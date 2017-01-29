@@ -6,10 +6,10 @@ from . import preprocess
 from . import dpt
 from . import tsne
 from . import sim
-from . import ctpaths
+from . import drawg
 # development tools
 try:
-    from . import drawg
+    from . import ctpaths
 except ImportError:
     pass
 
