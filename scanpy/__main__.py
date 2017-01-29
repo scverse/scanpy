@@ -24,9 +24,10 @@ dsimple = odict([
 
 # description of standard tools
 dtools = odict([
-    ('pca', 'visualize using PCA'),
-    ('diffmap', 'visualize using Diffusion Map'''),
-    ('tsne', 'visualize using tSNE'),
+    ('pca', 'visualize data using PCA'),
+    ('diffmap', 'visualize data using Diffusion Map'''),
+    ('tsne', 'visualize data using tSNE'),
+    ('drawg', 'visualize data using force-directed graph drawing (experimental)'),
     ('dpt', 'perform Diffusion Pseudotime analysis'),
     ('difftest', 'test for differential expression'),
     ('sim', 'simulate stochastic gene expression models'),

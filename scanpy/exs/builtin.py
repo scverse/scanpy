@@ -305,18 +305,18 @@ def paul15_raw():
     # cluster assocations identified by Paul et al.
     # groupnames_n = sc.read(filename,'cluster.id')['X']
     infogenenames = sc.read(filename, 'info.genes_strings')['X']
-    print('the first 10 informative gene names are \n',infogenenames[:10])
+    # print('the first 10 informative gene names are \n',infogenenames[:10])
     # just keep the first of the equivalent names for each gene
     genenames = np.array([gn.split(';')[0] for gn in genenames])
-    print('the first 10 trunkated gene names are \n',genenames[:10])
+    # print('the first 10 trunkated gene names are \n',genenames[:10])
     # mask array for the informative genes
     infogenes_idcs = np.array([(True if gn in infogenenames else False)
                                 for gn in genenames])
     # restrict data array to the 3451 informative genes
     X = X[:, infogenes_idcs]
     genenames = genenames[infogenes_idcs]
-    print('after selecting info genes, the first 10 gene names are \n',
-          genenames[:10])
+    # print('after selecting info genes, the first 10 gene names are \n',
+    #       genenames[:10])
     # write to dict
     ddata['X'] = X
     ddata['colnames'] = genenames

@@ -19,7 +19,6 @@ def exdata(format='plain'):
     """
     if format == 'plain':
         s = utils.pretty_dict_string(dexdata())
-        print(s)
     elif format == 'markdown':
         s = utils.markdown_dict_string(builtin.dexdata)
     print(s)

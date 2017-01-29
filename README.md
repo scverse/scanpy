@@ -6,36 +6,31 @@
 # Scanpy - Single-Cell Analysis in Python
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
-of dynamic biological processes from snapshots of transcriptome or 
-proteome.
+of dynamic biological processes from snapshots of transcriptome or proteome. See
+see [examples](examples) for a high number of use cases.
 
 * [preprocess](scanpy/tools/preprocess.py) - Filter, subsample, normalize data,
   and identify highly variable genes.
 
 * [pca](scanpy/tools/pca.py) - Visualize data using PCA.
 
-* [diffmap](scanpy/tools/diffmap.py) - Visualize data using Diffusion Maps
+* [diffmap](#diffmap) - Visualize data using Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15)).
 
 * [tsne](scanpy/tools/tsne.py) - Visualize data using t-SNE ([van
   der Maaten & Hinton, 2008](#ref_vandermaaten08); [Amir *et al.*, 2013](#ref_amir13)).
 
-* [dpt](scanpy/tools/dpt.py) - Infer progression of cells, identify *branching*
+* [dpt](#dpt) - Infer progression of cells, identify *branching*
 subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16)).
 
 *  [difftest](scanpy/tools/difftest.py) - Test for differential gene
   expression.
 
-* [sim](scanpy/tools/sim.py) - Simulate dynamic gene expression data ([Wittmann
+* [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09)).
 
-Scanpy features a high number of use cases that can be called directly
-from the command line.
-
-* [examples](scanpy/exs/builtin.py) - Summarizes example data and use
-  cases. Allows to call data reading, annotating and preprocessing steps as well
-  as tool paramters using a single key.
+Please, cite the original references! 
 
 The draft [Wolf & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains
 conceptual ideas and usage as a library. Potential coauthors who would like to
@@ -111,7 +106,7 @@ python scripts/scanpy.py pca myexample
 ```
 
 Also, it'd be awesome if you provide your working example for the public Scanpy
-examples: copy your example from [scanpy/exs/user.py](scanpy/exs/user.py) to
+library: copy your example from [scanpy/exs/user.py](scanpy/exs/user.py) to
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data and
 make a pull request. If you have questions or prefer sending your script by
 email, contact Alex.

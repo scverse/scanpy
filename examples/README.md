@@ -92,7 +92,7 @@ The left panel illustrates how the data is organized according to a *pseudotime*
 and different *segments*. Pseudotime 'estimates geodesic distance on the
 manifold' from a root cell. Segments are discrete partitions of the data. 
 
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_diffmap.pngRELOAD" height="175">
+<img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_diffmap.png" height="175">
 
 See the [notebook](examples/krumsiek11.ipynb) for more.
 
