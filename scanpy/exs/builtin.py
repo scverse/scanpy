@@ -36,21 +36,35 @@ from .. import settings as sett
 
 dexdata = {
 'burczynski06': {
+    'ref': 'Burczynski et al., J Mol Diagn 8, 51 (2006)',
+    'title': 'Molecular classification of Crohn\'s disease and ulcerative colitis '
+             'patients using transcriptional profiles in peripheral blood '
+             'mononuclear cells',
     'doi': '10.2353/jmoldx.2006.050079',
     'info': 'bulk data',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'krumsiek11': {
+    'ref': 'Krumsiek et al., PLoS ONE 6, e22649 (2011)',
+    'title': 'Hierarchical Differentiation of Myeloid Progenitors Is Encoded in '
+             'the Transcription Factor Network',
     'doi': '10.1371/journal.pone.0022649',
-    'info': 'simulated data',
+    'type': 'simulated data',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'moignard15': {
+    'ref': 'Moignard et al., Nature Biotechnology 33, 269 (2015)',
+    'title': 'Decoding the regulatory network of early blood development from '
+             'single-cell gene expression measurements',
     'doi': '10.1038/nbt.3154',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'paul15': {
+    'ref': 'Paul et al., Cell 163, 1663 (2015)',
+    'title': 'Transcriptional Heterogeneity and Lineage Commitment in Myeloid '
+             'Progenitors',
     'doi': '10.1016/j.cell.2015.11.013',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'toggleswitch': {
-    'info': 'simulated data',
+    'title': 'Simple toggle switch model.'
+    'type': 'simulated data',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 } 
 
@@ -147,7 +161,14 @@ def krumsiek11():
     """
     Simulated myeloid progenitor data.
 
-    Using a literature curated boolean network from Krumsiek et al. (2011).
+    Uses a literature-curated boolean network from the reference below.
+
+    Reference
+    ---------
+    Krumsiek et al.
+    "Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the
+    Transcription Factor Network"
+    PLoS ONE 6, e22649 (2011).
 
     Returns
     -------
@@ -160,6 +181,15 @@ def krumsiek11():
 
 def moignard15():
     """
+    Hematopoiesis in early mouse embryos.
+
+    Reference
+    ---------
+    Moignard et al.,
+    "Decoding the regulatory network of early blood development from single-cell
+    gene expression measurements"
+    Nature Biotechnology 33, 269 (2015)
+
     Returns
     -------
     See paul15. 
@@ -173,6 +203,13 @@ def paul15():
 
     This largely follows an R tutorial by Maren Buttner.
     https://github.com/theislab/scAnalysisTutorial
+
+    Reference
+    ---------
+    Paul et al.,
+    "Transcriptional Heterogeneity and Lineage Commitment in Myeloid
+    Progenitors",
+    Cell 163, 1663 (2015)
 
     Returns
     -------

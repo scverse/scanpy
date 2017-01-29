@@ -86,7 +86,10 @@ def main():
             'exdata': sc.exdata,
             'examples': sc.examples
         }
-        func[argv[1]]()
+        if len(argv) > 2:
+            func[argv[1]](argv[2])
+        else:
+            func[argv[1]]()
         exit(0)
 
     # init the parsers for each tool

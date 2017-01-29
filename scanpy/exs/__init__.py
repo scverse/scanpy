@@ -13,11 +13,15 @@ from . import builtin, user
 from .. import utils
 from .. import settings as sett
 
-def exdata():
+def exdata(format='plain'):
     """
     Show available example data.
     """
-    s = utils.pretty_dict_string(dexdata())
+    if format == 'plain':
+        s = utils.pretty_dict_string(dexdata())
+        print(s)
+    elif format == 'markdown':
+        s = utils.markdown_dict_string(builtin.dexdata)
     print(s)
 
 def examples():
@@ -34,7 +38,7 @@ def dexdata():
         # additional possibility to add example module
         from . import user_private
         all_dex = utils.merge_dicts(all_dex, user_private.dexdata) 
-    except:
+    except ImportError:
         pass
     return all_dex
 
@@ -49,7 +53,7 @@ def dexamples():
         user_private_dex = utils.fill_in_datakeys(user_private.dexamples, 
                                                   user_private.dexdata)
         all_dex = utils.merge_dicts(all_dex, user_private_dex) 
-    except:
+    except ImportError:
         pass
     return all_dex
 
@@ -94,7 +98,7 @@ def example(exkey, return_module=False):
             from . import user_private
             _exkey = getattr(user_private, exkey)
             exmodule = user_private
-        except AttributeError:
+        except (ImportError, AttributeError):
             try:
                 _exkey = getattr(builtin, exkey)
                 exmodule = builtin

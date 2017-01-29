@@ -9,4 +9,4 @@ python scripts/scanpy.py moignard15 dpt --figdir examples/figs/ --savefigs png
 python scripts/scanpy.py paul15 dpt --figdir examples/figs/ --savefigs png
 python scripts/scanpy.py paul15 difftest --figdir examples/figs/ --savefigs png
 python scripts/scanpy.py krumsiek11 sim --figdir examples/figs/ --savefigs png
-python scripts/scanpy.py krumsiek11 dpt --figdir examples/figs/ --savefigs png --plotparams layout 3d
+python scripts/scanpy.py krumsiek11 dpt --figdir examples/figs/ --savefigs png --plotparams layout 3d legendloc "upper left"

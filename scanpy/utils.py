@@ -878,6 +878,40 @@ def pretty_dict_string(d, indent=0):
              s += ' = ' + str(value) + '\n'
     return s
 
+def markdown_dict_string(d):
+    """
+    Markdown output that can be pasted in the examples/README.md.
+    """
+    # sort experimental data from simulated data
+    sorted_keys = []
+    sim_keys = []
+    for key, value in sorted(d.items()):
+        if 'type' in value:
+            if 'sim' in value['type']:
+                sim_keys.append(key)
+        else:
+            sorted_keys.append(key)
+    len_exp = len(sorted_keys) - 1
+    sorted_keys += sim_keys
+    # format output
+    s = 'Examples using experimental data.\n'
+    for ikey, key in enumerate(sorted_keys):
+        value = d[key]
+        s += '* [' + key + '](#' + key + ')'
+        if 'ref' in value:
+            if 'doi' in value:
+                link = 'http://dx.doi.org/' + value['doi']
+            elif 'url' in value:
+                link = value['url']
+            s += (' - [' +  value['ref'].replace('et al.','*et al.*') 
+                         + '](' + link +  ')')
+        if 'title' in value:
+            s += '   \n*' + value['title'] + '*'
+        s += '\n'
+        if ikey == len_exp:
+            s += '\nExamples using simulated data.\n'
+    return s
+
 def merge_dicts(*dicts):
     """
     Given any number of dicts, shallow copy and merge into a new dict,

@@ -1,4 +1,4 @@
-[Example Use](#examples) | 
+[Example Use](#example_use) | 
 [Tools](#tools) | 
 [Installation](#install) | 
 [References](#references)
@@ -42,7 +42,7 @@ conceptual ideas and usage as a library. Potential coauthors who would like to
 work on software and manuscript are welcome! Contributors, who merely want to
 add their own example or tool are welcome, too! Any comments are appreciated!
 
-## Example Use <a id="examples"></a>
+## Example Use <a id="example_use"></a>
 
 The following command-line examples call the wrapper
 [scripts/scanpy.py](scripts/scanpy.py), which works **without**
@@ -85,15 +85,16 @@ With this, we reproduced Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
 more information.
 
-#### Get help
+#### More examples and help
 
-Show available example data and example use cases, respectively
+For more examples, read [this](examples), or display them on the command line
+(example data and example use cases, respectively).
 ```shell
 python scripts/scanpy.py exdata
 python scripts/scanpy.py examples
 ```
 
-Get general and tool-specific help, respectively,
+Get general and tool-specific help, respectively.
 ```shell
 python scripts/scanpy.py --help
 python scripts/scanpy.py dpt --help
@@ -114,58 +115,6 @@ examples: copy your example from [scanpy/exs/user.py](scanpy/exs/user.py) to
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data and
 make a pull request. If you have questions or prefer sending your script by
 email, contact Alex.
-
-#### Data of [Paul *et al.* (2015)](#ref_paul15)
-
-Diffusion Pseudotime (DPT) analysis detects the branch of granulocyte/macrophage
-progenitors (GMP), and the branch of megakaryocyte/erythrocyte progenitors
-(MEP). There are two small further subgroups (*segments* 0 and 2).
-```shell
-python scripts/scanpy.py paul15 dpt
-```
-<img src="http://falexwolf.de/scanpy/figs/paul15_dpt_diffmap.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/paul15_dpt_segpt.png" height="175">
-
-We can now test for differential gene expression.
-```shell
-python scripts/scanpy.py paul15 difftest
-```
-<img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
-
-See the [notebook](examples/paul15.ipynb) for more information.
-
-#### Simulated myeloid progenitor data ([Krumsiek *et al.*, 2011](#ref_krumsiek11)) <a id="krumsiek11"></a>
-
-Here, we are going to simulate some data using a literature-curated boolean gene
-regulatory network, which is believed to describe myeloid differentiation
-([Krumsiek *et al.*, 2011](#ref_krumsiek11)). Using [sim.py](scanpy/sim.py), the
-[boolean model](models/krumsiek11.txt) is translated into a stochastic 
-differential equation ([Wittmann *et al.*, 2009](#ref_wittmann09)). Simulations result
-in branching time series of gene expression, where each branch corresponds to a
-certain cell fate of common myeloid progenitors (megakaryocytes, erythrocytes,
-granulocytes and monocytes).
-```shell
-python scripts/scanpy.py krumsiek11 sim
-```
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_sim.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_sim_shuffled.png" height="175">
-
-If the order is shuffled, as in a snapshot, the same data looks as on the right.
-Let us reconstruct the process using DPT and obtain the branching lineages
-```shell
-python scripts/scanpy.py krumsiek11 dpt --plotparams layout 3d
-```
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_vsorder.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_segpt.png" height="175">
-
-The left panel illustrates how the data is organized according to a *pseudotime*
-and different *segments*. Pseudotime 'estimates geodesic distance on the
-manifold' from a root cell. Segments are discrete partitions of the data. 
-
-<img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_diffmap.png" height="175">
-
-See the [notebook](examples/krumsiek11.ipynb) for more.
-
 
 ## Tools <a id="tools"></a>
 
