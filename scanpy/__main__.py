@@ -43,7 +43,7 @@ def main_descr():
         descr += '\n{:12}'.format(key) + help
     descr += '\n\nexkey tool\n----------'
     descr += ('\n{:12}'.format('exkey tool')
-                   + 'shortcut for providing exkey for --exkey argument to tool')
+                   + 'shortcut for providing exkey argument to tool')
     return descr
 
 def init_main_parser():
@@ -62,7 +62,7 @@ def init_main_parser():
     for key, help in dtools.items():
         sub_p = sub_parsers.add_parser(
                     key,
-                    description=sc.help(key,string=True),
+                    description=sc.help(key, string=True),
                     formatter_class=argparse.RawDescriptionHelpFormatter,
                     add_help=False)
         try:
