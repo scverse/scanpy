@@ -18,7 +18,7 @@ else: # Python 2
     from urllib import urlretrieve
 
 url = 'https://github.com/theislab/scanpy/archive/master.zip'
-dirname = 'test_scanpy'
+dirname = 'scanpy_test'
 filename = dirname + '.zip'
 print('downloading master branch from '+ url)
 urlretrieve(url,filename)

@@ -100,12 +100,12 @@ python scripts/scanpy.py --help
 python scripts/scanpy.py dpt --help
 ```
 
-#### Add your own examples
+#### Add your examples <a id="add_example"></a>
 
-To add your own examples, simply modify the content of the function
-`myexample()` in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy
-and paste from [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example
-using
+To add your example, simply modify this [notebook](examples/myexample.ipynb),
+or, if you want to call from the command-line, modify the function `myexample()`
+in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy and paste from
+[scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using
 ```shell
 python scripts/scanpy.py pca myexample
 ```

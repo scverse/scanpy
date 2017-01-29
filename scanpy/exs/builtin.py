@@ -18,7 +18,7 @@ dexamples: dict
 """
 
 # this is necessary to import scanpy from within package
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # standard modules
 from collections import OrderedDict as odict
 # scientific modules
@@ -63,7 +63,7 @@ dexdata = {
     'doi': '10.1016/j.cell.2015.11.013',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'toggleswitch': {
-    'title': 'Simple toggle switch model.'
+    'title': 'Simple toggle switch model.',
     'type': 'simulated data',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 } 
@@ -265,7 +265,7 @@ def moignard15_raw():
     # filter out the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
     genes = np.r_[np.arange(0,4),np.arange(5,31),np.arange(32,36),np.arange(37,45)]
-    sett.m(0, 'selected',len(genes), 'genes')
+    print('selected',len(genes), 'genes')
     ddata['X'] = X[:, genes] # filter data matrix
     ddata['colnames'] = genenames[genes] # filter genenames
     # choose root cell as in Haghverdi et al. (2016)
@@ -305,18 +305,18 @@ def paul15_raw():
     # cluster assocations identified by Paul et al.
     # groupnames_n = sc.read(filename,'cluster.id')['X']
     infogenenames = sc.read(filename, 'info.genes_strings')['X']
-    sett.m(1,'the first 10 informative gene names are \n',infogenenames[:10])
+    print('the first 10 informative gene names are \n',infogenenames[:10])
     # just keep the first of the equivalent names for each gene
     genenames = np.array([gn.split(';')[0] for gn in genenames])
-    sett.m(1,'the first 10 trunkated gene names are \n',genenames[:10])
+    print('the first 10 trunkated gene names are \n',genenames[:10])
     # mask array for the informative genes
     infogenes_idcs = np.array([(True if gn in infogenenames else False)
                                 for gn in genenames])
     # restrict data array to the 3451 informative genes
     X = X[:, infogenes_idcs]
     genenames = genenames[infogenes_idcs]
-    sett.m(1,'after selecting info genes, the first 10 gene names are \n',
-             genenames[:10])
+    print('after selecting info genes, the first 10 gene names are \n',
+          genenames[:10])
     # write to dict
     ddata['X'] = X
     ddata['colnames'] = genenames
