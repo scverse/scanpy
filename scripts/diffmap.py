@@ -13,5 +13,4 @@ from sys import path
 path.insert(0, '.')
 import scanpy as sc
 
-dtool, ddata = sc.read_args_run_tool('diffmap')
-sc.plot(dtool, ddata)
+sc.read_args_run_tool('diffmap')

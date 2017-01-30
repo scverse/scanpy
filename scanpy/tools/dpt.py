@@ -30,6 +30,7 @@ from ..compat.matplotlib import pyplot as pl
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
+from .. import graph
 
 def dpt(ddata, num_branchings=1, k=5, knn=False, 
         sigma=0, allow_branching_at_root=False):
@@ -95,7 +96,9 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
     params = locals(); del params['ddata']
     X = ddata['X']
     xroot = ddata['xroot']
-    dpt, ddpt = _init_DPT(X,params)
+    dpt = DPT(X, params)
+    # diffusion map
+    ddpt = dpt.diffmap()
     sett.m(0,'perform Diffusion Pseudotime Analysis')
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
@@ -135,6 +138,7 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
     return ddpt
 
 def plot(ddpt, ddata,
+         comps='1,2,3',
          layout='2d',
          legendloc='lower right',
          cmap='jet'): # consider changing to 'viridis'
@@ -147,6 +151,8 @@ def plot(ddpt, ddata,
         Dict returned by DPT tool.
     ddata : dict
         Data dictionary.
+    comps : str
+         String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right') 
@@ -154,16 +160,16 @@ def plot(ddpt, ddata,
     cmap : str, optional (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['ddpt']    
+    params = locals(); del params['ddata']; del params['ddpt']
     X = ddata['X']
     ddpt['groupcolors'] = pl.cm.get_cmap(params['cmap'])(
-                                            pl.Normalize()(ddpt['groupids']))
+                                         pl.Normalize()(ddpt['groupids']))
 
     # color by pseudotime and by segments
     colors = [ddpt['pseudotimes'], 'white']
     # coloring according to experimental labels
     if 'groupmasks' in ddata:
-        colors.append('white')
+        colors.append('grey')
     # highlight root
     highlights = list(ddpt['iroot'])
     # highlight tip points of each segment
@@ -200,8 +206,11 @@ def plot_groups(ddpt, ddata, params, colors,
     """
     Plot groups in diffusion map visualization.
     """
+    from numpy import array
+    comps = array(params['comps'].split(',')).astype(int) - 1
+
     # base figure
-    axs = plott.scatter(ddpt['Y'],
+    axs = plott.scatter(ddpt['Y'][:, comps],
                         subtitles=['pseudotime','segments',
                                    'experimental groups'],
                         layout=params['layout'],
@@ -212,15 +221,15 @@ def plot_groups(ddpt, ddata, params, colors,
 
     # dpt groups (segments)
     for igroup, group in enumerate(ddpt['groupmasks']):
-        plott.group(axs[1], igroup, ddpt, ddpt['Y'], params['layout'])
+        plott.group(axs[1], igroup, ddpt, ddpt['Y'][:, comps], params['layout'])
     axs[1].legend(frameon=False, loc=params['legendloc'])
 
     # annotated groups in data dict
     if 'groupmasks' in ddata:
         for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[2], igroup, ddata, ddpt['Y'], params['layout'])
+            plott.group(axs[2], igroup, ddata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        pl.subplots_adjust(right=0.87)
+        pl.subplots_adjust(right=0.8)
 
     if sett.savefigs:
         pl.savefig(sett.figdir+ddpt['writekey']+'_diffmap.'+sett.extf)
@@ -248,341 +257,10 @@ def plot_segments_pseudotimes(ddpt, cmap):
     if sett.savefigs:
         pl.savefig(sett.figdir+ddpt['writekey']+'_segpt.'+sett.extf)
 
-def _init_DPT(X, params):
+class DPT(graph.DataGraph):
     """
-    Returns
-    -------
-    dpt : DPT
-        Instance of DPT object.
-    ddmap : dict
-        Dictionary as returned by function diffmap.diffmap.
+    Diffusion Pseudotime Class.
     """
-    # initialization of DPT merely computes diffusion map
-    dpt = DPT(X, params)
-    # write results to dictionary
-    ddmap = {}
-    # skip the first eigenvalue/eigenvector, it does not store information
-    ddmap['Y'] = dpt.rbasis[:,1:]
-    ddmap['evals'] = dpt.evals[1:]
-    return dpt, ddmap
-
-class DPT:
-    """ 
-    Diffusion Pseudotime and Diffusion Map.
-
-    Diffusion Pseudotime as of Haghverdi et al. (2016) and Diffusion Map as of
-    Coifman et al. (2005).
-
-    Also implements the modifications to diffusion map introduced by Haghverdi
-    et al. (2016).
-    """
-
-    def __init__(self, X, params):
-        """ 
-        Initilization of DPT computes a diffusion map.
-
-        The corresponding class attributes are described below and can be
-        retrieved as needed.
-
-        Parameters
-        ----------
-        X : np.ndarray
-            Data array, where the row index distinguishes different
-            observations, column index distinguishes different features.
-        params : dict, optional
-            See attribute params for default keys/values.
-
-        Writes Attributes
-        -----------------
-        evals : np.ndarray 
-            Eigenvalues of transition matrix
-        rbasis : np.ndarray 
-             Matrix of right eigenvectors (stored in columns), also known as
-             'diffusion components'.
-        lbasis : np.ndarray
-            Matrix of left eigenvectors (stored in columns).
-        """
-        self.X = X 
-        self.N = self.X.shape[0]
-        self.params = params
-        if self.params['sigma'] > 0:
-            self.params['method'] = 'global'
-        else:
-            self.params['method'] = 'local'            
-        sett.m(0,'computing Diffusion Map with method',
-                 '"'+self.params['method']+'"')
-        self.compute_transition_matrix()
-        # compute spectral embedding
-        self.embed()
-
-    def compute_transition_matrix(self):
-        """ 
-        Compute similarity matrix and transition matrix.
-
-        Notes
-        -----
-        In the code, the following two parameters are set.
-
-        alpha : float
-            The density rescaling parameter of Coifman and Lafon (2006). Should
-            in all practical applications equal 1: Then only the geometry of the
-            data matters, not the sampling density.
-        zerodiagonal : bool 
-            Set the diagonal of the transition matrix to zero as suggested by
-            Haghverdi et al. 2015.
-
-        See also
-        --------
-        Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
-        Coifman et al. (2005).
-        """
-        # compute distance matrix in squared Euclidian norm
-        Dsq = utils.comp_distance(self.X,metric='sqeuclidean')
-        if self.params['method'] == 'local':
-            # choose sigma (width of a Gaussian kernel) according to the
-            # distance of the kth nearest neighbor of each point, including the
-            # point itself in the count
-            k = self.params['k']
-            # deterimine the distance of the k nearest neighbors
-            indices = np.zeros((Dsq.shape[0],k),dtype=np.int_)
-            distances_sq = np.zeros((Dsq.shape[0],k),dtype=np.float_)
-            for irow, row in enumerate(Dsq):
-                # the last item is already in its sorted position as
-                # argpartition puts the (k-1)th element - starting to count from
-                # zero - in its sorted position
-                idcs = np.argpartition(row,k-1)[:k]
-                indices[irow] = idcs
-                distances_sq[irow] = np.sort(row[idcs])
-            # choose sigma, the heuristic here often makes not much 
-            # of a difference, but is used to reproduce the figures
-            # of Haghverdi et al. (2016)
-            if self.params['knn']:
-                # as the distances are not sorted except for last element
-                # take median
-                sigmas_sq = np.median(distances_sq,axis=1)
-            else:
-                # the last item is already in its sorted position as
-                # argpartition puts the (k-1)th element - starting to count from
-                # zero - in its sorted position
-                sigmas_sq = distances_sq[:,-1]/4
-            sigmas = np.sqrt(sigmas_sq)
-            sett.mt(0,'determined k =',k,
-                      'nearest neighbors of each point')
-        elif self.params['method'] == 'standard':
-            sigmas = self.params['sigma']*np.ones(self.N)
-            sigmas_sq = sigmas**2
-        # compute the symmetric weight matrix
-        Num = 2*np.multiply.outer(sigmas,sigmas)
-        Den = np.add.outer(sigmas_sq,sigmas_sq)
-        W = np.sqrt(Num/Den)*np.exp(-Dsq/Den)
-        # make the weight matrix sparse
-        if not self.params['knn']:
-            W[W < 1e-14] = 0
-        else:
-            # restrict number of neighbors to k
-            Mask = np.zeros(Dsq.shape,dtype=bool)
-            for irow,row in enumerate(indices):
-                Mask[irow,row] = True
-                for j in row:
-                    if irow not in indices[j]:
-                        Mask[j,irow] = True
-            # set all entries that are not nearest neighbors to zero
-            W[Mask==False] = 0
-        sett.mt(0,'computed W (weight matrix) with "knn" =',
-               self.params['knn'])
-        if False:
-            pl.matshow(W)
-            pl.title('$ W$')
-            pl.colorbar()
-        # zero diagonal as discussed in Haghverdi et al. (2015)
-        # then the kernel does not encode a notion of similarity then anymore
-        # and is not positive semidefinite anymore
-        # in practice, it doesn't matter too much
-        zerodiagonal = False
-        if zerodiagonal:
-            np.fill_diagonal(W, 0)
-        # density normalisation 
-        # as discussed in Coifman et al. (2005)
-        # ensure that kernel matrix is independent of sampling density
-        alpha = 1
-        if alpha == 0:
-            # nothing happens here, simply use the isotropic similarity matrix
-            self.K = np.array(W)
-        else:
-            # q[i] is an estimate for the sampling density at point x_i
-            # it's also the degree of the underlying graph
-            q = np.sum(W,axis=0)
-            # raise to power alpha
-            if alpha != 1: 
-                q = q**alpha
-            Den = np.outer(q,q)
-            self.K = W/Den
-        sett.mt(0,'computed K (anisotropic kernel)')
-        if False:
-            pl.matshow(self.K)
-            pl.title('$ K$')
-            pl.colorbar()
-        # now compute the row normalization to build the transition matrix T
-        # and the adjoint Ktilde: both have the same spectrum
-        self.z = np.sum(self.K,axis=0)
-        # the following is the transition matrix
-        self.T = self.K/self.z[:,np.newaxis]
-        # now we need the square root of the density
-        self.sqrtz = np.array(np.sqrt(self.z))
-        # now compute the density-normalized Kernel
-        # it's still symmetric
-        szszT = np.outer(self.sqrtz,self.sqrtz)
-        self.Ktilde = self.K/szszT
-        sett.mt(0,'computed Ktilde (normalized anistropic kernel)')
-        if False:
-            pl.matshow(self.Ktilde)
-            pl.title('$ \widetilde K$')
-            pl.colorbar()
-            pl.show()
-
-    def embed(self, number=10, sym=True):
-        """ 
-        Compute eigen decomposition of T.
-
-        Parameters
-        ----------
-        number : int  
-            Number of eigenvalues/vectors to be computed, set number = 0 if
-            you need all eigenvectors.
-        sym : bool
-            Instead of computing the eigendecomposition of the assymetric 
-            transition matrix, computed the eigendecomposition of the symmetric
-            Ktilde matrix.
-
-        Writes class members
-        --------------------
-        evals : np.ndarray 
-            Eigenvalues of transition matrix
-        lbasis : np.ndarray
-            Matrix of left eigenvectors (stored in columns).
-        rbasis : np.ndarray 
-             Matrix of right eigenvectors (stored in columns).
-             self.rbasis is projection of data matrix on right eigenvectors, 
-             that is, the projection on the diffusion components.
-             these are simply the components of the right eigenvectors
-             and can directly be used for plotting.
-        """
-        self.rbasisBool = True
-        # compute the spectrum
-        if number == 0:
-            w,u = np.linalg.eigh(self.Ktilde)
-        else:
-            number = min(self.Ktilde.shape[0]-1, number)
-            w,u = sp.sparse.linalg.eigsh(self.Ktilde, k=number)
-        self.evals = w[::-1]
-        u = u[:,::-1]
-        sett.mt(0,'computed Ktilde\'s eigenvalues:')
-        sett.m(0,self.evals)
-        sett.m(1,'computed',number,'eigenvalues. if you want more increase the'
-                'parameter "number" or set it to zero, to compute all eigenvalues')
-        if sym:
-            self.rbasis = self.lbasis = u
-        else:
-            # The eigenvectors of T are stored in self.rbasis and self.lbasis 
-            # and are simple trafos of the eigenvectors of Ktilde.
-            # rbasis and lbasis are right and left eigenvectors, respectively
-            self.rbasis = np.array(u/self.sqrtz[:,np.newaxis])
-            self.lbasis = np.array(u*self.sqrtz[:,np.newaxis])
-            # normalize in L2 norm
-            # note that, in contrast to that, a probability distribution
-            # on the graph is normalized in L1 norm
-            # therefore, the eigenbasis in this normalization does not correspond
-            # to a probability distribution on the graph
-            self.rbasis /= np.linalg.norm(self.rbasis,axis=0,ord=2)
-            self.lbasis /= np.linalg.norm(self.lbasis,axis=0,ord=2)
-
-    def _embed(self):
-        """
-        Checks and tests for embed.
-        """
-        # pl.semilogy(w,'x',label=r'$ \widetilde K$')
-        # pl.show()
-        if sett.verbosity > 2:
-            # output of spectrum of K for comparison
-            w,v = np.linalg.eigh(self.K)
-            sett.mi('spectrum of K (kernel)')
-        if sett.verbosity > 3:
-            # direct computation of spectrum of T
-            w,vl,vr = sp.linalg.eig(self.T,left=True)
-            sett.mi('spectrum of transition matrix (should be same as of Ktilde)')
-
-    def compute_M_matrix(self):
-        """ 
-        The M matrix is the matrix that results from summing over all powers of
-        T in the subspace without the first eigenspace.
-
-        See Haghverdi et al. (2016).
-        """
-        # the projected inverse therefore is
-        self.M = sum([self.evals[i]/(1-self.evals[i])
-                      * np.outer(self.rbasis[:,i],self.lbasis[:,i])
-                      for i in range(1,self.evals.size)])
-        sett.mt(0,'computed M matrix')
-        if False:
-            pl.matshow(self.Ktilde)
-            pl.title('Ktilde')
-            pl.colorbar()
-            pl.matshow(self.M)
-            pl.title('M')
-            pl.colorbar()
-            pl.show()
-
-    def compute_Ddiff_matrix(self):
-        """ 
-        Returns the distance matrix in the diffusion metric.
-
-        Is based on the M matrix. self.Ddiff[self.iroot,:] stores diffusion
-        pseudotime as a vector.
-        """
-        self.Dbool = True
-        self.Ddiff = sp.spatial.distance.pdist(self.M)
-        self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
-        sett.mt(0,'computed Ddiff distance matrix')
-        if False:
-            pl.matshow(self.Ddiff)
-            pl.title('Ddiff')
-            pl.colorbar()
-            pl.show()
-        return self.Ddiff
-
-    def find_root(self,xroot):
-        """ 
-        Determine the index of the root cell.
-
-        Given an expression vector, find the observation index that is closest
-        to this vector.
-        
-        Parameters
-        ----------
-        xroot : np.ndarray
-            Vector that marks the root cell, the vector storing the initial
-            condition, only relevant for computing pseudotime.
-        """
-        # this is the squared distance
-        dsqroot = 1e10
-        self.iroot = 0
-        for i in range(self.N):
-            diff = self.X[i,:]-xroot
-            dsq = diff.dot(diff)
-            if  dsq < dsqroot:
-                dsqroot = dsq
-                self.iroot = i
-                if np.sqrt(dsqroot) < 1e-10:
-                    sett.m(2,'root found at machine prec')
-                    break
-        sett.m(1,'sample',self.iroot,'has distance',np.sqrt(dsqroot),'from root')
-        return self.iroot
-
-    def set_pseudotimes(self):
-        """
-        Return pseudotimes with respect to root point.
-        """
-        self.pseudotimes = self.Ddiff[self.iroot]/np.max(self.Ddiff[self.iroot])
 
     def branchings_segments(self):
         """ 
@@ -631,7 +309,7 @@ class DPT:
             if segstips[iseg][0] == -1:
                 continue
             # restrict distance matrix to points in segment
-            Dseg = self.Ddiff[np.ix_(seg,seg)]
+            Dseg = self.Dchosen[np.ix_(seg,seg)]
             # obtain the two indices that maximize distance in the segment
             # call them tips
             if False:
@@ -677,7 +355,7 @@ class DPT:
         # it's completely defined by the indices of the points in the segment
         # initialize the search for branchings with a single segment,
         # that is, get the indices of the whole data set
-        indices_all = np.arange(self.Ddiff.shape[0],dtype=int)
+        indices_all = np.arange(self.Dchosen.shape[0],dtype=int)
         # let's keep a list of segments, the first segment to add is the 
         # whole data set
         segs = [indices_all]
@@ -695,12 +373,12 @@ class DPT:
         #
         # if D denotes a euclidian distance matrix, a line segment is a linear
         # object, and the name "line" is justified. if we take the
-        # diffusion-based distance matrix Ddiff, which approximates geodesic
+        # diffusion-based distance matrix Dchosen, which approximates geodesic
         # distance, with "line", we mean the shortest path between two points,
         # which can be highly non-linear in the original space
         #
         # let us define the tips of the whole data set
-        tips_all = list(np.unravel_index(np.argmax(self.Ddiff),self.Ddiff.shape))
+        tips_all = list(np.unravel_index(np.argmax(self.Dchosen),self.Dchosen.shape))
         # we keep a list of the tips of each segment
         segstips = [tips_all]
         for ibranch in range(self.params['num_branchings']):
@@ -724,7 +402,7 @@ class DPT:
         # make segs a list of mask arrays, it's easier to store 
         # as there is a hdf5 equivalent
         for iseg,seg in enumerate(self.segs):
-            mask = np.zeros(self.Ddiff.shape[0],dtype=bool)
+            mask = np.zeros(self.Dchosen.shape[0],dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
         # convert to arrays
@@ -746,9 +424,9 @@ class DPT:
         if self.iroot not in self.segstips[iseg]:
             # if it's not exactly a tip, but very close to it, 
             # just keep it as it is
-            dist_to_root = self.Ddiff[self.iroot,self.segstips[iseg]]
+            dist_to_root = self.Dchosen[self.iroot,self.segstips[iseg]]
             # otherwise, allow branching at root
-            if (np.min(dist_to_root) > 0.01*self.Ddiff[tuple(self.segstips[iseg])]
+            if (np.min(dist_to_root) > 0.01*self.Dchosen[tuple(self.segstips[iseg])]
                 and self.params['allow_branching_at_root']):
                 allindices = np.arange(self.N,dtype=int)
                 tips3_global = np.insert(self.segstips[iseg],0,self.iroot)
@@ -789,7 +467,7 @@ class DPT:
         """
         Return a single array that stores integer segment labels.
         """
-        segslabels = np.zeros(self.Ddiff.shape[0],dtype=int)
+        segslabels = np.zeros(self.Dchosen.shape[0],dtype=int)
         for iseg,seg in enumerate(self.segs):
             segslabels[seg] = iseg
         self.segslabels = segslabels
@@ -835,7 +513,7 @@ class DPT:
         Parameters
         ----------
         segs : list of np.ndarray
-            Ddiff distance matrix restricted to segment.
+            Dchosen distance matrix restricted to segment.
         segstips : list of np.ndarray
             Stores all tip points for the segments in segs.
         iseg : int
@@ -852,7 +530,7 @@ class DPT:
         """
         seg = segs[iseg]
         # restrict distance matrix to points in chosen segment seg
-        Dseg = self.Ddiff[np.ix_(seg,seg)]
+        Dseg = self.Dchosen[np.ix_(seg,seg)]
         # given the three tip points and the distance matrix detect the
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
@@ -882,7 +560,7 @@ class DPT:
         Parameters
         ----------
         Dseg : np.ndarray
-            Ddiff distance matrix restricted to segment.
+            Dchosen distance matrix restricted to segment.
         tips : np.ndarray
             The three tip points. They form a 'triangle' that contains the data.
         
@@ -1006,7 +684,7 @@ class DPT:
         Parameters
         ----------
         Dseg : np.ndarray
-            Ddiff distance matrix restricted to segment.
+            Dchosen distance matrix restricted to segment.
         tips : np.ndarray
             The three tip points. They form a 'triangle' that contains the data.
 

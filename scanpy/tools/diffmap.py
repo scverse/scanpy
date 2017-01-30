@@ -70,13 +70,15 @@ def diffmap(ddata, n_components=3, k=5, knn=False, sigma=0):
     """
     params = locals(); del params['ddata']
     X = ddata['X']
-    diffmap, ddmap = dpt._init_DPT(X, params)
+    dmap = dpt.DPT(X, params)
+    ddmap = dmap.diffmap()
     ddmap['type'] = 'diffmap'
     # restrict number of components
     ddmap['Y'] = ddmap['Y'][:,:params['n_components']]
     return ddmap
 
 def plot(ddmap, ddata,
+         comps='1,2,3',
          layout='2d',
          legendloc='lower right',
          cmap='jet',
@@ -90,6 +92,8 @@ def plot(ddmap, ddata,
         Dict returned by diffmap tool.
     ddata : dict
         Data dictionary.
+    comps : str
+         String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
@@ -98,13 +102,15 @@ def plot(ddmap, ddata,
          String denoting matplotlib color map. 
     """
     params = locals(); del params['ddata']; del params['ddmap']
+    from numpy import array
+    comps = array(params['comps'].split(',')).astype(int) - 1
     # highlights
     highlights = []
     if False:
         if 'highlights' in ddata:
             highlights = ddata['highlights']
     # base figure
-    axs = plott.scatter(ddmap['Y'],
+    axs = plott.scatter(ddmap['Y'][:, comps],
                         subtitles=['diffusion map'],
                         component_name='DC',
                         layout=params['layout'],
@@ -114,7 +120,7 @@ def plot(ddmap, ddata,
     # annotated groups
     if 'groupmasks' in ddata:
         for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[0], igroup, ddata, ddmap['Y'], params['layout'])
+            plott.group(axs[0], igroup, ddata, ddmap['Y'][:, comps], params['layout'])
         axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         # right margin
         pl.subplots_adjust(right=params['adjust_right'])

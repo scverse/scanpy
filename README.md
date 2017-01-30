@@ -30,7 +30,7 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16)).
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09)).
 
-Please, cite the original references! 
+Please, cite the original references.
 
 The draft [Wolf & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains
 conceptual ideas and usage as a library. Potential coauthors who would like to
@@ -72,7 +72,7 @@ python scripts/scanpy.py moignard15 dpt
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
 
-This orders cells by segment, and within each segment, by pseudotime and outputs
+This orders cells by segment, and within each segment, by pseudotime.
 
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_heatmap.png" height="250">
 

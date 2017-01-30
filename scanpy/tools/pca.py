@@ -22,7 +22,7 @@ from .. import plotting as plott
 from .. import utils
 from ..tools import preprocess
 
-def pca(ddata, n_components=2):
+def pca(ddata, n_components=10):
     """
     Embed data using PCA.
 
@@ -45,6 +45,7 @@ def pca(ddata, n_components=2):
     return {'type': 'pca', 'Y': Y}
 
 def plot(dpca, ddata,
+         comps='1,2,3',
          layout='2d',
          legendloc='lower right',
          cmap='jet',
@@ -58,6 +59,8 @@ def plot(dpca, ddata,
         Dict returned by PCA tool.
     ddata : dict
         Data dictionary.
+    comps : str
+         String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right') 
@@ -66,13 +69,15 @@ def plot(dpca, ddata,
          String denoting matplotlib color map. 
     """
     params = locals(); del params['ddata']; del params['dpca']
+    from numpy import array
+    comps = array(params['comps'].split(',')).astype(int) - 1
     # highlights
     highlights = []
     if False:
         if 'highlights' in ddata:
             highlights = ddata['highlights']
     # base figure
-    axs = plott.scatter(dpca['Y'],
+    axs = plott.scatter(dpca['Y'][:, comps],
                         subtitles=['PCA'],
                         component_name='PC',
                         layout=params['layout'],
@@ -82,7 +87,7 @@ def plot(dpca, ddata,
     # annotated groups
     if 'groupmasks' in ddata:
         for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[0], igroup, ddata, dpca['Y'], params['layout'])
+            plott.group(axs[0], igroup, ddata, dpca['Y'][:, comps], params['layout'])
         axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         # right margin
         pl.subplots_adjust(right=params['adjust_right'])
