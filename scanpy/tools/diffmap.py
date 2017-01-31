@@ -27,7 +27,7 @@ from .. import utils
 from .. import settings as sett
 from .. import plotting as plott
 
-def diffmap(ddata, n_components=3, k=5, knn=False, sigma=0):
+def diffmap(ddata, n_components=10, k=5, knn=False, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -110,9 +110,17 @@ def plot(ddmap, ddata,
         if 'highlights' in ddata:
             highlights = ddata['highlights']
     # base figure
-    axs = plott.scatter(ddmap['Y'][:, comps],
+    try:
+        Y = ddmap['Y'][:, comps]
+    except IndexError:
+        sett.mi('IndexError: Only computed', ddmap['Y'].shape[1], ' components')
+        sett.mi('--> recompute using scanpy exkey diffmap -p n_components YOUR_NR')
+        from sys import exit
+        exit(0)
+    axs = plott.scatter(Y,
                         subtitles=['diffusion map'],
                         component_name='DC',
+                        component_indexnames=comps + 1,
                         layout=params['layout'],
                         c='grey',
                         highlights=highlights,

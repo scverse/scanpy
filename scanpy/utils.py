@@ -30,7 +30,7 @@ from .compat.matplotlib import pyplot as pl
 import scanpy as sc
 from . import settings as sett
 
-avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz']
+avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx']
 """ Available file formats for writing data. """
 
 #--------------------------------------------------------------------------------
@@ -386,6 +386,8 @@ def _read_file(filename, ext, sheet, sep, first_column_names,
                 ddata = read_file_to_dict(filename, ext=ext)
             else:
                 ddata = _read_excel(filename, sheet)
+        elif ext == 'mtx':
+            ddata = _read_mtx(filename)
         elif ext == 'csv':
             ddata = _read_text(filename, sep=',', 
                                first_column_names=first_column_names,
@@ -410,6 +412,16 @@ def _read_file(filename, ext, sheet, sep, first_column_names,
         ddata = read_file_to_dict(filename_hdf5)
 
     return ddata
+
+def _read_mtx(filename):
+    """
+    Read mtx file.
+    """
+    from scipy.io import mmread
+    X = mmread(filename).todense()
+    sett.m(0, '--> did not find any rownames or columnnames')
+    sett.m(0, '--> TODO: don\'t use dense format')
+    return {'X': X}
 
 def _read_text(filename, sep=None, first_column_names=False, as_strings=False):
     """ 
@@ -831,7 +843,7 @@ def check_datafile_present(filename, backup_url=''):
             exkey = filename.split('/')[1]
             print('file ' + filename + ' does not exist')
             print('you can produce the datafile by')
-            exit('running subcommand "sim ' + exkey + '"')
+            sys.exit('running subcommand "sim ' + exkey + '"')
 
     if not os.path.exists(filename):
         if os.path.exists('../' + filename):
@@ -839,8 +851,10 @@ def check_datafile_present(filename, backup_url=''):
             return '../' + filename
         else:
             # download the file
-            sett.m(0,'file ' + filename + ' is not present\n' + 
-                  'try downloading from url\n' + backup_url + '\n' + 
+            sett.m(0, 'file ' + filename + ' is not present')
+            if backup_url == '':
+                sys.exit(0)
+            sett.m(0, 'try downloading from url\n' + backup_url + '\n' + 
                   '... this may take a while but only happens once')
             d = os.path.dirname(filename)
             if not os.path.exists(d):
@@ -1035,9 +1049,13 @@ def transpose_ddata(ddata):
         With X transposed and rownames and colnames interchanged.
     """
     ddata['X'] = ddata['X'].T
-    colnames = ddata['colnames']
-    ddata['colnames'] = ddata['rownames']
-    ddata['rownames'] = colnames
+    colnames = None
+    if 'colnames' in ddata:
+        colnames = ddata['colnames']
+    if 'rownames' in ddata:
+        ddata['colnames'] = ddata['rownames']
+    if not colnames is None:
+        ddata['rownames'] = colnames
     return ddata
 
 def subsample(X,subsample=1,seed=0):

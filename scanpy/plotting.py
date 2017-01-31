@@ -148,6 +148,7 @@ def scatter(Ys,
             layout='2d',
             subtitles=['pseudotime', 'segments', 'experimental labels'],
             component_name='DC',
+            component_indexnames=[1, 2, 3],
             axlabels=None,
             **kwargs):
     """ 
@@ -159,14 +160,10 @@ def scatter(Ys,
         Single data array or list of data arrays. Rows store observations,
         columns store variables. For example X, or phi or [phi,psi]. Arrays must
         be of dimension ndim=2.
-    c : string or np.array or list of np.array
-        Colors array, for example [pseudotimes] or [pseudotimes,colors_labels].
-    title : str
-        Title of plot, default ''. 
     layout : str
         Choose from '2d', '3d' and 'unfolded 3d', default '2d'.
-    cmap:
-        Color map
+    comps : iterable
+        Iterable that stores the component indices.
 
     Returns
     -------
@@ -178,14 +175,17 @@ def scatter(Ys,
     # set default axlabels
     if axlabels is None:
         if layout == '2d':
-            axlabels = [[component_name+str(i) for i in idcs] 
-                         for idcs in [[1,2] for iax in range(len(axs))]]            
+            axlabels = [[component_name + str(i) for i in idcs] 
+                         for idcs in 
+                         [component_indexnames for iax in range(len(axs))]]            
         elif layout == '3d':
-            axlabels = [[component_name+str(i) for i in idcs] 
-                         for idcs in [[1,2,3] for iax in range(len(axs))]]
+            axlabels = [[component_name + str(i) for i in idcs] 
+                         for idcs in 
+                         [component_indexnames for iax in range(len(axs))]]
         elif layout == 'unfolded 3d':
-            axlabels = [[component_name+str(i) for i in idcs] 
-                         for idcs in [[2,3],[1,2],[1,2,3],[1,3]]]
+            axlabels = [[component_name 
+                         + str(component_indexnames[i-1]) for i in idcs]
+                         for idcs in [[2, 3], [1, 2], [1, 2, 3], [1, 3]]]
     # set axlabels
     bool3d = True if layout == '3d' else False
     for iax,ax in enumerate(axs):

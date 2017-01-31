@@ -43,7 +43,7 @@ The following command-line examples call the wrapper
 [scripts/scanpy.py](scripts/scanpy.py), which works **without**
 [installation](#install).  To get all required packages (all default in
 [Anaconda](https://www.continuum.io/downloads)), install
-[miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
+[Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
 matplotlib h5py pandas xlrd`.
 
 Download or clone the repository - green button on top of the page - and `cd`
@@ -149,10 +149,34 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 Command-line use through the wrapper [scripts/scanpy.py](scripts/scanpy.py)
 works **without** installation.  To get all required packages (all default
 in [Anaconda](https://www.continuum.io/downloads)), install
-[miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
+[Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
 matplotlib h5py pandas xlrd`.
 
-You can install Scanpy, hence `import scanpy` from anywhere on your system, via
+#### Details
+
+After downloading [Miniconda](http://conda.pydata.org/miniconda.html), in a unix shell (Linux, Mac), run
+```shell
+cd DOWNLOAD_DIR
+chmod +x Miniconda3-latest-VERSION.sh
+./Miniconda3-latest-VERSION.sh
+```
+and accept all suggestions. Either reopen a new terminal or run
+```shell
+source ~/.bashrc
+```
+on Linux and 
+```shell
+source ~/.bash_profile
+```
+on Mac.
+
+Then run
+```shell
+conda install scipy matplotlib h5py pandas xlrd
+```
+The whole process takes about 5 min.
+
+<!--- You can install Scanpy, hence `import scanpy` from anywhere on your system, via
 ```shell
 pip install .
 ```
@@ -162,6 +186,7 @@ system, call `scanpy --help`. The package is
 Index](https://pypi.python.org/pypi), but versioning has not started yet. In the
 future, installation will be possible without reference to GitHub via 
 `pip install scanpy`.
+-->
 
 ## References <a id="references"></a>
 

@@ -69,17 +69,25 @@ def plot(dpca, ddata,
          String denoting matplotlib color map. 
     """
     params = locals(); del params['ddata']; del params['dpca']
-    from numpy import array
-    comps = array(params['comps'].split(',')).astype(int) - 1
     # highlights
     highlights = []
     if False:
         if 'highlights' in ddata:
             highlights = ddata['highlights']
     # base figure
-    axs = plott.scatter(dpca['Y'][:, comps],
+    from numpy import array
+    comps = array(params['comps'].split(',')).astype(int) - 1
+    try:
+        Y = dpca['Y'][:, comps]
+    except IndexError:
+        sett.mi('IndexError: Only computed', dpca['Y'].shape[1], ' components')
+        sett.mi('--> recompute using scanpy exkey pca -p n_components YOUR_NR')
+        from sys import exit
+        exit(0)
+    axs = plott.scatter(Y,
                         subtitles=['PCA'],
                         component_name='PC',
+                        component_indexnames=comps + 1,
                         layout=params['layout'],
                         c='grey',
                         highlights=highlights,

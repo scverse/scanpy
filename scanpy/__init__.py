@@ -184,7 +184,7 @@ def run_args(toolkey, args):
                     if toolkey in key:
                         params = dexample[key]
             except:
-                sett.m(0, 'did not find any example parameters')
+                sett.m(0, 'using default parameters')
                 pass
 
     # subsampling

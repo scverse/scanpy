@@ -164,7 +164,12 @@ def plot(ddpt, ddata, dplot=None,
     if dplot is not None:
         ddpt['Y'] = dplot['Y']
         groups_writekey = ddpt['writekey'] + '_' + dplot['type']
+        params['component_name'] = ('DC' if dplot['type'] == 'diffmap'
+                                    else 'FR' if dplot['type'] == 'drawg'
+                                    else 'tSNE' if dplot['type'] == 'tsne'
+                                    else 'PC')
     else:
+        params['component_name'] = 'DC'
         groups_writekey = ddpt['writekey'] + '_diffmap'
     X = ddata['X']
     ddpt['groupcolors'] = pl.cm.get_cmap(params['cmap'])(
@@ -216,11 +221,19 @@ def plot_groups(ddpt, ddata, params, colors,
     """
     from numpy import array
     comps = array(params['comps'].split(',')).astype(int) - 1
-
     # base figure
+    try:
+        Y = ddpt['Y'][:, comps]
+    except IndexError:
+        sett.mi('IndexError: Only computed', ddpt['Y'].shape[1], ' components')
+        sett.mi('--> recompute using scanpy exkey dpt -p n_components YOUR_NR')
+        from sys import exit
+        exit(0)
     axs = plott.scatter(ddpt['Y'][:, comps],
                         subtitles=['pseudotime','segments',
                                    'experimental groups'],
+                        component_name=params['component_name'],
+                        component_indexnames=comps + 1,
                         layout=params['layout'],
                         c=colors,
                         highlights=highlights,
