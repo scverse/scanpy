@@ -1,7 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Draw the Data Graph
-===================
 
 Simple force-directed graph drawing. In particular, the Fruchterman-Reingold
 algorithm. See https://en.wikipedia.org/wiki/Force-directed_graph_drawing for
@@ -76,7 +75,7 @@ def drawg(ddata, k=4, n_components=2):
     return {'type': 'drawg', 'Y': Y, 'Adj': Adj, 'istep': istep}
 
 def plot(ddrawg, ddata,
-         nrsteps=0,
+         add_steps=0,
          layout='2d',
          legendloc='lower right',
          cmap='jet',
@@ -90,6 +89,8 @@ def plot(ddrawg, ddata,
         Dict returned by diffmap tool.
     ddata : dict
         Data dictionary.
+    add_steps : int
+        Steps to iterate graph drawing algorithm.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
@@ -100,16 +101,16 @@ def plot(ddrawg, ddata,
     params = locals(); del params['ddata']; del params['ddrawg']
     Y = ddrawg['Y']
 
-    if params['nrsteps'] == 0:
-        sett.m(0, 'set parameter nrsteps > 0 to iterate. ' 
+    if params['add_steps'] == 0:
+        sett.m(0, 'set parameter add_steps > 0 to iterate. ' 
                'the current step is', ddrawg['istep'],
-               '\n--> append, for example, "--plotparams nrsteps 1", for a single step')
+               '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         istep = ddrawg['istep']
         _plot(Y, ddata, params, istep)
-        if sett.autoshow:
-            pl.show()
         pl.savefig(sett.figdir+ddrawg['writekey']
                    +'_step{:02}'.format(istep)+'.'+sett.extf)
+        if sett.autoshow:
+            pl.show()
     else:
         Adj = ddrawg['Adj']
         istep = ddrawg['istep']
@@ -119,13 +120,12 @@ def plot(ddrawg, ddata,
         sc.write(ddrawg['writekey']+'_step{:02}'.format(istep), ddrawg)
         # compute the next steps
         istep_init = istep + 1
-        for istep in istep_init + np.arange(params['nrsteps'], dtype=int):
+        for istep in istep_init + np.arange(params['add_steps'], dtype=int):
             sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
             Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
             sett.mt(0, 'finished computation')
             _plot(Y, ddata, params, istep)
             if sett.autoshow:
-                pl.show(block=False)
                 sett.mt(0, 'finished plotting')
             pl.savefig(sett.figdir+ddrawg['writekey']
                        +'_step{:02}'.format(istep)+'.'+sett.extf)
@@ -133,9 +133,9 @@ def plot(ddrawg, ddata,
         ddrawg['Y'] = Y 
         ddrawg['istep'] = istep
         sc.write(ddrawg['writekey'], ddrawg)
-        #
         if sett.autoshow:
             pl.show()
+
 
 def _plot(Y, ddata, params, istep):
     # highlights

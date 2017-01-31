@@ -1,6 +1,5 @@
 """
 Example Data and Use Cases - Builtin Examples
-=============================================
 
 Summarizes example data and use cases.
 
@@ -9,6 +8,8 @@ preprocessing of the raw data.
 
 Attributes
 ----------
+Functions read data and do preprocessing, furthermore
+
 dexdata: dict
     Stores information about example data.
 dexamples: dict 

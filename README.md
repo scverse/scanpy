@@ -65,18 +65,23 @@ python scripts/scanpy.py moignard15 diffmap
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
 cells (segment 1/2) and erythrocytes (segment 3). The inferred *pseudotime*
-traces the degree of cells' progression in the differentiation process.
+traces the degree of cells' progression in the differentiation process. By default,
+this is plotted using Diffusion Maps, but you might just as well plot the subgroups using another
+plotting tool.
 ```shell
 python scripts/scanpy.py moignard15 dpt
+python scripts/scanpy.py moignard15 dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_tsne.png" height="175">
 
 This orders cells by segment, and within each segment, by pseudotime.
 
+<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_heatmap.png" height="250">
 
-With this, we reproduced Fig. 1 from [Haghverdi *et al.*
+
+With this, we also reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
 more information.
 

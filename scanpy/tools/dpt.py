@@ -137,8 +137,8 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
     ddpt['type'] = 'dpt'    
     return ddpt
 
-def plot(ddpt, ddata,
-         comps='1,2,3',
+def plot(ddpt, ddata, dplot=None,
+         comps='1,2',
          layout='2d',
          legendloc='lower right',
          cmap='jet'): # consider changing to 'viridis'
@@ -160,7 +160,12 @@ def plot(ddpt, ddata,
     cmap : str, optional (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['ddpt']
+    params = locals(); del params['ddata']; del params['ddpt']; del params['dplot']
+    if dplot is not None:
+        ddpt['Y'] = dplot['Y']
+        groups_writekey = ddpt['writekey'] + '_' + dplot['type']
+    else:
+        groups_writekey = ddpt['writekey'] + '_diffmap'
     X = ddata['X']
     ddpt['groupcolors'] = pl.cm.get_cmap(params['cmap'])(
                                          pl.Normalize()(ddpt['groupids']))
@@ -178,6 +183,9 @@ def plot(ddpt, ddata,
 
     # a single figure for all colors using 2 diffusion components
     plot_groups(ddpt, ddata, params, colors, highlights)
+    if sett.savefigs:
+        pl.savefig(sett.figdir+groups_writekey+'.'+sett.extf)
+
 
     # plot segments and pseudotimes
     plot_segments_pseudotimes(ddpt, params['cmap'])
@@ -229,10 +237,7 @@ def plot_groups(ddpt, ddata, params, colors,
         for igroup, group in enumerate(ddata['groupmasks']):
             plott.group(axs[2], igroup, ddata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        pl.subplots_adjust(right=0.8)
-
-    if sett.savefigs:
-        pl.savefig(sett.figdir+ddpt['writekey']+'_diffmap.'+sett.extf)
+        pl.subplots_adjust(right=0.88)
 
 def plot_segments_pseudotimes(ddpt, cmap):
     """ 

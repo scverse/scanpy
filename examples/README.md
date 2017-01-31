@@ -16,34 +16,7 @@ Examples using simulated data.
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
-Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
-NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
-```shell
-python scripts/scanpy.py moignard15 pca
-python scripts/scanpy.py moignard15 tsne
-python scripts/scanpy.py moignard15 diffmap
-```
-<img src="http://falexwolf.de/scanpy/figs/moignard15_pca.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_tsne.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap.png" height="175">
-
-Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
-detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
-cells (segment 1/2) and erythrocytes (segment 3). The inferred *pseudotime*
-traces the degree of cells' progression in the differentiation process.
-```shell
-python scripts/scanpy.py moignard15 dpt
-```
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
-
-This orders cells by segment, and within each segment, by pseudotime and outputs
-
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_heatmap.png" height="250">
-
-With this, we reproduced Fig. 1 from [Haghverdi *et al.*
-(2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
-more information.
+See Scanpy [README.md](..).
 
 #### Data of [Paul *et al.* (2015)](#ref_paul15)
 

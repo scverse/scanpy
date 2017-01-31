@@ -235,8 +235,12 @@ def run_args(toolkey, args):
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             dtool = getattr(exmodule, postprocess)(dtool)
             write(writekey, dtool)
-        # plot
-        plot(dtool, ddata, **plotparams)
+        if args['plotkey'] != '':
+            plotwritekey = sett.basekey + '_' +  args['plotkey'] + sett.fsig
+            dplot = read(plotwritekey)
+            plot(dtool, ddata, dplot, **plotparams)
+        else: 
+            plot(dtool, ddata, **plotparams)
 
 def read_args_run_tool(toolkey):
     """

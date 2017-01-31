@@ -1,6 +1,5 @@
 """
 Example Data and Use Cases - User Examples
-==========================================
 
 Add example data and use cases while being assured that no conflicts with
 scanpy/exs/builtin.py in the master branch on GitHub arise. The latter
@@ -11,12 +10,14 @@ example from here to there and make a pull request.
 
 Attributes
 ----------
+Functions read data and do preprocessing, furthermore
+
 dexdata : dict
     Stores information about example data.
 dexamples : dict 
     Stores information about example use cases. The keys in this dictionary also
     exist as a function attribute of this module that performs data reading and
-    preprocessing.
+    preprocessing. 
 """
 
 # this is necessary to import scanpy from within package
