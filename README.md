@@ -80,7 +80,7 @@ This orders cells by segment, and within each segment, by pseudotime.
 
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_heatmap.png" height="250">
 
-With this, we also reproduced most of Fig. 1 from [Haghverdi *et al.*
+With this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
 more information.
 

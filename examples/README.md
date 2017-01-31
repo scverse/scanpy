@@ -16,7 +16,7 @@ Examples using simulated data.
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
-See Scanpy [README.md](..).
+See Scanpy [README.md](https://github.com/theislab).
 
 #### Data of [Paul *et al.* (2015)](#ref_paul15)
 

@@ -470,7 +470,7 @@ def _read_text_raw(filename, sep=None):
         if line.startswith('#'):
             header += line
         else:
-            line_list = line[:-1].split(sep)
+            line_list = line.split(sep)
             data.append(line_list)
     return data, header
 
@@ -526,7 +526,12 @@ def _interpret_as_floats(data, header, first_column_names):
         sett.m(0,'--> assuming first column stores sample names')
         rownames = data[:,0].astype(str)
         # skip the first column
-        X = data[:,1:].astype(float)
+        try:
+            X = data[:, 1:].astype(float)
+        except ValueError as e:
+            msg = 'formating is strange, last line of data matrix is \n'
+            msg += str(data[-1, 1:])
+            raise ValueError(msg)
         if colnames.size > X.shape[1]:
             colnames = colnames[1:]
     # just numbers as rownames
