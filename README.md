@@ -73,13 +73,12 @@ python scripts/scanpy.py moignard15 dpt
 python scripts/scanpy.py moignard15 dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_tsne.png" height="175">
 
 This orders cells by segment, and within each segment, by pseudotime.
 
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_heatmap.png" height="250">
-
 
 With this, we also reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
