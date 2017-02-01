@@ -1,7 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Diffusion Maps
-==============
 
 Diffusion Maps for analysis of single-cell data.
 
@@ -27,7 +26,7 @@ from .. import utils
 from .. import settings as sett
 from .. import plotting as plott
 
-def diffmap(ddata, n_components=10, k=5, knn=False, sigma=0):
+def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -43,7 +42,7 @@ def diffmap(ddata, n_components=10, k=5, knn=False, sigma=0):
     ddata : dictionary containing
         X : np.ndarray
             Data array, rows store observations, columns covariates.
-    n_components : int, optional (default: 3)
+    nr_comps : int, optional (default: 3)
         The number of dimensions of the representation.
     k : int, optional (default: 5)
         Specify the number of nearest neighbors in the knn graph. If knn ==
@@ -74,7 +73,7 @@ def diffmap(ddata, n_components=10, k=5, knn=False, sigma=0):
     ddmap = dmap.diffmap()
     ddmap['type'] = 'diffmap'
     # restrict number of components
-    ddmap['Y'] = ddmap['Y'][:,:params['n_components']]
+    ddmap['Y'] = ddmap['Y'][:,:params['nr_comps']]
     return ddmap
 
 def plot(ddmap, ddata,
@@ -114,7 +113,7 @@ def plot(ddmap, ddata,
         Y = ddmap['Y'][:, comps]
     except IndexError:
         sett.mi('IndexError: Only computed', ddmap['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey diffmap -p n_components YOUR_NR')
+        sett.mi('--> recompute using scanpy exkey diffmap -p nr_comps YOUR_NR')
         from sys import exit
         exit(0)
     axs = plott.scatter(Y,

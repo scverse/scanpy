@@ -1,11 +1,6 @@
-# coding: utf-8
+# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Principal Component Analysis
-============================
-
-From package Scanpy (https://github.com/falexwolf/scanpy).
-Written in Python 3 (compatible with 2).
-Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 
 Notes
 -----
@@ -14,24 +9,22 @@ There are two PCA versions, which are automatically chosen
 - function _pca_fallback
 """
 
-from collections import OrderedDict as odict
-import numpy as np
 from ..compat.matplotlib import pyplot as pl
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
-from ..tools import preprocess
+from ..preprocess import preprocess as pp
 
-def pca(ddata, n_components=10):
+def pca(ddata_or_X, nr_comps=10):
     """
     Embed data using PCA.
 
     Parameters
     ----------
-    ddata : dict containing
+    ddata_or_X : dict containing
         X : np.ndarray
             Data array, rows store observations, columns variables.
-    n_components : int, optional (default: 2)
+    nr_comps : int, optional (default: 2)
         Number of PCs.
 
     Returns
@@ -40,9 +33,17 @@ def pca(ddata, n_components=10):
         Y : np.ndarray
             PCA representation of the data.
     """
-    X = ddata['X']
-    Y = preprocess.pca(X, n_components=n_components)
-    return {'type': 'pca', 'Y': Y}
+    if isinstance(ddata_or_X, dict):      
+        X = ddata_or_X['X']
+        isddata = True
+    else:
+        X = ddata_or_X
+        isddata = False
+    Y = pp(X, 'pca', nr_comps)
+    if isddata:
+        return {'type': 'pca', 'Y': Y}
+    else:
+        return Y
 
 def plot(dpca, ddata,
          comps='1,2,3',
@@ -81,7 +82,7 @@ def plot(dpca, ddata,
         Y = dpca['Y'][:, comps]
     except IndexError:
         sett.mi('IndexError: Only computed', dpca['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey pca -p n_components YOUR_NR')
+        sett.mi('--> recompute using scanpy exkey pca -p nr_comps YOUR_NR')
         from sys import exit
         exit(0)
     axs = plott.scatter(Y,

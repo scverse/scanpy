@@ -87,7 +87,7 @@ dexdata = {
 dexamples = {
 'krumsiek11': {
     'dpt': { 
-        'num_branchings': 2, # detect two branching points (default 1)
+        'nr_branchings': 2, # detect two branching points (default 1)
         'allow_branching_at_root': True }, # allow branching directly at root
     'ctpaths': { 
         'k': 5,
@@ -101,12 +101,21 @@ dexamples = {
         }
     },
 'paul15': {
-    'dpt/diffmap': {'k': 20, 'knn': True},
     'ctpaths': { 
         'num_fates': 2,
         'k': 20, # increase number of neighbors (default 5)
         'knn': True }, # set a hard threshold on number of neighbors
-    'difftest': { 'log': False, 'groupnames': ['GMP','MEP'] }
+    'dpt/diffmap': {'k': 20, 'knn': True},
+    'difftest': {'log': False, 'groupnames': ['GMP', 'MEP']}
+    },
+'paul15pca': {
+    'datakey': 'paul15',
+    'ctpaths': { 
+        'num_fates': 2,
+        'k': 20, # increase number of neighbors (default 5)
+        'knn': True }, # set a hard threshold on number of neighbors
+    'dpt/diffmap': {'k': 20, 'knn': True},
+    'difftest': {'log': False, 'groupnames': ['GMP', 'MEP']}
     },
 'toggleswitch': {
     'ctpaths': {'fates': {0: 95, 1: 189}},
@@ -227,8 +236,19 @@ def paul15():
             Expression vector of root cell.
     """
     ddata = paul15_raw()
-    ddata = sc.preprocess(ddata,'log')
+    ddata['X'] = sc.pp(ddata['X'], 'log')
+    # adjust expression vector of root cell
+    ddata['xroot'] = ddata['X'][ddata['iroot']]
     return ddata
+
+def paul15pca():
+    ddata = paul15_raw()
+    ddata['X'] = sc.pp(ddata['X'], 'log')
+    # reduce to 50 components
+    ddata['Xpca'] = sc.pca(ddata['X'])
+    # adjust expression vector of root cell
+    ddata['xroot'] = ddata['Xpca'][ddata['iroot']]
+    return ddata    
 
 def toggleswitch():
     """ 
@@ -271,7 +291,8 @@ def moignard15_raw():
     ddata['X'] = X[:, genes] # filter data matrix
     ddata['colnames'] = genenames[genes] # filter genenames
     # choose root cell as in Haghverdi et al. (2016)
-    ddata['xroot'] = ddata['X'][532] # note that in Matlab/R, counting starts at 1
+    ddata['iroot'] = 532 # note that in Matlab/R, counting starts at 1
+    ddata['xroot'] = ddata['X'][ddata['iroot']] 
     # defne groupnames and groupnames_n
     # coloring according to Moignard et al. (2015) experimental cell groups
     groupnames = np.array(['HF', 'NP', 'PS', '4SG', '4SFG'])
@@ -323,10 +344,15 @@ def paul15_raw():
     ddata['X'] = X
     ddata['colnames'] = genenames
     # set root cell as in Haghverdi et al. (2016)
-    ddata['xroot'] = X[840] # note that in Matlab/R, counting starts at 1
+    ddata['iroot'] = 840 # note that in Matlab/R, counting starts at 1
+    ddata['xroot'] = X[ddata['iroot']] 
     return ddata
 
 def paul15_dpt(ddpt):
     ddpt['groupnames'] = ['','GMP','','MEP']
+    return ddpt
+
+def paul15pca_dpt(ddpt):
+    ddpt['groupnames'] = ['','','GMP','MEP']
     return ddpt
 

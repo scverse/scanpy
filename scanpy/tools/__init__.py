@@ -1,12 +1,14 @@
-# coding: utf-8
+"""
+Tools
+"""
 
 from . import diffmap
 from . import difftest
-from . import preprocess
 from . import dpt
 from . import tsne
 from . import sim
 from . import drawg
+
 try:
     # development tools
     from . import ctpaths

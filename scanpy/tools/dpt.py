@@ -31,7 +31,7 @@ from .. import plotting as plott
 from .. import utils
 from .. import graph
 
-def dpt(ddata, num_branchings=1, k=5, knn=False, 
+def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         sigma=0, allow_branching_at_root=False):
     """
     Perform DPT analsysis as of Haghverdi et al. (2016).
@@ -43,13 +43,15 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
     Parameters
     ----------
     ddata : dict containing
-        X : np.ndarray
+        X or Xpca: np.ndarray
             Data array, rows store observations, columns variables.
+            Consider preprocessing with PCA. -> If there is an array Xpca,
+            dpt will use this one.
         xroot : np.ndarray
             Root of stochastic process on data points (root cell), specified
             either as expression vector of shape X.shape[1] or as index. The
             latter is not recommended.
-    num_branchings : int, optional (default: 1)
+    nr_branchings : int, optional (default: 1)
         Number of branchings to detect.
     k : int, optional (default: 5)
         Specify the number of nearest neighbors in the knn graph. If knn ==
@@ -60,6 +62,9 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
+    nr_pcs:
+        Use nr_pcs PCs to compute DPT distance matrix -> speeds up the
+        computation at almost no loss of accuracy.
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
         of the Kernel Gaussian (method 'global').
@@ -93,12 +98,11 @@ def dpt(ddata, num_branchings=1, k=5, knn=False,
             Array of size (number of cells). Eigenvalues of transition matrix.
     """
     params = locals(); del params['ddata']
-    X = ddata['X']
     xroot = ddata['xroot']
-    dpt = DPT(X, params)
+    dpt = DPT(ddata, params)
     # diffusion map
     ddpt = dpt.diffmap()
-    sett.m(0,'perform Diffusion Pseudotime Analysis')
+    sett.m(0, 'perform Diffusion Pseudotime Analysis')
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
     dpt.compute_M_matrix()
@@ -285,7 +289,7 @@ class DPT(graph.DataGraph):
         """ 
         Detect branchings and partition the data into corresponding segments.
 
-        Detect all branchings up to params['num_branchings'].
+        Detect all branchings up to params['nr_branchings'].
 
         Writes
         ------
@@ -360,7 +364,7 @@ class DPT(graph.DataGraph):
 
     def detect_branchings(self):
         """ 
-        Detect all branchings up to params['num_branchings'].
+        Detect all branchings up to params['nr_branchings'].
 
         Writes Attributes
         -----------------
@@ -369,7 +373,7 @@ class DPT(graph.DataGraph):
         segstips : np.ndarray
             List of indices of the tips of segments.
         """
-        sett.m(0,'detect',self.params['num_branchings'],'branchings')
+        sett.m(0,'detect',self.params['nr_branchings'],'branchings')
         # a segment is a subset of points of the data set
         # it's completely defined by the indices of the points in the segment
         # initialize the search for branchings with a single segment,
@@ -400,7 +404,7 @@ class DPT(graph.DataGraph):
         tips_all = list(np.unravel_index(np.argmax(self.Dchosen),self.Dchosen.shape))
         # we keep a list of the tips of each segment
         segstips = [tips_all]
-        for ibranch in range(self.params['num_branchings']):
+        for ibranch in range(self.params['nr_branchings']):
             # out of the list of segments, determine the segment
             # that most strongly deviates from a straight line
             # and provide the three tip points that span the triangle

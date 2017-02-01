@@ -23,7 +23,7 @@ from .. import utils
 
 step_size = 10
 
-def drawg(ddata, k=4, n_components=2):
+def drawg(ddata, k=4, nr_comps=2):
     """
     Visualize data using graph drawing algorithms.
 
@@ -36,7 +36,7 @@ def drawg(ddata, k=4, n_components=2):
             Data array, rows store observations, columns covariates.
     k : int
         Number of nearest neighbors in graph.
-    n_components : int
+    nr_comps : int
         Number of principal components in preprocessing PCA.
 
     Returns

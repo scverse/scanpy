@@ -3,11 +3,9 @@
 Scanpy - Single-Cell Analysis in Python
 =======================================
 
-Defines shortcut functions for calling tools.
-
-Reference of Development Version
---------------------------------
-Wolf & Theis, bioRxiv doi:... (2017)
+Reference
+---------
+Wolf, Angerer & Theis, bioRxiv doi:... (2017)
 """
 
 # standard modules
@@ -17,17 +15,19 @@ from .compat.matplotlib import pyplot as pl
 # scanpy modules
 from . import settings as sett
 from . import tools
+from . import preprocess
 from . import utils
 from .tools import get_tool
 # reexports
 from .utils import read, write, read_params, transpose_ddata
 from .exs import exdata, examples, example, annotate
+from .preprocess import preprocess, pp
+from .preprocess.advanced import subsample
 from .tools.diffmap import diffmap
 from .tools.tsne import tsne
 from .tools.dpt import dpt
 from .tools.difftest import difftest
 from .tools.sim import sim
-from .tools.preprocess import preprocess, subsample
 
 __all__ = [
     # example use cases
@@ -41,7 +41,7 @@ __all__ = [
     'write',
     'annotate',
     # preprocessing
-    'preprocess',
+    'preprocess', 'pp',
     'subsample',
     # visualization
     'diffmap',
@@ -225,13 +225,16 @@ def run_args(toolkey, args):
             # TODO: Would be good to name the first argument dprev_or_ddata
             #       in difftest, but this doesn't work
             del params['dprev']
-            del params['ddata']
         else:
             dtool = tool(ddata, **params)
             params = getcallargs(tool, ddata, **params)
+        if 'ddata' in params:
             del params['ddata']
+        elif 'ddata_or_X' in params:
+            del params['ddata_or_X']
         dtool['writekey'] = writekey
         write(writekey, dtool)
+        sett.m(0, 'wrote result to', utils.get_filename_from_key(writekey))
         # save a copy of the parameters to a file
         utils.write_params(paramsfile, params)
 

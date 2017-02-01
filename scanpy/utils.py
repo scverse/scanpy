@@ -250,6 +250,10 @@ def write_params(filename,*args,**dicts):
 # Reading and Writing data files and dictionaries
 #--------------------------------------------------------------------------------
 
+def get_filename_from_key(key):
+    filename = sett.writedir + key + '.' + sett.extd
+    return filename
+
 def write(filename_or_key, dictionary):
     """
     Writes dictionaries - as returned by tools - to file.
@@ -265,11 +269,13 @@ def write(filename_or_key, dictionary):
     filename_or_key : str
         Filename of data file or key used in function write(key,dict).
     """
-    if 'writekey' not in dictionary:
-        dictionary['writekey'] = filename_or_key
-    filename = sett.writedir + filename_or_key + '.' + sett.extd
     if is_filename(filename_or_key):
-        filename = filename_or_key    
+        filename = filename_or_key
+    else:
+        key = filename_or_key
+        filename = get_filename_from_key(key)
+        if 'writekey' not in dictionary:
+            dictionary['writekey'] = key
     write_dict_to_file(filename, dictionary)
 
 def read(filename_or_key, sheet='', sep=None, first_column_names=False, 

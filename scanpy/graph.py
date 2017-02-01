@@ -1,7 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
-Spectral Graph Tools
-====================
+Data Graph
 """   
 
 # standard modules
@@ -21,17 +20,31 @@ class DataGraph:
     Class for treating graphs.
     """
 
-    def __init__(self, X_or_Dsq, params):
+    def __init__(self, ddata_or_X_or_Dsq, params):
         """ 
         """
-        if X_or_Dsq.shape[0] == X_or_Dsq.shape[1]:
-            sett.m(0,'computing data graph from distance matrix')
-            self.Dsq = X_or_Dsq
-            self.X = None
+        if isinstance(ddata_or_X_or_Dsq, dict):
+            isddata = True
+            ddata = ddata_or_X_or_Dsq
         else:
-            sett.m(0,'computing data graph from data matrix')
-            self.X = X_or_Dsq
+            isddata = False
+            X_or_Dsq = ddata_or_X_or_Dsq
+        if isddata:
             self.Dsq = None
+            if 'Xpca' in ddata:
+                self.X = ddata['Xpca']
+                sett.m(0, '--> using Xpca for DPT')
+            else:
+                self.X = ddata['X']
+        else:
+            if X_or_Dsq.shape[0] == X_or_Dsq.shape[1]:
+                sett.m(0,'--> computing data graph from distance matrix')
+                self.Dsq = X_or_Dsq
+                self.X = None
+            else:
+                sett.m(0,'--> computing data graph from data matrix')
+                self.X = X_or_Dsq
+                self.Dsq = None
         self.N = self.X.shape[0]
         self.params = params
         if self.params['sigma'] > 0:
@@ -44,7 +57,7 @@ class DataGraph:
         Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
-        sett.m(0,'computing Diffusion Map with method',
+        sett.mt(0, 'start computing Diffusion Map with method',
                  '"'+self.params['method']+'"')
         self.compute_transition_matrix()
         self.embed()
@@ -90,6 +103,9 @@ class DataGraph:
         Coifman et al. (2005).
         """
         if self.Dsq is None:
+            if self.X.shape[1] > 1000:
+                sett.m(0, '--> high number of dimensions for computing distance matrix\n'
+                       '    consider preprocessing using PCA')
             # compute distance matrix in squared Euclidian norm
             Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
         else:
@@ -321,10 +337,15 @@ class DataGraph:
         - Is based on the M matrix. 
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
-        self.Dbool = True
+        if self.M.shape[0] > 1000 and self.params['nr_pcs'] == 0:
+            sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
+                   '    by setting nr_pcs > 0 you can speed up the computation')
+        if self.params['nr_pcs'] > 0:
+            import scanpy.preprocess as pp
+            self.M = pp(self.M, 'pca', nr_comps=self.params['nr_pcs'])
         self.Ddiff = sp.spatial.distance.pdist(self.M)
         self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
-        sett.mt(0,'computed Ddiff distance matrix')
+        sett.mt(0, 'computed Ddiff distance matrix')
         self.Dchosen = self.Ddiff
 
     def compute_C_matrix(self):

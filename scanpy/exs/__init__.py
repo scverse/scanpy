@@ -1,12 +1,6 @@
-# coding: utf-8
+# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Example Data and Example Use Cases
-==================================
-
-From package Scanpy (https://github.com/theislab/scanpy).
-Written in Python 3 (compatible with 2).
-Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
-
 """
 
 from . import builtin, user
@@ -14,8 +8,7 @@ from .. import utils
 from .. import settings as sett
 
 def exdata(format='plain'):
-    """
-    Show available example data.
+    """Show available example data.
     """
     if format == 'plain':
         s = utils.pretty_dict_string(dexdata())
@@ -24,14 +17,14 @@ def exdata(format='plain'):
     print(s)
 
 def examples():
-    """
-    Show available example use cases.
+    """Show available example use cases.
     """
     s = utils.pretty_dict_string(dexamples())
     print(s)
 
 def dexdata(): 
-    """ Example data. """
+    """Example data.
+    """
     all_dex = utils.merge_dicts(builtin.dexdata, user.dexdata)
     try:
         # additional possibility to add example module
@@ -42,7 +35,8 @@ def dexdata():
     return all_dex
 
 def dexamples():
-    """ Example use cases. """
+    """Example use cases.
+    """
     builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
     user_dex = utils.fill_in_datakeys(user.dexamples, user.dexdata)
     all_dex = utils.merge_dicts(builtin_dex, user_dex) 
@@ -89,17 +83,17 @@ def example(exkey, return_module=False):
         Example module.
     """
     try:
-        _exkey = getattr(user, exkey)
+        exfunc = getattr(user, exkey)
         exmodule = user
     except AttributeError:
         try:
             # additional possibility to add example module
             from . import user_private
-            _exkey = getattr(user_private, exkey)
+            exfunc = getattr(user_private, exkey)
             exmodule = user_private
         except (ImportError, AttributeError):
             try:
-                _exkey = getattr(builtin, exkey)
+                exfunc = getattr(builtin, exkey)
                 exmodule = builtin
             except AttributeError:
                 msg = ('Do not know how to run example "' + exkey +
@@ -111,7 +105,7 @@ def example(exkey, return_module=False):
                 exit(msg)
 
     # run the function
-    ddata = _exkey()
+    ddata = exfunc()
 
     # add exkey to ddata
     ddata['exkey'] = exkey

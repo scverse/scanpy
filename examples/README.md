@@ -1,7 +1,10 @@
 # Examples
 
-<!--- call "./scripts/scanpy.py exdata markup" to get this output -->
-Examples using experimental data.
+<!--- ----------------------------------------------------------------------- -->
+<!--- call "./scripts/scanpy.py exdata markup" to get the list below          -->
+
+## Sorted according to experiment
+
 * [moignard15](#moignard15) - [Moignard *et al.*, Nature Biotechnology 33, 269 (2015)](http://dx.doi.org/10.1038/nbt.3154)   
 *Decoding the regulatory network of early blood development from single-cell gene expression measurements*
 * [paul15](#paul15) - [Paul *et al.*, Cell 163, 1663 (2015)](http://dx.doi.org/10.1016/j.cell.2015.11.013)   
@@ -14,6 +17,18 @@ Examples using simulated data.
 *Simple toggle switch model.*   
 
 
+<!--- ----------------------------------------------------------------------- -->
+<!--- start the technical topics list here                                    -->
+
+## Sorted according to technical aspects
+
+* preprocessing with PCA - [paul15pca](#paul15pca)
+
+
+
+<!--- ----------------------------------------------------------------------- -->
+<!--- list the actual description of examples here                            -->
+
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
 See Scanpy [README.md](https://github.com/theislab).
@@ -23,19 +38,51 @@ See Scanpy [README.md](https://github.com/theislab).
 Diffusion Pseudotime (DPT) analysis detects the branch of granulocyte/macrophage
 progenitors (GMP), and the branch of megakaryocyte/erythrocyte progenitors
 (MEP). There are two small further subgroups (*segments* 0 and 2).
-```shell
-python scripts/scanpy.py paul15 dpt
+```
+./scripts/scanpy.py paul15 dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_segpt.png" height="175">
 
 We can now test for differential gene expression.
-```shell
-python scripts/scanpy.py paul15 difftest
+```
+./scripts/scanpy.py paul15 difftest --prev dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
 
 See the [notebook](examples/paul15.ipynb) for more information.
+
+##### Preprocessing with PCA <a id="paul15pca"></a>
+
+As for most methods that build a data graph, i.e., compute a distance matrix, preprocessing by PCA speeds up
+computations tremendously. Distance matrix computations in high dimensions are a very demanding problems.
+
+Does this preprocessing change the biology?
+```
+./scripts/scanpy.py paul15pca dpt
+./scripts/scanpy.py paul15pca dpt difftest --prev dpt
+```
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_diffmap.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_difftest.png" height="175">
+
+Even though the diffmap representation has changed a lot, the differential genes are still the same.
+Let us check whether the subgroups look much different in tSNE.
+```
+./scripts/scanpy.py paul15 tsne
+cp write/paul15_tsne.h5 write/paul15pca_tsne.h5
+./scripts/scanpy.py paul15 dpt tsne
+./scripts/scanpy.py paul15pca dpt tsne
+```
+<img src="http://falexwolf.de/scanpy/figs/paul15_dpt_tsne.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_tsne.png" height="175">
+
+Even though diffusion components 1 and 2 were considerably affected by preprocessing
+with PCA, subgroup identification has not!
+
+Note that, as tSNE yields non-deterministic output, we used the file
+`write/paul15_tsne.h5` also for plotting `paul15pca` (`cp write/paul15_tsne.h5
+write/paul15pca_tsne.h5`).
 
 #### Simulated myeloid progenitor data ([Krumsiek *et al.*, 2011](#ref_krumsiek11)) <a id="krumsiek11"></a>
 

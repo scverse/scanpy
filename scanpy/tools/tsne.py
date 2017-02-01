@@ -1,10 +1,9 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 t-SNE
-=====
 
-Credits
--------
+References
+----------
 This module automatically choose from three t-SNE versions from
 - sklearn.manifold.TSNE
 - Dmitry Ulyanov (multicore, fastest)
@@ -23,16 +22,18 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
-def tsne(ddata, numPCs=50, perplexity=30):
+def tsne(ddata, nr_pcs=50, perplexity=30):
     """
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
     Parameters
     ----------
     ddata : dictionary containing
-        X : np.ndarray
-            Data array, rows store observations, columns covariates.
-    numPCs : int
+        X or Xpca: np.ndarray
+            Data array, rows store observations, columns variables.
+            Consider preprocessing with PCA. -> If there is an array Xpca,
+            dpt will use this one.
+    nr_pcs : int
         Number of principal components in preprocessing PCA.
 
     Parameters as used in sklearn.manifold.TSNE:
@@ -47,16 +48,21 @@ def tsne(ddata, numPCs=50, perplexity=30):
     """
     params = locals(); del params['ddata']
     sett.m(0,'perform tSNE')
+    sett.m(0,'--> mind that this is not deterministic!')
     # preprocessing by PCA
-    if params['numPCs'] > 0 and ddata['X'].shape[1] > params['numPCs']:
-        sett.m(0, 'preprocess using PCA with', params['numPCs'], 'PCs')
-        sett.m(0, '--> avoid this by setting numPCs = 0')
-        dpca = pca(ddata, n_components=params['numPCs'])
-        X = dpca['Y']
+    if 'Xpca' in ddata:
+        X = ddata['Xpca']
+        sett.m(0, 'using Xpca for tSNE')
     else:
-        X = ddata['X']
+        if params['nr_pcs'] > 0 and ddata['X'].shape[1] > params['nr_pcs']:
+            sett.m(0, 'preprocess using PCA with', params['nr_pcs'], 'PCs')
+            sett.m(0, '--> avoid this by setting nr_pcs = 0')
+            dpca = pca(ddata, nr_comps=params['nr_pcs'])
+            X = dpca['Y']
+        else:
+            X = ddata['X']
     # params for sklearn
-    params_sklearn = {k: v for k, v in params.items() if not k=='numPCs'}
+    params_sklearn = {k: v for k, v in params.items() if not k=='nr_pcs'}
     params_sklearn['verbose'] = sett.verbosity
     # deal with different tSNE implementations
     try:
@@ -68,7 +74,7 @@ def tsne(ddata, numPCs=50, perplexity=30):
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
-            sett.m(0,'--> perform tSNE using sklearn')
+            sett.m(1,'--> perform tSNE using sklearn!')
             sett.m(1,'--> can be sped up by installing\n' 
                      '    https://github.com/DmitryUlyanov/Multicore-TSNE')
             Y = tsne.fit_transform(X)            
