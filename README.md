@@ -106,7 +106,7 @@ or, if you want to call from the command-line, modify the function `myexample()`
 in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy and paste from
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using
 ```shell
-python scripts/scanpy.py pca myexample
+python scripts/scanpy.py myexample pca
 ```
 
 Also, it'd be awesome if you provide your working example for the public Scanpy
@@ -130,13 +130,13 @@ al.* (2016)](#ref_haghverdi16).
 [dpt](scanpy/tools/dpt.py) implements Diffusion Pseudotime as introduced by [Haghverdi *et
 al.* (2016)](#ref_haghverdi16).
 
-The functions of these diffmap and dpt compare to the R package
+The functions of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
 ### sim <a id="sim"></a>
 
-[sim](scanpy/_sim.py) provides a way to sample from continuous stochastic
+[sim](scanpy/_sim.py) provides a way to sample from stochastic
 differential equations that correspond to simple, qualitiative,
 literature-curated boolean gene regulatory networks, as suggested by [Wittmann
 *et al.* (2009)](#ref_wittmann09).
