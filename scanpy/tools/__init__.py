@@ -7,9 +7,10 @@ from . import dpt
 from . import tsne
 from . import sim
 from . import drawg
-# development tools
 try:
+    # development tools
     from . import ctpaths
+    from . import scdg
 except ImportError:
     pass
 
@@ -25,3 +26,4 @@ def get_tool(toolkey, func=False):
         return getattr(tool, toolkey)
     else:
         return tool
+

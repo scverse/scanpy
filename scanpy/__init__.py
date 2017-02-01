@@ -170,31 +170,43 @@ def run_args(toolkey, args):
     else:
         ddata, exmodule = example(args['exkey'], return_module=True)
         params = {}
+        # try to load tool parameters from dexamples
+        try:
+            did_not_find_params_in_exmodule = False
+            dexample = exmodule.dexamples[args['exkey']]
+            params = {}
+            for key in dexample.keys():
+                if toolkey in key:
+                    params = dexample[key]
+        except:
+            did_not_find_params_in_exmodule = True
+            pass
+        # if parameters have been specified in a parameter file
+        # update the current param dict with these
+        if args['paramsfile'] != '':
+            add_params = read_params(args['paramsfile'])
+            params = utils.update_params(params, add_params)
+        # same if parameters have been specified on the command line
         if args['params']:
-            params = utils.get_params_from_list(args['params'])
-        # if a parameter file has been specified, load the parameter file
-        elif args['paramsfile'] != '':
-            params = read_params(args['paramsfile'])
-        # otherwise, load tool parameters from dexamples
-        else:
-            try:
-                dexample = exmodule.dexamples[args['exkey']]
-                params = {}
-                for key in dexample.keys():
-                    if toolkey in key:
-                        params = dexample[key]
-            except:
-                sett.m(0, 'using default parameters')
-                pass
+            add_params = utils.get_params_from_list(args['params'])
+            params = utils.update_params(params, add_params)
+        elif did_not_find_params_in_exmodule and args['paramsfile'] != '':
+            sett.m(0, 'using default parameters, change them using "--params"')
 
     # subsampling
     if args['subsample'] != 1:
-        ddata = subsample(ddata,args['subsample'])
+        ddata = subsample(ddata, args['subsample'])
 
     # previous tool
-    if 'prev' in args:
+    if args['prev'] != '':
         prevkey = sett.basekey + '_' + args['prev'] + sett.fsig
         dprev = read(prevkey)
+    # all tools that require a previous tool
+    elif toolkey in ['difftest', 'scdg']:
+        print('Error: need to provide a tool to option --prev')
+        print('--> presumably one for identification of subgroups')
+        from sys import exit
+        exit(0)
     
     # simply load resultfile
     if os.path.exists(resultfile) and not sett.recompute:
@@ -207,7 +219,7 @@ def run_args(toolkey, args):
         if toolkey == 'sim':
             dtool = tool(**params)
             params = getcallargs(tool, **params)
-        elif 'prev' in args:
+        elif args['prev'] != '':
             dtool = tool(dprev, ddata, **params)
             params = getcallargs(tool, dprev, ddata, **params)
             # TODO: Would be good to name the first argument dprev_or_ddata
@@ -236,11 +248,15 @@ def run_args(toolkey, args):
             dtool = getattr(exmodule, postprocess)(dtool)
             write(writekey, dtool)
         if args['plotkey'] != '':
-            plotwritekey = sett.basekey + '_' +  args['plotkey'] + sett.fsig
+            plotwritekey = sett.exkey + '_' +  args['plotkey'] + sett.fsig
             dplot = read(plotwritekey)
-            plot(dtool, ddata, dplot, **plotparams)
+            sett.m(0, '--> using result', plotwritekey, 'for plotting')
+            plotargs = [dtool, ddata, dplot]
         else: 
-            plot(dtool, ddata, **plotparams)
+            plotargs = [dtool, ddata]
+        if args['prev'] != '':
+            plotargs.append(dprev)
+        plot(*tuple(plotargs), **plotparams)
 
 def read_args_run_tool(toolkey):
     """

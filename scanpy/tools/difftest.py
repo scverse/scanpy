@@ -218,19 +218,19 @@ def difftest_shedden(ddata=None, params=None):
 
     return ddifftest
     
-def add_args(p):
-    """
-    Update parser.
-    """
-    # dictionary for adding arguments
-    dadd_args = {
-        '--prev' : {
-            'type' : str,
-            'default' : 'dpt',
-            'help' : 'Specify the "previous" tool ' 
-                     '- the one you used to generate subgroups of the '
-                     'data. For example, "scct" or "dpt" (default: dpt).'
-            }
-        }
-    p = utils.add_args(p,dadd_args)
-    return p
+# def add_args(p):
+#     """
+#     Update parser.
+#     """
+#     # dictionary for adding arguments
+#     dadd_args = {
+#         '--prev' : {
+#             'type' : str,
+#             'default' : 'dpt',
+#             'help' : 'Specify the "previous" tool ' 
+#                      '- the one you used to generate subgroups of the '
+#                      'data. For example, "scct" or "dpt" (default: dpt).'
+#             }
+#         }
+#     p = utils.add_args(p, dadd_args)
+#     return p

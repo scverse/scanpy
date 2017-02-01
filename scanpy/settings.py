@@ -27,8 +27,19 @@ from matplotlib import rcParams
 verbosity = 1
 """ Set global verbosity level, choose from {0,...,6}. """
 
+exkey = ''
+""" Global example key.
+"""
+
 suffix = ''
 """ Global suffix, which is appended to basekey of output and figure files.
+"""
+
+plotsuffix = ''
+""" Global suffix which is appended to figure filenames.
+
+Is needed when the computation parameters remain unchanged, but only plotting
+parameters are changed.
 """
 
 extd = 'h5'
@@ -38,7 +49,7 @@ Allowed are 'h5' (hdf5), 'xlsx' (Excel) or 'csv' (comma separated value
 file).
 """
 
-extf = 'pdf'
+extf = 'png'
 """ Global file extension for saving figures.
 
 Recommended are 'png' and 'pdf'. Many other formats work as well (see
@@ -104,12 +115,12 @@ def add_args(p):
             ' of the data (default: %(default)d).')
     aa = p.add_argument_group('Save figures').add_argument
     aa('--savefigs',
-       type=str, default='', const='pdf', nargs='?', metavar='extf',
-       help='Save figures to files. With the exception of interactive sessions,'
-            ' and do not show interactive plots anymore.'
-            ' Specify the file format via the extension, e.g.'
-            ' "pdf" or "png". Just providing "--savefigs" will save to "pdf"'
-            ' (default: do not save figures).')
+       type=str, default='', const=extf, nargs='?', metavar='extf',
+       help='Save figures to files. With the exception of interactive sessions, '
+            'and do not show interactive plots anymore. '
+            'Specify the file format via the extension, e.g. "pdf", '
+            '"svg", "png". Just providing "--savefigs" will save to "png" '
+            '(default: do not save figures).')
     aa('--figdir',
        type=str, default=figdir, metavar='dir',
        help='Change figure directory (default: %(default)s).')
@@ -120,6 +131,10 @@ def add_args(p):
     aa('--suffix',
        type=str, default='', metavar='suffix',
        help='Specify suffix to append to example key'
+            ' (default: "").')
+    aa('--plotsuffix',
+       type=str, default='', metavar='psuffix',
+       help='Specify suffix to append to suffix, when you simply change plotting parameters'
             ' (default: "").')
     aa = p.add_argument_group('General settings').add_argument
     aa('-h', '--help',
@@ -158,6 +173,10 @@ def process_args(args):
     suffix = args['suffix']
     args.pop('suffix')
 
+    global plotsuffix
+    plotsuffix = args['plotsuffix']
+    args.pop('plotsuffix')
+
     global recompute
     recompute = args['recompute']
     args.pop('recompute')
@@ -195,8 +214,10 @@ def process_args(args):
     args.pop('writedir')
 
     # from these arguments, init further global variables
+    global exkey
     global basekey
     if 'exkey' in args:
+        exkey = args['exkey']
         basekey = args['exkey'] + suffix
     else:
         basekey = 'test' + suffix

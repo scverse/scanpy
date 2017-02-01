@@ -1,7 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Diffusion Pseudotime Analysis
-=============================
 
 Perform Diffusion Pseudotime analysis of an expression matrix, given the
 expression vector of an "initial state" = "root cell".
@@ -171,6 +170,7 @@ def plot(ddpt, ddata, dplot=None,
     else:
         params['component_name'] = 'DC'
         groups_writekey = ddpt['writekey'] + '_diffmap'
+    ddpt['groups_writekey'] = groups_writekey
     X = ddata['X']
     ddpt['groupcolors'] = pl.cm.get_cmap(params['cmap'])(
                                          pl.Normalize()(ddpt['groupids']))
@@ -188,9 +188,6 @@ def plot(ddpt, ddata, dplot=None,
 
     # a single figure for all colors using 2 diffusion components
     plot_groups(ddpt, ddata, params, colors, highlights)
-    if sett.savefigs:
-        pl.savefig(sett.figdir+groups_writekey+'.'+sett.extf)
-
 
     # plot segments and pseudotimes
     plot_segments_pseudotimes(ddpt, params['cmap'])
@@ -251,6 +248,10 @@ def plot_groups(ddpt, ddata, params, colors,
             plott.group(axs[2], igroup, ddata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         pl.subplots_adjust(right=0.88)
+
+    if sett.savefigs:
+        pl.savefig(sett.figdir + ddpt['groups_writekey']
+                   + sett.plotsuffix + '.'+sett.extf)
 
 def plot_segments_pseudotimes(ddpt, cmap):
     """ 

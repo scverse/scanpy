@@ -60,21 +60,35 @@ def fill_in_datakeys(dexamples, dexdata):
 # Deal with tool parameters
 #--------------------------------------------------------------------------------
 
-def init_params(params, default_params, check=True):
+def update_params(old_params, new_params, check=False):
     """
-    Update default paramaters with params.
+    Update old_params with new_params.
+
+    If check==False, this merely adds and overwrites the content of old_params.
+
+    If check==True, this only allows updating of parameters that are already
+    present in old_params.
+
+    Parameters
+    ----------
+    old_params : dict
+    new_params : dict
+    check : bool, optional (default: False)
+
+    Returns
+    -------
+    updated_params : dict
     """
-    _params = dict(default_params)
-    if params: # allow for params to be None
-        for key, val in params.items():
-            if key in default_params:
-                _params[key] = val
-            elif check:
+    updated_params = dict(old_params)
+    if new_params: # allow for new_params to be None
+        for key, val in new_params.items():
+            if not key in old_params and check:
                 raise ValueError('\'' + key 
                                  + '\' is not a valid parameter key, '
                                  + 'consider one of \n' 
-                                 + str(list(default_params.keys())))
-    return _params
+                                 + str(list(old_params.keys())))
+            updated_params[key] = val
+    return updated_params
 
 #--------------------------------------------------------------------------------
 # Command-line argument reading and processing
@@ -125,7 +139,7 @@ def add_args(p, dadd_args=None):
             'See possible keys by calling "--plotparams help" (default: "").')
 
     aa = p.add_argument_group('Toolchain').add_argument
-    aa('--pre',
+    aa('--prev',
        type=str, default='', metavar='tool',
        help='Tool whose output should be used as input, ' 
             'often a tool that detects subgroups (default: tool dependent).')

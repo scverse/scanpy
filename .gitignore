@@ -3,6 +3,14 @@ data/
 figs/
 */figs/
 write/
+sim/hill*
+sim/var*
+scanpy.egg-info/
+
+# private files
+scanpy/exs/user_private.py
+scanpy/tools/ctpaths.py
+scanpy/tools/scdg.py
 
 # always-ignore extensions
 *~

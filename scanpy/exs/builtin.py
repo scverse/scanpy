@@ -101,7 +101,7 @@ dexamples = {
         }
     },
 'paul15': {
-    'dpt/diffmap': { 'k': 20, 'knn': True }, 
+    'dpt/diffmap': {'k': 20, 'knn': True},
     'ctpaths': { 
         'num_fates': 2,
         'k': 20, # increase number of neighbors (default 5)
@@ -109,7 +109,8 @@ dexamples = {
     'difftest': { 'log': False, 'groupnames': ['GMP','MEP'] }
     },
 'toggleswitch': {
-    'difftest': { 'log': False }
+    'ctpaths': {'fates': {0: 95, 1: 189}},
+    'difftest': {'log': False}
     }
 }
 

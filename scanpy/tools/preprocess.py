@@ -108,7 +108,8 @@ def pca(X, n_components=2, exact=True):
     """
     Return PCA representation of data.
 
-    Beware, the sklearn implementation is not completely deterministic!
+    Mind that the sklearn implementation is not completely deterministic,
+    even if the 'arpack' solver is used. # Alex now thinks it's determinisitic.
 
     Parameters
     ----------
@@ -133,6 +134,8 @@ def pca(X, n_components=2, exact=True):
             svd_solver = 'randomized'
         p = PCA(n_components=n_components, svd_solver=svd_solver)
         sett.m(0,'compute PCA using sklearn')
+        # sett.m(0,'--> mind that this is not 100% deterministic')
+        # Alex now thinks it's determinisitic.
         sett.m(1,'--> to speed this up, set option exact=False')
         Y = p.fit_transform(X)
     except ImportError:

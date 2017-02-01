@@ -2,12 +2,14 @@
 """
 Draw the Data Graph
 
-Simple force-directed graph drawing. In particular, the Fruchterman-Reingold
-algorithm. See https://en.wikipedia.org/wiki/Force-directed_graph_drawing for
-some history.
+By default, the Fruchterman-Reingold algorithm is used. This is simple
+force-directed graph drawing.
 
-Suggested for drawing knn graphs in the context of single-cell transcriptomics 
-by Weinreb et al., bioRxiv doi:10.1101/090332 (2016.
+References
+----------
+- General: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
+- Suggested for drawing knn graphs in the context of single-cell
+  transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016) 
 """
 
 from __future__ import absolute_import

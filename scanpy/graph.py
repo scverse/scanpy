@@ -133,7 +133,8 @@ class DataGraph:
         W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
         # make the weight matrix sparse
         if not self.params['knn']:
-            W[W < 1e-14] = 0
+            self.Mask = W > 1e-14
+            W[self.Mask == False] = 0
         else:
             # restrict number of neighbors to k
             Mask = np.zeros(Dsq.shape, dtype=bool)
@@ -144,6 +145,7 @@ class DataGraph:
                         Mask[j, irow] = True
             # set all entries that are not nearest neighbors to zero
             W[Mask == False] = 0
+            self.Mask = Mask
 
         if not weighted:
             W = Mask.astype(float)
