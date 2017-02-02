@@ -86,8 +86,8 @@ def tsne(ddata, nr_pcs=50, perplexity=30):
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     return {'type': 'tsne', 'Y': Y}
 
-
-def plot(dtsne, ddata,
+def plot(dplot, ddata,
+         comps='1,2',
          layout='2d',
          legendloc='lower right',
          cmap='jet',
@@ -97,43 +97,29 @@ def plot(dtsne, ddata,
 
     Parameters
     ----------
-    dtsne : dict
-        Dict returned by tSNE tool.
+    dplot : dict
+        Dict returned by diffmap tool.
     ddata : dict
         Data dictionary.
+    comps : str
+         String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right') 
+    legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str, optional (default: jet)
+    cmap : str (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['dtsne']
-    # highlights
-    highlights = []
-    if False:
-        if 'highlights' in ddata:
-            highlights = ddata['highlights']
-    # base figure
-    axs = plott.scatter(dtsne['Y'],
-                        subtitles=['tSNE'],
-                        component_name='tSNE',
-                        layout=params['layout'],
-                        c='grey',
-                        highlights=highlights,
-                        cmap=params['cmap'])
-    # annotated groups
-    if 'groupmasks' in ddata:
-        for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[0], igroup, ddata, dtsne['Y'], params['layout'])
-        axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        # right margin
-        pl.subplots_adjust(right=params['adjust_right'])
-
-    if sett.savefigs:
-        pl.savefig(sett.figdir+dtsne['writekey']+'.'+sett.extf)
-    elif sett.autoshow:
-        pl.show()
+    from .. import plotting as plott
+    plott.plot_tool(dplot, ddata,
+                    comps,
+                    layout,
+                    legendloc,
+                    cmap,
+                    adjust_right,
+                    # defined in plotting
+                    subtitles=['tSNE'],
+                    component_name='tSNE')
 
 def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
     """

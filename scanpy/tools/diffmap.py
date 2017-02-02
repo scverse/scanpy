@@ -76,8 +76,8 @@ def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
     ddmap['Y'] = ddmap['Y'][:,:params['nr_comps']]
     return ddmap
 
-def plot(ddmap, ddata,
-         comps='1,2,3',
+def plot(dplot, ddata,
+         comps='1,2',
          layout='2d',
          legendloc='lower right',
          cmap='jet',
@@ -87,7 +87,7 @@ def plot(ddmap, ddata,
 
     Parameters
     ----------
-    ddmap : dict
+    dplot : dict
         Dict returned by diffmap tool.
     ddata : dict
         Data dictionary.
@@ -100,40 +100,14 @@ def plot(ddmap, ddata,
     cmap : str (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['ddmap']
-    from numpy import array
-    comps = array(params['comps'].split(',')).astype(int) - 1
-    # highlights
-    highlights = []
-    if False:
-        if 'highlights' in ddata:
-            highlights = ddata['highlights']
-    # base figure
-    try:
-        Y = ddmap['Y'][:, comps]
-    except IndexError:
-        sett.mi('IndexError: Only computed', ddmap['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey diffmap -p nr_comps YOUR_NR')
-        from sys import exit
-        exit(0)
-    axs = plott.scatter(Y,
-                        subtitles=['diffusion map'],
-                        component_name='DC',
-                        component_indexnames=comps + 1,
-                        layout=params['layout'],
-                        c='grey',
-                        highlights=highlights,
-                        cmap=params['cmap'])
-    # annotated groups
-    if 'groupmasks' in ddata:
-        for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[0], igroup, ddata, ddmap['Y'][:, comps], params['layout'])
-        axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        # right margin
-        pl.subplots_adjust(right=params['adjust_right'])
-
-    if sett.savefigs:
-        pl.savefig(sett.figdir+ddmap['writekey']+'.'+sett.extf)
-    elif sett.autoshow:
-        pl.show()
+    from .. import plotting as plott
+    plott.plot_tool(dplot, ddata,
+                    comps,
+                    layout,
+                    legendloc,
+                    cmap,
+                    adjust_right,
+                    # defined in plotting
+                    subtitles=['diffusion map'],
+                    component_name='DC')
 

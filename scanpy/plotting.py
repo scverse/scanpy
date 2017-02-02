@@ -19,10 +19,75 @@ from .compat.matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import ticker
 from matplotlib.figure import SubplotParams as sppars
+from . import settings as sett
 
 #--------------------------------------------------------------------------------
 # Scanpy Plotting Functions 
 #--------------------------------------------------------------------------------
+
+def plot_tool(dplot, ddata,
+              comps='1,2,3',
+              layout='2d',
+              legendloc='lower right',
+              cmap='jet',
+              adjust_right=0.75,
+              subtitles=['one title'],
+              component_name='comp'): 
+    """
+    Plot the results of a DPT analysis.
+
+    Parameters
+    ----------
+    dplot : dict
+        Dict returned by plotting tool.
+    ddata : dict
+        Data dictionary.
+    comps : str
+         String in the form "comp1,comp2,comp3".
+    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+         Layout of plot.
+    legendloc : see matplotlib.legend, optional (default: 'lower right')
+         Options for keyword argument 'loc'.
+    cmap : str (default: jet)
+         String denoting matplotlib color map. 
+    """
+    params = locals(); del params['ddata']; del params['dplot']
+    from numpy import array
+    comps = array(params['comps'].split(',')).astype(int) - 1
+    # highlights
+    highlights = []
+    if False:
+        if 'highlights' in ddata:
+            highlights = ddata['highlights']
+    # base figure
+    try:
+        Y = dplot['Y'][:, comps]
+    except IndexError:
+        sett.mi('IndexError: Only computed', dplot['Y'].shape[1], ' components')
+        sett.mi('--> recompute using scanpy exkey diffmap -p nr_comps YOUR_NR')
+        from sys import exit
+        exit(0)
+    axs = scatter(Y,
+                  subtitles=subtitles,
+                  component_name=component_name,
+                  component_indexnames=comps + 1,
+                  layout=params['layout'],
+                  c='grey',
+                  highlights=highlights,
+                  cmap=params['cmap'])
+    # annotated groups
+    if 'groupmasks' in ddata:
+        for imask, mask in enumerate(ddata['groupmasks']):
+            group(axs[0], imask, ddata, dplot['Y'][:, comps], params['layout'])
+        axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+        # right margin
+        pl.subplots_adjust(right=params['adjust_right'])
+
+    if sett.savefigs:
+        pl.savefig(sett.figdir+dplot['writekey']+'.'+sett.extf)
+    elif sett.autoshow:
+        pl.show()
+
 
 def timeseries(*args,**kwargs):
     """ 
