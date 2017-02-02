@@ -3,7 +3,7 @@
 <!--- ----------------------------------------------------------------------- -->
 <!--- call "./scripts/scanpy.py exdata markup" to get the list below          -->
 
-## Sorted according to experiment
+#### Example Data
 
 * [moignard15](#moignard15) - [Moignard *et al.*, Nature Biotechnology 33, 269 (2015)](http://dx.doi.org/10.1038/nbt.3154)   
 *Decoding the regulatory network of early blood development from single-cell gene expression measurements*
@@ -20,7 +20,7 @@ Examples using simulated data.
 <!--- ----------------------------------------------------------------------- -->
 <!--- start the technical topics list here                                    -->
 
-## Sorted according to technical aspects
+#### Technical Topics
 
 * preprocessing with PCA - [paul15pca](#paul15pca)
 

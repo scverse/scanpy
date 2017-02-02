@@ -56,10 +56,10 @@ Recommended are 'png' and 'pdf'. Many other formats work as well (see
 matplotlib.pyplot.savefig).
 """
 
-recompute = False
+recompute = 'none'
 """ Don't use the results of previous calculations.
 
-Recompute and overwrite previous files.  
+Recompute and overwrite previous result and preprocessing files.  
 """
 
 savefigs = False
@@ -126,8 +126,11 @@ def add_args(p):
        help='Change figure directory (default: %(default)s).')
     aa = p.add_argument_group('Run a tool repeatedly, to try out different parameters').add_argument
     aa('-r', '--recompute',
-       action='store_const',  default=False, const=True,
-       help='Recompute and overwrite result files of previous calculations.')
+       type=str, default='none', const='tool', nargs='?', metavar='r',
+       help='Recompute and overwrite result files of previous calculations. '
+            'Just providing "-r" recomputes the tool, "-r all" also recomputes preprocessing.'
+            '(default: do not recompute).'
+       )
     aa('--suffix',
        type=str, default='', metavar='suffix',
        help='Specify suffix to append to example key'

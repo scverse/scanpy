@@ -104,14 +104,21 @@ def example(exkey, return_module=False):
                 from sys import exit
                 exit(msg)
 
-    # run the function
-    ddata = exfunc()
-
-    # add exkey to ddata
-    ddata['exkey'] = exkey
-    sett.m(0, 'X has shape', ddata['X'].shape[0], 'x', ddata['X'].shape[1])
-    # do sanity checks on data dictionary
-    ddata = check_ddata(ddata)
+    from os.path import exists
+    exfile = utils.get_filename_from_key(sett.basekey)
+    if (not exists(exfile)
+        or sett.recompute == 'all'):
+        # run the function
+        ddata = exfunc()
+        # add exkey to ddata
+        ddata['exkey'] = exkey
+        sett.m(0, 'X has shape', ddata['X'].shape[0], 'x', ddata['X'].shape[1])
+        # do sanity checks on data dictionary
+        ddata = check_ddata(ddata)
+        utils.write(sett.basekey, ddata)
+        sett.m(0, 'wrote preprocessed data to', exfile)
+    else:
+        ddata = utils.read(sett.basekey)
     
     if return_module:
         return ddata, exmodule

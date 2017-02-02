@@ -44,7 +44,7 @@ reproduce the figures [here](https://github.com/theislab/scanpy) and there
   this provides lots of ouput and suggestions for new users, but allows to
   decrease it for more experienced users
 
-* speed increase by intelligent importing
+* speedup by *sparse* importing? seems mainly important for displaying help?
 
 * support for reading fcs cytof files (Maren)
 
@@ -55,7 +55,11 @@ reproduce the figures [here](https://github.com/theislab/scanpy) and there
 * Lukas: frequent task: map dataset into other datasets / do an analysis of one
   of the large datasets
 
-### Solved 2016-02-01:19:06
+### Solved Feb 2, 2017 at 09:58
+
+* ~~speed-up through writing of data dictionary / option recompute more powerful~~
+
+### Solved Feb 1, 2017 at 19:06
 
 * ~~speed-up computation of M matrix in DPT by using symmetries~~ -> the latter
   didn't work, but a huge speed-up was possible by performing PCA

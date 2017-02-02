@@ -8,10 +8,6 @@ Reference
 Wolf, Angerer & Theis, bioRxiv doi:... (2017)
 """
 
-# standard modules
-import os
-# scientific modules
-from .compat.matplotlib import pyplot as pl
 # scanpy modules
 from . import settings as sett
 from . import tools
@@ -62,7 +58,7 @@ __all__ = [
     'transpose_ddata'
 ]
 
-def plot(*dtools,**kwargs):
+def plot(*dtools, **kwargs):
     """
     Plot the result of a computation with a tool.
 
@@ -75,13 +71,10 @@ def plot(*dtools,**kwargs):
         if 'writekey' not in dtools[0]:
             raise ValueError('Need key "writekey" in dict d' 
                              + dtools[0]['type'],' - call sc.write first')
-
     toolkey = dtools[0]['type']
-
     # TODO: this is not a good solution
     if toolkey == 'sim':
         dtools = [dtools[0]]
-
     get_tool(toolkey).plot(*dtools, **kwargs)
 
 def help(toolkey,string=False):
@@ -97,39 +90,18 @@ def show():
     """
     Show plots.
     """
+    from .compat.matplotlib import pyplot as pl
     pl.show()
-
-def run(toolkey, exkey, **kwargs):
-    """
-    Run example with specified tool, do preprocessing and read/write outfiles.
-
-    Output files store the dictionary returned by the tool. File type is
-    determined by variable sett.extd allowed are 'h5' (hdf5), 'xlsx' (Excel) or
-    'csv' (comma separated value file).
-
-    If called twice with the same settings the dictionary that is read from the 
-    existing output file is returned.
-
-    Parameters
-    ----------
-    toolkey : str
-        Name of the tool.
-    exkey : str
-        Identifies the example.
-    kwargs : keyword arguments
-    """
-    kwargs['exkey'] = exkey
-    run_args(toolkey, kwargs)
 
 def run_args(toolkey, args):
     """
     Run specified tool, do preprocessing and read/write outfiles.
 
-    Output files store the dictionary returned by the tool. File type is
+    Result files store the dictionary returned by the tool. File type is
     determined by variable sett.extd allowed are 'h5' (hdf5), 'xlsx' (Excel) or
     'csv' (comma separated value file).
 
-    If called twice with the same settings the existing output file is returned.
+    If called twice with the same settings the existing result file is used.
 
     Parameters
     ----------
@@ -138,12 +110,6 @@ def run_args(toolkey, args):
     args : dict containing
         exkey : str
             String that identifies the example use key.
-
-    Returns
-    -------
-    dfunc : dict of type toolkey
-    dadd : dict 
-         Additional dict used for plotting in a later step.
     """
     if args['plotparams']:
         if args['plotparams'][0] == 'help':
@@ -151,7 +117,7 @@ def run_args(toolkey, args):
             exit(get_tool(toolkey).plot.__doc__)
 
     writekey = sett.basekey + '_' + toolkey + sett.fsig
-    resultfile = sett.writedir + writekey + '.' + sett.extd
+    resultfile = utils.get_filename_from_key(writekey)
     paramsfile = sett.writedir + writekey + '_params.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
@@ -208,12 +174,10 @@ def run_args(toolkey, args):
         from sys import exit
         exit(0)
     
-    # simply load resultfile
-    if os.path.exists(resultfile) and not sett.recompute:
-        dtool = read(writekey)
-    # call the tool resultfile
-    else:
-        # TODO: solve this in a nicer way, also get an ordered dict for params
+    # simply load the result file if it exists
+    from os.path import exists
+    if not exists(resultfile) or sett.recompute in ['all', 'tool']:
+        # TODO: solve this in a nicer way, get an ordered dict for params
         from inspect import getcallargs
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
@@ -234,9 +198,12 @@ def run_args(toolkey, args):
             del params['ddata_or_X']
         dtool['writekey'] = writekey
         write(writekey, dtool)
-        sett.m(0, 'wrote result to', utils.get_filename_from_key(writekey))
+        sett.m(0, 'wrote result to', resultfile)
         # save a copy of the parameters to a file
         utils.write_params(paramsfile, params)
+    else:
+        # call the tool resultfile
+        dtool = read(writekey)
 
     # plotting and postprocessing
     plotparams = {}
@@ -266,4 +233,5 @@ def read_args_run_tool(toolkey):
     Read arguments and run tool specified by toolkey.
     """
     args = utils.read_args_tool(toolkey, exs.dexamples())
-    return run_args(toolkey, args)
+    run_args(toolkey, args)
+
