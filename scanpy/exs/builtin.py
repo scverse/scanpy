@@ -106,7 +106,7 @@ dexamples = {
         'k': 20, # increase number of neighbors (default 5)
         'knn': True }, # set a hard threshold on number of neighbors
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'groupnames': ['GMP', 'MEP']}
+    'difftest': {'log': False, 'groups_names': ['GMP', 'MEP']}
     },
 'paul15pca': {
     'datakey': 'paul15',
@@ -115,7 +115,7 @@ dexamples = {
         'k': 20, # increase number of neighbors (default 5)
         'knn': True }, # set a hard threshold on number of neighbors
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'groupnames': ['GMP', 'MEP']}
+    'difftest': {'log': False, 'groups_names': ['GMP', 'MEP']}
     },
 'toggleswitch': {
     'ctpaths': {'fates': {0: 95, 1: 189}},
@@ -286,33 +286,34 @@ def moignard15_raw():
     # filter genes
     # filter out the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
-    genes = np.r_[np.arange(0,4),np.arange(5,31),np.arange(32,36),np.arange(37,45)]
-    print('selected',len(genes), 'genes')
+    genes = np.r_[np.arange(0, 4), np.arange(5, 31), 
+                  np.arange(32, 36), np.arange(37, 45)]
+    print('selected', len(genes), 'genes')
     ddata['X'] = X[:, genes] # filter data matrix
     ddata['colnames'] = genenames[genes] # filter genenames
     # choose root cell as in Haghverdi et al. (2016)
     ddata['iroot'] = 532 # note that in Matlab/R, counting starts at 1
     ddata['xroot'] = ddata['X'][ddata['iroot']] 
-    # defne groupnames and groupnames_n
-    # coloring according to Moignard et al. (2015) experimental cell groups
-    groupnames = np.array(['HF', 'NP', 'PS', '4SG', '4SFG'])
-    groupnames_n = [] # a list with n entries (one for each sample)
+    # annotate rows of X with Moignard et al. (2015) experimental cell groups
+    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    groups = [] # a list with n entries (one for each sample)
     for name in cellnames:
-        for groupname in groupnames:
+        for groupname in groups_names:
             if name.startswith(groupname):
-                groupnames_n.append(groupname)
-    ddata['groupnames_n'] = groupnames_n
-    ddata['groupnames'] = groupnames    
-    # custom colors for each group
-    groupcolors = np.array(['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099'])
-    ddata['groupcolors'] = groupcolors
+                groups.append(groupname)
+    # groups are categorical annotation for rows of X
+    ddata['rowcat'] = {'groups': groups}
+    # add additional metadata for the groups, we want them to be ordered
+    # and we want custom colors for each group
+    ddata['groups_names'] = groups_names    
+    ddata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return ddata
 
 def moignard15_dpt(ddpt):
     # switch on annotation by uncommenting the following
-    groupnames = ['trunk', 'undecided/endothelial', 
+    groups_names = ['trunk', 'undecided/endothelial', 
                   'endothelial', 'erythrocytes']
-    ddpt['groupnames'] = [str(i) + ': ' + n for i, n in enumerate(groupnames)]
+    ddpt['groups_names'] = [str(i) + ': ' + n for i, n in enumerate(groups_names)]
     return ddpt
 
 def paul15_raw():
@@ -326,7 +327,7 @@ def paul15_raw():
     X = ddata['X']
     genenames = ddata['colnames']
     # cluster assocations identified by Paul et al.
-    # groupnames_n = sc.read(filename,'cluster.id')['X']
+    # groups = sc.read(filename,'cluster.id')['X']
     infogenenames = sc.read(filename, 'info.genes_strings')['X']
     # print('the first 10 informative gene names are \n',infogenenames[:10])
     # just keep the first of the equivalent names for each gene
@@ -349,10 +350,10 @@ def paul15_raw():
     return ddata
 
 def paul15_dpt(ddpt):
-    ddpt['groupnames'] = ['','GMP','','MEP']
+    ddpt['groups_names'] = ['','GMP','','MEP']
     return ddpt
 
 def paul15pca_dpt(ddpt):
-    ddpt['groupnames'] = ['','','GMP','MEP']
+    ddpt['groups_names'] = ['','','GMP','MEP']
     return ddpt
 

@@ -1,30 +1,21 @@
-# coding: utf-8
+# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Differential Gene Expression Analysis
-=====================================
-
-From package Scanpy (https://github.com/theislab/scanpy).
-Written in Python 3 (compatible with 2).
-Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 
 This is a Beta Version of a tool for differential gene expression testing
 between sets detected in previous tools. Tools such as dpt, cluster,...
 """   
 
-from collections import OrderedDict as odict
 from itertools import combinations
-
 import numpy as np
 from scipy.stats.distributions import norm
-from ..compat.matplotlib import pyplot as pl
-
 from .. import utils
 from .. import plotting as plott
 from .. import settings as sett
 
 def difftest(dprev, ddata=None,
-             groupids='all',
-             groupnames='all',
+             groups_ids='all',
+             groups_names='all',
              sig_level=0.05,
              correction='Bonferroni',
              log=True):
@@ -34,15 +25,15 @@ def difftest(dprev, ddata=None,
     Parameters
     ----------
     dprev (or ddata) : dict containing
-        groupnames : np.ndarray of dtype str
+        groups_names : np.ndarray of dtype str
             Array of shape (number of groups) that names the groups.
-        groupnames_n : np.ndarray of dtype str
+        groups : np.ndarray of dtype str
             Array of shape (number of samples) that names the groups.
     ddata : dict
         Data dictionary containing gene names.
     params: dict, optional. possible keys are
-        groupnames : list of str or int
-            Subset of names in dprev['groupnames'] to which comparison shall be
+        groups_names : list of str or int
+            Subset of names in dprev['groups_names'] to which comparison shall be
             restricted.
 
     Returns
@@ -71,32 +62,32 @@ def difftest(dprev, ddata=None,
         XL = X
 
     # select groups
-    groupnames = dprev['groupnames']
-    groupids = list(range(len(groupnames)))
-    groupmasks = dprev['groupmasks']
-    if params['groupnames'] != 'all':
-        groupnames = np.array(params['groupnames'])
-        groupids = np.where(np.in1d(dprev['groupnames'], groupnames))[0]
-        if not np.any(groupids):
-            sett.m(0, 'specify valid groupnames for testing, one of',
-                   dprev['groupnames'])
+    groups_names = dprev['groups_names']
+    groups_ids = list(range(len(groups_names)))
+    groups_masks = dprev['groups_masks']
+    if params['groups_names'] != 'all':
+        groups_names = np.array(params['groups_names'])
+        groups_ids = np.where(np.in1d(dprev['groups_names'], groups_names))[0]
+        if not np.any(groups_ids):
+            sett.m(0, 'specify valid groups_names for testing, one of',
+                   dprev['groups_names'])
             from sys import exit
             exit(0)
-        groupmasks = groupmasks[groupids]
-    sett.m(0, 'testing groups', groupnames, 'with ids', groupids)
+        groups_masks = groups_masks[groups_ids]
+    sett.m(0, 'testing groups', groups_names, 'with ids', groups_ids)
 
-    # loop over all groupmasks and compute means, variances and sample numbers in groupmasks
-    means = np.zeros((groupmasks.shape[0],X.shape[1]))
-    vars = np.zeros((groupmasks.shape[0],X.shape[1]))
-    ns = np.zeros(groupmasks.shape[0],dtype=int)
-    for igroup,group in enumerate(groupmasks):
+    # loop over all groups_masks and compute means, variances and sample numbers in groups_masks
+    means = np.zeros((groups_masks.shape[0],X.shape[1]))
+    vars = np.zeros((groups_masks.shape[0],X.shape[1]))
+    ns = np.zeros(groups_masks.shape[0],dtype=int)
+    for igroup,group in enumerate(groups_masks):
         means[igroup] = XL[group].mean(axis=0)
         vars[igroup] = XL[group].var(axis=0)
         ns[igroup] = np.where(group)[0].size
 
     ddifftest = {'type' : 'difftest'}
-    igroupmasks = np.arange(len(groupmasks),dtype=int)
-    pairs = list(combinations(igroupmasks,2))
+    igroups_masks = np.arange(len(groups_masks),dtype=int)
+    pairs = list(combinations(igroups_masks,2))
     pvalues_all = np.zeros((len(pairs),X.shape[1]))
     zscores_all = np.zeros((len(pairs),X.shape[1]))
     genes_sorted = np.zeros((len(pairs),X.shape[1]),dtype=int)
@@ -124,7 +115,7 @@ def difftest(dprev, ddata=None,
         genes_sorted[ipair] = np.argsort(abszscores)[::-1]
 
         # names
-        testlabel = groupnames[i] + ' vs '+ groupnames[j]
+        testlabel = groups_names[i] + ' vs '+ groups_names[j]
         ddifftest['testnames'].append(testlabel)
     if False:
         ddifftest['pvalues'] = -np.log10(pvalues_all)
@@ -137,6 +128,7 @@ def plot(ddifftest, ddata, params=None):
     """
     Plot ranking of genes for all tested comparisons.
     """
+    from ..compat.matplotlib import pyplot as pl
     plott.ranking(ddifftest, ddata)
     if not sett.savefigs:
         pl.show()

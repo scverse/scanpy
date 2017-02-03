@@ -18,16 +18,8 @@ See also
   arXiv:0711.0189 (2007).
 """   
 
-# standard modules
-from collections import OrderedDict as odict
-# scientific modules
 import numpy as np
-import scipy as sp
-import matplotlib
-from ..compat.matplotlib import pyplot as pl
-# scanpy modules
 from .. import settings as sett
-from .. import plotting as plott
 from .. import utils
 from .. import graph
 
@@ -77,23 +69,16 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         pseudotimes : np.ndarray
             Array of dim (number of cells) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
-        groupmasks : np.ndarray
-            Array of dim (number of groups) x (number of cells). In the rows, it
-            contains one-dimensional mask arrays that store the index sets that
-            correspond to subgroups detected by the 'branch detection'
-            algorithm.
-        groupnames : np.ndarray
-            Array of dimension (number of groups) that stores group names in the
-            order they appear in groupsmasks.
-        groupids_n : np.ndarray of dtype int
+            Serves as 'rowcont' for ddata.
+        groups : np.ndarray of dtype int
             Array of dim (number of cells) that stores the segment=subgroup id -
             an integer that indexes groupnames - of each cell. The groups might
             either correspond to 'progenitor cells', 'undecided cells' or
-            'branches'.
+            'branches'. Serves as 'rowcat' for ddata.
         Y : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
-            basis of transition matrix with eigenvectors as columns.
+            basis of the transition matrix with eigenvectors as columns.
         evals : np.ndarray
             Array of size (number of cells). Eigenvalues of transition matrix.
     """
@@ -120,18 +105,14 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     ddpt['pseudotimes'] = dpt.pseudotimes
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    # as in every tool or data annotation, we define (sub)groups
-    ddpt['groupmasks'] = dpt.segs # array of shape (number of groups x number of samples)
-                                  # it's an array of mask arrays
-    ddpt['groupids_n'] = dpt.segslabels # array of shape (number of samples)
-    # store the group labels and default colors in the order they appear in 'groups'
-    ddpt['groupids'] = np.arange(len(ddpt['groupmasks']), dtype=int)
-    ddpt['groupnames'] = [str(i) for i in ddpt['groupids']]
-    # n-vector of groupnames
-    ddpt['groupnames_n'] = [ddpt['groupnames'][i] if i < len(ddpt['groupnames'])
-                           else 'dontknow'
-                           for i in ddpt['groupids_n']]
-
+    # n-vector of groupnames / rowcat for ddata / compare exs.check_ddata
+    ddpt['groups_masks'] = dpt.segs
+    ddpt['groups_ids'] = np.arange(len(ddpt['groups_masks']), dtype=int)
+    ddpt['groups_names'] = [str(i) for i in ddpt['groups_ids']]
+    ddpt['groups'] = np.array([ddpt['groups_names'][i] 
+                               if i < len(ddpt['groups_names'])
+                               else 'dontknow'
+                               for i in dpt.segslabels])
     # the ordering according to segments and pseudotimes
     ddpt['indices'] = dpt.indices
     ddpt['changepoints'] = dpt.changepoints
@@ -141,10 +122,12 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     return ddpt
 
 def plot(ddpt, ddata, dplot=None,
+         rowcat='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
-         cmap='jet'): # consider changing to 'viridis'
+         cmap='jet',
+         adjust_right=0.88):
     """
     Plot the results of a DPT analysis.
 
@@ -152,17 +135,23 @@ def plot(ddpt, ddata, dplot=None,
     ----------
     ddpt : dict
         Dict returned by DPT tool.
+    dplot : dict
+        Dict returned by plotting tool.
     ddata : dict
         Data dictionary.
-    comps : str
+    rowcat : str, optional (default: '')
+        String for accessing a categorical annotation of rows.
+    comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right') 
+    legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str, optional (default: jet)
-         String denoting matplotlib color map. 
+    cmap : str (default: "jet")
+         String denoting matplotlib color map.
     """
+    from ..compat.matplotlib import pyplot as pl
+    from .. import plotting as plott
     params = locals(); del params['ddata']; del params['ddpt']; del params['dplot']
     if dplot is not None:
         ddpt['Y'] = dplot['Y']
@@ -176,41 +165,35 @@ def plot(ddpt, ddata, dplot=None,
         groups_writekey = ddpt['writekey'] + '_diffmap'
     ddpt['groups_writekey'] = groups_writekey
     X = ddata['X']
-    ddpt['groupcolors'] = pl.cm.get_cmap(params['cmap'])(
-                                         pl.Normalize()(ddpt['groupids']))
-
+    if not 'groups_colors' in ddpt:
+        ddpt['groups_colors'] = pl.cm.get_cmap(params['cmap'])(
+                                             pl.Normalize()(ddpt['groups_ids']))
     # color by pseudotime and by segments
     colors = [ddpt['pseudotimes'], 'white']
     # coloring according to experimental labels
-    if 'groupmasks' in ddata:
+    if 'rowcat' in ddata:
         colors.append('grey')
     # highlight root
     highlights = list(ddpt['iroot'])
     # highlight tip points of each segment
     if False:
         highlights = [i for l in ddpt['segtips'] for i in l if l[0] != -1]
-
     # a single figure for all colors using 2 diffusion components
     plot_groups(ddpt, ddata, params, colors, highlights)
-
     # plot segments and pseudotimes
     plot_segments_pseudotimes(ddpt, params['cmap'])
-
-    # if number of genes is not too high, plot the time series
+    # if number of genes is not too high, plot time series
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[ddpt['indices']],ddata['colnames'],
+        plott.timeseries(X[ddpt['indices']], ddata['colnames'],
                          highlightsX=ddpt['changepoints'],
-                         xlim=[0,1.3*X.shape[0]])
-        if sett.savefigs:
-            pl.savefig(sett.figdir+ddpt['writekey']+'_vsorder.'+sett.extf)
+                         xlim=[0, 1.3*X.shape[0]])
+        plott.savefig(ddpt['writekey']+'_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
         plott.timeseries_as_heatmap(X[ddpt['indices'],:40],ddata['colnames'],
                                     highlightsX=ddpt['changepoints'])
-        if sett.savefigs:
-            pl.savefig(sett.figdir+ddpt['writekey']+'_heatmap.'+sett.extf)
-
+        plott.savefig(ddpt['writekey']+'_heatmap')
     if not sett.savefigs and sett.autoshow:
         pl.show()
             
@@ -220,8 +203,9 @@ def plot_groups(ddpt, ddata, params, colors,
     """
     Plot groups in diffusion map visualization.
     """
-    from numpy import array
-    comps = array(params['comps'].split(',')).astype(int) - 1
+    from ..compat.matplotlib import pyplot as pl
+    from .. import plotting as plott
+    comps = np.array(params['comps'].split(',')).astype(int) - 1
     # base figure
     try:
         Y = ddpt['Y'][:, comps]
@@ -241,34 +225,43 @@ def plot_groups(ddpt, ddata, params, colors,
                         highlights_labels=highlights_labels,
                         cmap=params['cmap'])
 
-    # dpt groups (segments)
-    for igroup, group in enumerate(ddpt['groupmasks']):
-        plott.group(axs[1], igroup, ddpt, ddpt['Y'][:, comps], params['layout'])
+    # dpt categories / groups (segments)
+    for igroup in ddpt['groups_ids']:
+        plott.group(axs[1], 'groups', igroup, ddpt, ddpt['Y'][:, comps], 
+                    params['layout'])
     axs[1].legend(frameon=False, loc=params['legendloc'])
 
-    # annotated groups in data dict
-    if 'groupmasks' in ddata:
-        for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[2], igroup, ddata, ddpt['Y'][:, comps], params['layout'])
+    # row categories / experimental groups in ddata
+    if 'rowcat' in ddata:
+        if params['rowcat'] == '':
+            # simply take a random key
+            rowcat = list(ddata['rowcat'].keys())[0]
+        elif rowcat not in ddata:
+            print('specify valid row category class')
+        # colors for the categories
+        if not rowcat + '_colors' in ddata:
+            ddata[k + '_colors'] = pl.cm.get_cmap(params['cmap'])(
+                                                  pl.Normalize()(ddata[k + '_ids']))
+        for icat in ddata[rowcat + '_ids']:
+            plott.group(axs[2], rowcat, icat, ddata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        pl.subplots_adjust(right=0.88)
-
-    if sett.savefigs:
-        pl.savefig(sett.figdir + ddpt['groups_writekey']
-                   + sett.plotsuffix + '.'+sett.extf)
+        pl.subplots_adjust(right=params['adjust_right'])
+    plott.savefig(ddpt['groups_writekey'] + sett.plotsuffix)
 
 def plot_segments_pseudotimes(ddpt, cmap):
     """ 
     Helper function for plot.
     """
+    from ..compat.matplotlib import pyplot as pl
+    from .. import plotting as plott
     pl.figure()
     pl.subplot(211)
-    plott.timeseries_subplot(ddpt['groupids_n'][ddpt['indices'],np.newaxis],
-                             c=ddpt['groupids_n'][ddpt['indices']],
+    plott.timeseries_subplot(ddpt['groups'][ddpt['indices'],np.newaxis],
+                             c=ddpt['groups'][ddpt['indices']],
                              highlightsX=ddpt['changepoints'],
                              ylabel='segments',
-                             yticks=(np.arange(ddpt['groupmasks'].shape[0],dtype=int) if 
-                                     ddpt['groupmasks'].shape[0] < 5 else None),
+                             yticks=(np.arange(ddpt['groups_masks'].shape[0], dtype=int) if 
+                                     ddpt['groups_masks'].shape[0] < 5 else None),
                              cmap=cmap)
     pl.subplot(212)
     plott.timeseries_subplot(ddpt['pseudotimes'][ddpt['indices'],np.newaxis],
@@ -277,8 +270,7 @@ def plot_segments_pseudotimes(ddpt, cmap):
                              ylabel='pseudotime',
                              yticks=[0,1],
                              cmap=cmap)
-    if sett.savefigs:
-        pl.savefig(sett.figdir+ddpt['writekey']+'_segpt.'+sett.extf)
+    plott.savefig(ddpt['writekey']+'_segpt')
 
 class DPT(graph.DataGraph):
     """
@@ -778,7 +770,7 @@ class DPT(graph.DataGraph):
             raise ValueError('a and b need to have the same size')
         if a.ndim != b.ndim != 1:
             raise ValueError('a and b need to be one-dimensional arrays')            
-
+        import scipy as sp
         min_length = 5
         n = a.size
         idx_range = np.arange(min_length,a.size-min_length-1,dtype=int)
@@ -887,87 +879,3 @@ class DPT(graph.DataGraph):
         diff_neg = np.dot(a_neg,b_neg)
 
         return diff_pos, diff_neg
-
-def plot_subgroup(axs,ilabel,ddata,dscct,layout,cmap):
-    """
-    Plot experimental subgroup.
-    """
-    colors = pl.cm.get_cmap(cmap)(pl.Normalize()(range(len(ddata['poplabels']))))
-    c = matplotlib.colors.rgb2hex(colors[ilabel])
-    indices = ddata['explabels'] == ilabel
-    indices = ddata['expindices'][indices]
-    data = [dscct['rbasis'][indices,1],dscct['rbasis'][indices,2]]
-    if layout == '3d':
-        data.append(dscct['rbasis'][indices,3])
-    axs[2].scatter(*data,c=c,edgecolors='face',
-                   label=ddata['poplabels'][ilabel])
-
-def plot_set(axs,iset,ddpt,layout):
-    """
-    Plot set.
-    """
-    set = ddpt['sets'][iset]
-    c = matplotlib.colors.rgb2hex(ddpt['setcolors'][iset])
-    data = [ddpt['rbasis'][set,1],ddpt['rbasis'][set,2]]
-    if layout == '3d':
-        data.append(ddpt['rbasis'][set,3])
-    markersize = 3
-    axs[1].scatter(*data,c=c,edgecolors='face',
-                   s=markersize,
-                   alpha=1,
-                   label=ddpt['setlabels'][iset])
-
-def plot_all_sets(ddpt,ddata,layout,colors,
-                  highlights = [],
-                  highlights_labels = [],
-                  legendloc = 'lower right',
-                  cmap= 'jet'): # consider changing to viridis
-    """
-    """
-    # base figure
-    axs = plott.diffmap(
-        [ddpt['rbasis'][:, [1, 2, 3]]],
-        layout=layout,
-        c=colors,
-        titles=['pseudotime', 'segments', 'experimental labels'],
-        highlights=highlights,
-        highlights_labels=highlights_labels,
-        cmap=cmap,
-    )
-
-    # sets
-    for iset,set in enumerate(ddpt['sets']):
-        plot_set(axs,iset,ddpt,layout)
-    axs[1].legend(frameon=False,loc=legendloc)
-
-    # experimental subgroups
-    if 'poplabels' in ddata:
-        for ilabel,label in enumerate(ddata['poplabels']):
-            plot_subgroup(axs, ilabel, ddata, ddpt, layout, cmap)
-        if False:
-            axs[2].legend(frameon=False,loc='lower right')
-        if True:
-            axs[2].legend(frameon=False,loc='center left',
-                          bbox_to_anchor=(1, 0.5))
-            pl.subplots_adjust(right=0.8)
-
-    if sett.savefigs:
-        pl.savefig(sett.figdir+ddpt['writekey']+'_diffmap.'+sett.extf)
-
-def read_args(example_dict):
-    """
-    Read arguments for calling main from command line.
-    """
-
-    p = utils.default_parser(__doc__,example_dict)
-    p = update_parser(p)
-    args = utils.process_args(p)
-
-    return args
-
-def update_parser(p):
-    """
-    Update parser.
-    """
-    p = utils.add_args(p)
-    return p

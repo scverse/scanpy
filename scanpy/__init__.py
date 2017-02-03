@@ -15,7 +15,8 @@ from . import preprocess
 from . import utils
 from .tools import get_tool
 # reexports
-from .utils import read, write, read_params, transpose_ddata
+from .readwrite import read, write, read_params
+from .utils import transpose_ddata
 from .exs import exdata, examples, example, annotate
 from .preprocess import preprocess, pp
 from .preprocess.advanced import subsample
@@ -117,7 +118,7 @@ def run_args(toolkey, args):
             exit(get_tool(toolkey).plot.__doc__)
 
     writekey = sett.basekey + '_' + toolkey + sett.fsig
-    resultfile = utils.get_filename_from_key(writekey)
+    resultfile = readwrite.get_filename_from_key(writekey)
     paramsfile = sett.writedir + writekey + '_params.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
@@ -200,7 +201,7 @@ def run_args(toolkey, args):
         write(writekey, dtool)
         sett.m(0, 'wrote result to', resultfile)
         # save a copy of the parameters to a file
-        utils.write_params(paramsfile, params)
+        readwrite.write_params(paramsfile, params)
     else:
         # call the tool resultfile
         dtool = read(writekey)
@@ -208,7 +209,7 @@ def run_args(toolkey, args):
     # plotting and postprocessing
     plotparams = {}
     if args['plotparams']:
-        plotparams = utils.get_params_from_list(args['plotparams'])
+        plotparams = readwrite.get_params_from_list(args['plotparams'])
     if toolkey == 'sim':
         plot(dtool, plotparams)
     else:

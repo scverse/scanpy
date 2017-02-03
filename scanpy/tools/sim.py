@@ -1,12 +1,7 @@
-# coding: utf-8
+# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Simulate Artificial Data
-========================
 
-From package Scanpy (https://github.com/theislab/scanpy).
-Written in Python 3 (compatible with 2).
-Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
-    
 Simulate stochastic dynamic systems to model gene expression dynamics and
 cause-effect data.
 
@@ -15,24 +10,19 @@ TODO
 Beta Version. The code will be reorganized soon.
 """
 
-# standard library modules
 import argparse
 import os
 import itertools
 import collections
 from collections import OrderedDict as odict
-# scientific modules
 import numpy as np
 import scipy as sp
 import scipy.optimize
 import scipy.stats
-from ..compat.matplotlib import pyplot as pl
-# scanpy modules
 from .. import utils
+from .. import readwrite
 from .. import plotting as plott
 from .. import settings as sett
-# set options
-np.set_printoptions(precision=14)
 
 def sim(model='sim/toggleswitch.txt', 
         tmax=100, 
@@ -74,34 +64,31 @@ def plot(ddata):
     """
     Plot results of simulation.
     """
-
     X = ddata['X']
     genenames = ddata['colnames']
     tmax = ddata['tmax_write']
-
     nr_real = X.shape[0]/tmax
-
-    plott.timeseries(X,genenames,
-                          xlim=[0,1.25*X.shape[0]],
-                          highlightsX = np.arange(tmax,nr_real*tmax,tmax),
-                          xlabel='realizations / time steps')
-    if sett.savefigs:
-        pl.savefig(sett.figdir + sett.basekey + '_sim.' + sett.extf)
-
+    plott.timeseries(X, genenames,
+                     xlim=[0,1.25*X.shape[0]],
+                     highlightsX=np.arange(tmax,nr_real*tmax,tmax),
+                     xlabel='realizations / time steps')
+    plott.savefig(sett.basekey + '_sim')
     # shuffled data
-    X, rows = utils.subsample(X,seed=1)
-    plott.timeseries(X,genenames,
-                          xlim=[0,1.25*X.shape[0]],
-                          highlightsX = np.arange(tmax,nr_real*tmax,tmax),
-                          xlabel='index (arbitrary order)')
-    if sett.savefigs:
-        pl.savefig(sett.figdir + sett.basekey + '_sim_shuffled.' + sett.extf)
-    elif sett.autoshow:
+    X, rows = utils.subsample(X, seed=1)
+    plott.timeseries(X, genenames,
+                     xlim=[0,1.25*X.shape[0]],
+                     highlightsX=np.arange(tmax,nr_real*tmax,tmax),
+                     xlabel='index (arbitrary order)')
+    plott.savefig(sett.basekey + '_sim_shuffled')
+    if not sett.savefigs and sett.autoshow:
+        from ..compat.matplotlib import pyplot as pl
         pl.show()
 
 def add_args(p):
     """
     Update parser with tool specific arguments.
+
+    This overwrites was is done in utils.add_args.
     """
     # dictionary for adding arguments
     dadd_args = {
@@ -131,7 +118,7 @@ def sample_dynamic_data(params):
     sett.m(0,'writing to directory', params['writedir'])
     if not os.path.exists(params['writedir']):
         os.makedirs(params['writedir'])
-    utils.write_params(params['writedir'] + '/params.txt', params)
+    readwrite.write_params(params['writedir'] + '/params.txt', params)
     # init variables
     dir = params['writedir']
     modelkey = os.path.basename(params['model']).replace('.txt','')
@@ -265,7 +252,7 @@ def sample_dynamic_data(params):
                     break
 
     filename = dir+'/sim_000000.txt'
-    ddata = utils.read_file(filename, first_column_names=True)
+    ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
     ddata['type'] = 'sim'
 

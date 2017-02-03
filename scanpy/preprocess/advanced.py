@@ -1,6 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
-Functions that take ddata as argument
+Preprocessing functions that take ddata as argument
 -> subsampling
 -> whole preprocessing workflows from the literature
 """
@@ -30,8 +30,10 @@ def subsample(ddata, subsample, seed=0):
     for key in ['rownames']:
         if key in ddata and len(ddata[key]) == ddata['X'].shape[0]:
             ddata[key] = ddata[key][row_indices]
-    if 'groupmasks' in ddata:
-        ddata['groupmasks'] = ddata['groupmasks'][:,row_indices]
+    if 'rowcat' in ddata:
+        for k in ddata['rowcat']:
+            ddata['rowcat'][k] = ddata['rowcat'][k][row_indices]
+            ddata[k + '_masks'] = ddata[k + '_masks'][:, row_indices]
     ddata['X'] = X
     ddata['subsample'] = True
     return ddata

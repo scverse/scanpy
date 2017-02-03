@@ -87,31 +87,37 @@ def tsne(ddata, nr_pcs=50, perplexity=30):
     return {'type': 'tsne', 'Y': Y}
 
 def plot(dplot, ddata,
+         rowcat='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
          cmap='jet',
-         adjust_right=0.75): # consider changing to 'viridis'
+         adjust_right=0.75):
     """
     Plot the results of a DPT analysis.
 
     Parameters
     ----------
     dplot : dict
-        Dict returned by diffmap tool.
+        Dict returned by plotting tool.
     ddata : dict
         Data dictionary.
-    comps : str
+    rowcat : str, optional (default: '')
+        String for accessing a categorical annotation of rows.
+    comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: jet)
-         String denoting matplotlib color map. 
+    cmap : str (default: "jet")
+         String denoting matplotlib color map.
+    adjust_right : float, optional (default: 0.75)
+         Increase to increase the right margin.
     """
     from .. import plotting as plott
     plott.plot_tool(dplot, ddata,
+                    rowcat,
                     comps,
                     layout,
                     legendloc,

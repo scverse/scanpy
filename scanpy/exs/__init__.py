@@ -5,6 +5,7 @@ Example Data and Example Use Cases
 
 from . import builtin, user
 from .. import utils
+from .. import readwrite
 from .. import settings as sett
 
 def exdata(format='plain'):
@@ -105,7 +106,7 @@ def example(exkey, return_module=False):
                 exit(msg)
 
     from os.path import exists
-    exfile = utils.get_filename_from_key(sett.basekey)
+    exfile = readwrite.get_filename_from_key(sett.basekey)
     if (not exists(exfile)
         or sett.recompute == 'all'):
         # run the function
@@ -115,10 +116,10 @@ def example(exkey, return_module=False):
         sett.m(0, 'X has shape', ddata['X'].shape[0], 'x', ddata['X'].shape[1])
         # do sanity checks on data dictionary
         ddata = check_ddata(ddata)
-        utils.write(sett.basekey, ddata)
+        readwrite.write(sett.basekey, ddata)
         sett.m(0, 'wrote preprocessed data to', exfile)
     else:
-        ddata = utils.read(sett.basekey)
+        ddata = readwrite.read(sett.basekey)
     
     if return_module:
         return ddata, exmodule
@@ -145,38 +146,48 @@ def annotate(ddata, exkey):
 #-------------------------------------------------------------------------------
 
 # howtos
-howto_specify_subgroups = '''no key "groupnames_n" in ddata dictionary found
---> you might provide a list/1d-array of subgroup names (strings) or
-    integers with length = n = number of cells/samples.'''
+howto_specify_subgroups = '''no key "rowcat" in ddata dictionary found
+--> you might provide a dict of lists of n subgroup names (strings or ints) with
+    number of samples as follows
+    {'group1': ['A', 'B', 'A', ... ], 'group2': ['c', 'a', ...]}
+'''
 
 def check_ddata(ddata):
     """
     Do sanity checks on ddata dictionary.
+
+    Checks whether ddata conains categorical row metadata 'rowcat'. 
+
+    If yes, for each class of categories in 'rowcat' associate an 'order',
+    indices 'ids', colors and masks.
     """
     import numpy as np
-    if not 'groupnames_n' in ddata:
+    import sys
+    if not 'rowcat' in ddata:
         sett.m(0, howto_specify_subgroups)
-    else: 
-        try:
-            ddata['groupnames_n'] = np.array(ddata['groupnames_n'], dtype=int)
-        except:
-            ddata['groupnames_n'] = np.array(ddata['groupnames_n'], dtype=str)
-        if not 'groupnames' in ddata:
-            ddata['groupnames'] = np.unique(ddata['groupnames_n'])            
-        # just an array for iterating quickly
-        if not 'groupmasks' in ddata:
-            groupmasks = []
-            for groupname in ddata['groupnames']: 
-                groupmasks.append(groupname == np.array(ddata['groupnames_n']))
-            ddata['groupmasks'] = np.array(groupmasks)
-        # for indexing into groupnames and groupmasks
-        if not 'groupids' in ddata:
-            ddata['groupids'] = np.arange(len(ddata['groupnames']), dtype=int)
-        # for plotting
-        if not 'groupcolors' in ddata:
-            from ..compat.matplotlib import pyplot as pl
-            ddata['groupcolors'] = pl.cm.jet(pl.Normalize()(ddata['groupids']))
-        sett.m(0,'groupnames in ddata', ddata['groupnames'])
+    else:
+        if not isinstance(ddata['rowcat'], dict):
+            msg = 'rowcat must be a dictionary! {\'cat1\': [...], }'
+            sys.exit(msg)
+        for k in ddata['rowcat']:
+            # transform to np.ndarray
+            try:
+                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=int)
+            except:
+                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=str)
+            sett.m(0,'row categories in ddata', ddata['rowcat'][k])
+            # order of the categories
+            if not k + '_names' in ddata:
+                ddata[k + '_names'] = np.unique(ddata['rowcat'])
+            # indices for each category
+            if not k + '_ids' in ddata:
+                ddata[k + '_ids'] = np.arange(len(ddata[k + '_names']), dtype=int)
+            # masks for each category
+            if not k + '_masks' in ddata:
+                masks = []
+                for name in ddata[k + '_names']:
+                    masks.append(name == ddata['rowcat'][k])
+                ddata[k + '_masks'] = np.array(masks)
     return ddata
 
 def exkeys_str():

@@ -2,24 +2,15 @@
 
 ### Urgent
 
-* data and result class that is flexible but allows for convenient way of
-  defining subgroups etc. (-> the user should be able to define different
-  subgroups, different colorings, and coloring by genes) / among others, mind
-  that sparse data types have to be supported [one idea would be to allow
-  for a class `rowgroups`, and a class `colgroups` as possible attributes of data and 
-  result classes. class `rowgroups` allows storing names, ids, masks, colors. make
-  sure we do not reinvent the wheel: can pandas help us?
-
-* fix installation of scanpy anywhere on the system
+* fix installation of scanpy / import anywhere on the system
 
 * seaborn layout for difftest?
 
-* merge plotting functions / add option for placing the legend outside
+* speedup by *sparse* importing? seems mainly important for displaying help?
 
-* Error 'QxcbConnection' on susi / warning raised when Lukas runs it on the server
+* Error 'QxcbConnection' on susi / warning raised when Lukas runs scanpy on the server
 
-* storing figure files on http://falexwolf.de is optimal solution?
-
+* storing figure files on http://falexwolf.de is good solution?
 
 * make sure drawg converges for a given set of parameters!
 
@@ -29,13 +20,12 @@
 
 * check sc.help() versus help()
 
-* is there a way to get a list of genes on the command line? for plotting
-
 * command line output: instead of setting default verbosity to 1, set it to 2 ->
   this provides lots of ouput and suggestions for new users, but allows to
-  decrease it for more experienced users
-
-* speedup by *sparse* importing? seems mainly important for displaying help?
+  decrease it for more experienced users / timing information important for users? / 
+  tipps marked with "-->" are very important for new users but not for experienced ones / 
+  should all be managed via verbosity, maybe config file that sets the settings in 
+  settings.py?
 
 * support for reading fcs cytof files (Maren)
 
@@ -45,6 +35,22 @@
 
 * Lukas: frequent task: map dataset into other datasets / do an analysis of one
   of the large datasets
+
+* is there a way to get a list of available genes to choose from on the command
+  line? for plotting?
+
+### Solved Feb 3, 2017 at 5:26
+
+* ~~data and result class that is flexible but allows for convenient way of
+  defining subgroups etc. (-> the user should be able to define different
+  subgroups, different colorings, and coloring by genes) / among others, mind
+  that sparse data types have to be supported [one idea would be to allow
+  for a class `rowgroups`, and a class `colgroups` as possible attributes of data and 
+  result classes. class `rowgroups` allows storing names, ids, masks, colors. make
+  sure we do not reinvent the wheel: can pandas help us?~~ -> hack with dict
+
+* ~~merge plotting functions / add option for placing the legend outside~~ -> at least
+  for visualization tools done
 
 ### Solved Feb 2, 2017 at 09:58
 
@@ -68,3 +74,4 @@
 * ~~naming conventions of parameters: stick to scikit-learn conventions,
   e.g. 'n_components'?~~ -> no! we use 'nr_comps' instead, all parameter names
   involving 'number' are called 'nr_'
+
