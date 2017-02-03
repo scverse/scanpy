@@ -40,7 +40,7 @@ add their own example or tool are welcome, too! Any comments are appreciated!
 ## Example Use <a id="example_use"></a>
 
 The following command-line examples call the wrapper
-[scripts/scanpy.py](scripts/scanpy.py), which works **without**
+[scanpy.py](scanpy.py), which works **without**
 [installation](#install).  To get all required packages (all default in
 [Anaconda](https://www.continuum.io/downloads)), install
 [Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
@@ -54,9 +54,9 @@ into its root directory.
 Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
 NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
 ```shell
-python scripts/scanpy.py moignard15 pca
-python scripts/scanpy.py moignard15 tsne
-python scripts/scanpy.py moignard15 diffmap
+python scanpy.py moignard15 pca
+python scanpy.py moignard15 tsne
+python scanpy.py moignard15 diffmap
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_pca.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_tsne.png" height="175">
@@ -69,8 +69,8 @@ traces the degree of cells' progression in the differentiation process. By defau
 this is plotted using Diffusion Maps, but you might just as well plot the subgroups using another
 plotting tool.
 ```shell
-python scripts/scanpy.py moignard15 dpt
-python scripts/scanpy.py moignard15 dpt tsne
+python scanpy.py moignard15 dpt
+python scanpy.py moignard15 dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
@@ -89,14 +89,14 @@ more information.
 For more examples, read [this](examples), or display them on the command line
 (example data and example use cases, respectively).
 ```shell
-python scripts/scanpy.py exdata
-python scripts/scanpy.py examples
+python scanpy.py exdata
+python scanpy.py examples
 ```
 
 Get general and tool-specific help, respectively.
 ```shell
-python scripts/scanpy.py --help
-python scripts/scanpy.py dpt --help
+python scanpy.py --help
+python scanpy.py dpt --help
 ```
 
 #### Add your examples <a id="add_example"></a>
@@ -106,7 +106,7 @@ or, if you want to call from the command-line, modify the function `myexample()`
 in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy and paste from
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using
 ```shell
-python scripts/scanpy.py myexample pca
+python scanpy.py myexample pca
 ```
 
 Also, it'd be awesome if you provide your working example for the public Scanpy
@@ -146,7 +146,7 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 
 ## Installation <a id="install"></a>
 
-Command-line use through the wrapper [scripts/scanpy.py](scripts/scanpy.py)
+Command-line use through the wrapper [scanpy.py](scanpy.py)
 works **without** installation.  To get all required packages (all default
 in [Anaconda](https://www.continuum.io/downloads)), install
 [Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy

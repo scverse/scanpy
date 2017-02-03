@@ -1,7 +1,7 @@
 # Examples
 
 <!--- ----------------------------------------------------------------------- -->
-<!--- call "./scripts/scanpy.py exdata markup" to get the list below          -->
+<!--- call "./scanpy.py exdata markup" to get the list below          -->
 
 #### Example Data
 
@@ -39,14 +39,14 @@ Diffusion Pseudotime (DPT) analysis detects the branch of granulocyte/macrophage
 progenitors (GMP), and the branch of megakaryocyte/erythrocyte progenitors
 (MEP). There are two small further subgroups (*segments* 0 and 2).
 ```
-./scripts/scanpy.py paul15 dpt
+./scanpy.py paul15 dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_segpt.png" height="175">
 
 We can now test for differential gene expression.
 ```
-./scripts/scanpy.py paul15 difftest --prev dpt
+./scanpy.py paul15 difftest --prev dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
 
@@ -59,8 +59,8 @@ computations tremendously. Distance matrix computations in high dimensions are a
 
 Does this preprocessing change the biology?
 ```
-./scripts/scanpy.py paul15pca dpt
-./scripts/scanpy.py paul15pca dpt difftest --prev dpt
+./scanpy.py paul15pca dpt
+./scanpy.py paul15pca dpt difftest --prev dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_segpt.png" height="175">
@@ -69,10 +69,10 @@ Does this preprocessing change the biology?
 Even though the diffmap representation has changed a lot, the differential genes are still the same.
 Let us check whether the subgroups look much different in tSNE.
 ```
-./scripts/scanpy.py paul15 tsne
+./scanpy.py paul15 tsne
 cp write/paul15_tsne.h5 write/paul15pca_tsne.h5
-./scripts/scanpy.py paul15 dpt tsne
-./scripts/scanpy.py paul15pca dpt tsne
+./scanpy.py paul15 dpt tsne
+./scanpy.py paul15pca dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_tsne.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_tsne.png" height="175">
