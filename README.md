@@ -74,7 +74,7 @@ python scanpy.py moignard15 dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_tsne.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_tsne_new.png" height="175">
 
 This orders cells by segment, and within each segment, by pseudotime.
 
@@ -83,6 +83,11 @@ This orders cells by segment, and within each segment, by pseudotime.
 With this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
 more information.
+
+If you want to use the results externally, simply read the corresponding hdf5
+file, which you can inspect using `h5ls write/moignard15_dpt.h5`. If you prefer
+reading and writing csv or Excel files, which is much slower, however, use the
+option `--fileformat csv`.
 
 #### More examples and help
 

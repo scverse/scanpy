@@ -82,7 +82,8 @@ def plot_tool(dplot, ddata,
                                                   pl.Normalize()(ddata[k + '_ids']))
         for icat in ddata[rowcat + '_ids']:
             group(axs[0], rowcat, icat, ddata, dplot['Y'][:, comps], params['layout'])
-        axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+        if params['legendloc'] != 'none':
+            axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         # right margin
         pl.subplots_adjust(right=params['adjust_right'])
 

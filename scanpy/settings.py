@@ -150,7 +150,7 @@ def add_args(p):
     aa('--logfile',
        action='store_const', default=False, const=True,
        help='Write to logfile instead of to standard output.')
-    aa('--fileform',
+    aa('--fileformat',
        type=str, default=extd, metavar='extd',
        help='Specify file extension and by that'
             ' file format for saving results, either "h5" or "xlsx".'
@@ -207,8 +207,8 @@ def process_args(args):
     args.pop('figdir')
 
     global extd
-    extd = args['fileform']
-    args.pop('fileform')
+    extd = args['fileformat']
+    args.pop('fileformat')
 
     global writedir
     writedir = args['writedir'] 

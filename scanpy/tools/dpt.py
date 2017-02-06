@@ -192,7 +192,7 @@ def plot(ddpt, ddata, dplot=None,
         plott.savefig(ddpt['writekey']+'_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[ddpt['indices'],:40],ddata['colnames'],
+        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], ddata['colnames'],
                                     highlightsX=ddpt['changepoints'])
         plott.savefig(ddpt['writekey']+'_heatmap')
     if not sett.savefigs and sett.autoshow:
@@ -230,7 +230,8 @@ def plot_groups(ddpt, ddata, params, colors,
     for igroup in ddpt['groups_ids']:
         plott.group(axs[1], 'groups', igroup, ddpt, ddpt['Y'][:, comps], 
                     params['layout'])
-    axs[1].legend(frameon=False, loc=params['legendloc'])
+    if params['legendloc'] != 'none':
+        axs[1].legend(frameon=False, loc=params['legendloc'])
 
     # row categories / experimental groups in ddata
     if 'rowcat' in ddata:

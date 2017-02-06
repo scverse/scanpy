@@ -86,9 +86,6 @@ def add_args(p, dadd_args=None):
        help='Specify the "example key" (just a shorthand), which is used '
             'to look up a data dictionary and parameters. ' 
             'Use Scanpy subcommand "examples" to inspect possible values.')
-    aa('plotkey',
-       type=str, default='', metavar='plotkey', nargs='?',
-       help='Specify plotting tool for visualization (default: tool dependent).')
     # example key default argument
     aa('-p', '--params',
        nargs='*', default=None, metavar='k v',
@@ -107,6 +104,9 @@ def add_args(p, dadd_args=None):
                 aa(key, **val)
 
     aa = p.add_argument_group('Plotting').add_argument
+    aa('plotkey',
+       type=str, default='', metavar='plotkey', nargs='?',
+       help='Specify plotting tool for visualization (default: tool dependent).')
     aa('-q', '--plotparams',
        nargs='*', default=None, metavar='k v',
        help='Provide specific plotting parameters as list, '

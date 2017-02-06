@@ -45,7 +45,7 @@ def write(filename_or_key, dictionary):
         filename = get_filename_from_key(key)
         if 'writekey' not in dictionary:
             dictionary['writekey'] = key
-    write_dict_to_file(filename, dictionary)
+    write_dict_to_file(filename, dictionary, ext=sett.extd)
 
 def read(filename_or_key, sheet='', sep=None, first_column_names=False, 
          as_strings=False, backup_url=''):
@@ -267,7 +267,7 @@ def _read_file(filename, ext, sheet, sep, first_column_names,
         if 'type' not in ddata:
             ddata['type'] = 'data'
         # write as hdf5 for faster reading when calling the next time
-        write_dict_to_file(filename_hdf5,ddata)
+        write_dict_to_file(filename_hdf5, ddata)
     else:
         ddata = read_file_to_dict(filename_hdf5)
 

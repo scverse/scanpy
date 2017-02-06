@@ -67,7 +67,7 @@ def plot(dplot, ddata,
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
+    legendloc : {none, see matplotlib.legend}, optional (default: 'lower right')
          Options for keyword argument 'loc'.
     cmap : str (default: "jet")
          String denoting matplotlib color map.
