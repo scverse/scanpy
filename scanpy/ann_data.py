@@ -25,9 +25,9 @@ VAR_NAMES = 'var_names'
 class BoundRecArr(np.recarray):
     """
     A np.recarray which can be constructed from a dict.
-    Can be bound to AnnData to allow adding fields
+    Is bound to AnnData to allow adding fields
     """
-    def __new__(cls, source, nr_row, name_col, parent=None):
+    def __new__(cls, source, name_col, parent, nr_row=None):
         if source is None:  # empty array
             cols = [np.arange(nr_row)]
             dtype = [(name_col, 'int64')]
@@ -44,7 +44,7 @@ class BoundRecArr(np.recarray):
             cols = [np.asarray(col) for col in source.values()]
             if name_col not in source:
                 names.append(name_col)
-                cols.append(np.arange(nr_row))
+                cols.append(np.arange(len(cols[0])))
             dtype = list(zip(names, [str(c.dtype) for c in cols]))
         try:
             dtype = np.dtype(dtype)
@@ -74,7 +74,7 @@ class BoundRecArr(np.recarray):
                                  .format(len(value), len(self)))
             source = append_fields(self, [key], [value],
                                    usemask=False, asrecarray=True)
-            new = BoundRecArr(source, len(self), self._name_col, self._parent)
+            new = BoundRecArr(source, self._name_col, self._parent)
             setattr(self._parent, attr, new)
         else:
             super(BoundRecArr, self).__setitem__(key, value)
@@ -156,8 +156,8 @@ class AnnData(IndexMixin):
 
         self.X = X
 
-        self.smp = BoundRecArr(smp, nr_smp, SMP_NAMES, self)
-        self.var = BoundRecArr(var, nr_var, VAR_NAMES, self)
+        self.smp = BoundRecArr(smp, SMP_NAMES, self, nr_smp)
+        self.var = BoundRecArr(var, VAR_NAMES, self, nr_var)
 
         _check_dimensions(X, self.smp, self.var)
 
@@ -201,6 +201,18 @@ class AnnData(IndexMixin):
     @var_names.setter
     def var_names(self, keys):
         self.var[VAR_NAMES] = keys
+
+    def __setattr__(self, key, value):
+        names_col = dict(smp=SMP_NAMES, var=VAR_NAMES).get(key)
+        if names_col and not isinstance(value, BoundRecArr):  # if smp/var is set, give it the right class
+            names_orig, dim = (self.smp_names, 0) if names_col == SMP_NAMES else (self.var_names, 1)
+            value_orig, value = value, BoundRecArr(value, names_col, self)
+            if len(value) != self.X.shape[dim]:
+                raise ValueError('New value for {!r} was converted to a reacarray of length {} instead of {}'
+                                 .format(key, len(value_orig), len(self)))
+            if (value[names_col] == np.arange(self.X.shape[dim])).all():  # TODO: add to constructor
+                value[names_col] = names_orig
+        object.__setattr__(self, key, value)
 
     def _unpack_index(self, index):
         smp, var = super(AnnData, self)._unpack_index(index)
@@ -268,8 +280,9 @@ def test_creation():
         dict(Smp=['A', 'B']),
         dict(Feat=['a', 'b', 'c']))
 
+    assert AnnData(np.array([1, 2])).X.shape == (2, 1)
+
     from pytest import raises
-    raises(ValueError, AnnData, np.array([1]))
     raises(ValueError, AnnData,
            np.array([[1, 2], [3, 4]]),
            dict(TooLong=[1, 2, 3, 4]))
@@ -315,3 +328,19 @@ def test_append_meta_col():
     from pytest import raises
     with raises(ValueError):
         mat.smp['new_col2'] = 'far too long'.split()
+
+def test_set_meta():
+    mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+
+    mat.smp = dict(smp_names=[1, 2])
+    assert isinstance(mat.smp, BoundRecArr)
+    assert len(mat.smp.dtype) == 1
+
+    mat.smp = dict(a=[1, 2])  # leave smp_names and a custom column
+    assert isinstance(mat.smp, BoundRecArr)
+    assert len(mat.smp.dtype) == 2
+    assert mat.smp_names.tolist() == [1, 2]
+
+    from pytest import raises
+    with raises(ValueError):
+        mat.smp = dict(a=[1, 2, 3])
