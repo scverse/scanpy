@@ -23,19 +23,19 @@ class DataGraph:
     def __init__(self, ddata_or_X_or_Dsq, params):
         """ 
         """
-        if isinstance(ddata_or_X_or_Dsq, dict):
-            isddata = True
+        isddata = isinstance(ddata_or_X_or_Dsq, dict)
+        if isddata:
             ddata = ddata_or_X_or_Dsq
         else:
-            isddata = False
             X_or_Dsq = ddata_or_X_or_Dsq
         if isddata:
             self.Dsq = None
             if 'Xpca' in ddata:
                 self.X = ddata['Xpca']
-                sett.m(0, '--> using Xpca for DPT')
+                sett.m(0, '--> using Xpca for building graph')
             else:
                 self.X = ddata['X']
+                sett.m(0, '--> using X for building graph')
         else:
             if X_or_Dsq.shape[0] == X_or_Dsq.shape[1]:
                 sett.m(0,'--> computing data graph from distance matrix')
@@ -340,7 +340,7 @@ class DataGraph:
         if self.M.shape[0] > 1000 and self.params['nr_pcs'] == 0:
             sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
                    '    by setting nr_pcs > 0 you can speed up the computation')
-        if self.params['nr_pcs'] > 0:
+        if self.params['nr_pcs'] > 0 and self.M.shape[0] > self.params['nr_pcs']:
             import scanpy.preprocess as pp
             self.M = pp(self.M, 'pca', nr_comps=self.params['nr_pcs'])
         self.Ddiff = sp.spatial.distance.pdist(self.M)

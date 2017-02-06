@@ -90,7 +90,7 @@ def plot_tool(dplot, ddata,
     if not sett.savefigs and sett.autoshow:
         pl.show()
 
-def group(ax, name, imask, ddata, Y, layout='2d'):
+def group(ax, name, imask, ddata, Y, layout='2d', s=3):
     """
     Plot group using representation of data Y.
     """
@@ -102,11 +102,10 @@ def group(ax, name, imask, ddata, Y, layout='2d'):
     data = [Y[mask,0], Y[mask,1]]
     if layout == '3d':
         data.append(Y[mask,2])
-    markersize = 3
     ax.scatter(*data,
                c=color,
                edgecolors='face',
-               s=markersize,
+               s=s,
                alpha=1,
                label=ddata[name + '_names'][imask])
 

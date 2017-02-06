@@ -112,11 +112,13 @@ dexamples = {
 'paul15pca': {
     'datakey': 'paul15',
     'paths': { 
+        'fates': {0: 193, 1: 2201},
         'num_fates': 2,
-        'k': 20, # increase number of neighbors (default 5)
-        'knn': True }, # set a hard threshold on number of neighbors
+        'k': 4, # increase number of neighbors (default 5)
+        'knn': True}, # set a hard threshold on number of neighbors
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'groups_names': ['GMP', 'MEP']}
+    'difftest': {'log': False, 'groups_names': ['GMP', 'MEP']},
+    'tgdyn': {'groups_names': ['GMP', 'MEP']}
     },
 'toggleswitch': {
     'ctpaths': {'fates': {0: 95, 1: 189}},
@@ -246,7 +248,7 @@ def paul15pca():
     ddata = paul15_raw()
     ddata['X'] = sc.pp(ddata['X'], 'log')
     # reduce to 50 components
-    ddata['Xpca'] = sc.pca(ddata['X'])
+    ddata['Xpca'] = sc.pca(ddata['X'], nr_comps=50)
     # adjust expression vector of root cell
     ddata['xroot'] = ddata['Xpca'][ddata['iroot']]
     return ddata    
@@ -357,4 +359,12 @@ def paul15_dpt(ddpt):
 def paul15pca_dpt(ddpt):
     ddpt['groups_names'] = ['','','GMP','MEP']
     return ddpt
+
+def paul15_paths(dtool):
+    dtool['groups_names'] = ['GMP','MEP']
+    return dtool
+
+def paul15pca_paths(dtool):
+    dtool['groups_names'] = ['GMP','MEP']
+    return dtool
 

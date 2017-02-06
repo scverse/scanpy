@@ -23,6 +23,7 @@ from .preprocess.advanced import subsample
 from .tools.diffmap import diffmap
 from .tools.tsne import tsne
 from .tools.dpt import dpt
+from .tools.pca import pca
 from .tools.difftest import difftest
 from .tools.sim import sim
 
@@ -43,6 +44,7 @@ __all__ = [
     # visualization
     'diffmap',
     'tsne',
+    'pca',
     # subgroup identification
     'dpt',
     'ctpaths',

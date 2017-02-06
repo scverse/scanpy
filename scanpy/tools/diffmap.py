@@ -68,12 +68,11 @@ def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
             Array of size (number of cells). Eigenvalues of transition matrix.
     """
     params = locals(); del params['ddata']
-    X = ddata['X']
-    dmap = dpt.DPT(X, params)
+    dmap = dpt.DPT(ddata, params)
     ddmap = dmap.diffmap()
     ddmap['type'] = 'diffmap'
     # restrict number of components
-    ddmap['Y'] = ddmap['Y'][:,:params['nr_comps']]
+    ddmap['Y'] = ddmap['Y'][:, :params['nr_comps']]
     return ddmap
 
 def plot(dplot, ddata,
