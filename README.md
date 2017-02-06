@@ -107,12 +107,10 @@ python scanpy.py dpt --help
 #### Add your examples <a id="add_example"></a>
 
 To add your example, simply modify this [notebook](examples/myexample.ipynb),
-or, if you want to call from the command-line, modify the function `myexample()`
-in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy and paste from
-[scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using
-```shell
-python scanpy.py myexample pca
-```
+or, if you want to call it from the command-line, modify the function
+`myexample()` in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy
+and paste from [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example
+using `python scanpy.py myexample pca`.
 
 Also, it'd be awesome if you provide your working example for the public Scanpy
 library: copy your example from [scanpy/exs/user.py](scanpy/exs/user.py) to
@@ -165,15 +163,8 @@ cd DOWNLOAD_DIR
 chmod +x Miniconda3-latest-VERSION.sh
 ./Miniconda3-latest-VERSION.sh
 ```
-and accept all suggestions. Either reopen a new terminal or run
-```shell
-source ~/.bashrc
-```
-on Linux and 
-```shell
-source ~/.bash_profile
-```
-on Mac.
+and accept all suggestions. Either reopen a new terminal or `source
+~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac.
 
 Then run
 ```shell
