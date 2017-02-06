@@ -107,6 +107,7 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     dpt.branchings_segments()
     # n-vector of groupnames / rowcat for ddata / compare exs.check_ddata
     ddpt['groups_masks'] = dpt.segs
+    # TODO: remove the following line
     ddpt['groups_ids'] = np.arange(len(ddpt['groups_masks']), dtype=int)
     ddpt['groups_names'] = [str(i) for i in ddpt['groups_ids']]
     ddpt['groups'] = np.array([ddpt['groups_names'][i] 

@@ -20,66 +20,7 @@ avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx']
 """ Available file formats for writing data. """
 
 #--------------------------------------------------------------------------------
-# Reading and writing parameter files
-#--------------------------------------------------------------------------------
-
-def read_params(filename, asheader=False):
-    """ 
-    Read parameter dictionary from text file.
-
-    Assumes that parameters are specified in the format:  
-        par1 = value1
-        par2 = value2
-
-    Comments that start with '#' are allowed.
-    
-    Parameters
-    ----------
-    filename : str
-        Filename of data file.
-    asheader : bool, optional
-        Read the dictionary from the header (comment section) of a file.
-
-    Returns
-    -------
-    params : dict
-        Dictionary that stores parameters.
-    """
-    if not os.path.exists(filename):
-        filename = '../' + filename
-    if not asheader:
-        sett.m(0,'reading params file',filename)
-    from collections import OrderedDict as odict
-    params = odict([])
-    for line in open(filename):
-        if '=' in line:
-            if not asheader or line.startswith('#'):
-                line = line[1:] if line.startswith('#') else line
-                key, val = line.split('=')
-                key = key.strip(); val = val.strip()
-                params[key] = utils.convert_string(val)
-    return params
-
-def write_params(filename, *args, **dicts):
-    """
-    Write parameters to file, so that it's readable py read_params.
-
-    Uses INI file format.
-    """
-    if len(args) == 1:
-        d = args[0]
-        with open(filename, 'w') as f:
-            for key in d:
-                f.write(key + ' = ' + str(d[key]) + '\n')
-    else:
-        with open(filename, 'w') as f:
-            for k, d in dicts.items():
-                f.write('[' + k + ']\n')
-                for key, val in d.items():
-                    f.write(key + ' = ' + str(val) + '\n')
-
-#--------------------------------------------------------------------------------
-# Reading and Writing data files and dictionaries
+# Reading and Writing data files and result dictionaries
 #--------------------------------------------------------------------------------
 
 def write(filename_or_key, dictionary):
@@ -155,6 +96,77 @@ def read(filename_or_key, sheet='', sep=None, first_column_names=False,
                          'inferred filename ' +
                          filename + ' does not exist.')
     return read_file_to_dict(filename)
+
+#--------------------------------------------------------------------------------
+# Reading and writing parameter files
+#--------------------------------------------------------------------------------
+
+def read_params(filename, asheader=False):
+    """ 
+    Read parameter dictionary from text file.
+
+    Assumes that parameters are specified in the format:  
+        par1 = value1
+        par2 = value2
+
+    Comments that start with '#' are allowed.
+    
+    Parameters
+    ----------
+    filename : str
+        Filename of data file.
+    asheader : bool, optional
+        Read the dictionary from the header (comment section) of a file.
+
+    Returns
+    -------
+    params : dict
+        Dictionary that stores parameters.
+    """
+    if not os.path.exists(filename):
+        filename = '../' + filename
+    if not asheader:
+        sett.m(0,'reading params file',filename)
+    from collections import OrderedDict as odict
+    params = odict([])
+    for line in open(filename):
+        if '=' in line:
+            if not asheader or line.startswith('#'):
+                line = line[1:] if line.startswith('#') else line
+                key, val = line.split('=')
+                key = key.strip(); val = val.strip()
+                params[key] = convert_string(val)
+    return params
+
+def write_params(filename, *args, **dicts):
+    """
+    Write parameters to file, so that it's readable py read_params.
+
+    Uses INI file format.
+    """
+    if len(args) == 1:
+        d = args[0]
+        with open(filename, 'w') as f:
+            for key in d:
+                f.write(key + ' = ' + str(d[key]) + '\n')
+    else:
+        with open(filename, 'w') as f:
+            for k, d in dicts.items():
+                f.write('[' + k + ']\n')
+                for key, val in d.items():
+                    f.write(key + ' = ' + str(val) + '\n')
+
+def get_params_from_list(params_list):
+    """
+    Transform params list to dictionary.
+    """
+    if len(params_list)%2 != 0:
+        raise ValueError('need to provide a list of key value pairs')
+    params = {}
+    for i in range(0,len(params_list),2):
+        key, val = params_list[i:i+2]
+        params[key] = convert_string(val)    
+    return params
 
 #--------------------------------------------------------------------------------
 # Reading and Writing data files
@@ -674,6 +686,58 @@ def write_dict_to_file(filename, d, ext='h5'):
                 pd.DataFrame(value).to_excel(writer,key)
 
 #--------------------------------------------------------------------------------
+# Type conversion
+#--------------------------------------------------------------------------------
+
+def is_float(string):
+    """
+    Check whether string is float.
+
+    See also
+    --------
+    http://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
+    """    
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
+def is_int(string):
+    """
+    Check whether string is integer.
+    """    
+    try:
+        int(string)
+        return True
+    except ValueError:
+        return False
+
+def convert_bool(string):
+    """
+    Check whether string is boolean.
+    """    
+    if string == 'True':
+        return True, True
+    elif string == 'False':
+        return True, False
+    else:
+        return False, False
+
+def convert_string(string):
+    """
+    Convert string to int, float or bool.
+    """
+    if is_int(string):
+        return int(string)
+    elif is_float(string):
+        return float(string)
+    elif convert_bool(string)[0]:
+        return convert_bool(string)[1]
+    else:
+        return string
+
+#--------------------------------------------------------------------------------
 # Helper functions for reading and writing
 #--------------------------------------------------------------------------------
 
@@ -746,14 +810,4 @@ def is_filename(filename_or_key,return_ext=False):
     else:
         return False
 
-def get_params_from_list(params_list):
-    """
-    Transform params list to dictionary.
-    """
-    if len(params_list)%2 != 0:
-        raise ValueError('need to provide a list of key value pairs')
-    params = {}
-    for i in range(0,len(params_list),2):
-        key, val = params_list[i:i+2]
-        params[key] = utils.convert_string(val)    
-    return params
+

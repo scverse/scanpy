@@ -8,7 +8,7 @@ force-directed graph drawing.
 References
 ----------
 - General: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
-- Suggested for drawing knn graphs in the context of single-cell
+- Suggested for drawing knn-graphs in the context of single-cell
   transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016) 
 """
 
@@ -60,20 +60,18 @@ def drawg(ddata, k=4, nr_comps=2):
     # make this float, as we might put a weight matrix here
     Adj = np.zeros(D.shape, dtype=float) 
     for irow, row in enumerate(indices):
-        Adj[irow,row] = 1
+        Adj[irow, row] = 1
         # symmetrize as in DPT
         # for j in row:
         #    if irow not in indices[j]:
-        #        Adj[j,irow] = 1
-    
+        #        Adj[j,irow] = 1    
     # just sample initial positions, the rest is done by the plotting tool
     np.random.seed(1)
     Y = np.asarray(np.random.random((Adj.shape[0], 2)), dtype=Adj.dtype)
-    # compute first step 
-    istep = 1
-    sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
-    Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
-    sett.mt(0, 'finished')
+    nr_steps = 12
+    for istep in 1 + np.arange(nr_steps, dtype=int):
+        sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
+        Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
     return {'type': 'drawg', 'Y': Y, 'Adj': Adj, 'istep': istep}
 
 def plot(ddrawg, ddata,
@@ -104,15 +102,16 @@ def plot(ddrawg, ddata,
     Y = ddrawg['Y']
 
     if params['add_steps'] == 0:
+        del params['add_steps']
         sett.m(0, 'set parameter add_steps > 0 to iterate. ' 
                'the current step is', ddrawg['istep'],
                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         istep = ddrawg['istep']
-        _plot(Y, ddata, params, istep)
-        pl.savefig(sett.figdir+ddrawg['writekey']
-                   +'_step{:02}'.format(istep)+'.'+sett.extf)
-        if sett.autoshow:
-            pl.show()
+        _plot(ddrawg, ddata, istep, **params)
+#         pl.savefig(sett.figdir+ddrawg['writekey']
+#                    +'_step{:02}'.format(istep)+'.'+sett.extf)
+#         if sett.autoshow:
+#             pl.show()
     else:
         Adj = ddrawg['Adj']
         istep = ddrawg['istep']
@@ -122,44 +121,90 @@ def plot(ddrawg, ddata,
         sc.write(ddrawg['writekey']+'_step{:02}'.format(istep), ddrawg)
         # compute the next steps
         istep_init = istep + 1
-        for istep in istep_init + np.arange(params['add_steps'], dtype=int):
+        add_steps = params['add_steps']
+        del params['add_steps']
+        for istep in istep_init + np.arange(add_steps, dtype=int):
             sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
             Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
             sett.mt(0, 'finished computation')
-            _plot(Y, ddata, params, istep)
-            if sett.autoshow:
-                sett.mt(0, 'finished plotting')
-            pl.savefig(sett.figdir+ddrawg['writekey']
-                       +'_step{:02}'.format(istep)+'.'+sett.extf)
+            _plot({'Y': Y}, ddata, istep, **params)
+#             if sett.autoshow:
+#                 sett.mt(0, 'finished plotting')
+#             pl.savefig(sett.figdir+ddrawg['writekey']
+#                        +'_step{:02}'.format(istep)+'.'+sett.extf)
         # save state of Y to outfile
         ddrawg['Y'] = Y 
         ddrawg['istep'] = istep
         sc.write(ddrawg['writekey'], ddrawg)
-        if sett.autoshow:
-            pl.show()
+#         if sett.autoshow:
+#             pl.show()
 
 
-def _plot(Y, ddata, params, istep):
-    # highlights
-    highlights = []
-    if False:
-        if 'highlights' in ddata:
-            highlights = ddata['highlights']
-    # base figure
-    axs = plott.scatter(Y,
-                        subtitles=['draw graph: step ' + str(istep)],
-                        component_name='FR',
-                        layout=params['layout'],
-                        c='grey',
-                        highlights=highlights,
-                        cmap=params['cmap'])
-    # annotated groups
-    if 'groupmasks' in ddata:
-        for igroup, group in enumerate(ddata['groupmasks']):
-            plott.group(axs[0], igroup, ddata, Y, params['layout'])
-        axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        # right margin
-        pl.subplots_adjust(right=params['adjust_right'])
+def _plot(dplot, ddata,
+          istep=0,
+          rowcat='',
+          comps='1,2',
+          layout='2d',
+          legendloc='lower right',
+          cmap='jet',
+          adjust_right=0.75):
+    """
+    Plot the results of a DPT analysis.
+
+    Parameters
+    ----------
+    dplot : dict
+        Dict returned by plotting tool.
+    ddata : dict
+        Data dictionary.
+    rowcat : str, optional (default: '')
+        String for accessing a categorical annotation of rows.
+    comps : str, optional (default: "1,2")
+         String in the form "comp1,comp2,comp3".
+    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+         Layout of plot.
+    legendloc : see matplotlib.legend, optional (default: 'lower right')
+         Options for keyword argument 'loc'.
+    cmap : str (default: "jet")
+         String denoting matplotlib color map.
+    adjust_right : float, optional (default: 0.75)
+         Increase to increase the right margin.
+    """
+    from .. import plotting as plott
+    plott.plot_tool(dplot, ddata,
+                    rowcat,
+                    comps,
+                    layout,
+                    legendloc,
+                    cmap,
+                    adjust_right,
+                    # defined in plotting
+                    subtitles=['Fruchterman-Reingold step: ' + str(istep)],
+                    component_name='FR')
+
+
+
+# def _plot(Y, ddata, params, istep):
+#     # highlights
+#     highlights = []
+#     if False:
+#         if 'highlights' in ddata:
+#             highlights = ddata['highlights']
+#     # base figure
+#     axs = plott.scatter(Y,
+#                         subtitles=['draw graph: step ' + str(istep)],
+#                         component_name='FR',
+#                         layout=params['layout'],
+#                         c='grey',
+#                         highlights=highlights,
+#                         cmap=params['cmap'])
+#     # annotated groups
+#     if 'groupmasks' in ddata:
+#         for igroup, group in enumerate(ddata['groupmasks']):
+#             plott.group(axs[0], igroup, ddata, Y, params['layout'])
+#         axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+#         # right margin
+#         pl.subplots_adjust(right=params['adjust_right'])
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
     """ 

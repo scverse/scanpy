@@ -11,8 +11,9 @@ from . import drawg
 
 try:
     # development tools
-    from . import ctpaths
-    from . import scdg
+    from . import paths
+    from . import tgdyn
+    # from . import scdg
 except ImportError:
     pass
 

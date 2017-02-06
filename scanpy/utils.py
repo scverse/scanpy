@@ -157,6 +157,24 @@ def default_tool_argparser(description, dexamples):
 # Others
 #--------------------------------------------------------------------------------
 
+def select_groups(dgroups, groups_names_subset='all'):
+    """
+    Get groups from dgroups.
+    """
+    groups_names = dgroups['groups_names']
+    groups_masks = dgroups['groups_masks']
+    groups_ids = list(range(len(groups_names)))
+    if groups_names_subset != 'all':
+        groups_names = np.array(groups_names_subset)
+        groups_ids = np.where(np.in1d(dgroups['groups_names'], groups_names))[0]
+        if not np.any(groups_ids):
+            sett.m(0, 'specify valid groups_names for testing, one of',
+                   dgroups['groups_names'])
+            from sys import exit
+            exit(0)
+        groups_masks = groups_masks[groups_ids]
+    return groups_names, groups_masks
+
 def pretty_dict_string(d, indent=0):
     """
     Pretty output of nested dictionaries.
@@ -217,54 +235,6 @@ def merge_dicts(*dicts):
     for d in dicts:
         result.update(d)
     return result
-
-def is_float(string):
-    """
-    Check whether string is float.
-
-    See also
-    --------
-    http://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
-    """    
-    try:
-        float(string)
-        return True
-    except ValueError:
-        return False
-
-def is_int(string):
-    """
-    Check whether string is integer.
-    """    
-    try:
-        int(string)
-        return True
-    except ValueError:
-        return False
-
-def convert_bool(string):
-    """
-    Check whether string is boolean.
-    """    
-    if string == 'True':
-        return True, True
-    elif string == 'False':
-        return True, False
-    else:
-        return False, False
-
-def convert_string(string):
-    """
-    Convert string to int, float or bool.
-    """
-    if is_int(string):
-        return int(string)
-    elif is_float(string):
-        return float(string)
-    elif convert_bool(string)[0]:
-        return convert_bool(string)[1]
-    else:
-        return string
 
 def masks(list_of_index_lists,n):
     """

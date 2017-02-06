@@ -86,9 +86,8 @@ def plot_tool(dplot, ddata,
         # right margin
         pl.subplots_adjust(right=params['adjust_right'])
 
-    if sett.savefigs:
-        pl.savefig(sett.figdir+dplot['writekey']+'.'+sett.extf)
-    elif sett.autoshow:
+    savefig(dplot['writekey'])
+    if not sett.savefigs and sett.autoshow:
         pl.show()
 
 def group(ax, name, imask, ddata, Y, layout='2d'):

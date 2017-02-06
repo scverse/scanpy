@@ -175,10 +175,11 @@ def check_ddata(ddata):
                 ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=int)
             except:
                 ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=str)
-            sett.m(0,'row categories in ddata', ddata['rowcat'][k])
-            # order of the categories
+            # ordered unique categories
             if not k + '_names' in ddata:
                 ddata[k + '_names'] = np.unique(ddata['rowcat'])
+            # output 
+            sett.m(0,'row categories in ddata', ddata[k + '_names'])
             # indices for each category
             if not k + '_ids' in ddata:
                 ddata[k + '_ids'] = np.arange(len(ddata[k + '_names']), dtype=int)

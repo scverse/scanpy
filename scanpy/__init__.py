@@ -112,18 +112,13 @@ def run_args(toolkey, args):
         exkey : str
             String that identifies the example use key.
     """
+    # help on plot parameters
     if args['plotparams']:
         if args['plotparams'][0] == 'help':
             from sys import exit
             exit(get_tool(toolkey).plot.__doc__)
 
-    writekey = sett.basekey + '_' + toolkey + sett.fsig
-    resultfile = readwrite.get_filename_from_key(writekey)
-    paramsfile = sett.writedir + writekey + '_params.txt'
-    if args['logfile']:
-        logfile = sett.writedir + writekey + '_log.txt'
-        sett.logfile(logfile)
-
+    # read parameters
     if toolkey == 'sim':
         if args['paramsfile'] != '':
             params = read_params(args['paramsfile'])
@@ -155,27 +150,40 @@ def run_args(toolkey, args):
             params = utils.update_params(params, add_params)
         # same if parameters have been specified on the command line
         if args['params']:
-            add_params = utils.get_params_from_list(args['params'])
+            add_params = readwrite.get_params_from_list(args['params'])
             params = utils.update_params(params, add_params)
         elif did_not_find_params_in_exmodule and args['paramsfile'] != '':
             sett.m(0, 'using default parameters, change them using "--params"')
+
+    # previous tool
+    prevsuffix = ''
+    if args['prev'] != '':
+        prevkey = sett.basekey + '_' + args['prev'] + sett.fsig
+        dprev = read(prevkey)
+        prevsuffix = '_' + args['prev']
+    # all tools that require a previous tool
+    elif toolkey in ['scdg']:
+        print('Error: need to provide a tool to option --prev')
+        print('--> presumably one for identification of subgroups')
+        from sys import exit
+        exit(0)
+    elif toolkey in ['difftest']:
+        # use subgroups in ddata
+        dprev = ddata
 
     # subsampling
     if args['subsample'] != 1:
         ddata = subsample(ddata, args['subsample'])
 
-    # previous tool
-    if args['prev'] != '':
-        prevkey = sett.basekey + '_' + args['prev'] + sett.fsig
-        dprev = read(prevkey)
-    # all tools that require a previous tool
-    elif toolkey in ['difftest', 'scdg']:
-        print('Error: need to provide a tool to option --prev')
-        print('--> presumably one for identification of subgroups')
-        from sys import exit
-        exit(0)
+    # read/write files
+    writekey = sett.basekey + '_' + toolkey + prevsuffix + sett.fsig
+    resultfile = readwrite.get_filename_from_key(writekey)
+    paramsfile = sett.writedir + writekey + '_params.txt'
+    if args['logfile']:
+        logfile = sett.writedir + writekey + '_log.txt'
+        sett.logfile(logfile)
     
-    # simply load the result file if it exists
+    # actual call of tool
     from os.path import exists
     if not exists(resultfile) or sett.recompute in ['all', 'tool']:
         # TODO: solve this in a nicer way, get an ordered dict for params
@@ -189,7 +197,10 @@ def run_args(toolkey, args):
             params = getcallargs(tool, dprev, ddata, **params)
             # TODO: Would be good to name the first argument dprev_or_ddata
             #       in difftest, but this doesn't work
-            del params['dprev']
+            if 'dprev' in params:
+                del params['dprev']
+            elif 'dgroups' in params:
+                del params['dgroups']
         else:
             dtool = tool(ddata, **params)
             params = getcallargs(tool, ddata, **params)
@@ -225,7 +236,7 @@ def run_args(toolkey, args):
             plotargs = [dtool, ddata, dplot]
         else: 
             plotargs = [dtool, ddata]
-        if args['prev'] != '':
+        if args['prev'] != '' and toolkey != 'tgdyn':
             plotargs.append(dprev)
         plot(*tuple(plotargs), **plotparams)
 
