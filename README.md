@@ -6,8 +6,8 @@
 # Scanpy - Single-Cell Analysis in Python
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
-of dynamic biological processes from snapshots of transcriptome or proteome. See
-see [examples](examples) for a high number of use cases.
+of dynamic biological processes from snapshots of transcriptome or proteome. See 
+[examples](examples) for a high number of use cases.
 
 * [preprocess](scanpy/tools/preprocess.py) - Filter, subsample, normalize data,
   and identify highly variable genes.
