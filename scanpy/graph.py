@@ -15,7 +15,7 @@ from . import settings as sett
 from . import plotting as plott
 from . import utils
 
-class DataGraph:
+class DataGraph(object):
     """ 
     Class for treating graphs.
     """
