@@ -69,8 +69,6 @@ def weinreb16(ddata):
     ddata['X'] = X
     ddata['Xpca'] = Xpca
     ddata['colnames'] = ddata['colnames'][gene_filter]
-    sett.m(0, 'X has shape', 
-           ddata['X'].shape[0], 'x', ddata['X'].shape[1])
     sett.m(0, 'Xpca has shape', 
            ddata['Xpca'].shape[0], 'x', ddata['Xpca'].shape[1])
     return ddata

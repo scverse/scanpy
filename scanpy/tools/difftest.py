@@ -14,10 +14,10 @@ from .. import plotting as plott
 from .. import settings as sett
 
 def difftest(dgroups, ddata=None,
-             groups_names='all',
+             groups='all',
              sig_level=0.05,
              correction='Bonferroni',
-             log=True):
+             log=False):
     """
     Perform differential gene expression test for groups defined in dgroups.
 
@@ -29,10 +29,10 @@ def difftest(dgroups, ddata=None,
         groups : list, np.ndarray of dtype str
             Array of shape (number of samples) that names the groups.
     ddata : dict, optional
-        Data dictionary containing gene names.
-    groups_names : list, np.ndarray of dtype str
-        Subset of names in dgroups['groups_names'] to which comparison shall be
-        restricted.
+        Data dictionary containing expression matrix and gene names.
+    groups : str, list, np.ndarray
+        Subset of names - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - in
+        dgroups['groups_names'] to which comparison shall be restricted.
 
     Returns
     -------
@@ -45,42 +45,50 @@ def difftest(dgroups, ddata=None,
         genes_sorted : np.ndarray
             Array of shape (number of tests) x (number of genes) storing genes
             sorted according the decreasing absolute value of the zscore.
-    """    
-    params = locals(); del params['ddata']; del params['dgroups']
+    """
+    # for clarity, rename variable
+    groups_names = groups
     # if ddata is empty, assume that ddata dgroups also contains
     # the data file elements
     if not ddata:
         sett.m(0, 'testing experimental groups')
         ddata = dgroups
-    # TODO: treat negativity explicitly
-    X = np.abs(ddata['X'])
-    # Convert X to log scale
-    if params['log']:
-        XL = np.log(X) / np.log(2)
-    else:
-        XL = X
+    X = ddata['X']
+    if log:
+        # Convert X to log scale
+        # TODO: treat negativity explicitly
+        X = np.abs(X)
+        X = np.log(X) / np.log(2)
 
-    # select groups
+    # select subset of groups
+    if isinstance(groups_names, str):
+        groups_names = groups_names.split(',')
     groups_names, groups_masks = utils.select_groups(dgroups, groups_names)
-    sett.m(0, 'testing groups', groups_names)
 
-    # loop over all groups_masks and compute means, variances and sample numbers
-    # in groups_masks
-    means = np.zeros((groups_masks.shape[0],X.shape[1]))
-    vars = np.zeros((groups_masks.shape[0],X.shape[1]))
-    ns = np.zeros(groups_masks.shape[0],dtype=int)
-    for igroup, group in enumerate(groups_masks):
-        means[igroup] = XL[group].mean(axis=0)
-        vars[igroup] = XL[group].var(axis=0)
-        ns[igroup] = np.where(group)[0].size
+    # loop over all masks and compute means, variances and sample numbers
+    nr_groups = groups_masks.shape[0]
+    nr_genes = X.shape[1]
+    means = np.zeros((nr_groups, nr_genes))
+    vars = np.zeros((nr_groups, nr_genes))
+    ns = np.zeros(nr_groups, dtype=int)
+    for imask, mask in enumerate(groups_masks):
+        means[imask] = X[mask].mean(axis=0)
+        vars[imask] = X[mask].var(axis=0)
+        ns[imask] = np.where(mask)[0].size
+    sett.m(0, 'testing groups', groups_names, 'with sample numbers', ns)
+    sett.m(2, 'means', means) 
+    sett.m(2, 'variances', vars)
 
     ddifftest = {'type' : 'difftest'}
-    igroups_masks = np.arange(len(groups_masks),dtype=int)
-    pairs = list(combinations(igroups_masks,2))
-    pvalues_all = np.zeros((len(pairs), X.shape[1]))
-    zscores_all = np.zeros((len(pairs), X.shape[1]))
-    genes_sorted = np.zeros((len(pairs), X.shape[1]),dtype=int)
-    ddifftest['testnames'] = []
+    igroups_masks = np.arange(len(groups_masks), dtype=int)
+    pairs = list(combinations(igroups_masks, 2))
+    pvalues_all = np.zeros((len(pairs), nr_genes))
+    zscores_all = np.zeros((len(pairs), nr_genes))
+    rankings_geneidcs = np.zeros((len(pairs), nr_genes),dtype=int)
+    # each test provides a ranking of genes
+    # we store the name of the ranking, i.e. the name of the test, 
+    # in the following list
+    ddifftest['rankings_names'] = []
     
     # test all combinations of groups against each other
     for ipair, (i,j) in enumerate(pairs):
@@ -89,30 +97,41 @@ def difftest(dgroups, ddata=None,
         zeros = np.flatnonzero(denom==0)
         denom[zeros] = np.nan
         zscores = (means[i] - means[j]) / denom
-        zscores = np.ma.masked_invalid(zscores)
+        # the following is equivalent with 
+        # zscores = np.ma.masked_invalid(zscores)
+        zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
+        
         zscores_all[ipair] = zscores
+        abs_zscores = np.abs(zscores)
 
-        abszscores = np.abs(zscores)
         # p-values
         if False:
-            pvalues = 2*norm.sf(abszscores) # two-sided test
+            pvalues = 2 * norm.sf(abs_zscores) # two-sided test
             pvalues = np.ma.masked_invalid(pvalues)
             sig_genes = np.flatnonzero(pvalues < 0.05/zscores.shape[0])
             pvalues_all[ipair] = pvalues
 
         # sort genes according to score
-        genes_sorted[ipair] = np.argsort(abszscores)[::-1]
-
+        ranking_geneidcs = np.argsort(abs_zscores)[::-1]        
+        # move masked values to the end of the index array
+        masked = abs_zscores[ranking_geneidcs].mask
+        len_not_masked = len(ranking_geneidcs[masked == False])
+        save_masked_idcs = np.copy(ranking_geneidcs[masked])
+        ranking_geneidcs[:len_not_masked] = ranking_geneidcs[masked == False]
+        ranking_geneidcs[len_not_masked:] = save_masked_idcs
+        # write to global rankings_genedics
+        rankings_geneidcs[ipair] = ranking_geneidcs
         # names
-        testlabel = groups_names[i] + ' vs '+ groups_names[j]
-        ddifftest['testnames'].append(testlabel)
+        ranking_name = groups_names[i] + ' vs '+ groups_names[j]
+        ddifftest['rankings_names'].append(ranking_name)
 
     if False:
         ddifftest['pvalues'] = -np.log10(pvalues_all)
 
     ddifftest['zscores'] = zscores_all
-    ddifftest['genes_sorted'] = genes_sorted
+    ddifftest['rankings_geneidcs'] = rankings_geneidcs
     ddifftest['scoreskey'] = 'zscores'
+
     return ddifftest
 
 def plot(ddifftest, ddata, params=None):

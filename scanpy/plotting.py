@@ -394,29 +394,28 @@ def ranking(drankings, ddata, nr=20):
         Number of genes.
     """
 
-    scoreskey = drankings['scoreskey']
-
     # one panel for each ranking
-    nr_panels = len(drankings['testnames'])
+    scoreskey = drankings['scoreskey']
+    nr_panels = len(drankings['rankings_names'])
     # maximal number of genes that is shown
     nr_genes = nr
 
     def get_scores(irank):
         allscores = drankings[scoreskey][irank]
-        allscores = np.ma.masked_invalid(allscores)
-        scores = allscores[drankings['genes_sorted'][irank,:nr_genes]]
+        scores = allscores[drankings['rankings_geneidcs'][irank, :nr_genes]]
         scores = np.abs(scores)
         return scores
 
     # the limits for the y axis
     ymin = 1e100
     ymax = -1e100
-    for irank in range(len(drankings['testnames'])):
+    for irank in range(len(drankings['rankings_names'])):
         scores = get_scores(irank)
         ymin = np.min([ymin,np.min(scores)])
         ymax = np.max([ymax,np.max(scores)])
     ymax += 0.3*(ymax-ymin)
 
+    # number of panels
     if nr_panels <= 5:
         nr_panels_y = 1
         nr_panels_x = nr_panels
@@ -428,10 +427,10 @@ def ranking(drankings, ddata, nr=20):
     pl.subplots_adjust(left=0.15,top=0.9,right=0.98,bottom=0.13)
 
     count = 1
-    for irank in range(len(drankings['testnames'])):
+    for irank in range(len(drankings['rankings_names'])):
         fig.add_subplot(nr_panels_y,nr_panels_x,count)
         scores = get_scores(irank)
-        for ig,g in enumerate(drankings['genes_sorted'][irank,:nr_genes]):
+        for ig,g in enumerate(drankings['rankings_geneidcs'][irank, :nr_genes]):
             marker = (r'\leftarrow' if drankings['zscores'][irank,g] < 0 
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
@@ -440,7 +439,7 @@ def ranking(drankings, ddata, nr=20):
                     rotation='vertical',verticalalignment='bottom',
                     horizontalalignment='center',
                     fontsize=8)
-        title = drankings['testnames'][irank]
+        title = drankings['rankings_names'][irank]
         pl.title(title)
         if nr_panels <= 5 or count > nr_panels_x:
             pl.xlabel('ranking')
