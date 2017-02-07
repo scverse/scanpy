@@ -67,6 +67,10 @@ def pca(X, nr_comps=50, exact=True):
         Data projected on nr_comps PCs.
     """
     from .. import settings as sett
+    if X.shape[1] < nr_comps:
+        nr_comps = X.shape[1]-1
+        sett.m(0, 'reducing number of computed PCs to', 
+               nr_comps, 'as dim of data is only', X.shape[1])
     # deal with multiple PCA implementations
     try:
         from sklearn.decomposition import PCA

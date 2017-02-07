@@ -16,7 +16,7 @@ import numpy as np
 from . import settings as sett
 from . import utils
 
-avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx']
+avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab']
 """ Available file formats for writing data. """
 
 #--------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ def write(filename_or_key, dictionary):
             dictionary['writekey'] = key
     write_dict_to_file(filename, dictionary, ext=sett.extd)
 
-def read(filename_or_key, sheet='', sep=None, first_column_names=False, 
+def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False, 
          as_strings=False, backup_url=''):
     """
     Read file or dictionary and return data dictionary.
@@ -61,6 +61,8 @@ def read(filename_or_key, sheet='', sep=None, first_column_names=False,
         Filename of data file or key used in function write(key,dict).
     sheet : str, optional
         Name of sheet in Excel file.
+    ext : str, optional (default: automatically inferred from filename)
+        Extension that indicates the file type.
     sep : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
@@ -84,7 +86,7 @@ def read(filename_or_key, sheet='', sep=None, first_column_names=False,
             Array storing the names of columns (gene names).
     """
     if is_filename(filename_or_key):
-        return read_file(filename_or_key, sheet, sep, first_column_names, 
+        return read_file(filename_or_key, sheet, ext, sep, first_column_names, 
                          as_strings, backup_url)
 
     # generate filename and read to dict
@@ -92,9 +94,13 @@ def read(filename_or_key, sheet='', sep=None, first_column_names=False,
     filename = sett.writedir + key + '.' + sett.extd
     if not os.path.exists(filename):
         raise ValueError('Reading with key ' + key + ' failed! ' + 
-                         'Provide valid key or filename directly: ' + 
+                         'Provide valid key or valid filename directly: ' + 
                          'inferred filename ' +
-                         filename + ' does not exist.')
+                         filename + ' does not exist.\n' +
+                         'If you intended to provide a filename, either ' + 
+                         'use a filename on one of the available extensions\n' + 
+                         str(avail_exts) + 
+                         'or provide the parameter "ext" to sc.read.')
     return read_file_to_dict(filename)
 
 #--------------------------------------------------------------------------------
@@ -172,7 +178,7 @@ def get_params_from_list(params_list):
 # Reading and Writing data files
 #--------------------------------------------------------------------------------
 
-def read_file(filename, sheet='', sep=None, first_column_names=False,
+def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
               as_strings=False, backup_url=''):
     """ 
     Read file and return data dictionary.
@@ -186,6 +192,8 @@ def read_file(filename, sheet='', sep=None, first_column_names=False,
         Filename of data file.
     sheet : str, optional
         Name of sheet in Excel file.
+    ext : str, optional (default: automatically inferred from filename)
+        Extension that indicates the file type.
     sep : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
@@ -212,21 +220,15 @@ def read_file(filename, sheet='', sep=None, first_column_names=False,
     If sheet is unspecified and an h5 or xlsx file is read, the dict
     contains all sheets instead.
     """
-    ext = is_filename(filename, return_ext=True)
+    if ext != '': 
+        if not ext in avail_exts:
+            raise ValueError('Please provide one of the available extensions.'
+                             + avail_exts)
+    else:
+        ext = is_filename(filename, return_ext=True)
+    # check whether data file is present, otherwise download
     filename = check_datafile_present(filename, backup_url=backup_url)
-    return _read_file(filename, ext, sheet, sep, first_column_names, 
-                      as_strings)
-
-def _read_file(filename, ext, sheet, sep, first_column_names,
-               as_strings):
-    """
-    Same as read_file(), one additional parameter ext.
-
-    Parameters
-    ----------
-    ext : str
-        Extension that denotes the type of the file.
-    """
+    # actual reading
     if ext == 'h5':
         if sheet == '':
             return read_file_to_dict(filename, ext='h5')
@@ -252,7 +254,7 @@ def _read_file(filename, ext, sheet, sep, first_column_names,
             ddata = _read_text(filename, sep=',', 
                                first_column_names=first_column_names,
                                as_strings=as_strings)
-        elif ext == 'txt':
+        elif ext == 'txt' or ext == 'tab':
             ddata = _read_text(filename, sep, first_column_names,
                                as_strings=as_strings)
         elif ext == 'soft.gz':
