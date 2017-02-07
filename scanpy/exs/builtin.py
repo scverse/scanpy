@@ -42,30 +42,32 @@ dexdata = {
              'patients using transcriptional profiles in peripheral blood '
              'mononuclear cells',
     'doi': '10.2353/jmoldx.2006.050079',
-    'info': 'bulk data',
+    'type': 'bulk',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'krumsiek11': {
     'ref': 'Krumsiek et al., PLoS ONE 6, e22649 (2011)',
     'title': 'Hierarchical Differentiation of Myeloid Progenitors Is Encoded in '
              'the Transcription Factor Network',
     'doi': '10.1371/journal.pone.0022649',
-    'type': 'simulated data',
+    'type': 'simulated',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'moignard15': {
     'ref': 'Moignard et al., Nature Biotechnology 33, 269 (2015)',
     'title': 'Decoding the regulatory network of early blood development from '
              'single-cell gene expression measurements',
+    'type': 'scqPCR',
     'doi': '10.1038/nbt.3154',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'paul15': {
     'ref': 'Paul et al., Cell 163, 1663 (2015)',
     'title': 'Transcriptional Heterogeneity and Lineage Commitment in Myeloid '
              'Progenitors',
+    'type': 'scRNAseq',
     'doi': '10.1016/j.cell.2015.11.013',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 'toggleswitch': {
     'title': 'Simple toggle switch model.',
-    'type': 'simulated data',
+    'type': 'simulated',
     'addedby': 'FA Wolf (falexwolf), 2016-12-15' },
 } 
 
@@ -239,14 +241,15 @@ def paul15():
             Expression vector of root cell.
     """
     ddata = paul15_raw()
-    ddata['X'] = sc.pp(ddata['X'], 'log')
+    ddata['X'] = sc.pp('log', ddata['X'])
     # adjust expression vector of root cell
     ddata['xroot'] = ddata['X'][ddata['iroot']]
     return ddata
 
 def paul15pca():
     ddata = paul15_raw()
-    ddata['X'] = sc.pp(ddata['X'], 'log')
+    ddata['X'] = sc.pp('log', ddata['X'])
+    #ddata['X'] = sc.pp.log(ddata['X'])
     # reduce to 50 components
     ddata['Xpca'] = sc.pca(ddata['X'], nr_comps=50)
     # adjust expression vector of root cell

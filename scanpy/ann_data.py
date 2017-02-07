@@ -1,5 +1,5 @@
 """
-Annotated Matrix
+Annotated Data
 """
 import sys
 from collections import Mapping

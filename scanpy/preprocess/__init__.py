@@ -3,27 +3,27 @@
 Preprocess Data
 
 Normalization and filtering functions that can be called directly or via
->>> ddata_or_X = preprocess(ddata_or_X, key)
+>>> ddata_or_X = preprocess(key, ddata_or_X)
 or euqivalently
->>> ddata_or_X = pp(ddata_or_X, key)
+>>> ddata_or_X = pp(key, ddata_or_X)
 
 Here, ddata_or_X is a data dictionary or data matrix and key is a string that
 identifies the preprocessing function.
 """
 
-def preprocess(ddata_or_X, key, *args, **kwargs):
+def preprocess(key, ddata_or_X, *args, **kwargs):
     """
     Preprocess data with a set of available functions in this module.
 
     A function is selected based on the 'preprocess key' and
-    is passed the optional arguments args and kwargs.
+    is passed the arguments args and kwargs.
 
     Parameters
     ----------
-    ddata_or_X : dict or np.ndarray
-       Data dictionary containing at least a data matrix 'X'.
     key : str
        String that identifies a preprocessing function.
+    ddata_or_X : dict or np.ndarray
+       Data dictionary containing at least a data matrix 'X'.
 
     Returns
     -------

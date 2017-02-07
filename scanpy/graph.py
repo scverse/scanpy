@@ -342,7 +342,7 @@ class DataGraph(object):
                    '    by setting nr_pcs > 0 you can speed up the computation')
         if self.params['nr_pcs'] > 0 and self.M.shape[0] > self.params['nr_pcs']:
             import scanpy.preprocess as pp
-            self.M = pp(self.M, 'pca', nr_comps=self.params['nr_pcs'])
+            self.M = pp('pca', self.M, nr_comps=self.params['nr_pcs'])
         self.Ddiff = sp.spatial.distance.pdist(self.M)
         self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
         sett.mt(0, 'computed Ddiff distance matrix')

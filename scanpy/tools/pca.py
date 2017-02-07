@@ -39,7 +39,7 @@ def pca(ddata_or_X, nr_comps=10):
     else:
         X = ddata_or_X
         isddata = False
-    Y = pp(X, 'pca', nr_comps)
+    Y = pp('pca', X, nr_comps)
     if isddata:
         return {'type': 'pca', 'Y': Y}
     else:
