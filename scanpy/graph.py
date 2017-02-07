@@ -403,11 +403,15 @@ class DataGraph:
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
         """
+        if self.X.shape[1] != xroot.size:
+            raise ValueError('The root vector you provided does not have the '
+                             'correct dimension. Make sure you provide the dimension-'
+                             'reduced version, if you provided Xpca.')
         # this is the squared distance
         dsqroot = 1e10
         self.iroot = 0
         for i in range(self.N):
-            diff = self.X[i,:]-xroot
+            diff = self.X[i, :]-xroot
             dsq = diff.dot(diff)
             if  dsq < dsqroot:
                 dsqroot = dsq

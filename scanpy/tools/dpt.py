@@ -242,8 +242,8 @@ def plot_groups(ddpt, ddata, params, colors,
             print('specify valid row category class')
         # colors for the categories
         if not rowcat + '_colors' in ddata:
-            ddata[k + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(ddata[k + '_ids']))
+            ddata[rowcat + '_colors'] = pl.cm.get_cmap(params['cmap'])(
+                                                  pl.Normalize()(ddata[rowcat + '_ids']))
         for icat in ddata[rowcat + '_ids']:
             plott.group(axs[2], rowcat, icat, ddata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))

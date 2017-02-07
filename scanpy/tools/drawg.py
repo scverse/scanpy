@@ -46,7 +46,12 @@ def drawg(ddata, k=4, nr_comps=2):
             Fruchterman Reingold representation of data.
     """
     sett.m(0,'draw knn graph')
-    X = ddata['X']
+    if 'Xpca' in ddata:
+        X = ddata['Xpca']
+        sett.m(0, '--> using Xpca for building graph')
+    else:
+        X = ddata['X']
+        sett.m(0, '--> using X for building graph')
     D = utils.comp_distance(X, metric='euclidean')
     # deterimine the distance of the k nearest neighbors
     indices = np.zeros((D.shape[0],k),dtype=np.int_)

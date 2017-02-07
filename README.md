@@ -39,12 +39,12 @@ add their own example or tool are welcome, too! Any comments are appreciated!
 
 ## Example Use <a id="example_use"></a>
 
-The following command-line examples call the wrapper
-[scanpy.py](scanpy.py), which works **without**
-[installation](#install).  To get all required packages (all default in
-[Anaconda](https://www.continuum.io/downloads)), install
+The following command-line examples call the wrapper [scanpy.py](scanpy.py),
+which works **without** [installation](#install).  To get all required packages
+(all default in [Anaconda](https://www.continuum.io/downloads)), install
 [Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
-matplotlib h5py pandas xlrd`.
+matplotlib h5py pandas xlrd`. Scanpy is written in Python 3 and compatible with
+Python 2.
 
 Download or clone the repository - green button on top of the page - and `cd`
 into its root directory.
@@ -153,7 +153,8 @@ Command-line use through the wrapper [scanpy.py](scanpy.py)
 works **without** installation.  To get all required packages (all default
 in [Anaconda](https://www.continuum.io/downloads)), install
 [Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
-matplotlib h5py pandas xlrd`.
+matplotlib h5py pandas xlrd`. Scanpy is written in Python 3 and compatible with
+Python 2.
 
 #### Details
 
