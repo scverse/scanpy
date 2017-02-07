@@ -2,7 +2,7 @@
 """
 Scanpy - Single-Cell Analysis in Python
 
-This is the general purpose command-line utility. 
+This is the general purpose command-line utility.
 """
 # Notes
 # -----
@@ -27,7 +27,7 @@ dtools = odict([
     ('pca', 'visualize data using PCA'),
     ('diffmap', 'visualize data using Diffusion Map'''),
     ('tsne', 'visualize data using tSNE'),
-    ('drawg', 'visualize data using force-directed graph drawing (experimental)'),
+    ('drawg', 'visualize data using force-directed graph drawing'),
     ('dpt', 'perform Diffusion Pseudotime analysis'),
     ('difftest', 'test for differential expression'),
     ('sim', 'simulate stochastic gene expression models'),
@@ -38,8 +38,11 @@ def main_descr():
     descr = '\nsimple inquiries\n----------------'
     for key, help in dsimple.items():
         descr += '\n{:12}'.format(key) + help
-    descr += '\n\ntools\n-----'
     for key, help in dtools.items():
+        if key == 'pca':
+            descr += '\n\nplotting tools\n--------------'
+        if key == 'dpt':
+            descr += '\n\nother tools\n-----------'
         descr += '\n{:12}'.format(key) + help
     descr += '\n\nexkey tool\n----------'
     descr += ('\n{:12}'.format('exkey tool')
@@ -60,9 +63,10 @@ def init_main_parser():
                                              description=main_descr())
 
     for key, help in dtools.items():
+        descr = 78*'-' + '\n' + sc.help(key, string=True) + 78*'-'
         sub_p = sub_parsers.add_parser(
                     key,
-                    description=sc.help(key, string=True),
+                    description=descr,
                     formatter_class=argparse.RawDescriptionHelpFormatter,
                     add_help=False)
         try:

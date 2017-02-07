@@ -92,9 +92,9 @@ def add_args(p):
     """
     # dictionary for adding arguments
     dadd_args = {
-        '--paramsfile': {
+        '--opfile': {
             'default': '',
-            'metavar': 'pf',
+            'metavar': 'f',
             'type': str,
             'help': 'Specify a parameter file ' 
                     '(default: "sim/${exkey}_params.txt")'

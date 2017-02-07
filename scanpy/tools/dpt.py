@@ -46,20 +46,20 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     nr_branchings : int, optional (default: 1)
         Number of branchings to detect.
     k : int, optional (default: 5)
-        Specify the number of nearest neighbors in the knn graph. If knn ==
-        False, set the Gaussian kernel width to the distance of the kth
-        neighbor (method 'local').
+        Number of nearest neighbors on the knn graph. If knn == False, set the
+        Gaussian kernel width to the distance of the kth neighbor (method
+        'local').
     knn : bool, optional (default: False)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    nr_pcs:
+    nr_pcs: int, optional (default: 30)
         Use nr_pcs PCs to compute DPT distance matrix -> speeds up the
         computation at almost no loss of accuracy.
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
-        of the Kernel Gaussian (method 'global').
+        of the Kernel Gaussian (method 'global') - knn needs to be False.
     allow_branching_at_root : bool, optional (default: False)
         Allow to have branching directly at root point.
         
@@ -67,20 +67,20 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     -------
     ddpt : dict containing
         pseudotimes : np.ndarray
-            Array of dim (number of cells) that stores the pseudotime of each
+            Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
             Serves as 'rowcont' for ddata.
         groups : np.ndarray of dtype int
-            Array of dim (number of cells) that stores the segment=subgroup id -
-            an integer that indexes groupnames - of each cell. The groups might
-            either correspond to 'progenitor cells', 'undecided cells' or
+            Array of dim (number of samples) that stores the segment=subgroup id
+            - an integer that indexes groupnames - of each cell. The groups
+            might either correspond to 'progenitor cells', 'undecided cells' or
             'branches'. Serves as 'rowcat' for ddata.
         Y : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
             basis of the transition matrix with eigenvectors as columns.
         evals : np.ndarray
-            Array of size (number of cells). Eigenvalues of transition matrix.
+            Array of size (number of samples). Eigenvalues of transition matrix.
     """
     params = locals(); del params['ddata']
     xroot = ddata['xroot']

@@ -83,20 +83,14 @@ def add_args(p, dadd_args=None):
     aa = p.add_argument_group('Tool parameters').add_argument
     aa('exkey',
        type=str, default='', metavar='exkey',
-       help='Specify the "example key" (just a shorthand), which is used '
-            'to look up a data dictionary and parameters. ' 
-            'Use Scanpy subcommand "examples" to inspect possible values.')
+       help='The "example key" is used to look up data and default parameters. '
+            'Use subcommand "examples" to display possible values.')
     # example key default argument
-    aa('-p', '--params',
+    aa('-o', '--oparams',
        nargs='*', default=None, metavar='k v',
-       help='Provide optional parameters as list, '
-            'e.g., "sigma 5 knn True" for setting "sigma" and "knn". See possible '
-            'keys in the function definition above (default: "").')
-    # make sure there are is conflict with dadd_args
-    if dadd_args is None or '--paramsfile' not in dadd_args:
-        aa('--paramsfile',
-           type=str, default='', metavar='pf',
-           help='Alternatively, specify the path to a parameter file (default: "").')
+       help='Optional tool parameters as list, e.g., "k 20 knn True", '
+            'see detailed help above, also note the '
+            'option --opfile (default: "").')
     # arguments from dadd_args
     if dadd_args is not None:
         for key, val in dadd_args.items():
@@ -106,18 +100,23 @@ def add_args(p, dadd_args=None):
     aa = p.add_argument_group('Plotting').add_argument
     aa('plotkey',
        type=str, default='', metavar='plotkey', nargs='?',
-       help='Specify plotting tool for visualization (default: tool dependent).')
-    aa('-q', '--plotparams',
+       help='Plotting tool for visualization (default: tool dependent).')
+    aa('-p', '--pparams',
        nargs='*', default=None, metavar='k v',
-       help='Provide specific plotting parameters as list, '
-            'e.g., "layout 3d cmap viridis". ' 
-            'See possible keys by calling "--plotparams help" (default: "").')
+       help='Plotting parameters as list, '
+            'e.g., "layout 3d comps 1,3,4". ' 
+            'Display possible paramaters via "-p help" (default: "").')
 
     aa = p.add_argument_group('Toolchain').add_argument
     aa('--prev',
        type=str, default='', metavar='tool',
-       help='Tool whose output should be used as input, ' 
+       help='Tool whose result should be used as input, ' 
             'often a tool that detects subgroups (default: tool dependent).')
+    # make sure there are is no conflict with dadd_args
+    if dadd_args is None or '--opfile' not in dadd_args:
+        aa('--opfile',
+           type=str, default='', metavar='f',
+           help='Path to file with optional parameters (default: "").')
 
     # standard arguments
     p = sett.add_args(p)

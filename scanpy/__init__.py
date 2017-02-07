@@ -1,7 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Scanpy - Single-Cell Analysis in Python
-=======================================
 
 Reference
 ---------
@@ -115,20 +114,20 @@ def run_args(toolkey, args):
             String that identifies the example use key.
     """
     # help on plot parameters
-    if args['plotparams']:
-        if args['plotparams'][0] == 'help':
+    if args['pparams']:
+        if args['pparams'][0] == 'help':
             from sys import exit
             exit(get_tool(toolkey).plot.__doc__)
 
     # read parameters
     if toolkey == 'sim':
-        if args['paramsfile'] != '':
-            params = read_params(args['paramsfile'])
+        if args['opfile'] != '':
+            params = read_params(args['opfile'])
         else:
-            paramsfile_sim = 'sim/' + args['exkey'] + '_params.txt'
-            params = read_params(paramsfile_sim)
+            opfile_sim = 'sim/' + args['exkey'] + '_oparams.txt'
+            params = read_params(opfile_sim)
             sett.m(0,'--> you can specify your custom params file using the option\n'
-                     '    "--paramsfile" or provide parameters directly via "--params"')
+                     '    "--opfile" or provide parameters directly via "--oparams"')
         if 'writedir' not in params:
             params['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
     else:
@@ -145,17 +144,17 @@ def run_args(toolkey, args):
         except:
             did_not_find_params_in_exmodule = True
             pass
-        # if parameters have been specified in a parameter file
-        # update the current param dict with these
-        if args['paramsfile'] != '':
-            add_params = read_params(args['paramsfile'])
+        # if optional parameters have been specified in a parameter file update
+        # the current param dict with these
+        if args['opfile'] != '':
+            add_params = read_params(args['opfile'])
             params = utils.update_params(params, add_params)
-        # same if parameters have been specified on the command line
-        if args['params']:
-            add_params = readwrite.get_params_from_list(args['params'])
+        # same if optional parameters have been specified on the command line
+        if args['oparams']:
+            add_params = readwrite.get_params_from_list(args['oparams'])
             params = utils.update_params(params, add_params)
-        elif did_not_find_params_in_exmodule and args['paramsfile'] != '':
-            sett.m(0, 'using default parameters, change them using "--params"')
+        elif did_not_find_params_in_exmodule and args['opfile'] != '':
+            sett.m(0, 'using default parameters, change them using "--oparams"')
 
     # previous tool
     prevsuffix = ''
@@ -180,7 +179,7 @@ def run_args(toolkey, args):
     # read/write files
     writekey = sett.basekey + '_' + toolkey + prevsuffix + sett.fsig
     resultfile = readwrite.get_filename_from_key(writekey)
-    paramsfile = sett.writedir + writekey + '_params.txt'
+    opfile = sett.writedir + writekey + '_oparams.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
         sett.logfile(logfile)
@@ -214,17 +213,17 @@ def run_args(toolkey, args):
         write(writekey, dtool)
         sett.m(0, 'wrote result to', resultfile)
         # save a copy of the parameters to a file
-        readwrite.write_params(paramsfile, params)
+        readwrite.write_params(opfile, params)
     else:
         # call the tool resultfile
         dtool = read(writekey)
 
     # plotting and postprocessing
-    plotparams = {}
-    if args['plotparams']:
-        plotparams = readwrite.get_params_from_list(args['plotparams'])
+    pparams = {}
+    if args['pparams']:
+        pparams = readwrite.get_params_from_list(args['pparams'])
     if toolkey == 'sim':
-        plot(dtool, plotparams)
+        plot(dtool, pparams)
     else:
         # post-processing specific to example and tool
         postprocess = args['exkey'] + '_' + toolkey
@@ -240,7 +239,7 @@ def run_args(toolkey, args):
             plotargs = [dtool, ddata]
         if args['prev'] != '' and toolkey != 'tgdyn':
             plotargs.append(dprev)
-        plot(*tuple(plotargs), **plotparams)
+        plot(*tuple(plotargs), **pparams)
 
 def read_args_run_tool(toolkey):
     """

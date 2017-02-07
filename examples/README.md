@@ -103,7 +103,7 @@ python scripts/scanpy.py krumsiek11 sim
 If the order is shuffled, as in a snapshot, the same data looks as on the right.
 Let us reconstruct the process using DPT and obtain the branching lineages
 ```shell
-python scripts/scanpy.py krumsiek11 dpt --plotparams layout 3d
+python scripts/scanpy.py krumsiek11 dpt -p layout 3d
 ```
 <img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_vsorder.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/krumsiek11_dpt_segpt.png" height="175">

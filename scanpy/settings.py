@@ -115,30 +115,25 @@ def add_args(p):
             ' of the data (default: %(default)d).')
     aa = p.add_argument_group('Save figures').add_argument
     aa('--savefigs',
-       type=str, default='', const=extf, nargs='?', metavar='extf',
-       help='Save figures to files. With the exception of interactive sessions, '
-            'and do not show interactive plots anymore. '
-            'Specify the file format via the extension, e.g. "pdf", '
-            '"svg", "png". Just providing "--savefigs" will save to "png" '
-            '(default: do not save figures).')
+       type=str, default='', const=extf, nargs='?', metavar='ext',
+       help='Save figures to files, either "png", "svg" or "pdf". Just providing '
+            '"--savefigs" will save to "png" (default: do not save figures).')
     aa('--figdir',
        type=str, default=figdir, metavar='dir',
        help='Change figure directory (default: %(default)s).')
-    aa = p.add_argument_group('Run a tool repeatedly, to try out different parameters').add_argument
-    aa('-r', '--recompute',
-       type=str, default='none', const='tool', nargs='?', metavar='r',
+    aa = p.add_argument_group('Run a tool repeatedly to try out different parameters').add_argument
+    aa('-r', '--recomp',
+       type=str, default='none', const='tool', nargs='?', metavar='x',
        help='Recompute and overwrite result files of previous calculations. '
-            'Just providing "-r" recomputes the tool, "-r all" also recomputes preprocessing.'
-            '(default: do not recompute).'
-       )
+            'Just providing "-r" recomputes the tool, "-r all" also recomputes '
+            'preprocessing (default: do not recompute).')
     aa('--suffix',
        type=str, default='', metavar='suffix',
-       help='Specify suffix to append to example key'
-            ' (default: "").')
-    aa('--plotsuffix',
+       help='Is appended to exkey in result filename (default: "").')
+    aa('--psuffix',
        type=str, default='', metavar='psuffix',
-       help='Specify suffix to append to suffix, when you simply change plotting parameters'
-            ' (default: "").')
+       help='Is appended to suffix. Useful when only changing plotting '
+            'parameters (default: "").')
     aa = p.add_argument_group('General settings').add_argument
     aa('-h', '--help',
        action='help',
@@ -149,15 +144,14 @@ def add_args(p):
             ' (default: %(default)d).')
     aa('--logfile',
        action='store_const', default=False, const=True,
-       help='Write to logfile instead of to standard output.')
+       help='Write to logfile instead of standard output.')
     aa('--fileformat',
-       type=str, default=extd, metavar='extd',
-       help='Specify file extension and by that'
-            ' file format for saving results, either "h5" or "xlsx".'
-            ' (default: %(default)s).')
+       type=str, default=extd, metavar='ext',
+       help='Specify file format for saving results, either "h5", "csv" or '
+            '"xlsx". (default: %(default)s).')
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
-       help='Change outfile directory (default: %(default)s).')
+       help='Change write directory (default: %(default)s).')
 
     return p
 
@@ -177,12 +171,12 @@ def process_args(args):
     args.pop('suffix')
 
     global plotsuffix
-    plotsuffix = args['plotsuffix']
-    args.pop('plotsuffix')
+    plotsuffix = args['psuffix']
+    args.pop('psuffix')
 
     global recompute
-    recompute = args['recompute']
-    args.pop('recompute')
+    recompute = args['recomp']
+    args.pop('recomp')
 
     global verbosity
     verbosity = args['verbosity']
