@@ -31,6 +31,7 @@ from .. import settings as sett
 
 #--------------------------------------------------------------------------------
 # The 'dexdata dictionary' stores information about example data.
+# - is optional, can stay empty
 #--------------------------------------------------------------------------------
 
 dexdata = {
@@ -39,6 +40,7 @@ dexdata = {
 #--------------------------------------------------------------------------------
 # The 'example dictionary' provides information about tool parameters 
 # that deviate from default parameters.
+# - is optional, can stay empty
 #--------------------------------------------------------------------------------
 
 dexamples = {
