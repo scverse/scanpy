@@ -56,22 +56,22 @@ def weinreb16(ddata):
     cvFilter = 2
     nr_pcs = 50
     X = ddata['X']
-    # filter out cells with fewer than 1000 UMIs
-    # X, cell_filter = filter_cells(X,1000)
-    # ddata['rownames'] = ddata['rownames'][cell_filter]
     # row normalize
     X = row_norm(X, max_fraction=0.05, mult_with_mean=True)
     # filter out genes with mean expression < 0.1 and coefficient of variance <
     # cvFilter
-    _, gene_filter = filter_genes_cv(X, meanFilter, cvFilter)
+    X, gene_filter = filter_genes_cv(X, meanFilter, cvFilter)
     # compute zscore of filtered matrix
-    X_z = zscore(X[:, gene_filter])
+    Xz = zscore(X)
     # PCA
-    X_pca = pca(X_z, nr_comps=nr_pcs)
+    Xpca = pca(Xz, nr_comps=nr_pcs)
     # update dictionary
-    ddata['X'] = X_pca
+    ddata['X'] = X
+    ddata['Xpca'] = Xpca
     ddata['colnames'] = ddata['colnames'][gene_filter]
-    sett.m(0, 'after PCA, X has shape', 
+    sett.m(0, 'X has shape', 
            ddata['X'].shape[0], 'x', ddata['X'].shape[1])
+    sett.m(0, 'Xpca has shape', 
+           ddata['Xpca'].shape[0], 'x', ddata['Xpca'].shape[1])
     return ddata
 
