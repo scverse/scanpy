@@ -72,14 +72,14 @@ def plot_tool(dplot, ddata,
     # rowcategories in ddata
     if 'rowcat' in ddata:
         if rowcat == '':
-            # simply take a random key
             rowcat = list(ddata['rowcat'].keys())[0]
-        elif rowcat not in ddata:
+            sett.m(0, 'coloring according to', rowcat)
+        elif rowcat not in ddata['rowcat']:
             print('specify valid row category class')
         # colors for categories
         if not rowcat + '_colors' in ddata:
             ddata[rowcat + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(ddata[k + '_ids']))
+                                                  pl.Normalize()(ddata[rowcat + '_ids']))
         for icat in ddata[rowcat + '_ids']:
             group(axs[0], rowcat, icat, ddata, dplot['Y'][:, comps], params['layout'])
         if params['legendloc'] != 'none':

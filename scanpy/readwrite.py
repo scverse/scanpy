@@ -16,7 +16,7 @@ import numpy as np
 from . import settings as sett
 from . import utils
 
-avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab']
+avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for writing data. """
 
 #--------------------------------------------------------------------------------
@@ -254,7 +254,10 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
             ddata = _read_text(filename, sep=',', 
                                first_column_names=first_column_names,
                                as_strings=as_strings)
-        elif ext == 'txt' or ext == 'tab':
+        elif ext in ['txt', 'tab', 'data']:
+            if ext == 'data':
+                sett.m(0, 'assuming ".data" means tab or white-space separated text file')
+                sett.m(0, '--> change this by specifying ext to sc.read')
             ddata = _read_text(filename, sep, first_column_names,
                                as_strings=as_strings)
         elif ext == 'soft.gz':
@@ -346,14 +349,16 @@ def _read_text_raw(filename, sep=None):
         else:
             line_list = line.split(sep)
             data.append(line_list)
+
     return data, header
 
 def _interpret_as_strings(data):
     """
-    Interpret list of lists as floats.
+    Interpret list of lists as strings
     """
     if len(data[0]) == len(data[1]):
         X = np.array(data).astype(str)
+        sett.m(0,'--> the whole content of the file is in X')
     else:
         # strip quotation marks
         if data[0][0].startswith('"'):
@@ -366,6 +371,9 @@ def _interpret_as_strings(data):
         data = np.array(data[1:]).astype(str)
         rownames = data[:, 0]
         X = data[:, 1:]
+        sett.m(0,'--> first column is stored in "colnames"')
+        sett.m(0,'--> first row is stored in "rownames"')
+        sett.m(0,'--> data is stored in X')
     ddata = {'X': X, 'colnames': colnames, 'rownames': rownames}
     return ddata
 
@@ -373,6 +381,7 @@ def _interpret_as_floats(data, header, first_column_names):
     """
     Interpret as float array with optional colnames and rownames.
     """
+    
     # if the first element of the data list cannot be interpreted as float, the
     # first row of the data is assumed to store variable names
     if not is_float(data[0][0]):
@@ -398,7 +407,7 @@ def _interpret_as_floats(data, header, first_column_names):
     # as float, it is assumed to store sample names
     if not is_float(data[1][0]) or first_column_names: 
         sett.m(0,'--> assuming first column stores sample names')
-        rownames = data[:,0].astype(str)
+        rownames = data[:, 0].astype(str)
         # skip the first column
         try:
             X = data[:, 1:].astype(float)

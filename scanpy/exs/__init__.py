@@ -177,9 +177,9 @@ def check_ddata(ddata):
                 ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=str)
             # ordered unique categories
             if not k + '_names' in ddata:
-                ddata[k + '_names'] = np.unique(ddata['rowcat'])
+                ddata[k + '_names'] = np.unique(ddata['rowcat'][k])
             # output 
-            sett.m(0,'row categories in ddata', ddata[k + '_names'])
+            sett.m(0,'read sample annotation', k, 'with', ddata[k + '_names'])
             # indices for each category
             if not k + '_ids' in ddata:
                 ddata[k + '_ids'] = np.arange(len(ddata[k + '_names']), dtype=int)
