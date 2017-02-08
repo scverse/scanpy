@@ -153,7 +153,6 @@ def burczynski06():
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
-    ddata['rowcat'] = {'groups': ddata['groups']}
     return ddata
 
 def krumsiek11():

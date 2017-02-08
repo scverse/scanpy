@@ -584,7 +584,7 @@ def _read_softgz(filename):
     rownames = sample_names
     colnames = gene_names
     ddata = {'X': X, 'rownames': rownames, 'colnames': colnames, 
-             'groups': groups}
+             'rowcat': {'groups': groups}}
     return ddata
 
 #--------------------------------------------------------------------------------
