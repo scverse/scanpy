@@ -154,10 +154,9 @@ def burczynski06():
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
-#     print(ddata)
-#     adata = AnnData.from_ddata(**ddata)
-#     print(adata.X)
-#     print(adata.smp_names)
+    adata = AnnData(ddata)
+    adata.smp['groups'] = ddata['row']['groups']
+    ddata['rowcat'] = ddata['row']
     return ddata
 
 def krumsiek11():
@@ -318,7 +317,6 @@ def paul15_raw():
     # define local variables to manipulate
     X = ddata['X']
     genenames = ddata['col_names']
-    print(genenames)
     # cluster assocations identified by Paul et al.
     # groups = sc.read(filename,'cluster.id')['X']
     infogenenames = sc.read(filename, 'info.genes_strings')['X']

@@ -91,16 +91,15 @@ def _check_dimensions(data, smp, var):
                          .format(nr_var, var.shape[0]))
 
 class AnnData(IndexMixin):
-    def __init__(self, X, smp=None, var=None, vis=None, **meta):
-        u"""
-        Annotated Matrix
+    def __init__(self, ddata=None, X=None, smp=None, var=None, vis=None, **meta):
+        """
+        Annotated Data
 
-        Represents a sample × variable matrix (e.g. cell × gene) with the
-        possibility to store an arbitrary number of annotations for both
-        samples and variables.
+        Stores a data matrix X of dimensions nr_samples × nr_variables,
+        e.g. nr_cells × nr_genes, with the possibility to store an arbitrary
+        number of annotations for both samples and variables.
 
-        All named parameters will be stored as attributes. You can access
-        additional metadata elements directly from the AnnData:
+        You can access additional metadata elements directly from the AnnData:
 
         >>> adata = AnnData(np.eye(3), k=1)
         >>> assert adata['k'] == 1
@@ -121,19 +120,57 @@ class AnnData(IndexMixin):
 
         Parameters
         ----------
+        ddata : dict, containing
+            X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
+                A nr_samples x nr_variables data matrix.
+            row_names : list, np.ndarray, optional
+                A nr_samples array storing names for samples.
+            col_names : list, np.ndarray, optional
+                A nr_variables array storing names for variables.
+            row : dict, optional
+                A dict with row annotation.
         X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-            A sample × variable matrix
-        smp : np.recarray | dict
-            A sample × ? record array containing sample names (`smp_names`)
-            and other sample metadata columns. A passed dict will be
+            A nr_samples × nr_variables data matrix.
+        smp : np.recarray, dict
+            A nr_samples × ? record array containing sample names (`smp_names`)
+            and other sample annotation in the columns. A passed dict is
             converted to a record array.
-        var : np.recarray | dict
-            The same as `smp_meta`, only for variable metadata.
+        var : np.recarray, dict
+            The same as `smp`, but of shape nr_variables x ? for annotation of
+            variables.
         vis : dict
             A dict containing visualization metadata.
         **meta : dict
             Unstructured metadata for the whole dataset.
+
+        Attributes
+        ----------
+        X, smp, var from the Parameters.
         """
+
+        if ddata is not None:
+            if 'X' in ddata:
+                X = ddata['X']
+            if False:
+                # TODO: enable this
+                smp = {}
+                if 'row' in ddata:
+                    smp = ddata['row']
+                var = {}
+                if 'col' in ddata:
+                    var = ddata['col']
+                if 'row_names' in ddata:
+                    smp['smp_names'] = ddata['row_names']
+                if 'col_names' in ddata:
+                    smp['var_names'] = ddata['col_names']
+            if 'row_names' in ddata:
+                row_names = ddata['row_names']
+                smp = np.rec.fromarrays([np.asarray(row_names)],
+                                         names=[SMP_NAMES])
+            if 'col_names' in ddata:
+                col_names = ddata['col_names']
+                var = np.rec.fromarrays([np.asarray(col_names)],
+                                         names=[VAR_NAMES])
 
         # check data type of X
         for s_type in StorageType:
@@ -164,27 +201,11 @@ class AnnData(IndexMixin):
         self.vis = vis or {}
         self._meta = meta
 
-    @classmethod
-    def from_ddata(cls, X=None, row_names=None, col_names=None, **meta):
-        """
-        Temporary helper to an AnnData from a “ddata” dict.
+    def smp_keys(self):
+        return list(self.smp.dtype.names)
 
-        Parameters
-        ----------
-        X : n×p data matrix
-        row_names : n-length array of samples
-        col_names : n-length array of variables
-        """
-        if X is None:
-            raise ValueError('Missing data. Got instead {}'.format(meta.keys()))
-
-        smp_meta = var_meta = None
-        if row_names is not None:
-            smp_meta = np.rec.fromarrays([np.asarray(row_names)], names=[SMP_NAMES])
-        if col_names is not None:
-            var_meta = np.rec.fromarrays([np.asarray(col_names)], names=[VAR_NAMES])
-
-        return cls(X, smp_meta, var_meta, **meta)
+    def var_keys(self):
+        return list(self.smp.dtype.names)
 
     @property
     def smp_names(self):

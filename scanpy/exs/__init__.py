@@ -113,7 +113,8 @@ def example(exkey, return_module=False):
         ddata = exfunc()
         # add exkey to ddata
         ddata['exkey'] = exkey
-        sett.m(0, 'X has shape', ddata['X'].shape[0], 'x', ddata['X'].shape[1])
+        sett.m(0, 'X has shape nr_samples x nr_variables =', 
+               ddata['X'].shape[0], 'x', ddata['X'].shape[1])
         # do sanity checks on data dictionary
         ddata = check_ddata(ddata)
         readwrite.write(sett.basekey, ddata)
@@ -137,6 +138,45 @@ howto_specify_subgroups = '''no key "rowcat" in ddata dictionary found
     number of samples as follows
     {'group1': ['A', 'B', 'A', ... ], 'group2': ['c', 'a', ...]}
 '''
+
+def check_adata(adata):
+    """
+    Do sanity checks on adata object.
+
+    Checks whether ddata conains categorical row metadata 'rowcat'. 
+
+    If yes, for each class of categories in 'rowcat' associate an 'order',
+    indices 'ids', colors and masks.
+    """
+    import numpy as np
+    import sys
+    if not 'rowcat' in ddata:
+        sett.m(0, howto_specify_subgroups)
+    else:
+        if not isinstance(ddata['rowcat'], dict):
+            msg = 'rowcat must be a dictionary! {\'cat1\': [...], }'
+            sys.exit(msg)
+        for k in ddata['rowcat']:
+            # transform to np.ndarray
+            try:
+                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=int)
+            except:
+                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=str)
+            # ordered unique categories
+            if not k + '_names' in ddata:
+                ddata[k + '_names'] = np.unique(ddata['rowcat'][k])
+            # output 
+            sett.m(0,'read sample annotation', k, 'with', ddata[k + '_names'])
+            # indices for each category
+            if not k + '_ids' in ddata:
+                ddata[k + '_ids'] = np.arange(len(ddata[k + '_names']), dtype=int)
+            # masks for each category
+            if not k + '_masks' in ddata:
+                masks = []
+                for name in ddata[k + '_names']:
+                    masks.append(name == ddata['rowcat'][k])
+                ddata[k + '_masks'] = np.array(masks)
+    return ddata
 
 def check_ddata(ddata):
     """
