@@ -65,7 +65,7 @@ def plot(ddata):
     Plot results of simulation.
     """
     X = ddata['X']
-    genenames = ddata['colnames']
+    genenames = ddata['col_names']
     tmax = ddata['tmax_write']
     nr_real = X.shape[0]/tmax
     plott.timeseries(X, genenames,

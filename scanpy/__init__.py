@@ -194,7 +194,7 @@ def run_args(toolkey, args):
     
     # actual call of tool
     from os.path import exists
-    if not exists(resultfile) or sett.recompute in ['all', 'tool']:
+    if not exists(resultfile) or sett.recompute != 'none':
         # TODO: solve this in a nicer way, get an ordered dict for oparams
         from inspect import getcallargs
         tool = get_tool(toolkey, func=True)

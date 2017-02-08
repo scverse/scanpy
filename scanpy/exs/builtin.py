@@ -28,6 +28,7 @@ import numpy as np
 import scanpy as sc
 from .. import utils
 from .. import settings as sett
+from ..ann_data import AnnData
 
 #--------------------------------------------------------------------------------
 # The 'dexdata dictionary' stores information about example data.
@@ -153,6 +154,10 @@ def burczynski06():
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
+#     print(ddata)
+#     adata = AnnData.from_ddata(**ddata)
+#     print(adata.X)
+#     print(adata.smp_names)
     return ddata
 
 def krumsiek11():
@@ -215,9 +220,9 @@ def paul15():
         X: np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames: np.ndarray
+        row_names: np.ndarray
             Array storing the experimental labels of samples.
-        colnames: np.ndarray
+        col_names: np.ndarray
             Array storing the names of genes.
         xroot: np.ndarray
             Expression vector of root cell.
@@ -268,8 +273,8 @@ def moignard15_raw():
     url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     ddata = sc.read(filename, sheet='dCt_values.txt', backup_url=url)
     X = ddata['X'] # data matrix
-    genenames = ddata['colnames'] 
-    cellnames = ddata['rownames'] 
+    genenames = ddata['col_names'] 
+    cellnames = ddata['row_names'] 
     # filter genes
     # filter out the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
@@ -277,7 +282,7 @@ def moignard15_raw():
                   np.arange(32, 36), np.arange(37, 45)]
     print('selected', len(genes), 'genes')
     ddata['X'] = X[:, genes] # filter data matrix
-    ddata['colnames'] = genenames[genes] # filter genenames
+    ddata['col_names'] = genenames[genes] # filter genenames
     # choose root cell as in Haghverdi et al. (2016)
     ddata['iroot'] = 532 # note that in Matlab/R, counting starts at 1
     ddata['xroot'] = ddata['X'][ddata['iroot']] 
@@ -312,7 +317,8 @@ def paul15_raw():
     ddata = utils.transpose_ddata(ddata)
     # define local variables to manipulate
     X = ddata['X']
-    genenames = ddata['colnames']
+    genenames = ddata['col_names']
+    print(genenames)
     # cluster assocations identified by Paul et al.
     # groups = sc.read(filename,'cluster.id')['X']
     infogenenames = sc.read(filename, 'info.genes_strings')['X']
@@ -330,7 +336,7 @@ def paul15_raw():
     #       genenames[:10])
     # write to dict
     ddata['X'] = X
-    ddata['colnames'] = genenames
+    ddata['col_names'] = genenames
     # set root cell as in Haghverdi et al. (2016)
     ddata['iroot'] = 840 # note that in Matlab/R, counting starts at 1
     ddata['xroot'] = X[ddata['iroot']] 

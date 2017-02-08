@@ -434,7 +434,7 @@ def ranking(drankings, ddata, nr=20):
             marker = (r'\leftarrow' if drankings['zscores'][irank,g] < 0 
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
-                    r'$ ' + marker + '$ '+ddata['colnames'][g],
+                    r'$ ' + marker + '$ '+ddata['col_names'][g],
                     color = 'red' if drankings['zscores'][irank,g] < 0 else 'green',
                     rotation='vertical',verticalalignment='bottom',
                     horizontalalignment='center',

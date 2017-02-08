@@ -80,9 +80,9 @@ def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False,
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows (experimental labels of samples).
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns (gene names).
     """
     if is_filename(filename_or_key):
@@ -192,7 +192,7 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
         Filename of data file.
     sheet : str, optional
         Name of sheet in Excel file.
-    ext : str, optional (default: automatically inferred from filename)
+    ext : str, optional (default: inferred from filename)
         Extension that indicates the file type.
     sep : str, optional
         Separator that separates data within text file. If None, will split at
@@ -212,9 +212,9 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows (experimental labels of samples).
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns (gene names).
 
     If sheet is unspecified and an h5 or xlsx file is read, the dict
@@ -239,7 +239,7 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
     # just to make sure that we have a different filename
     if filename_hdf5 == filename:
         filename_hdf5 = filename + '.h5'
-    if not os.path.exists(filename_hdf5):
+    if not os.path.exists(filename_hdf5) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
                  '\n--> write an hdf5 version to speedup reading next time')
         # do the actual reading
@@ -284,7 +284,7 @@ def _read_mtx(filename):
     """
     from scipy.io import mmread
     X = mmread(filename).todense()
-    sett.m(0, '--> did not find any rownames or columnnames')
+    sett.m(0, '--> did not find any row_names or columnnames')
     sett.m(0, '--> TODO: don\'t use dense format')
     return {'X': X}
 
@@ -309,9 +309,9 @@ def _read_text(filename, sep=None, first_column_names=False, as_strings=False):
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows (experimental labels of samples).
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns (gene names).
     """
     data, header = _read_text_raw(filename,sep)
@@ -367,19 +367,19 @@ def _interpret_as_strings(data):
             for ir, r in enumerate(data):
                 for ic, elem in enumerate(r):
                     data[ir][ic] = elem.strip('"')
-        colnames = np.array(data[0]).astype(str)
+        col_names = np.array(data[0]).astype(str)
         data = np.array(data[1:]).astype(str)
-        rownames = data[:, 0]
+        row_names = data[:, 0]
         X = data[:, 1:]
-        sett.m(0,'--> first column is stored in "colnames"')
-        sett.m(0,'--> first row is stored in "rownames"')
+        sett.m(0,'--> first column is stored in "col_names"')
+        sett.m(0,'--> first row is stored in "row_names"')
         sett.m(0,'--> data is stored in X')
-    ddata = {'X': X, 'colnames': colnames, 'rownames': rownames}
+    ddata = {'X': X, 'col_names': col_names, 'row_names': row_names}
     return ddata
 
 def _interpret_as_floats(data, header, first_column_names):
     """
-    Interpret as float array with optional colnames and rownames.
+    Interpret as float array with optional col_names and row_names.
     """
     
     # if the first element of the data list cannot be interpreted as float, the
@@ -387,27 +387,27 @@ def _interpret_as_floats(data, header, first_column_names):
     if not is_float(data[0][0]):
         sett.m(0,'--> assuming first line in file stores variable names')
         # if the first row is one element shorter
-        colnames = np.array(data[0]).astype(str)
+        col_names = np.array(data[0]).astype(str)
         data = np.array(data[1:])
-    # try reading colnames from the last comment line
+    # try reading col_names from the last comment line
     elif len(header) > 0 and type(header) == str:
         sett.m(0,'--> assuming last comment line stores variable names')
         potentialnames = header.split('\n')[-2].strip('#').split()
-        colnames = np.array(potentialnames)
+        col_names = np.array(potentialnames)
         # skip the first column
-        colnames = colnames[1:]
+        col_names = col_names[1:]
         data = np.array(data)
-    # just numbers as colnames
+    # just numbers as col_names
     else:
         sett.m(0,'--> did not find variable names in file')
         data = np.array(data)
-        colnames = np.arange(data.shape[1]).astype(str)
+        col_names = np.arange(data.shape[1]).astype(str)
 
     # if the first element of the second row of the data cannot be interpreted
     # as float, it is assumed to store sample names
     if not is_float(data[1][0]) or first_column_names: 
         sett.m(0,'--> assuming first column stores sample names')
-        rownames = data[:, 0].astype(str)
+        row_names = data[:, 0].astype(str)
         # skip the first column
         try:
             X = data[:, 1:].astype(float)
@@ -415,21 +415,21 @@ def _interpret_as_floats(data, header, first_column_names):
             msg = 'formating is strange, last line of data matrix is \n'
             msg += str(data[-1, 1:])
             raise ValueError(msg)
-        if colnames.size > X.shape[1]:
-            colnames = colnames[1:]
-    # just numbers as rownames
+        if col_names.size > X.shape[1]:
+            col_names = col_names[1:]
+    # just numbers as row_names
     else:
         sett.m(0,'--> did not find sample names in file')
         X = data.astype(float)
-        rownames = np.arange(X.shape[0]).astype(str)
+        row_names = np.arange(X.shape[0]).astype(str)
 
     ddata = {
-        'X' : X, 'rownames' : rownames, 'colnames' : colnames
+        'X' : X, 'row_names' : row_names, 'col_names' : col_names
     }
 
     return ddata
 
-def _read_hdf5_single(filename,key=''):
+def _read_hdf5_single(filename, key=''):
     """ 
     Read a single dataset from an hdf5 file.
 
@@ -449,9 +449,9 @@ def _read_hdf5_single(filename,key=''):
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows (experimental labels of samples).
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns (gene names).
     """
     with h5py.File(filename, 'r') as f:
@@ -467,15 +467,17 @@ def _read_hdf5_single(filename,key=''):
         if X.dtype.kind == 'S':
             X = X.astype(str)
         # init dict
-        ddata = { 'X' : X }
-        # set row and column names
-        for iname, name in enumerate(['rownames','colnames']):
+        ddata = {'X' : X}
+        # try to find row and column names
+        for iname, name in enumerate(['row_names','col_names']):
             if name in keys:
                 ddata[name] = f[name][()]
-            elif key + '_' + name in keys:
-                ddata[name] = f[key + '_' + name][()]
+            elif key + '_' + name.replace('_', '') in keys:
+                ddata[name] = f[key + '_' + name.replace('_', '')][()]
             else:
-                ddata[name] = np.arange(X.shape[0 if name == 'rownames' else 1])
+                ddata[name] = np.arange(X.shape[0 if name == 'row_names' else 1])
+                if key == 'X':
+                    sett.m(0, 'did not find', name, 'in', filename)
             ddata[name] = ddata[name].astype(str)
             if X.ndim == 1:
                 break
@@ -498,9 +500,9 @@ def _read_excel(filename, sheet=''):
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows (experimental labels of samples).
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns (gene names).
     """
     # rely on pandas for reading an excel file
@@ -526,9 +528,9 @@ def _read_softgz(filename):
     ddata : dict, containing
         X : np.ndarray
             A d x n array of gene expression values.
-        colnames : np.ndarray
+        col_names : np.ndarray
             A list of gene identifiers of length d.
-        rownames : np.ndarray
+        row_names : np.ndarray
             A list of sample identifiers of length n.
         groups : np.ndarray
             A list of sample desriptions of length n.
@@ -581,9 +583,9 @@ def _read_softgz(filename):
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
     X = np.array(X).T
-    rownames = sample_names
-    colnames = gene_names
-    ddata = {'X': X, 'rownames': rownames, 'colnames': colnames, 
+    row_names = sample_names
+    col_names = gene_names
+    ddata = {'X': X, 'row_names': row_names, 'col_names': col_names, 
              'rowcat': {'groups': groups}}
     return ddata
 
@@ -746,10 +748,10 @@ def ddata_from_df(df):
     """
     Write pandas.dataframe to ddata dictionary.
     """
-    ddata = { 
-        'X' : df.values[:,1:].astype(float), 
-        'rownames' : df.iloc[:,0].values.astype(str), 
-        'colnames' : np.array(df.columns[1:],dtype=str) 
+    ddata = {
+        'X': df.values[:,1:].astype(float),
+        'row_names': df.iloc[:,0].values.astype(str),
+        'col_names': np.array(df.columns[1:], dtype=str)
         }
     return ddata
 

@@ -186,13 +186,13 @@ def plot(ddpt, ddata, dplot=None,
     # if number of genes is not too high, plot time series
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[ddpt['indices']], ddata['colnames'],
+        plott.timeseries(X[ddpt['indices']], ddata['col_names'],
                          highlightsX=ddpt['changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
         plott.savefig(ddpt['writekey']+'_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], ddata['colnames'],
+        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], ddata['col_names'],
                                     highlightsX=ddpt['changepoints'])
         plott.savefig(ddpt['writekey']+'_heatmap')
     if not sett.savefigs and sett.autoshow:

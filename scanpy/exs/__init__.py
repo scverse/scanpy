@@ -68,9 +68,9 @@ def example(exkey, return_module=False):
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the experimental labels of samples.
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of genes.
 
         There might be further entries such as
@@ -108,7 +108,7 @@ def example(exkey, return_module=False):
     from os.path import exists
     exfile = readwrite.get_filename_from_key(sett.basekey)
     if (not exists(exfile)
-        or sett.recompute == 'all'):
+        or sett.recompute in ['read', 'pp']):
         # run the function
         ddata = exfunc()
         # add exkey to ddata

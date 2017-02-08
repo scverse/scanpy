@@ -284,23 +284,23 @@ def transpose_ddata(ddata):
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the names of rows.
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of columns.
     Returns
     -------
     ddata : dict 
-        With X transposed and rownames and colnames interchanged.
+        With X transposed and row_names and col_names interchanged.
     """
     ddata['X'] = ddata['X'].T
-    colnames = None
-    if 'colnames' in ddata:
-        colnames = ddata['colnames']
-    if 'rownames' in ddata:
-        ddata['colnames'] = ddata['rownames']
-    if not colnames is None:
-        ddata['rownames'] = colnames
+    col_names = None
+    if 'col_names' in ddata:
+        col_names = ddata['col_names']
+    if 'row_names' in ddata:
+        ddata['col_names'] = ddata['row_names']
+    if not col_names is None:
+        ddata['row_names'] = col_names
     return ddata
 
 def subsample(X,subsample=1,seed=0):

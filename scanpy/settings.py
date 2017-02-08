@@ -125,8 +125,9 @@ def add_args(p):
     aa('-r', '--recomp',
        type=str, default='none', const='tool', nargs='?', metavar='x',
        help='Recompute and overwrite result files of previous calculations. '
-            'Just providing "-r" recomputes the tool, "-r all" also recomputes '
-            'preprocessing (default: do not recompute).')
+            'Just providing "-r" only recomputes the tool, "-r pp" also '
+            'recomputes preprocessing, "-r read" also rereads data files '
+            '(default: do not recompute).')
     aa('--suffix',
        type=str, default='', metavar='suffix',
        help='Is appended to exkey in result filename (default: "").')

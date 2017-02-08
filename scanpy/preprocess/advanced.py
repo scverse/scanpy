@@ -23,11 +23,11 @@ def subsample(ddata, subsample, seed=0):
     Returns
     -------
     ddata : dict containing modified entries
-        'rownames', 'expindices', 'explabels', 'expcolors'
+        'row_names', 'expindices', 'explabels', 'expcolors'
     """
     from .. import utils
     X, row_indices = utils.subsample(ddata['X'],subsample,seed)
-    for key in ['rownames', 'Xpca']:
+    for key in ['row_names', 'Xpca']:
         if key in ddata and len(ddata[key]) == ddata['X'].shape[0]:
             ddata[key] = ddata[key][row_indices]
     if 'rowcat' in ddata:
@@ -68,7 +68,7 @@ def weinreb16(ddata):
     # update dictionary
     ddata['X'] = X
     ddata['Xpca'] = Xpca
-    ddata['colnames'] = ddata['colnames'][gene_filter]
+    ddata['col_names'] = ddata['col_names'][gene_filter]
     sett.m(0, 'Xpca has shape', 
            ddata['Xpca'].shape[0], 'x', ddata['Xpca'].shape[1])
     return ddata

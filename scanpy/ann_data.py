@@ -165,24 +165,24 @@ class AnnData(IndexMixin):
         self._meta = meta
 
     @classmethod
-    def from_ddata(cls, X=None, rownames=None, colnames=None, **meta):
+    def from_ddata(cls, X=None, row_names=None, col_names=None, **meta):
         """
         Temporary helper to an AnnData from a “ddata” dict.
 
         Parameters
         ----------
         X : n×p data matrix
-        rownames : n-length array of samples
-        colnames : n-length array of variables
+        row_names : n-length array of samples
+        col_names : n-length array of variables
         """
         if X is None:
             raise ValueError('Missing data. Got instead {}'.format(meta.keys()))
 
         smp_meta = var_meta = None
-        if rownames is not None:
-            smp_meta = np.rec.fromarrays([np.asarray(rownames)], names=[SMP_NAMES])
-        if colnames is not None:
-            var_meta = np.rec.fromarrays([np.asarray(colnames)], names=[VAR_NAMES])
+        if row_names is not None:
+            smp_meta = np.rec.fromarrays([np.asarray(row_names)], names=[SMP_NAMES])
+        if col_names is not None:
+            var_meta = np.rec.fromarrays([np.asarray(col_names)], names=[VAR_NAMES])
 
         return cls(X, smp_meta, var_meta, **meta)
 
@@ -290,8 +290,8 @@ def test_creation():
 def test_ddata():
     ddata = dict(
         X=np.array([[1, 2, 3], [4, 5, 6]]),
-        rownames=['A', 'B'],
-        colnames=['a', 'b', 'c'])
+        row_names=['A', 'B'],
+        col_names=['a', 'b', 'c'])
     AnnData.from_ddata(**ddata)
 
 def test_names():
