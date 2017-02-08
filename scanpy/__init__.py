@@ -12,6 +12,7 @@ from . import tools
 from . import preprocess
 from . import utils
 from .tools import get_tool
+from .ann_data import AnnData
 from .readwrite import read, write, read_params
 from .exs import exdata, examples, example
 from . import preprocess
@@ -54,8 +55,8 @@ __all__ = [
     # plotting
     'plot',
     'show', # show plots
-    # management
-    'run'
+    # classes
+    'AnnData'
 ]
 
 def plot(*dtools, **kwargs):

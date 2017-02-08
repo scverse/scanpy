@@ -6,11 +6,9 @@
 # Scanpy - Single-Cell Analysis in Python
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
-of dynamic biological processes from snapshots of transcriptome or proteome. See 
-[examples](examples) for a high number of use cases.
-
-* [preprocess](scanpy/tools/preprocess.py) - Filter, subsample, normalize data,
-  and identify highly variable genes.
+of dynamic biological processes from snapshots of transcriptome or proteome.
+[Examples](examples) and [preprocess](scanpy/tools/preprocess) summarize a high
+number of use cases and preprocessing methods, respectively.
 
 * [pca](scanpy/tools/pca.py) - Visualize data using PCA.
 
@@ -30,12 +28,11 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16)).
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09)).
 
-Please, cite the original references.
-
-The draft [Wolf & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains
-conceptual ideas and usage as a library. Potential coauthors who would like to
-work on software and manuscript are welcome! Contributors, who merely want to
-add their own example or tool are welcome, too! Any comments are appreciated!
+Please, cite the original references. The draft [Wolf & Theis
+(2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas and usage
+as a library. Potential coauthors who would like to work on software and
+manuscript are welcome! Contributors, who just want to add their own example or
+tool are welcome, too! Any comments are appreciated!
 
 ## Example Use <a id="example_use"></a>
 
@@ -130,27 +127,26 @@ email, contact Alex.
 
 ## Tools <a id="tools"></a>
 
-### diffmap <a id="diffmap"></a>
+### [diffmap](scanpy/tools/diffmap.py) <a id="diffmap"></a>
 
-[diffmap](scanpy/tools/diffmap.py) implements *diffusion maps* ([Coifman *et al.*, 
-2005)](#ref_coifman05)), which has been proposed for visualizing single-cell data by
-[Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, [diffmap](scanpy/tools/diffmap.py)
-accounts for modifications to the original algorithm proposed by [Haghverdi *et
+This implements *diffusion maps* ([Coifman
+*et al.*, 2005](#ref_coifman05)), which has been proposed for visualizing
+single-cell data by [Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, it uses
+the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16).
+
+### [dpt](scanpy/tools/dpt.py) <a id="dpt"></a>
+
+Reconstruct progression in a biological from snapshot data and detect branching
+subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi *et
 al.* (2016)](#ref_haghverdi16).
 
-### dpt <a id="dpt"></a>
-
-[dpt](scanpy/tools/dpt.py) implements Diffusion Pseudotime as introduced by [Haghverdi *et
-al.* (2016)](#ref_haghverdi16).
-
-The functions of diffmap and dpt compare to the R package
+The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
-### sim <a id="sim"></a>
+### [sim](scanpy/tools/sim.py) <a id="sim"></a>
 
-[sim](scanpy/_sim.py) provides a way to sample from stochastic
-differential equations that correspond to simple, qualitiative,
+Sample from a stochastic differential equation model built from
 literature-curated boolean gene regulatory networks, as suggested by [Wittmann
 *et al.* (2009)](#ref_wittmann09).
 
