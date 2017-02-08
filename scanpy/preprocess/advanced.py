@@ -1,6 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
-Preprocessing functions that take ddata as argument
+Preprocessing functions that take adata as argument
 -> subsampling
 -> whole preprocessing workflows from the literature
 """
@@ -8,13 +8,13 @@ Preprocessing functions that take ddata as argument
 from .. import settings as sett
 from .simple import *
 
-def subsample(ddata, subsample, seed=0):
+def subsample(adata, subsample, seed=0):
     """ 
     Subsample.
 
     Parameters
     ----------
-    ddata : data dictionary
+    adata : data dictionary
     subsample : int
         Inverse fraction to sample to.
     seed : int
@@ -22,29 +22,27 @@ def subsample(ddata, subsample, seed=0):
             
     Returns
     -------
-    ddata : dict containing modified entries
+    adata : dict containing modified entries
         'row_names', 'expindices', 'explabels', 'expcolors'
     """
     from .. import utils
-    X, row_indices = utils.subsample(ddata['X'],subsample,seed)
-    for key in ['row_names', 'Xpca']:
-        if key in ddata and len(ddata[key]) == ddata['X'].shape[0]:
-            ddata[key] = ddata[key][row_indices]
-    if 'rowcat' in ddata:
-        for k in ddata['rowcat']:
-            ddata['rowcat'][k] = ddata['rowcat'][k][row_indices]
-            ddata[k + '_masks'] = ddata[k + '_masks'][:, row_indices]
-    ddata['X'] = X
-    ddata['subsample'] = True
-    return ddata
+    _, smp_indices = utils.subsample(adata.X,subsample,seed)
+    adata = adata[smp_indices]
+    for key in ['Xpca']:
+        if key in adata:
+            adata[key] = adata[key][smp_indices]
+    for k in adata.smp_keys():
+        adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
+    adata['subsample'] = True
+    return adata
 
-def weinreb16(ddata):
+def weinreb16(adata):
     """
     Normalization and filtering as of Weinreb et al. (2016).
 
     Parameters
     ----------
-    ddata : dict
+    adata : dict
         Data dictionary.
 
     Reference
@@ -55,6 +53,7 @@ def weinreb16(ddata):
     meanFilter = 0.01
     cvFilter = 2
     nr_pcs = 50
+    ddata = adata.to_dict()
     X = ddata['X']
     # row normalize
     X = row_norm(X, max_fraction=0.05, mult_with_mean=True)
@@ -68,8 +67,27 @@ def weinreb16(ddata):
     # update dictionary
     ddata['X'] = X
     ddata['Xpca'] = Xpca
-    ddata['col_names'] = ddata['col_names'][gene_filter]
+    ddata['var_names'] = ddata['var_names'][gene_filter]
     sett.m(0, 'Xpca has shape', 
            ddata['Xpca'].shape[0], 'x', ddata['Xpca'].shape[1])
-    return ddata
+    from ..ann_data import AnnData
+    return AnnData(ddata)
 
+#     TODO: this should all be organized more nicely
+#     ones retrieve, do everythin on X, then feed back into adata
+#     X = adata.X
+#     # row normalize
+#     adata.X = row_norm(adata.X, max_fraction=0.05, mult_with_mean=True)
+#     # filter out genes with mean expression < 0.1 and coefficient of variance <
+#     # cvFilter
+#     X, gene_filter = filter_genes_cv(X, meanFilter, cvFilter)
+#     Xz = zscore(X)
+#     # PCA
+#     Xpca = pca(Xz, nr_comps=nr_pcs)
+#     # update adata
+#     adata = adata[:, gene_filter]
+#     adata.X = zscore(adata.X)
+#     adata['Xpca'] = Xpca
+#     sett.m(0, 'Xpca has shape', 
+#            adata['Xpca'].shape[0], 'x', adata['Xpca'].shape[1])
+#     return adata

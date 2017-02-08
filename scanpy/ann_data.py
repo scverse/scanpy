@@ -49,7 +49,8 @@ class BoundRecArr(np.recarray):
         try:
             dtype = np.dtype(dtype)
         except TypeError:
-            print(dtype, file=sys.stderr)
+            # TODO: fix compat with Python 2
+            # print(dtype, file=sys.stderr)
             raise
 
         arr = np.recarray.__new__(cls, (len(cols[0]),), dtype)
@@ -95,8 +96,8 @@ class AnnData(IndexMixin):
         """
         Annotated Data
 
-        Stores a data matrix X of dimensions nr_samples × nr_variables,
-        e.g. nr_cells × nr_genes, with the possibility to store an arbitrary
+        Stores a data matrix X of dimensions nr_samples x nr_variables,
+        e.g. nr_cells x nr_genes, with the possibility to store an arbitrary
         number of annotations for both samples and variables.
 
         You can access additional metadata elements directly from the AnnData:
@@ -104,7 +105,7 @@ class AnnData(IndexMixin):
         >>> adata = AnnData(np.eye(3), k=1)
         >>> assert adata['k'] == 1
 
-        Visualization metadata (`vis`) is a dict mapping `smp_meta` column
+        Visualization metadata (vis) is a dict mapping smp_meta column
         names to colors. Possible values can be either a palette (a list of
         colors) or a dict/function mapping values from the corresponding
         metadata column to colors, e.g.:
@@ -130,9 +131,9 @@ class AnnData(IndexMixin):
             row : dict, optional
                 A dict with row annotation.
         X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-            A nr_samples × nr_variables data matrix.
+            A nr_samples x nr_variables data matrix.
         smp : np.recarray, dict
-            A nr_samples × ? record array containing sample names (`smp_names`)
+            A nr_samples x ? record array containing sample names (`smp_names`)
             and other sample annotation in the columns. A passed dict is
             converted to a record array.
         var : np.recarray, dict
@@ -147,30 +148,30 @@ class AnnData(IndexMixin):
         ----------
         X, smp, var from the Parameters.
         """
-
         if ddata is not None:
             if 'X' in ddata:
                 X = ddata['X']
-            if False:
-                # TODO: enable this
-                smp = {}
-                if 'row' in ddata:
-                    smp = ddata['row']
-                var = {}
-                if 'col' in ddata:
-                    var = ddata['col']
-                if 'row_names' in ddata:
-                    smp['smp_names'] = ddata['row_names']
-                if 'col_names' in ddata:
-                    smp['var_names'] = ddata['col_names']
+                del ddata['X']
             if 'row_names' in ddata:
                 row_names = ddata['row_names']
                 smp = np.rec.fromarrays([np.asarray(row_names)],
                                          names=[SMP_NAMES])
+                del ddata['row_names']
+            elif 'smp_names' in ddata:
+                smp_names = ddata['smp_names']
+                smp = np.rec.fromarrays([np.asarray(smp_names)],
+                                         names=[SMP_NAMES])
+                del ddata['smp_names']
             if 'col_names' in ddata:
                 col_names = ddata['col_names']
                 var = np.rec.fromarrays([np.asarray(col_names)],
                                          names=[VAR_NAMES])
+                del ddata['col_names']
+            elif 'var_names' in ddata:
+                var_names = ddata['var_names']
+                var = np.rec.fromarrays([np.asarray(var_names)],
+                                         names=[VAR_NAMES])
+                del ddata['var_names']
 
         # check data type of X
         for s_type in StorageType:
@@ -180,8 +181,8 @@ class AnnData(IndexMixin):
         else:
             class_names = ', '.join(c.__name__ for c in StorageType.classes())
             raise ValueError(
-                '`data` needs to be of one of the following types, not {}: [{}]'
-                .format(type(X), class_names))
+                'X needs to be of one of the following types [{}] not {}'
+                .format(class_names, type(X)))
 
         if len(X.shape) == 1:
             X.shape = (X.shape[0], 1)
@@ -201,11 +202,37 @@ class AnnData(IndexMixin):
         self.vis = vis or {}
         self._meta = meta
 
+        if ddata is not None:
+            for key, value in ddata.items():
+                if not key in ['smp', 'row', 'var', 'col']:
+                    self._meta[key] = value
+                elif key == 'row':
+                    for k, v in ddata['row'].items():
+                        self.smp[k] = v
+                elif key == 'smp':
+                    for k, v in ddata['smp'].items():
+                        self.smp[k] = v
+                elif key == 'col':
+                    for k, v in ddata['col'].items():
+                        self.var[k] = v
+                elif key == 'var':
+                    for k, v in ddata['var'].items():
+                        self.var[k] = v
+                    
     def smp_keys(self):
-        return list(self.smp.dtype.names)
+        return list(self.smp.dtype.names)[1:]
 
     def var_keys(self):
-        return list(self.smp.dtype.names)
+        return list(self.var.dtype.names)[1:]
+
+    def to_dict(self):
+        smp = {k: self.smp[k] for k in self.smp_keys() if not k=='smp_names'}
+        var = {k: self.var[k] for k in self.var_keys() if not k=='var_names'}
+        d = {'X': self.X, 'smp': smp, 'var': var, 
+             'smp_names': self.smp_names, 'var_names': self.var_names}
+        for k, v in self._meta.items():
+            d[k] = v
+        return d
 
     @property
     def smp_names(self):
@@ -252,17 +279,19 @@ class AnnData(IndexMixin):
             del self.var.iloc[var, :]
 
     def __getitem__(self, index):
+        # return element from _meta if index is string
         if isinstance(index, str):
             return self._meta[index]
-
+        # otherwise unpack index
         smp, var = self._unpack_index(index)
-        data = self.X[smp, var]
+        X = self.X[smp, var]
         smp_meta = self.smp[smp]
         var_meta = self.var[var]
-
-        assert smp_meta.shape[0] == data.shape[0], (smp, smp_meta)
-        assert var_meta.shape[0] == data.shape[1], (var, var_meta)
-        return AnnData(data, smp_meta, var_meta, self.vis, **self._meta)
+        assert smp_meta.shape[0] == X.shape[0], (smp, smp_meta)
+        assert var_meta.shape[0] == X.shape[1], (var, var_meta)
+        adata = AnnData(X=X, smp=smp_meta, var=var_meta, 
+                       vis=self.vis, **self._meta)
+        return adata
 
     def __setitem__(self, index, val):
         if isinstance(index, str):
@@ -288,7 +317,7 @@ class AnnData(IndexMixin):
         var = np.rec.array(self.smp)
         var.dtype.names = [VAR_NAMES if n == SMP_NAMES else n
                            for n in var.dtype.names]
-        return AnnData(self.X.T, smp, var, self.vis, **self._meta)
+        return AnnData(X=self.X.T, smp=smp, var=var, vis=self.vis, **self._meta)
 
     T = property(transpose)
 

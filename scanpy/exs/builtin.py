@@ -155,9 +155,7 @@ def burczynski06():
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
     adata = AnnData(ddata)
-    adata.smp['groups'] = ddata['row']['groups']
-    ddata['rowcat'] = ddata['row']
-    return ddata
+    return adata
 
 def krumsiek11():
     """
@@ -171,15 +169,12 @@ def krumsiek11():
     "Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the
     Transcription Factor Network"
     PLoS ONE 6, e22649 (2011).
-
-    Returns
-    -------
-    See paul15().
     """ 
     filename = 'write/krumsiek11_sim/sim_000000.txt'
     ddata = sc.read(filename, first_column_names=True)
-    ddata['xroot'] = ddata['X'][0]
-    return ddata
+    adata = AnnData(ddata)
+    adata['xroot'] = adata.X[0]
+    return adata
 
 def moignard15():
     """
@@ -191,13 +186,9 @@ def moignard15():
     "Decoding the regulatory network of early blood development from single-cell
     gene expression measurements"
     Nature Biotechnology 33, 269 (2015)
-
-    Returns
-    -------
-    See paul15. 
     """
-    ddata = moignard15_raw() 
-    return ddata
+    adata = moignard15_raw()
+    return adata
 
 def paul15():
     """ 
@@ -215,42 +206,31 @@ def paul15():
 
     Returns
     -------
-    ddata: dict containing
-        X: np.ndarray
-            Data array for further processing, columns correspond to genes,
-            rows correspond to samples.
-        row_names: np.ndarray
-            Array storing the experimental labels of samples.
-        col_names: np.ndarray
-            Array storing the names of genes.
-        xroot: np.ndarray
-            Expression vector of root cell.
+    adata: AnnData
     """
-    ddata = paul15_raw()
-    ddata['X'] = sc.pp.log(ddata['X'])
+    adata = paul15_raw()
+    adata.X = sc.pp.log(adata.X)
     # adjust expression vector of root cell
-    ddata['xroot'] = ddata['X'][ddata['iroot']]
-    return ddata
+    adata['xroot'] = adata.X[adata['iroot']]
+    return adata
 
 def paul15pca():
-    ddata = paul15_raw()
-    ddata['X'] = sc.pp.log(ddata['X'])
+    adata = paul15_raw()
+    adata.X = sc.pp.log(adata.X)
     # reduce to 50 components
-    ddata['Xpca'] = sc.pca(ddata['X'], nr_comps=50)
+    adata['Xpca'] = sc.pca(adata.X, nr_comps=50)
     # adjust expression vector of root cell
-    ddata['xroot'] = ddata['Xpca'][ddata['iroot']]
-    return ddata    
+    adata['xroot'] = adata['Xpca'][adata['iroot']]
+    return adata    
 
 def toggleswitch():
     """ 
-    Returns
-    -------
-    See paul15.
     """
     filename = 'write/toggleswitch_sim/sim_000000.txt'
     ddata = sc.read(filename, first_column_names=True)
-    ddata['xroot'] = ddata['X'][0]
-    return ddata
+    adata = AnnData(ddata)
+    adata['xroot'] = adata.X[0]
+    return adata
 
 #--------------------------------------------------------------------------------
 # Optional functions for Raw Data, Annotation, Postprocessing, respectively
@@ -271,34 +251,25 @@ def moignard15_raw():
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
     url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     ddata = sc.read(filename, sheet='dCt_values.txt', backup_url=url)
-    X = ddata['X'] # data matrix
-    genenames = ddata['col_names'] 
-    cellnames = ddata['row_names'] 
+    adata = AnnData(ddata)
     # filter genes
     # filter out the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
     genes = np.r_[np.arange(0, 4), np.arange(5, 31), 
                   np.arange(32, 36), np.arange(37, 45)]
     print('selected', len(genes), 'genes')
-    ddata['X'] = X[:, genes] # filter data matrix
-    ddata['col_names'] = genenames[genes] # filter genenames
+    adata = adata[:, genes] # filter data matrix
     # choose root cell as in Haghverdi et al. (2016)
-    ddata['iroot'] = 532 # note that in Matlab/R, counting starts at 1
-    ddata['xroot'] = ddata['X'][ddata['iroot']] 
-    # annotate rows of X with Moignard et al. (2015) experimental cell groups
-    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
-    groups = [] # a list with n entries (one for each sample)
-    for name in cellnames:
-        for groupname in groups_names:
-            if name.startswith(groupname):
-                groups.append(groupname)
-    # groups are categorical annotation for rows of X
-    ddata['rowcat'] = {'groups': groups}
-    # add additional metadata for the groups, we want them to be ordered
-    # and we want custom colors for each group
-    ddata['groups_names'] = groups_names    
-    ddata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
-    return ddata
+    adata['iroot'] = iroot = 532 # note that in Matlab/R, counting starts at 1
+    adata['xroot'] = adata.X[iroot]
+    # annotate with Moignard et al. (2015) experimental cell groups
+    adata['groups_names'] = groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    # get name for each cell
+    adata.smp['groups'] = [
+        next(gname for gname in groups_names if sname.startswith(gname))
+        for sname in adata.smp_names]
+    return adata
 
 def moignard15_dpt(ddpt):
     # switch on annotation by uncommenting the following
@@ -311,48 +282,37 @@ def paul15_raw():
     filename = 'data/paul15/paul15.h5'
     url = 'http://falexwolf.de/data/paul15.h5'
     ddata = sc.read(filename, 'data.debatched', backup_url=url)
+    adata = AnnData(ddata)
     # the data has to be transposed (in the hdf5 and R files, each row
     # corresponds to one gene, we use the opposite convention)
-    ddata = utils.transpose_ddata(ddata)
-    # define local variables to manipulate
-    X = ddata['X']
-    genenames = ddata['col_names']
+    adata = adata.transpose()
     # cluster assocations identified by Paul et al.
     # groups = sc.read(filename,'cluster.id')['X']
-    infogenenames = sc.read(filename, 'info.genes_strings')['X']
-    # print('the first 10 informative gene names are \n',infogenenames[:10])
-    # just keep the first of the equivalent names for each gene
-    genenames = np.array([gn.split(';')[0] for gn in genenames])
-    # print('the first 10 trunkated gene names are \n',genenames[:10])
-    # mask array for the informative genes
-    infogenes_idcs = np.array([(True if gn in infogenenames else False)
-                                for gn in genenames])
+    infogenes_names = sc.read(filename, 'info.genes_strings')['X']
+    # just keep the first of the two equivalent names per gene
+    adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])
+    # index array for the informative genes
+    infogenes_idcs = np.array([gn in infogenes_names for gn in adata.var_names])
     # restrict data array to the 3451 informative genes
-    X = X[:, infogenes_idcs]
-    genenames = genenames[infogenes_idcs]
-    # print('after selecting info genes, the first 10 gene names are \n',
-    #       genenames[:10])
-    # write to dict
-    ddata['X'] = X
-    ddata['col_names'] = genenames
+    adata = adata[:, infogenes_idcs]
     # set root cell as in Haghverdi et al. (2016)
-    ddata['iroot'] = 840 # note that in Matlab/R, counting starts at 1
-    ddata['xroot'] = X[ddata['iroot']] 
-    return ddata
+    adata['iroot'] = iroot = 840 # note that in Matlab/R, counting starts at 1
+    adata['xroot'] = adata.X[iroot]
+    return adata
 
 def paul15_dpt(ddpt):
-    ddpt['groups_names'] = ['','GMP','','MEP']
+    ddpt['groups_names'] = ['', 'GMP', '', 'MEP']
     return ddpt
 
 def paul15pca_dpt(ddpt):
-    ddpt['groups_names'] = ['','','GMP','MEP']
+    ddpt['groups_names'] = ['', '', 'GMP', 'MEP']
     return ddpt
 
 def paul15_paths(dtool):
-    dtool['groups_names'] = ['GMP','MEP']
+    dtool['groups_names'] = ['GMP', 'MEP']
     return dtool
 
 def paul15pca_paths(dtool):
-    dtool['groups_names'] = ['GMP','MEP']
+    dtool['groups_names'] = ['GMP', 'MEP']
     return dtool
 

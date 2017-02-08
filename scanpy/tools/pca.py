@@ -14,14 +14,15 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 from .. import preprocess as pp
+from ..ann_data import AnnData
 
-def pca(ddata_or_X, nr_comps=10):
+def pca(adata_or_X, nr_comps=10):
     """
     Embed data using PCA.
 
     Parameters
     ----------
-    ddata_or_X : dict containing
+    adata_or_X : dict containing
         X : np.ndarray
             Data array, rows store observations, columns variables.
     nr_comps : int, optional (default: 2)
@@ -33,20 +34,20 @@ def pca(ddata_or_X, nr_comps=10):
         Y : np.ndarray
             PCA representation of the data.
     """
-    if isinstance(ddata_or_X, dict):      
-        X = ddata_or_X['X']
-        isddata = True
+    if isinstance(adata_or_X, AnnData):
+        X = adata_or_X.X
+        isadata = True
     else:
-        X = ddata_or_X
-        isddata = False
+        X = adata_or_X
+        isadata = False
     Y = pp.pca(X, nr_comps)
-    if isddata:
+    if isadata:
         return {'type': 'pca', 'Y': Y}
     else:
         return Y
 
-def plot(dplot, ddata,
-         rowcat='',
+def plot(dplot, adata,
+         smp='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
@@ -59,10 +60,11 @@ def plot(dplot, ddata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
-    rowcat : str, optional (default: '')
-        String for accessing a categorical annotation of rows.
+    smp : str, optional (default: first anntotated group)
+        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
+        or gene names.
     comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -75,8 +77,8 @@ def plot(dplot, ddata,
          Increase to increase the right margin.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, ddata,
-                    rowcat,
+    plott.plot_tool(dplot, adata,
+                    smp,
                     comps,
                     layout,
                     legendloc,

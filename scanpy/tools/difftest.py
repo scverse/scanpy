@@ -13,8 +13,9 @@ from .. import utils
 from .. import plotting as plott
 from .. import settings as sett
 
-def difftest(dgroups, ddata=None,
-             groups='all',
+def difftest(dgroups, adata=None,
+             smp='groups',
+             names='all',
              sig_level=0.05,
              correction='Bonferroni',
              log=False):
@@ -23,16 +24,18 @@ def difftest(dgroups, ddata=None,
 
     Parameters
     ----------
-    dgroups (or ddata) : dict containing
+    dgroups (or adata) : dict containing
         groups_names : list, np.ndarray of dtype str
             Array of shape (number of groups) that names the groups.
         groups : list, np.ndarray of dtype str
             Array of shape (number of samples) that names the groups.
-    ddata : dict, optional
+    adata : dict, optional
         Data dictionary containing expression matrix and gene names.
-    groups : str, list, np.ndarray
-        Subset of names - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - in
-        dgroups['groups_names'] to which comparison shall be restricted.
+    smp : str, optional (default: 'groups')
+        Specify the name of the grouping to consider.
+    names : str, list, np.ndarray
+        Subset of groupnames - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - in
+        dgroups[smp + '_names'] to which comparison shall be restricted.
 
     Returns
     -------
@@ -47,13 +50,13 @@ def difftest(dgroups, ddata=None,
             sorted according the decreasing absolute value of the zscore.
     """
     # for clarity, rename variable
-    groups_names = groups
-    # if ddata is empty, assume that ddata dgroups also contains
+    groups_names = names
+    # if adata is empty, assume that adata dgroups also contains
     # the data file elements
-    if not ddata:
+    if not adata:
         sett.m(0, 'testing experimental groups')
-        ddata = dgroups
-    X = ddata['X']
+        adata = dgroups
+    X = adata.X
     if log:
         # Convert X to log scale
         # TODO: treat negativity explicitly
@@ -61,7 +64,7 @@ def difftest(dgroups, ddata=None,
         X = np.log(X) / np.log(2)
 
     # select subset of groups
-    groups_names, groups_masks = utils.select_groups(dgroups, groups_names)
+    groups_names, groups_masks = utils.select_groups(dgroups, groups_names, smp)
 
     # loop over all masks and compute means, variances and sample numbers
     nr_groups = groups_masks.shape[0]
@@ -73,7 +76,7 @@ def difftest(dgroups, ddata=None,
         means[imask] = X[mask].mean(axis=0)
         vars[imask] = X[mask].var(axis=0)
         ns[imask] = np.where(mask)[0].size
-    sett.m(0, 'testing groups', groups_names, 'with sample numbers', ns)
+    sett.m(0, 'testing', smp, 'with', groups_names, 'with sample numbers', ns)
     sett.m(2, 'means', means) 
     sett.m(2, 'variances', vars)
 
@@ -132,11 +135,11 @@ def difftest(dgroups, ddata=None,
 
     return ddifftest
 
-def plot(ddifftest, ddata, params=None):
+def plot(ddifftest, adata, params=None):
     """
     Plot ranking of genes for all tested comparisons.
     """
-    plott.ranking(ddifftest, ddata)
+    plott.ranking(ddifftest, adata)
     plott.savefig(ddifftest['writekey'])
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl

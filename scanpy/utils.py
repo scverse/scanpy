@@ -156,12 +156,12 @@ def default_tool_argparser(description, dexamples):
 # Others
 #--------------------------------------------------------------------------------
 
-def select_groups(dgroups, groups_names_subset='all'):
+def select_groups(dgroups, groups_names_subset='all', smp='groups'):
     """
     Get groups from dgroups.
     """
-    groups_names = dgroups['groups_names']
-    groups_masks = dgroups['groups_masks']
+    groups_names = dgroups[smp + '_names']
+    groups_masks = dgroups[smp + '_masks']
     groups_ids = list(range(len(groups_names)))
     if groups_names_subset != 'all':
         # get list from string
@@ -169,10 +169,10 @@ def select_groups(dgroups, groups_names_subset='all'):
             groups_names_subset = groups_names_subset.split(',')
         # set groups_names to subset
         groups_names = np.array(groups_names_subset)
-        groups_ids = np.where(np.in1d(dgroups['groups_names'], groups_names))[0]
+        groups_ids = np.where(np.in1d(dgroups[smp + '_names'], groups_names))[0]
         if not np.any(groups_ids):
             sett.m(0, 'specify valid groups_names for testing, one of',
-                   dgroups['groups_names'])
+                   dgroups[smp + '_names'])
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
@@ -273,35 +273,6 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     traceback.print_stack()
     log = file if hasattr(file,'write') else sys.stderr
     sett.write(warnings.formatwarning(message, category, filename, lineno, line))
-
-def transpose_ddata(ddata):
-    """
-    Transpose a data dictionary.
-
-    Parameters
-    ----------
-    ddata : dict containing (at least)
-        X : np.ndarray
-            Data array for further processing, columns correspond to genes,
-            rows correspond to samples.
-        row_names : np.ndarray
-            Array storing the names of rows.
-        col_names : np.ndarray
-            Array storing the names of columns.
-    Returns
-    -------
-    ddata : dict 
-        With X transposed and row_names and col_names interchanged.
-    """
-    ddata['X'] = ddata['X'].T
-    col_names = None
-    if 'col_names' in ddata:
-        col_names = ddata['col_names']
-    if 'row_names' in ddata:
-        ddata['col_names'] = ddata['row_names']
-    if not col_names is None:
-        ddata['row_names'] = col_names
-    return ddata
 
 def subsample(X,subsample=1,seed=0):
     """ 

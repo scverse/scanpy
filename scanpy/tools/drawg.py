@@ -23,7 +23,7 @@ from .. import utils
 
 step_size = 10
 
-def drawg(ddata, k=4, nr_comps=2):
+def drawg(adata, k=4, nr_comps=2):
     """
     Visualize data using graph drawing algorithms.
 
@@ -31,7 +31,7 @@ def drawg(ddata, k=4, nr_comps=2):
 
     Parameters
     ----------
-    ddata : dict containing
+    adata : dict containing
         X : np.ndarray
             Data array, rows store observations, columns covariates.
     k : int
@@ -46,11 +46,11 @@ def drawg(ddata, k=4, nr_comps=2):
             Fruchterman Reingold representation of data.
     """
     sett.m(0,'draw knn graph')
-    if 'Xpca' in ddata:
-        X = ddata['Xpca']
+    if 'Xpca' in adata:
+        X = adata['Xpca']
         sett.m(0, '--> using Xpca for building graph')
     else:
-        X = ddata['X']
+        X = adata.X
         sett.m(0, '--> using X for building graph')
     D = utils.comp_distance(X, metric='euclidean')
     # deterimine the distance of the k nearest neighbors
@@ -79,7 +79,7 @@ def drawg(ddata, k=4, nr_comps=2):
         Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
     return {'type': 'drawg', 'Y': Y, 'Adj': Adj, 'istep': istep}
 
-def plot(ddrawg, ddata,
+def plot(ddrawg, adata,
          add_steps=0,
          layout='2d',
          legendloc='lower right',
@@ -92,7 +92,7 @@ def plot(ddrawg, ddata,
     ----------
     ddrawg : dict
         Dict returned by diffmap tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
     add_steps : int
         Steps to iterate graph drawing algorithm.
@@ -103,7 +103,7 @@ def plot(ddrawg, ddata,
     cmap : str (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['ddrawg']
+    params = locals(); del params['adata']; del params['ddrawg']
     Y = ddrawg['Y']
 
     if params['add_steps'] == 0:
@@ -112,7 +112,7 @@ def plot(ddrawg, ddata,
                'the current step is', ddrawg['istep'],
                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         istep = ddrawg['istep']
-        _plot(ddrawg, ddata, istep, **params)
+        _plot(ddrawg, adata, istep, **params)
 #         pl.savefig(sett.figdir+ddrawg['writekey']
 #                    +'_step{:02}'.format(istep)+'.'+sett.extf)
 #         if sett.autoshow:
@@ -132,7 +132,7 @@ def plot(ddrawg, ddata,
             sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
             Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
             sett.mt(0, 'finished computation')
-            _plot({'Y': Y}, ddata, istep, **params)
+            _plot({'Y': Y}, adata, istep, **params)
 #             if sett.autoshow:
 #                 sett.mt(0, 'finished plotting')
 #             pl.savefig(sett.figdir+ddrawg['writekey']
@@ -145,9 +145,9 @@ def plot(ddrawg, ddata,
 #             pl.show()
 
 
-def _plot(dplot, ddata,
+def _plot(dplot, adata,
           istep=0,
-          rowcat='',
+          smp='',
           comps='1,2',
           layout='2d',
           legendloc='lower right',
@@ -160,10 +160,11 @@ def _plot(dplot, ddata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
-    rowcat : str, optional (default: '')
-        String for accessing a categorical annotation of rows.
+    smp : str, optional (default: first anntotated group)
+        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
+        or gene names.
     comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -176,8 +177,8 @@ def _plot(dplot, ddata,
          Increase to increase the right margin.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, ddata,
-                    rowcat,
+    plott.plot_tool(dplot, adata,
+                    smp,
                     comps,
                     layout,
                     legendloc,
@@ -186,30 +187,6 @@ def _plot(dplot, ddata,
                     # defined in plotting
                     subtitles=['Fruchterman-Reingold step: ' + str(istep)],
                     component_name='FR')
-
-
-
-# def _plot(Y, ddata, params, istep):
-#     # highlights
-#     highlights = []
-#     if False:
-#         if 'highlights' in ddata:
-#             highlights = ddata['highlights']
-#     # base figure
-#     axs = plott.scatter(Y,
-#                         subtitles=['draw graph: step ' + str(istep)],
-#                         component_name='FR',
-#                         layout=params['layout'],
-#                         c='grey',
-#                         highlights=highlights,
-#                         cmap=params['cmap'])
-#     # annotated groups
-#     if 'groupmasks' in ddata:
-#         for igroup, group in enumerate(ddata['groupmasks']):
-#             plott.group(axs[0], igroup, ddata, Y, params['layout'])
-#         axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-#         # right margin
-#         pl.subplots_adjust(right=params['adjust_right'])
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
     """ 

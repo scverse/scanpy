@@ -255,9 +255,7 @@ def sample_dynamic_data(params):
     ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
     ddata['type'] = 'sim'
-
     dsim = ddata
-
     return dsim
     
 def write_data(X,dir='sim/test',append=False,header='',

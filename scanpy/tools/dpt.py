@@ -23,7 +23,7 @@ from .. import settings as sett
 from .. import utils
 from .. import graph
 
-def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
+def dpt(adata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         sigma=0, allow_branching_at_root=False):
     """
     Perform DPT analsysis as of Haghverdi et al. (2016).
@@ -34,7 +34,7 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
 
     Parameters
     ----------
-    ddata : dict containing
+    adata : dict containing
         X or Xpca: np.ndarray
             Data array, rows store observations, columns variables.
             Consider preprocessing with PCA. -> If there is an array Xpca,
@@ -69,12 +69,12 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         pseudotimes : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
-            Serves as 'rowcont' for ddata.
+            Serves as 'rowcont' for adata.
         groups : np.ndarray of dtype int
             Array of dim (number of samples) that stores the segment=subgroup id
             - an integer that indexes groupnames - of each cell. The groups
             might either correspond to 'progenitor cells', 'undecided cells' or
-            'branches'. Serves as 'rowcat' for ddata.
+            'branches'. Serves as 'smp' for adata.
         Y : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
@@ -82,9 +82,9 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         evals : np.ndarray
             Array of size (number of samples). Eigenvalues of transition matrix.
     """
-    params = locals(); del params['ddata']
-    xroot = ddata['xroot']
-    dpt = DPT(ddata, params)
+    params = locals(); del params['adata']
+    xroot = adata['xroot']
+    dpt = DPT(adata, params)
     # diffusion map
     ddpt = dpt.diffmap()
     sett.m(0, 'perform Diffusion Pseudotime Analysis')
@@ -105,7 +105,7 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     ddpt['pseudotimes'] = dpt.pseudotimes
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    # n-vector of groupnames / rowcat for ddata / compare exs.check_ddata
+    # n-vector of groupnames / smp for adata / compare exs.check_adata
     ddpt['groups_masks'] = dpt.segs
     # TODO: remove the following line
     ddpt['groups_ids'] = np.arange(len(ddpt['groups_masks']), dtype=int)
@@ -122,8 +122,8 @@ def dpt(ddata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     ddpt['type'] = 'dpt'    
     return ddpt
 
-def plot(ddpt, ddata, dplot=None,
-         rowcat='',
+def plot(ddpt, adata, dplot=None,
+         smp='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
@@ -138,10 +138,11 @@ def plot(ddpt, ddata, dplot=None,
         Dict returned by DPT tool.
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
-    rowcat : str, optional (default: '')
-        String for accessing a categorical annotation of rows.
+    smp : str, optional (default: first anntotated group)
+        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
+        or gene names.
     comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -153,7 +154,7 @@ def plot(ddpt, ddata, dplot=None,
     """
     from ..compat.matplotlib import pyplot as pl
     from .. import plotting as plott
-    params = locals(); del params['ddata']; del params['ddpt']; del params['dplot']
+    params = locals(); del params['adata']; del params['ddpt']; del params['dplot']
     if dplot is not None:
         ddpt['Y'] = dplot['Y']
         groups_writekey = ddpt['writekey'] + '_' + dplot['type']
@@ -165,14 +166,14 @@ def plot(ddpt, ddata, dplot=None,
         params['component_name'] = 'DC'
         groups_writekey = ddpt['writekey'] + '_diffmap'
     ddpt['groups_writekey'] = groups_writekey
-    X = ddata['X']
+    X = adata.X
     if not 'groups_colors' in ddpt:
         ddpt['groups_colors'] = pl.cm.get_cmap(params['cmap'])(
                                              pl.Normalize()(ddpt['groups_ids']))
     # color by pseudotime and by segments
     colors = [ddpt['pseudotimes'], 'white']
     # coloring according to experimental labels
-    if 'rowcat' in ddata:
+    if len(adata.smp_keys()) > 0:
         colors.append('grey')
     # highlight root
     highlights = list(ddpt['iroot'])
@@ -180,26 +181,26 @@ def plot(ddpt, ddata, dplot=None,
     if False:
         highlights = [i for l in ddpt['segtips'] for i in l if l[0] != -1]
     # a single figure for all colors using 2 diffusion components
-    plot_groups(ddpt, ddata, params, colors, highlights)
+    plot_groups(ddpt, adata, params, colors, highlights)
     # plot segments and pseudotimes
     plot_segments_pseudotimes(ddpt, params['cmap'])
     # if number of genes is not too high, plot time series
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[ddpt['indices']], ddata['col_names'],
+        plott.timeseries(X[ddpt['indices']], adata.var_names,
                          highlightsX=ddpt['changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
         plott.savefig(ddpt['writekey']+'_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], ddata['col_names'],
+        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
                                     highlightsX=ddpt['changepoints'])
         plott.savefig(ddpt['writekey']+'_heatmap')
     if not sett.savefigs and sett.autoshow:
         pl.show()
             
 
-def plot_groups(ddpt, ddata, params, colors,
+def plot_groups(ddpt, adata, params, colors,
                 highlights=[], highlights_labels=[]):
     """
     Plot groups in diffusion map visualization.
@@ -233,21 +234,21 @@ def plot_groups(ddpt, ddata, params, colors,
     if params['legendloc'] != 'none':
         axs[1].legend(frameon=False, loc=params['legendloc'])
 
-    # row categories / experimental groups in ddata
-    if 'rowcat' in ddata:
-        if params['rowcat'] == '':
-            # simply take a random key
-            rowcat = list(ddata['rowcat'].keys())[0]
-        elif rowcat not in ddata:
-            print('specify valid row category class')
-        # colors for the categories
-        if not rowcat + '_colors' in ddata:
-            ddata[rowcat + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(ddata[rowcat + '_ids']))
-        for icat in ddata[rowcat + '_ids']:
-            plott.group(axs[2], rowcat, icat, ddata, ddpt['Y'][:, comps], params['layout'])
+    # sample annotation in adata
+    if len(adata.smp_keys()) > 0:
+        if params['smp'] == '':
+            smp = adata.smp_keys()[0]
+            sett.m(0, 'coloring according to', smp)
+        elif smp not in adata.smp_keys():
+            raise ValueError('specify valid sample annotation, one of'
+                             + str(adata.smp_keys()))
+        if not smp + '_colors' in adata:
+            adata[smp + '_colors'] = pl.cm.get_cmap(params['cmap'])(
+                                                  pl.Normalize()(adata[smp + '_ids']))
+        for ismp in adata[smp + '_ids']:
+            plott.group(axs[2], smp, ismp, adata, ddpt['Y'][:, comps], params['layout'])
         axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        pl.subplots_adjust(right=params['adjust_right'])
+    pl.subplots_adjust(right=params['adjust_right'])
     plott.savefig(ddpt['groups_writekey'] + sett.plotsuffix)
 
 def plot_segments_pseudotimes(ddpt, cmap):

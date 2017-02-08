@@ -53,14 +53,24 @@ into its root directory.
 
 Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
 NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
-```shell
+```
 python scanpy.py moignard15 pca
 python scanpy.py moignard15 tsne
 python scanpy.py moignard15 diffmap
 ```
-<img src="http://falexwolf.de/scanpy/figs/moignard15_pca.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_tsne.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_pca_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap_groups.png" height="175">
+
+Coloring samples/cells by gene expression works analogously,
+```
+python scanpy.py moignard15 pca -p smp HbbbH1
+python scanpy.py moignard15 tsne -p smp HbbbH1
+python scanpy.py moignard15 diffmap -p smp HbbbH1
+```
+<img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
@@ -68,7 +78,7 @@ cells (segment 1/2) and erythrocytes (segment 3). The inferred *pseudotime*
 traces the degree of cells' progression in the differentiation process. By default,
 this is plotted using Diffusion Maps, but you might just as well plot the subgroups using another
 plotting tool.
-```shell
+```
 python scanpy.py moignard15 dpt
 python scanpy.py moignard15 dpt tsne
 ```

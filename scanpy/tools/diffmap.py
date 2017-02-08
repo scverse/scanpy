@@ -26,7 +26,7 @@ from .. import utils
 from .. import settings as sett
 from .. import plotting as plott
 
-def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
+def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -39,7 +39,7 @@ def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
 
     Parameters
     ----------
-    ddata : dictionary containing
+    adata : dictionary containing
         X : np.ndarray
             Data array, rows store observations, columns covariates.
     nr_comps : int, optional (default: 3)
@@ -67,16 +67,16 @@ def diffmap(ddata, nr_comps=10, k=5, knn=False, sigma=0):
         evals : np.ndarray
             Array of size (number of cells). Eigenvalues of transition matrix.
     """
-    params = locals(); del params['ddata']
-    dmap = dpt.DPT(ddata, params)
+    params = locals(); del params['adata']
+    dmap = dpt.DPT(adata, params)
     ddmap = dmap.diffmap()
     ddmap['type'] = 'diffmap'
     # restrict number of components
     ddmap['Y'] = ddmap['Y'][:, :params['nr_comps']]
     return ddmap
 
-def plot(dplot, ddata,
-         rowcat='',
+def plot(dplot, adata,
+         smp='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
@@ -89,10 +89,11 @@ def plot(dplot, ddata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
-    rowcat : str, optional (default: '')
-        String for accessing a categorical annotation of rows.
+    smp : str, optional (default: first anntotated group)
+        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
+        or gene names.
     comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -105,8 +106,8 @@ def plot(dplot, ddata,
          Increase to increase the right margin.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, ddata,
-                    rowcat,
+    plott.plot_tool(dplot, adata,
+                    smp,
                     comps,
                     layout,
                     legendloc,

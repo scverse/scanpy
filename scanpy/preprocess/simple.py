@@ -80,9 +80,10 @@ def pca(X, nr_comps=50, exact=True):
         else:
             # run randomized, more efficient version
             svd_solver = 'randomized'
+        sett.mt(0, 'compute PCA with nr_comps =', nr_comps)
         p = PCA(n_components=nr_comps, svd_solver=svd_solver)
         Y = p.fit_transform(X)
-        sett.mt(0, 'computed PCA with nr_comps =', nr_comps)
+        sett.mt(0, 'computed PCA')
         sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
         Y = _pca_fallback(X, nr_comps=nr_comps, exact=exact)

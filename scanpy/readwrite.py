@@ -23,7 +23,7 @@ avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
 # Reading and Writing data files and result dictionaries
 #--------------------------------------------------------------------------------
 
-def write(filename_or_key, dictionary):
+def write(filename_or_key, dict_or_adata):
     """
     Writes dictionaries - as returned by tools - to file.
     
@@ -37,7 +37,14 @@ def write(filename_or_key, dictionary):
     ----------
     filename_or_key : str
         Filename of data file or key used in function write(key,dict).
+    dict_or_adata : dict, AnnData
+        One of these.
     """
+    if not isinstance(dict_or_adata, dict):
+        dictionary = dict_or_adata.to_dict()
+        dictionary['isadata'] = True
+    else:
+        dictionary = dict_or_adata
     if is_filename(filename_or_key):
         filename = filename_or_key
     else:
@@ -76,13 +83,13 @@ def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False,
 
     Returns
     -------
-    ddata : dict containing
-        X : np.ndarray
+    data : AnnData, dict, if dict it usually contains
+        X : np.ndarray, optional
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        row_names : np.ndarray
+        row_names : np.ndarray, optional
             Array storing the names of rows (experimental labels of samples).
-        col_names : np.ndarray
+        col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
     """
     if is_filename(filename_or_key):
@@ -101,7 +108,13 @@ def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False,
                          'use a filename on one of the available extensions\n' + 
                          str(avail_exts) + 
                          'or provide the parameter "ext" to sc.read.')
-    return read_file_to_dict(filename)
+    d = read_file_to_dict(filename)
+    if 'isadata' in d:
+        from .ann_data import AnnData
+        del d['isadata']
+        return AnnData(d)
+    else:
+        return d
 
 #--------------------------------------------------------------------------------
 # Reading and writing parameter files
@@ -231,7 +244,13 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
     # actual reading
     if ext == 'h5':
         if sheet == '':
-            return read_file_to_dict(filename, ext='h5')
+            d = read_file_to_dict(filename, ext='h5')
+            if 'isadata' in d:
+                from .ann_data import AnnData
+                del d['isadata']
+                return AnnData(d)
+            else:
+                return d
         sett.m(0, 'reading sheet', sheet, 'from file', filename)
         return _read_hdf5_single(filename, sheet)
     # if filename is not in the hdf5 format, do some more book keeping

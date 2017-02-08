@@ -13,7 +13,6 @@ from . import preprocess
 from . import utils
 from .tools import get_tool
 from .readwrite import read, write, read_params
-from .utils import transpose_ddata
 from .exs import exdata, examples, example
 from . import preprocess
 from .preprocess.advanced import subsample
@@ -57,8 +56,6 @@ __all__ = [
     'show', # show plots
     # management
     'run'
-    # utils
-    'transpose_ddata'
 ]
 
 def plot(*dtools, **kwargs):
@@ -132,7 +129,7 @@ def run_args(toolkey, args):
         if 'writedir' not in oparams:
             oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
     else:
-        ddata, exmodule = example(args['exkey'], return_module=True)
+        adata, exmodule = example(args['exkey'], return_module=True)
         oparams = {}
         # try to load tool parameters from dexamples
         try:
@@ -177,12 +174,12 @@ def run_args(toolkey, args):
         from sys import exit
         exit(0)
     elif toolkey in ['difftest']:
-        # use subgroups in ddata
-        dprev = ddata
+        # use subgroups in adata
+        dprev = adata
 
     # subsampling
     if args['subsample'] != 1:
-        ddata = subsample(ddata, args['subsample'])
+        adata = subsample(adata, args['subsample'])
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey + prevsuffix + sett.fsig
@@ -202,21 +199,21 @@ def run_args(toolkey, args):
             dtool = tool(**oparams)
             oparams = getcallargs(tool, **oparams)
         elif args['prev'] != '':
-            dtool = tool(dprev, ddata, **oparams)
-            oparams = getcallargs(tool, dprev, ddata, **oparams)
-            # TODO: Would be good to name the first argument dprev_or_ddata
+            dtool = tool(dprev, adata, **oparams)
+            oparams = getcallargs(tool, dprev, adata, **oparams)
+            # TODO: Would be good to name the first argument dprev_or_adata
             #       in difftest, but this doesn't work
             if 'dprev' in oparams:
                 del oparams['dprev']
             elif 'dgroups' in oparams:
                 del oparams['dgroups']
         else:
-            dtool = tool(ddata, **oparams)
-            oparams = getcallargs(tool, ddata, **oparams)
-        if 'ddata' in oparams:
-            del oparams['ddata']
-        elif 'ddata_or_X' in oparams:
-            del oparams['ddata_or_X']
+            dtool = tool(adata, **oparams)
+            oparams = getcallargs(tool, adata, **oparams)
+        if 'adata' in oparams:
+            del oparams['adata']
+        elif 'adata_or_X' in oparams:
+            del oparams['adata_or_X']
         dtool['writekey'] = writekey
         write(writekey, dtool)
         sett.m(0, 'wrote result to', resultfile)
@@ -243,9 +240,9 @@ def run_args(toolkey, args):
             plotwritekey = sett.exkey + '_' +  args['plotkey'] + sett.fsig
             dplot = read(plotwritekey)
             sett.m(0, '--> using result', plotwritekey, 'for plotting')
-            plotargs = [dtool, ddata, dplot]
+            plotargs = [dtool, adata, dplot]
         else: 
-            plotargs = [dtool, ddata]
+            plotargs = [dtool, adata]
         if args['prev'] != '' and toolkey != 'tgdyn':
             plotargs.append(dprev)
         plot(*tuple(plotargs), **pparams)
