@@ -109,8 +109,8 @@ dexamples = {
         'k': 20, # increase number of neighbors (default 5)
         'knn': True }, # set a hard threshold on number of neighbors
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'groups': 'GMP,MEP'},
-    'tgdyn': {'groups': 'GMP,MEP'}
+    'difftest': {'log': False, 'names': 'GMP,MEP'},
+    'tgdyn': {'names': 'GMP,MEP'}
     },
 'paul15pca': {
     'datakey': 'paul15',
@@ -120,8 +120,8 @@ dexamples = {
         'k': 4, # increase number of neighbors (default 5)
         'knn': True}, # set a hard threshold on number of neighbors
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'groups': 'GMP,MEP'},
-    'tgdyn': {'groups': 'GMP,MEP'}
+    'difftest': {'log': False, 'names': 'GMP,MEP'},
+    'tgdyn': {'names': 'GMP,MEP'}
     },
 'toggleswitch': {
     'ctpaths': {'fates': {0: 95, 1: 189}},
