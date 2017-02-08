@@ -64,13 +64,13 @@ def example(exkey, return_module=False):
 
     Returns
     -------
-    ddata : dict containing
+    adata : dict containing
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
-        rownames : np.ndarray
+        row_names : np.ndarray
             Array storing the experimental labels of samples.
-        colnames : np.ndarray
+        col_names : np.ndarray
             Array storing the names of genes.
 
         There might be further entries such as
@@ -108,31 +108,69 @@ def example(exkey, return_module=False):
     from os.path import exists
     exfile = readwrite.get_filename_from_key(sett.basekey)
     if (not exists(exfile)
-        or sett.recompute == 'all'):
+        or sett.recompute in ['read', 'pp']):
         # run the function
-        ddata = exfunc()
-        # add exkey to ddata
-        ddata['exkey'] = exkey
-        sett.m(0, 'X has shape', ddata['X'].shape[0], 'x', ddata['X'].shape[1])
+        adata = exfunc()
+        # add exkey to adata
+        adata['exkey'] = exkey
+        sett.m(0, 'X has shape nr_samples x nr_variables =', 
+               adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
-        ddata = check_ddata(ddata)
-        readwrite.write(sett.basekey, ddata)
+        adata = check_adata(adata)
+        readwrite.write(sett.basekey, adata)
         sett.m(0, 'wrote preprocessed data to', exfile)
     else:
-        ddata = readwrite.read(sett.basekey)
-    
+        adata = readwrite.read(sett.basekey)
+
     if return_module:
-        return ddata, exmodule
+        return adata, exmodule
     else:
-        return ddata
+        return adata
 
 #-------------------------------------------------------------------------------
 # Checking of data dictionary
 # - Might be replaced with a data class.
 #-------------------------------------------------------------------------------
 
+
+ignore_groups = ['N/A', 'dontknow', 'no_gate']
 # howtos
-howto_specify_subgroups = '''no key "rowcat" in ddata dictionary found
+howto_specify_subgroups = '''sample annotation in adata only consists of sample names
+--> you can provide additional annotation by setting, for example,
+    adata.smp['groups'] = ['A', 'B', 'A', ... ]
+    adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
+
+def check_adata(adata):
+    """
+    Do sanity checks on adata object.
+
+    Checks whether adata contains annotation.
+    """
+    import numpy as np
+    import sys
+    if len(adata.smp_keys()) == 0:
+        sett.m(0, howto_specify_subgroups)
+    else:
+        for k in adata.smp_keys():
+            # ordered unique categories
+            if not k + '_names' in adata:
+                adata[k + '_names'] = np.unique(adata.smp[k])
+            adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
+                                               np.array(ignore_groups))
+            # output 
+            sett.m(0,'sample annotation', k, 'with', adata[k + '_names'])
+            # indices for each category
+            if not k + '_ids' in adata:
+                adata[k + '_ids'] = np.arange(len(adata[k + '_names']), dtype=int)
+            # masks for each category
+            if not k + '_masks' in adata:
+                masks = []
+                for name in adata[k + '_names']:
+                    masks.append(name == adata.smp[k])
+                adata[k + '_masks'] = np.array(masks)
+    return adata
+
+howto_specify_subgroups_ddata = '''no key "row" in adata dictionary found
 --> you might provide a dict of lists of n subgroup names (strings or ints) with
     number of samples as follows
     {'group1': ['A', 'B', 'A', ... ], 'group2': ['c', 'a', ...]}
@@ -142,28 +180,28 @@ def check_ddata(ddata):
     """
     Do sanity checks on ddata dictionary.
 
-    Checks whether ddata conains categorical row metadata 'rowcat'. 
+    Checks whether ddata conains categorical row metadata 'row'. 
 
-    If yes, for each class of categories in 'rowcat' associate an 'order',
+    If yes, for each class of categories in 'row' associate an 'order',
     indices 'ids', colors and masks.
     """
     import numpy as np
     import sys
-    if not 'rowcat' in ddata:
-        sett.m(0, howto_specify_subgroups)
+    if not 'row' in ddata:
+        sett.m(0, howto_specify_subgroups_ddata)
     else:
-        if not isinstance(ddata['rowcat'], dict):
-            msg = 'rowcat must be a dictionary! {\'cat1\': [...], }'
+        if not isinstance(ddata['row'], dict):
+            msg = 'row must be a dictionary! {\'cat1\': [...], }'
             sys.exit(msg)
-        for k in ddata['rowcat']:
+        for k in ddata['row']:
             # transform to np.ndarray
             try:
-                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=int)
+                ddata['row'][k] = np.array(ddata['row'][k], dtype=int)
             except:
-                ddata['rowcat'][k] = np.array(ddata['rowcat'][k], dtype=str)
+                ddata['row'][k] = np.array(ddata['row'][k], dtype=str)
             # ordered unique categories
             if not k + '_names' in ddata:
-                ddata[k + '_names'] = np.unique(ddata['rowcat'][k])
+                ddata[k + '_names'] = np.unique(ddata['row'][k])
             # output 
             sett.m(0,'read sample annotation', k, 'with', ddata[k + '_names'])
             # indices for each category
@@ -173,7 +211,7 @@ def check_ddata(ddata):
             if not k + '_masks' in ddata:
                 masks = []
                 for name in ddata[k + '_names']:
-                    masks.append(name == ddata['rowcat'][k])
+                    masks.append(name == ddata['row'][k])
                 ddata[k + '_masks'] = np.array(masks)
     return ddata
 

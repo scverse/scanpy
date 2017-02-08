@@ -18,8 +18,8 @@ def savefig(writekey):
     if sett.savefigs:
         pl.savefig(sett.figdir + writekey + '.' + sett.extf)
 
-def plot_tool(dplot, ddata,
-              rowcat='',
+def plot_tool(dplot, adata,
+              smp='',
               comps='1,2',
               layout='2d',
               legendloc='lower right',
@@ -34,7 +34,7 @@ def plot_tool(dplot, ddata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
     comps : str
          String in the form "comp1,comp2,comp3".
@@ -45,14 +45,14 @@ def plot_tool(dplot, ddata,
     cmap : str (default: jet)
          String denoting matplotlib color map. 
     """
-    params = locals(); del params['ddata']; del params['dplot']
+    params = locals(); del params['adata']; del params['dplot']
     from numpy import array
     comps = array(params['comps'].split(',')).astype(int) - 1
     # highlights
     highlights = []
     if False:
-        if 'highlights' in ddata:
-            highlights = ddata['highlights']
+        if 'highlights' in adata:
+            highlights = adata['highlights']
     # base figure
     try:
         Y = dplot['Y'][:, comps]
@@ -61,45 +61,63 @@ def plot_tool(dplot, ddata,
         sett.mi('--> recompute using scanpy exkey diffmap -p nr_comps YOUR_NR')
         from sys import exit
         exit(0)
+
+    c = 'grey'
+    cat = False
+    if len(adata.smp_keys()) > 0:
+        if smp == '':
+            smp = adata.smp_keys()[0]
+            sett.m(0, 'coloring according to', smp)
+        # test whether we have categorial or continuous annotation
+        if smp in adata.smp_keys():
+            if adata.smp[smp].dtype.char in ['S', 'U']:
+                cat = True
+            elif np.unique(adata.smp).size < 20:
+                cat = True
+            else:
+                c = pl.cm.get_cmap(params['cmap'])(
+                                               pl.Normalize()(adata.smp[smp]))
+        # coloring according to gene expression
+        elif smp in adata.var_names:
+            c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
+            sett.m(0, 'coloring according expression of gene', smp)
+        else:
+            raise ValueError('specify valid sample annotation, one of '
+                             + str(adata.smp_keys()) + ' or a gene name '
+                             + str(adata.var_names))
+        
     axs = scatter(Y,
-                  subtitles=subtitles,
+                  subtitles=[smp],
                   component_name=component_name,
                   component_indexnames=comps + 1,
                   layout=params['layout'],
-                  c='grey',
+                  c=c,
                   highlights=highlights,
                   cmap=params['cmap'])
-    # rowcategories in ddata
-    if 'rowcat' in ddata:
-        if rowcat == '':
-            rowcat = list(ddata['rowcat'].keys())[0]
-            sett.m(0, 'coloring according to', rowcat)
-        elif rowcat not in ddata['rowcat']:
-            print('specify valid row category class')
-        # colors for categories
-        if not rowcat + '_colors' in ddata:
-            ddata[rowcat + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(ddata[rowcat + '_ids']))
-        for icat in ddata[rowcat + '_ids']:
-            group(axs[0], rowcat, icat, ddata, dplot['Y'][:, comps], params['layout'])
+
+    if cat: 
+        if not smp + '_colors' in adata:
+            adata[smp + '_colors'] = pl.cm.get_cmap(params['cmap'])(
+                                                  pl.Normalize()(adata[smp + '_ids']))
+        for icat in adata[smp + '_ids']:
+            group(axs[0], smp, icat, adata, dplot['Y'][:, comps], params['layout'])
         if params['legendloc'] != 'none':
             axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-        # right margin
-        pl.subplots_adjust(right=params['adjust_right'])
+    pl.subplots_adjust(right=params['adjust_right'])
 
-    savefig(dplot['writekey'])
+    savefig(dplot['writekey'] + '_' + smp)
     if not sett.savefigs and sett.autoshow:
         pl.show()
 
-def group(ax, name, imask, ddata, Y, layout='2d', s=3):
+def group(ax, name, imask, adata, Y, layout='2d', s=3):
     """
     Plot group using representation of data Y.
     """
-    mask = ddata[name + '_masks'][imask]
-    color = ddata[name + '_colors'][imask]
+    mask = adata[name + '_masks'][imask]
+    color = adata[name + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
-        color = rgb2hex(ddata[name + '_colors'][imask])
+        color = rgb2hex(adata[name + '_colors'][imask])
     data = [Y[mask,0], Y[mask,1]]
     if layout == '3d':
         data.append(Y[mask,2])
@@ -108,7 +126,7 @@ def group(ax, name, imask, ddata, Y, layout='2d', s=3):
                edgecolors='face',
                s=s,
                alpha=1,
-               label=ddata[name + '_names'][imask])
+               label=adata[name + '_names'][imask])
 
 def timeseries(*args,**kwargs):
     """ 
@@ -274,7 +292,8 @@ def _scatter(Ys,
              highlights=[],
              highlights_labels=[],
              title='', 
-             cmap='jet'):
+             cmap='jet',
+             **kwargs):
     # if we have a single array, transform it into a list with a single array
     avail_layouts = ['2d', '3d', 'unfolded 3d']
     if layout not in avail_layouts:
@@ -330,7 +349,8 @@ def _scatter(Ys,
                            c=color,
                            edgecolors='face',
                            s=markersize,
-                           cmap=cmap)
+                           cmap=cmap,
+                           **kwargs)
             # set the subsubtitles
             if icolor == 0:
                 ax.set_title(subtitles[0])
@@ -377,7 +397,7 @@ def _scatter_single(ax,Y,*args,**kwargs):
     ax.scatter(Y[:,0],Y[:,1],**kwargs)
     ax.set_xticks([]); ax.set_yticks([])
 
-def ranking(drankings, ddata, nr=20):
+def ranking(drankings, adata, nr=20):
     """ 
     Plot ranking of genes
 
@@ -388,7 +408,7 @@ def ranking(drankings, ddata, nr=20):
             Key to identify scores.
         scores : np.ndarray
             Array of scores for genes according to which to rank them.
-    ddata : dict
+    adata : dict
         Data dictionary.
     nr : int
         Number of genes.
@@ -434,7 +454,7 @@ def ranking(drankings, ddata, nr=20):
             marker = (r'\leftarrow' if drankings['zscores'][irank,g] < 0 
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
-                    r'$ ' + marker + '$ '+ddata['colnames'][g],
+                    r'$ ' + marker + '$ ' + adata.var_names[g],
                     color = 'red' if drankings['zscores'][irank,g] < 0 else 'green',
                     rotation='vertical',verticalalignment='bottom',
                     horizontalalignment='center',

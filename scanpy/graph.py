@@ -14,27 +14,28 @@ from .compat.matplotlib import pyplot as pl
 from . import settings as sett
 from . import plotting as plott
 from . import utils
+from .ann_data import AnnData
 
 class DataGraph(object):
     """ 
     Class for treating graphs.
     """
 
-    def __init__(self, ddata_or_X_or_Dsq, params):
+    def __init__(self, adata_or_X_or_Dsq, params):
         """ 
         """
-        isddata = isinstance(ddata_or_X_or_Dsq, dict)
-        if isddata:
-            ddata = ddata_or_X_or_Dsq
+        isadata = isinstance(adata_or_X_or_Dsq, AnnData)
+        if isadata:
+            adata = adata_or_X_or_Dsq
         else:
-            X_or_Dsq = ddata_or_X_or_Dsq
-        if isddata:
+            X_or_Dsq = adata_or_X_or_Dsq
+        if isadata:
             self.Dsq = None
-            if 'Xpca' in ddata:
-                self.X = ddata['Xpca']
+            if 'Xpca' in adata:
+                self.X = adata['Xpca']
                 sett.m(0, '--> using Xpca for building graph')
             else:
-                self.X = ddata['X']
+                self.X = adata.X
                 sett.m(0, '--> using X for building graph')
         else:
             if X_or_Dsq.shape[0] == X_or_Dsq.shape[1]:

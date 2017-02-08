@@ -1,19 +1,13 @@
-# coding: utf-8
+# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Settings and Logfile 
-====================
-
-From package Scanpy (https://github.com/theislab/scanpy).
-Written in Python 3 (compatible with 2).
-Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 
 Sets global variables like verbosity, manages log output and timing.
-
-Note
-----
-The very first version (tracking cpu time) of this was based on
-http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 """   
+# Note
+# ----
+# The very first version (tracking cpu time) of this was based on
+# http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
 import atexit
 from time import clock
@@ -125,8 +119,9 @@ def add_args(p):
     aa('-r', '--recomp',
        type=str, default='none', const='tool', nargs='?', metavar='x',
        help='Recompute and overwrite result files of previous calculations. '
-            'Just providing "-r" recomputes the tool, "-r all" also recomputes '
-            'preprocessing (default: do not recompute).')
+            'Just providing "-r" only recomputes the tool, "-r pp" also '
+            'recomputes preprocessing, "-r read" also rereads data files '
+            '(default: do not recompute).')
     aa('--suffix',
        type=str, default='', metavar='suffix',
        help='Is appended to exkey in result filename (default: "").')

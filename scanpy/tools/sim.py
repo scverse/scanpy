@@ -65,7 +65,7 @@ def plot(ddata):
     Plot results of simulation.
     """
     X = ddata['X']
-    genenames = ddata['colnames']
+    genenames = ddata['col_names']
     tmax = ddata['tmax_write']
     nr_real = X.shape[0]/tmax
     plott.timeseries(X, genenames,
@@ -255,9 +255,7 @@ def sample_dynamic_data(params):
     ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
     ddata['type'] = 'sim'
-
     dsim = ddata
-
     return dsim
     
 def write_data(X,dir='sim/test',append=False,header='',

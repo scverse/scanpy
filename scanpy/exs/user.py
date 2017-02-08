@@ -59,27 +59,28 @@ def myexample():
     # read data from any path on your system
     path_to_data = 'data/myexample/'
     ddata = sc.read(path_to_data + 'myexample.csv')
+    adata = AnnData(ddata)
 
     # other data reading examples
-    # ddata = sc.read(path_to_data + 'myexample.csv', first_column_names=True)
-    # ddata = sc.read(path_to_data + 'myexample.h5', sheet='countmatrix')
-    # ddata = sc.read(path_to_data + 'myexample.xlsx', sheet='countmatrix')
-    # ddata = sc.read(path_to_data + 'myexample.txt', sheet='countmatrix')
-    # ddata = sc.read(path_to_data + 'myexample.txt.gz', sheet='countmatrix')
-    # ddata = sc.read(path_to_data + 'myexample.soft.gz', sheet='countmatrix')
+    # adata = sc.read(path_to_data + 'myexample.csv', first_column_names=True)
+    # adata = sc.read(path_to_data + 'myexample.h5', sheet='countmatrix')
+    # adata = sc.read(path_to_data + 'myexample.xlsx', sheet='countmatrix')
+    # adata = sc.read(path_to_data + 'myexample.txt', sheet='countmatrix')
+    # adata = sc.read(path_to_data + 'myexample.txt.gz', sheet='countmatrix')
+    # adata = sc.read(path_to_data + 'myexample.soft.gz', sheet='countmatrix')
 
-    # in ddata['X'], rows should correspond to samples, columns to genes
+    # in adata.X, rows should correspond to samples, columns to genes
     # to match this convention, transpose your data if necessary
-    # ddata = utils.transpose_ddata(ddata)
+    # adata = utils.transpose_adata(adata)
 
     # get groupnames (as strings)
     dgroups = sc.read(path_to_data + 'mygroups.csv', as_strings=True)
-    ddata['groupnames_n'] = dgroups['X'][:, 0]
+    adata['groupnames_n'] = dgroups['X'][:, 0]
 
     # specify root cell
-    ddata['xroot'] = ddata['X'][336]
+    adata['xroot'] = adata.X[336]
 
-    return ddata
+    return adata
 
 #--------------------------------------------------------------------------------
 # Optional functions for Raw Data, Annotation, Postprocessing, respectively

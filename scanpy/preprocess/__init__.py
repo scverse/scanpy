@@ -22,7 +22,7 @@ __all__ = [
 
 def show():
     from . import advanced, simple
-    str = 'take ddata as argument (advanced)'
+    str = 'take adata as argument (advanced)'
     for k in sorted(dir(advanced)):
         if not k.startswith('_'):
             str += '\n    ' + k

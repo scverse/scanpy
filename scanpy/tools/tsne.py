@@ -22,13 +22,13 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
-def tsne(ddata, nr_pcs=50, perplexity=30):
+def tsne(adata, nr_pcs=50, perplexity=30):
     """
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
     Parameters
     ----------
-    ddata : dictionary containing
+    adata : dictionary containing
         X or Xpca: np.ndarray
             Data array, rows store observations, columns variables.
             Consider preprocessing with PCA. -> If there is an array Xpca,
@@ -46,21 +46,21 @@ def tsne(ddata, nr_pcs=50, perplexity=30):
         Y : np.ndarray
             tSNE representation of the data.
     """
-    params = locals(); del params['ddata']
+    params = locals(); del params['adata']
     sett.m(0,'perform tSNE')
     sett.m(0,'--> mind that this is not deterministic!')
     # preprocessing by PCA
-    if 'Xpca' in ddata:
-        X = ddata['Xpca']
+    if 'Xpca' in adata:
+        X = adata['Xpca']
         sett.m(0, 'using Xpca for tSNE')
     else:
-        if params['nr_pcs'] > 0 and ddata['X'].shape[1] > params['nr_pcs']:
+        if params['nr_pcs'] > 0 and adata.X.shape[1] > params['nr_pcs']:
             sett.m(0, 'preprocess using PCA with', params['nr_pcs'], 'PCs')
             sett.m(0, '--> avoid this by setting nr_pcs = 0')
-            dpca = pca(ddata, nr_comps=params['nr_pcs'])
+            dpca = pca(adata, nr_comps=params['nr_pcs'])
             X = dpca['Y']
         else:
-            X = ddata['X']
+            X = adata.X
     # params for sklearn
     params_sklearn = {k: v for k, v in params.items() if not k=='nr_pcs'}
     params_sklearn['verbose'] = sett.verbosity
@@ -86,8 +86,8 @@ def tsne(ddata, nr_pcs=50, perplexity=30):
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     return {'type': 'tsne', 'Y': Y}
 
-def plot(dplot, ddata,
-         rowcat='',
+def plot(dplot, adata,
+         smp='',
          comps='1,2',
          layout='2d',
          legendloc='lower right',
@@ -100,10 +100,11 @@ def plot(dplot, ddata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    ddata : dict
+    adata : dict
         Data dictionary.
-    rowcat : str, optional (default: '')
-        String for accessing a categorical annotation of rows.
+    smp : str, optional (default: first anntotated group)
+        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
+        or gene names.
     comps : str, optional (default: "1,2")
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -116,8 +117,8 @@ def plot(dplot, ddata,
          Increase to increase the right margin.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, ddata,
-                    rowcat,
+    plott.plot_tool(dplot, adata,
+                    smp,
                     comps,
                     layout,
                     legendloc,
