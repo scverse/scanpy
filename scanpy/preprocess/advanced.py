@@ -27,7 +27,7 @@ def subsample(ddata, subsample, seed=0):
     """
     from .. import utils
     X, row_indices = utils.subsample(ddata['X'],subsample,seed)
-    for key in ['rownames']:
+    for key in ['rownames', 'Xpca']:
         if key in ddata and len(ddata[key]) == ddata['X'].shape[0]:
             ddata[key] = ddata[key][row_indices]
     if 'rowcat' in ddata:

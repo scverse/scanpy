@@ -61,8 +61,6 @@ def difftest(dgroups, ddata=None,
         X = np.log(X) / np.log(2)
 
     # select subset of groups
-    if isinstance(groups_names, str):
-        groups_names = groups_names.split(',')
     groups_names, groups_masks = utils.select_groups(dgroups, groups_names)
 
     # loop over all masks and compute means, variances and sample numbers

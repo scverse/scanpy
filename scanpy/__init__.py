@@ -122,25 +122,25 @@ def run_args(toolkey, args):
     # read parameters
     if toolkey == 'sim':
         if args['opfile'] != '':
-            params = read_params(args['opfile'])
+            oparams = read_params(args['opfile'])
         else:
             opfile_sim = 'sim/' + args['exkey'] + '_oparams.txt'
-            params = read_params(opfile_sim)
+            oparams = read_params(opfile_sim)
             sett.m(0,'--> you can specify your custom params file using the option\n'
                      '    "--opfile" or provide parameters directly via "--oparams"')
-        if 'writedir' not in params:
-            params['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
+        if 'writedir' not in oparams:
+            oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
     else:
         ddata, exmodule = example(args['exkey'], return_module=True)
-        params = {}
+        oparams = {}
         # try to load tool parameters from dexamples
         try:
             did_not_find_params_in_exmodule = False
             dexample = exmodule.dexamples[args['exkey']]
-            params = {}
+            oparams = {}
             for key in dexample.keys():
                 if toolkey in key:
-                    params = dexample[key]
+                    oparams = dexample[key]
         except:
             did_not_find_params_in_exmodule = True
             pass
@@ -148,11 +148,11 @@ def run_args(toolkey, args):
         # the current param dict with these
         if args['opfile'] != '':
             add_params = read_params(args['opfile'])
-            params = utils.update_params(params, add_params)
+            oparams = utils.update_params(oparams, add_params)
         # same if optional parameters have been specified on the command line
         if args['oparams']:
             add_params = readwrite.get_params_from_list(args['oparams'])
-            params = utils.update_params(params, add_params)
+            oparams = utils.update_params(oparams, add_params)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
 
@@ -162,6 +162,13 @@ def run_args(toolkey, args):
         prevkey = sett.basekey + '_' + args['prev'] + sett.fsig
         dprev = read(prevkey)
         prevsuffix = '_' + args['prev']
+        if toolkey in ['difftest']:
+            # ignore default settings for groups
+            if (args['subsample'] != 1 
+                and 'groups' in oparams
+                and not args['oparams']):
+                del oparams['groups']
+                sett.m(0, 'ignoring default settings for "groups" parameter')
     # all tools that require a previous tool
     elif toolkey in ['scdg']:
         print('Error: need to provide a tool to option --prev')
@@ -187,33 +194,33 @@ def run_args(toolkey, args):
     # actual call of tool
     from os.path import exists
     if not exists(resultfile) or sett.recompute in ['all', 'tool']:
-        # TODO: solve this in a nicer way, get an ordered dict for params
+        # TODO: solve this in a nicer way, get an ordered dict for oparams
         from inspect import getcallargs
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
-            dtool = tool(**params)
-            params = getcallargs(tool, **params)
+            dtool = tool(**oparams)
+            oparams = getcallargs(tool, **oparams)
         elif args['prev'] != '':
-            dtool = tool(dprev, ddata, **params)
-            params = getcallargs(tool, dprev, ddata, **params)
+            dtool = tool(dprev, ddata, **oparams)
+            oparams = getcallargs(tool, dprev, ddata, **oparams)
             # TODO: Would be good to name the first argument dprev_or_ddata
             #       in difftest, but this doesn't work
-            if 'dprev' in params:
-                del params['dprev']
-            elif 'dgroups' in params:
-                del params['dgroups']
+            if 'dprev' in oparams:
+                del oparams['dprev']
+            elif 'dgroups' in oparams:
+                del oparams['dgroups']
         else:
-            dtool = tool(ddata, **params)
-            params = getcallargs(tool, ddata, **params)
-        if 'ddata' in params:
-            del params['ddata']
-        elif 'ddata_or_X' in params:
-            del params['ddata_or_X']
+            dtool = tool(ddata, **oparams)
+            oparams = getcallargs(tool, ddata, **oparams)
+        if 'ddata' in oparams:
+            del oparams['ddata']
+        elif 'ddata_or_X' in oparams:
+            del oparams['ddata_or_X']
         dtool['writekey'] = writekey
         write(writekey, dtool)
         sett.m(0, 'wrote result to', resultfile)
         # save a copy of the parameters to a file
-        readwrite.write_params(opfile, params)
+        readwrite.write_params(opfile, oparams)
     else:
         # call the tool resultfile
         dtool = read(writekey)
@@ -227,6 +234,7 @@ def run_args(toolkey, args):
     else:
         # post-processing specific to example and tool
         postprocess = args['exkey'] + '_' + toolkey
+        # only if we are not subsampling
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             dtool = getattr(exmodule, postprocess)(dtool)
             write(writekey, dtool)

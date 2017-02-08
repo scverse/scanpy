@@ -164,6 +164,10 @@ def select_groups(dgroups, groups_names_subset='all'):
     groups_masks = dgroups['groups_masks']
     groups_ids = list(range(len(groups_names)))
     if groups_names_subset != 'all':
+        # get list from string
+        if isinstance(groups_names_subset, str):
+            groups_names_subset = groups_names_subset.split(',')
+        # set groups_names to subset
         groups_names = np.array(groups_names_subset)
         groups_ids = np.where(np.in1d(dgroups['groups_names'], groups_names))[0]
         if not np.any(groups_ids):
