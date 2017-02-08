@@ -26,7 +26,7 @@ def examples():
 def dexdata(): 
     """Example data.
     """
-    all_dex = utils.merge_dicts(builtin.dexdata, user.dexdata)
+    all_dex = utils.merge_dicts(builtin.dexdata, {})
     try:
         # additional possibility to add example module
         from . import builtin_private
@@ -132,10 +132,8 @@ def example(exkey, return_module=False):
         return adata
 
 #-------------------------------------------------------------------------------
-# Checking of data dictionary
-# - Might be replaced with a data class.
+# Checks of AnnData object
 #-------------------------------------------------------------------------------
-
 
 ignore_groups = ['N/A', 'dontknow', 'no_gate']
 # howtos
@@ -173,51 +171,6 @@ def check_adata(adata):
                     masks.append(name == adata.smp[k])
                 adata[k + '_masks'] = np.array(masks)
     return adata
-
-howto_specify_subgroups_ddata = '''no key "row" in adata dictionary found
---> you might provide a dict of lists of n subgroup names (strings or ints) with
-    number of samples as follows
-    {'group1': ['A', 'B', 'A', ... ], 'group2': ['c', 'a', ...]}
-'''
-
-def check_ddata(ddata):
-    """
-    Do sanity checks on ddata dictionary.
-
-    Checks whether ddata conains categorical row metadata 'row'. 
-
-    If yes, for each class of categories in 'row' associate an 'order',
-    indices 'ids', colors and masks.
-    """
-    import numpy as np
-    import sys
-    if not 'row' in ddata:
-        sett.m(0, howto_specify_subgroups_ddata)
-    else:
-        if not isinstance(ddata['row'], dict):
-            msg = 'row must be a dictionary! {\'cat1\': [...], }'
-            sys.exit(msg)
-        for k in ddata['row']:
-            # transform to np.ndarray
-            try:
-                ddata['row'][k] = np.array(ddata['row'][k], dtype=int)
-            except:
-                ddata['row'][k] = np.array(ddata['row'][k], dtype=str)
-            # ordered unique categories
-            if not k + '_names' in ddata:
-                ddata[k + '_names'] = np.unique(ddata['row'][k])
-            # output 
-            sett.m(0,'read sample annotation', k, 'with', ddata[k + '_names'])
-            # indices for each category
-            if not k + '_ids' in ddata:
-                ddata[k + '_ids'] = np.arange(len(ddata[k + '_names']), dtype=int)
-            # masks for each category
-            if not k + '_masks' in ddata:
-                masks = []
-                for name in ddata[k + '_names']:
-                    masks.append(name == ddata['row'][k])
-                ddata[k + '_masks'] = np.array(masks)
-    return ddata
 
 def exkeys_str():
     str = ''
