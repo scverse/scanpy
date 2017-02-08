@@ -246,8 +246,7 @@ def moignard15_raw():
     adata = sc.AnnData(ddata)
     # filter out genes: the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
-    genes = np.r_[np.arange(0, 4), np.arange(5, 31), 
-                  np.arange(32, 36), np.arange(37, 45)]
+    genes = np.array([g not in [4, 31, 36, 45] for g in range(adata.X.shape[1])])
     print('selected', len(genes), 'genes')
     adata = adata[:, genes] # filter data matrix
     # choose root cell as in Haghverdi et al. (2016)
