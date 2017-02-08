@@ -18,17 +18,9 @@ dexamples: dict
     preprocessing.
 """
 
-# this is necessary to import scanpy from within package
 from __future__ import absolute_import, print_function
-# standard modules
-from collections import OrderedDict as odict
-# scientific modules
 import numpy as np
-# scanpy
 import scanpy as sc
-from .. import utils
-from .. import settings as sett
-from ..ann_data import AnnData
 
 #--------------------------------------------------------------------------------
 # The 'dexdata dictionary' stores information about example data.
@@ -154,7 +146,7 @@ def burczynski06():
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
-    adata = AnnData(ddata)
+    adata = sc.AnnData(ddata)
     return adata
 
 def krumsiek11():
@@ -172,7 +164,7 @@ def krumsiek11():
     """ 
     filename = 'write/krumsiek11_sim/sim_000000.txt'
     ddata = sc.read(filename, first_column_names=True)
-    adata = AnnData(ddata)
+    adata = sc.AnnData(ddata)
     adata['xroot'] = adata.X[0]
     return adata
 
@@ -206,7 +198,7 @@ def paul15():
 
     Returns
     -------
-    adata: AnnData
+    adata: sc.AnnData
     """
     adata = paul15_raw()
     adata.X = sc.pp.log(adata.X)
@@ -228,7 +220,7 @@ def toggleswitch():
     """
     filename = 'write/toggleswitch_sim/sim_000000.txt'
     ddata = sc.read(filename, first_column_names=True)
-    adata = AnnData(ddata)
+    adata = sc.AnnData(ddata)
     adata['xroot'] = adata.X[0]
     return adata
 
@@ -251,9 +243,8 @@ def moignard15_raw():
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
     url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     ddata = sc.read(filename, sheet='dCt_values.txt', backup_url=url)
-    adata = AnnData(ddata)
-    # filter genes
-    # filter out the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
+    adata = sc.AnnData(ddata)
+    # filter out genes: the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
     genes = np.r_[np.arange(0, 4), np.arange(5, 31), 
                   np.arange(32, 36), np.arange(37, 45)]
@@ -263,12 +254,14 @@ def moignard15_raw():
     adata['iroot'] = iroot = 532 # note that in Matlab/R, counting starts at 1
     adata['xroot'] = adata.X[iroot]
     # annotate with Moignard et al. (2015) experimental cell groups
-    adata['groups_names'] = groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
-    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
-    # get name for each cell
+    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    # annotate each sample/cell
     adata.smp['groups'] = [
         next(gname for gname in groups_names if sname.startswith(gname))
         for sname in adata.smp_names]
+    # fix the order and colors of names in "groups"
+    adata['groups_names'] = groups_names
+    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
 def moignard15_dpt(ddpt):
@@ -282,7 +275,7 @@ def paul15_raw():
     filename = 'data/paul15/paul15.h5'
     url = 'http://falexwolf.de/data/paul15.h5'
     ddata = sc.read(filename, 'data.debatched', backup_url=url)
-    adata = AnnData(ddata)
+    adata = sc.AnnData(ddata)
     # the data has to be transposed (in the hdf5 and R files, each row
     # corresponds to one gene, we use the opposite convention)
     adata = adata.transpose()

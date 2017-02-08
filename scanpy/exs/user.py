@@ -20,14 +20,9 @@ dexamples : dict
     preprocessing. 
 """
 
-# this is necessary to import scanpy from within package
-from __future__ import absolute_import
-# scientific modules
+from __future__ import absolute_import, print_function
 import numpy as np
-# scanpy
 import scanpy as sc
-from .. import utils
-from .. import settings as sett
 
 #--------------------------------------------------------------------------------
 # The 'dexdata dictionary' stores information about example data.

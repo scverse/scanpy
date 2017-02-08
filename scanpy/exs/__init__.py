@@ -155,8 +155,8 @@ def check_adata(adata):
             # ordered unique categories
             if not k + '_names' in adata:
                 adata[k + '_names'] = np.unique(adata.smp[k])
-            adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
-                                               np.array(ignore_groups))
+                adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
+                                                   np.array(ignore_groups))
             # output 
             sett.m(0,'sample annotation', k, 'with', adata[k + '_names'])
             # indices for each category
