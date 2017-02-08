@@ -141,36 +141,19 @@ def burczynski06():
     cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
     hybridization to microarrays interrogating more than 22,000 sequences.
 
+    Available from https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=GDS1615.
+
     Reference
     ---------
     Burczynski ME, Peterson RL, Twine NC, Zuberek KA et al. 
     "Molecular classification of Crohn's disease and ulcerative colitis patients
     using transcriptional profiles in peripheral blood mononuclear cells"
     J Mol Diagn 8, 51 (2006). PMID:16436634.
-
-    https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=GDS1615
-
-    Note
-    ----
-    The function is based on a script by Kerby Shedden.
-    http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     ddata = sc.read(filename, backup_url=url)
-    groupnames_n = ddata['groupnames_n']
-    # locations (indices) of samples for the ulcerative colitis group
-    locs_UC = [i for i, x in enumerate(groupnames_n) if x == 'ulcerative colitis']
-    # locations (indices) of samples for the Crohn's disease group
-    locs_CD = [i for i, x in enumerate(groupnames_n) if x == 'Crohn\'s disease']
-    grouplocs = [locs_UC, locs_CD]
-    # this is just a label that distinguishes the sets
-    ddata['grouplabels'] = ['ulcerative colitis','Crohn\'s disease']
-    ddata['groupmasks'] = sc.utils.masks(grouplocs, ddata['X'].shape[0])
-    # this is not actually needed
-    ddata['STP'] = groupnames_n
-    ddata['UC'] = locs_UC
-    ddata['CD'] = locs_CD
+    ddata['rowcat'] = {'groups': ddata['groups']}
     return ddata
 
 def krumsiek11():

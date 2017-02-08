@@ -9,6 +9,7 @@ set -x  # print commands
 ./scanpy.py moignard15 diffmap -s 5 --savefigs -r all -v 0
 ./scanpy.py moignard15 dpt -s 5 --savefigs -r all -v 0
 ./scanpy.py moignard15 dpt tsne -s 5 --savefigs -r all -v 0
+./scanpy.py burczynski06 difftest --savefigs -r all -v 0
 ./scanpy.py paul15pca dpt -s 5 --savefigs -r all -v 0
 ./scanpy.py paul15pca difftest -s 5 --prev dpt -o groups '2,3' --savefigs -r all -v 0
 ./scanpy.py toggleswitch sim --savefigs -r all -v 0

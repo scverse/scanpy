@@ -521,13 +521,17 @@ def _read_softgz(filename):
     The SOFT format is documented here 
     http://www.ncbi.nlm.nih.gov/geo/info/soft2.html.
 
-    The following values can be exported:
-        GID : A list of gene identifiers of length d.
-        SID : A list of sample identifiers of length n.
-        STP : A list of sample desriptions of length d.
-        X   : A dxn array of gene expression values.
-
-    We translate this to the conventions of scanpy.
+    Returns
+    -------
+    ddata : dict, containing
+        X : np.ndarray
+            A d x n array of gene expression values.
+        colnames : np.ndarray
+            A list of gene identifiers of length d.
+        rownames : np.ndarray
+            A list of sample identifiers of length n.
+        groups : np.ndarray
+            A list of sample desriptions of length n.
 
     Note
     ----
@@ -535,14 +539,11 @@ def _read_softgz(filename):
     http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
     import gzip
-    with gzip.open(filename) as fid:
-
-        #print(help(fid))
-
+    with gzip.open(filename) as file:
         # The header part of the file contains information about the
         # samples. Read that information first.
-        SIF = {}
-        for line in fid:
+        samples_info = {}
+        for line in file:
             line = line.decode("utf-8")
             if line.startswith("!dataset_table_begin"):
                 break
@@ -552,24 +553,19 @@ def _read_softgz(filename):
                 subset_ids = line.split("=")[1].split(",")
                 subset_ids = [x.strip() for x in subset_ids]
                 for k in subset_ids:
-                    SIF[k] = subset_description
-
+                    samples_info[k] = subset_description
         # Next line is the column headers (sample id's)
-        SID = fid.readline().decode("utf-8").split("\t")
-
+        sample_names = file.readline().decode("utf-8").split("\t")
         # The column indices that contain gene expression data
-        I = [i for i,x in enumerate(SID) if x.startswith("GSM")]
-
+        I = [i for i,x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
-        SID = [SID[i] for i in I]
-
+        sample_names = [sample_names[i] for i in I]
         # Get a list of sample labels
-        STP = [SIF[k] for k in SID]
-
+        groups = [samples_info[k] for k in sample_names]
         # Read the gene expression data as a list of lists, also get the gene
         # identifiers
-        GID,X = [],[]
-        for line in fid:
+        gene_names, X = [], []
+        for line in file:
             line = line.decode("utf-8")
             # This is what signals the end of the gene expression data
             # section in the file
@@ -580,25 +576,15 @@ def _read_softgz(filename):
             # and convert the strings to numbers
             x = [float(V[i]) for i in I]
             X.append(x)
-            GID.append(#V[0] + ";" + 
-                       V[1])
-
+            gene_names.append(#V[0] + ";" + # only use the second gene name
+                              V[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
-    # the Scanpy convention of storing observations in rows and variables in
-    # colums.
+    # the Scanpy convention of storing samples in rows and variables in colums.
     X = np.array(X).T
-    # rownames are the sample identifiers
-    rownames = SID
-    # labels identifying sets
-    setlabels = STP
-    # column names are the gene identifiers
-    colnames = GID
-
-    ddata = {
-        'X' : X, 'rownames' : rownames, 'colnames' : colnames,
-        'groupnames_n' : setlabels
-    }
-
+    rownames = sample_names
+    colnames = gene_names
+    ddata = {'X': X, 'rownames': rownames, 'colnames': colnames, 
+             'groups': groups}
     return ddata
 
 #--------------------------------------------------------------------------------

@@ -126,20 +126,6 @@ def example(exkey, return_module=False):
     else:
         return ddata
 
-def annotate(ddata, exkey):
-    """
-    Annotates ddata if a corresponding function is present.
-    """
-    try:
-        ddata = getattr(user, exkey + '_annotate')(ddata)
-    except:
-        try:
-            ddata = getattr(builtin, exkey + '_annotate')(ddata)
-        except:
-            raise ValueError('Did not find separate function for annotation.\n'
-                             'Try calling sc.example(' + exkey + ').')
-    return ddata
-
 #-------------------------------------------------------------------------------
 # Checking of data dictionary
 # - Might be replaced with a data class.

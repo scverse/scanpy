@@ -14,8 +14,8 @@ from . import utils
 from .tools import get_tool
 from .readwrite import read, write, read_params
 from .utils import transpose_ddata
-from .exs import exdata, examples, example, annotate
-from . import preprocess as pp
+from .exs import exdata, examples, example
+from . import preprocess
 from .preprocess.advanced import subsample
 from .tools.diffmap import diffmap
 from .tools.tsne import tsne
@@ -23,6 +23,9 @@ from .tools.dpt import dpt
 from .tools.pca import pca
 from .tools.difftest import difftest
 from .tools.sim import sim
+
+# just an equivalent name
+pp = preprocess
 
 __all__ = [
     # example use cases
