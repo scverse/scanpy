@@ -3,7 +3,7 @@
 Example Data and Example Use Cases
 """
 
-from . import builtin, user
+from . import builtin
 from .. import utils
 from .. import readwrite
 from .. import settings as sett
@@ -29,8 +29,8 @@ def dexdata():
     all_dex = utils.merge_dicts(builtin.dexdata, user.dexdata)
     try:
         # additional possibility to add example module
-        from . import user_private
-        all_dex = utils.merge_dicts(all_dex, user_private.dexdata) 
+        from . import builtin_private
+        all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
     except ImportError:
         pass
     return all_dex
@@ -39,14 +39,13 @@ def dexamples():
     """Example use cases.
     """
     builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
-    user_dex = utils.fill_in_datakeys(user.dexamples, user.dexdata)
-    all_dex = utils.merge_dicts(builtin_dex, user_dex) 
+    all_dex = utils.merge_dicts(builtin_dex, {}) 
     try:
         # additional possibility to add example module
-        from . import user_private
-        user_private_dex = utils.fill_in_datakeys(user_private.dexamples, 
-                                                  user_private.dexdata)
-        all_dex = utils.merge_dicts(all_dex, user_private_dex) 
+        from . import builtin_private
+        builtin_private_dex = utils.fill_in_datakeys(builtin_private.dexamples, 
+                                                  builtin_private.dexdata)
+        all_dex = utils.merge_dicts(all_dex, builtin_private_dex) 
     except ImportError:
         pass
     return all_dex
@@ -84,14 +83,19 @@ def example(exkey, return_module=False):
         Example module.
     """
     try:
-        exfunc = getattr(user, exkey)
-        exmodule = user
-    except AttributeError:
+        try:
+            import userexs
+        except ImportError:
+            sett.m(0, 'did not find user examples, to provide some\n'
+                   '--> generate file userexs.py in your working directory')
+        exfunc = getattr(userexs, exkey)
+        exmodule = userexs
+    except (UnboundLocalError, AttributeError):
         try:
             # additional possibility to add example module
-            from . import user_private
-            exfunc = getattr(user_private, exkey)
-            exmodule = user_private
+            from . import builtin_private
+            exfunc = getattr(builtin_private, exkey)
+            exmodule = builtin_private
         except (ImportError, AttributeError):
             try:
                 exfunc = getattr(builtin, exkey)
@@ -99,8 +103,8 @@ def example(exkey, return_module=False):
             except AttributeError:
                 msg = ('Do not know how to run example "' + exkey +
                        '".\nEither define a function ' + exkey + '() '
-                       'in scanpy/exs/user.py that returns a data dictionary.\n'
-                       'Or use one of the available examples:'
+                       'in ./userexs.py that returns an AnnData object.\n'
+                       'Or, use one of the builtin examples:'
                        + exkeys_str())
                 from sys import exit
                 exit(msg)
@@ -216,7 +220,7 @@ def check_ddata(ddata):
     return ddata
 
 def exkeys_str():
-    str = '\n'
+    str = ''
     for k in sorted(dexamples().keys()):
-        str += '    ' + k + '\n'
+        str += '\n    ' + k
     return str

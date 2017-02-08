@@ -111,18 +111,23 @@ python scanpy.py --help
 python scanpy.py dpt --help
 ```
 
-#### Add your examples <a id="add_example"></a>
+#### Work on your own examples <a id="add_example"></a>
 
-To add your example, simply modify this [notebook](examples/myexample.ipynb),
-or, if you want to call it from the command-line, modify the function
-`myexample()` in [scanpy/exs/user.py](scanpy/exs/user.py). Consider using copy
-and paste from [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example
+To work on your own example, make a copy and edit the following
+[notebook](examples/myexample_template.ipynb). If you want to call user examples
+from the command-line, create a file `userexs.py` in your current working
+directory, e.g., by copying [userexs_template.py](scanpy/exs/userexs_template.py)
+``` 
+cp scanpy/exs/userexs_template.py userexs.py
+``` 
+and changing the function `myexample()` to your needs. Consider using copy and
+paste from [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example
 using `python scanpy.py myexample pca`.
 
 Also, it'd be awesome if you provide your working example for the public Scanpy
-library: copy your example from [scanpy/exs/user.py](scanpy/exs/user.py) to
-[scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data and
-make a pull request. If you have questions or prefer sending your script by
+library: copy your example from `userexs.py` to
+[scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data
+and make a pull request. If you have questions or prefer sending your script by
 email, contact Alex.
 
 ## Tools <a id="tools"></a>

@@ -8,8 +8,9 @@ sim/var*
 scanpy.egg-info/
 
 # private files
-scanpy/exs/user_private.py
-scanpy/tools/ctpaths.py
+scanpy/exs/builtin_private.py
+scanpy/tools/paths.py
+scanpy/tools/tgdyn.py
 scanpy/tools/scdg.py
 
 # always-ignore extensions
