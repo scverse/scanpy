@@ -241,15 +241,14 @@ def paul15():
             Expression vector of root cell.
     """
     ddata = paul15_raw()
-    ddata['X'] = sc.pp('log', ddata['X'])
+    ddata['X'] = sc.pp.log(ddata['X'])
     # adjust expression vector of root cell
     ddata['xroot'] = ddata['X'][ddata['iroot']]
     return ddata
 
 def paul15pca():
     ddata = paul15_raw()
-    ddata['X'] = sc.pp('log', ddata['X'])
-    #ddata['X'] = sc.pp.log(ddata['X'])
+    ddata['X'] = sc.pp.log(ddata['X'])
     # reduce to 50 components
     ddata['Xpca'] = sc.pca(ddata['X'], nr_comps=50)
     # adjust expression vector of root cell

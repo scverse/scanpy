@@ -13,7 +13,7 @@ from ..compat.matplotlib import pyplot as pl
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
-from ..preprocess import preprocess as pp
+from .. import preprocess as pp
 
 def pca(ddata_or_X, nr_comps=10):
     """
@@ -39,7 +39,7 @@ def pca(ddata_or_X, nr_comps=10):
     else:
         X = ddata_or_X
         isddata = False
-    Y = pp('pca', X, nr_comps)
+    Y = pp.pca(X, nr_comps)
     if isddata:
         return {'type': 'pca', 'Y': Y}
     else:

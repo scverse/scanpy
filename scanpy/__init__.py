@@ -7,17 +7,15 @@ Reference
 Wolf, Angerer & Theis, bioRxiv doi:... (2017)
 """
 
-# scanpy modules
 from . import settings as sett
 from . import tools
 from . import preprocess
 from . import utils
 from .tools import get_tool
-# reexports
 from .readwrite import read, write, read_params
 from .utils import transpose_ddata
 from .exs import exdata, examples, example, annotate
-from .preprocess import preprocess, pp
+from . import preprocess as pp
 from .preprocess.advanced import subsample
 from .tools.diffmap import diffmap
 from .tools.tsne import tsne
