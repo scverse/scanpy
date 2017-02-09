@@ -190,29 +190,32 @@ class AnnData(IndexMixin):
     def _from_ddata(ddata):
         smp, var = OrderedDict(), OrderedDict()
 
-        X = ddata['X']
-        del ddata['X']
+        meta = ddata.copy()
+        del ddata
 
-        if 'row_names' in ddata:
-            smp['smp_names'] = ddata['row_names']
-            del ddata['row_names']
-        elif 'smp_names' in ddata:
-            smp['smp_names'] = ddata['smp_names']
-            del ddata['smp_names']
+        X = meta['X']
+        del meta['X']
 
-        if 'col_names' in ddata:
-            var['var_names'] = ddata['col_names']
-            del ddata['col_names']
-        elif 'var_names' in ddata:
-            var['var_names'] = ddata['var_names']
-            del ddata['var_names']
+        if 'row_names' in meta:
+            smp['smp_names'] = meta['row_names']
+            del meta['row_names']
+        elif 'smp_names' in meta:
+            smp['smp_names'] = meta['smp_names']
+            del meta['smp_names']
 
-        smp = odict_merge(smp, ddata.get('row', {}), ddata.get('smp', {}))
-        var = odict_merge(var, ddata.get('col', {}), ddata.get('var', {}))
-        for n in {'row', 'smp', 'col', 'var'} & ddata.keys():
-            del ddata[n]
+        if 'col_names' in meta:
+            var['var_names'] = meta['col_names']
+            del meta['col_names']
+        elif 'var_names' in meta:
+            var['var_names'] = meta['var_names']
+            del meta['var_names']
 
-        return X, smp, var, ddata
+        smp = odict_merge(smp, meta.get('row', {}), meta.get('smp', {}))
+        var = odict_merge(var, meta.get('col', {}), meta.get('var', {}))
+        for n in {'row', 'smp', 'col', 'var'} & meta.keys():
+            del meta[n]
+
+        return X, smp, var, meta
 
     def smp_keys(self):
         return [n for n in self.smp.dtype.names if n != SMP_NAMES]
