@@ -53,6 +53,7 @@ def weinreb16(adata):
     meanFilter = 0.01
     cvFilter = 2
     nr_pcs = 50
+
     ddata = adata.to_dict()
     X = ddata['X']
     # row normalize
@@ -71,23 +72,28 @@ def weinreb16(adata):
     sett.m(0, 'Xpca has shape', 
            ddata['Xpca'].shape[0], 'x', ddata['Xpca'].shape[1])
     from ..ann_data import AnnData
-    return AnnData(ddata)
+    adata = AnnData(ddata)
+#     print(adata.X)
+#     #return adata
 
-#     TODO: this should all be organized more nicely
-#     ones retrieve, do everythin on X, then feed back into adata
+#     # TODO: this should all be organized more nicely
+#     # ones retrieve, do everythin on X, then feed back into adata
 #     X = adata.X
 #     # row normalize
-#     adata.X = row_norm(adata.X, max_fraction=0.05, mult_with_mean=True)
+#     X = row_norm(X, max_fraction=0.05, mult_with_mean=True)
 #     # filter out genes with mean expression < 0.1 and coefficient of variance <
 #     # cvFilter
 #     X, gene_filter = filter_genes_cv(X, meanFilter, cvFilter)
+#     # compute zscore of filtered matrix
 #     Xz = zscore(X)
 #     # PCA
 #     Xpca = pca(Xz, nr_comps=nr_pcs)
 #     # update adata
-#     adata = adata[:, gene_filter]
-#     adata.X = zscore(adata.X)
+#     adata.X = X
+#     adata = adata.var_names[gene_filter] # filter genes
 #     adata['Xpca'] = Xpca
 #     sett.m(0, 'Xpca has shape', 
 #            adata['Xpca'].shape[0], 'x', adata['Xpca'].shape[1])
-#     return adata
+#     print(adata.X)
+
+    return adata

@@ -167,7 +167,7 @@ in [Anaconda](https://www.continuum.io/downloads)), install
 matplotlib h5py pandas xlrd`. Scanpy is written in Python 3 and compatible with
 Python 2.
 
-#### Details
+#### Details on required packages via Miniconda
 
 After downloading [Miniconda](http://conda.pydata.org/miniconda.html), in a unix shell (Linux, Mac), run
 ```shell
@@ -176,13 +176,8 @@ chmod +x Miniconda3-latest-VERSION.sh
 ./Miniconda3-latest-VERSION.sh
 ```
 and accept all suggestions. Either reopen a new terminal or `source
-~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac.
-
-Then run
-```shell
-conda install scipy matplotlib h5py pandas xlrd
-```
-The whole process takes about 5 min.
+~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac. Then run
+`conda install scipy matplotlib h5py pandas xlrd`. The whole process takes about 5 min.
 
 <!--- You can install Scanpy, hence `import scanpy` from anywhere on your system, via
 ```shell
