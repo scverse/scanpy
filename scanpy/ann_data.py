@@ -209,9 +209,8 @@ class AnnData(IndexMixin):
 
         smp = odict_merge(smp, ddata.get('row', {}), ddata.get('smp', {}))
         var = odict_merge(var, ddata.get('col', {}), ddata.get('var', {}))
-        for n in ['row', 'smp', 'col', 'var']:
-            if n in ddata:
-                del ddata[n]
+        for n in {'row', 'smp', 'col', 'var'} & ddata.keys():
+            del ddata[n]
 
         return X, smp, var, ddata
 
