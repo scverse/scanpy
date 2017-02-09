@@ -5,6 +5,8 @@ Utility functions and classes
 
 from __future__ import absolute_import
 import os
+from collections import OrderedDict
+
 import numpy as np
 from . import settings as sett
 
@@ -461,3 +463,10 @@ def check_datafile_deprecated(filename, ext=None):
             quit()
 
     return rel_filename
+
+def odict_merge(*ds):
+    merged = OrderedDict()
+    for d in ds:
+        for k, v in d.items():
+            merged[k] = v
+    return merged

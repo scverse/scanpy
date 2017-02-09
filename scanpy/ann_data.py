@@ -1,14 +1,17 @@
 """
 Annotated Data
 """
-import sys
 from collections import Mapping
+from collections import OrderedDict
 from enum import Enum
 import numpy as np
 from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
+
+from .utils import odict_merge
+
 
 class StorageType(Enum):
     Array = np.ndarray
@@ -92,7 +95,7 @@ def _check_dimensions(data, smp, var):
                          .format(nr_var, var.shape[0]))
 
 class AnnData(IndexMixin):
-    def __init__(self, ddata=None, X=None, smp=None, var=None, vis=None, **meta):
+    def __init__(self, ddata_or_X=None, smp=None, var=None, vis=None, **meta):
         """
         Annotated Data
 
@@ -121,7 +124,8 @@ class AnnData(IndexMixin):
 
         Parameters
         ----------
-        ddata : dict, containing
+        ddata_or_X : np.ndarray, np.ma.MaskedArray, sp.spmatrix, dict
+            Either a nr_samples x nr_variables data matrix, or a dict, containing:
             X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
                 A nr_samples x nr_variables data matrix.
             row_names : list, np.ndarray, optional
@@ -130,8 +134,6 @@ class AnnData(IndexMixin):
                 A nr_variables array storing names for variables.
             row : dict, optional
                 A dict with row annotation.
-        X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-            A nr_samples x nr_variables data matrix.
         smp : np.recarray, dict
             A nr_samples x ? record array containing sample names (`smp_names`)
             and other sample annotation in the columns. A passed dict is
@@ -148,30 +150,12 @@ class AnnData(IndexMixin):
         ----------
         X, smp, var from the Parameters.
         """
-        if ddata is not None:
-            if 'X' in ddata:
-                X = ddata['X']
-                del ddata['X']
-            if 'row_names' in ddata:
-                row_names = ddata['row_names']
-                smp = np.rec.fromarrays([np.asarray(row_names)],
-                                         names=[SMP_NAMES])
-                del ddata['row_names']
-            elif 'smp_names' in ddata:
-                smp_names = ddata['smp_names']
-                smp = np.rec.fromarrays([np.asarray(smp_names)],
-                                         names=[SMP_NAMES])
-                del ddata['smp_names']
-            if 'col_names' in ddata:
-                col_names = ddata['col_names']
-                var = np.rec.fromarrays([np.asarray(col_names)],
-                                         names=[VAR_NAMES])
-                del ddata['col_names']
-            elif 'var_names' in ddata:
-                var_names = ddata['var_names']
-                var = np.rec.fromarrays([np.asarray(var_names)],
-                                         names=[VAR_NAMES])
-                del ddata['var_names']
+        if isinstance(ddata_or_X, Mapping):
+            if smp or var or meta:
+                raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata')
+            X, smp, var, meta = self._from_ddata(ddata_or_X)
+        else:
+            X = ddata_or_X
 
         # check data type of X
         for s_type in StorageType:
@@ -202,28 +186,37 @@ class AnnData(IndexMixin):
         self.vis = vis or {}
         self._meta = meta
 
-        if ddata is not None:
-            for key, value in ddata.items():
-                if not key in ['smp', 'row', 'var', 'col']:
-                    self._meta[key] = value
-                elif key == 'row':
-                    for k, v in ddata['row'].items():
-                        self.smp[k] = v
-                elif key == 'smp':
-                    for k, v in ddata['smp'].items():
-                        self.smp[k] = v
-                elif key == 'col':
-                    for k, v in ddata['col'].items():
-                        self.var[k] = v
-                elif key == 'var':
-                    for k, v in ddata['var'].items():
-                        self.var[k] = v
-                    
+    @staticmethod
+    def _from_ddata(ddata):
+        smp, var = OrderedDict(), OrderedDict()
+
+        X = ddata['X']
+        del ddata['X']
+
+        if 'row_names' in ddata:
+            smp['smp_names'] = ddata['row_names']
+            del ddata['row_names']
+        elif 'smp_names' in ddata:
+            smp['smp_names'] = ddata['smp_names']
+            del ddata['smp_names']
+
+        if 'col_names' in ddata:
+            var['var_names'] = ddata['col_names']
+            del ddata['col_names']
+        elif 'var_names' in ddata:
+            var['var_names'] = ddata['var_names']
+            del ddata['var_names']
+
+        smp = odict_merge(smp, ddata.get('row', {}), ddata.get('smp', {}))
+        var = odict_merge(var, ddata.get('col', {}), ddata.get('var', {}))
+
+        return X, smp, var, ddata
+
     def smp_keys(self):
-        return list(self.smp.dtype.names)[1:]
+        return [n for n in self.smp.dtype.names if n != SMP_NAMES]
 
     def var_keys(self):
-        return list(self.var.dtype.names)[1:]
+        return [n for n in self.var.dtype.names if n != VAR_NAMES]
 
     def to_dict(self):
         smp = {k: self.smp[k] for k in self.smp_keys() if not k=='smp_names'}
@@ -289,8 +282,7 @@ class AnnData(IndexMixin):
         var_meta = self.var[var]
         assert smp_meta.shape[0] == X.shape[0], (smp, smp_meta)
         assert var_meta.shape[0] == X.shape[1], (var, var_meta)
-        adata = AnnData(X=X, smp=smp_meta, var=var_meta, 
-                       vis=self.vis, **self._meta)
+        adata = AnnData(X, smp_meta, var_meta, self.vis, **self._meta)
         return adata
 
     def __setitem__(self, index, val):
@@ -317,7 +309,7 @@ class AnnData(IndexMixin):
         var = np.rec.array(self.smp)
         var.dtype.names = [VAR_NAMES if n == SMP_NAMES else n
                            for n in var.dtype.names]
-        return AnnData(X=self.X.T, smp=smp, var=var, vis=self.vis, **self._meta)
+        return AnnData(self.X.T, smp, var, self.vis, **self._meta)
 
     T = property(transpose)
 
@@ -342,7 +334,7 @@ def test_ddata():
         X=np.array([[1, 2, 3], [4, 5, 6]]),
         row_names=['A', 'B'],
         col_names=['a', 'b', 'c'])
-    AnnData.from_ddata(**ddata)
+    AnnData(ddata)
 
 def test_names():
     adata = AnnData(
