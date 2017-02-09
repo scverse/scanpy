@@ -368,7 +368,6 @@ def _read_text_raw(filename, sep=None):
         else:
             line_list = line.split(sep)
             data.append(line_list)
-
     return data, header
 
 def _interpret_as_strings(data):
@@ -407,7 +406,9 @@ def _interpret_as_floats(data, header, first_column_names):
         sett.m(0,'--> assuming first line in file stores variable names')
         # if the first row is one element shorter
         col_names = np.array(data[0]).astype(str)
+        sett.mt(0, 'constructed array of column names')
         data = np.array(data[1:])
+        sett.mt(0, 'constructed array from list of list')
     # try reading col_names from the last comment line
     elif len(header) > 0 and type(header) == str:
         sett.m(0,'--> assuming last comment line stores variable names')
@@ -427,9 +428,12 @@ def _interpret_as_floats(data, header, first_column_names):
     if not is_float(data[1][0]) or first_column_names: 
         sett.m(0,'--> assuming first column stores sample names')
         row_names = data[:, 0].astype(str)
+        sett.mt(0, 'initialized row names')
         # skip the first column
         try:
             X = data[:, 1:].astype(float)
+            sett.mt(0, 'wrote X as float from data')
+            sett.mt(0, 'constructed array from list of list')
         except ValueError as e:
             msg = 'formating is strange, last line of data matrix is \n'
             msg += str(data[-1, 1:])
