@@ -9,7 +9,7 @@ from .advanced import *
 __all__ = [
     # from simple
     'filter_cells',
-    'filter_genes_cv',
+    'gene_cv_filter',
     'filter_genes_fano',
     'log',
     'pca',

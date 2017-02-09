@@ -58,7 +58,7 @@ def weinreb16(adata):
     adata.X = row_norm(adata.X, max_fraction=0.05, mult_with_mean=True)
     # filter out genes with mean expression < 0.1
     # and coefficient of variance < cv_filter
-    _, gene_filter = filter_genes_cv(adata.X, mean_filter, cv_filter)
+    gene_filter = gene_cv_filter(adata.X, mean_filter, cv_filter)
     adata = adata[:, gene_filter]  # filter genes
 
     # compute zscore of filtered matrix and create PCA
