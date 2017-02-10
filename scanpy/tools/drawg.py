@@ -25,7 +25,7 @@ from .. import utils
 step_size = 10
 
 def drawg(adata, k=4, nr_comps=2):
-    """
+    u"""
     Visualize data using graph drawing algorithms.
 
     In particular the force-directed Fruchterman-Reingold algorithm.

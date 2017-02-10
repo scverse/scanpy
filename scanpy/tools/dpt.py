@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Diffusion Pseudotime Analysis
@@ -25,7 +26,7 @@ from .. import graph
 
 def dpt(adata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         sigma=0, allow_branching_at_root=False):
-    """
+    u"""
     Perform DPT analsysis as of Haghverdi et al. (2016).
 
     Reference
