@@ -63,7 +63,8 @@ def plot_tool(dplot, adata,
         exit(0)
 
     c = 'grey'
-    cat = False
+    categorical = False
+    continuous = False
     if len(adata.smp_keys()) > 0:
         if smp == '':
             smp = adata.smp_keys()[0]
@@ -71,15 +72,17 @@ def plot_tool(dplot, adata,
         # test whether we have categorial or continuous annotation
         if smp in adata.smp_keys():
             if adata.smp[smp].dtype.char in ['S', 'U']:
-                cat = True
+                categorical = True
             elif np.unique(adata.smp).size < 20:
-                cat = True
+                categorical = True
             else:
                 c = pl.cm.get_cmap(params['cmap'])(
                                                pl.Normalize()(adata.smp[smp]))
+                continuous = True
         # coloring according to gene expression
         elif smp in adata.var_names:
             c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
+            continuous = True
             sett.m(0, 'coloring according expression of gene', smp)
         else:
             raise ValueError('specify valid sample annotation, one of '
@@ -95,9 +98,9 @@ def plot_tool(dplot, adata,
                   c=c,
                   highlights=highlights,
                   cmap=params['cmap'],
-                  colorbar=(not cat))
+                  colorbar=continuous)
 
-    if cat: 
+    if categorical: 
         if not smp + '_colors' in adata:
             adata[smp + '_colors'] = pl.cm.get_cmap(params['cmap'])(
                                                   pl.Normalize()(adata[smp + '_ids']))

@@ -10,14 +10,14 @@ TODO
 """
 
 import os
-import h5py
 import sys
+import h5py
 import numpy as np
 
-from . import AnnData, settings as sett
+from . import settings as sett
 
 avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
-""" Available file formats for writing data. """
+""" Available file formats for reading data. """
 
 #--------------------------------------------------------------------------------
 # Reading and Writing data files and result dictionaries
@@ -40,6 +40,7 @@ def write(filename_or_key, dict_or_adata):
     dict_or_adata : dict, AnnData
         Annotated data matrix or dictionary convertible to one.
     """
+    from .ann_data import AnnData
     if isinstance(dict_or_adata, AnnData):
         dictionary = dict_or_adata.to_dict()
         dictionary['isadata'] = True
@@ -54,7 +55,7 @@ def write(filename_or_key, dict_or_adata):
             dictionary['writekey'] = key
     write_dict_to_file(filename, dictionary, ext=sett.extd)
 
-def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False, 
+def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
          as_strings=False, backup_url=''):
     """
     Read file or dictionary and return data dictionary.
@@ -70,8 +71,8 @@ def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False,
         Name of sheet in Excel file.
     ext : str, optional (default: automatically inferred from filename)
         Extension that indicates the file type.
-    sep : str, optional
-        Separator that separates data within text file. If None, will split at
+    delim : str, optional
+        Delimiter that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
     first_column_names : bool, optional
@@ -93,7 +94,7 @@ def read(filename_or_key, sheet='', ext='', sep=None, first_column_names=False,
             Array storing the names of columns (gene names).
     """
     if is_filename(filename_or_key):
-        return read_file(filename_or_key, sheet, ext, sep, first_column_names, 
+        return read_file(filename_or_key, sheet, ext, delim, first_column_names, 
                          as_strings, backup_url)
 
     # generate filename and read to dict
@@ -191,7 +192,7 @@ def get_params_from_list(params_list):
 # Reading and Writing data files
 #--------------------------------------------------------------------------------
 
-def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
+def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
               as_strings=False, backup_url=''):
     """ 
     Read file and return data dictionary.
@@ -207,7 +208,7 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
         Name of sheet in Excel file.
     ext : str, optional (default: inferred from filename)
         Extension that indicates the file type.
-    sep : str, optional
+    delim : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
@@ -270,14 +271,14 @@ def read_file(filename, sheet='', ext='', sep=None, first_column_names=False,
         elif ext == 'mtx':
             ddata = _read_mtx(filename)
         elif ext == 'csv':
-            ddata = _read_text(filename, sep=',', 
+            ddata = read_txt(filename, delim=',', 
                                first_column_names=first_column_names,
                                as_strings=as_strings)
         elif ext in ['txt', 'tab', 'data']:
             if ext == 'data':
                 sett.m(0, 'assuming ".data" means tab or white-space separated text file')
                 sett.m(0, '--> change this by specifying ext to sc.read')
-            ddata = _read_text(filename, sep, first_column_names,
+            ddata = read_txt(filename, delim, first_column_names,
                                as_strings=as_strings)
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
@@ -307,7 +308,7 @@ def _read_mtx(filename):
     sett.m(0, '--> TODO: don\'t use dense format')
     return {'X': X}
 
-def _read_text(filename, sep=None, first_column_names=False, as_strings=False):
+def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
     """ 
     Return ddata dictionary.
 
@@ -315,7 +316,7 @@ def _read_text(filename, sep=None, first_column_names=False, as_strings=False):
     ----------
     filename : str
         Filename to read from.
-    sep : str, optional
+    delim : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
@@ -333,14 +334,13 @@ def _read_text(filename, sep=None, first_column_names=False, as_strings=False):
         col_names : np.ndarray
             Array storing the names of columns (gene names).
     """
-    data, header = _read_text_raw(filename,sep)
-    
     if as_strings:
-        return _interpret_as_strings(data)
+        ddata = read_txt_as_strings(filename, delim)
     else:
-        return _interpret_as_floats(data, header, first_column_names)
+        ddata = read_txt_as_floats(filename, delim, first_column_names)
+    return ddata
 
-def _read_text_raw(filename, sep=None):
+def read_txt_as_floats(filename, delim=None, first_column_names=None):
     """
     Return data as list of lists of strings and the header as string.
 
@@ -348,7 +348,7 @@ def _read_text_raw(filename, sep=None):
     ----------
     filename : str
         Filename of data file.
-    sep : str, optional
+    delim : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
@@ -362,20 +362,96 @@ def _read_text_raw(filename, sep=None):
     """
     header = ''
     data = []
+    length = -1
+    f = open(filename)
+    col_names = []
+    row_names = []
+    # read header and column names
+    for line in f:
+        if line.startswith('#'):
+            header += line
+        else:
+            line_list = line.split(delim)
+            if not is_float(line_list[0]):
+                col_names = line_list
+                sett.m(0, '--> assuming first line in file stores column names')
+            else:
+                if not is_float(line_list[0]) or first_column_names:
+                    first_column_names = True
+                    row_names.append(line_list[0])
+                    data.append(line_list[1:])
+                else:
+                    data.append(line_list)
+            break
+    if not col_names:
+        # try reading col_names from the last comment line
+        if len(header) > 0:
+            sett.m(0,'--> assuming last comment line stores variable names')
+            col_names = np.array(header.split('\n')[-2].strip('#').split())
+        # just numbers as col_names
+        else:
+            sett.m(0,'--> did not find column names in file')
+            col_names = np.arange(len(data[0])).astype(str)
+    col_names = np.array(col_names, dtype=str)
+    # check if first column contains row names or not
+    if first_column_names is None:
+        first_column_names = False
+    for line in f:
+        line_list = line.split(delim)
+        if not is_float(line_list[0]) or first_column_names:
+            sett.m(0, '--> assuming first column in file stores row names')
+            first_column_names = True
+            row_names.append(line_list[0])
+            data.append(line_list[1:])
+        else:
+            data.append(line_list)
+        break
+    # parse the file
+    for line in f:
+        line_list = line.split(delim)
+        if first_column_names:
+            row_names.append(line_list[0])
+            data.append(line_list[1:])
+        else:
+            data.append(line_list)
+    sett.mt(0, 'read data into list of lists')
+    # transfrom to array, this takes a long time and a lot of memory
+    # but it's actually the same thing as np.genfromtext does
+    # - we don't use the latter as it would involve another slicing step
+    #   in the end, to separate row_names from float data, slicing takes
+    #   a lot of memory and cpu time
+    data = np.array(data, dtype=np.float64)
+    sett.mt(0, 'constructed array from list of list')
+    # transform row_names
+    if not row_names:
+        row_names = np.arange(len(data)).astype(str)
+        sett.m(0,'--> did not find row names in file')
+    else:
+        row_names = np.array(row_names)
+    # adapt col_names if necessary
+    if col_names.size > data.shape[1]:
+        col_names = col_names[1:]
+    ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
+    return ddata
+
+def read_txt_as_strings(filename, delim):
+    """
+    Interpret list of lists as strings
+    """
+    # just a plain loop is enough
+    header = ''
+    data = []
     for line in open(filename):
         if line.startswith('#'):
             header += line
         else:
-            line_list = line.split(sep)
+            line_list = line.split(delim)
             data.append(line_list)
-    return data, header
-
-def _interpret_as_strings(data):
-    """
-    Interpret list of lists as strings
-    """
+    # now see whether we can simply transform it to an array    
     if len(data[0]) == len(data[1]):
         X = np.array(data).astype(str)
+        col_names = None
+        row_names = None
         sett.m(0,'--> the whole content of the file is in X')
     else:
         # strip quotation marks
@@ -389,67 +465,10 @@ def _interpret_as_strings(data):
         data = np.array(data[1:]).astype(str)
         row_names = data[:, 0]
         X = data[:, 1:]
-        sett.m(0,'--> first column is stored in "col_names"')
-        sett.m(0,'--> first row is stored in "row_names"')
+        sett.m(0,'--> first row is stored in "col_names"')
+        sett.m(0,'--> first column is stored in "row_names"')
         sett.m(0,'--> data is stored in X')
     ddata = {'X': X, 'col_names': col_names, 'row_names': row_names}
-    return ddata
-
-def _interpret_as_floats(data, header, first_column_names):
-    """
-    Interpret as float array with optional col_names and row_names.
-    """
-    
-    # if the first element of the data list cannot be interpreted as float, the
-    # first row of the data is assumed to store variable names
-    if not is_float(data[0][0]):
-        sett.m(0,'--> assuming first line in file stores variable names')
-        # if the first row is one element shorter
-        col_names = np.array(data[0]).astype(str)
-        sett.mt(0, 'constructed array of column names')
-        data = np.array(data[1:])
-        sett.mt(0, 'constructed array from list of list')
-    # try reading col_names from the last comment line
-    elif len(header) > 0 and type(header) == str:
-        sett.m(0,'--> assuming last comment line stores variable names')
-        potentialnames = header.split('\n')[-2].strip('#').split()
-        col_names = np.array(potentialnames)
-        # skip the first column
-        col_names = col_names[1:]
-        data = np.array(data)
-    # just numbers as col_names
-    else:
-        sett.m(0,'--> did not find variable names in file')
-        data = np.array(data)
-        col_names = np.arange(data.shape[1]).astype(str)
-
-    # if the first element of the second row of the data cannot be interpreted
-    # as float, it is assumed to store sample names
-    if not is_float(data[1][0]) or first_column_names: 
-        sett.m(0,'--> assuming first column stores sample names')
-        row_names = data[:, 0].astype(str)
-        sett.mt(0, 'initialized row names')
-        # skip the first column
-        try:
-            X = data[:, 1:].astype(float)
-            sett.mt(0, 'wrote X as float from data')
-            sett.mt(0, 'constructed array from list of list')
-        except ValueError as e:
-            msg = 'formating is strange, last line of data matrix is \n'
-            msg += str(data[-1, 1:])
-            raise ValueError(msg)
-        if col_names.size > X.shape[1]:
-            col_names = col_names[1:]
-    # just numbers as row_names
-    else:
-        sett.m(0,'--> did not find sample names in file')
-        X = data.astype(float)
-        row_names = np.arange(X.shape[0]).astype(str)
-
-    ddata = {
-        'X' : X, 'row_names' : row_names, 'col_names' : col_names
-    }
-
     return ddata
 
 def _read_hdf5_single(filename, key=''):
