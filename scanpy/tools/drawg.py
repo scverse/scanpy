@@ -36,7 +36,7 @@ def drawg(adata, k=4, nr_comps=2):
         Annotated data matrix, optionally with metadata:
         adata['Xpca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
-            If there it exists, drawg will use this instead of adata.X.
+            If it exists, drawg will use this instead of adata.X.
     k : int
         Number of nearest neighbors in graph.
     nr_comps : int

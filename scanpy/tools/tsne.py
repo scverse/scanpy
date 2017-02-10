@@ -33,7 +33,7 @@ def tsne(adata, nr_pcs=50, perplexity=30):
         Annotated data matrix, optionally with metadata:
         adata['Xpca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
-            If there it exists, tsne will use this instead of adata.X.
+            If it exists, tsne will use this instead of adata.X.
     nr_pcs : int
         Number of principal components in preprocessing PCA.
 

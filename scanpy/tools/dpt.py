@@ -38,7 +38,7 @@ def dpt(adata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
         Annotated data matrix, optionally with metadata:
         adata['Xpca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
-            If there it exists, dpt will use this instead of adata.X.
+            If it exists, dpt will use this instead of adata.X.
         adata['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
             either as expression vector of shape X.shape[1] or as index. The
