@@ -73,7 +73,7 @@ def plot_tool(dplot, adata,
         if smp in adata.smp_keys():
             if adata.smp[smp].dtype.char in ['S', 'U']:
                 categorical = True
-            elif np.unique(adata.smp).size < 20:
+            elif np.unique(adata.smp).size < 13:
                 categorical = True
             else:
                 c = pl.cm.get_cmap(params['cmap'])(
