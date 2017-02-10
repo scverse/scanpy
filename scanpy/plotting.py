@@ -85,7 +85,8 @@ def plot_tool(dplot, adata,
             raise ValueError('specify valid sample annotation, one of '
                              + str(adata.smp_keys()) + ' or a gene name '
                              + str(adata.var_names))
-        
+
+    adjust_right = params['adjust_right']
     axs = scatter(Y,
                   subtitles=[smp],
                   component_name=component_name,
@@ -93,7 +94,8 @@ def plot_tool(dplot, adata,
                   layout=params['layout'],
                   c=c,
                   highlights=highlights,
-                  cmap=params['cmap'])
+                  cmap=params['cmap'],
+                  colorbar=(not cat))
 
     if cat: 
         if not smp + '_colors' in adata:
@@ -103,7 +105,10 @@ def plot_tool(dplot, adata,
             group(axs[0], smp, icat, adata, dplot['Y'][:, comps], params['layout'])
         if params['legendloc'] != 'none':
             axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-    pl.subplots_adjust(right=params['adjust_right'])
+    else:
+        adjust_right *= 1.2
+
+    pl.subplots_adjust(right=adjust_right)
 
     savefig(dplot['writekey'] + '_' + smp)
     if not sett.savefigs and sett.autoshow:
@@ -234,6 +239,7 @@ def scatter(Ys,
             component_name='DC',
             component_indexnames=[1, 2, 3],
             axlabels=None,
+            colorbar=False,
             **kwargs):
     """ 
     Plot scatter plot of data.
@@ -255,7 +261,7 @@ def scatter(Ys,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    axs = _scatter(Ys,layout=layout,subtitles=subtitles,**kwargs)
+    axs = _scatter(Ys,layout=layout,subtitles=subtitles,colorbar=colorbar,**kwargs)
     # set default axlabels
     if axlabels is None:
         if layout == '2d':
@@ -293,6 +299,7 @@ def _scatter(Ys,
              highlights_labels=[],
              title='', 
              cmap='jet',
+             colorbar=False,
              **kwargs):
     # if we have a single array, transform it into a list with a single array
     avail_layouts = ['2d', '3d', 'unfolded 3d']
@@ -345,12 +352,14 @@ def _scatter(Ys,
                 data = Y[:,0],Y[:,1],Y[:,2]
             # do the plotting
             if type(color) != str or 'white' != color:
-                ax.scatter(*data,
+                sct = ax.scatter(*data,
                            c=color,
                            edgecolors='face',
                            s=markersize,
                            cmap=cmap,
                            **kwargs)
+            if colorbar:
+                pl.colorbar(sct)
             # set the subsubtitles
             if icolor == 0:
                 ax.set_title(subtitles[0])
