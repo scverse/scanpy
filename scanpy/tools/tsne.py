@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 t-SNE
@@ -23,16 +24,16 @@ from .. import plotting as plott
 from .. import utils
 
 def tsne(adata, nr_pcs=50, perplexity=30):
-    """
+    u"""
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
     Parameters
     ----------
-    adata : dictionary containing
-        X or Xpca: np.ndarray
-            Data array, rows store observations, columns variables.
-            Consider preprocessing with PCA. -> If there is an array Xpca,
-            dpt will use this one.
+    adata : AnnData
+        Annotated data matrix, optionally with metadata:
+        adata['Xpca']: np.ndarray
+            Result of preprocessing with PCA: observations × variables.
+            If there it exists, tsne will use this instead of adata.X.
     nr_pcs : int
         Number of principal components in preprocessing PCA.
 
@@ -100,8 +101,8 @@ def plot(dplot, adata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     smp : str, optional (default: first anntotated group)
         Sample annotation for coloring, possible are all keys in adata.smp_keys(),
         or gene names.

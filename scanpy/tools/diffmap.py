@@ -39,9 +39,8 @@ def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
 
     Parameters
     ----------
-    adata : dictionary containing
-        X : np.ndarray
-            Data array, rows store observations, columns covariates.
+    adata : AnnData
+        Annotated data matrix.
     nr_comps : int, optional (default: 3)
         The number of dimensions of the representation.
     k : int, optional (default: 5)
@@ -89,8 +88,8 @@ def plot(dplot, adata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     smp : str, optional (default: first anntotated group)
         Sample annotation for coloring, possible are all keys in adata.smp_keys(),
         or gene names.

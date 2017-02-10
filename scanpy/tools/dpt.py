@@ -34,12 +34,12 @@ def dpt(adata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
 
     Parameters
     ----------
-    adata : dict containing
-        X or Xpca: np.ndarray
-            Data array, rows store observations, columns variables.
-            Consider preprocessing with PCA. -> If there is an array Xpca,
-            dpt will use this one.
-        xroot : np.ndarray
+    adata : AnnData
+        Annotated data matrix, optionally with metadata:
+        adata['Xpca']: np.ndarray
+            Result of preprocessing with PCA: observations × variables.
+            If there it exists, dpt will use this instead of adata.X.
+        adata['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
             either as expression vector of shape X.shape[1] or as index. The
             latter is not recommended.
@@ -138,8 +138,8 @@ def plot(ddpt, adata, dplot=None,
         Dict returned by DPT tool.
     dplot : dict
         Dict returned by plotting tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     smp : str, optional (default: first anntotated group)
         Sample annotation for coloring, possible are all keys in adata.smp_keys(),
         or gene names.

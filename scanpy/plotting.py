@@ -25,7 +25,7 @@ def plot_tool(dplot, adata,
               legendloc='lower right',
               cmap='jet',
               adjust_right=0.75,
-              subtitles=['one title'],
+              subtitles=('one title',),
               component_name='comp'): 
     """
     Plot the results of a DPT analysis.
@@ -34,8 +34,8 @@ def plot_tool(dplot, adata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     comps : str
          String in the form "comp1,comp2,comp3".
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -417,8 +417,8 @@ def ranking(drankings, adata, nr=20):
             Key to identify scores.
         scores : np.ndarray
             Array of scores for genes according to which to rank them.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     nr : int
         Number of genes.
     """

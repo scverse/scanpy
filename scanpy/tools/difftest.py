@@ -29,8 +29,8 @@ def difftest(dgroups, adata=None,
             Array of shape (number of groups) that names the groups.
         groups : list, np.ndarray of dtype str
             Array of shape (number of samples) that names the groups.
-    adata : dict, optional
-        Data dictionary containing expression matrix and gene names.
+    adata : AnnData
+        Annotated data matrix.
     smp : str, optional (default: 'groups')
         Specify the name of the grouping to consider.
     names : str, list, np.ndarray

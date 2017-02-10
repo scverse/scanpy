@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Draw the Data Graph
@@ -31,9 +32,11 @@ def drawg(adata, k=4, nr_comps=2):
 
     Parameters
     ----------
-    adata : dict containing
-        X : np.ndarray
-            Data array, rows store observations, columns covariates.
+    adata : AnnData
+        Annotated data matrix, optionally with metadata:
+        adata['Xpca']: np.ndarray
+            Result of preprocessing with PCA: observations × variables.
+            If there it exists, drawg will use this instead of adata.X.
     k : int
         Number of nearest neighbors in graph.
     nr_comps : int
@@ -92,8 +95,8 @@ def plot(ddrawg, adata,
     ----------
     ddrawg : dict
         Dict returned by diffmap tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     add_steps : int
         Steps to iterate graph drawing algorithm.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -160,8 +163,8 @@ def _plot(dplot, adata,
     ----------
     dplot : dict
         Dict returned by plotting tool.
-    adata : dict
-        Data dictionary.
+    adata : AnnData
+        Annotated data matrix.
     smp : str, optional (default: first anntotated group)
         Sample annotation for coloring, possible are all keys in adata.smp_keys(),
         or gene names.

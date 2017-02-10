@@ -63,19 +63,9 @@ def example(exkey, return_module=False):
 
     Returns
     -------
-    adata : dict containing
-        X : np.ndarray
-            Data array for further processing, columns correspond to genes,
-            rows correspond to samples.
-        row_names : np.ndarray
-            Array storing the experimental labels of samples.
-        col_names : np.ndarray
-            Array storing the names of genes.
-
-        There might be further entries such as
-        groupnames_n : np.ndarray
-            Array of shape (number of samples) that indicates groups.
-        xroot : np.ndarray or int
+    adata : AnnData
+        Annotated data matrix, optionally with metadata such as
+        adata['xroot'] : np.ndarray or int
             Expression vector or index of root cell for DPT analysis.
 
     Returns additionally, if return_module == True:

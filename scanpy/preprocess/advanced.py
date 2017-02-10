@@ -14,7 +14,8 @@ def subsample(adata, subsample, seed=0):
 
     Parameters
     ----------
-    adata : data dictionary
+    adata : AnnData
+        Annotated data matrix
     subsample : int
         Inverse fraction to sample to.
     seed : int
@@ -27,7 +28,7 @@ def subsample(adata, subsample, seed=0):
     """
     from .. import utils
     _, smp_indices = utils.subsample(adata.X,subsample,seed)
-    adata = adata[smp_indices]
+    adata = adata[smp_indices, ]
     for key in ['Xpca']:
         if key in adata:
             adata[key] = adata[key][smp_indices]

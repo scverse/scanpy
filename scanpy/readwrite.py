@@ -13,8 +13,8 @@ import os
 import h5py
 import sys
 import numpy as np
-from . import settings as sett
-from . import utils
+
+from . import AnnData, settings as sett
 
 avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for writing data. """
@@ -38,9 +38,9 @@ def write(filename_or_key, dict_or_adata):
     filename_or_key : str
         Filename of data file or key used in function write(key,dict).
     dict_or_adata : dict, AnnData
-        One of these.
+        Annotated data matrix or dictionary convertible to one.
     """
-    if not isinstance(dict_or_adata, dict):
+    if isinstance(dict_or_adata, AnnData):
         dictionary = dict_or_adata.to_dict()
         dictionary['isadata'] = True
     else:
