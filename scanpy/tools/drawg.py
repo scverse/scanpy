@@ -84,12 +84,15 @@ def drawg(adata, k=4, nr_comps=2):
 
 def plot(ddrawg, adata,
          add_steps=0,
+         smp=None,
+         comps='1,2',
+         cont=None,
          layout='2d',
          legendloc='lower right',
-         cmap='jet',
-         adjust_right=0.75): # consider changing to 'viridis'
+         cmap=None,
+         adjust_right=0.75):
     """
-    Plot the results of a DPT analysis.
+    Scatter plots.
 
     Parameters
     ----------
@@ -99,12 +102,23 @@ def plot(ddrawg, adata,
         Annotated data matrix.
     add_steps : int
         Steps to iterate graph drawing algorithm.
+    smp : str, optional (default: first annotation)
+        Sample annotation to choose for coloring. String annotation is plotted
+        assuming categorical annotation, float and integer annotation is plotted
+        assuming continuous annoation. Option 'cont' allows to switch between
+        these default choices. The first annotation is plotted.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: jet)
-         String denoting matplotlib color map. 
+    cmap : str (default: continuous: inferno/ categorical: finite palette)
+         String denoting matplotlib color map.
+    adjust_right : float (default: 0.75)
+         Adjust how far the plotting panel extends to the right.
     """
     params = locals(); del params['adata']; del params['ddrawg']
     Y = ddrawg['Y']
@@ -116,14 +130,9 @@ def plot(ddrawg, adata,
                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         istep = ddrawg['istep']
         _plot(ddrawg, adata, istep, **params)
-#         pl.savefig(sett.figdir+ddrawg['writekey']
-#                    +'_step{:02}'.format(istep)+'.'+sett.extf)
-#         if sett.autoshow:
-#             pl.show()
     else:
         Adj = ddrawg['Adj']
         istep = ddrawg['istep']
-        # save a copy to retrieve later
         # TODO: don't save the adjacency matrix!!!
         import scanpy as sc
         sc.write(ddrawg['writekey']+'_step{:02}'.format(istep), ddrawg)
@@ -136,60 +145,18 @@ def plot(ddrawg, adata,
             Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
             sett.mt(0, 'finished computation')
             _plot({'Y': Y}, adata, istep, **params)
-#             if sett.autoshow:
-#                 sett.mt(0, 'finished plotting')
-#             pl.savefig(sett.figdir+ddrawg['writekey']
-#                        +'_step{:02}'.format(istep)+'.'+sett.extf)
         # save state of Y to outfile
         ddrawg['Y'] = Y 
         ddrawg['istep'] = istep
         sc.write(ddrawg['writekey'], ddrawg)
-#         if sett.autoshow:
-#             pl.show()
 
-
-def _plot(dplot, adata,
-          istep=0,
-          smp='',
-          comps='1,2',
-          layout='2d',
-          legendloc='lower right',
-          cmap='jet',
-          adjust_right=0.75):
-    """
-    Plot the results of a DPT analysis.
-
-    Parameters
-    ----------
-    dplot : dict
-        Dict returned by plotting tool.
-    adata : AnnData
-        Annotated data matrix.
-    smp : str, optional (default: first anntotated group)
-        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
-        or gene names.
-    comps : str, optional (default: "1,2")
-         String in the form "comp1,comp2,comp3".
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
-         Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
-         Options for keyword argument 'loc'.
-    cmap : str (default: "jet")
-         String denoting matplotlib color map.
-    adjust_right : float, optional (default: 0.75)
-         Increase to increase the right margin.
-    """
+def _plot(dplot, adata, istep=0, **params):
     from .. import plotting as plott
     plott.plot_tool(dplot, adata,
-                    smp,
-                    comps,
-                    layout,
-                    legendloc,
-                    cmap,
-                    adjust_right,
                     # defined in plotting
                     subtitles=['Fruchterman-Reingold step: ' + str(istep)],
-                    component_name='FR')
+                    component_name='FR',
+                    **params)
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
     """ 

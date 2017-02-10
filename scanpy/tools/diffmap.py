@@ -75,14 +75,15 @@ def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
     return ddmap
 
 def plot(dplot, adata,
-         smp='',
+         smp=None,
          comps='1,2',
+         cont=None,
          layout='2d',
          legendloc='lower right',
          cmap='jet',
          adjust_right=0.75):
     """
-    Plot the results of a DPT analysis.
+    Scatter plots.
 
     Parameters
     ----------
@@ -90,24 +91,29 @@ def plot(dplot, adata,
         Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first anntotated group)
-        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
-        or gene names.
-    comps : str, optional (default: "1,2")
-         String in the form "comp1,comp2,comp3".
+    smp : str, optional (default: first annotation)
+        Sample annotation to choose for coloring. String annotation is plotted
+        assuming categorical annotation, float and integer annotation is plotted
+        assuming continuous annoation. Option 'cont' allows to switch between
+        these default choices.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: "jet")
+    cmap : str (default: continuous: inferno/ categorical: finite palette)
          String denoting matplotlib color map.
-    adjust_right : float, optional (default: 0.75)
-         Increase to increase the right margin.
+    adjust_right : float (default: 0.75)
+         Adjust how far the plotting panel extends to the right.
     """
     from .. import plotting as plott
     plott.plot_tool(dplot, adata,
                     smp,
                     comps,
+                    cont,
                     layout,
                     legendloc,
                     cmap,

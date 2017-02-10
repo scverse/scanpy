@@ -19,16 +19,17 @@ def savefig(writekey):
         pl.savefig(sett.figdir + writekey + '.' + sett.extf)
 
 def plot_tool(dplot, adata,
-              smp='',
+              smp=None,
               comps='1,2',
+              cont=None,
               layout='2d',
               legendloc='lower right',
-              cmap='jet',
+              cmap=None,
               adjust_right=0.75,
               subtitles=('one title',),
               component_name='comp'): 
     """
-    Plot the results of a DPT analysis.
+    Scatter plots.
 
     Parameters
     ----------
@@ -36,16 +37,26 @@ def plot_tool(dplot, adata,
         Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
-    comps : str
-         String in the form "comp1,comp2,comp3".
+    smp : str, optional (default: first annotation)
+        Sample annotation to choose for coloring. String annotation is plotted
+        assuming categorical annotation, float and integer annotation is plotted
+        assuming continuous annoation. Option 'cont' allows to switch between
+        these default choices.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: jet)
-         String denoting matplotlib color map. 
+    cmap : str (default: continuous: inferno/ categorical: finite palette)
+         String denoting matplotlib color map.
+    adjust_right : float (default: 0.75)
+         Adjust how far the plotting panel extends to the right.
     """
     params = locals(); del params['adata']; del params['dplot']
+    # compute components
     from numpy import array
     comps = array(params['comps'].split(',')).astype(int) - 1
     # highlights
@@ -66,29 +77,32 @@ def plot_tool(dplot, adata,
     categorical = False
     continuous = False
     if len(adata.smp_keys()) > 0:
-        if smp == '':
+        if smp is None:
             smp = adata.smp_keys()[0]
-            sett.m(0, 'coloring according to', smp)
+            sett.m(0, '... coloring according to', smp)
         # test whether we have categorial or continuous annotation
         if smp in adata.smp_keys():
             if adata.smp[smp].dtype.char in ['S', 'U']:
                 categorical = True
-            elif np.unique(adata.smp).size < 13:
-                categorical = True
+                if cont is True:
+                    c = adata.smp[smp]
             else:
-                c = pl.cm.get_cmap(params['cmap'])(
-                                               pl.Normalize()(adata.smp[smp]))
                 continuous = True
+                c = adata.smp[smp]
         # coloring according to gene expression
         elif smp in adata.var_names:
             c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
             continuous = True
-            sett.m(0, 'coloring according expression of gene', smp)
+            sett.m(0, '... coloring according to expression of gene', smp)
         else:
             raise ValueError('specify valid sample annotation, one of '
                              + str(adata.smp_keys()) + ' or a gene name '
                              + str(adata.var_names))
-
+    if cont is not None:
+        categorical = not cont
+        continuous = cont
+    if continuous:
+        cmap = 'inferno'
     adjust_right = params['adjust_right']
     axs = scatter(Y,
                   subtitles=[smp],
@@ -97,13 +111,13 @@ def plot_tool(dplot, adata,
                   layout=params['layout'],
                   c=c,
                   highlights=highlights,
-                  cmap=params['cmap'],
-                  colorbar=continuous)
+                  colorbar=continuous,
+                  cmap=cmap)
 
-    if categorical: 
+    if categorical:
         if not smp + '_colors' in adata:
-            adata[smp + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(adata[smp + '_ids']))
+            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
+                                            pl.Normalize()(adata[smp + '_ids']))
         for icat in adata[smp + '_ids']:
             group(axs[0], smp, icat, adata, dplot['Y'][:, comps], params['layout'])
         if params['legendloc'] != 'none':
