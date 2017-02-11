@@ -57,14 +57,10 @@ def plot_tool(dplot, adata,
     """
     # compute components
     from numpy import array
-    comps = array(comps.split(',')).astype(int) - 1
-    smps = [None] if smp is None else smp.split(',')
+    comps = array(comps.split(',')).astype(int) - 1    
+    smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     # highlights
-    highlights = []
-    if False:
-        if 'highlights' in adata:
-            highlights = adata['highlights']
-    # base figure
+    highlights = adata['highlights'] if 'highlights' in adata else None
     try:
         Y = dplot['Y'][:, comps]
     except IndexError:
@@ -128,8 +124,10 @@ def plot_tool(dplot, adata,
                                             pl.Normalize()(adata[smp + '_ids']))
         for icat in adata[smp + '_ids']:
             group(axs[ismp], smp, icat, adata, dplot['Y'][:, comps], layout)
-        if legendloc != 'none':
+        if ismp == categoricals[-1]:
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+        elif legendloc != 'none':
+            axs[ismp].legend(frameon=False, loc=legendloc)
 
     adjust_right *= 1.05**len(smps)
     pl.subplots_adjust(right=adjust_right)
@@ -246,7 +244,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
 
     fig = pl.figure(figsize=(1.5*4,2*4))
     im = pl.imshow(np.array(X,dtype=np.float_), aspect='auto',
-              interpolation='nearest', cmap='viridis')
+              interpolation='nearest', cmap='inferno')
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), varnames)
     for ih,h in enumerate(highlightsX):
@@ -263,7 +261,7 @@ def scatter(Ys,
             component_name='DC',
             component_indexnames=[1, 2, 3],
             axlabels=None,
-            colorbars=False,
+            colorbars=[False],
             **kwargs):
     """ 
     Plot scatter plot of data.

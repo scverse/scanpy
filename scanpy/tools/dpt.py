@@ -124,14 +124,15 @@ def dpt(adata, nr_branchings=1, k=5, knn=False, nr_pcs=30,
     return ddpt
 
 def plot(ddpt, adata, dplot=None,
-         smp='',
+         smp=None,
          comps='1,2',
+         cont=None,
          layout='2d',
          legendloc='lower right',
-         cmap='jet',
-         adjust_right=0.88):
+         cmap=None,
+         adjust_right=0.75):
     """
-    Plot the results of a DPT analysis.
+    Plot results of DPT analysis.
 
     Parameters
     ----------
@@ -141,51 +142,36 @@ def plot(ddpt, adata, dplot=None,
         Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first anntotated group)
-        Sample annotation for coloring, possible are all keys in adata.smp_keys(),
-        or gene names.
-    comps : str, optional (default: "1,2")
-         String in the form "comp1,comp2,comp3".
+    smp : str, optional (default: first annotation)
+        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: "jet")
+    cmap : str (default: continuous: inferno/ categorical: finite palette)
          String denoting matplotlib color map.
+    adjust_right : float (default: 0.75)
+         Adjust how far the plotting panel extends to the right.
     """
-    from ..compat.matplotlib import pyplot as pl
-    from .. import plotting as plott
-    params = locals(); del params['adata']; del params['ddpt']; del params['dplot']
-    if dplot is not None:
-        ddpt['Y'] = dplot['Y']
-        groups_writekey = ddpt['writekey'] + '_' + dplot['type']
-        params['component_name'] = ('DC' if dplot['type'] == 'diffmap'
-                                    else 'FR' if dplot['type'] == 'drawg'
-                                    else 'tSNE' if dplot['type'] == 'tsne'
-                                    else 'PC')
-    else:
-        params['component_name'] = 'DC'
-        groups_writekey = ddpt['writekey'] + '_diffmap'
-    ddpt['groups_writekey'] = groups_writekey
-    X = adata.X
-    if not 'groups_colors' in ddpt:
-        ddpt['groups_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                             pl.Normalize()(ddpt['groups_ids']))
-    # color by pseudotime and by segments
-    colors = [ddpt['pseudotimes'], 'white']
-    # coloring according to experimental labels
-    if len(adata.smp_keys()) > 0:
-        colors.append('grey')
-    # highlight root
-    highlights = list(ddpt['iroot'])
-    # highlight tip points of each segment
-    if False:
-        highlights = [i for l in ddpt['segtips'] for i in l if l[0] != -1]
-    # a single figure for all colors using 2 diffusion components
-    plot_groups(ddpt, adata, params, colors, highlights)
+    adata.smp['pseudotimes'] = ddpt['pseudotimes']
+    adata.smp['segments'] = ddpt['groups']
+    adata['segments_names'] = ddpt['groups_names']
+    adata['segments_ids'] = ddpt['groups_ids']
+    adata['segments_masks'] = ddpt['groups_masks']
+    adata['highlights'] = list(ddpt['iroot'])
+
     # plot segments and pseudotimes
-    plot_segments_pseudotimes(ddpt, params['cmap'])
+    plot_segments_pseudotimes(ddpt, 'inferno' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
+    from .. import plotting as plott
+    X = adata.X
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
         plott.timeseries(X[ddpt['indices']], adata.var_names,
@@ -197,60 +183,22 @@ def plot(ddpt, adata, dplot=None,
         plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
                                     highlightsX=ddpt['changepoints'])
         plott.savefig(ddpt['writekey']+'_heatmap')
-    if not sett.savefigs and sett.autoshow:
-        pl.show()
-            
 
-def plot_groups(ddpt, adata, params, colors,
-                highlights=[], highlights_labels=[]):
-    """
-    Plot groups in diffusion map visualization.
-    """
-    from ..compat.matplotlib import pyplot as pl
-    from .. import plotting as plott
-    comps = np.array(params['comps'].split(',')).astype(int) - 1
-    # base figure
-    try:
-        Y = ddpt['Y'][:, comps]
-    except IndexError:
-        sett.mi('IndexError: Only computed', ddpt['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey dpt -p n_components YOUR_NR')
-        from sys import exit
-        exit(0)
-    axs = plott.scatter(ddpt['Y'][:, comps],
-                        subtitles=['pseudotime','segments',
-                                   'experimental groups'],
-                        component_name=params['component_name'],
-                        component_indexnames=comps + 1,
-                        layout=params['layout'],
-                        c=colors,
-                        highlights=highlights,
-                        highlights_labels=highlights_labels,
-                        cmap=params['cmap'])
+    if dplot is not None:
+        ddpt['Y'] = dplot['Y']
+        ddpt['writekey'] += '_' + dplot['type']
+        component_name = ('DC' if dplot['type'] == 'diffmap'
+                          else 'FR' if dplot['type'] == 'drawg'
+                          else 'tSNE' if dplot['type'] == 'tsne'
+                          else 'PC')
+    else:
+        component_name = 'DC'
+        ddpt['writekey'] += '_diffmap'
 
-    # dpt categories / groups (segments)
-    for igroup in ddpt['groups_ids']:
-        plott.group(axs[1], 'groups', igroup, ddpt, ddpt['Y'][:, comps], 
-                    params['layout'])
-    if params['legendloc'] != 'none':
-        axs[1].legend(frameon=False, loc=params['legendloc'])
-
-    # sample annotation in adata
-    if len(adata.smp_keys()) > 0:
-        if params['smp'] == '':
-            smp = adata.smp_keys()[0]
-            sett.m(0, 'coloring according to', smp)
-        elif smp not in adata.smp_keys():
-            raise ValueError('specify valid sample annotation, one of'
-                             + str(adata.smp_keys()))
-        if not smp + '_colors' in adata:
-            adata[smp + '_colors'] = pl.cm.get_cmap(params['cmap'])(
-                                                  pl.Normalize()(adata[smp + '_ids']))
-        for ismp in adata[smp + '_ids']:
-            plott.group(axs[2], smp, ismp, adata, ddpt['Y'][:, comps], params['layout'])
-        axs[2].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-    pl.subplots_adjust(right=params['adjust_right'])
-    plott.savefig(ddpt['groups_writekey'] + sett.plotsuffix)
+    plott.plot_tool(ddpt, adata,
+                    smp=['pseudotimes', 'segments', None],
+                    component_name=component_name,
+                    legendloc=legendloc)
 
 def plot_segments_pseudotimes(ddpt, cmap):
     """ 
@@ -266,7 +214,7 @@ def plot_segments_pseudotimes(ddpt, cmap):
                              ylabel='segments',
                              yticks=(np.arange(ddpt['groups_masks'].shape[0], dtype=int) if 
                                      ddpt['groups_masks'].shape[0] < 5 else None),
-                             cmap=cmap)
+                             cmap='jet')
     pl.subplot(212)
     plott.timeseries_subplot(ddpt['pseudotimes'][ddpt['indices'],np.newaxis],
                              c=ddpt['pseudotimes'][ddpt['indices']],
