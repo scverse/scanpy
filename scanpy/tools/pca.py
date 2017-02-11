@@ -52,7 +52,7 @@ def plot(dplot, adata,
          cont=None,
          layout='2d',
          legendloc='lower right',
-         cmap='jet',
+         cmap=None,
          adjust_right=0.75):
     """
     Scatter plots.
@@ -64,10 +64,10 @@ def plot(dplot, adata,
     adata : AnnData
         Annotated data matrix.
     smp : str, optional (default: first annotation)
-        Sample annotation to choose for coloring. String annotation is plotted
-        assuming categorical annotation, float and integer annotation is plotted
-        assuming continuous annoation. Option 'cont' allows to switch between
-        these default choices.
+        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)

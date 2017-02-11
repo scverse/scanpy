@@ -38,10 +38,10 @@ def plot_tool(dplot, adata,
     adata : AnnData
         Annotated data matrix.
     smp : str, optional (default: first annotation)
-        Sample annotation to choose for coloring. String annotation is plotted
-        assuming categorical annotation, float and integer annotation is plotted
-        assuming continuous annoation. Option 'cont' allows to switch between
-        these default choices.
+        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -55,10 +55,10 @@ def plot_tool(dplot, adata,
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
     """
-    params = locals(); del params['adata']; del params['dplot']
     # compute components
     from numpy import array
-    comps = array(params['comps'].split(',')).astype(int) - 1
+    comps = array(comps.split(',')).astype(int) - 1
+    smps = [None] if smp is None else smp.split(',')
     # highlights
     highlights = []
     if False:
@@ -69,62 +69,69 @@ def plot_tool(dplot, adata,
         Y = dplot['Y'][:, comps]
     except IndexError:
         sett.mi('IndexError: Only computed', dplot['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey diffmap -p nr_comps YOUR_NR')
+        sett.mi('--> recompute using scanpy exkey PLOTTOOL -p nr_comps YOUR_NR')
         from sys import exit
         exit(0)
 
-    c = 'grey'
-    categorical = False
-    continuous = False
-    if len(adata.smp_keys()) > 0:
-        if smp is None:
-            smp = adata.smp_keys()[0]
-            sett.m(0, '... coloring according to', smp)
-        # test whether we have categorial or continuous annotation
-        if smp in adata.smp_keys():
-            if adata.smp[smp].dtype.char in ['S', 'U']:
-                categorical = True
-                if cont is True:
+    colors = []
+    categoricals = []
+    colorbars = []
+    for ismp, smp in enumerate(smps):
+        c = 'grey'
+        categorical = False
+        continuous = False
+        if len(adata.smp_keys()) > 0:
+            if smp is None:
+                smp = adata.smp_keys()[0]
+                smps[ismp] = smp
+            # test whether we have categorial or continuous annotation
+            if smp in adata.smp_keys():
+                if adata.smp[smp].dtype.char in ['S', 'U']:
+                    categorical = True
+                    if cont is True:
+                        c = adata.smp[smp]
+                else:
+                    continuous = True
                     c = adata.smp[smp]
-            else:
+                sett.m(0, '... coloring according to', smp)
+            # coloring according to gene expression
+            elif smp in adata.var_names:
+                c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
                 continuous = True
-                c = adata.smp[smp]
-        # coloring according to gene expression
-        elif smp in adata.var_names:
-            c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
-            continuous = True
-            sett.m(0, '... coloring according to expression of gene', smp)
-        else:
-            raise ValueError('specify valid sample annotation, one of '
-                             + str(adata.smp_keys()) + ' or a gene name '
-                             + str(adata.var_names))
-    if cont is not None:
-        categorical = not cont
-        continuous = cont
-    if continuous:
-        cmap = 'inferno'
-    adjust_right = params['adjust_right']
+                sett.m(0, '... coloring according to expression of gene', smp)
+            else:
+                raise ValueError('specify valid sample annotation, one of '
+                                 + str(adata.smp_keys()) + ' or a gene name '
+                                 + str(adata.var_names))
+        if cont is not None:
+            categorical = not cont
+            continuous = cont
+        colors.append(c)
+        colorbars.append(True if continuous else False)
+        if categorical:
+            categoricals.append(ismp)
+
     axs = scatter(Y,
-                  subtitles=[smp],
+                  subtitles=smps,
                   component_name=component_name,
                   component_indexnames=comps + 1,
-                  layout=params['layout'],
-                  c=c,
+                  layout=layout,
+                  c=colors,
                   highlights=highlights,
-                  colorbar=continuous,
-                  cmap=cmap)
+                  colorbars=colorbars,
+                  cmap='inferno' if cmap is None else cmap)
 
-    if categorical:
+    for ismp in categoricals:
+        smp = smps[ismp]
         if not smp + '_colors' in adata:
             adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
                                             pl.Normalize()(adata[smp + '_ids']))
         for icat in adata[smp + '_ids']:
-            group(axs[0], smp, icat, adata, dplot['Y'][:, comps], params['layout'])
-        if params['legendloc'] != 'none':
-            axs[0].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
-    else:
-        adjust_right *= 1.2
+            group(axs[ismp], smp, icat, adata, dplot['Y'][:, comps], layout)
+        if legendloc != 'none':
+            axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
 
+    adjust_right *= 1.05**len(smps)
     pl.subplots_adjust(right=adjust_right)
 
     savefig(dplot['writekey'] + '_' + smp)
@@ -256,7 +263,7 @@ def scatter(Ys,
             component_name='DC',
             component_indexnames=[1, 2, 3],
             axlabels=None,
-            colorbar=False,
+            colorbars=False,
             **kwargs):
     """ 
     Plot scatter plot of data.
@@ -278,7 +285,11 @@ def scatter(Ys,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    axs = _scatter(Ys,layout=layout,subtitles=subtitles,colorbar=colorbar,**kwargs)
+    axs = _scatter(Ys,
+                   layout=layout,
+                   subtitles=subtitles,
+                   colorbars=colorbars,
+                   **kwargs)
     # set default axlabels
     if axlabels is None:
         if layout == '2d':
@@ -315,8 +326,7 @@ def _scatter(Ys,
              highlights=[],
              highlights_labels=[],
              title='', 
-             cmap='jet',
-             colorbar=False,
+             colorbars=[False],
              **kwargs):
     # if we have a single array, transform it into a list with a single array
     avail_layouts = ['2d', '3d', 'unfolded 3d']
@@ -349,49 +359,43 @@ def _scatter(Ys,
     axs = []
     for Y in Ys:
         markersize = (2 if Y.shape[0] > 500 else 10)
-        for icolor,color in enumerate(colors):
+        for icolor, color in enumerate(colors):
             # set up panel
             if layout == 'unfolded 3d' and count != 3:
-                ax = fig.add_subplot(2,2,count)
+                ax = fig.add_subplot(2, 2, count)
                 bool3d = False
             elif layout == 'unfolded 3d' and count == 3:
-                ax = fig.add_subplot(2,2,count,
+                ax = fig.add_subplot(2, 2, count,
                                      projection='3d')
                 bool3d = True
             elif layout == '2d':
-                ax = fig.add_subplot(len(Ys),len(colors),count)
+                ax = fig.add_subplot(len(Ys), len(colors), count)
             elif layout == '3d':
-                ax = fig.add_subplot(len(Ys),len(colors),count,
+                ax = fig.add_subplot(len(Ys), len(colors), count,
                                      projection='3d')
             if not bool3d:
-                data = Y[:,0],Y[:,1]
+                data = Y[:,0], Y[:,1]
             else:
-                data = Y[:,0],Y[:,1],Y[:,2]
+                data = Y[:,0], Y[:,1], Y[:,2]
             # do the plotting
-            if type(color) != str or 'white' != color:
+            if type(color) != str or color != 'white':
                 sct = ax.scatter(*data,
-                           c=color,
-                           edgecolors='face',
-                           s=markersize,
-                           cmap=cmap,
-                           **kwargs)
-            if colorbar:
-                pl.colorbar(sct)
-            # set the subsubtitles
-            if icolor == 0:
-                ax.set_title(subtitles[0])
-            if icolor == 1:
-                ax.set_title(subtitles[1])
-            if icolor == 2:
-                ax.set_title(subtitles[2])
+                                 c=color,
+                                 edgecolors='face',
+                                 s=markersize,
+                                 **kwargs)
+            if colorbars[icolor]:
+                cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter))
+            # set the subtitles
+            ax.set_title(subtitles[icolor])
             # output highlighted data points
             for iihighlight,ihighlight in enumerate(highlights):
-                data = [Y[ihighlight,0]],[Y[ihighlight,1]]
+                data = [Y[ihighlight,0]], [Y[ihighlight,1]]
                 if bool3d:
-                    data = [Y[ihighlight,0]],[Y[ihighlight,1]],[Y[ihighlight,2]]
-                ax.scatter(*data,c='black',
-                           facecolors='black',edgecolors='black', 
-                           marker='x',s=40,zorder=20)
+                    data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
+                ax.scatter(*data, c='black',
+                           facecolors='black', edgecolors='black', 
+                           marker='x', s=40, zorder=20)
                 highlight = (highlights_labels[iihighlight] if 
                              len(highlights_labels) > 0 
                              else str(ihighlight))
@@ -541,6 +545,21 @@ def arrows_transitions(ax,X,indices,weight=None):
 #-------------------------------------------------------------------------------
 # Helper Functions
 #-------------------------------------------------------------------------------
+
+def ticks_formatter(x, pos):
+    # pretty scientific notation
+    if False:
+        a, b = '{:.2e}'.format(x).split('e')
+        b = int(b)
+        return r'${} \times 10^{{{}}}$'.format(a, b)
+    else:
+        return ('%.3f'%(x)).rstrip('0').rstrip('.')
+
+def pimp_axis(ax):
+    """
+    Remove trailing zeros.
+    """
+    ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
 
 def scale_to_zero_one(x):
     """

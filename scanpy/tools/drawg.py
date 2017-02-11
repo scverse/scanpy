@@ -103,10 +103,10 @@ def plot(ddrawg, adata,
     add_steps : int
         Steps to iterate graph drawing algorithm.
     smp : str, optional (default: first annotation)
-        Sample annotation to choose for coloring. String annotation is plotted
-        assuming categorical annotation, float and integer annotation is plotted
-        assuming continuous annoation. Option 'cont' allows to switch between
-        these default choices. The first annotation is plotted.
+        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)

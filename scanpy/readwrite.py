@@ -665,11 +665,14 @@ def read_file_to_dict(filename, ext='h5'):
                 if value.dtype.kind == 'S':
                     value = value.astype(str)
                 # get back dictionaries
-                if key.endswith('_dict'):
+                if key.endswith('_ann'):
                     dd = {}
                     for row in value:
-                        dd[row[0]] = row[1:]
-                    d[key[:-5]] = dd
+                        # the type is stored after the "_"
+                        t = row[0].split('_')[-1]
+                        k = '_'.join(row[0].split('_')[:-1])
+                        dd[k] = row[1:].astype(t)
+                    d[key[:-4]] = dd
                 else:
                     d[key] = value
     elif ext == 'xlsx':
@@ -703,9 +706,11 @@ def write_dict_to_file(filename, d, ext='h5'):
                 if isinstance(value, dict):
                     array = []
                     for k, v in value.items():
-                        array.append(np.r_[np.array([k]), v])
+                        t = v.dtype.char
+                        # the type is stored after the "_"
+                        array.append(np.r_[np.array([k+'_'+t]), v])
                     value = np.array(array)
-                    key = key + '_dict'
+                    key = key + '_ann'
                 if type(value) != np.ndarray:
                     value = np.array(value)
                 # some output about the data to write
