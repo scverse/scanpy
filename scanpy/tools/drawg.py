@@ -85,6 +85,7 @@ def drawg(adata, k=4, nr_comps=2):
 def plot(ddrawg, adata,
          add_steps=0,
          smp=None,
+         names=None,
          comps='1,2',
          cont=None,
          layout='2d',
@@ -107,6 +108,8 @@ def plot(ddrawg, adata,
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
+    names : str, optional (default: all names in smp)
+        Allows to restrict groups in sample annotation (smp) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)

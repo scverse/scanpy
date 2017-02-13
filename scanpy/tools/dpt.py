@@ -160,13 +160,6 @@ def plot(ddpt, adata, dplot=None,
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
     """
-    adata.smp['pseudotimes'] = ddpt['pseudotimes']
-    adata.smp['segments'] = ddpt['groups']
-    adata['segments_names'] = ddpt['groups_names']
-    adata['segments_ids'] = ddpt['groups_ids']
-    adata['segments_masks'] = ddpt['groups_masks']
-    adata['highlights'] = list(ddpt['iroot'])
-
     # plot segments and pseudotimes
     plot_segments_pseudotimes(ddpt, 'inferno' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
@@ -195,8 +188,17 @@ def plot(ddpt, adata, dplot=None,
         component_name = 'DC'
         ddpt['writekey'] += '_diffmap'
 
+    smp = ['pseudotimes', 'segments']
+    if len(adata.smp_keys()) > 0:
+        smp += [None]
+    adata.smp['pseudotimes'] = ddpt['pseudotimes']
+    adata.smp['segments'] = ddpt['groups']
+    adata['segments_names'] = ddpt['groups_names']
+    adata['segments_ids'] = ddpt['groups_ids']
+    adata['segments_masks'] = ddpt['groups_masks']
+    adata['highlights'] = list(ddpt['iroot'])
     plott.plot_tool(ddpt, adata,
-                    smp=['pseudotimes', 'segments', None],
+                    smp=smp,
                     component_name=component_name,
                     legendloc=legendloc)
 

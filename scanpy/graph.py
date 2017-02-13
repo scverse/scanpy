@@ -69,6 +69,18 @@ class DataGraph(object):
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
+    def compute_Ddiff_all(self, num_evals=10):
+        self.embed(number=num_evals)
+        self.compute_M_matrix()
+        self.compute_Ddiff_matrix()
+
+    def compute_C_all(self, num_evals=10):
+        self.compute_L_matrix()
+        self.embed(self.L, number=num_evals, sort='increase')
+        evalsL = self.evals
+        self.compute_Lp_matrix()
+        self.compute_C_matrix()
+
     def spec_layout(self):
         """
         """
@@ -206,7 +218,7 @@ class DataGraph(object):
         # and the adjoint Ktilde: both have the same spectrum
         self.z = np.sum(self.K, axis=0)
         # the following is the transition matrix
-        self.T = self.K/self.z[:, np.newaxis]
+        self.T = self.K / self.z[:, np.newaxis]
         # now we need the square root of the density
         self.sqrtz = np.array(np.sqrt(self.z))
         # now compute the density-normalized Kernel
@@ -292,8 +304,8 @@ class DataGraph(object):
             # on the graph is normalized in L1 norm
             # therefore, the eigenbasis in this normalization does not correspond
             # to a probability distribution on the graph
-            self.rbasis /= np.linalg.norm(self.rbasis,axis=0,ord=2)
-            self.lbasis /= np.linalg.norm(self.lbasis,axis=0,ord=2)
+#             self.rbasis /= np.linalg.norm(self.rbasis,axis=0,ord=2)
+#             self.lbasis /= np.linalg.norm(self.lbasis,axis=0,ord=2)
 
     def compute_M_matrix(self):
         """ 
@@ -306,6 +318,7 @@ class DataGraph(object):
         self.M = sum([self.evals[i]/(1-self.evals[i])
                       * np.outer(self.rbasis[:, i], self.lbasis[:, i])
                       for i in range(1, self.evals.size)])
+        self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
         sett.mt(0,'computed M matrix')
         if False:
             pl.matshow(self.Ktilde)
@@ -356,10 +369,16 @@ class DataGraph(object):
         This is the commute-time matrix. It's a squared-euclidian distance
         matrix in \mathbb{R}^n.
         """
-        self.C = np.zeros(self.Lp.shape)
-        for i in range(self.Lp.shape[0]):
-            for j in range(self.Lp.shape[1]):
-                self.C[i, j] = self.Lp[i, i] + self.Lp[j, j] - 2*self.Lp[i, j]
+        self.C = np.repeat(np.diag(self.Lp)[:, np.newaxis],
+                           self.Lp.shape[0], axis=1)
+        self.C += np.repeat(np.diag(self.Lp)[np.newaxis, :], 
+                            self.Lp.shape[0], axis=0)
+        self.C -= 2*self.Lp
+        # the following is much slower
+        # self.C = np.zeros(self.Lp.shape)
+        # for i in range(self.Lp.shape[0]):
+        #     for j in range(self.Lp.shape[1]):
+        #         self.C[i, j] = self.Lp[i, i] + self.Lp[j, j] - 2*self.Lp[i, j]
         volG = np.sum(self.z)
         self.C *= volG
         sett.mt(0,'computed commute distance matrix')

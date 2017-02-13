@@ -156,10 +156,10 @@ def check_adata(adata):
                 adata[k + '_ids'] = np.arange(len(adata[k + '_names']), dtype=int)
             # masks for each category
             if not k + '_masks' in adata:
-                masks = []
-                for name in adata[k + '_names']:
-                    masks.append(name == adata.smp[k])
-                adata[k + '_masks'] = np.array(masks)
+                adata[k + '_masks'] = np.zeros((len(adata[k + '_names']),
+                                                adata.smp[k].size), dtype=bool)
+                for iname, name in enumerate(adata[k + '_names']):
+                    adata[k + '_masks'][iname] = name == adata.smp[k]
     return adata
 
 def exkeys_str():

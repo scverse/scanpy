@@ -20,14 +20,16 @@ def savefig(writekey):
 
 def plot_tool(dplot, adata,
               smp=None,
+              names=None,
               comps='1,2',
               cont=None,
               layout='2d',
               legendloc='lower right',
               cmap=None,
               adjust_right=0.75,
+              size=3,
               subtitles=('one title',),
-              component_name='comp'): 
+              component_name='comp'):
     """
     Scatter plots.
 
@@ -42,6 +44,8 @@ def plot_tool(dplot, adata,
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
+    names : str, optional (default: all names in smp)
+        Allows to restrict groups in sample annotation (smp) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -54,13 +58,16 @@ def plot_tool(dplot, adata,
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
+    size : float (default: 3)
+         Point size.
     """
     # compute components
     from numpy import array
-    comps = array(comps.split(',')).astype(int) - 1    
+    comps = array(comps.split(',')).astype(int) - 1
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
+    names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
-    highlights = adata['highlights'] if 'highlights' in adata else None
+    highlights = adata['highlights'] if 'highlights' in adata else []
     try:
         Y = dplot['Y'][:, comps]
     except IndexError:
@@ -119,12 +126,22 @@ def plot_tool(dplot, adata,
 
     for ismp in categoricals:
         smp = smps[ismp]
-        if not smp + '_colors' in adata:
+        if (smp != 'groups' and 'groups_names' in adata
+            and len(np.setdiff1d(adata['groups_names'], adata[smp + '_names']))
+                < len(adata['groups_names'])):
+            # if there is a correspondence between smp and the 'groups' defined
+            # in adata, that is, if smp has corresponding categories with those 
+            # in adata['groups_names']
+            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
+                                    pl.Normalize()(adata['groups_ids']))
+        elif not smp + '_colors' in adata:
             adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
                                             pl.Normalize()(adata[smp + '_ids']))
-        for icat in adata[smp + '_ids']:
-            group(axs[ismp], smp, icat, adata, dplot['Y'][:, comps], layout)
-        if ismp == categoricals[-1]:
+        for iname, name in enumerate(adata[smp + '_names']):
+            if (names is None or (names != None and name in names)):
+                group(axs[ismp], smp, iname, adata, dplot['Y'][:, comps], layout, size)
+        # for the last panel, let's put the legend outside panel
+        if legendloc is None or ismp == categoricals[-1]:
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
@@ -132,11 +149,11 @@ def plot_tool(dplot, adata,
     adjust_right *= 1.05**len(smps)
     pl.subplots_adjust(right=adjust_right)
 
-    savefig(dplot['writekey'] + '_' + smp)
+    savefig(dplot['writekey'] + sett.plotsuffix)
     if not sett.savefigs and sett.autoshow:
         pl.show()
 
-def group(ax, name, imask, adata, Y, layout='2d', s=3):
+def group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
     Plot group using representation of data Y.
     """
@@ -145,13 +162,13 @@ def group(ax, name, imask, adata, Y, layout='2d', s=3):
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
         color = rgb2hex(adata[name + '_colors'][imask])
-    data = [Y[mask,0], Y[mask,1]]
+    data = [Y[mask, 0], Y[mask, 1]]
     if layout == '3d':
-        data.append(Y[mask,2])
+        data.append(Y[mask, 2])
     ax.scatter(*data,
                c=color,
                edgecolors='face',
-               s=s,
+               s=size,
                alpha=1,
                label=adata[name + '_names'][imask])
 

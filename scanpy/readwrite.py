@@ -706,6 +706,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 if isinstance(value, dict):
                     array = []
                     for k, v in value.items():
+                        v = np.array(v)
                         t = v.dtype.char
                         # the type is stored after the "_"
                         array.append(np.r_[np.array([k+'_'+t]), v])

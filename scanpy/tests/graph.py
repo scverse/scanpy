@@ -39,7 +39,7 @@ def test_distance_metrics():
     # TODO: investigate quality of approximation!
 
     # chain layout
-    n = 50
+    n = 1000
     num_evals = 10
     norm = True
     show = True
@@ -50,6 +50,8 @@ def test_distance_metrics():
     params['k'] = 2
     params['knn'] = True
     params['sigma'] = 0
+    params['nr_pcs'] = 30
+    from scanpy import graph
     ct = graph.DataGraph(X, params)
 
     ct.compute_transition_matrix(weighted=False, 
@@ -57,11 +59,9 @@ def test_distance_metrics():
                                  alpha=0)
     print(ct.K)
 
-    # dpt distance
-    ct.embed(number=num_evals)
+    ct.compute_Ddiff_all(num_evals)
     evalsT = ct.evals
-    ct.compute_M_matrix()
-    ct.compute_Ddiff_matrix()
+    # dpt distance
     if show:
         pl.matshow(ct.Ddiff)
         pl.title('Ddiff')
@@ -70,11 +70,8 @@ def test_distance_metrics():
         print(ct.Ddiff)
 
     # commute distance
-    ct.compute_L_matrix()
-    ct.embed(ct.L, number=num_evals, sort='increase')
+    ct.compute_C_all(num_evals)
     evalsL = ct.evals
-    ct.compute_Lp_matrix()
-    ct.compute_C_matrix()
     if show:
         pl.matshow(ct.C)
         pl.title('C')
@@ -82,27 +79,31 @@ def test_distance_metrics():
     else:
         print(ct.C)
 
-    ct.compute_MFP_matrix()
-    if show:
-        pl.matshow(ct.MFP)
-        pl.title('MFP')
-        pl.colorbar()
-    else:
-        print(ct.MFP)
+    # MFP distance
+#     ct.compute_MFP_matrix()
+#     if show:
+#         pl.matshow(ct.MFP)
+#         pl.title('MFP')
+#         pl.colorbar()
+#     else:
+#         print(ct.MFP)
 
     i = 0 #int(n/2)
     normDdiff = np.max(ct.Ddiff[i]) if norm else 1
     normC = np.max(ct.C[i]) if norm else 1
-    normMFP = np.max(ct.MFP[i]) if norm else 1
+#     normMFP = np.max(ct.MFP[i]) if norm else 1
     pl.figure()
     pl.plot(ct.Ddiff[i]/normDdiff, label='Ddiff')
     pl.plot(ct.C[i]/normC, label='C')
-    pl.plot(ct.MFP[i]/normMFP, label='MFP')
+#     pl.plot(ct.MFP[i]/normMFP, label='MFP')
+    pl.legend()
 
     pl.figure()
     pl.plot(evalsT/normDdiff, label='evalsT')
     pl.plot(evalsL/normC, label='evalsL')
+    pl.legend()
     pl.show()
 
 if __name__ == '__main__':
-    test_shortest_path()
+    #test_shortest_path()
+    test_distance_metrics()

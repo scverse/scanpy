@@ -76,12 +76,14 @@ def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
 
 def plot(dplot, adata,
          smp=None,
+         names=None,
          comps='1,2',
          cont=None,
          layout='2d',
          legendloc='lower right',
-         cmap='jet',
-         adjust_right=0.75):
+         cmap=None,
+         adjust_right=0.75,
+         size=3):
     """
     Scatter plots.
 
@@ -96,6 +98,8 @@ def plot(dplot, adata,
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
+    names : str, optional (default: all names in smp)
+        Allows to restrict groups in sample annotation (smp) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -108,16 +112,20 @@ def plot(dplot, adata,
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
+    size : float (default: 3)
+         Point size.
     """
     from .. import plotting as plott
     plott.plot_tool(dplot, adata,
                     smp,
+                    names,
                     comps,
                     cont,
                     layout,
                     legendloc,
                     cmap,
                     adjust_right,
+                    size=size,
                     # defined in plotting
                     subtitles=['diffusion map'],
                     component_name='DC')

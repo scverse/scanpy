@@ -19,6 +19,7 @@ dexamples: dict
 """
 
 from __future__ import absolute_import, print_function
+from collections import OrderedDict as odict
 import numpy as np
 import scanpy as sc
 
@@ -90,33 +91,23 @@ dexamples = {
         }
     },
 'moignard15': {
-    'ctpaths': { 
-        'k': 5,
-        'num_fates': 2, # detect two branching points (default 1)
-        }
+    'paths': {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])},
     },
 'paul15': {
-    'paths': { 
-        'fates': {0: 877, 1: 2156},
-        'k': 20, # increase number of neighbors (default 5)
-        'knn': True }, # set a hard threshold on number of neighbors
+    'paths': {'fates': odict([('GMP', 877), ('MEP', 2156)])},
     'dpt/diffmap': {'k': 20, 'knn': True},
     'difftest': {'log': False, 'names': 'GMP,MEP'},
     'tgdyn': {'names': 'GMP,MEP'}
     },
 'paul15pca': {
     'datakey': 'paul15',
-    'paths': { 
-        'fates': {0: 193, 1: 2201},
-        'num_fates': 2,
-        'k': 4, # increase number of neighbors (default 5)
-        'knn': True}, # set a hard threshold on number of neighbors
+    'paths': {'fates': odict([('GMP', 193), ('MEP', 2201)])},
     'dpt/diffmap': {'k': 20, 'knn': True},
     'difftest': {'log': False, 'names': 'GMP,MEP'},
     'tgdyn': {'names': 'GMP,MEP'}
     },
 'toggleswitch': {
-    'ctpaths': {'fates': {0: 95, 1: 189}},
+    'paths': {'fates': odict([('0', 95), ('1', 189)])},
     'difftest': {'log': False}
     }
 }
@@ -298,12 +289,4 @@ def paul15_dpt(ddpt):
 def paul15pca_dpt(ddpt):
     ddpt['groups_names'] = ['', '', 'GMP', 'MEP']
     return ddpt
-
-def paul15_paths(dtool):
-    dtool['groups_names'] = ['GMP', 'MEP']
-    return dtool
-
-def paul15pca_paths(dtool):
-    dtool['groups_names'] = ['GMP', 'MEP']
-    return dtool
 
