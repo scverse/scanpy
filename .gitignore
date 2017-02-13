@@ -1,11 +1,13 @@
 # Scanpy
 data/
 figs/
-*/figs/
+*/figs*/
 write/
 sim/hill*
 sim/var*
 scanpy.egg-info/
+scanpy_save/
+thirdp/
 
 # private files
 scanpy/exs/builtin_private.py

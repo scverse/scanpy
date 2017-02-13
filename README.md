@@ -93,8 +93,8 @@ more information.
 
 If you want to use the results externally, simply read the corresponding hdf5
 file, which you can inspect using `h5ls write/moignard15_dpt.h5`. If you prefer
-reading and writing csv or Excel files, which is much slower, however, use the
-option `--fileformat csv`.
+reading and writing csv/txt files, which is much slower, however, use the
+option `--fileformat csv` (or `txt`).
 
 #### More examples and help
 
@@ -141,9 +141,9 @@ the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16).
 
 ### [dpt](scanpy/tools/dpt.py) <a id="dpt"></a>
 
-Reconstruct progression in a biological from snapshot data and detect branching
-subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi *et
-al.* (2016)](#ref_haghverdi16).
+Reconstruct progression in a biological process from snapshot data and detect
+branching subgroups. Diffusion Pseudotime analysis has been introduced by
+[Haghverdi *et al.* (2016)](#ref_haghverdi16).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of

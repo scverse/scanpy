@@ -676,11 +676,33 @@ def read_file_to_dict(filename, ext='h5'):
                 else:
                     d[key] = value
     elif ext == 'xlsx':
+        raise ValueError('TODO: this is broke.')
         import pandas as pd
         xl = pd.ExcelFile(filename)
         for sheet in xl.sheet_names:
             d[sheet] = xl.parse(sheet).values
     return d
+
+def prepare_writing(key, value):
+    # if is a dict, build an array from it
+    if isinstance(value, dict):
+        array = []
+        for k, v in value.items():
+            v = np.array(v)
+            t = v.dtype.char
+            # the type is stored after the "_"
+            array.append(np.r_[np.array([k+'_'+t]), v])
+        value = np.array(array)
+        key = key + '_ann'
+    if type(value) != np.ndarray:
+        value = np.array(value)
+    # some output about the data to write
+    sett.m(1, key, type(value), 
+           value.dtype, value.dtype.kind, value.shape)
+    # make sure string format is chosen correctly
+    if value.dtype.kind == 'U':
+        value = value.astype(np.string_)
+    return key, value
 
 def write_dict_to_file(filename, d, ext='h5'):
     """ 
@@ -702,31 +724,24 @@ def write_dict_to_file(filename, d, ext='h5'):
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d.items():
-                # if is a dict, build an array from it
-                if isinstance(value, dict):
-                    array = []
-                    for k, v in value.items():
-                        v = np.array(v)
-                        t = v.dtype.char
-                        # the type is stored after the "_"
-                        array.append(np.r_[np.array([k+'_'+t]), v])
-                    value = np.array(array)
-                    key = key + '_ann'
-                if type(value) != np.ndarray:
-                    value = np.array(value)
-                # some output about the data to write
-                sett.m(1, key, type(value), 
-                       value.dtype, value.dtype.kind, value.shape)
-                # make sure string format is chosen correctly
-                if value.dtype.kind == 'U':
-                    value = value.astype(np.string_)
-                # try writing
+                key, value = prepare_writing(key, value)
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
                     sett.m(0,'error creating dataset for key =', key)
                     raise e
+    elif ext == 'csv' or ext == 'txt':
+        dirname = filename.replace('.' + ext, '')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        for key, value in d.items():
+            key, value = prepare_writing(key, value)
+            if len(value.shape) > 0:
+                np.savetxt(dirname + '/' + key + '.' + ext, value, 
+                           fmt = '%.18e' if value.dtype.char != 'S' else '%s',
+                           delimiter=' ' if ext == 'txt' else ',')
     elif ext == 'xlsx':
+        raise ValueError('TODO: this is broke.')
         import pandas as pd
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
             for key, value in d.items():
