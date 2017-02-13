@@ -683,7 +683,7 @@ def read_file_to_dict(filename, ext='h5'):
             d[sheet] = xl.parse(sheet).values
     return d
 
-def prepare_writing(key, value):
+def prepare_writing(key, value, ext):
     # if is a dict, build an array from it
     if isinstance(value, dict):
         array = []
@@ -691,8 +691,10 @@ def prepare_writing(key, value):
             v = np.array(v)
             t = v.dtype.char
             # the type is stored after the "_"
-            array.append(np.r_[np.array([k+'_'+t]), v])
+            array.append(np.r_[np.array([k + '_' + t]), v])
         value = np.array(array)
+        if ext != 'h5':
+            value = value.T
         key = key + '_ann'
     if type(value) != np.ndarray:
         value = np.array(value)
@@ -724,7 +726,7 @@ def write_dict_to_file(filename, d, ext='h5'):
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d.items():
-                key, value = prepare_writing(key, value)
+                key, value = prepare_writing(key, value, ext)
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
@@ -735,10 +737,15 @@ def write_dict_to_file(filename, d, ext='h5'):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         for key, value in d.items():
-            key, value = prepare_writing(key, value)
+            key, value = prepare_writing(key, value, ext)
+            if value.dtype.kind == 'S':
+                value = value.astype('U')
             if len(value.shape) > 0:
                 np.savetxt(dirname + '/' + key + '.' + ext, value, 
-                           fmt = '%.18e' if value.dtype.char != 'S' else '%s',
+                           fmt = ('%.14e' if value.dtype.char == 'f'
+                                  else '%s' if value.dtype.char == 'U'
+                                  else '%d' if (value.dtype.char == 'b' or value.dtype.char == 'i')
+                                  else '%f'),
                            delimiter=' ' if ext == 'txt' else ',')
     elif ext == 'xlsx':
         raise ValueError('TODO: this is broke.')
