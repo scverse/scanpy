@@ -34,13 +34,16 @@ def pca(adata_or_X, nr_comps=10):
         Y : np.ndarray
             PCA representation of the data.
     """
-    if isinstance(adata_or_X, AnnData):
+    isadata = isinstance(adata_or_X, AnnData)
+    if isadata:
         X = adata_or_X.X
-        isadata = True
+        adata = adata_or_X
     else:
         X = adata_or_X
-        isadata = False
-    Y = pp.pca(X, nr_comps)
+    if isadata and 'Xpca' in adata and adata['Xpca'].shape[1] > nr_comps:
+        Y = adata['Xpca']
+    else:
+        Y = pp.pca(X, nr_comps)
     if isadata:
         return {'type': 'pca', 'Y': Y}
     else:
@@ -80,7 +83,7 @@ def plot(dplot, adata,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: inferno/ categorical: finite palette)
+    cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.

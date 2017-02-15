@@ -155,13 +155,13 @@ def plot(ddpt, adata, dplot=None,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: inferno/ categorical: finite palette)
+    cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
     """
     # plot segments and pseudotimes
-    plot_segments_pseudotimes(ddpt, 'inferno' if cmap is None else cmap)
+    plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
     X = adata.X

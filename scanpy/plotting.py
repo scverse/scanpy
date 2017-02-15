@@ -54,7 +54,7 @@ def plot_tool(dplot, adata,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: inferno/ categorical: finite palette)
+    cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
@@ -122,7 +122,7 @@ def plot_tool(dplot, adata,
                   c=colors,
                   highlights=highlights,
                   colorbars=colorbars,
-                  cmap='inferno' if cmap is None else cmap)
+                  cmap='viridis' if cmap is None else cmap)
 
     for ismp in categoricals:
         smp = smps[ismp]
@@ -261,7 +261,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
 
     fig = pl.figure(figsize=(1.5*4,2*4))
     im = pl.imshow(np.array(X,dtype=np.float_), aspect='auto',
-              interpolation='nearest', cmap='inferno')
+              interpolation='nearest', cmap='viridis')
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), varnames)
     for ih,h in enumerate(highlightsX):

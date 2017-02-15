@@ -118,7 +118,7 @@ def plot(ddrawg, adata,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: inferno/ categorical: finite palette)
+    cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
     adjust_right : float (default: 0.75)
          Adjust how far the plotting panel extends to the right.
