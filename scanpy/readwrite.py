@@ -261,7 +261,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         filename_hdf5 = filename + '.h5'
     if not os.path.exists(filename_hdf5) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
-                 '\n--> write an hdf5 version to speedup reading next time')
+                 '\n... writing an hdf5 version to speedup reading next time')
         # do the actual reading
         if ext == 'xlsx' or ext == 'xls':
             if sheet=='':
@@ -428,9 +428,13 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
         sett.m(0,'--> did not find row names in file')
     else:
         row_names = np.array(row_names)
+        for iname, name in enumerate(row_names):
+            row_names[iname] = name.strip('"')
     # adapt col_names if necessary
     if col_names.size > data.shape[1]:
         col_names = col_names[1:]
+    for iname, name in enumerate(col_names):
+        col_names[iname] = name.strip('"')
     ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
     return ddata
 
@@ -722,6 +726,7 @@ def write_dict_to_file(filename, d, ext='h5'):
     """
     directory = os.path.dirname(filename)
     if not os.path.exists(directory):
+        sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
@@ -733,6 +738,8 @@ def write_dict_to_file(filename, d, ext='h5'):
                     sett.m(0,'error creating dataset for key =', key)
                     raise e
     elif ext == 'csv' or ext == 'txt':
+        # here this is actually a directory that corresponds to the 
+        # single hdf5 file
         dirname = filename.replace('.' + ext, '')
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -854,6 +861,7 @@ def check_datafile_present(filename, backup_url=''):
                   '... this may take a while but only happens once')
             d = os.path.dirname(filename)
             if not os.path.exists(d):
+                sett.m(0, 'creating directory', d+'/', 'for saving data')
                 os.makedirs(d)
             from .compat.urllib_request import urlretrieve
             urlretrieve(backup_url, filename, reporthook=download_progress)

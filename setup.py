@@ -24,7 +24,9 @@ setup(
         'scipy',
         'xlrd',  # for reading excel data
         'h5py',
+        'scikit-learn',
     ] + more_requires,
-    packages=['scanpy'],
+    packages=['scanpy', 'scanpy.tools', 'scanpy.compat', 'scanpy.exs',
+    'scanpy.preprocess'],
     zip_safe=False,
 )

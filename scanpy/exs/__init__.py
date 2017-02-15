@@ -74,12 +74,14 @@ def example(exkey, return_module=False):
     """
     try:
         try:
-            import userexs
+            from sys import path
+            path.insert(0, '.')
+            import user_exs
         except ImportError:
-            sett.m(0, 'did not find user examples, to provide some\n'
-                   '--> generate file userexs.py in your working directory')
-        exfunc = getattr(userexs, exkey)
-        exmodule = userexs
+            sett.m(0, '--> did not find user examples, to provide some,\n'
+                   '    generate file user_exs.py in your working directory')
+        exfunc = getattr(user_exs, exkey)
+        exmodule = user_exs
     except (UnboundLocalError, AttributeError):
         try:
             # additional possibility to add example module
@@ -93,7 +95,7 @@ def example(exkey, return_module=False):
             except AttributeError:
                 msg = ('Do not know how to run example "' + exkey +
                        '".\nEither define a function ' + exkey + '() '
-                       'in ./userexs.py that returns an AnnData object.\n'
+                       'in ./user_exs.py that returns an AnnData object.\n'
                        'Or, use one of the builtin examples:'
                        + exkeys_str())
                 from sys import exit

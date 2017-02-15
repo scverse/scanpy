@@ -187,11 +187,12 @@ def process_args(args):
     args.pop('savefigs')
 
     global figdir
-    figdir = args['figdir'] + '/'
+    figdir = args['figdir']
     if figdir[-1] != '/':
         figdir += '/'
     from os import path, makedirs
     if not path.exists(figdir):
+        print('creating directory', figdir, 'for saving figures')
         makedirs(figdir)    
     args.pop('figdir')
 

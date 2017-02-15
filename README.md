@@ -36,24 +36,26 @@ tool are welcome, too! Any comments are appreciated!
 
 ## Example Use <a id="example_use"></a>
 
-The following command-line examples call the wrapper [scanpy.py](scanpy.py),
-which works **without** [installation](#install).  To get all required packages
-(all default in [Anaconda](https://www.continuum.io/downloads)), install
-[Miniconda](http://conda.pydata.org/miniconda.html) and run `conda install scipy
-matplotlib h5py pandas xlrd`. Scanpy is written in Python 3 and compatible with
-Python 2.
-
 Download or clone the repository - green button on top of the page - and `cd`
-into its root directory.
+into its root directory. Type `pip install -e .` and work with the top-level
+command `scanpy` in any directory. Or, call the wrapper `python scanpy.py` from
+within the root of the repository, which works **without**
+[installation](#install).
+
+Packages you might need (all default in
+[Anaconda](https://www.continuum.io/downloads)) can be easily installed using
+[Miniconda](http://conda.pydata.org/miniconda.html). Then run `conda install
+scipy matplotlib h5py scikit-learn pandas xlrd`. Scanpy is written in Python 3
+and compatible with Python 2.
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
 Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
 NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
 ```
-python scanpy.py moignard15 pca
-python scanpy.py moignard15 tsne
-python scanpy.py moignard15 diffmap
+scanpy moignard15 pca
+scanpy moignard15 tsne
+scanpy moignard15 diffmap
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_pca_groups.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_groups.png" height="175">
@@ -61,9 +63,9 @@ python scanpy.py moignard15 diffmap
 
 Coloring samples/cells by gene expression works analogously,
 ```
-python scanpy.py moignard15 pca -p smp HbbbH1
-python scanpy.py moignard15 tsne -p smp HbbbH1
-python scanpy.py moignard15 diffmap -p smp HbbbH1
+scanpy moignard15 pca -p smp HbbbH1
+scanpy moignard15 tsne -p smp HbbbH1
+scanpy moignard15 diffmap -p smp HbbbH1
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_HbbbH1.png" height="175">
@@ -76,8 +78,8 @@ traces the degree of cells' progression in the differentiation process. By defau
 this is plotted using Diffusion Maps, but you might just as well plot the subgroups using another
 plotting tool.
 ```
-python scanpy.py moignard15 dpt
-python scanpy.py moignard15 dpt tsne
+scanpy moignard15 dpt
+scanpy moignard15 dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_diffmap.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_dpt_segpt.png" height="175">
@@ -101,31 +103,29 @@ option `--fileformat csv` (or `txt`).
 For more examples, read [this](examples), or display them on the command line
 (example data and example use cases, respectively).
 ```shell
-python scanpy.py exdata
-python scanpy.py examples
+scanpy exdata
+scanpy examples
 ```
 
 Get general and tool-specific help, respectively.
 ```shell
-python scanpy.py --help
-python scanpy.py dpt --help
+scanpy --help
+scanpy dpt --help
 ```
 
 #### Work on your own examples <a id="add_example"></a>
 
 To work on your own example, make a copy and edit the following
 [notebook](examples/myexample_template.ipynb). If you want to call user examples
-from the command-line, create a file `userexs.py` in your current working
-directory, e.g., by copying [userexs_template.py](scanpy/exs/userexs_template.py)
-``` 
-cp scanpy/exs/userexs_template.py userexs.py
-``` 
-and changing the function `myexample()` to your needs. Consider using copy and
-paste from [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example
-using `python scanpy.py myexample pca`.
+from the command-line, create a file `user_exs.py` in your current working
+directory, e.g., by downloading and renaming
+[user_exs_template.py](scanpy/exs/user_exs_template.py) and changing the function
+`myexample()` to your needs. Consider using copy and paste from
+[scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using `scanpy
+myexample pca`.
 
-Also, it'd be awesome if you provide your working example for the public Scanpy
-library: copy your example from `userexs.py` to
+Also, it'd be awesome if you provide you upload your example to the
+[examples](examples) library: copy your example from `user_exs.py` to
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data
 and make a pull request. If you have questions or prefer sending your script by
 email, contact Alex.
