@@ -149,10 +149,15 @@ def check_adata(adata):
             # ordered unique categories
             if not k + '_names' in adata:
                 adata[k + '_names'] = np.unique(adata.smp[k])
-                adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
-                                                   np.array(ignore_groups))
+                if adata[k + '_names'].dtype.char == 'U':
+                    adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
+                                                       np.array(ignore_groups))
             # output 
-            sett.m(0,'sample annotation', k, 'with', adata[k + '_names'])
+            ann_info = adata[k + '_names']
+            if len(adata[k + '_names']) > 20:
+                ann_info = (str(adata[k + '_names'][0:3]).replace(']','') 
+                            + ' ...' + str(adata[k + '_names'][-2:]).replace('[',''))
+            sett.m(0,'sample annotation', k, 'with',  ann_info)
             # indices for each category
             if not k + '_ids' in adata:
                 adata[k + '_ids'] = np.arange(len(adata[k + '_names']), dtype=int)

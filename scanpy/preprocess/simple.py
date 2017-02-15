@@ -29,17 +29,23 @@ def filter_cells(X, min_reads):
     cell_filter = total_counts >= min_reads
     return X[cell_filter], cell_filter
 
-def gene_cv_filter(X, Ecutoff, cvFilter):
+def gene_filter_cv(X, Ecutoff, cvFilter):
+    """
+    Filter genes by coefficient of variance and mean.
+    """
     mean_filter = np.mean(X,axis=0)> Ecutoff
     var_filter = np.std(X,axis=0) / (np.mean(X,axis=0)+.0001) > cvFilter
     gene_filter = np.nonzero(np.all([mean_filter,var_filter],axis=0))[0]
     return gene_filter
 
-def filter_genes_fano(X, Ecutoff, Vcutoff):
+def gene_filter_fano(X, Ecutoff, Vcutoff):
+    """
+    Filter genes by fano factor and mean.
+    """
     mean_filter = np.mean(X,axis=0) > Ecutoff
     var_filter = np.var(X,axis=0) / (np.mean(X,axis=0)+.0001) > Vcutoff
     gene_filter = np.nonzero(np.all([mean_filter,var_filter],axis=0))[0]
-    return X[:,gene_filter], gene_filter
+    return gene_filter
 
 def log(X):
     """ 
