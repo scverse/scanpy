@@ -141,7 +141,7 @@ def plot_tool(dplot, adata,
             if (names is None or (names != None and name in names)):
                 group(axs[ismp], smp, iname, adata, dplot['Y'][:, comps], layout, size)
         # for the last panel, let's put the legend outside panel
-        if legendloc is None or ismp == categoricals[-1]:
+        if legendloc is None or ismp == len(axs)-1:
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
