@@ -506,9 +506,10 @@ class DPT(graph.DataGraph):
         ssegs, ssegs_tips = self._detect_branching(Dseg,tips3)            
         # map back to global indices
         for iseg_new,seg_new in enumerate(ssegs):
-            ssegs[iseg_new] = seg[seg_new]
-            if ssegs_tips[iseg_new][0] != -1:
-                ssegs_tips[iseg_new] = seg[ssegs_tips[iseg_new]] 
+            if len(np.flatnonzero(seg_new)) > 3: # terrible hack
+                ssegs[iseg_new] = seg[seg_new]
+                if ssegs_tips[iseg_new][0] != -1:
+                    ssegs_tips[iseg_new] = seg[ssegs_tips[iseg_new]] 
         # remove previous segment
         segs.pop(iseg)
         segstips.pop(iseg)
@@ -542,12 +543,12 @@ class DPT(graph.DataGraph):
             List of tips of segments in ssegs.
         """
         if False:
-            ssegs = self._detect_branching_versions(Dseg,tips)
+            ssegs = self._detect_branching_versions(Dseg, tips)
         if True:
-            ssegs = self._detect_branching_single(Dseg,tips)
+            ssegs = self._detect_branching_single(Dseg, tips)
         # make sure that each data point has a unique association with a segment
-        masks = np.zeros((3,Dseg.shape[0]),dtype=bool)
-        for iseg,seg in enumerate(ssegs):
+        masks = np.zeros((3, Dseg.shape[0]), dtype=bool)
+        for iseg, seg in enumerate(ssegs):
             masks[iseg][seg] = True
         nonunique = np.sum(masks,axis=0) > 1
         # obtain the corresponding index arrays from masks
@@ -558,15 +559,19 @@ class DPT(graph.DataGraph):
         # compute new tips within new segments
         ssegstips = []
         for inewseg, newseg in enumerate(ssegs):
-            # get tip point position within segment
-            tip = np.where(np.arange(Dseg.shape[0])[newseg]
-                           == tips[inewseg])[0][0]
-            # new tip within restricted distance matrix
-            secondtip = np.argmax(Dseg[np.ix_(newseg,newseg)][tip])
-            # map back to position within segment
-            secondtip = np.arange(Dseg.shape[0])[newseg][secondtip]
-            # add to list
-            ssegstips.append([tips[inewseg],secondtip])
+            if len(np.flatnonzero(newseg)) > 3: # terrible hack
+                # get tip point position within segment
+                tip = np.where(np.arange(Dseg.shape[0])[newseg]
+                               == tips[inewseg])[0][0]
+                # new tip within restricted distance matrix
+                secondtip = np.argmax(Dseg[np.ix_(newseg,newseg)][tip])
+                # map back to position within segment
+                secondtip = np.arange(Dseg.shape[0])[newseg][secondtip]
+                # add to list
+                ssegstips.append([tips[inewseg],secondtip])
+            else:
+                ssegstips.append(np.array([-1,-1])) # terrible hack
+                sett.m(0, inewseg, 'contains less than 4 data points')
         # for the points that cannot be assigned to the three segments of the
         # branching, hence have no tip cells, but form a subset of their own,
         # add dummy tips [-1,-1]
