@@ -39,14 +39,14 @@ Diffusion Pseudotime (DPT) analysis detects the branch of granulocyte/macrophage
 progenitors (GMP), and the branch of megakaryocyte/erythrocyte progenitors
 (MEP). There are two small further subgroups (*segments* 0 and 2).
 ```
-./scanpy.py paul15 dpt
+scanpy paul15 dpt
 ```
-<img src="http://falexwolf.de/scanpy/figs/paul15_dpt_diffmap.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/paul15_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/paul15_dpt_diffmap_pseudotimes_segments.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/paul15_dpt_segpt.png" height="175">
 
 We can now test for differential gene expression.
 ```
-./scanpy.py paul15 difftest --prev dpt
+scanpy paul15 difftest --prev dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
 
@@ -59,20 +59,20 @@ computations tremendously. Distance matrix computations in high dimensions are a
 
 Does this preprocessing change the biology?
 ```
-./scanpy.py paul15pca dpt
-./scanpy.py paul15pca dpt difftest --prev dpt
+scanpy paul15pca dpt
+scanpy paul15pca dpt difftest --prev dpt
 ```
-<img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_diffmap.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_segpt.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_difftest.png" height="175">
 
 Even though the diffmap representation has changed a lot, the differential genes are still the same.
 Let us check whether the subgroups look much different in tSNE.
 ```
-./scanpy.py paul15 tsne
+scanpy paul15 tsne
 cp write/paul15_tsne.h5 write/paul15pca_tsne.h5
-./scanpy.py paul15 dpt tsne
-./scanpy.py paul15pca dpt tsne
+scanpy paul15 dpt tsne
+scanpy paul15pca dpt tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs/paul15_dpt_tsne.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_dpt_tsne.png" height="175">

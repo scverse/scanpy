@@ -200,7 +200,6 @@ def plot(ddpt, adata, dplot=None,
     adata['segments_masks'] = ddpt['groups_masks']
     adata['highlights'] = list(ddpt['iroot'])
 
-    print(smp)
     plott.plot_tool(ddpt, adata,
                     smp=smp,
                     component_name=component_name,

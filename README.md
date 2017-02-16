@@ -56,9 +56,9 @@ scanpy moignard15 pca -p smp groups
 scanpy moignard15 tsne -p smp groups
 scanpy moignard15 diffmap -p smp groups
 ```
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_pca_groups.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_tsne_groups.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_diffmap_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_pca_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_tsne_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_groups.png" height="175">
 
 Coloring samples/cells by gene expression works analogously,
 ```
@@ -66,9 +66,9 @@ scanpy moignard15 pca -p smp HbbbH1
 scanpy moignard15 tsne -p smp HbbbH1
 scanpy moignard15 diffmap -p smp HbbbH1
 ```
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_pca_HbbbH1.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_tsne_HbbbH1.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_diffmap_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_pca_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_tsne_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
@@ -80,13 +80,13 @@ plotting tool.
 scanpy moignard15 dpt
 scanpy moignard15 dpt tsne
 ```
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_dpt_diffmap_pseudotimes_segments_groups.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_dpt_segpt.png" height="175">
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_dpt_tsne_new.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_diffmap_pseudotimes_segments_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_tsne_pseudotimes_segments_groups.png" height="175">
 
 This orders cells by segment, and within each segment, by pseudotime.
 
-<img src="/Users/alexwolf/hholtz/03_webnew/deploy/scanpy/figs0/moignard15_dpt_heatmap.png" height="250">
+<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_heatmap.png" height="250">
 
 With this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
