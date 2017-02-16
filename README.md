@@ -121,7 +121,31 @@ directory, e.g., by downloading and renaming
 [user_exs_template.py](scanpy/exs/user_exs_template.py) and changing the function
 `myexample()` to your needs. Consider using copy and paste from
 [scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using `scanpy
-myexample pca`.
+myexample pca`. For the previous example (`moignard15`) you would define the
+following
+```python
+def moignard15():
+    filename = 'data/moignard15/nbt.3154-S3.xlsx'
+    ddata = sc.read(filename, sheet='dCt_values.txt')
+    adata = sc.AnnData(ddata)
+    # filter out genes: the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
+    # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
+    genes = np.array([g not in [4, 31, 36, 45] for g in range(adata.X.shape[1])])
+    adata = adata[:, genes] # filter adata
+    # choose root cell as in Haghverdi et al. (2016)
+    adata['iroot'] = iroot = 532 # note that in Matlab/R, counting starts at 1
+    adata['xroot'] = adata.X[iroot]
+    # annotate with Moignard et al. (2015) experimental cell groups
+    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    # annotate each sample/cell
+    adata.smp['groups'] = [
+        next(gname for gname in groups_names if sname.startswith(gname))
+        for sname in adata.smp_names]
+    # fix the order and colors of names in "groups"
+    adata['groups_names'] = groups_names
+    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    return adata
+```
 
 Also, it'd be awesome if you provide you upload your example to the
 [examples](examples) library: copy your example from `user_exs.py` to
