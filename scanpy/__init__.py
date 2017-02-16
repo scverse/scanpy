@@ -140,6 +140,11 @@ def run_args(toolkey, args):
             for key in dexample.keys():
                 if toolkey in key:
                     oparams = dexample[key]
+                    sett.m(0, '... appending "-o',
+                           ' '.join([' '.join([k, str(v)]) for k, v in oparams.items()])
+                           + '"',
+                          'to call of', toolkey)
+                    break
         except:
             did_not_find_params_in_exmodule = True
             pass
@@ -154,6 +159,7 @@ def run_args(toolkey, args):
             oparams = utils.update_params(oparams, add_params)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
+
 
     # previous tool
     prevsuffix = ''

@@ -93,6 +93,7 @@ dexamples = {
         }
     },
 'moignard15': {
+    'dpt/diffmap': {'k': 5, 'knn': False},
     'paths': {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])},
     },
 'paul15': {
