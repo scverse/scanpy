@@ -102,7 +102,7 @@ def paul15pca():
 Does this preprocessing change the biology?
 ```
 scanpy paul15pca dpt
-scanpy paul15pca dpt difftest --prev dpt
+scanpy paul15pca difftest --prev dpt
 ```
 <img src="http://falexwolf.de/scanpy/figs0/paul15pca_dpt_diffmap_pseudotimes_segments.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/paul15pca_difftest.png" height="175">

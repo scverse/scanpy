@@ -52,9 +52,9 @@ and compatible with Python 2.
 Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
 NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
 ```
-scanpy moignard15 pca -p smp groups
-scanpy moignard15 tsne -p smp groups
-scanpy moignard15 diffmap -p smp groups
+scanpy moignard15 pca
+scanpy moignard15 tsne
+scanpy moignard15 diffmap
 ```
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_pca_groups.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_tsne_groups.png" height="175">
