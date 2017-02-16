@@ -161,21 +161,21 @@ def plot(ddpt, adata, dplot=None,
          Adjust how far the plotting panel extends to the right.
     """
     # plot segments and pseudotimes
-#     plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
-#     # if number of genes is not too high, plot time series
+    plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
+    # if number of genes is not too high, plot time series
     from .. import plotting as plott
-#     X = adata.X
-#     if X.shape[1] <= 11:
-#         # plot time series as gene expression vs time
-#         plott.timeseries(X[ddpt['indices']], adata.var_names,
-#                          highlightsX=ddpt['changepoints'],
-#                          xlim=[0, 1.3*X.shape[0]])
-#         plott.savefig(ddpt['writekey']+'_vsorder')
-#     elif X.shape[1] < 50:
-#         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-#         plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
-#                                     highlightsX=ddpt['changepoints'])
-#         plott.savefig(ddpt['writekey']+'_heatmap')
+    X = adata.X
+    if X.shape[1] <= 11:
+        # plot time series as gene expression vs time
+        plott.timeseries(X[ddpt['indices']], adata.var_names,
+                         highlightsX=ddpt['changepoints'],
+                         xlim=[0, 1.3*X.shape[0]])
+        plott.savefig(ddpt['writekey']+'_vsorder')
+    elif X.shape[1] < 50:
+        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
+                                    highlightsX=ddpt['changepoints'])
+        plott.savefig(ddpt['writekey']+'_heatmap')
 
     if dplot is not None:
         ddpt['Y'] = dplot['Y']
@@ -188,7 +188,9 @@ def plot(ddpt, adata, dplot=None,
         component_name = 'DC'
         ddpt['writekey'] += '_diffmap'
 
-    smp = ['pseudotimes', 'segments']
+    smp = ['pseudotimes']
+    if len(ddpt['groups_names']) > 1:
+        smp += ['segments']
     if len(adata.smp_keys()) > 0:
         smp += [None]
     adata.smp['pseudotimes'] = ddpt['pseudotimes']
@@ -197,6 +199,8 @@ def plot(ddpt, adata, dplot=None,
     adata['segments_ids'] = ddpt['groups_ids']
     adata['segments_masks'] = ddpt['groups_masks']
     adata['highlights'] = list(ddpt['iroot'])
+
+    print(smp)
     plott.plot_tool(ddpt, adata,
                     smp=smp,
                     component_name=component_name,

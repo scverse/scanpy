@@ -114,7 +114,7 @@ def add_args(p):
             '"--savefigs" will save to "png" (default: do not save figures).')
     aa('--figdir',
        type=str, default=figdir, metavar='dir',
-       help='Change figure directory (default: %(default)s).')
+       help='Change figure directory and automatically save figures (default: %(default)s).')
     aa = p.add_argument_group('Run a tool repeatedly to try out different parameters').add_argument
     aa('-r', '--recomp',
        type=str, default='none', const='tool', nargs='?', metavar='x',
@@ -187,6 +187,8 @@ def process_args(args):
     args.pop('savefigs')
 
     global figdir
+    if figdir != args['figdir']:
+        savefigs = True
     figdir = args['figdir']
     if figdir[-1] != '/':
         figdir += '/'

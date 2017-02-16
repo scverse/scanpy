@@ -117,7 +117,7 @@ def plot_tool(dplot, adata,
             categoricals.append(ismp)
             
     if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.2
+        right_margin = 0.22
     axs = scatter(Y,
                   subtitles=smps,
                   component_name=component_name,
@@ -370,16 +370,20 @@ def _scatter(Ys,
     # try importing Axes3D
     if '3d' in layout:
         from mpl_toolkits.mplot3d import Axes3D
+
     fig = pl.figure(figsize=figsize,
-                    subplotpars=sppars(left=0.07,right=0.98,bottom=0.08))
+                    subplotpars=sppars(left=0,right=1,bottom=0.08))
     from matplotlib import gridspec
     # grid of axes for plotting and legends/colorbars
     if np.any(colorbars) and right_margin is None:
-        right_margin = 0.2
+        right_margin = 0.25
     elif right_margin is None:
         right_margin = 0.01
+
+    white_space = 0.08/len(colors)
     gs = gridspec.GridSpec(len(Ys), 2*len(colors), 
-                           width_ratios=[r for i in range(len(colors)) for r in [1-right_margin, right_margin]])
+                           width_ratios=[r for i in range(len(colors)) for r in [1-right_margin, right_margin]],
+                           left=0.08/len(colors), wspace=white_space)
     fig.suptitle(title)
     count = 1
     bool3d = True if layout == '3d' else False
@@ -415,7 +419,7 @@ def _scatter(Ys,
                 pos = gs.get_grid_positions(fig)
                 left = pos[2][2*(count-1)+1]
                 bottom = pos[0][0]
-                width = 0.5*(pos[3][2*(count-1)+1] - left)
+                width = 0.2*(pos[3][2*(count-1)+1] + white_space - left)
                 height = pos[1][0] - bottom
                 # again shift to left
                 left = pos[3][2*(count-1)] + 0.1*width

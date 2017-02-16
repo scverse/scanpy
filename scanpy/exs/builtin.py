@@ -255,9 +255,10 @@ def moignard15_raw():
 
 def moignard15_dpt(ddpt):
     # switch on annotation by uncommenting the following
-    groups_names = ['trunk', 'undecided', 
-                  'endothelial', 'erythrocytes']
-    ddpt['groups_names'] = [str(i) + ': ' + n for i, n in enumerate(groups_names)]
+    if len(ddpt['groups_names']) > 1:
+        groups_names = ['trunk', 'undecided', 
+                        'endothelial', 'erythrocytes']
+        ddpt['groups_names'] = [str(i) + ': ' + n for i, n in enumerate(groups_names)]
     return ddpt
 
 def paul15_raw():
