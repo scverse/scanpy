@@ -36,10 +36,10 @@ tool are welcome, too! Any comments are appreciated!
 ## Quick Start <a id="quick_start"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
-into its root directory. Type `pip install -e .` and work with the top-level
-command `scanpy` in any directory. Or, call the wrapper `python scanpy.py` from
-within the root of the repository, which works **without**
-[installation](#install).
+into its root directory. Type `pip install -e .`. You can now work with the
+top-level command `scanpy` in any directory. Alternatively, call the wrapper
+`python scanpy.py` from within the root of the repository. The latter works
+**without** [installation](#install).
 
 Packages you might need (all default in
 [Anaconda](https://www.continuum.io/downloads)) can be easily installed using
@@ -66,9 +66,10 @@ scanpy moignard15 pca -p smp HbbbH1
 scanpy moignard15 tsne -p smp HbbbH1
 scanpy moignard15 diffmap -p smp HbbbH1
 ```
-<img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
+<!-- <img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_HbbbH1.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap_HbbbH1.png" height="175">
+-->
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial

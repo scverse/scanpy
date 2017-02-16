@@ -151,7 +151,8 @@ def plot_tool(dplot, adata,
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
 
-    savefig(dplot['writekey'] + sett.plotsuffix)
+    writekey = dplot['writekey'] + '_' + '_'.join(smps)
+    savefig(writekey + sett.plotsuffix)
     if not sett.savefigs and sett.autoshow:
         pl.show()
 
