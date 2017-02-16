@@ -66,10 +66,9 @@ scanpy moignard15 pca -p smp HbbbH1
 scanpy moignard15 tsne -p smp HbbbH1
 scanpy moignard15 diffmap -p smp HbbbH1
 ```
-<!-- <img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/moignard15_pca_HbbbH1.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_tsne_HbbbH1.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs/moignard15_diffmap_HbbbH1.png" height="175">
--->
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
