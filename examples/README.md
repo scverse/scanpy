@@ -123,6 +123,38 @@ Note that, as tSNE yields non-deterministic output, we used the file
 `write/paul15_tsne.h5` also for plotting `paul15pca` (`cp write/paul15_tsne.h5
 write/paul15pca_tsne.h5`).
 
+#### Testing experimental groups
+
+```python
+def burczynski06():
+    """
+    Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
+
+    The study assesses transcriptional profiles in peripheral blood mononuclear
+    cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
+    hybridization to microarrays interrogating more than 22,000 sequences.
+
+    Available from https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=GDS1615.
+
+    Reference
+    ---------
+    Burczynski ME, Peterson RL, Twine NC, Zuberek KA et al. 
+    "Molecular classification of Crohn's disease and ulcerative colitis patients
+    using transcriptional profiles in peripheral blood mononuclear cells"
+    J Mol Diagn 8, 51 (2006). PMID:16436634.
+    """
+    filename = 'data/burczynski06/GDS1615_full.soft.gz'
+    url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
+    ddata = sc.read(filename, backup_url=url)
+    adata = sc.AnnData(ddata)
+    return adata
+```
+
+Here we go
+```
+scanpy burczynski06 difftest
+```
+
 #### Simulated myeloid progenitor data ([Krumsiek *et al.*, 2011](#ref_krumsiek11)) <a id="krumsiek11"></a>
 
 Here, we are going to simulate some data using a literature-curated boolean gene

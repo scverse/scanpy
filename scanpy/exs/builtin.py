@@ -81,6 +81,8 @@ dexdata = {
 #--------------------------------------------------------------------------------
 
 dexamples = {
+'burczynski06': {
+    'datakey' : 'burczynski06' },
 'krumsiek11': {
     'dpt': { 
         'nr_branchings': 2, # detect two branching points (default 1)
