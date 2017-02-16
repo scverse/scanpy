@@ -91,7 +91,7 @@ def plot(ddrawg, adata,
          layout='2d',
          legendloc='lower right',
          cmap=None,
-         adjust_right=0.75):
+         right_margin=0.75):
     """
     Scatter plots.
 
@@ -120,7 +120,7 @@ def plot(ddrawg, adata,
          Options for keyword argument 'loc'.
     cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
-    adjust_right : float (default: 0.75)
+    right_margin : float (default: 0.2)
          Adjust how far the plotting panel extends to the right.
     """
     params = locals(); del params['adata']; del params['ddrawg']

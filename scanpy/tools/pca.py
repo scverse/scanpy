@@ -55,9 +55,9 @@ def plot(dplot, adata,
          comps='1,2',
          cont=None,
          layout='2d',
-         legendloc='lower right',
+         legendloc='right margin',
          cmap=None,
-         adjust_right=0.75,
+         right_margin=None,
          size=3):
     """
     Scatter plots.
@@ -81,11 +81,11 @@ def plot(dplot, adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
+    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
     cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
-    adjust_right : float (default: 0.75)
+    right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
@@ -99,7 +99,7 @@ def plot(dplot, adata,
                     layout,
                     legendloc,
                     cmap,
-                    adjust_right,
+                    right_margin,
                     size=size,
                     # defined in plotting
                     subtitles=['PCA'],

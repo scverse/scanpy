@@ -16,7 +16,9 @@ from . import settings as sett
 
 def savefig(writekey):
     if sett.savefigs:
-        pl.savefig(sett.figdir + writekey + '.' + sett.extf)
+        filename = sett.figdir + writekey + '.' + sett.extf
+        sett.m(0, 'saving figure to file', filename)
+        pl.savefig(filename)
 
 def plot_tool(dplot, adata,
               smp=None,
@@ -24,9 +26,9 @@ def plot_tool(dplot, adata,
               comps='1,2',
               cont=None,
               layout='2d',
-              legendloc='lower right',
+              legendloc='right margin',
               cmap=None,
-              adjust_right=0.75,
+              right_margin=None,
               size=3,
               subtitles=('one title',),
               component_name='comp'):
@@ -56,7 +58,7 @@ def plot_tool(dplot, adata,
          Options for keyword argument 'loc'.
     cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
-    adjust_right : float (default: 0.75)
+    right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
@@ -113,7 +115,9 @@ def plot_tool(dplot, adata,
         colorbars.append(True if continuous else False)
         if categorical:
             categoricals.append(ismp)
-
+            
+    if right_margin is None and legendloc == 'right margin':
+        right_margin = 0.2
     axs = scatter(Y,
                   subtitles=smps,
                   component_name=component_name,
@@ -122,6 +126,7 @@ def plot_tool(dplot, adata,
                   c=colors,
                   highlights=highlights,
                   colorbars=colorbars,
+                  right_margin=right_margin,
                   cmap='viridis' if cmap is None else cmap)
 
     for ismp in categoricals:
@@ -141,13 +146,10 @@ def plot_tool(dplot, adata,
             if (names is None or (names != None and name in names)):
                 group(axs[ismp], smp, iname, adata, dplot['Y'][:, comps], layout, size)
         # for the last panel, let's put the legend outside panel
-        if legendloc is None or ismp == len(axs)-1:
+        if legendloc == 'right margin':
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
-
-    adjust_right *= 1.05**len(smps)
-    pl.subplots_adjust(right=adjust_right)
 
     savefig(dplot['writekey'] + sett.plotsuffix)
     if not sett.savefigs and sett.autoshow:
@@ -340,6 +342,117 @@ def _scatter(Ys,
              c='blue',
              highlights=[],
              highlights_labels=[],
+             title='',
+             colorbars=[False],
+             right_margin=None,
+             **kwargs):
+    # if we have a single array, transform it into a list with a single array
+    avail_layouts = ['2d', '3d', 'unfolded 3d']
+    if layout not in avail_layouts:
+        raise ValueError('choose layout from',avail_layouts)
+    colors = c
+    if type(Ys) == np.ndarray:
+        Ys = [Ys]
+    if len(colors) == len(Ys[0]) or type(colors) == str:
+        colors = [colors]
+    # make a figure with panels len(colors) x len(Ys)
+    figsize = (4*len(colors), 4*len(Ys))
+    # checks
+    if layout == 'unfolded 3d':
+        if len(Ys) != 1:
+            raise ValueError('use single 3d array')
+        if len(colors) > 1:
+            raise ValueError('choose a single color')
+        figsize = (4*2, 4*2)
+        Y = Ys[0]
+        Ys = [Y[:,[1,2]], Y[:,[0,1]], Y, Y[:,[0,2]]]
+    # try importing Axes3D
+    if '3d' in layout:
+        from mpl_toolkits.mplot3d import Axes3D
+    fig = pl.figure(figsize=figsize,
+                    subplotpars=sppars(left=0.07,right=0.98,bottom=0.08))
+    from matplotlib import gridspec
+    # grid of axes for plotting and legends/colorbars
+    if np.any(colorbars) and right_margin is None:
+        right_margin = 0.2
+    elif right_margin is None:
+        right_margin = 0.01
+    gs = gridspec.GridSpec(len(Ys), 2*len(colors), 
+                           width_ratios=[r for i in range(len(colors)) for r in [1-right_margin, right_margin]])
+    fig.suptitle(title)
+    count = 1
+    bool3d = True if layout == '3d' else False
+    axs = []
+    for Y in Ys:
+        markersize = (2 if Y.shape[0] > 500 else 10)
+        for icolor, color in enumerate(colors):
+            # set up panel
+            if layout == 'unfolded 3d' and count != 3:
+                ax = fig.add_subplot(2, 2, count)
+                bool3d = False
+            elif layout == 'unfolded 3d' and count == 3:
+                ax = fig.add_subplot(2, 2, count,
+                                     projection='3d')
+                bool3d = True
+            elif layout == '2d':
+                ax = pl.subplot(gs[2*(count-1)])
+            elif layout == '3d':
+                ax = fig.add_subplot(len(Ys), len(colors), count,
+                                     projection='3d')
+            if not bool3d:
+                data = Y[:,0], Y[:,1]
+            else:
+                data = Y[:,0], Y[:,1], Y[:,2]
+            # do the plotting
+            if type(color) != str or color != 'white':
+                sct = ax.scatter(*data,
+                                 c=color,
+                                 edgecolors='face',
+                                 s=markersize,
+                                 **kwargs)
+            if colorbars[icolor]:
+                pos = gs.get_grid_positions(fig)
+                left = pos[2][2*(count-1)+1]
+                bottom = pos[0][0]
+                width = 0.5*(pos[3][2*(count-1)+1] - left)
+                height = pos[1][0] - bottom
+                # again shift to left
+                left = pos[3][2*(count-1)] + 0.1*width
+                rectangle = [left, bottom, width, height]
+                ax_cb = fig.add_axes(rectangle)
+                cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
+                                 cax=ax_cb)
+            # set the subtitles
+            ax.set_title(subtitles[icolor])
+            # output highlighted data points
+            for iihighlight,ihighlight in enumerate(highlights):
+                data = [Y[ihighlight,0]], [Y[ihighlight,1]]
+                if bool3d:
+                    data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
+                ax.scatter(*data, c='black',
+                           facecolors='black', edgecolors='black', 
+                           marker='x', s=40, zorder=20)
+                highlight = (highlights_labels[iihighlight] if 
+                             len(highlights_labels) > 0 
+                             else str(ihighlight))
+                # the following is a Python 2 compatibility hack                
+                ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
+            ax.set_xticks([]); ax.set_yticks([])
+            if bool3d:
+                ax.set_zticks([]) 
+            axs.append(ax)
+            count += 1
+    # scatter.set_edgecolors = scatter.set_facecolors = lambda *args:None
+    return axs
+
+# the following doesn't use a fixed grid, therefore panels have
+# different sizes depending on whether there is a suplot or not
+def _scatter_auto_grid(Ys,
+             layout='2d',
+             subtitles=['pseudotime', 'segments', 'experimental labels'],
+             c='blue',
+             highlights=[],
+             highlights_labels=[],
              title='', 
              colorbars=[False],
              **kwargs):
@@ -360,7 +473,7 @@ def _scatter(Ys,
             raise ValueError('use single 3d array')
         if len(colors) > 1:
             raise ValueError('choose a single color')
-        figsize = (4*2,4*2)
+        figsize = (4*2, 4*2)
         Y = Ys[0]
         Ys = [Y[:,[1,2]], Y[:,[0,1]], Y, Y[:,[0,2]]]
     # try importing Axes3D

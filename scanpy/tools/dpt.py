@@ -128,9 +128,9 @@ def plot(ddpt, adata, dplot=None,
          comps='1,2',
          cont=None,
          layout='2d',
-         legendloc='lower right',
+         legendloc='right margin',
          cmap=None,
-         adjust_right=0.75):
+         right_margin=None):
     """
     Plot results of DPT analysis.
 
@@ -153,29 +153,29 @@ def plot(ddpt, adata, dplot=None,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
+    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
     cmap : str (default: continuous: viridis/ categorical: finite palette)
          String denoting matplotlib color map.
-    adjust_right : float (default: 0.75)
+    right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     """
     # plot segments and pseudotimes
-    plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
-    # if number of genes is not too high, plot time series
+#     plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
+#     # if number of genes is not too high, plot time series
     from .. import plotting as plott
-    X = adata.X
-    if X.shape[1] <= 11:
-        # plot time series as gene expression vs time
-        plott.timeseries(X[ddpt['indices']], adata.var_names,
-                         highlightsX=ddpt['changepoints'],
-                         xlim=[0, 1.3*X.shape[0]])
-        plott.savefig(ddpt['writekey']+'_vsorder')
-    elif X.shape[1] < 50:
-        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
-                                    highlightsX=ddpt['changepoints'])
-        plott.savefig(ddpt['writekey']+'_heatmap')
+#     X = adata.X
+#     if X.shape[1] <= 11:
+#         # plot time series as gene expression vs time
+#         plott.timeseries(X[ddpt['indices']], adata.var_names,
+#                          highlightsX=ddpt['changepoints'],
+#                          xlim=[0, 1.3*X.shape[0]])
+#         plott.savefig(ddpt['writekey']+'_vsorder')
+#     elif X.shape[1] < 50:
+#         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+#         plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
+#                                     highlightsX=ddpt['changepoints'])
+#         plott.savefig(ddpt['writekey']+'_heatmap')
 
     if dplot is not None:
         ddpt['Y'] = dplot['Y']
@@ -200,7 +200,8 @@ def plot(ddpt, adata, dplot=None,
     plott.plot_tool(ddpt, adata,
                     smp=smp,
                     component_name=component_name,
-                    legendloc=legendloc)
+                    legendloc=legendloc,
+                    right_margin=right_margin)
 
 def plot_segments_pseudotimes(ddpt, cmap):
     """ 

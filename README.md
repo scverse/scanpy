@@ -1,4 +1,5 @@
-[Example Use](#example_use) | 
+[Quick Start](#quick_start) | 
+[Example Library](examples) | 
 [Tools](#tools) | 
 [Installation](#install) | 
 [References](#references)
@@ -7,8 +8,6 @@
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
 of dynamic biological processes from snapshots of transcriptome or proteome.
-[Examples](examples) and [preprocess](scanpy/tools/preprocess) summarize a high
-number of use cases and preprocessing methods, respectively.
 
 * [pca](scanpy/tools/pca.py) - Visualize data using PCA.
 
@@ -34,7 +33,7 @@ as a library. Potential coauthors who would like to work on software and
 manuscript are welcome! Contributors, who just want to add their own example or
 tool are welcome, too! Any comments are appreciated!
 
-## Example Use <a id="example_use"></a>
+## Quick Start <a id="quick_start"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
 into its root directory. Type `pip install -e .` and work with the top-level
