@@ -20,7 +20,7 @@ def test_shortest_path():
     params['k'] = 2
     params['knn'] = True
     params['sigma'] = 0
-    params['nr_pcs'] = 30
+    params['n_pcs'] = 30
     params['fates'] = {'test': 4}
     ct = sc.tools.paths.Commute(X, params)
     ct.iroot = 3
@@ -50,7 +50,7 @@ def test_distance_metrics():
     params['k'] = 2
     params['knn'] = True
     params['sigma'] = 0
-    params['nr_pcs'] = 30
+    params['n_pcs'] = 30
     from scanpy import graph
     ct = graph.DataGraph(X, params)
 

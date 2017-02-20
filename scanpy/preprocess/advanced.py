@@ -53,7 +53,7 @@ def weinreb16(adata):
     sett.m(0, 'preprocess: weinreb16')
     mean_filter = 0.01
     cv_filter = 2
-    nr_pcs = 50
+    n_pcs = 50
 
     # row normalize
     adata.X = row_norm(adata.X, max_fraction=0.05, mult_with_mean=True)
@@ -64,7 +64,7 @@ def weinreb16(adata):
 
     # compute zscore of filtered matrix and create PCA
     Xz = zscore(adata.X)
-    Xpca = pca(Xz, nr_comps=nr_pcs)
+    Xpca = pca(Xz, n_comps=n_pcs)
 
     # update adata
     adata['Xpca'] = Xpca

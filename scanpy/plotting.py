@@ -74,7 +74,7 @@ def plot_tool(dplot, adata,
         Y = dplot['Y'][:, comps]
     except IndexError:
         sett.mi('IndexError: Only computed', dplot['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey PLOTTOOL -p nr_comps YOUR_NR')
+        sett.mi('--> recompute using scanpy exkey PLOTTOOL -p n_comps YOUR_NR')
         from sys import exit
         exit(0)
 
@@ -579,13 +579,13 @@ def ranking(drankings, adata, nr=20):
 
     # one panel for each ranking
     scoreskey = drankings['scoreskey']
-    nr_panels = len(drankings['rankings_names'])
+    n_panels = len(drankings['rankings_names'])
     # maximal number of genes that is shown
-    nr_genes = nr
+    n_genes = nr
 
     def get_scores(irank):
         allscores = drankings[scoreskey][irank]
-        scores = allscores[drankings['rankings_geneidcs'][irank, :nr_genes]]
+        scores = allscores[drankings['rankings_geneidcs'][irank, :n_genes]]
         scores = np.abs(scores)
         return scores
 
@@ -599,21 +599,21 @@ def ranking(drankings, adata, nr=20):
     ymax += 0.3*(ymax-ymin)
 
     # number of panels
-    if nr_panels <= 5:
-        nr_panels_y = 1
-        nr_panels_x = nr_panels
+    if n_panels <= 5:
+        n_panels_y = 1
+        n_panels_x = n_panels
     else:
-        nr_panels_y = 2
-        nr_panels_x = int(nr_panels/2+0.5)
+        n_panels_y = 2
+        n_panels_x = int(n_panels/2+0.5)
 
-    fig = pl.figure(figsize=(nr_panels_x*4,nr_panels_y*4))
+    fig = pl.figure(figsize=(n_panels_x*4,n_panels_y*4))
     pl.subplots_adjust(left=0.15,top=0.9,right=0.98,bottom=0.13)
 
     count = 1
     for irank in range(len(drankings['rankings_names'])):
-        fig.add_subplot(nr_panels_y,nr_panels_x,count)
+        fig.add_subplot(n_panels_y,n_panels_x,count)
         scores = get_scores(irank)
-        for ig,g in enumerate(drankings['rankings_geneidcs'][irank, :nr_genes]):
+        for ig,g in enumerate(drankings['rankings_geneidcs'][irank, :n_genes]):
             marker = (r'\leftarrow' if drankings['zscores'][irank,g] < 0 
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
@@ -624,9 +624,9 @@ def ranking(drankings, adata, nr=20):
                     fontsize=8)
         title = drankings['rankings_names'][irank]
         pl.title(title)
-        if nr_panels <= 5 or count > nr_panels_x:
+        if n_panels <= 5 or count > n_panels_x:
             pl.xlabel('ranking')
-        if count == 1 or count == nr_panels_x+1: 
+        if count == 1 or count == n_panels_x+1: 
             pl.ylabel(scoreskey)
         else:
             pl.yticks([])

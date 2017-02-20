@@ -24,7 +24,7 @@ from .. import utils
 
 step_size = 10
 
-def drawg(adata, k=4, nr_comps=2):
+def drawg(adata, k=4, n_comps=2):
     u"""
     Visualize data using graph drawing algorithms.
 
@@ -39,7 +39,7 @@ def drawg(adata, k=4, nr_comps=2):
             If it exists, drawg will use this instead of adata.X.
     k : int
         Number of nearest neighbors in graph.
-    nr_comps : int
+    n_comps : int
         Number of principal components in preprocessing PCA.
 
     Returns
@@ -76,8 +76,8 @@ def drawg(adata, k=4, nr_comps=2):
     # just sample initial positions, the rest is done by the plotting tool
     np.random.seed(1)
     Y = np.asarray(np.random.random((Adj.shape[0], 2)), dtype=Adj.dtype)
-    nr_steps = 12
-    for istep in 1 + np.arange(nr_steps, dtype=int):
+    n_steps = 12
+    for istep in 1 + np.arange(n_steps, dtype=int):
         sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
         Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
     return {'type': 'drawg', 'Y': Y, 'Adj': Adj, 'istep': istep}

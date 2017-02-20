@@ -93,7 +93,7 @@ def paul15pca():
     adata = paul15_raw()
     adata.X = sc.pp.log(adata.X)
     # reduce to 50 components
-    adata['Xpca'] = sc.pca(adata.X, nr_comps=50)
+    adata['Xpca'] = sc.pca(adata.X, n_comps=50)
     # adjust expression vector of root cell
     adata['xroot'] = adata['Xpca'][adata['iroot']]
     return adata    

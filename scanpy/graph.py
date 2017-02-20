@@ -351,12 +351,12 @@ class DataGraph(object):
         - Is based on the M matrix. 
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
-        if self.M.shape[0] > 1000 and self.params['nr_pcs'] == 0:
+        if self.M.shape[0] > 1000 and self.params['n_pcs'] == 0:
             sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-                   '    by setting nr_pcs > 0 you can speed up the computation')
-        if self.params['nr_pcs'] > 0 and self.M.shape[0] > self.params['nr_pcs']:
+                   '    by setting n_pcs > 0 you can speed up the computation')
+        if self.params['n_pcs'] > 0 and self.M.shape[0] > self.params['n_pcs']:
             import scanpy.preprocess as pp
-            self.M = pp.pca(self.M, nr_comps=self.params['nr_pcs'])
+            self.M = pp.pca(self.M, n_comps=self.params['n_pcs'])
         self.Ddiff = sp.spatial.distance.pdist(self.M)
         self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
         sett.mt(0, 'computed Ddiff distance matrix')

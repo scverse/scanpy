@@ -23,7 +23,7 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
-def tsne(adata, nr_pcs=50, perplexity=30):
+def tsne(adata, n_pcs=50, perplexity=30):
     u"""
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
@@ -34,7 +34,7 @@ def tsne(adata, nr_pcs=50, perplexity=30):
         adata['Xpca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, tsne will use this instead of adata.X.
-    nr_pcs : int
+    n_pcs : int
         Number of principal components in preprocessing PCA.
 
     Parameters as used in sklearn.manifold.TSNE:
@@ -55,15 +55,15 @@ def tsne(adata, nr_pcs=50, perplexity=30):
         X = adata['Xpca']
         sett.m(0, 'using Xpca for tSNE')
     else:
-        if params['nr_pcs'] > 0 and adata.X.shape[1] > params['nr_pcs']:
-            sett.m(0, 'preprocess using PCA with', params['nr_pcs'], 'PCs')
-            sett.m(0, '--> avoid this by setting nr_pcs = 0')
-            dpca = pca(adata, nr_comps=params['nr_pcs'])
+        if params['n_pcs'] > 0 and adata.X.shape[1] > params['n_pcs']:
+            sett.m(0, 'preprocess using PCA with', params['n_pcs'], 'PCs')
+            sett.m(0, '--> avoid this by setting n_pcs = 0')
+            dpca = pca(adata, n_comps=params['n_pcs'])
             X = dpca['Y']
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {k: v for k, v in params.items() if not k=='nr_pcs'}
+    params_sklearn = {k: v for k, v in params.items() if not k=='n_pcs'}
     params_sklearn['verbose'] = sett.verbosity
     # deal with different tSNE implementations
     try:

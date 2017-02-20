@@ -109,7 +109,7 @@ def example(exkey, return_module=False):
         adata = exfunc()
         # add exkey to adata
         adata['exkey'] = exkey
-        sett.m(0, 'X has shape nr_samples x nr_variables =', 
+        sett.m(0, 'X has shape n_samples x n_variables =', 
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
         adata = check_adata(adata)

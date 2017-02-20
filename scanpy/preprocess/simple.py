@@ -56,7 +56,7 @@ def log(X):
     X = np.log(X + 1)
     return X
 
-def pca(X, nr_comps=50, exact=True):
+def pca(X, n_comps=50, exact=True):
     """
     Return PCA representation of data.
 
@@ -64,19 +64,19 @@ def pca(X, nr_comps=50, exact=True):
     ----------
     X : np.ndarray
         Data matrix.
-    nr_comps : int
+    n_comps : int
         Number of PCs to compute.
 
     Returns
     -------
     Y : np.ndarray
-        Data projected on nr_comps PCs.
+        Data projected on n_comps PCs.
     """
     from .. import settings as sett
-    if X.shape[1] < nr_comps:
-        nr_comps = X.shape[1]-1
+    if X.shape[1] < n_comps:
+        n_comps = X.shape[1]-1
         sett.m(0, 'reducing number of computed PCs to', 
-               nr_comps, 'as dim of data is only', X.shape[1])
+               n_comps, 'as dim of data is only', X.shape[1])
     # deal with multiple PCA implementations
     try:
         from sklearn.decomposition import PCA
@@ -86,13 +86,13 @@ def pca(X, nr_comps=50, exact=True):
         else:
             # run randomized, more efficient version
             svd_solver = 'randomized'
-        sett.mt(0, 'compute PCA with nr_comps =', nr_comps)
-        p = PCA(n_components=nr_comps, svd_solver=svd_solver)
+        sett.mt(0, 'compute PCA with n_comps =', n_comps)
+        p = PCA(n_components=n_comps, svd_solver=svd_solver)
         Y = p.fit_transform(X)
         sett.mt(0, 'computed PCA')
         sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
-        Y = _pca_fallback(X, nr_comps=nr_comps, exact=exact)
+        Y = _pca_fallback(X, n_comps=n_comps, exact=exact)
         sett.mt(0,'preprocess: computed PCA using fallback code\n',
                 '--> can be sped up by installing package scikit-learn\n',
                 '    or by setting the option exact=False')
@@ -165,7 +165,7 @@ def zscore(X):
 # Helper Functions
 #--------------------------------------------------------------------------------
 
-def _pca_fallback(data, nr_comps=2, exact=False):
+def _pca_fallback(data, n_comps=2, exact=False):
     # mean center the data
     data -= data.mean(axis=0)
     # calculate the covariance matrix
@@ -176,14 +176,14 @@ def _pca_fallback(data, nr_comps=2, exact=False):
     if exact:
         evals, evecs = np.linalg.eigh(C)
     else:
-        evals, evecs = sp.sparse.linalg.eigsh(C, k=nr_comps)
+        evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
     # sort eigenvalues in decreasing order
     idcs = np.argsort(evals)[::-1]
     evecs = evecs[:, idcs]
     evals = evals[idcs]
     # select the first n eigenvectors (n is desired dimension
-    # of rescaled data array, or nr_comps)
-    evecs = evecs[:, :nr_comps]
+    # of rescaled data array, or n_comps)
+    evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
 

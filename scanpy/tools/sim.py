@@ -67,17 +67,17 @@ def plot(ddata):
     X = ddata['X']
     genenames = ddata['col_names']
     tmax = ddata['tmax_write']
-    nr_real = X.shape[0]/tmax
+    n_real = X.shape[0]/tmax
     plott.timeseries(X, genenames,
                      xlim=[0,1.25*X.shape[0]],
-                     highlightsX=np.arange(tmax,nr_real*tmax,tmax),
+                     highlightsX=np.arange(tmax,n_real*tmax,tmax),
                      xlabel='realizations / time steps')
     plott.savefig(sett.basekey + '_sim')
     # shuffled data
     X, rows = utils.subsample(X, seed=1)
     plott.timeseries(X, genenames,
                      xlim=[0,1.25*X.shape[0]],
-                     highlightsX=np.arange(tmax,nr_real*tmax,tmax),
+                     highlightsX=np.arange(tmax,n_real*tmax,tmax),
                      xlabel='index (arbitrary order)')
     plott.savefig(sett.basekey + '_sim_shuffled')
     if not sett.savefigs and sett.autoshow:
@@ -565,15 +565,15 @@ class GRNsim:
                 self.Adj_signed = np.sign(Coupl)
         elif self.model in ['6','7','8','9','10']:
             self.Adj_signed = np.zeros((self.dim,self.dim))
-            nr_sinknodes = 2
+            n_sinknodes = 2
 #             sinknodes = np.random.choice(np.arange(0,self.dim),
-#                                              size=nr_sinknodes,replace=False)
+#                                              size=n_sinknodes,replace=False)
             sinknodes = np.array([0,1])
             # assume sinknodes have feeback
-            self.Adj_signed[sinknodes,sinknodes] = np.ones(nr_sinknodes)
+            self.Adj_signed[sinknodes,sinknodes] = np.ones(n_sinknodes)
 #             # allow negative feedback
 #             if self.model == 10:
-#                 plus_minus = (np.random.randint(0,2,nr_sinknodes) - 0.5)*2
+#                 plus_minus = (np.random.randint(0,2,n_sinknodes) - 0.5)*2
 #                 self.Adj_signed[sinknodes,sinknodes] = plus_minus
             leafnodes = np.array(sinknodes)
             availnodes = np.array([i for i in range(self.dim) if i not in sinknodes])
@@ -908,7 +908,7 @@ def sample_coupling_matrix(dim=3,connectivity=0.5):
     for trial in range(max_trial):
         # random topology for a given connectivity / edge density 
         Coupl = np.zeros((dim,dim))
-        nr_edges = 0
+        n_edges = 0
         for gp in range(dim):
             for g in range(dim):
                 if gp != g:
@@ -916,19 +916,19 @@ def sample_coupling_matrix(dim=3,connectivity=0.5):
                     # connectivity=1 would lead to dim*(dim-1) edges
                     if np.random.rand() < 0.5*connectivity:
                         Coupl[gp,g] = 0.7
-                        nr_edges += 1
+                        n_edges += 1
         # obtain adjacancy matrix 
         Adj_signed = np.zeros((dim,dim),dtype='int_')
         Adj_signed = np.sign(Coupl)
         Adj = np.abs(Adj_signed)
         # check for cycles and whether there is at least one edge
-        if check_nocycles(Adj) and nr_edges > 0:
+        if check_nocycles(Adj) and n_edges > 0:
             check = True
             break
     if not check:
         raise ValueError('did not find graph without cycles after',
                          max_trial,'trials')    
-    return Coupl, Adj, Adj_signed, nr_edges
+    return Coupl, Adj, Adj_signed, n_edges
 
 class StaticCauseEffect:
     """ 
@@ -967,14 +967,14 @@ class StaticCauseEffect:
            Adj (np.array): adjacancy matrix of shape (dim,dim).  
 
         Returns:
-           Data array of shape (nr_samples,dim).  
+           Data array of shape (n_samples,dim).  
         """
         # nice examples
         examples = [{'func' : 'sawtooth', 'gdist' : 'uniform', 
                      'sigma_glob' : 1.8, 'sigma_noise' : 0.1}]
 
         # nr of samples
-        nr_samples = 100
+        n_samples = 100
 
         # noise
         sigma_glob = 1.8
@@ -988,7 +988,7 @@ class StaticCauseEffect:
 
         # loop over source nodes
         dim = Adj.shape[0]
-        X = np.zeros((nr_samples,dim))
+        X = np.zeros((n_samples,dim))
         # source nodes have no parents themselves
         nrpar = 0
         children = list(range(dim))
@@ -996,9 +996,9 @@ class StaticCauseEffect:
         for gp in range(dim):
             if Adj[gp,:].sum() == nrpar:
                 if sourcedist == 'gaussian':
-                    X[:,gp] = np.random.normal(0,sigma_glob,nr_samples)
+                    X[:,gp] = np.random.normal(0,sigma_glob,n_samples)
                 if sourcedist == 'uniform':
-                    X[:,gp] = np.random.uniform(-sigma_glob,sigma_glob,nr_samples)
+                    X[:,gp] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
                 parents.append(gp)
                 children.remove(gp)
                     
@@ -1027,7 +1027,7 @@ class StaticCauseEffect:
             for g in range(dim):
                 if Adj[gp,g] > 0:
                     X[:,gp] += 1./Adj[gp,:].sum()*func(X[:,g])
-            X[:,gp] += np.random.normal(0,sigma_noise,nr_samples)
+            X[:,gp] += np.random.normal(0,sigma_noise,n_samples)
 
 #         fig = pl.figure()
 #         fig.add_subplot(311)
@@ -1048,13 +1048,13 @@ class StaticCauseEffect:
         Returns:
 
         """
-        nr_samples = 500
+        n_samples = 500
         sigma_glob = 1.8
 
-        X = np.zeros((nr_samples,3))
+        X = np.zeros((n_samples,3))
         
-        X[:,0] = np.random.uniform(-sigma_glob,sigma_glob,nr_samples)
-        X[:,1] = np.random.uniform(-sigma_glob,sigma_glob,nr_samples)
+        X[:,0] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
+        X[:,1] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
 
         func = self.funcs['tanh']
 
@@ -1079,22 +1079,22 @@ def sample_static_data(model,dir,verbosity=0):
     # in one direction, which amounts to dim*(dim-1)/2 edges
     connectivity = 0.8
     dim = 3
-    nr_Coupls = 50
+    n_Coupls = 50
     model = model.replace('static-','')
     np.random.seed(0)
 
     if model != 'combi':
-        nr_edges = np.zeros(nr_Coupls)
-        for icoupl in range(nr_Coupls):
-            Coupl, Adj, Adj_signed, nr_e = sample_coupling_matrix(dim,connectivity)
+        n_edges = np.zeros(n_Coupls)
+        for icoupl in range(n_Coupls):
+            Coupl, Adj, Adj_signed, n_e = sample_coupling_matrix(dim,connectivity)
             if verbosity > 1:
                 sett.m(0,icoupl)
                 sett.m(0,Adj)
-            nr_edges[icoupl] = nr_e
+            n_edges[icoupl] = n_e
             # sample data
             X = StaticCauseEffect().sim_givenAdj(Adj,model)
             write_data(X,dir,Adj=Adj)
-        sett.m(0,'mean edge number:',nr_edges.mean())
+        sett.m(0,'mean edge number:',n_edges.mean())
 
     else:
         X = StaticCauseEffect().sim_combi()

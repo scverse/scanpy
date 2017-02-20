@@ -16,7 +16,7 @@ from .. import utils
 from .. import preprocess as pp
 from ..ann_data import AnnData
 
-def pca(adata_or_X, nr_comps=10):
+def pca(adata_or_X, n_comps=10):
     """
     Embed data using PCA.
 
@@ -25,7 +25,7 @@ def pca(adata_or_X, nr_comps=10):
     adata_or_X : dict containing
         X : np.ndarray
             Data array, rows store observations, columns variables.
-    nr_comps : int, optional (default: 2)
+    n_comps : int, optional (default: 2)
         Number of PCs.
 
     Returns
@@ -40,10 +40,10 @@ def pca(adata_or_X, nr_comps=10):
         adata = adata_or_X
     else:
         X = adata_or_X
-    if isadata and 'Xpca' in adata and adata['Xpca'].shape[1] > nr_comps:
+    if isadata and 'Xpca' in adata and adata['Xpca'].shape[1] > n_comps:
         Y = adata['Xpca']
     else:
-        Y = pp.pca(X, nr_comps)
+        Y = pp.pca(X, n_comps)
     if isadata:
         return {'type': 'pca', 'Y': Y}
     else:

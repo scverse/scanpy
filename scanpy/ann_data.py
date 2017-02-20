@@ -30,9 +30,9 @@ class BoundRecArr(np.recarray):
     A np.recarray which can be constructed from a dict.
     Is bound to AnnData to allow adding fields
     """
-    def __new__(cls, source, name_col, parent, nr_row=None):
+    def __new__(cls, source, name_col, parent, n_row=None):
         if source is None:  # empty array
-            cols = [np.arange(nr_row)]
+            cols = [np.arange(n_row)]
             dtype = [(name_col, 'int64')]
         elif isinstance(source, np.recarray):
             cols = [source[n] for n in source.dtype.names]
@@ -84,23 +84,23 @@ class BoundRecArr(np.recarray):
             super(BoundRecArr, self).__setitem__(key, value)
 
 def _check_dimensions(data, smp, var):
-    nr_smp, nr_var = data.shape
-    if len(smp) != nr_smp:
+    n_smp, n_var = data.shape
+    if len(smp) != n_smp:
         raise ValueError('Sample metadata needs to have the same amount of '
                          'rows as data has ({}), but has {} rows'
-                         .format(nr_smp, smp.shape[0]))
-    if len(var) != nr_var:
+                         .format(n_smp, smp.shape[0]))
+    if len(var) != n_var:
         raise ValueError('Feature metadata needs to have the same amount of '
                          'rows as data has columns ({}), but has {} rows'
-                         .format(nr_var, var.shape[0]))
+                         .format(n_var, var.shape[0]))
 
 class AnnData(IndexMixin):
     def __init__(self, ddata_or_X=None, smp=None, var=None, vis=None, **meta):
         """
         Annotated Data
 
-        Stores a data matrix X of dimensions nr_samples x nr_variables,
-        e.g. nr_cells x nr_genes, with the possibility to store an arbitrary
+        Stores a data matrix X of dimensions n_samples x n_variables,
+        e.g. n_cells x n_genes, with the possibility to store an arbitrary
         number of annotations for both samples and variables.
 
         You can access additional metadata elements directly from the AnnData:
@@ -125,21 +125,21 @@ class AnnData(IndexMixin):
         Parameters
         ----------
         ddata_or_X : np.ndarray, np.ma.MaskedArray, sp.spmatrix, dict
-            Either a nr_samples x nr_variables data matrix, or a dict, containing:
+            Either a n_samples x n_variables data matrix, or a dict, containing:
             X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-                A nr_samples x nr_variables data matrix.
+                A n_samples x n_variables data matrix.
             row_names : list, np.ndarray, optional
-                A nr_samples array storing names for samples.
+                A n_samples array storing names for samples.
             col_names : list, np.ndarray, optional
-                A nr_variables array storing names for variables.
+                A n_variables array storing names for variables.
             row : dict, optional
                 A dict with row annotation.
         smp : np.recarray, dict
-            A nr_samples x ? record array containing sample names (`smp_names`)
+            A n_samples x ? record array containing sample names (`smp_names`)
             and other sample annotation in the columns. A passed dict is
             converted to a record array.
         var : np.recarray, dict
-            The same as `smp`, but of shape nr_variables x ? for annotation of
+            The same as `smp`, but of shape n_variables x ? for annotation of
             variables.
         vis : dict
             A dict containing visualization metadata.
@@ -174,12 +174,12 @@ class AnnData(IndexMixin):
             raise ValueError('X needs to be 2-dimensional, not '
                              '{}D'.format(len(X.shape)))
 
-        nr_smp, nr_var = X.shape
+        n_smp, n_var = X.shape
 
         self.X = X
 
-        self.smp = BoundRecArr(smp, SMP_NAMES, self, nr_smp)
-        self.var = BoundRecArr(var, VAR_NAMES, self, nr_var)
+        self.smp = BoundRecArr(smp, SMP_NAMES, self, n_smp)
+        self.var = BoundRecArr(var, VAR_NAMES, self, n_var)
 
         _check_dimensions(X, self.smp, self.var)
 
