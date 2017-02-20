@@ -157,6 +157,10 @@ def run_args(toolkey, args):
         if args['oparams']:
             add_params = readwrite.get_params_from_list(args['oparams'])
             oparams = utils.update_params(oparams, add_params)
+            sett.m(0, '... overwriting optional params', '"' + 
+                   ' '.join([' '.join([k, str(v)]) for k, v in oparams.items()])
+                   + '"',
+                  'to call of', toolkey)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
 
