@@ -37,7 +37,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['Xpca']: np.ndarray
+        adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, dpt will use this instead of adata.X.
         adata['xroot'] : np.ndarray

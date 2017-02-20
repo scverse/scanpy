@@ -40,8 +40,8 @@ def pca(adata_or_X, n_comps=10):
         adata = adata_or_X
     else:
         X = adata_or_X
-    if isadata and 'Xpca' in adata and adata['Xpca'].shape[1] > n_comps:
-        Y = adata['Xpca']
+    if isadata and 'X_pca' in adata and adata['X_pca'].shape[1] > n_comps:
+        Y = adata['X_pca']
     else:
         Y = pp.pca(X, n_comps)
     if isadata:

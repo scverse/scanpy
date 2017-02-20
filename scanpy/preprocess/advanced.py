@@ -29,7 +29,7 @@ def subsample(adata, subsample, seed=0):
     from .. import utils
     _, smp_indices = utils.subsample(adata.X,subsample,seed)
     adata = adata[smp_indices, ]
-    for key in ['Xpca']:
+    for key in ['X_pca']:
         if key in adata:
             adata[key] = adata[key][smp_indices]
     for k in adata.smp_keys():
@@ -64,10 +64,10 @@ def weinreb16(adata):
 
     # compute zscore of filtered matrix and create PCA
     Xz = zscore(adata.X)
-    Xpca = pca(Xz, n_comps=n_pcs)
+    X_pca = pca(Xz, n_comps=n_pcs)
 
     # update adata
-    adata['Xpca'] = Xpca
-    sett.m(0, 'Xpca has shape', adata['Xpca'].shape[0], 'x', adata['Xpca'].shape[1])
+    adata['X_pca'] = X_pca
+    sett.m(0, 'X_pca has shape', adata['X_pca'].shape[0], 'x', adata['X_pca'].shape[1])
 
     return adata

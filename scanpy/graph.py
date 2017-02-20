@@ -31,9 +31,9 @@ class DataGraph(object):
             X_or_Dsq = adata_or_X_or_Dsq
         if isadata:
             self.Dsq = None
-            if 'Xpca' in adata:
-                self.X = adata['Xpca']
-                sett.m(0, '--> using Xpca for building graph')
+            if 'X_pca' in adata:
+                self.X = adata['X_pca']
+                sett.m(0, '--> using X_pca for building graph')
             else:
                 self.X = adata.X
                 sett.m(0, '--> using X for building graph')
@@ -426,7 +426,7 @@ class DataGraph(object):
         if self.X.shape[1] != xroot.size:
             raise ValueError('The root vector you provided does not have the '
                              'correct dimension. Make sure you provide the dimension-'
-                             'reduced version, if you provided Xpca.')
+                             'reduced version, if you provided X_pca.')
         # this is the squared distance
         dsqroot = 1e10
         self.iroot = 0

@@ -31,7 +31,7 @@ def tsne(adata, n_pcs=50, perplexity=30):
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['Xpca']: np.ndarray
+        adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, tsne will use this instead of adata.X.
     n_pcs : int
@@ -51,9 +51,9 @@ def tsne(adata, n_pcs=50, perplexity=30):
     sett.m(0,'perform tSNE')
     sett.m(0,'--> mind that this is not deterministic!')
     # preprocessing by PCA
-    if 'Xpca' in adata:
-        X = adata['Xpca']
-        sett.m(0, 'using Xpca for tSNE')
+    if 'X_pca' in adata:
+        X = adata['X_pca']
+        sett.m(0, 'using X_pca for tSNE')
     else:
         if params['n_pcs'] > 0 and adata.X.shape[1] > params['n_pcs']:
             sett.m(0, 'preprocess using PCA with', params['n_pcs'], 'PCs')

@@ -34,7 +34,7 @@ def drawg(adata, k=4, n_comps=2):
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['Xpca']: np.ndarray
+        adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, drawg will use this instead of adata.X.
     k : int
@@ -49,9 +49,9 @@ def drawg(adata, k=4, n_comps=2):
             Fruchterman Reingold representation of data.
     """
     sett.m(0,'draw knn graph')
-    if 'Xpca' in adata:
-        X = adata['Xpca']
-        sett.m(0, '--> using Xpca for building graph')
+    if 'X_pca' in adata:
+        X = adata['X_pca']
+        sett.m(0, '--> using X_pca for building graph')
     else:
         X = adata.X
         sett.m(0, '--> using X for building graph')
