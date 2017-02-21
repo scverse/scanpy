@@ -76,7 +76,7 @@ this is plotted using Diffusion Maps, but you might just as well plot the subgro
 plotting tool.
 ```
 scanpy moignard15 dpt
-scanpy moignard15 dpt tsne
+scanpy moignard15 dpt -p basis tsne
 ```
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_diffmap_pseudotimes_segments_groups.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_segpt.png" height="175">
