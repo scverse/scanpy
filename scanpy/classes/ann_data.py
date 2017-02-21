@@ -109,15 +109,17 @@ class AnnData(IndexMixin):
 
         Parameters
         ----------
-        ddata_or_X : np.ndarray, np.ma.MaskedArray, sp.spmatrix, dict
-            Either a n_samples x n_variables data matrix, or a dict, containing:
+        ddata_or_X : dict, np.ndarray, np.ma.MaskedArray, sp.spmatrix
+            The data matrix or a dict containing the data matrix and possibly
             X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
                 A n_samples x n_variables data matrix.
-            row_names : list, np.ndarray, optional
+            row_names / smp_names : list, np.ndarray, optional
                 A n_samples array storing names for samples.
-            col_names : list, np.ndarray, optional
+            col_names / var_names : list, np.ndarray, optional
                 A n_variables array storing names for variables.
-            row : dict, optional
+            row / smp : dict, optional
+                A dict with row annotation.
+            col / var : dict, optional
                 A dict with row annotation.
         smp : np.recarray, dict
             A n_samples x ? record array containing sample names (`smp_names`)
@@ -193,8 +195,9 @@ class AnnData(IndexMixin):
 
         smp = odict_merge(smp, meta.get('row', {}), meta.get('smp', {}))
         var = odict_merge(var, meta.get('col', {}), meta.get('var', {}))
-        for n in {'row', 'smp', 'col', 'var'} & meta.keys():
-            del meta[n]
+        for k in ['row', 'smp', 'col', 'var']:
+            if k in meta:
+                del meta[k]
 
         return X, smp, var, meta
 
