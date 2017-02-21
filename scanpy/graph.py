@@ -31,7 +31,7 @@ class DataGraph(object):
             X_or_Dsq = adata_or_X_or_Dsq
         if isadata:
             self.Dsq = None
-            if 'X_pca' in adata:
+            if 'X_pca' in adata and adata.X.shape[1] > 50:
                 self.X = adata['X_pca']
                 sett.m(0, '--> using X_pca for building graph')
             else:
@@ -120,9 +120,8 @@ class DataGraph(object):
                 sett.m(0, '--> high number of dimensions for computing distance matrix\n'
                        '    consider preprocessing using PCA')
             # compute distance matrix in squared Euclidian norm
-            Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
-        else:
-            Dsq = self.Dsq
+            self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
+        Dsq = self.Dsq
         if self.params['method'] == 'local':
             # choose sigma (width of a Gaussian kernel) according to the
             # distance of the kth nearest neighbor of each point, including the
@@ -404,11 +403,11 @@ class DataGraph(object):
         sett.mt(0,'computed mean first passage time matrix')
         self.Dchosen = self.MFP
 
-    def set_pseudotimes(self):
+    def set_pseudotime(self):
         """
-        Return pseudotimes with respect to root point.
+        Return pseudotime with respect to root point.
         """
-        self.pseudotimes = self.Dchosen[self.iroot]/np.max(self.Dchosen[self.iroot])
+        self.pseudotime = self.Dchosen[self.iroot]/np.max(self.Dchosen[self.iroot])
 
     def find_root(self,xroot):
         """ 

@@ -42,8 +42,7 @@ def write(filename_or_key, dict_or_adata):
     """
     from .ann_data import AnnData
     if isinstance(dict_or_adata, AnnData):
-        dictionary = dict_or_adata.to_dict()
-        dictionary['isadata'] = True
+        dictionary = dict_or_adata.to_ddata()
     else:
         dictionary = dict_or_adata
     if is_filename(filename_or_key):
@@ -51,12 +50,10 @@ def write(filename_or_key, dict_or_adata):
     else:
         key = filename_or_key
         filename = get_filename_from_key(key)
-        if 'writekey' not in dictionary:
-            dictionary['writekey'] = key
     write_dict_to_file(filename, dictionary, ext=sett.extd)
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
-         as_strings=False, backup_url=''):
+         as_strings=False, backup_url='', return_AnnData=True):
     """
     Read file or dictionary and return data dictionary.
 
@@ -93,9 +90,14 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
     """
+    from .ann_data import AnnData
     if is_filename(filename_or_key):
-        return read_file(filename_or_key, sheet, ext, delim, first_column_names, 
-                         as_strings, backup_url)
+        d = read_file(filename_or_key, sheet, ext, delim, first_column_names, 
+                      as_strings, backup_url)
+        if return_AnnData:
+            return AnnData(d)
+        else:
+            return d
 
     # generate filename and read to dict
     key = filename_or_key
@@ -110,9 +112,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
                          str(avail_exts) + 
                          'or provide the parameter "ext" to sc.read.')
     d = read_file_to_dict(filename)
-    if 'isadata' in d:
-        from .ann_data import AnnData
-        del d['isadata']
+    if return_AnnData:
         return AnnData(d)
     else:
         return d
@@ -287,10 +287,6 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             sys.exit()
         else:
             raise ValueError('unkown extension', ext)
-
-        # specify Scanpy type of dictionary
-        if 'type' not in ddata:
-            ddata['type'] = 'data'
         # write as hdf5 for faster reading when calling the next time
         write_dict_to_file(filename_hdf5, ddata)
     else:

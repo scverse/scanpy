@@ -99,17 +99,14 @@ def add_args(p, dadd_args=None):
             if key != 'arg':
                 aa(key, **val)
 
-    aa = p.add_argument_group('Plotting').add_argument
-    aa('plotkey',
-       type=str, default='', metavar='plotkey', nargs='?',
-       help='Plotting tool for visualization (default: tool dependent).')
+    aa = p.add_argument_group('Plot parameters').add_argument
     aa('-p', '--pparams',
        nargs='*', default=None, metavar='k v',
        help='Plotting parameters as list, '
             'e.g., "layout 3d comps 1,3,4". ' 
             'Display possible paramaters via "-p help" (default: "").')
 
-    aa = p.add_argument_group('Toolchain').add_argument
+    aa = p.add_argument_group('Tool chain').add_argument
     aa('--prev',
        type=str, default='', metavar='tool',
        help='Tool whose result should be used as input, ' 
@@ -158,27 +155,34 @@ def default_tool_argparser(description, dexamples):
 # Others
 #--------------------------------------------------------------------------------
 
-def select_groups(dgroups, groups_names_subset='all', smp='groups'):
+def select_groups(adata, groups_names_subset='all', smp='groups'):
     """
-    Get groups from dgroups.
+    Get subset of groups in adata.smp[smp].
     """
-    groups_names = dgroups[smp + '_names']
-    groups_masks = dgroups[smp + '_masks']
+    groups_names = adata[smp + '_names']
+    if smp + '_masks' in adata:
+        groups_masks = adata[smp + '_masks']
+    else:
+        groups_masks = np.zeros((len(adata[smp + '_names']),
+                                        adata.smp[smp].size), dtype=bool)
+        for iname, name in enumerate(adata[smp + '_names']):
+            groups_masks[iname] = name == adata.smp[smp]
     groups_ids = list(range(len(groups_names)))
     if groups_names_subset != 'all':
         # get list from string
         if isinstance(groups_names_subset, str):
             groups_names_subset = groups_names_subset.split(',')
-        # set groups_names to subset
-        groups_names = np.array(groups_names_subset)
-        groups_ids = np.where(np.in1d(dgroups[smp + '_names'], groups_names))[0]
-        if not np.any(groups_ids):
-            sett.m(0, 'specify valid groups_names for testing, one of',
-                   dgroups[smp + '_names'])
+        groups_ids = np.where(np.in1d(adata[smp + '_names'], np.array(groups_names_subset)))[0]
+        if len(groups_ids) == 0:
+            sett.m(0, np.array(groups_names_subset), 
+                   'invalid! specify valid groups_names for testing, one of',
+                   adata[smp + '_names'])
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-    return groups_names, groups_masks
+    else:
+        groups_names_subset = groups_names
+    return groups_names_subset, groups_masks
 
 def pretty_dict_string(d, indent=0):
     """

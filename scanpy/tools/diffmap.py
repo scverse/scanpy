@@ -26,7 +26,7 @@ from .. import utils
 from .. import settings as sett
 from .. import plotting as plott
 
-def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
+def diffmap(adata, n_comps=10, k=5, knn=False, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -41,7 +41,7 @@ def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
     ----------
     adata : AnnData
         Annotated data matrix.
-    nr_comps : int, optional (default: 3)
+    n_comps : int, optional (default: 3)
         The number of dimensions of the representation.
     k : int, optional (default: 5)
         Specify the number of nearest neighbors in the knn graph. If knn ==
@@ -58,26 +58,20 @@ def diffmap(adata, nr_comps=10, k=5, knn=False, sigma=0):
 
     Returns
     -------
-    ddmap : dict containing
-        Y : np.ndarray
-            Array of shape (number of samples) x (number of eigen
-            vectors). DiffMap representation of data, which is the right eigen
-            basis of transition matrix with eigenvectors as columns.
-        evals : np.ndarray
-            Array of size (number of cells). Eigenvalues of transition matrix.
+    X_diffmap : np.ndarray
+        Array of shape n_samples x n_comps. DiffMap representation of data, which is the right eigen
+        basis of transition matrix with eigenvectors as columns.
     """
     params = locals(); del params['adata']
     dmap = dpt.DPT(adata, params)
     ddmap = dmap.diffmap()
-    ddmap['type'] = 'diffmap'
-    # restrict number of components
-    ddmap['Y'] = ddmap['Y'][:, :params['nr_comps']]
-    return ddmap
+    adata['X_diffmap'] = ddmap['Y'][:, :n_comps]
+    return adata
 
-def plot(dplot, adata,
+def plot(adata,
          smp=None,
          names=None,
-         comps='1,2',
+         comps=None,
          cont=None,
          layout='2d',
          legendloc='right margin',
@@ -89,8 +83,6 @@ def plot(dplot, adata,
 
     Parameters
     ----------
-    dplot : dict
-        Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
     smp : str, optional (default: first annotation)
@@ -116,17 +108,16 @@ def plot(dplot, adata,
          Point size.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, adata,
-                    smp,
-                    names,
-                    comps,
-                    cont,
-                    layout,
-                    legendloc,
-                    cmap,
-                    right_margin,
-                    size=size,
-                    # defined in plotting
-                    subtitles=['diffusion map'],
-                    component_name='DC')
+    plott.plot_tool(adata,
+                    basis='diffmap',
+                    toolkey='diffmap',
+                    smp=smp,
+                    names=names,
+                    comps=comps,
+                    cont=cont,
+                    layout=layout,
+                    legendloc=legendloc,
+                    cmap=cmap,
+                    right_margin=right_margin,
+                    size=size)
 

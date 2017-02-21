@@ -95,32 +95,19 @@ def _check_dimensions(data, smp, var):
                          .format(n_var, var.shape[0]))
 
 class AnnData(IndexMixin):
-    def __init__(self, ddata_or_X=None, smp=None, var=None, vis=None, **meta):
+    def __init__(self, ddata_or_X=None, smp=None, var=None, **meta):
         """
         Annotated Data
 
         Stores a data matrix X of dimensions n_samples x n_variables,
         e.g. n_cells x n_genes, with the possibility to store an arbitrary
-        number of annotations for both samples and variables.
-
+        number of annotations for both samples and variables, and 
+        additional arbitrary unstructured via **meta.
+        
         You can access additional metadata elements directly from the AnnData:
 
         >>> adata = AnnData(np.eye(3), k=1)
         >>> assert adata['k'] == 1
-
-        Visualization metadata (vis) is a dict mapping smp_meta column
-        names to colors. Possible values can be either a palette (a list of
-        colors) or a dict/function mapping values from the corresponding
-        metadata column to colors, e.g.:
-
-        >>> from collections import OrderedDict
-        >>> from matplotlib import cm
-        >>> vis = {
-        ...     'Col1': ['#ff3300', '#ffcc88'],
-        ...     'Col2': {'V1': '#ff3300', 'V2': '#ffcc88'},  # no order!
-        ...     'Col3': OrderedDict([('V1', '#ff3300'), ('V2', '#ffcc88')]),
-        ...     'Col4': cm.magma,
-        ... }
 
         Parameters
         ----------
@@ -141,8 +128,6 @@ class AnnData(IndexMixin):
         var : np.recarray, dict
             The same as `smp`, but of shape n_variables x ? for annotation of
             variables.
-        vis : dict
-            A dict containing visualization metadata.
         **meta : dict
             Unstructured metadata for the whole dataset.
 
@@ -153,7 +138,7 @@ class AnnData(IndexMixin):
         if isinstance(ddata_or_X, Mapping):
             if smp or var or meta:
                 raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata')
-            X, smp, var, meta = self._from_ddata(ddata_or_X)
+            X, smp, var, meta = self.from_ddata(ddata_or_X)
         else:
             X = ddata_or_X
 
@@ -183,11 +168,9 @@ class AnnData(IndexMixin):
 
         _check_dimensions(X, self.smp, self.var)
 
-        self.vis = vis or {}
         self._meta = meta
 
-    @staticmethod
-    def _from_ddata(ddata):
+    def from_ddata(self, ddata):
         smp, var = OrderedDict(), OrderedDict()
 
         meta = ddata.copy()
@@ -217,13 +200,7 @@ class AnnData(IndexMixin):
 
         return X, smp, var, meta
 
-    def smp_keys(self):
-        return [n for n in self.smp.dtype.names if n != SMP_NAMES]
-
-    def var_keys(self):
-        return [n for n in self.var.dtype.names if n != VAR_NAMES]
-
-    def to_dict(self):
+    def to_ddata(self):
         smp = {k: self.smp[k] for k in self.smp_keys() if not k=='smp_names'}
         var = {k: self.var[k] for k in self.var_keys() if not k=='var_names'}
         d = {'X': self.X, 'smp': smp, 'var': var, 
@@ -231,6 +208,12 @@ class AnnData(IndexMixin):
         for k, v in self._meta.items():
             d[k] = v
         return d
+
+    def smp_keys(self):
+        return [n for n in self.smp.dtype.names if n != SMP_NAMES]
+
+    def var_keys(self):
+        return [n for n in self.var.dtype.names if n != VAR_NAMES]
 
     @property
     def smp_names(self):
@@ -287,7 +270,7 @@ class AnnData(IndexMixin):
         var_meta = self.var[var]
         assert smp_meta.shape[0] == X.shape[0], (smp, smp_meta)
         assert var_meta.shape[0] == X.shape[1], (var, var_meta)
-        adata = AnnData(X, smp_meta, var_meta, self.vis, **self._meta)
+        adata = AnnData(X, smp_meta, var_meta,  **self._meta)
         return adata
 
     def __setitem__(self, index, val):
@@ -314,7 +297,7 @@ class AnnData(IndexMixin):
         var = np.rec.array(self.smp)
         var.dtype.names = [VAR_NAMES if n == SMP_NAMES else n
                            for n in var.dtype.names]
-        return AnnData(self.X.T, smp, var, self.vis, **self._meta)
+        return AnnData(self.X.T, smp, var, **self._meta)
 
     T = property(transpose)
 

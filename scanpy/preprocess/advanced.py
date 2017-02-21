@@ -33,7 +33,8 @@ def subsample(adata, subsample, seed=0):
         if key in adata:
             adata[key] = adata[key][smp_indices]
     for k in adata.smp_keys():
-        adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
+        if k + '_masks' in adata:
+            adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
     adata['subsample'] = True
     return adata
 
@@ -68,6 +69,6 @@ def weinreb16(adata):
 
     # update adata
     adata['X_pca'] = X_pca
-    sett.m(0, 'X_pca has shape', adata['X_pca'].shape[0], 'x', adata['X_pca'].shape[1])
-
+    sett.m(0, 'X_pca has shape n_samples x n_comps =',
+           adata['X_pca'].shape[0], 'x', adata['X_pca'].shape[1])
     return adata

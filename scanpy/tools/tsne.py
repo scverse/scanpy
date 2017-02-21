@@ -47,29 +47,28 @@ def tsne(adata, n_pcs=50, perplexity=30):
         Y : np.ndarray
             tSNE representation of the data.
     """
-    params = locals(); del params['adata']
-    sett.m(0,'perform tSNE')
-    sett.m(0,'--> mind that this is not deterministic!')
+    sett.m(0,'compute tSNE')
+    sett.m(0,'... mind that this is not deterministic!')
     # preprocessing by PCA
-    if 'X_pca' in adata:
+    if 'X_pca' in adata and adata['X_pca'].shape[1] > n_pcs:
         X = adata['X_pca']
         sett.m(0, 'using X_pca for tSNE')
     else:
-        if params['n_pcs'] > 0 and adata.X.shape[1] > params['n_pcs']:
-            sett.m(0, 'preprocess using PCA with', params['n_pcs'], 'PCs')
+        if n_pcs > 0 and adata.X.shape[1] > n_pcs:
+            sett.m(0, 'preprocess using PCA with', n_pcs, 'PCs')
             sett.m(0, '--> avoid this by setting n_pcs = 0')
-            dpca = pca(adata, n_comps=params['n_pcs'])
-            X = dpca['Y']
+            X = pca(adata.X, n_comps=n_pcs)
+            adata['X_pca'] = X
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {k: v for k, v in params.items() if not k=='n_pcs'}
+    params_sklearn = {'perplexity' : perplexity}
     params_sklearn['verbose'] = sett.verbosity
     # deal with different tSNE implementations
     try:
         from MulticoreTSNE import MulticoreTSNE as TSNE
         tsne = TSNE(n_jobs=4, **params_sklearn)
-        sett.m(0,'--> perform tSNE using MulticoreTSNE')
+        sett.m(0,'... compute tSNE using MulticoreTSNE')
         Y = tsne.fit_transform(X)
     except ImportError:
         try:
@@ -85,12 +84,13 @@ def tsne(adata, n_pcs=50, perplexity=30):
                      '--> consider installing sklearn\n'
                      '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
-    return {'type': 'tsne', 'Y': Y}
+    adata['X_tsne'] = Y
+    return adata
 
-def plot(dplot, adata,
+def plot(adata,
          smp=None,
          names=None,
-         comps='1,2',
+         comps=None,
          cont=None,
          layout='2d',
          legendloc='right margin',
@@ -129,19 +129,18 @@ def plot(dplot, adata,
          Point size.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, adata,
-                    smp,
-                    names,
-                    comps,
-                    cont,
-                    layout,
-                    legendloc,
-                    cmap,
-                    right_margin,
-                    size=size,
-                    # defined in plotting
-                    subtitles=['tSNE'],
-                    component_name='tSNE')
+    plott.plot_tool(adata,
+                    basis='tsne',
+                    toolkey='tsne',
+                    smp=smp,
+                    names=names,
+                    comps=comps,
+                    cont=cont,
+                    layout=layout,
+                    legendloc=legendloc,
+                    cmap=cmap,
+                    right_margin=right_margin,
+                    size=size)
 
 def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
     """

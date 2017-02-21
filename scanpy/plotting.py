@@ -20,27 +20,30 @@ def savefig(writekey):
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
 
-def plot_tool(dplot, adata,
+def plot_tool(adata,
+              toolkey,
+              basis='pca',
               smp=None,
               names=None,
-              comps='1,2',
+              comps=None,
               cont=None,
               layout='2d',
               legendloc='right margin',
               cmap=None,
               right_margin=None,
               size=3,
-              subtitles=('one title',),
-              component_name='comp'):
+              subtitles=None):
     """
     Scatter plots.
 
     Parameters
     ----------
-    dplot : dict
-        Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
+    toolkey : str
+        Toolkey to use for generating filename.
+    basis : {'pca', 'tsne', 'diffmap'}
+        String that denotes a plotting tool.
     smp : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
@@ -65,18 +68,24 @@ def plot_tool(dplot, adata,
     """
     # compute components
     from numpy import array
+    if comps is None: 
+        comps = '1,2' if '2d' in layout else '1,2,3'
     comps = array(comps.split(',')).astype(int) - 1
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
     highlights = adata['highlights'] if 'highlights' in adata else []
     try:
-        Y = dplot['Y'][:, comps]
-    except IndexError:
-        sett.mi('IndexError: Only computed', dplot['Y'].shape[1], ' components')
-        sett.mi('--> recompute using scanpy exkey PLOTTOOL -p n_comps YOUR_NR')
+        Y = adata['X_' + basis][:, comps]
+    except:
+        sett.mi('--> compute the basis using plotting tool', basis, 'first')
         from sys import exit
         exit(0)
+
+    component_name = ('DC' if basis == 'diffmap'
+                      else 'Spring' if basis == 'spring'
+                      else 'tSNE' if basis == 'tsne'
+                      else 'PC')
 
     colors = []
     categoricals = []
@@ -87,8 +96,10 @@ def plot_tool(dplot, adata,
         continuous = False
         if len(adata.smp_keys()) > 0:
             if smp is None:
-                smp = adata.smp_keys()[0]
-                smps[ismp] = smp
+                for smp_ in adata.smp_keys():
+                    if smp_ not in smps:
+                        smp = smp_
+                        smps[ismp] = smp
             # test whether we have categorial or continuous annotation
             if smp in adata.smp_keys():
                 if adata.smp[smp].dtype.char in ['S', 'U']:
@@ -105,7 +116,8 @@ def plot_tool(dplot, adata,
                 continuous = True
                 sett.m(0, '... coloring according to expression of gene', smp)
             else:
-                raise ValueError('specify valid sample annotation, one of '
+                raise ValueError('"' + smp + '" is invalid!' 
+                                 + ' specify valid sample annotation, one of '
                                  + str(adata.smp_keys()) + ' or a gene name '
                                  + str(adata.var_names))
         if cont is not None:
@@ -117,9 +129,11 @@ def plot_tool(dplot, adata,
             categoricals.append(ismp)
             
     if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.22
+        right_margin = 0.24
+    if subtitles is None:
+        subtitles = [smp.replace('_', ' ') for smp in smps]
     axs = scatter(Y,
-                  subtitles=smps,
+                  subtitles=subtitles,
                   component_name=component_name,
                   component_indexnames=comps + 1,
                   layout=layout,
@@ -138,21 +152,24 @@ def plot_tool(dplot, adata,
             # in adata, that is, if smp has corresponding categories with those 
             # in adata['groups_names']
             adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
-                                    pl.Normalize()(adata['groups_ids']))
+                                    pl.Normalize()(
+                                       np.arange(len(adata['groups_names']), dtype=int)))
         elif not smp + '_colors' in adata:
             adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
-                                            pl.Normalize()(adata[smp + '_ids']))
+                                            pl.Normalize()(
+                                       np.arange(len(adata[smp + '_names']), dtype=int)))
         for iname, name in enumerate(adata[smp + '_names']):
             if (names is None or (names != None and name in names)):
-                group(axs[ismp], smp, iname, adata, dplot['Y'][:, comps], layout, size)
+                group(axs[ismp], smp, iname, adata, Y, layout, size)
         # for the last panel, let's put the legend outside panel
         if legendloc == 'right margin':
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
 
-    writekey = dplot['writekey'] + '_' + '_'.join(smps)
-    savefig(writekey + sett.plotsuffix)
+    writekey = sett.basekey + '_' + toolkey + sett.fsig
+    writekey += '_' + '-'.join(smps) + sett.plotsuffix
+    savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         pl.show()
 
@@ -160,7 +177,13 @@ def group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
     Plot group using representation of data Y.
     """
-    mask = adata[name + '_masks'][imask]
+    if name + '_masks' in adata:
+        mask = adata[name + '_masks'][imask]
+    else:
+        if adata[name + '_names'][imask] in adata.smp[name]:
+            mask = adata[name + '_names'][imask] == adata.smp[name]
+        else:
+            mask = str(imask) == adata.smp[name]
     color = adata[name + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
@@ -198,7 +221,7 @@ def timeseries_subplot(X,
     """
     for i in range(X.shape[1]):
         pl.scatter(
-            np.arange(X.shape[0]),X[:,i],
+            np.arange(X.shape[0]), X[:, i],
             marker='.',
             edgecolor='face',
             s=rcParams['lines.markersize'],
@@ -248,7 +271,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
     if False:
         # generate new array with highlightsX
         space = 10 # integer
-        Xnew = np.zeros((X.shape[0], X.shape[1]+space*len(highlightsX)))
+        Xnew = np.zeros((X.shape[0], X.shape[1] + space*len(highlightsX)))
         hold = 0
         _hold = 0
         space_sum = 0
@@ -372,7 +395,8 @@ def _scatter(Ys,
         from mpl_toolkits.mplot3d import Axes3D
 
     fig = pl.figure(figsize=figsize,
-                    subplotpars=sppars(left=0,right=1,bottom=0.08))
+                    subplotpars=sppars(left=0, right=1, bottom=0.08))
+
     from matplotlib import gridspec
     # grid of axes for plotting and legends/colorbars
     if np.any(colorbars) and right_margin is None:
@@ -380,10 +404,14 @@ def _scatter(Ys,
     elif right_margin is None:
         right_margin = 0.01
 
-    white_space = 0.08/len(colors)
-    gs = gridspec.GridSpec(len(Ys), 2*len(colors), 
-                           width_ratios=[r for i in range(len(colors)) for r in [1-right_margin, right_margin]],
-                           left=0.08/len(colors), wspace=white_space)
+    from inspect import getcallargs
+    gs = gridspec.GridSpec(nrows=len(Ys),
+                           ncols=2*len(colors),
+                           width_ratios=[r for i in range(len(colors))
+                                         for r in [1-right_margin, right_margin]],
+                           left=0.08/len(colors),
+                           right=1-(len(colors)-1)*0.08/len(colors),
+                           wspace=0)
     fig.suptitle(title)
     count = 1
     bool3d = True if layout == '3d' else False
@@ -402,8 +430,7 @@ def _scatter(Ys,
             elif layout == '2d':
                 ax = pl.subplot(gs[2*(count-1)])
             elif layout == '3d':
-                ax = fig.add_subplot(len(Ys), len(colors), count,
-                                     projection='3d')
+                ax = pl.subplot(gs[2*(count-1)], projection='3d')
             if not bool3d:
                 data = Y[:,0], Y[:,1]
             else:
@@ -419,7 +446,7 @@ def _scatter(Ys,
                 pos = gs.get_grid_positions(fig)
                 left = pos[2][2*(count-1)+1]
                 bottom = pos[0][0]
-                width = 0.2*(pos[3][2*(count-1)+1] + white_space - left)
+                width = 0.2*(pos[3][2*(count-1)+1] - left)
                 height = pos[1][0] - bottom
                 # again shift to left
                 left = pos[3][2*(count-1)] + 0.1*width
@@ -871,6 +898,7 @@ def init_fig_params():
     rcParams['legend.numpoints'] = 1
     rcParams['legend.scatterpoints'] = 1
     rcParams['legend.handlelength'] = 0.5
+    rcParams['legend.handletextpad'] = 0.4
 
     # resolution of png output
     rcParams['savefig.dpi'] = 200

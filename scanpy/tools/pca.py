@@ -22,17 +22,18 @@ def pca(adata_or_X, n_comps=10):
 
     Parameters
     ----------
-    adata_or_X : dict containing
+    adata_or_X : AnnData object or np.ndarray
         X : np.ndarray
-            Data array, rows store observations, columns variables.
-    n_comps : int, optional (default: 2)
-        Number of PCs.
+            Data matrix of shape n_samples x n_variables.
+    n_comps : int, optional (default: 10)
+        Number of principal components to compute.
 
     Returns
     -------
-    dtsne : dict containing
-        Y : np.ndarray
-            PCA representation of the data.
+    X_pca : np.ndarray
+         PCA representation of the data with shape n_variables x n_comps.
+         Depending on whether an AnnData or a data matrix has been 
+         provided, the array is written to AnnData or returned directly.
     """
     isadata = isinstance(adata_or_X, AnnData)
     if isadata:
@@ -40,19 +41,20 @@ def pca(adata_or_X, n_comps=10):
         adata = adata_or_X
     else:
         X = adata_or_X
-    if isadata and 'X_pca' in adata and adata['X_pca'].shape[1] > n_comps:
-        Y = adata['X_pca']
+    if isadata and 'X_pca' in adata and adata['X_pca'].shape[1] >= n_comps:
+        return adata
     else:
-        Y = pp.pca(X, n_comps)
+        X_pca = pp.pca(X, n_comps)
     if isadata:
-        return {'type': 'pca', 'Y': Y}
+        adata['X_pca'] = X_pca
+        return adata
     else:
-        return Y
+        return X_pca
 
-def plot(dplot, adata,
+def plot(adata,
          smp=None,
          names=None,
-         comps='1,2',
+         comps=None,
          cont=None,
          layout='2d',
          legendloc='right margin',
@@ -64,8 +66,6 @@ def plot(dplot, adata,
 
     Parameters
     ----------
-    dplot : dict
-        Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
     smp : str, optional (default: first annotation)
@@ -91,17 +91,16 @@ def plot(dplot, adata,
          Point size.
     """
     from .. import plotting as plott
-    plott.plot_tool(dplot, adata,
-                    smp,
-                    names,
-                    comps,
-                    cont,
-                    layout,
-                    legendloc,
-                    cmap,
-                    right_margin,
-                    size=size,
-                    # defined in plotting
-                    subtitles=['PCA'],
-                    component_name='PC')
+    plott.plot_tool(adata,
+                    basis='pca',
+                    toolkey='pca',
+                    smp=smp,
+                    names=names,
+                    comps=comps,
+                    cont=cont,
+                    layout=layout,
+                    legendloc=legendloc,
+                    cmap=cmap,
+                    right_margin=right_margin,
+                    size=size)
 

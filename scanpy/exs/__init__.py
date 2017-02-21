@@ -108,7 +108,7 @@ def example(exkey, return_module=False):
         # run the function
         adata = exfunc()
         # add exkey to adata
-        adata['exkey'] = exkey
+        # adata['exkey'] = exkey
         sett.m(0, 'X has shape n_samples x n_variables =', 
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
@@ -142,31 +142,29 @@ def check_adata(adata):
     """
     import numpy as np
     import sys
+    if 'tools' not in adata:
+        adata['tools'] = np.array([], dtype=str)
     if len(adata.smp_keys()) == 0:
         sett.m(0, howto_specify_subgroups)
     else:
-        for k in adata.smp_keys():
+        for smp in adata.smp_keys():
             # ordered unique categories
-            if not k + '_names' in adata:
-                adata[k + '_names'] = np.unique(adata.smp[k])
-                if adata[k + '_names'].dtype.char == 'U':
-                    adata[k + '_names'] = np.setdiff1d(adata[k + '_names'],
+            if not smp + '_names' in adata:
+                adata[smp + '_names'] = np.unique(adata.smp[smp])
+                try:
+                    from natsort import natsorted
+                    adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names']))
+                except:
+                    pass
+                if adata[smp + '_names'].dtype.char == 'U':
+                    adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
                                                        np.array(ignore_groups))
-            # output 
-            ann_info = adata[k + '_names']
-            if len(adata[k + '_names']) > 20:
-                ann_info = (str(adata[k + '_names'][0:3]).replace(']','') 
-                            + ' ...' + str(adata[k + '_names'][-2:]).replace('[',''))
-            sett.m(0,'sample annotation', k, 'with',  ann_info)
-            # indices for each category
-            if not k + '_ids' in adata:
-                adata[k + '_ids'] = np.arange(len(adata[k + '_names']), dtype=int)
-            # masks for each category
-            if not k + '_masks' in adata:
-                adata[k + '_masks'] = np.zeros((len(adata[k + '_names']),
-                                                adata.smp[k].size), dtype=bool)
-                for iname, name in enumerate(adata[k + '_names']):
-                    adata[k + '_masks'][iname] = name == adata.smp[k]
+            # output
+            ann_info = adata[smp + '_names']
+            if len(adata[smp + '_names']) > 20:
+                ann_info = (str(adata[smp + '_names'][0:3]).replace(']','') 
+                            + ' ...' + str(adata[smp + '_names'][-2:]).replace('[',''))
+            sett.m(0,'sample annotation','"' + smp + '"', 'with',  ann_info)
     return adata
 
 def exkeys_str():

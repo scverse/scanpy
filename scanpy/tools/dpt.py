@@ -66,28 +66,29 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
         
     Returns
     -------
-    ddpt : dict containing
-        pseudotimes : np.ndarray
+    Writes the following arrays to adata.
+        dpt_pseudotime : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
             Serves as 'rowcont' for adata.
-        groups : np.ndarray of dtype int
+        dpt_groups : np.ndarray of dtype int
             Array of dim (number of samples) that stores the segment=subgroup id
             - an integer that indexes groupnames - of each cell. The groups
             might either correspond to 'progenitor cells', 'undecided cells' or
             'branches'. Serves as 'smp' for adata.
-        Y : np.ndarray
+        X_diffmap : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
             basis of the transition matrix with eigenvectors as columns.
-        evals : np.ndarray
+        dpt_evals : np.ndarray
             Array of size (number of samples). Eigenvalues of transition matrix.
     """
     params = locals(); del params['adata']
     xroot = adata['xroot']
     dpt = DPT(adata, params)
     # diffusion map
-    ddpt = dpt.diffmap()
+    ddmap = dpt.diffmap()
+    adata['X_diffmap'] = ddmap['Y']
     sett.m(0, 'perform Diffusion Pseudotime Analysis')
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
@@ -100,48 +101,44 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     # if it's an index, directly set the index
     else:
         dpt.iroot = xroot
-    ddpt['iroot'] = np.array([dpt.iroot])
-    # pseudotimes are distances from root point
-    dpt.set_pseudotimes()
-    ddpt['pseudotimes'] = dpt.pseudotimes
+    # pseudotime are distances from root point
+    dpt.set_pseudotime()
+    adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # n-vector of groupnames / smp for adata / compare exs.check_adata
-    ddpt['groups_masks'] = dpt.segs
-    # TODO: remove the following line
-    ddpt['groups_ids'] = np.arange(len(ddpt['groups_masks']), dtype=int)
-    ddpt['groups_names'] = [str(i) for i in ddpt['groups_ids']]
-    ddpt['groups'] = np.array([ddpt['groups_names'][i] 
-                               if i < len(ddpt['groups_names'])
-                               else 'dontknow'
-                               for i in dpt.segslabels])
-    # the ordering according to segments and pseudotimes
-    ddpt['indices'] = dpt.indices
-    ddpt['changepoints'] = dpt.changepoints
-    ddpt['segtips'] = dpt.segstips
-    # type of dict
-    ddpt['type'] = 'dpt'    
-    return ddpt
+    adata['dpt_groups_names'] = np.array([str(i) for i in 
+                                          np.arange(len(dpt.segs), dtype=int)])
+    adata.smp['dpt_groups'] = np.array([adata['dpt_groups_names'][i]
+                                        if i < len(adata['dpt_groups_names'])
+                                        else 'dontknow'
+                                        for i in dpt.segslabels])
+    # the ordering according to segments and pseudotime
+    adata['dpt_indices'] = dpt.indices
+    adata['dpt_changepoints'] = dpt.changepoints
+    adata['dpt_segtips'] = dpt.segstips
+    return adata
 
-def plot(ddpt, adata, dplot=None,
+def plot(adata,
+         basis='diffmap',
          smp=None,
-         comps='1,2',
+         names=None,
+         comps=None,
          cont=None,
          layout='2d',
          legendloc='right margin',
          cmap=None,
-         right_margin=None):
+         right_margin=None,
+         size=3):
     """
     Plot results of DPT analysis.
 
     Parameters
     ----------
-    ddpt : dict
-        Dict returned by DPT tool.
-    dplot : dict
-        Dict returned by plotting tool.
     adata : AnnData
         Annotated data matrix.
+    basis : {'diffmap', 'pca', 'tsne', 'spring'}
+        Choose the basis in which to plot.
     smp : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
@@ -160,53 +157,46 @@ def plot(ddpt, adata, dplot=None,
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     """
-    # plot segments and pseudotimes
-    plot_segments_pseudotimes(ddpt, 'viridis' if cmap is None else cmap)
+    # plot segments and pseudotime
+    plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
     X = adata.X
+    writekey = sett.basekey + '_' + 'dpt' + sett.fsig + sett.plotsuffix
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[ddpt['indices']], adata.var_names,
-                         highlightsX=ddpt['changepoints'],
+        plott.timeseries(X[adata['dpt_indices']], 
+                         adata.var_names,
+                         highlightsX=adata['dpt_changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
-        plott.savefig(ddpt['writekey']+'_vsorder')
+        plott.savefig(writekey + '_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[ddpt['indices'],:40], adata.var_names,
-                                    highlightsX=ddpt['changepoints'])
-        plott.savefig(ddpt['writekey']+'_heatmap')
+        plott.timeseries_as_heatmap(X[adata['dpt_indices'],:40], adata.var_names,
+                                    highlightsX=adata['dpt_changepoints'])
+        plott.savefig(writekey + '_heatmap')
 
-    if dplot is not None:
-        ddpt['Y'] = dplot['Y']
-        ddpt['writekey'] += '_' + dplot['type']
-        component_name = ('DC' if dplot['type'] == 'diffmap'
-                          else 'FR' if dplot['type'] == 'drawg'
-                          else 'tSNE' if dplot['type'] == 'tsne'
-                          else 'PC')
-    else:
-        component_name = 'DC'
-        ddpt['writekey'] += '_diffmap'
+    smps = ['dpt_pseudotime']
+    if len(adata['dpt_groups_names']) > 1:
+        smps += ['dpt_groups']
+    adata['highlights'] = list([adata['iroot']])
+    if smp is not None:
+        smps.append(smp)
 
-    smp = ['pseudotimes']
-    if len(ddpt['groups_names']) > 1:
-        smp += ['segments']
-    if len(adata.smp_keys()) > 0:
-        smp += [None]
-    adata.smp['pseudotimes'] = ddpt['pseudotimes']
-    adata.smp['segments'] = ddpt['groups']
-    adata['segments_names'] = ddpt['groups_names']
-    adata['segments_ids'] = ddpt['groups_ids']
-    adata['segments_masks'] = ddpt['groups_masks']
-    adata['highlights'] = list(ddpt['iroot'])
-
-    plott.plot_tool(ddpt, adata,
-                    smp=smp,
-                    component_name=component_name,
+    plott.plot_tool(adata,
+                    basis=basis,
+                    toolkey='dpt_' + basis,
+                    smp=smps,
+                    names=names,
+                    comps=comps,
+                    cont=cont,
+                    layout=layout,
                     legendloc=legendloc,
-                    right_margin=right_margin)
+                    cmap=cmap,
+                    right_margin=right_margin,
+                    size=size)
 
-def plot_segments_pseudotimes(ddpt, cmap):
+def plot_segments_pseudotime(adata, cmap):
     """ 
     Helper function for plot.
     """
@@ -214,21 +204,22 @@ def plot_segments_pseudotimes(ddpt, cmap):
     from .. import plotting as plott
     pl.figure()
     pl.subplot(211)
-    plott.timeseries_subplot(ddpt['groups'][ddpt['indices'],np.newaxis],
-                             c=ddpt['groups'][ddpt['indices']],
-                             highlightsX=ddpt['changepoints'],
+    plott.timeseries_subplot(adata.smp['dpt_groups'][adata['dpt_indices'], np.newaxis],
+                             c = adata.smp['dpt_groups'][adata['dpt_indices']],
+                             highlightsX=adata['dpt_changepoints'],
                              ylabel='segments',
-                             yticks=(np.arange(ddpt['groups_masks'].shape[0], dtype=int) if 
-                                     ddpt['groups_masks'].shape[0] < 5 else None),
+                             yticks=(np.arange(len(adata['dpt_groups_names']), dtype=int) 
+                                     if len(adata['dpt_groups_names']) < 5 else None),
                              cmap='jet')
     pl.subplot(212)
-    plott.timeseries_subplot(ddpt['pseudotimes'][ddpt['indices'],np.newaxis],
-                             c=ddpt['pseudotimes'][ddpt['indices']],
-                             highlightsX=ddpt['changepoints'],
+    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata['dpt_indices'], np.newaxis],
+                             c=adata.smp['dpt_pseudotime'][adata['dpt_indices']],
+                             highlightsX=adata['dpt_changepoints'],
                              ylabel='pseudotime',
                              yticks=[0,1],
                              cmap=cmap)
-    plott.savefig(ddpt['writekey']+'_segpt')
+    writekey = sett.basekey + '_' + 'dpt' + sett.fsig + sett.plotsuffix
+    plott.savefig(writekey + '_segpt')
 
 class DPT(graph.DataGraph):
     """
@@ -275,8 +266,8 @@ class DPT(graph.DataGraph):
         tips3 : int
             Positions of tips within chosen segment.
         """
-        scores_tips = np.zeros((len(segs),4))
-        allindices = np.arange(self.N,dtype=int)
+        scores_tips = np.zeros((len(segs), 4))
+        allindices = np.arange(self.N, dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider 'unproper segments'
             if segstips[iseg][0] == -1:
@@ -417,7 +408,7 @@ class DPT(graph.DataGraph):
         """ 
         # there are different options for computing the score
         if False:
-            # minimum of pseudotimes in the segment
+            # minimum of pseudotime in the segment
             score = np.min
         if True:
             # average pseudotime
@@ -425,7 +416,7 @@ class DPT(graph.DataGraph):
         # score segments by minimal pseudotime
         seg_scores = []
         for seg in self.segs:
-            seg_scores.append(score(self.pseudotimes[seg]))
+            seg_scores.append(score(self.pseudotime[seg]))
         indices = np.argsort(seg_scores)
         # order segments by minimal pseudotime
         self.segs = self.segs[indices]
@@ -433,7 +424,7 @@ class DPT(graph.DataGraph):
         # within segstips, order tips according to pseudotime
         for itips, tips in enumerate(self.segstips):
             if tips[0] != -1:
-                indices = np.argsort(self.pseudotimes[tips])
+                indices = np.argsort(self.pseudotime[tips])
                 self.segstips[itips] = self.segstips[itips][indices]
 
     def set_segslabels(self):
@@ -464,12 +455,12 @@ class DPT(graph.DataGraph):
         segslabels = self.segslabels[indices]
         # find changepoints of segments
         changepoints = np.arange(indices.size-1)[np.diff(segslabels)==1]+1
-        pseudotimes = self.pseudotimes[indices]
+        pseudotime = self.pseudotime[indices]
         for iseg,seg in enumerate(self.segs):
             # only consider one segment, it's already ordered by segment
             seg_sorted = seg[indices]
-            # consider the pseudotimes on this segment and sort them
-            seg_indices = np.argsort(pseudotimes[seg_sorted])
+            # consider the pseudotime on this segment and sort them
+            seg_indices = np.argsort(pseudotime[seg_sorted])
             # within the segment, order indices according to increasing pseudotime
             indices[seg_sorted] = indices[seg_sorted][seg_indices]
         # define class members

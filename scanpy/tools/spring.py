@@ -1,7 +1,7 @@
 # coding: utf-8
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
-Draw the Data Graph
+Force-directed drawing of Data Graph
 
 By default, the Fruchterman-Reingold algorithm is used. This is simple
 force-directed graph drawing.
@@ -13,22 +13,16 @@ References
   transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016) 
 """
 
-from __future__ import absolute_import
-from collections import OrderedDict as odict
 import numpy as np
-from ..compat.matplotlib import pyplot as pl
-from ..tools.pca import pca
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
 step_size = 10
 
-def drawg(adata, k=4, n_comps=2):
+def spring(adata, k=4, n_comps=2):
     u"""
-    Visualize data using graph drawing algorithms.
-
-    In particular the force-directed Fruchterman-Reingold algorithm.
+    Visualize data using the force-directed Fruchterman-Reingold algorithm.
 
     Parameters
     ----------
@@ -36,7 +30,7 @@ def drawg(adata, k=4, n_comps=2):
         Annotated data matrix, optionally with metadata:
         adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
-            If it exists, drawg will use this instead of adata.X.
+            If it exists, spring will use this instead of adata.X.
     k : int
         Number of nearest neighbors in graph.
     n_comps : int
@@ -44,9 +38,9 @@ def drawg(adata, k=4, n_comps=2):
 
     Returns
     -------
-    d : dict containing
-        Y : np.ndarray
-            Fruchterman Reingold representation of data.
+    X_spring : np.ndarray
+         Force-directed graph drawing representation of the data with shape
+         n_variables x n_comps.
     """
     sett.m(0,'draw knn graph')
     if 'X_pca' in adata:
@@ -77,32 +71,30 @@ def drawg(adata, k=4, n_comps=2):
     np.random.seed(1)
     Y = np.asarray(np.random.random((Adj.shape[0], 2)), dtype=Adj.dtype)
     n_steps = 12
+    sett.m(0, 'is very slow, will be sped up soon')
     for istep in 1 + np.arange(n_steps, dtype=int):
         sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
         Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
-    return {'type': 'drawg', 'Y': Y, 'Adj': Adj, 'istep': istep}
+    adata['X_spring'] = Y
+    return adata
 
-def plot(ddrawg, adata,
-         add_steps=0,
+def plot(adata,
          smp=None,
          names=None,
          comps='1,2',
          cont=None,
          layout='2d',
-         legendloc='lower right',
+         legendloc='right margin',
          cmap=None,
-         right_margin=0.75):
+         right_margin=None,
+         size=3):
     """
     Scatter plots.
 
     Parameters
     ----------
-    ddrawg : dict
-        Dict returned by diffmap tool.
     adata : AnnData
         Annotated data matrix.
-    add_steps : int
-        Steps to iterate graph drawing algorithm.
     smp : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
@@ -122,23 +114,35 @@ def plot(ddrawg, adata,
          String denoting matplotlib color map.
     right_margin : float (default: 0.2)
          Adjust how far the plotting panel extends to the right.
+    size : float (default: 3)
+         Point size.
     """
-    params = locals(); del params['adata']; del params['ddrawg']
-    Y = ddrawg['Y']
-
-    if params['add_steps'] == 0:
-        del params['add_steps']
-        sett.m(0, 'set parameter add_steps > 0 to iterate. ' 
-               'the current step is', ddrawg['istep'],
-               '\n--> append, for example, "--plotparams add_steps 1", for a single step')
-        istep = ddrawg['istep']
-        _plot(ddrawg, adata, istep, **params)
+    Y = adata['X_spring']
+    if True:
+#         sett.m(0, 'set parameter add_steps > 0 to iterate. ' 
+#                'the current step is', dspring['istep'],
+#                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
+        from .. import plotting as plott
+        plott.plot_tool(adata,
+                        basis='spring',
+                        toolkey='spring',
+                        smp=smp,
+                        names=names,
+                        comps=comps,
+                        cont=cont,
+                        layout=layout,
+                        legendloc=legendloc,
+                        cmap=cmap,
+                        right_margin=right_margin,
+                        size=size,
+                        # defined in plotting
+                        subtitles=['Fruchterman-Reingold step: 12'])
     else:
-        Adj = ddrawg['Adj']
-        istep = ddrawg['istep']
+        Adj = dspring['Adj']
+        istep = dspring['istep']
         # TODO: don't save the adjacency matrix!!!
         import scanpy as sc
-        sc.write(ddrawg['writekey']+'_step{:02}'.format(istep), ddrawg)
+        sc.write(dspring['writekey']+'_step{:02}'.format(istep), dspring)
         # compute the next steps
         istep_init = istep + 1
         add_steps = params['add_steps']
@@ -149,17 +153,9 @@ def plot(ddrawg, adata,
             sett.mt(0, 'finished computation')
             _plot({'Y': Y}, adata, istep, **params)
         # save state of Y to outfile
-        ddrawg['Y'] = Y 
-        ddrawg['istep'] = istep
-        sc.write(ddrawg['writekey'], ddrawg)
-
-def _plot(dplot, adata, istep=0, **params):
-    from .. import plotting as plott
-    plott.plot_tool(dplot, adata,
-                    # defined in plotting
-                    subtitles=['Fruchterman-Reingold step: ' + str(istep)],
-                    component_name='FR',
-                    **params)
+        dspring['Y'] = Y 
+        dspring['istep'] = istep
+        sc.write(dspring['writekey'], dspring)
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
     """ 

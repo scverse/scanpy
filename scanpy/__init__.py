@@ -59,24 +59,11 @@ __all__ = [
     'AnnData'
 ]
 
-def plot(*dtools, **kwargs):
+def plot(toolkey, adata, **pparams):
     """
-    Plot the result of a computation with a tool.
-
-    Parameters
-    ----------
-    *dtools : dicts
-       An arbitrary number of tool dictionaries.
+    Plot the result of a tool computation.
     """
-    if sett.savefigs:
-        if 'writekey' not in dtools[0]:
-            raise ValueError('Need key "writekey" in dict d' 
-                             + dtools[0]['type'],' - call sc.write first')
-    toolkey = dtools[0]['type']
-    # TODO: this is not a good solution
-    if toolkey == 'sim':
-        dtools = [dtools[0]]
-    get_tool(toolkey).plot(*dtools, **kwargs)
+    get_tool(toolkey).plot(adata, **pparams)
 
 def help(toolkey,string=False):
     """
@@ -156,14 +143,13 @@ def run_args(toolkey, args):
         # same if optional parameters have been specified on the command line
         if args['oparams']:
             add_params = readwrite.get_params_from_list(args['oparams'])
-            oparams = utils.update_params(oparams, add_params)
             sett.m(0, '... overwriting optional params', '"' + 
-                   ' '.join([' '.join([k, str(v)]) for k, v in oparams.items()])
+                   ' '.join([' '.join([k, str(v)]) for k, v in add_params.items()])
                    + '"',
                   'to call of', toolkey)
+            oparams = utils.update_params(oparams, add_params)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
-
 
     # previous tool
     prevsuffix = ''
@@ -202,37 +188,23 @@ def run_args(toolkey, args):
     
     # actual call of tool
     from os.path import exists
-    if not exists(resultfile) or sett.recompute != 'none':
-        # TODO: solve this in a nicer way, get an ordered dict for oparams
-        from inspect import getcallargs
+    if toolkey not in adata['tools'] or sett.recompute != 'none':
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
             dtool = tool(**oparams)
-            oparams = getcallargs(tool, **oparams)
         elif args['prev'] != '':
             dtool = tool(dprev, adata, **oparams)
-            oparams = getcallargs(tool, dprev, adata, **oparams)
-            # TODO: Would be good to name the first argument dprev_or_adata
-            #       in difftest, but this doesn't work
-            if 'dprev' in oparams:
-                del oparams['dprev']
-            elif 'dgroups' in oparams:
-                del oparams['dgroups']
         else:
-            dtool = tool(adata, **oparams)
-            oparams = getcallargs(tool, adata, **oparams)
-        if 'adata' in oparams:
-            del oparams['adata']
-        elif 'adata_or_X' in oparams:
-            del oparams['adata_or_X']
-        dtool['writekey'] = writekey
-        write(writekey, dtool)
-        sett.m(0, 'wrote result to', resultfile)
-        # save a copy of the parameters to a file
+            adata = tool(adata, **oparams)
+        # append toolkey to tools in adata
+        if toolkey not in adata['tools']:
+            import numpy as np
+            adata['tools'] = np.append(adata['tools'], toolkey)
+        write(sett.basekey, adata)
+        sett.m(0, 'updated file',
+               readwrite.get_filename_from_key(sett.basekey))
+        # save a copy of the changed parameters
         readwrite.write_params(opfile, oparams)
-    else:
-        # call the tool resultfile
-        dtool = read(writekey)
 
     # plotting and postprocessing
     pparams = {}
@@ -242,22 +214,13 @@ def run_args(toolkey, args):
         plot(dtool, pparams)
     else:
         # post-processing specific to example and tool
+        # - only if we are not subsampling
         postprocess = args['exkey'] + '_' + toolkey
-        # only if we are not subsampling
         if postprocess in dir(exmodule) and args['subsample'] == 1:
-            dtool = getattr(exmodule, postprocess)(dtool)
-            write(writekey, dtool)
-        if args['plotkey'] != '':
-            plotwritekey = sett.exkey + '_' +  args['plotkey'] + sett.fsig
-            dplot = read(plotwritekey)
-            sett.m(0, '--> using result', plotwritekey, 'for plotting')
-            plotargs = [dtool, adata, dplot]
-        else: 
-            plotargs = [dtool, adata]
-        if args['prev'] != '' and toolkey != 'tgdyn':
-            plotargs.append(dprev)
-        plot(*tuple(plotargs), **pparams)
-
+            adata = getattr(exmodule, postprocess)(adata)
+            write(sett.basekey, adata)
+        plot(toolkey, adata, **pparams)
+   
 def read_args_run_tool(toolkey):
     """
     Read arguments and run tool specified by toolkey.
