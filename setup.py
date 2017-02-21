@@ -27,6 +27,6 @@ setup(
         'scikit-learn',
     ] + more_requires,
     packages=['scanpy', 'scanpy.tools', 'scanpy.compat', 'scanpy.exs',
-    'scanpy.preprocess'],
+    'scanpy.preprocess', 'scanpy.classes'],
     zip_safe=False,
 )
