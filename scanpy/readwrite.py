@@ -53,7 +53,7 @@ def write(filename_or_key, dict_or_adata):
     write_dict_to_file(filename, dictionary, ext=sett.extd)
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
-         as_strings=False, backup_url='', return_AnnData=True):
+         as_strings=False, backup_url='', return_dict=False):
     """
     Read file or dictionary and return data dictionary.
 
@@ -78,6 +78,8 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         detected automatically.
     as_strings : bool, optional
         Read names instead of numbers.
+    return_dict : bool, optional (default: False)
+        Return dictionary instead of AnnData object.      
 
     Returns
     -------
@@ -94,10 +96,10 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names, 
                       as_strings, backup_url)
-        if return_AnnData:
-            return AnnData(d)
-        else:
+        if return_dict:
             return d
+        else:
+            return AnnData(d)
 
     # generate filename and read to dict
     key = filename_or_key
@@ -112,10 +114,10 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
                          str(avail_exts) + 
                          'or provide the parameter "ext" to sc.read.')
     d = read_file_to_dict(filename)
-    if return_AnnData:
-        return AnnData(d)
-    else:
+    if return_dict:
         return d
+    else:
+        return AnnData(d)
 
 #--------------------------------------------------------------------------------
 # Reading and writing parameter files

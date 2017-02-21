@@ -269,8 +269,8 @@ def paul15_raw():
     # corresponds to one gene, we use the opposite convention)
     adata = adata.transpose()
     # cluster assocations identified by Paul et al.
-    # groups = sc.read(filename,'cluster.id', return_AnnData=False)['X']
-    infogenes_names = sc.read(filename, 'info.genes_strings', return_AnnData=False)['X']
+    # groups = sc.read(filename,'cluster.id', return_dict=True)['X']
+    infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
     adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])
     # index array for the informative genes

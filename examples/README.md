@@ -45,14 +45,13 @@ def paul15():
 
 def paul15_raw():
     filename = 'data/paul15/paul15.h5'
-    ddata = sc.read(filename, 'data.debatched')
-    adata = sc.AnnData(ddata)
+    adata = sc.read(filename, 'data.debatched')
     # the data has to be transposed (in the hdf5 and R files, each row
     # corresponds to one gene, we use the opposite convention)
     adata = adata.transpose()
     # cluster assocations identified by Paul et al.
-    # groups = sc.read(filename,'cluster.id')['X']
-    infogenes_names = sc.read(filename, 'info.genes_strings')['X']
+    # groups = sc.read(filename, 'cluster.id', return_dict=True)['X']
+    infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
     adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])
     # index array for the informative genes
@@ -145,8 +144,7 @@ def burczynski06():
     """
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
-    ddata = sc.read(filename, backup_url=url)
-    adata = sc.AnnData(ddata)
+    adata = sc.read(filename, backup_url=url)
     return adata
 ```
 

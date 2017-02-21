@@ -124,8 +124,7 @@ following
 ```python
 def moignard15():
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
-    ddata = sc.read(filename, sheet='dCt_values.txt')
-    adata = sc.AnnData(ddata)
+    adata = sc.read(filename, sheet='dCt_values.txt')
     # filter out genes: the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
     # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
     genes = np.array([g not in [4, 31, 36, 45] for g in range(adata.X.shape[1])])
