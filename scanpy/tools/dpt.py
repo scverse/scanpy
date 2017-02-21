@@ -22,7 +22,7 @@ See also
 import numpy as np
 from .. import settings as sett
 from .. import utils
-from .. import graph
+from ..classes import data_graph
 
 def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
         sigma=0, allow_branching_at_root=False):
@@ -223,7 +223,7 @@ def plot_segments_pseudotime(adata, cmap):
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     plott.savefig(writekey + '_segpt')
 
-class DPT(graph.DataGraph):
+class DPT(data_graph.DataGraph):
     """
     Diffusion Pseudotime Class.
     """

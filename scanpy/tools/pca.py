@@ -14,7 +14,7 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 from .. import preprocess as pp
-from ..ann_data import AnnData
+from ..classes.ann_data import AnnData
 
 def pca(adata_or_X, n_comps=10):
     """

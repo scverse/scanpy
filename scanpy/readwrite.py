@@ -40,7 +40,7 @@ def write(filename_or_key, dict_or_adata):
     dict_or_adata : dict, AnnData
         Annotated data matrix or dictionary convertible to one.
     """
-    from .ann_data import AnnData
+    from .classes.ann_data import AnnData
     if isinstance(dict_or_adata, AnnData):
         dictionary = dict_or_adata.to_ddata()
     else:
@@ -90,7 +90,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
     """
-    from .ann_data import AnnData
+    from .classes.ann_data import AnnData
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names, 
                       as_strings, backup_url)
@@ -247,7 +247,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         if sheet == '':
             d = read_file_to_dict(filename, ext='h5')
             if 'isadata' in d:
-                from .ann_data import AnnData
+                from .classes.ann_data import AnnData
                 del d['isadata']
                 return AnnData(d)
             else:

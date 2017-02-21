@@ -263,7 +263,7 @@ def sample_dynamic_data(params):
     filename = dir+'/sim_000000.txt'
     ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
-    from ..ann_data import AnnData
+    from ..classes.ann_data import AnnData
     adata = AnnData(ddata)
     return adata
     

@@ -9,11 +9,11 @@ from collections import OrderedDict as odict
 import numpy as np
 import scipy as sp
 import matplotlib
-from .compat.matplotlib import pyplot as pl
+from ..compat.matplotlib import pyplot as pl
 # scanpy modules
-from . import settings as sett
-from . import plotting as plott
-from . import utils
+from .. import settings as sett
+from .. import plotting as plott
+from .. import utils
 from .ann_data import AnnData
 
 class DataGraph(object):

@@ -12,7 +12,7 @@ from . import tools
 from . import preprocess
 from . import utils
 from .tools import get_tool
-from .ann_data import AnnData
+from .classes.ann_data import AnnData
 from .readwrite import read, write, read_params
 from .exs import exdata, examples, example
 from . import preprocess

@@ -9,9 +9,7 @@ from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
-
-from .utils import odict_merge
-
+from ..utils import odict_merge
 
 class StorageType(Enum):
     Array = np.ndarray
