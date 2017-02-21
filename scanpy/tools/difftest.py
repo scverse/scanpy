@@ -13,7 +13,7 @@ from .. import utils
 from .. import plotting as plott
 from .. import settings as sett
 
-def difftest(dgroups, adata=None,
+def difftest(adata,
              smp='groups',
              names='all',
              sig_level=0.05,
@@ -24,13 +24,7 @@ def difftest(dgroups, adata=None,
 
     Parameters
     ----------
-    dgroups (or adata) : dict containing
-        groups_names : list, np.ndarray of dtype str
-            Array of shape (number of groups) that names the groups.
-        groups : list, np.ndarray of dtype str
-            Array of shape (number of samples) that names the groups.
-    adata : AnnData
-        Annotated data matrix.
+    adata : AnnData object
     smp : str, optional (default: 'groups')
         Specify the name of the grouping to consider.
     names : str, list, np.ndarray
@@ -39,32 +33,25 @@ def difftest(dgroups, adata=None,
 
     Returns
     -------
-    ddifftest : dict containing
-        zscores : np.ndarray
-            Array of shape (number of tests) x (number of genes) storing the
-            zscore of the each gene for each test.
-        testlabels : np.ndarray of dtype str
-            Array of shape (number of tests). Stores the labels for each test.
-        genes_sorted : np.ndarray
-            Array of shape (number of tests) x (number of genes) storing genes
-            sorted according the decreasing absolute value of the zscore.
+    zscores : np.ndarray
+        Array of shape (number of tests) x (number of genes) storing the
+        zscore of the each gene for each test.
+    testlabels : np.ndarray of dtype str
+        Array of shape (number of tests). Stores the labels for each test.
+    genes_sorted : np.ndarray
+        Array of shape (number of tests) x (number of genes) storing genes
+        sorted according the decreasing absolute value of the zscore.
     """
     # for clarity, rename variable
     groups_names = names
-    # if adata is empty, assume that adata dgroups also contains
-    # the data file elements
-    if not adata:
-        sett.m(0, 'testing experimental groups')
-        adata = dgroups
+    groups_names, groups_masks = utils.select_groups(adata, groups_names, smp)
+    adata['difftest_groups'] = smp
+    adata['difftest_groups_names'] = groups_names
     X = adata.X
     if log:
-        # Convert X to log scale
         # TODO: treat negativity explicitly
         X = np.abs(X)
         X = np.log(X) / np.log(2)
-
-    # select subset of groups
-    groups_names, groups_masks = utils.select_groups(dgroups, groups_names, smp)
 
     # loop over all masks and compute means, variances and sample numbers
     nr_groups = groups_masks.shape[0]
@@ -80,7 +67,6 @@ def difftest(dgroups, adata=None,
     sett.m(2, 'means', means) 
     sett.m(2, 'variances', vars)
 
-    ddifftest = {'type' : 'difftest'}
     igroups_masks = np.arange(len(groups_masks), dtype=int)
     pairs = list(combinations(igroups_masks, 2))
     pvalues_all = np.zeros((len(pairs), nr_genes))
@@ -89,7 +75,7 @@ def difftest(dgroups, adata=None,
     # each test provides a ranking of genes
     # we store the name of the ranking, i.e. the name of the test, 
     # in the following list
-    ddifftest['rankings_names'] = []
+    adata['difftest_rankings_names'] = []
     
     # test all combinations of groups against each other
     for ipair, (i,j) in enumerate(pairs):
@@ -124,23 +110,30 @@ def difftest(dgroups, adata=None,
         rankings_geneidcs[ipair] = ranking_geneidcs
         # names
         ranking_name = groups_names[i] + ' vs '+ groups_names[j]
-        ddifftest['rankings_names'].append(ranking_name)
+        adata['difftest_rankings_names'].append(ranking_name)
 
     if False:
-        ddifftest['pvalues'] = -np.log10(pvalues_all)
+        adata['difftest_pvalues'] = -np.log10(pvalues_all)
 
-    ddifftest['zscores'] = zscores_all
-    ddifftest['rankings_geneidcs'] = rankings_geneidcs
-    ddifftest['scoreskey'] = 'zscores'
+    adata['difftest_zscores'] = zscores_all
+    adata['difftest_rankings_geneidcs'] = rankings_geneidcs
+    adata['difftest_scoreskey'] = 'zscores'
 
-    return ddifftest
+    return adata
 
-def plot(ddifftest, adata, params=None):
+def plot(adata, n_genes=20):
     """
     Plot ranking of genes for all tested comparisons.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    n_genes : int
+        Number of genes to show.
     """
-    plott.ranking(ddifftest, adata)
-    plott.savefig(ddifftest['writekey'])
+    plott.ranking(adata, toolkey='difftest', n_genes=n_genes)
+    writekey = sett.basekey + '_difftest_' + adata['difftest_groups'] + sett.plotsuffix
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()

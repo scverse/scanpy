@@ -101,6 +101,8 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     # if it's an index, directly set the index
     else:
         dpt.iroot = xroot
+    # update iroot, might have changed when subsampling, for example
+    adata['iroot'] = dpt.iroot
     # pseudotime are distances from root point
     dpt.set_pseudotime()
     adata.smp['dpt_pseudotime'] = dpt.pseudotime
@@ -162,7 +164,7 @@ def plot(adata,
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
     X = adata.X
-    writekey = sett.basekey + '_' + 'dpt' + sett.fsig + sett.plotsuffix
+    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
         plott.timeseries(X[adata['dpt_indices']], 
@@ -218,7 +220,7 @@ def plot_segments_pseudotime(adata, cmap):
                              ylabel='pseudotime',
                              yticks=[0,1],
                              cmap=cmap)
-    writekey = sett.basekey + '_' + 'dpt' + sett.fsig + sett.plotsuffix
+    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     plott.savefig(writekey + '_segpt')
 
 class DPT(graph.DataGraph):

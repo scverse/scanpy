@@ -117,7 +117,8 @@ def run_args(toolkey, args):
         if 'writedir' not in oparams:
             oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
     else:
-        adata, exmodule = example(args['exkey'], return_module=True)
+        adata, exmodule = example(args['exkey'], subsample=args['subsample'],
+                                  return_module=True)
         oparams = {}
         # try to load tool parameters from dexamples
         try:
@@ -151,36 +152,8 @@ def run_args(toolkey, args):
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
 
-    # previous tool
-    prevsuffix = ''
-    if args['prev'] != '':
-        prevkey = sett.basekey + '_' + args['prev'] + sett.fsig
-        dprev = read(prevkey)
-        prevsuffix = '_' + args['prev']
-        if toolkey in ['difftest']:
-            # ignore default settings for groups
-            if (args['subsample'] != 1 
-                and 'groups' in oparams
-                and not args['oparams']):
-                del oparams['groups']
-                sett.m(0, 'ignoring default settings for "groups" parameter')
-    # all tools that require a previous tool
-    elif toolkey in ['scdg']:
-        print('Error: need to provide a tool to option --prev')
-        print('--> presumably one for identification of subgroups')
-        from sys import exit
-        exit(0)
-    elif toolkey in ['difftest']:
-        # use subgroups in adata
-        dprev = adata
-
-    # subsampling
-    if args['subsample'] != 1:
-        adata = subsample(adata, args['subsample'])
-
     # read/write files
-    writekey = sett.basekey + '_' + toolkey + prevsuffix + sett.fsig
-    resultfile = readwrite.get_filename_from_key(writekey)
+    writekey = sett.basekey + '_' + toolkey
     opfile = sett.writedir + writekey + '_oparams.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
@@ -188,16 +161,17 @@ def run_args(toolkey, args):
     
     # actual call of tool
     from os.path import exists
-    if toolkey not in adata['tools'] or sett.recompute != 'none':
+    if ((toolkey == 'sim'
+         or toolkey not in adata['tools'])
+        or sett.recompute != 'none'):
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
-            dtool = tool(**oparams)
-        elif args['prev'] != '':
-            dtool = tool(dprev, adata, **oparams)
+            adata = tool(**oparams)
         else:
             adata = tool(adata, **oparams)
         # append toolkey to tools in adata
-        if toolkey not in adata['tools']:
+        if (toolkey != 'sim' 
+            and toolkey not in adata['tools']):
             import numpy as np
             adata['tools'] = np.append(adata['tools'], toolkey)
         write(sett.basekey, adata)
@@ -207,19 +181,16 @@ def run_args(toolkey, args):
         readwrite.write_params(opfile, oparams)
 
     # plotting and postprocessing
-    pparams = {}
-    if args['pparams']:
-        pparams = readwrite.get_params_from_list(args['pparams'])
-    if toolkey == 'sim':
-        plot(dtool, pparams)
-    else:
-        # post-processing specific to example and tool
-        # - only if we are not subsampling
+    pparams = (readwrite.get_params_from_list(args['pparams']) 
+               if args['pparams'] else {})
+    # post-processing specific to example and tool
+    # - only if we are not subsampling
+    if toolkey != 'sim':
         postprocess = args['exkey'] + '_' + toolkey
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             adata = getattr(exmodule, postprocess)(adata)
             write(sett.basekey, adata)
-        plot(toolkey, adata, **pparams)
+    plot(toolkey, adata, **pparams)
    
 def read_args_run_tool(toolkey):
     """

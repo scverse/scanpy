@@ -76,10 +76,6 @@ figdir = 'figs/'
 """ Directory where plots are saved.
 """
 
-fsig = ''
-""" File signature.
-"""
-
 basekey = ''
 """ Basename for file reading and writing.
 """
@@ -217,10 +213,8 @@ def process_args(args):
     else:
         basekey = 'test' + suffix
 
-    # file signature to be appended to each filename
-    global fsig
     if args['subsample'] != 1:
-        fsig += '_s{:02}'.format(args['subsample'])
+        basekey += '_s{:02}'.format(args['subsample'])
 
     return args
 

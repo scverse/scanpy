@@ -132,6 +132,7 @@ def plot_tool(adata,
         right_margin = 0.24
     if subtitles is None:
         subtitles = [smp.replace('_', ' ') for smp in smps]
+
     axs = scatter(Y,
                   subtitles=subtitles,
                   component_name=component_name,
@@ -141,7 +142,8 @@ def plot_tool(adata,
                   highlights=highlights,
                   colorbars=colorbars,
                   right_margin=right_margin,
-                  cmap='viridis' if cmap is None else cmap)
+                  cmap='viridis' if cmap is None else cmap,
+                  s=size-2)
 
     for ismp in categoricals:
         smp = smps[ismp]
@@ -167,7 +169,7 @@ def plot_tool(adata,
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
 
-    writekey = sett.basekey + '_' + toolkey + sett.fsig
+    writekey = sett.basekey + '_' + toolkey
     writekey += '_' + '-'.join(smps) + sett.plotsuffix
     savefig(writekey)
     if not sett.savefigs and sett.autoshow:
@@ -299,6 +301,11 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
     # pl.tight_layout()
 
 def scatter(Ys,
+            c='blue',
+            highlights=[],
+            highlights_labels=[],
+            title='',
+            right_margin=None,
             layout='2d',
             subtitles=['pseudotime', 'segments', 'experimental labels'],
             component_name='DC',
@@ -326,50 +333,6 @@ def scatter(Ys,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    axs = _scatter(Ys,
-                   layout=layout,
-                   subtitles=subtitles,
-                   colorbars=colorbars,
-                   **kwargs)
-    # set default axlabels
-    if axlabels is None:
-        if layout == '2d':
-            axlabels = [[component_name + str(i) for i in idcs] 
-                         for idcs in 
-                         [component_indexnames for iax in range(len(axs))]]            
-        elif layout == '3d':
-            axlabels = [[component_name + str(i) for i in idcs] 
-                         for idcs in 
-                         [component_indexnames for iax in range(len(axs))]]
-        elif layout == 'unfolded 3d':
-            axlabels = [[component_name 
-                         + str(component_indexnames[i-1]) for i in idcs]
-                         for idcs in [[2, 3], [1, 2], [1, 2, 3], [1, 3]]]
-    # set axlabels
-    bool3d = True if layout == '3d' else False
-    for iax,ax in enumerate(axs):
-        if layout == 'unfolded 3d' and iax != 2:
-            bool3d = False
-        elif layout == 'unfolded 3d' and iax == 2:
-            bool3d = True
-        if axlabels is not None:
-            ax.set_xlabel(axlabels[iax][0]) 
-            ax.set_ylabel(axlabels[iax][1]) 
-            if bool3d:
-                # shift the label closer to the axis
-                ax.set_zlabel(axlabels[iax][2],labelpad=-7)
-    return axs
-
-def _scatter(Ys,
-             layout='2d',
-             subtitles=['pseudotime', 'segments', 'experimental labels'],
-             c='blue',
-             highlights=[],
-             highlights_labels=[],
-             title='',
-             colorbars=[False],
-             right_margin=None,
-             **kwargs):
     # if we have a single array, transform it into a list with a single array
     avail_layouts = ['2d', '3d', 'unfolded 3d']
     if layout not in avail_layouts:
@@ -417,7 +380,6 @@ def _scatter(Ys,
     bool3d = True if layout == '3d' else False
     axs = []
     for Y in Ys:
-        markersize = (2 if Y.shape[0] > 500 else 10)
         for icolor, color in enumerate(colors):
             # set up panel
             if layout == 'unfolded 3d' and count != 3:
@@ -440,7 +402,6 @@ def _scatter(Ys,
                 sct = ax.scatter(*data,
                                  c=color,
                                  edgecolors='face',
-                                 s=markersize,
                                  **kwargs)
             if colorbars[icolor]:
                 pos = gs.get_grid_positions(fig)
@@ -474,7 +435,33 @@ def _scatter(Ys,
                 ax.set_zticks([]) 
             axs.append(ax)
             count += 1
-    # scatter.set_edgecolors = scatter.set_facecolors = lambda *args:None
+    # set default axlabels
+    if axlabels is None:
+        if layout == '2d':
+            axlabels = [[component_name + str(i) for i in idcs] 
+                         for idcs in 
+                         [component_indexnames for iax in range(len(axs))]]            
+        elif layout == '3d':
+            axlabels = [[component_name + str(i) for i in idcs] 
+                         for idcs in 
+                         [component_indexnames for iax in range(len(axs))]]
+        elif layout == 'unfolded 3d':
+            axlabels = [[component_name 
+                         + str(component_indexnames[i-1]) for i in idcs]
+                         for idcs in [[2, 3], [1, 2], [1, 2, 3], [1, 3]]]
+    # set axlabels
+    bool3d = True if layout == '3d' else False
+    for iax,ax in enumerate(axs):
+        if layout == 'unfolded 3d' and iax != 2:
+            bool3d = False
+        elif layout == 'unfolded 3d' and iax == 2:
+            bool3d = True
+        if axlabels is not None:
+            ax.set_xlabel(axlabels[iax][0]) 
+            ax.set_ylabel(axlabels[iax][1]) 
+            if bool3d:
+                # shift the label closer to the axis
+                ax.set_zlabel(axlabels[iax][2],labelpad=-7)
     return axs
 
 # the following doesn't use a fixed grid, therefore panels have
@@ -587,39 +574,32 @@ def _scatter_single(ax,Y,*args,**kwargs):
     ax.scatter(Y[:,0],Y[:,1],**kwargs)
     ax.set_xticks([]); ax.set_yticks([])
 
-def ranking(drankings, adata, nr=20):
+def ranking(adata, toolkey, n_genes=20):
     """ 
     Plot ranking of genes
 
     Parameters
     ----------
-    drankings : dict containing
-        scoreskey : str
-            Key to identify scores.
-        scores : np.ndarray
-            Array of scores for genes according to which to rank them.
     adata : AnnData
         Annotated data matrix.
-    nr : int
+    n_genes : int
         Number of genes.
     """
 
     # one panel for each ranking
-    scoreskey = drankings['scoreskey']
-    n_panels = len(drankings['rankings_names'])
-    # maximal number of genes that is shown
-    n_genes = nr
+    scoreskey = adata[toolkey + '_scoreskey']
+    n_panels = len(adata[toolkey + '_rankings_names'])
 
     def get_scores(irank):
-        allscores = drankings[scoreskey][irank]
-        scores = allscores[drankings['rankings_geneidcs'][irank, :n_genes]]
+        allscores = adata[toolkey + '_' + scoreskey][irank]
+        scores = allscores[adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
         scores = np.abs(scores)
         return scores
 
     # the limits for the y axis
     ymin = 1e100
     ymax = -1e100
-    for irank in range(len(drankings['rankings_names'])):
+    for irank in range(len(adata[toolkey + '_rankings_names'])):
         scores = get_scores(irank)
         ymin = np.min([ymin,np.min(scores)])
         ymax = np.max([ymax,np.max(scores)])
@@ -637,19 +617,19 @@ def ranking(drankings, adata, nr=20):
     pl.subplots_adjust(left=0.15,top=0.9,right=0.98,bottom=0.13)
 
     count = 1
-    for irank in range(len(drankings['rankings_names'])):
+    for irank in range(len(adata[toolkey + '_rankings_names'])):
         fig.add_subplot(n_panels_y,n_panels_x,count)
         scores = get_scores(irank)
-        for ig,g in enumerate(drankings['rankings_geneidcs'][irank, :n_genes]):
-            marker = (r'\leftarrow' if drankings['zscores'][irank,g] < 0 
+        for ig,g in enumerate(adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
+            marker = (r'\leftarrow' if adata[toolkey + '_zscores'][irank,g] < 0 
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
                     r'$ ' + marker + '$ ' + adata.var_names[g],
-                    color = 'red' if drankings['zscores'][irank,g] < 0 else 'green',
+                    color = 'red' if adata[toolkey + '_zscores'][irank,g] < 0 else 'green',
                     rotation='vertical',verticalalignment='bottom',
                     horizontalalignment='center',
                     fontsize=8)
-        title = drankings['rankings_names'][irank]
+        title = adata[toolkey + '_rankings_names'][irank]
         pl.title(title)
         if n_panels <= 5 or count > n_panels_x:
             pl.xlabel('ranking')

@@ -8,49 +8,7 @@ from .. import utils
 from .. import readwrite
 from .. import settings as sett
 
-def exdata(format='plain'):
-    """Show available example data.
-    """
-    if format == 'plain':
-        s = utils.pretty_dict_string(dexdata())
-    elif format == 'markdown':
-        s = utils.markdown_dict_string(builtin.dexdata)
-    print(s)
-
-def examples():
-    """Show available example use cases.
-    """
-    s = utils.pretty_dict_string(dexamples())
-    print(s)
-
-def dexdata(): 
-    """Example data.
-    """
-    all_dex = utils.merge_dicts(builtin.dexdata, {})
-    try:
-        # additional possibility to add example module
-        from . import builtin_private
-        all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
-    except ImportError:
-        pass
-    return all_dex
-
-def dexamples():
-    """Example use cases.
-    """
-    builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
-    all_dex = utils.merge_dicts(builtin_dex, {}) 
-    try:
-        # additional possibility to add example module
-        from . import builtin_private
-        builtin_private_dex = utils.fill_in_datakeys(builtin_private.dexamples, 
-                                                  builtin_private.dexdata)
-        all_dex = utils.merge_dicts(all_dex, builtin_private_dex) 
-    except ImportError:
-        pass
-    return all_dex
-
-def example(exkey, return_module=False):
+def example(exkey, subsample=1, return_module=False):
     """
     Read and preprocess data for predefined example.
 
@@ -58,6 +16,8 @@ def example(exkey, return_module=False):
     ----------
     exkey : str
         Key for the example dictionary in _examples.
+    subsample : int
+        Subsample to a fraction of 1/subsample of the data.
     return_module : bool, optional
         Return example module.
 
@@ -113,6 +73,12 @@ def example(exkey, return_module=False):
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
         adata = check_adata(adata)
+
+        # subsampling
+        if subsample != 1:
+            from ..preprocess import subsample as subsample_function
+            adata = subsample_function(adata, subsample)
+
         readwrite.write(sett.basekey, adata)
         sett.m(0, 'wrote preprocessed data to', exfile)
     else:
@@ -122,6 +88,48 @@ def example(exkey, return_module=False):
         return adata, exmodule
     else:
         return adata
+
+def exdata(format='plain'):
+    """Show available example data.
+    """
+    if format == 'plain':
+        s = utils.pretty_dict_string(dexdata())
+    elif format == 'markdown':
+        s = utils.markdown_dict_string(builtin.dexdata)
+    print(s)
+
+def examples():
+    """Show available example use cases.
+    """
+    s = utils.pretty_dict_string(dexamples())
+    print(s)
+
+def dexdata(): 
+    """Example data.
+    """
+    all_dex = utils.merge_dicts(builtin.dexdata, {})
+    try:
+        # additional possibility to add example module
+        from . import builtin_private
+        all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
+    except ImportError:
+        pass
+    return all_dex
+
+def dexamples():
+    """Example use cases.
+    """
+    builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
+    all_dex = utils.merge_dicts(builtin_dex, {}) 
+    try:
+        # additional possibility to add example module
+        from . import builtin_private
+        builtin_private_dex = utils.fill_in_datakeys(builtin_private.dexamples, 
+                                                  builtin_private.dexdata)
+        all_dex = utils.merge_dicts(all_dex, builtin_private_dex) 
+    except ImportError:
+        pass
+    return all_dex
 
 #-------------------------------------------------------------------------------
 # Checks of AnnData object

@@ -15,9 +15,9 @@ def subsample(adata, subsample, seed=0):
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix
+        Annotated data matrix.
     subsample : int
-        Inverse fraction to sample to.
+        Subsample to a fraction of 1/subsample of the data.
     seed : int
         Root to change subsampling.
             

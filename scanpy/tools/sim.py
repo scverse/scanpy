@@ -56,17 +56,26 @@ def sim(model='sim/toggleswitch.txt',
         Seed for generation of random numbers.
     writedir: str, optional
         Path to directory for writing output files.
+
+    Returns
+    -------
+    adata : AnnData
+        An annotated data object.
     """
     params = locals()
-    return sample_dynamic_data(params)
+    adata = sample_dynamic_data(params)
+    if 'tools' not in adata:
+        adata['tools'] = np.array([], dtype=str)
+    adata['xroot'] = adata.X[0]
+    return adata
 
-def plot(ddata):
+def plot(adata, params=None):
     """
     Plot results of simulation.
     """
-    X = ddata['X']
-    genenames = ddata['col_names']
-    tmax = ddata['tmax_write']
+    X = adata.X
+    genenames = adata.var_names
+    tmax = adata['tmax_write']
     n_real = X.shape[0]/tmax
     plott.timeseries(X, genenames,
                      xlim=[0,1.25*X.shape[0]],
@@ -254,9 +263,9 @@ def sample_dynamic_data(params):
     filename = dir+'/sim_000000.txt'
     ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
-    ddata['type'] = 'sim'
-    dsim = ddata
-    return dsim
+    from ..ann_data import AnnData
+    adata = AnnData(ddata)
+    return adata
     
 def write_data(X,dir='sim/test',append=False,header='',
               varNames={},Adj=np.array([]),Coupl=np.array([]),
