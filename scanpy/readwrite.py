@@ -113,7 +113,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
                          'use a filename on one of the available extensions\n' + 
                          str(avail_exts) + 
                          'or provide the parameter "ext" to sc.read.')
-    d = read_file_to_dict(filename)
+    d = read_file_to_dict(filename, ext=sett.extd)
     if return_dict:
         return d
     else:
@@ -236,37 +236,32 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     If sheet is unspecified and an h5 or xlsx file is read, the dict
     contains all sheets instead.
     """
-    if ext != '': 
-        if not ext in avail_exts:
-            raise ValueError('Please provide one of the available extensions.'
-                             + avail_exts)
+    if ext != '' and ext not in avail_exts:
+        raise ValueError('Please provide one of the available extensions.\n'
+                         + avail_exts)
     else:
         ext = is_filename(filename, return_ext=True)
     # check whether data file is present, otherwise download
     filename = check_datafile_present(filename, backup_url=backup_url)
-    # actual reading
+    # read hdf5 files
     if ext == 'h5':
         if sheet == '':
-            d = read_file_to_dict(filename, ext='h5')
-            if 'isadata' in d:
-                from .classes.ann_data import AnnData
-                del d['isadata']
-                return AnnData(d)
-            else:
-                return d
-        sett.m(0, 'reading sheet', sheet, 'from file', filename)
-        return _read_hdf5_single(filename, sheet)
-    # if filename is not in the hdf5 format, do some more book keeping
-    filename_hdf5 = filename.replace('.' + ext, '.h5')
-    # just to make sure that we have a different filename
-    if filename_hdf5 == filename:
-        filename_hdf5 = filename + '.h5'
-    if not os.path.exists(filename_hdf5) or sett.recompute == 'read':
+            return read_file_to_dict(filename, ext=sett.extd)
+        else:
+            sett.m(0, 'reading sheet', sheet, 'from file', filename)
+            return _read_hdf5_single(filename, sheet)
+    # read other file formats
+    filename_fast = (sett.writedir + 'data/' + 
+                     filename.replace('.' + ext, '.' + sett.extd))
+    if not os.path.exists(filename_fast) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
-                 '\n... writing an hdf5 version to speedup reading next time')
+                 '\n... writing a', sett.extd, 'version to speedup reading next time\n   ',
+                 filename_fast)
+        if not os.path.exists(os.path.dirname(filename_fast)):
+            os.makedirs(os.path.dirname(filename_fast))
         # do the actual reading
         if ext == 'xlsx' or ext == 'xls':
-            if sheet=='':
+            if sheet == '':
                 ddata = read_file_to_dict(filename, ext=ext)
             else:
                 ddata = _read_excel(filename, sheet)
@@ -274,11 +269,11 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             ddata = _read_mtx(filename)
         elif ext == 'csv':
             ddata = read_txt(filename, delim=',', 
-                               first_column_names=first_column_names,
-                               as_strings=as_strings)
+                             first_column_names=first_column_names,
+                             as_strings=as_strings)
         elif ext in ['txt', 'tab', 'data']:
             if ext == 'data':
-                sett.m(0, 'assuming ".data" means tab or white-space separated text file')
+                sett.m(0, '... assuming ".data" means tab or white-space separated text file')
                 sett.m(0, '--> change this by specifying ext to sc.read')
             ddata = read_txt(filename, delim, first_column_names,
                                as_strings=as_strings)
@@ -288,12 +283,11 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             print('TODO: implement similar to read_softgz')
             sys.exit()
         else:
-            raise ValueError('unkown extension', ext)
-        # write as hdf5 for faster reading when calling the next time
-        write_dict_to_file(filename_hdf5, ddata)
+            raise ValueError('Unkown extension', ext)
+        # write as fast for faster reading when calling the next time
+        write_dict_to_file(filename_fast, ddata, sett.extd)
     else:
-        ddata = read_file_to_dict(filename_hdf5)
-
+        ddata = read_file_to_dict(filename_fast, sett.extd)
     return ddata
 
 def _read_mtx(filename):
@@ -301,9 +295,12 @@ def _read_mtx(filename):
     Read mtx file.
     """
     from scipy.io import mmread
-    X = mmread(filename).todense()
-    sett.m(0, '--> did not find any row_names or columnnames')
-    sett.m(0, '--> TODO: don\'t use dense format')
+    X = mmread(filename)
+    from scipy.sparse.csr import csr_matrix
+    X = csr_matrix(X)
+    sett.m(0, '... did not find row_names or col_names')
+    sett.extd = 'npz'
+    sett.m(0, '... using npz file format, hdf5 currently not available')
     return {'X': X}
 
 def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
@@ -637,6 +634,21 @@ def _read_softgz(filename):
 # Reading and writing for dictionaries
 #--------------------------------------------------------------------------------
 
+def postprocess_reading(key, value):
+    if value.dtype.kind == 'S':
+        value = value.astype(str)
+    # get back dictionaries
+    if key.endswith('_ann'):
+        dd = {}
+        for row in value:
+            # the type is stored after the "_"
+            t = row[0].split('_')[-1]
+            k = '_'.join(row[0].split('_')[:-1])
+            dd[k] = row[1:].astype(t)
+        return key[:-4], dd
+    else:
+        return key, value
+
 def read_file_to_dict(filename, ext='h5'):
     """ 
     Read file and return dict with keys.
@@ -656,7 +668,7 @@ def read_file_to_dict(filename, ext='h5'):
     -------
     d : dict
     """
-    sett.m(0,'reading file',filename)
+    sett.m(0,'reading file', filename)
     d = {}
     if ext == 'h5':
         with h5py.File(filename, 'r') as f:
@@ -664,25 +676,23 @@ def read_file_to_dict(filename, ext='h5'):
                 # the '()' means 'read everything' (by contrast, ':' only works
                 # if not reading a scalar type)
                 value = f[key][()]
-                if value.dtype.kind == 'S':
-                    value = value.astype(str)
-                # get back dictionaries
-                if key.endswith('_ann'):
-                    dd = {}
-                    for row in value:
-                        # the type is stored after the "_"
-                        t = row[0].split('_')[-1]
-                        k = '_'.join(row[0].split('_')[:-1])
-                        dd[k] = row[1:].astype(t)
-                    d[key[:-4]] = dd
-                else:
-                    d[key] = value
+                key, value = postprocess_reading(key, value)
+                d[key] = value
+    elif ext == 'npz':
+        d_read = np.load(filename)
+        for key, value in d_read.items():
+            key, value = postprocess_reading(key, value)
+            d[key] = value
     elif ext == 'xlsx':
         raise ValueError('TODO: this is broke.')
         import pandas as pd
         xl = pd.ExcelFile(filename)
         for sheet in xl.sheet_names:
             d[sheet] = xl.parse(sheet).values
+    if 'X' not in d:
+        if os.path.exists(filename.replace('.' + ext, '') + '_X.npz'):
+            X = load_sparse_csr(filename.replace('.' + ext, '') + '_X.npz')
+            d['X'] = X
     return d
 
 def prepare_writing(key, value, ext):
@@ -695,7 +705,7 @@ def prepare_writing(key, value, ext):
             # the type is stored after the "_"
             array.append(np.r_[np.array([k + '_' + t]), v])
         value = np.array(array)
-        if ext != 'h5':
+        if ext not in {'h5', 'npz'}:
             value = value.T
         key = key + '_ann'
     if type(value) != np.ndarray:
@@ -726,6 +736,10 @@ def write_dict_to_file(filename, d, ext='h5'):
     if not os.path.exists(directory):
         sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
+    if 'X' in d:
+        import scipy.sparse
+        if isinstance(d['X'], scipy.sparse.spmatrix):
+            save_sparse_csr(filename.replace('.' + ext, '') + '_X.npz', d['X'])
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d.items():
@@ -733,8 +747,19 @@ def write_dict_to_file(filename, d, ext='h5'):
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
-                    sett.m(0,'error creating dataset for key =', key)
+                    sett.m(0, 'Error creating dataset for key =', key)
                     raise e
+    elif ext == 'npz':
+        d_write = {}
+        import scipy.sparse
+        for key, value in d.items():
+            if key == 'X' and isinstance(value, scipy.sparse.spmatrix):
+                continue
+            key, value = prepare_writing(key, value, ext)
+            d_write[key] = value
+        if not d_write:
+            d_write['dummy'] = np.array([1])
+        np.savez(filename, **d_write)
     elif ext == 'csv' or ext == 'txt':
         # here this is actually a directory that corresponds to the 
         # single hdf5 file
@@ -762,6 +787,18 @@ def write_dict_to_file(filename, d, ext='h5'):
 #--------------------------------------------------------------------------------
 # Type conversion
 #--------------------------------------------------------------------------------
+
+def save_sparse_csr(filename, array):
+    from scipy.sparse.csr import csr_matrix
+    array = csr_matrix(array)
+    np.savez(filename, data=array.data, indices=array.indices,
+             indptr=array.indptr, shape=array.shape)
+
+def load_sparse_csr(filename):
+    loader = np.load(filename)
+    from scipy.sparse.csr import csr_matrix
+    return csr_matrix((loader['data'], loader['indices'], loader['indptr']),
+                       shape=loader['shape'])
 
 def is_float(string):
     """
@@ -848,7 +885,7 @@ def check_datafile_present(filename, backup_url=''):
 
     if not os.path.exists(filename):
         if os.path.exists('../' + filename):
-            # we are in a subdirectory of Scanpy
+            # we are in a subdirectory of the scanpy repo
             return '../' + filename
         else:
             # download the file
@@ -878,9 +915,9 @@ def is_filename(filename_or_key,return_ext=False):
             else:
                 return True
     if return_ext:
-        raise ValueError(filename_or_key 
+        raise ValueError('"' + filename_or_key + '"' 
                          + ' does not contain a valid extension\n'
-                         + 'choose a filename that contains one of\n'
+                         + 'Please provide one of the available extensions.\n'
                          + avail_exts)
     else:
         return False

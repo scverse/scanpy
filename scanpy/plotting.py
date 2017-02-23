@@ -22,13 +22,11 @@ def savefig(writekey):
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
 
-
 def default_pal(pal=None):
     if pal is None:
         return rcParams['axes.prop_cycle']
     elif not isinstance(pal, Cycler):
         return cycler(color=pal)
-
 
 def plot_tool(adata,
               toolkey,
