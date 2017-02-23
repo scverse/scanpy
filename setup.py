@@ -4,6 +4,8 @@ from setuptools import setup
 more_requires = []
 if sys.version_info[:2] < (3, 5):
     more_requires.append('configparser')
+if sys.version_info[:2] < (3, 4):
+    more_requires.append('enum34')
 
 setup(
     name='scanpy',
@@ -26,7 +28,13 @@ setup(
         'h5py',
         'scikit-learn',
     ] + more_requires,
-    packages=['scanpy', 'scanpy.tools', 'scanpy.compat', 'scanpy.exs',
-    'scanpy.preprocess', 'scanpy.classes'],
+    packages=[
+        'scanpy',
+        'scanpy.tools',
+        'scanpy.compat',
+        'scanpy.exs',
+        'scanpy.preprocess',
+        'scanpy.classes',
+    ],
     zip_safe=False,
 )

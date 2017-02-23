@@ -1,7 +1,7 @@
-[Quick Start](#quick_start) | 
-[Example Library](examples) | 
-[Tools](#tools) | 
-[Installation](#install) | 
+[Quick Start](#quick_start) |
+[Example Library](examples) |
+[Tools](#tools) |
+[Installation](#install) |
 [References](#references)
 
 # Scanpy - Single-Cell Analysis in Python
@@ -42,7 +42,7 @@ with the top-level command `scanpy` in any directory (more info [here](#install)
 Packages you might need (all default in
 [Anaconda](https://www.continuum.io/downloads)) can be easily installed using
 [Miniconda](http://conda.pydata.org/miniconda.html). Then run `conda install
-scipy matplotlib h5py scikit-learn pandas xlrd`. Scanpy is written in Python 3
+scipy matplotlib h5py scikit-learn pandas xlrd enum34`. Scanpy is written in Python 3
 and compatible with Python 2.
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
@@ -189,9 +189,9 @@ Or, call the wrapper `python scanpy.py` from within the root of the repository,
 which works **without** [installation](#install).
 
 Packages you might need (all default in
-[Anaconda](https://www.continuum.io/downloads)) can be easily installed via 
+[Anaconda](https://www.continuum.io/downloads)) can be easily installed via
 [Miniconda](http://conda.pydata.org/miniconda.html). Run `conda install scipy
-matplotlib h5py pandas xlrd scikit-learn`. Scanpy is written in Python 3 and compatible with
+matplotlib h5py pandas xlrd scikit-learn enum34`. Scanpy is written in Python 3 and compatible with
 Python 2.
 
 #### Package Managment via Miniconda
@@ -204,7 +204,7 @@ chmod +x Miniconda3-latest-VERSION.sh
 ```
 and accept all suggestions. Either reopen a new terminal or `source
 ~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac. Then run
-`conda install scipy matplotlib h5py pandas xlrd scikit-learn`. The whole process takes about 5 min.
+`conda install scipy matplotlib h5py pandas xlrd scikit-learn enum34`. The whole process takes about 5 min.
 
 <!--- You can install Scanpy, hence `import scanpy` from anywhere on your system, via
 ```shell
@@ -214,14 +214,14 @@ Then, `scanpy` becomes a top-level command available from anywhere in the
 system, call `scanpy --help`. The package is
 [registered](https://pypi.python.org/pypi/scanpy/0.1) in the [Python Packaging
 Index](https://pypi.python.org/pypi), but versioning has not started yet. In the
-future, installation will be possible without reference to GitHub via 
+future, installation will be possible without reference to GitHub via
 `pip install scanpy`.
 -->
 
 ## References <a id="references"></a>
 
 <a id="ref_amir13"></a>
-Amir *et al.* (2013), 
+Amir *et al.* (2013),
 *viSNE enables visualization of high dimensional single-cell data and reveals phenotypic heterogeneity of leukemia*
 [Nature Biotechnology 31, 545](http://dx.doi.org/10.1038/nbt.2594).
 
@@ -245,13 +245,13 @@ reconstructs branching cellular lineages*, [Nature Methods 13, 845](
 http://dx.doi.org/10.1038/nmeth.3971).
 
 <a id="ref_krumsiek10"></a>
-Krumsiek *et al.* (2010), 
-*Odefy - From discrete to continuous models*, 
+Krumsiek *et al.* (2010),
+*Odefy - From discrete to continuous models*,
 [BMC Bioinformatics 11, 233](http://dx.doi.org/10.1186/1471-2105-11-233).
 
 <a id="ref_krumsiek11"></a>
-Krumsiek *et al.* (2011), 
-*Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*, 
+Krumsiek *et al.* (2011),
+*Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*,
 [PLoS ONE 6, e22649](http://dx.doi.org/10.1371/journal.pone.0022649).
 
 <a id="ref_moignard15"></a>
