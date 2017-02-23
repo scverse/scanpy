@@ -1,9 +1,11 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Plotting
-"""   
+"""
 
 import numpy as np
+from cycler import Cycler, cycler
+
 from .compat.matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import ticker
@@ -11,7 +13,7 @@ from matplotlib.figure import SubplotParams as sppars
 from . import settings as sett
 
 #--------------------------------------------------------------------------------
-# Scanpy Plotting Functions 
+# Scanpy Plotting Functions
 #--------------------------------------------------------------------------------
 
 def savefig(writekey):
@@ -19,6 +21,14 @@ def savefig(writekey):
         filename = sett.figdir + writekey + '.' + sett.extf
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
+
+
+def default_pal(pal=None):
+    if pal is None:
+        return rcParams['axes.prop_cycle']
+    elif not isinstance(pal, Cycler):
+        return cycler(color=pal)
+
 
 def plot_tool(adata,
               toolkey,
@@ -30,6 +40,7 @@ def plot_tool(adata,
               layout='2d',
               legendloc='right margin',
               cmap=None,
+              pal=None,
               right_margin=None,
               size=3,
               subtitles=None):
@@ -59,8 +70,10 @@ def plot_tool(adata,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: viridis/ categorical: finite palette)
+    cmap : str (default: 'viridis')
          String denoting matplotlib color map.
+    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+         Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
@@ -68,7 +81,7 @@ def plot_tool(adata,
     """
     # compute components
     from numpy import array
-    if comps is None: 
+    if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
     comps = array(comps.split(',')).astype(int) - 1
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
@@ -77,10 +90,11 @@ def plot_tool(adata,
     highlights = adata['highlights'] if 'highlights' in adata else []
     try:
         Y = adata['X_' + basis][:, comps]
-    except:
+    except KeyError:
         sett.mi('--> compute the basis using plotting tool', basis, 'first')
-        from sys import exit
-        exit(0)
+        raise
+
+    pal = default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
                       else 'Spring' if basis == 'spring'
@@ -116,7 +130,7 @@ def plot_tool(adata,
                 continuous = True
                 sett.m(0, '... coloring according to expression of gene', smp)
             else:
-                raise ValueError('"' + smp + '" is invalid!' 
+                raise ValueError('"' + smp + '" is invalid!'
                                  + ' specify valid sample annotation, one of '
                                  + str(adata.smp_keys()) + ' or a gene name '
                                  + str(adata.var_names))
@@ -127,7 +141,7 @@ def plot_tool(adata,
         colorbars.append(True if continuous else False)
         if categorical:
             categoricals.append(ismp)
-            
+
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.24
     if subtitles is None:
@@ -151,15 +165,11 @@ def plot_tool(adata,
             and len(np.setdiff1d(adata['groups_names'], adata[smp + '_names']))
                 < len(adata['groups_names'])):
             # if there is a correspondence between smp and the 'groups' defined
-            # in adata, that is, if smp has corresponding categories with those 
+            # in adata, that is, if smp has corresponding categories with those
             # in adata['groups_names']
-            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
-                                    pl.Normalize()(
-                                       np.arange(len(adata['groups_names']), dtype=int)))
+            adata[smp + '_colors'] = pal[:len(adata['groups_names'])].by_key()['color']
         elif not smp + '_colors' in adata:
-            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
-                                            pl.Normalize()(
-                                       np.arange(len(adata[smp + '_names']), dtype=int)))
+            adata[smp + '_colors'] = pal[:len(adata[smp + '_names'])].by_key()['color']
         for iname, name in enumerate(adata[smp + '_names']):
             if (names is None or (names != None and name in names)):
                 group(axs[ismp], smp, iname, adata, Y, layout, size)
@@ -200,35 +210,54 @@ def group(ax, name, imask, adata, Y, layout='2d', size=3):
                alpha=1,
                label=adata[name + '_names'][imask])
 
-def timeseries(*args,**kwargs):
-    """ 
+def timeseries(X, c, **kwargs):
+    """
     Plot X. See timeseries_subplot.
     """
     pl.figure(figsize=(2*4,4),
               subplotpars=sppars(left=0.12,right=0.98,bottom=0.13))
-    timeseries_subplot(*args,**kwargs)
+    timeseries_subplot(X, c, **kwargs)
 
 def timeseries_subplot(X,
-                       varnames=[],
-                       highlightsX=[],
-                       c = None,
+                       c,
+                       varnames=(),
+                       highlightsX=(),
                        xlabel='segments / pseudotime order',
                        ylabel='gene expression',
                        yticks=None,
                        xlim=None,
                        legend=True,
-                       cmap='jet'): # consider changing to 'viridis'
-    """ 
-    Plot X.
+                       pal=None,
+                       cmap='viridis'):
     """
-    for i in range(X.shape[1]):
+    Plot X. Call this with:
+    X with one column, c categorical
+    X with one column, c continuous
+    X with n columns, c is of length n
+    """
+
+    use_cmap = isinstance(c[0], float)
+    pal = default_pal(pal)
+    x_range = np.arange(X.shape[0])
+    if X.shape[1] > 1:
+        colors = pal[:X.shape[1]].by_key()['color']
+        subsets = [(x_range, X[:, 0])]
+    elif use_cmap:
+        colors = [c]
+        subsets = [(x_range, X[:, 0])]
+    else:
+        levels, _ = np.unique(c, return_inverse=True)
+        colors = np.array(pal[:len(levels)].by_key()['color'])
+        subsets = [(x_range[c == l], X[c == l, :]) for l in levels]
+
+    for i, (x, y) in enumerate(subsets):
         pl.scatter(
-            np.arange(X.shape[0]), X[:, i],
+            x, y,
             marker='.',
             edgecolor='face',
             s=rcParams['lines.markersize'],
-            c=cl[i] if c is None else c,
-            label = (varnames[i] if len(varnames) > 0 else ''),
+            c=colors[i],
+            label=varnames[i] if len(varnames) > 0 else '',
             cmap=cmap,
         )
     ylim = pl.ylim()
@@ -245,8 +274,8 @@ def timeseries_subplot(X,
     if len(varnames) > 0 and legend==True:
         pl.legend(frameon=False)
 
-def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
-    """ 
+def timeseries_as_heatmap(X, varnames=None, highlightsX = None, cmap='viridis'):
+    """
     Plot timeseries as heatmap.
 
     Parameters
@@ -289,7 +318,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None):
 
     fig = pl.figure(figsize=(1.5*4,2*4))
     im = pl.imshow(np.array(X,dtype=np.float_), aspect='auto',
-              interpolation='nearest', cmap='viridis')
+              interpolation='nearest', cmap=cmap)
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), varnames)
     for ih,h in enumerate(highlightsX):
@@ -313,7 +342,7 @@ def scatter(Ys,
             axlabels=None,
             colorbars=[False],
             **kwargs):
-    """ 
+    """
     Plot scatter plot of data.
 
     Parameters
@@ -423,30 +452,30 @@ def scatter(Ys,
                 if bool3d:
                     data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
                 ax.scatter(*data, c='black',
-                           facecolors='black', edgecolors='black', 
+                           facecolors='black', edgecolors='black',
                            marker='x', s=40, zorder=20)
-                highlight = (highlights_labels[iihighlight] if 
-                             len(highlights_labels) > 0 
+                highlight = (highlights_labels[iihighlight] if
+                             len(highlights_labels) > 0
                              else str(ihighlight))
-                # the following is a Python 2 compatibility hack                
+                # the following is a Python 2 compatibility hack
                 ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
             ax.set_xticks([]); ax.set_yticks([])
             if bool3d:
-                ax.set_zticks([]) 
+                ax.set_zticks([])
             axs.append(ax)
             count += 1
     # set default axlabels
     if axlabels is None:
         if layout == '2d':
-            axlabels = [[component_name + str(i) for i in idcs] 
-                         for idcs in 
-                         [component_indexnames for iax in range(len(axs))]]            
+            axlabels = [[component_name + str(i) for i in idcs]
+                         for idcs in
+                         [component_indexnames for iax in range(len(axs))]]
         elif layout == '3d':
-            axlabels = [[component_name + str(i) for i in idcs] 
-                         for idcs in 
+            axlabels = [[component_name + str(i) for i in idcs]
+                         for idcs in
                          [component_indexnames for iax in range(len(axs))]]
         elif layout == 'unfolded 3d':
-            axlabels = [[component_name 
+            axlabels = [[component_name
                          + str(component_indexnames[i-1]) for i in idcs]
                          for idcs in [[2, 3], [1, 2], [1, 2, 3], [1, 3]]]
     # set axlabels
@@ -457,8 +486,8 @@ def scatter(Ys,
         elif layout == 'unfolded 3d' and iax == 2:
             bool3d = True
         if axlabels is not None:
-            ax.set_xlabel(axlabels[iax][0]) 
-            ax.set_ylabel(axlabels[iax][1]) 
+            ax.set_xlabel(axlabels[iax][0])
+            ax.set_ylabel(axlabels[iax][1])
             if bool3d:
                 # shift the label closer to the axis
                 ax.set_zlabel(axlabels[iax][2],labelpad=-7)
@@ -472,7 +501,7 @@ def _scatter_auto_grid(Ys,
              c='blue',
              highlights=[],
              highlights_labels=[],
-             title='', 
+             title='',
              colorbars=[False],
              **kwargs):
     # if we have a single array, transform it into a list with a single array
@@ -498,7 +527,7 @@ def _scatter_auto_grid(Ys,
     # try importing Axes3D
     if '3d' in layout:
         from mpl_toolkits.mplot3d import Axes3D
-    fig = pl.figure(figsize=figsize, 
+    fig = pl.figure(figsize=figsize,
                     subplotpars=sppars(left=0.07,right=0.98,bottom=0.08))
     fig.suptitle(title)
     count = 1
@@ -541,23 +570,23 @@ def _scatter_auto_grid(Ys,
                 if bool3d:
                     data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
                 ax.scatter(*data, c='black',
-                           facecolors='black', edgecolors='black', 
+                           facecolors='black', edgecolors='black',
                            marker='x', s=40, zorder=20)
-                highlight = (highlights_labels[iihighlight] if 
-                             len(highlights_labels) > 0 
+                highlight = (highlights_labels[iihighlight] if
+                             len(highlights_labels) > 0
                              else str(ihighlight))
-                # the following is a Python 2 compatibility hack                
+                # the following is a Python 2 compatibility hack
                 ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
             ax.set_xticks([]); ax.set_yticks([])
             if bool3d:
-                ax.set_zticks([]) 
+                ax.set_zticks([])
             axs.append(ax)
             count += 1
     # scatter.set_edgecolors = scatter.set_facecolors = lambda *args:None
     return axs
 
 def _scatter_single(ax,Y,*args,**kwargs):
-    """ 
+    """
     Plot scatter plot of data. Just some wrapper of matplotlib.Axis.scatter.
 
     Parameters
@@ -575,7 +604,7 @@ def _scatter_single(ax,Y,*args,**kwargs):
     ax.set_xticks([]); ax.set_yticks([])
 
 def ranking(adata, toolkey, n_genes=20):
-    """ 
+    """
     Plot ranking of genes
 
     Parameters
@@ -621,7 +650,7 @@ def ranking(adata, toolkey, n_genes=20):
         fig.add_subplot(n_panels_y,n_panels_x,count)
         scores = get_scores(irank)
         for ig,g in enumerate(adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
-            marker = (r'\leftarrow' if adata[toolkey + '_zscores'][irank,g] < 0 
+            marker = (r'\leftarrow' if adata[toolkey + '_zscores'][irank,g] < 0
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
                     r'$ ' + marker + '$ ' + adata.var_names[g],
@@ -633,7 +662,7 @@ def ranking(adata, toolkey, n_genes=20):
         pl.title(title)
         if n_panels <= 5 or count > n_panels_x:
             pl.xlabel('ranking')
-        if count == 1 or count == n_panels_x+1: 
+        if count == 1 or count == n_panels_x+1:
             pl.ylabel(scoreskey)
         else:
             pl.yticks([])
@@ -642,7 +671,7 @@ def ranking(adata, toolkey, n_genes=20):
         count += 1
 
 def arrows_transitions(ax,X,indices,weight=None):
-    """ 
+    """
     Plot arrows of transitions in data matrix.
 
     Parameters
@@ -666,7 +695,7 @@ def arrows_transitions(ax,X,indices,weight=None):
     for ix,x in enumerate(X):
         if ix%step == 0:
             X_step = X[indices[ix]] - x
-            # don't plot arrow of length 0 
+            # don't plot arrow of length 0
             for itrans in range(X_step.shape[0]):
                 alphai = 1
                 widthi = width
@@ -678,7 +707,7 @@ def arrows_transitions(ax,X,indices,weight=None):
                     ax.arrow(x[0], x[1],
                              X_step[itrans,0], X_step[itrans,1],
                              length_includes_head=True,
-                             width=widthi, 
+                             width=widthi,
                              head_width=head_widthi,
                              alpha=alphai,
                              color='grey')
@@ -704,20 +733,20 @@ def pimp_axis(ax):
 def scale_to_zero_one(x):
     """
     Take some 1d data and scale it so that min matches 0 and max 1.
-    """    
+    """
     xscaled = x - np.min(x)
     xscaled /= np.max(xscaled)
     return xscaled
 
 def zoom(ax,xy='x',factor=1):
-    """ 
+    """
     Zoom into axis.
 
     Parameters
     ----------
     """
     limits = ax.get_xlim() if xy == 'x' else ax.get_ylim()
-    new_limits = (0.5*(limits[0] + limits[1]) 
+    new_limits = (0.5*(limits[0] + limits[1])
                   + 1./factor * np.array((-0.5, 0.5)) * (limits[1] - limits[0]))
     if xy == 'x':
         ax.set_xlim(new_limits)
@@ -725,7 +754,7 @@ def zoom(ax,xy='x',factor=1):
         ax.set_ylim(new_limits)
 
 def get_ax_size(ax,fig):
-    """ 
+    """
     Get axis size
 
     Parameters
@@ -741,7 +770,7 @@ def get_ax_size(ax,fig):
     height *= fig.dpi
 
 def axis_to_data(ax,width):
-    """ 
+    """
     For a width in axis coordinates, return the corresponding in data
     coordinates.
 
@@ -759,7 +788,7 @@ def axis_to_data(ax,width):
     return 0.5*(widthx + widthy)
 
 def axis_to_data_points(ax,points_axis):
-    """ 
+    """
     Map points in axis coordinates to data coordinates.
 
     Uses matplotlib.transform.
@@ -775,7 +804,7 @@ def axis_to_data_points(ax,points_axis):
     return axis_to_data.transform(points_axis)
 
 def data_to_axis_points(ax,points_data):
-    """ 
+    """
     Map points in data coordinates to axis coordinates.
 
     Uses matplotlib.transform.
@@ -793,62 +822,7 @@ def data_to_axis_points(ax,points_data):
 #--------------------------------------------------------------------------------
 # Global Plotting Variables
 #--------------------------------------------------------------------------------
-    
-# color dict
-cDict = {
-    '0':'black',
-    # red
-    '1':'#8B0000',  # darkred
-    '11':'#EE0000', # red
-    # orange
-     '2':'#DD2F00',   # darkorange1                                        
-     '21':'#DD8C00',  # darkorange                                         
-     '22':'#FF7F50',  # darkorange                            
-     '23':'#FFA500',  # orange                                             
-     '24':'#FFBB00',  # orange                                             
-    # green
-    '3':'#006400',   # darkgreen
-    '31':'#556B2F',  # DarkOliveGreen
-    '32':'#228B22',  # forestgreen
-    '33':'#66CD00',  # chartreuse3
-    '34':'#42CD42',  # limegreen
-    '35':'#7CFC00',  # LawnGreen
-    # blue
-    '4':'#00008B',   # darkblue
-    '41':'#104E8B',  # DodgerBlue4
-    '42':'#1874CD',  # dodgerblue3
-    '43':'#1E90FF',  # DodgerBlue
-    '44':'#1E90FF',  # DodgerBlue
-    '45':'#00BFFF',  # DeepSkyBlue
-    # violett
-    '5':'#68228B',  # DarkOrchid4
-    '51':'#9932CC', # darkorchid
-    '52':'#8B008B', # darkmagenta
-    '53':'#FF34B3', # maroon1
-    # yellow
-    '6':'#FFA500',   # orange
-    '61':'#FFB90F',  # DarkGoldenrod1
-    '62':'#FFD700',  # gold
-    '63':'#FFFF00',  # yellow
-    # other
-    '7':'turquoise', # turquoise
-    '8':'#212121',   # darkgrey
-    '81':'#424242',
-    '82':'grey',
-    '99':'white',
-}
-# list of colors
-cl = [cDict[k] for k in ['4','3','1','21','42','33','11',
-                          '53','23','35','7','81','0']]
-# list of colors (rainbow)
-clrb = [cDict[k] for k in ['1','11',                 # red (dark to light)
-                            '2','21','23',            # orange (dark to light)
-                            '61','62',                # yellow (dark to light)
-                            '35','34','33','3',       # green (light to dark)
-                            '45','43','42','41','4',  # blue (light to dark)
-                            '5',                      # violet
-                            '8'                       # dark grey 
-                            ]]
+
 # standard linewidth
 lw0 = rcParams['lines.linewidth']
 # list of markers

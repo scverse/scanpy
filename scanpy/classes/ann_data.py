@@ -45,7 +45,7 @@ class BoundRecArr(np.recarray):
             cols = [np.asarray(col) for col in source.values()]
             if name_col not in source:
                 names.append(name_col)
-                cols.append(np.arange(len(cols[0])))
+                cols.append(np.arange(len(cols[0]) if cols else n_row))
             dtype = list(zip(names, [str(c.dtype) for c in cols]))
         try:
             dtype = np.dtype(dtype)
@@ -99,9 +99,9 @@ class AnnData(IndexMixin):
 
         Stores a data matrix X of dimensions n_samples x n_variables,
         e.g. n_cells x n_genes, with the possibility to store an arbitrary
-        number of annotations for both samples and variables, and 
+        number of annotations for both samples and variables, and
         additional arbitrary unstructured via **meta.
-        
+
         You can access additional metadata elements directly from the AnnData:
 
         >>> adata = AnnData(np.eye(3), k=1)
@@ -202,9 +202,9 @@ class AnnData(IndexMixin):
         return X, smp, var, meta
 
     def to_ddata(self):
-        smp = {k: self.smp[k] for k in self.smp_keys() if not k=='smp_names'}
-        var = {k: self.var[k] for k in self.var_keys() if not k=='var_names'}
-        d = {'X': self.X, 'smp': smp, 'var': var, 
+        smp = {k: self.smp[k] for k in self.smp_keys() if k != 'smp_names'}
+        var = {k: self.var[k] for k in self.var_keys() if k != 'var_names'}
+        d = {'X': self.X, 'smp': smp, 'var': var,
              'smp_names': self.smp_names, 'var_names': self.var_names}
         for k, v in self._meta.items():
             d[k] = v
