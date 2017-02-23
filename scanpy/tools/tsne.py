@@ -38,7 +38,7 @@ def tsne(adata, n_pcs=50, perplexity=30):
         Number of principal components in preprocessing PCA.
 
     Parameters as used in sklearn.manifold.TSNE:
-    perplexity : float, optional (default: 30) 
+    perplexity : float, optional (default: 30)
         Perplexity.
 
     Returns
@@ -75,11 +75,11 @@ def tsne(adata, n_pcs=50, perplexity=30):
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
             sett.m(1,'--> perform tSNE using sklearn!')
-            sett.m(1,'--> can be sped up by installing\n' 
+            sett.m(1,'--> can be sped up by installing\n'
                      '    https://github.com/DmitryUlyanov/Multicore-TSNE')
-            Y = tsne.fit_transform(X)            
+            Y = tsne.fit_transform(X)
         except ImportError:
-            sett.m(0,'--> perform tSNE using slow/unreliable original\n' 
+            sett.m(0,'--> perform tSNE using slow/unreliable original\n'
                      '    code by L. van der Maaten!?\n'
                      '--> consider installing sklearn\n'
                      '    using "conda/pip install scikit-learn"')
@@ -95,6 +95,7 @@ def plot(adata,
          layout='2d',
          legendloc='right margin',
          cmap=None,
+         pal=None,
          right_margin=None,
          size=3):
     """
@@ -121,8 +122,10 @@ def plot(adata,
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: viridis/ categorical: finite palette)
+    cmap : str (default: 'viridis')
          String denoting matplotlib color map.
+    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+         Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
@@ -139,6 +142,7 @@ def plot(adata,
                     layout=layout,
                     legendloc=legendloc,
                     cmap=cmap,
+                    pal=pal,
                     right_margin=right_margin,
                     size=size)
 
@@ -205,7 +209,7 @@ def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
 
     # Return solution
     return Y;
-        
+
 def _Hbeta_vandermaaten(D = np.array([]), beta = 1.0):
     """
     Compute the perplexity and the P-row for a specific value of the

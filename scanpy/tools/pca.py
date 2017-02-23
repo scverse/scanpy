@@ -32,7 +32,7 @@ def pca(adata_or_X, n_comps=10):
     -------
     X_pca : np.ndarray
          PCA representation of the data with shape n_variables x n_comps.
-         Depending on whether an AnnData or a data matrix has been 
+         Depending on whether an AnnData or a data matrix has been
          provided, the array is written to AnnData or returned directly.
     """
     isadata = isinstance(adata_or_X, AnnData)
@@ -59,6 +59,7 @@ def plot(adata,
          layout='2d',
          legendloc='right margin',
          cmap=None,
+         pal=None,
          right_margin=None,
          size=3):
     """
@@ -83,8 +84,10 @@ def plot(adata,
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: viridis/ categorical: finite palette)
+    cmap : str (default: 'viridis')
          String denoting matplotlib color map.
+    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+         Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
@@ -101,6 +104,7 @@ def plot(adata,
                     layout=layout,
                     legendloc=legendloc,
                     cmap=cmap,
+                    pal=pal,
                     right_margin=right_margin,
                     size=size)
 

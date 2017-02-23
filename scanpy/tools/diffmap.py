@@ -33,9 +33,9 @@ def diffmap(adata, n_comps=10, k=5, knn=False, sigma=0):
     Also implements the modifications to diffusion map introduced by Haghverdi
     et al. (2016).
 
-    Return dictionary that stores the new data representation 'Y', which 
+    Return dictionary that stores the new data representation 'Y', which
     consists of the first few eigenvectors of a kernel matrix of the data, and
-    the eigenvalues 'evals'. 
+    the eigenvalues 'evals'.
 
     Parameters
     ----------
@@ -76,6 +76,7 @@ def plot(adata,
          layout='2d',
          legendloc='right margin',
          cmap=None,
+         pal=None,
          right_margin=None,
          size=3):
     """
@@ -100,8 +101,10 @@ def plot(adata,
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: viridis/ categorical: finite palette)
+    cmap : str (default: 'viridis')
          String denoting matplotlib color map.
+    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+         Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
@@ -118,6 +121,7 @@ def plot(adata,
                     layout=layout,
                     legendloc=legendloc,
                     cmap=cmap,
+                    pal=pal,
                     right_margin=right_margin,
                     size=size)
 

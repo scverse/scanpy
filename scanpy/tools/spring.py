@@ -10,7 +10,7 @@ References
 ----------
 - General: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 - Suggested for drawing knn-graphs in the context of single-cell
-  transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016) 
+  transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016)
 """
 
 import numpy as np
@@ -60,13 +60,13 @@ def spring(adata, k=4, n_comps=2):
         indices[irow] = idcs
     # compute adjacency matrix
     # make this float, as we might put a weight matrix here
-    Adj = np.zeros(D.shape, dtype=float) 
+    Adj = np.zeros(D.shape, dtype=float)
     for irow, row in enumerate(indices):
         Adj[irow, row] = 1
         # symmetrize as in DPT
         # for j in row:
         #    if irow not in indices[j]:
-        #        Adj[j,irow] = 1    
+        #        Adj[j,irow] = 1
     # just sample initial positions, the rest is done by the plotting tool
     np.random.seed(1)
     Y = np.asarray(np.random.random((Adj.shape[0], 2)), dtype=Adj.dtype)
@@ -86,6 +86,7 @@ def plot(adata,
          layout='2d',
          legendloc='right margin',
          cmap=None,
+         pal=None,
          right_margin=None,
          size=3):
     """
@@ -110,8 +111,10 @@ def plot(adata,
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
-    cmap : str (default: continuous: viridis/ categorical: finite palette)
+    cmap : str (default: 'viridis')
          String denoting matplotlib color map.
+    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+         Colors cycle to use for categorical groups.
     right_margin : float (default: 0.2)
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
@@ -119,7 +122,7 @@ def plot(adata,
     """
     Y = adata['X_spring']
     if True:
-#         sett.m(0, 'set parameter add_steps > 0 to iterate. ' 
+#         sett.m(0, 'set parameter add_steps > 0 to iterate. '
 #                'the current step is', dspring['istep'],
 #                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         from .. import plotting as plott
@@ -133,6 +136,7 @@ def plot(adata,
                         layout=layout,
                         legendloc=legendloc,
                         cmap=cmap,
+                        pal=pal,
                         right_margin=right_margin,
                         size=size,
                         # defined in plotting
@@ -153,15 +157,15 @@ def plot(adata,
             sett.mt(0, 'finished computation')
             _plot({'Y': Y}, adata, istep, **params)
         # save state of Y to outfile
-        dspring['Y'] = Y 
+        dspring['Y'] = Y
         dspring['istep'] = istep
         sc.write(dspring['writekey'], dspring)
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
-    """ 
+    """
     Wrapper around networkX function.
 
-    Is equivalent to what is hard-coded in this module up to a shift of the 
+    Is equivalent to what is hard-coded in this module up to a shift of the
     coordinates.
     """
     try:
