@@ -56,7 +56,7 @@ def log(X):
     X = np.log(X + 1)
     return X
 
-def pca(X, n_comps=50, exact=True):
+def pca(X, n_comps=50, zero_center=True, svd_solver='randomized'):
     """
     Return PCA representation of data.
 
@@ -64,8 +64,16 @@ def pca(X, n_comps=50, exact=True):
     ----------
     X : np.ndarray
         Data matrix.
-    n_comps : int
+    n_comps : int, optional (default: 50)
         Number of PCs to compute.
+    zero_center : bool, optional (default: True)
+        If True, compute standard PCA from Covariance matrix. If False, omit
+        zero-centering variables, which allows to handle sparse input efficiently.
+        For sparse intput, automatically defaults to False.
+    svd_solver : str, optional (default: 'randomized')
+        SVD solver to use. Either “arpack” for the ARPACK wrapper in SciPy
+        (scipy.sparse.linalg.svds), or “randomized” for the randomized algorithm
+        due to Halko (2009).
 
     Returns
     -------
@@ -77,23 +85,20 @@ def pca(X, n_comps=50, exact=True):
         n_comps = X.shape[1]-1
         sett.m(0, 'reducing number of computed PCs to', 
                n_comps, 'as dim of data is only', X.shape[1])
-    # deal with multiple PCA implementations
     try:
-        from sklearn.decomposition import PCA
-        if exact:
-            # run deterministic PCA
-            svd_solver = 'arpack'
-        else:
-            # run randomized, more efficient version
-            svd_solver = 'randomized'
+        from sklearn.decomposition import PCA, TruncatedSVD
         sett.mt(0, 'compute PCA with n_comps =', n_comps)
-        p = PCA(n_components=n_comps, svd_solver=svd_solver)
-        Y = p.fit_transform(X)
-        sett.mt(0, 'computed PCA')
+        from scipy.sparse import issparse
+        if zero_center and not issparse(X):
+            Y = PCA(n_components=n_comps, svd_solver=svd_solver).fit_transform(X)
+        else:
+            sett.m(0, '... without zero-centering')
+            Y = TruncatedSVD(n_components=n_comps).fit_transform(X)
+        sett.mt(0, 'finished')
         sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
-        Y = _pca_fallback(X, n_comps=n_comps, exact=exact)
-        sett.mt(0,'preprocess: computed PCA using fallback code\n',
+        Y = _pca_fallback(X, n_comps=n_comps)
+        sett.mt(0, 'preprocess: computed PCA using fallback code\n',
                 '--> can be sped up by installing package scikit-learn\n',
                 '    or by setting the option exact=False')
     return Y
@@ -165,7 +170,7 @@ def zscore(X):
 # Helper Functions
 #--------------------------------------------------------------------------------
 
-def _pca_fallback(data, n_comps=2, exact=False):
+def _pca_fallback(data, n_comps=2):
     # mean center the data
     data -= data.mean(axis=0)
     # calculate the covariance matrix
@@ -173,10 +178,8 @@ def _pca_fallback(data, n_comps=2, exact=False):
     # calculate eigenvectors & eigenvalues of the covariance matrix
     # use 'eigh' rather than 'eig' since C is symmetric, 
     # the performance gain is substantial
-    if exact:
-        evals, evecs = np.linalg.eigh(C)
-    else:
-        evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
+    # evals, evecs = np.linalg.eigh(C)
+    evals, evecs = sp.sparse.linalg.eigsh(C, k=n_comps)
     # sort eigenvalues in decreasing order
     idcs = np.argsort(evals)[::-1]
     evecs = evecs[:, idcs]

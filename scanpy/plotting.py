@@ -143,7 +143,7 @@ def plot_tool(adata,
 
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.24
-    if subtitles is None:
+    if subtitles is None and smps[0] is not None:
         subtitles = [smp.replace('_', ' ') for smp in smps]
 
     axs = scatter(Y,
@@ -179,7 +179,7 @@ def plot_tool(adata,
             axs[ismp].legend(frameon=False, loc=legendloc)
 
     writekey = sett.basekey + '_' + toolkey
-    writekey += '_' + '-'.join(smps) + sett.plotsuffix
+    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
     savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         pl.show()
@@ -336,7 +336,7 @@ def scatter(Ys,
             title='',
             right_margin=None,
             layout='2d',
-            subtitles=['pseudotime', 'segments', 'experimental labels'],
+            subtitles=None,
             component_name='DC',
             component_indexnames=[1, 2, 3],
             axlabels=None,
@@ -445,7 +445,8 @@ def scatter(Ys,
                 cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
                                  cax=ax_cb)
             # set the subtitles
-            ax.set_title(subtitles[icolor])
+            if subtitles is not None:
+                ax.set_title(subtitles[icolor])
             # output highlighted data points
             for iihighlight,ihighlight in enumerate(highlights):
                 data = [Y[ihighlight,0]], [Y[ihighlight,1]]

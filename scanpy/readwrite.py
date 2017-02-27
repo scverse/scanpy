@@ -250,8 +250,9 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                      + filename[5:].replace('.' + ext, '.' + sett.extd))
     if not os.path.exists(filename_fast) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
-                 '\n... writing a', sett.extd, 'version to speedup reading next time\n   ',
-                 filename_fast)
+               '\n... writing an', sett.extd, 
+               'version to speedup reading next time\n   ',
+               filename_fast)
         if not os.path.exists(os.path.dirname(filename_fast)):
             os.makedirs(os.path.dirname(filename_fast))
         # do the actual reading
@@ -294,8 +295,6 @@ def _read_mtx(filename):
     from scipy.sparse.csr import csr_matrix
     X = csr_matrix(X)
     sett.m(0, '... did not find row_names or col_names')
-    sett.extd = 'npz'
-    sett.m(0, '... using npz file format, hdf5 currently not available')
     return {'X': X}
 
 def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
@@ -684,10 +683,8 @@ def read_file_to_dict(filename, ext='h5'):
         xl = pd.ExcelFile(filename)
         for sheet in xl.sheet_names:
             d[sheet] = xl.parse(sheet).values
-    if 'X' not in d:
-        if os.path.exists(filename.replace('.' + ext, '') + '_X.npz'):
-            X = load_sparse_csr(filename.replace('.' + ext, '') + '_X.npz')
-            d['X'] = X
+    if 'X_sparse_data' in d:
+        d = load_sparse_csr(d)
     return d
 
 def prepare_writing(key, value, ext):
@@ -731,29 +728,25 @@ def write_dict_to_file(filename, d, ext='h5'):
     if not os.path.exists(directory):
         sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
-    if 'X' in d:
-        import scipy.sparse
-        if isinstance(d['X'], scipy.sparse.spmatrix):
-            save_sparse_csr(filename.replace('.' + ext, '') + '_X.npz', d['X'])
+    if ext == 'h5' or ext == 'npz':
+        d_write = {}
+        from scipy.sparse import issparse
+        for key, value in d.items():
+            if key == 'X' and issparse(value):
+                for k, v in save_sparse_csr(value).items():
+                    d_write[k] = v
+            else:
+                key, value = prepare_writing(key, value, ext)
+                d_write[key] = value
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
-            for key, value in d.items():
-                key, value = prepare_writing(key, value, ext)
+            for key, value in d_write.items():
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
                     sett.m(0, 'Error creating dataset for key =', key)
                     raise e
     elif ext == 'npz':
-        d_write = {}
-        import scipy.sparse
-        for key, value in d.items():
-            if key == 'X' and isinstance(value, scipy.sparse.spmatrix):
-                continue
-            key, value = prepare_writing(key, value, ext)
-            d_write[key] = value
-        if not d_write:
-            d_write['dummy'] = np.array([1])
         np.savez(filename, **d_write)
     elif ext == 'csv' or ext == 'txt':
         # here this is actually a directory that corresponds to the 
@@ -783,17 +776,25 @@ def write_dict_to_file(filename, d, ext='h5'):
 # Type conversion
 #--------------------------------------------------------------------------------
 
-def save_sparse_csr(filename, array):
+def save_sparse_csr(X):
     from scipy.sparse.csr import csr_matrix
-    array = csr_matrix(array)
-    np.savez(filename, data=array.data, indices=array.indices,
-             indptr=array.indptr, shape=array.shape)
+    X = csr_matrix(X)
+    return {'X_sparse_data': X.data,
+            'X_sparse_indices': X.indices,
+            'X_sparse_indptr': X.indptr,
+            'X_sparse_shape': X.shape}
 
-def load_sparse_csr(filename):
-    loader = np.load(filename)
+def load_sparse_csr(d):
     from scipy.sparse.csr import csr_matrix
-    return csr_matrix((loader['data'], loader['indices'], loader['indptr']),
-                       shape=loader['shape'])
+    d['X'] = csr_matrix((d['X_sparse_data'], 
+                         d['X_sparse_indices'], 
+                         d['X_sparse_indptr']),
+                         shape=d['X_sparse_shape'])
+    del d['X_sparse_data']
+    del d['X_sparse_indices']
+    del d['X_sparse_indptr']
+    del d['X_sparse_shape']
+    return d
 
 def is_float(string):
     """

@@ -157,8 +157,8 @@ scanpy burczynski06 diffrank
 
 Here, we are going to simulate some data using a literature-curated boolean gene
 regulatory network, which is believed to describe myeloid differentiation
-([Krumsiek *et al.*, 2011](#ref_krumsiek11)). Using [sim.py](scanpy/sim.py), the
-[boolean model](models/krumsiek11.txt)
+([Krumsiek *et al.*, 2011](#ref_krumsiek11)). Using [sim](scanpy/tools/sim.py), the
+[boolean model](scanpy/sim_models/krumsiek11.txt)
 ```
 Gata2 = Gata2 and not (Gata1 and Fog1) and not Pu.1
 Gata1 = (Gata1 or Gata2 or Fli1) and not Pu.1
