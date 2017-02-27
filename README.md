@@ -14,7 +14,7 @@ proteome. Please, cite the original references and implementations.
 
 * [diffmap](#diffmap) - Visualize data using Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
-2015](#ref_haghverdi15)).
+2015](#ref_haghverdi15); [Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13); 
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
@@ -38,12 +38,6 @@ appreciated!
 Download or clone the repository - green button on top of the page - and `cd`
 into its root directory. Type `pip install -e .` and you can immediately work
 with the top-level command `scanpy` in any directory (more info [here](#install)).
-
-Packages you might need (all default in
-[Anaconda](https://www.continuum.io/downloads)) can be easily installed using
-[Miniconda](http://conda.pydata.org/miniconda.html). Then run `conda install
-scipy matplotlib h5py scikit-learn pandas xlrd enum34`. Scanpy is written in Python 3
-and compatible with Python 2.
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
@@ -114,11 +108,11 @@ scanpy dpt --help
 
 To work on your own example, make a copy and edit the following
 [notebook](examples/myexample_template.ipynb). If you want to call user examples
-from the command-line, create a file `user_exs.py` in your current working
+from the command-line, create a file `scanpy_user.py` in your current working
 directory, e.g., by downloading and renaming
-[user_exs_template.py](scanpy/exs/user_exs_template.py) and changing the function
+[scanpy_user_template.py](scanpy/examples/scanpy_user_template.py) and changing the function
 `myexample()` to your needs. Consider using copy and paste from
-[scanpy/exs/builtin.py](scanpy/exs/builtin.py). Call your example using `scanpy
+[scanpy/examples/builtin.py](scanpy/examples/builtin.py). Call your example using `scanpy
 myexample pca`. For the previous example (`moignard15`) you would define the
 following
 ```python
@@ -145,7 +139,7 @@ def moignard15():
 ```
 
 Also, it'd be awesome if you add your example to [examples](EXAMPLES.md) and
-[scanpy/exs/builtin.py](scanpy/exs/builtin.py) together with a link to the
+[scanpy/examples/builtin.py](scanpy/examples/builtin.py) together with a link to the
 public data.  Simply make a pull request for this. If you have questions or
 prefer sending your script by email, contact [Alex](http://falexwolf.de).
 
@@ -154,14 +148,14 @@ prefer sending your script by email, contact [Alex](http://falexwolf.de).
 ### [pca](scanpy/tools/pca.py) <a id="pca"></a>
 
 If `scikit-learn` is installed, the tool uses the implementation of the package
-[Pedregosa *et al.* (2011)](#ref_pedregosa11).
+([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 ### [tsne](scanpy/tools/tsne.py) <a id="tsne"></a>
 
 The algorithm has been introduced by [Maaten & Hinton
   (2008)](#ref_maaten08) and proposed for single-cell data by [Amir *et
   al.* (2013)](#ref_amir13). If `scikit-learn` is installed, the tool uses the
-  implementation of the package [Pedregosa *et al.* (2011)](#ref_pedregosa11).
+  implementation of the package ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 ### [diffmap](scanpy/tools/diffmap.py) <a id="diffmap"></a>
 
@@ -196,18 +190,27 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 ## Installation <a id="install"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
-into its root directory. To install with symlinks (stay up to date with your
-cloned version after you update with `git pull`) with ```pip install -e .``` and
-work with the top-level command `scanpy` in any directory.
+into its root directory. To install with symbolic links (stay up to date with
+your cloned version after you update with `git pull`) 
+<!-- and for a single user (remove the option `--user` to install as root) -->
+call
+```
+pip install -e.
+``` 
+and work with the top-level command `scanpy` or
+```python
+import scanpy as sc
+```
+in any directory.
 
-Or, call the wrapper `python scanpy.py` from within the root of the repository,
+Or, call the wrapper `python scripts/scanpy.py` from within the root of the repository,
 which works **without** [installation](#install).
 
 Packages you might need (all default in
-[Anaconda](https://www.continuum.io/downloads)) can be easily installed via
-[Miniconda](http://conda.pydata.org/miniconda.html). Run `conda install scipy
-matplotlib h5py pandas xlrd scikit-learn enum34`. Scanpy is written in Python 3 and compatible with
-Python 2.
+[Anaconda](https://www.continuum.io/downloads)) can be easily installed using
+[Miniconda](http://conda.pydata.org/miniconda.html). Then run `conda install
+scipy matplotlib h5py scikit-learn pandas xlrd enum34`. Scanpy is written in Python 3
+and compatible with Python 2.
 
 #### Package Managment via Miniconda
 

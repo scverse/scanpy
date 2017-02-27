@@ -1,4 +1,4 @@
-model = sim/krumsiek11.txt
+model = SCANPY_PATH/sim_models/krumsiek11.txt
 tmax = 800
 branching = True
 nrRealizations = 4

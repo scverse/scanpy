@@ -1,4 +1,4 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Differential Gene Expression Analysis
 
@@ -121,7 +121,7 @@ def difftest(adata,
 
     return adata
 
-def plot(adata, n_genes=20):
+def plot_difftest(adata, n_genes=20):
     """
     Plot ranking of genes for all tested comparisons.
 

@@ -141,8 +141,6 @@ def read_params(filename, asheader=False):
     params : dict
         Dictionary that stores parameters.
     """
-    if not os.path.exists(filename):
-        filename = '../' + filename
     if not asheader:
         sett.m(0,'reading params file',filename)
     from collections import OrderedDict as odict

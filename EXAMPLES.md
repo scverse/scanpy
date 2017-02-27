@@ -35,7 +35,7 @@ See Scanpy [README.md](https://github.com/theislab).
 
 #### Data of [Paul *et al.* (2015)](#ref_paul15)
 
-Load the data in `user_exs.py` as follows.
+Load the data in `scanpy_user.py` as follows.
 ```python
 def paul15():
     adata = paul15_raw()

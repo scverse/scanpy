@@ -209,16 +209,16 @@ def group(ax, name, imask, adata, Y, layout='2d', size=3):
                alpha=1,
                label=adata[name + '_names'][imask])
 
-def timeseries(X, c, **kwargs):
+def timeseries(X, **kwargs):
     """
     Plot X. See timeseries_subplot.
     """
     pl.figure(figsize=(2*4,4),
               subplotpars=sppars(left=0.12,right=0.98,bottom=0.13))
-    timeseries_subplot(X, c, **kwargs)
+    timeseries_subplot(X, **kwargs)
 
 def timeseries_subplot(X,
-                       c,
+                       c=None,
                        varnames=(),
                        highlightsX=(),
                        xlabel='segments / pseudotime order',
@@ -234,13 +234,14 @@ def timeseries_subplot(X,
     X with one column, c continuous
     X with n columns, c is of length n
     """
-
-    use_cmap = isinstance(c[0], float)
+    
+    if c is not None:
+        use_cmap = isinstance(c[0], float)
     pal = default_pal(pal)
     x_range = np.arange(X.shape[0])
     if X.shape[1] > 1:
         colors = pal[:X.shape[1]].by_key()['color']
-        subsets = [(x_range, X[:, 0])]
+        subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
     elif use_cmap:
         colors = [c]
         subsets = [(x_range, X[:, 0])]

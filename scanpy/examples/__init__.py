@@ -8,7 +8,7 @@ from .. import utils
 from .. import readwrite
 from .. import settings as sett
 
-def example(exkey, subsample=1, return_module=False):
+def get_example(exkey, subsample=1, return_module=False):
     """
     Read and preprocess data for predefined example.
 
@@ -36,12 +36,12 @@ def example(exkey, subsample=1, return_module=False):
         try:
             from sys import path
             path.insert(0, '.')
-            import user_exs
+            import scanpy_user
         except ImportError:
             sett.m(0, '--> did not find user examples, to provide some,\n'
-                   '    generate file user_exs.py in your working directory')
-        exfunc = getattr(user_exs, exkey)
-        exmodule = user_exs
+                   '    generate file scanpy_user.py in your working directory')
+        exfunc = getattr(scanpy_user, exkey)
+        exmodule = scanpy_user
     except (UnboundLocalError, AttributeError):
         try:
             # additional possibility to add example module
@@ -55,7 +55,7 @@ def example(exkey, subsample=1, return_module=False):
             except AttributeError:
                 msg = ('Do not know how to run example "' + exkey +
                        '".\nEither define a function ' + exkey + '() '
-                       'in ./user_exs.py that returns an AnnData object.\n'
+                       'in ./scanpy_user.py that returns an AnnData object.\n'
                        'Or, use one of the builtin examples:'
                        + exkeys_str())
                 from sys import exit
@@ -72,7 +72,7 @@ def example(exkey, subsample=1, return_module=False):
         sett.m(0, 'X has shape n_samples x n_variables =', 
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
-        adata = check_adata(adata)
+        adata = _check_adata(adata)
 
         # subsampling
         if subsample != 1:
@@ -89,22 +89,22 @@ def example(exkey, subsample=1, return_module=False):
     else:
         return adata
 
-def exdata(format='plain'):
+def show_exdata(format='plain'):
     """Show available example data.
     """
     if format == 'plain':
-        s = utils.pretty_dict_string(dexdata())
+        s = utils.pretty_dict_string(_dexdata())
     elif format == 'markdown':
         s = utils.markdown_dict_string(builtin.dexdata)
     print(s)
 
-def examples():
+def show_examples():
     """Show available example use cases.
     """
-    s = utils.pretty_dict_string(dexamples())
+    s = utils.pretty_dict_string(_dexamples())
     print(s)
 
-def dexdata(): 
+def _dexdata():
     """Example data.
     """
     all_dex = utils.merge_dicts(builtin.dexdata, {})
@@ -116,7 +116,7 @@ def dexdata():
         pass
     return all_dex
 
-def dexamples():
+def _dexamples():
     """Example use cases.
     """
     builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
@@ -135,14 +135,14 @@ def dexamples():
 # Checks of AnnData object
 #-------------------------------------------------------------------------------
 
-ignore_groups = ['N/A', 'dontknow', 'no_gate']
+_ignore_groups = ['N/A', 'dontknow', 'no_gate']
 # howtos
-howto_specify_subgroups = '''sample annotation in adata only consists of sample names
+_howto_specify_subgroups = '''sample annotation in adata only consists of sample names
 --> you can provide additional annotation by setting, for example,
     adata.smp['groups'] = ['A', 'B', 'A', ... ]
     adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
 
-def check_adata(adata):
+def _check_adata(adata):
     """
     Do sanity checks on adata object.
 
@@ -153,7 +153,7 @@ def check_adata(adata):
     if 'tools' not in adata:
         adata['tools'] = np.array([], dtype=str)
     if len(adata.smp_keys()) == 0:
-        sett.m(0, howto_specify_subgroups)
+        sett.m(0, _howto_specify_subgroups)
     else:
         for smp in adata.smp_keys():
             # ordered unique categories
@@ -166,7 +166,7 @@ def check_adata(adata):
                     pass
                 if adata[smp + '_names'].dtype.char == 'U':
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
-                                                       np.array(ignore_groups))
+                                                       np.array(_ignore_groups))
             # output
             ann_info = adata[smp + '_names']
             if len(adata[smp + '_names']) > 20:
@@ -175,8 +175,8 @@ def check_adata(adata):
             sett.m(0,'sample annotation','"' + smp + '"', 'with',  ann_info)
     return adata
 
-def exkeys_str():
+def _exkeys_str():
     str = ''
-    for k in sorted(dexamples().keys()):
+    for k in sorted(_dexamples().keys()):
         str += '\n    ' + k
     return str

@@ -1,4 +1,4 @@
-model = sim/toggleswitch.txt
+model = SCANPY_PATH/sim_models/toggleswitch.txt
 tmax = 100
 branching = True
 nrRealizations = 2

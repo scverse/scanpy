@@ -68,7 +68,7 @@ def diffmap(adata, n_comps=10, k=5, knn=False, sigma=0):
     adata['X_diffmap'] = ddmap['Y'][:, :n_comps]
     return adata
 
-def plot(adata,
+def plot_diffmap(adata,
          smp=None,
          names=None,
          comps=None,

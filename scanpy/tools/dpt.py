@@ -108,7 +108,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    # n-vector of groupnames / smp for adata / compare exs.check_adata
+    # n-vector of groupnames / smp for adata / compare examples._check_adata
     adata['dpt_groups_names'] = np.array([str(i) for i in
                                           np.arange(len(dpt.segs), dtype=int)])
     adata.smp['dpt_groups'] = np.array([adata['dpt_groups_names'][i]
@@ -121,7 +121,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     adata['dpt_segtips'] = dpt.segstips
     return adata
 
-def plot(adata,
+def plot_dpt(adata,
          basis='diffmap',
          smp=None,
          names=None,
@@ -171,7 +171,7 @@ def plot(adata,
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
         plott.timeseries(X[adata['dpt_indices']],
-                         adata.var_names,
+                         varnames = adata.var_names,
                          highlightsX=adata['dpt_changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
         plott.savefig(writekey + '_vsorder')
@@ -211,15 +211,15 @@ def plot_segments_pseudotime(adata, cmap=None, pal=None):
     pl.figure()
     pl.subplot(211)
     plott.timeseries_subplot(adata.smp['dpt_groups'][adata['dpt_indices'], np.newaxis],
-                             adata.smp['dpt_groups'][adata['dpt_indices']],
+                             c=adata.smp['dpt_groups'][adata['dpt_indices']],
                              highlightsX=adata['dpt_changepoints'],
-                             ylabel='segments',
+                             ylabel='dpt groups',
                              yticks=(np.arange(len(adata['dpt_groups_names']), dtype=int)
                                      if len(adata['dpt_groups_names']) < 5 else None),
                              pal=pal)
     pl.subplot(212)
     plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata['dpt_indices'], np.newaxis],
-                             adata.smp['dpt_pseudotime'][adata['dpt_indices']],
+                             c=adata.smp['dpt_pseudotime'][adata['dpt_indices']],
                              highlightsX=adata['dpt_changepoints'],
                              ylabel='pseudotime',
                              yticks=[0,1],

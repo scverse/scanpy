@@ -78,7 +78,7 @@ def spring(adata, k=4, n_comps=2):
     adata['X_spring'] = Y
     return adata
 
-def plot(adata,
+def plot_spring(adata,
          smp=None,
          names=None,
          comps='1,2',

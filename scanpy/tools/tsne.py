@@ -87,7 +87,7 @@ def tsne(adata, n_pcs=50, perplexity=30):
     adata['X_tsne'] = Y
     return adata
 
-def plot(adata,
+def plot_tsne(adata,
          smp=None,
          names=None,
          comps=None,

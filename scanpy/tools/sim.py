@@ -69,7 +69,7 @@ def sim(model='sim/toggleswitch.txt',
     adata['xroot'] = adata.X[0]
     return adata
 
-def plot(adata, params=None):
+def plot_sim(adata, params=None):
     """
     Plot results of simulation.
     """
@@ -77,14 +77,16 @@ def plot(adata, params=None):
     genenames = adata.var_names
     tmax = adata['tmax_write']
     n_real = X.shape[0]/tmax
-    plott.timeseries(X, genenames,
+    plott.timeseries(X, 
+                     varnames=genenames,
                      xlim=[0,1.25*X.shape[0]],
                      highlightsX=np.arange(tmax,n_real*tmax,tmax),
                      xlabel='realizations / time steps')
     plott.savefig(sett.basekey + '_sim')
     # shuffled data
     X, rows = utils.subsample(X, seed=1)
-    plott.timeseries(X, genenames,
+    plott.timeseries(X,
+                     varnames=genenames,
                      xlim=[0,1.25*X.shape[0]],
                      highlightsX=np.arange(tmax,n_real*tmax,tmax),
                      xlabel='index (arbitrary order)')
@@ -119,11 +121,7 @@ def sample_dynamic_data(params):
     Helper function.
     """
     if params['writedir'] == '':
-        params['writedir'] = (sett.writedir + 
-                              params['model'].replace('sim/',
-                                                     '').replace('.txt','_sim'))
-    if not os.path.exists('sim/'):
-        params['writedir'] = '../' + params['writedir']
+        params['writedir'] = (sett.basekey + '_sim')
     sett.m(0,'writing to directory', params['writedir'])
     if not os.path.exists(params['writedir']):
         os.makedirs(params['writedir'])
@@ -385,9 +383,9 @@ class GRNsim:
         if model not in self.availModels.keys():
             message = 'model not among predefined models \n'
         # read from file
-        model = 'sim/'+model+'.txt'
+        from .. import sim_models
+        model = os.path.dirname(sim_models.__file__) + '/' + model + '.txt'
         if not os.path.exists(model):
-            model = '../' + model
             if not os.path.exists(model):
                 message = '  cannot read model from file ' + model
                 message += '\n as the directory does not exist'

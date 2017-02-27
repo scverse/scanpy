@@ -51,7 +51,7 @@ def pca(adata_or_X, n_comps=10):
     else:
         return X_pca
 
-def plot(adata,
+def plot_pca(adata,
          smp=None,
          names=None,
          comps=None,

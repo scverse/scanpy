@@ -7,6 +7,9 @@ Reference
 Wolf, Angerer & Theis, bioRxiv doi:... (2017)
 """
 
+import numpy as np
+import os
+
 from . import settings as sett
 from . import tools
 from . import preprocess
@@ -14,56 +17,47 @@ from . import utils
 from .tools import get_tool
 from .classes.ann_data import AnnData
 from .readwrite import read, write, read_params
-from .exs import exdata, examples, example
+from .examples import show_exdata, show_examples, get_example
 from . import preprocess
 from .preprocess.advanced import subsample
-from .tools.diffmap import diffmap
-from .tools.tsne import tsne
-from .tools.dpt import dpt
-from .tools.pca import pca
-from .tools.difftest import difftest
-from .tools.sim import sim
+from .tools.diffmap import diffmap, plot_diffmap
+from .tools.tsne import tsne, plot_tsne
+from .tools.dpt import dpt, plot_dpt
+from .tools.pca import pca, plot_pca
+from .tools.difftest import difftest, plot_difftest
+from .tools.sim import sim, plot_sim
 
 # just an equivalent name
 pp = preprocess
 
 __all__ = [
     # example use cases
-    'example', # call example
-    'exdata', # show available example data
-    'exs', # show available example use cases
+    'get_example', # call example
+    'show_exdata', # show available example data
+    'show_examples', # show available example use cases
     # help
     'help', # show help for a given tool
     # elementary operations
     'read',
     'write',
-    'annotate',
     # preprocessing
     'preprocess', 'pp',
     'subsample',
     # visualization
-    'diffmap',
-    'tsne',
-    'pca',
+    'diffmap', 'plot_diffmap',
+    'tsne', 'plot_tsne',
+    'pca', 'plot_pca'
     # subgroup identification
-    'dpt',
-    'ctpaths',
+    'dpt', 'plot_dpt'
     # differential expression testing
-    'difftest',
+    'difftest', 'plot_difftest'
     # simulation
-    'sim'
+    'sim', 'plot_sim'
     # plotting
-    'plot',
-    'show', # show plots
+    'show',
     # classes
     'AnnData'
 ]
-
-def plot(toolkey, adata, **pparams):
-    """
-    Plot the result of a tool computation.
-    """
-    get_tool(toolkey).plot(adata, **pparams)
 
 def help(toolkey,string=False):
     """
@@ -81,7 +75,7 @@ def show():
     from .compat.matplotlib import pyplot as pl
     pl.show()
 
-def run_args(toolkey, args):
+def _run_command_line_args(toolkey, args):
     """
     Run specified tool, do preprocessing and read/write outfiles.
 
@@ -106,19 +100,10 @@ def run_args(toolkey, args):
             exit(get_tool(toolkey).plot.__doc__)
 
     # read parameters
-    if toolkey == 'sim':
-        if args['opfile'] != '':
-            oparams = read_params(args['opfile'])
-        else:
-            opfile_sim = 'sim/' + args['exkey'] + '_oparams.txt'
-            oparams = read_params(opfile_sim)
-            sett.m(0,'--> you can specify your custom params file using the option\n'
-                     '    "--opfile" or provide parameters directly via "--oparams"')
-        if 'writedir' not in oparams:
-            oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
-    else:
-        adata, exmodule = example(args['exkey'], subsample=args['subsample'],
-                                  return_module=True)
+    adata = None
+    if os.path.exists(readwrite.get_filename_from_key(sett.basekey)):
+        adata, exmodule = get_example(args['exkey'], subsample=args['subsample'],
+                                      return_module=True)
         oparams = {}
         # try to load tool parameters from dexamples
         try:
@@ -151,6 +136,17 @@ def run_args(toolkey, args):
             oparams = utils.update_params(oparams, add_params)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
+    elif toolkey == 'sim':
+        if args['opfile'] != '':
+            oparams = read_params(args['opfile'])
+        else:
+            from . import sim_models
+            opfile_sim = os.path.dirname(sim_models.__file__) + '/' + args['exkey'] + '_oparams.txt'
+            oparams = read_params(opfile_sim)
+            sett.m(0,'--> you can specify your custom params file using the option\n'
+                     '    "--opfile" or provide parameters directly via "--oparams"')
+        if 'writedir' not in oparams:
+            oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey
@@ -160,9 +156,8 @@ def run_args(toolkey, args):
         sett.logfile(logfile)
     
     # actual call of tool
-    from os.path import exists
-    if ((toolkey == 'sim'
-         or toolkey not in adata['tools'])
+    if (adata is None
+        or toolkey not in adata['tools']
         or sett.recompute != 'none'):
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
@@ -170,9 +165,7 @@ def run_args(toolkey, args):
         else:
             adata = tool(adata, **oparams)
         # append toolkey to tools in adata
-        if (toolkey != 'sim' 
-            and toolkey not in adata['tools']):
-            import numpy as np
+        if toolkey not in adata['tools']:
             adata['tools'] = np.append(adata['tools'], toolkey)
         write(sett.basekey, adata)
         sett.m(0, 'updated file',
@@ -190,12 +183,11 @@ def run_args(toolkey, args):
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             adata = getattr(exmodule, postprocess)(adata)
             write(sett.basekey, adata)
-    plot(toolkey, adata, **pparams)
+    getattr(get_tool(toolkey), 'plot_' + toolkey)(adata, **pparams)
    
-def read_args_run_tool(toolkey):
+def _read_command_line_args_run_single_tool(toolkey):
     """
     Read arguments and run tool specified by toolkey.
     """
-    args = utils.read_args_tool(toolkey, exs.dexamples())
+    args = utils.read_args_tool(toolkey, examples.dexamples())
     run_args(toolkey, args)
-
