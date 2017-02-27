@@ -39,7 +39,8 @@ def get_example(exkey, subsample=1, return_module=False):
             import scanpy_user
         except ImportError:
             sett.m(0, '--> did not find user examples, to provide some,\n'
-                   '    generate file scanpy_user.py in your working directory')
+                   '    generate file scanpy_user.py in your working directory,\n'
+                   '    see https://github.com/theislab/scanpy#work-on-your-own-examples')
         exfunc = getattr(scanpy_user, exkey)
         exmodule = scanpy_user
     except (UnboundLocalError, AttributeError):

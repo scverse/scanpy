@@ -97,7 +97,7 @@ def _run_command_line_args(toolkey, args):
     if args['pparams']:
         if args['pparams'][0] == 'help':
             from sys import exit
-            exit(get_tool(toolkey).plot.__doc__)
+            exit(getattr(get_tool(toolkey), 'plot_' + toolkey).__doc__)
 
     # read parameters
     adata = None
@@ -190,5 +190,5 @@ def _read_command_line_args_run_single_tool(toolkey):
     """
     Read arguments and run tool specified by toolkey.
     """
-    args = utils.read_args_tool(toolkey, examples.dexamples())
-    run_args(toolkey, args)
+    args = utils.read_args_tool(toolkey, examples._dexamples())
+    _run_command_line_args(toolkey, args)
