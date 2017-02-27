@@ -101,7 +101,7 @@ def _run_command_line_args(toolkey, args):
 
     # read parameters
     adata = None
-    if os.path.exists(readwrite.get_filename_from_key(sett.basekey)):
+    if os.path.exists(readwrite.get_filename_from_key(sett.basekey)) or toolkey != 'sim':
         adata, exmodule = get_example(args['exkey'], subsample=args['subsample'],
                                       return_module=True)
         oparams = {}
@@ -147,6 +147,7 @@ def _run_command_line_args(toolkey, args):
                      '    "--opfile" or provide parameters directly via "--oparams"')
         if 'writedir' not in oparams:
             oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
+
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey

@@ -166,7 +166,12 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
         groups_masks = np.zeros((len(adata[smp + '_names']),
                                         adata.smp[smp].size), dtype=bool)
         for iname, name in enumerate(adata[smp + '_names']):
-            groups_masks[iname] = name == adata.smp[smp]
+            # if the name is not found, fallback to index retrieval
+            if adata[smp + '_names'][iname] in adata.smp[smp]:
+                mask = adata[name + '_names'][iname] == adata.smp[smp]
+            else:
+                mask = str(iname) == adata.smp[smp]
+            groups_masks[iname] = mask
     groups_ids = list(range(len(groups_names)))
     if groups_names_subset != 'all':
         # get list from string
