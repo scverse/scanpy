@@ -1,5 +1,5 @@
 [Quick Start](#quick_start) |
-[Example Library](examples) |
+[Example Library](EXAMPLES.md) |
 [Tools](#tools) |
 [Installation](#install) |
 [References](#references)
@@ -7,31 +7,32 @@
 # Scanpy - Single-Cell Analysis in Python
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
-of dynamic biological processes from snapshots of transcriptome or proteome.
+of dynamic biological processes from snapshots of transcriptome or
+proteome. Please, cite the original references and implementations.
 
-* [pca](scanpy/tools/pca.py) - Visualize data using PCA.
+* [pca](#pca) - Visualize data using PCA [(Pedregosa *et al.*, 2011)](#ref_pedregosa11).
 
 * [diffmap](#diffmap) - Visualize data using Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15)).
 
-* [tsne](scanpy/tools/tsne.py) - Visualize data using t-SNE ([van
-  der Maaten & Hinton, 2008](#ref_vandermaaten08); [Amir *et al.*, 2013](#ref_amir13)).
+* [tsne](#tsne) - Visualize data using t-SNE ([van
+  der Maaten & Hinton, 2008](#ref_vandermaaten08); [Amir *et al.*, 2013](#ref_amir13); 
+  [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [dpt](#dpt) - Infer progression of cells, identify *branching*
-subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16)).
+subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-*  [difftest](scanpy/tools/difftest.py) - Test for differential gene
-  expression.
+*  [diffrank](#diffrank) - Rank genes according to differential gene
+  expression ([Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
-*et al.*, 2009](#ref_wittmann09)).
+*et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17))).
 
-Please, cite the original references. The draft [Wolf & Theis
-(2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas and usage
-as a library. Potential coauthors who would like to work on software and
-manuscript are welcome! Contributors, who just want to add their own example or
-tool are welcome, too! Any comments are appreciated!
+The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf)
+explains conceptual ideas and usage as a library. Potential coauthors who would
+like to work on software and manuscript are welcome! Any comments are
+appreciated!
 
 ## Quick Start <a id="quick_start"></a>
 
@@ -97,7 +98,7 @@ option `--fileformat csv` (or `txt`).
 
 #### More examples and help
 
-For more examples, read [this](examples), or display them on the command line
+For more examples, read [this](EXAMPLES.md), or display them on the command line
 (example data and example use cases, respectively).
 ```shell
 scanpy exdata
@@ -144,13 +145,24 @@ def moignard15():
     return adata
 ```
 
-Also, it'd be awesome if you provide you upload your example to the
-[examples](examples) library: copy your example from `user_exs.py` to
-[scanpy/exs/builtin.py](scanpy/exs/builtin.py) with a link to the public data
-and make a pull request. If you have questions or prefer sending your script by
-email, contact Alex.
+Also, it'd be awesome if you add your example to [examples](EXAMPLES.md) and
+[scanpy/exs/builtin.py](scanpy/exs/builtin.py) together with a link to the
+public data.  Simply make a pull request for this. If you have questions or
+prefer sending your script by email, contact [Alex](http://falexwolf.de).
 
 ## Tools <a id="tools"></a>
+
+### [pca](scanpy/tools/pca.py) <a id="pca"></a>
+
+If `scikit-learn` is installed, the tool uses the implementation of the package
+[Pedregosa *et al.* (2011)](#ref_pedregosa11).
+
+### [tsne](scanpy/tools/tsne.py) <a id="tsne"></a>
+
+The algorithm has been introduced by [van der Maaten & Hinton
+  (2008)](#ref_vandermaaten08) and proposed for single-cell data by [Amir *et
+  al.* (2013)](#ref_amir13). If `scikit-learn` is installed, the tool uses the
+  implementation of the package [Pedregosa *et al.* (2011)](#ref_pedregosa11).
 
 ### [diffmap](scanpy/tools/diffmap.py) <a id="diffmap"></a>
 
@@ -158,6 +170,10 @@ This implements *diffusion maps* ([Coifman
 *et al.*, 2005](#ref_coifman05)), which has been proposed for visualizing
 single-cell data by [Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, it uses
 the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16).
+
+### [diffrank](scanpy/tools/diffrank.py) <a id="diffrank"></a>
+
+Rank genes by differential expression.
 
 ### [dpt](scanpy/tools/dpt.py) <a id="dpt"></a>
 
@@ -260,9 +276,16 @@ development from single-cell gene expression measurements*, [Nature Biotechnolog
 269](
 http://dx.doi.org/10.1038/nbt.3154).
 
+<a id="ref_pedregosa11"></a>
+Pedregosa *et al.* (2011),
+*Scikit-learn: Machine Learning in Python*, 
+[Journal of Machine Learning Research 12, 2825](
+http://www.jmlr.org/papers/v12/pedregosa11a.html).
+
 <a id="ref_paul15"></a>
-Paul *et al.* (2015), *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*, [Cell 163,
-1663](
+Paul *et al.* (2015),
+*Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*, 
+[Cell 163, 1663](
 http://dx.doi.org/10.1016/j.cell.2015.11.013).
 
 <a id="ref_vandermaaten08"></a>

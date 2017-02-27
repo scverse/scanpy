@@ -1,12 +1,6 @@
 # Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
 """
 Reading and Writing
-
-TODO
-----
-- Preserve case when writing params to files.
-- Consider using openpyxl or xlsxwriter instead of pandas for reading and
-  writing Excel files.   
 """
 
 import os
@@ -16,7 +10,7 @@ import numpy as np
 
 from . import settings as sett
 
-avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
+avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for reading data. """
 
 #--------------------------------------------------------------------------------
@@ -25,7 +19,7 @@ avail_exts = ['csv','xlsx','txt','h5','soft.gz','txt.gz', 'mtx', 'tab', 'data']
 
 def write(filename_or_key, dict_or_adata):
     """
-    Writes dictionaries - as returned by tools - to file.
+    Write AnnData objects and dictionaries to file.
     
     If a key is specified, the filename is generated as
         filename = sett.writedir + key + sett.extd
@@ -78,12 +72,15 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         detected automatically.
     as_strings : bool, optional
         Read names instead of numbers.
+    backup_url : str, optional
+        Retrieve the file from a URL if not present on disk.
     return_dict : bool, optional (default: False)
         Return dictionary instead of AnnData object.      
 
     Returns
     -------
-    data : AnnData, dict, if dict it usually contains
+    data : sc.AnnData object or dict if return_dict == True
+        If dict, it contains
         X : np.ndarray, optional
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
@@ -107,12 +104,11 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     if not os.path.exists(filename):
         raise ValueError('Reading with key ' + key + ' failed! ' + 
                          'Provide valid key or valid filename directly: ' + 
-                         'inferred filename ' +
-                         filename + ' does not exist.\n' +
+                         'inferred filename ' + filename + ' does not exist.\n' +
                          'If you intended to provide a filename, either ' + 
                          'use a filename on one of the available extensions\n' + 
                          str(avail_exts) + 
-                         'or provide the parameter "ext" to sc.read.')
+                         '\nor provide the parameter "ext" to sc.read.')
     d = read_file_to_dict(filename, ext=sett.extd)
     if return_dict:
         return d
@@ -251,8 +247,9 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             sett.m(0, 'reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
     # read other file formats
-    filename_fast = (sett.writedir + 'data/' + 
-                     filename.replace('.' + ext, '.' + sett.extd))
+    filename_fast = (sett.writedir + 'data/'
+                     + filename[:5].lstrip('./').replace('data/', '')
+                     + filename[5:].replace('.' + ext, '.' + sett.extd))
     if not os.path.exists(filename_fast) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
                  '\n... writing a', sett.extd, 'version to speedup reading next time\n   ',
