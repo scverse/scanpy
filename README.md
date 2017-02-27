@@ -1,5 +1,5 @@
 [Quick Start](#quick_start) |
-[Example Library](EXAMPLES.md) |
+[Examples](EXAMPLES.md) |
 [Tools](#tools) |
 [Installation](#install) |
 [References](#references)
@@ -10,14 +10,13 @@ Tools for analyzing and simulating single-cell data that aim at an understanding
 of dynamic biological processes from snapshots of transcriptome or
 proteome. Please, cite the original references and implementations.
 
-* [pca](#pca) - Visualize data using PCA [(Pedregosa *et al.*, 2011)](#ref_pedregosa11).
+* [pca](#pca) - Visualize data using PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [diffmap](#diffmap) - Visualize data using Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15)).
 
-* [tsne](#tsne) - Visualize data using t-SNE ([van
-  der Maaten & Hinton, 2008](#ref_vandermaaten08); [Amir *et al.*, 2013](#ref_amir13); 
+* [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13); 
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [dpt](#dpt) - Infer progression of cells, identify *branching*
@@ -27,7 +26,7 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
-*et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17))).
+*et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17)).
 
 The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf)
 explains conceptual ideas and usage as a library. Potential coauthors who would
@@ -70,11 +69,11 @@ scanpy moignard15 diffmap -p smp HbbbH1
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
-detects the *trunk* of progenitor cells (segment 0) and the *branches* of endothelial
-cells (segment 1/2) and erythrocytes (segment 3). The inferred *pseudotime*
-traces the degree of cells' progression in the differentiation process. By default,
-this is plotted using Diffusion Maps, but you might just as well plot the subgroups using another
-plotting tool.
+detects the *trunk* of progenitor cells (segment 0) and the *branches* of
+endothelial cells (segment 1/2) and erythrocytes (segment 3). The inferred
+*pseudotime* traces the degree of cells' progression in the differentiation
+process. By default, this is plotted using Diffusion Maps. Using the `-p`
+option, you can specify the tSNE basis, for example.
 ```
 scanpy moignard15 dpt
 scanpy moignard15 dpt -p basis tsne
@@ -88,13 +87,13 @@ This orders cells by segment, and within each segment, by pseudotime.
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_heatmap.png" height="250">
 
 With this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
-(2016)](#ref_haghverdi16). See this [notebook](examples/moignard15.ipynb) for
+(2016)](#ref_haghverdi16). See this [notebook](https://github.com/theislab/scanpy_notebooks/blob/master/moignard15.ipynb) for
 more information.
 
-If you want to use the results externally, simply read the corresponding hdf5
-file, which you can inspect using `h5ls write/moignard15_dpt.h5`. If you prefer
-reading and writing csv/txt files, which is much slower, however, use the
-option `--fileformat csv` (or `txt`).
+If you want to use the results external of scanpy, read the corresponding hdf5
+file (inspect its content using `h5ls write/moignard15_dpt.h5`). If you prefer
+reading and writing csv/txt files, which is much slower, however, use the option
+`--fileformat csv` (or `txt`).
 
 #### More examples and help
 
@@ -159,8 +158,8 @@ If `scikit-learn` is installed, the tool uses the implementation of the package
 
 ### [tsne](scanpy/tools/tsne.py) <a id="tsne"></a>
 
-The algorithm has been introduced by [van der Maaten & Hinton
-  (2008)](#ref_vandermaaten08) and proposed for single-cell data by [Amir *et
+The algorithm has been introduced by [Maaten & Hinton
+  (2008)](#ref_maaten08) and proposed for single-cell data by [Amir *et
   al.* (2013)](#ref_amir13). If `scikit-learn` is installed, the tool uses the
   implementation of the package [Pedregosa *et al.* (2011)](#ref_pedregosa11).
 
@@ -239,25 +238,31 @@ future, installation will be possible without reference to GitHub via
 <a id="ref_amir13"></a>
 Amir *et al.* (2013),
 *viSNE enables visualization of high dimensional single-cell data and reveals phenotypic heterogeneity of leukemia*
-[Nature Biotechnology 31, 545](http://dx.doi.org/10.1038/nbt.2594).
+[Nature Biotechnology 31, 545](
+http://dx.doi.org/10.1038/nbt.2594).
 
 <a id="ref_angerer15"></a>
-Angerer *et al.* (2015), *destiny - diffusion maps for large-scale single-cell
-data in R*, [Bioinformatics 32, 1241](http://dx.doi.org/10.1038/nmeth.3971).
+Angerer *et al.* (2015),
+*destiny - diffusion maps for large-scale single-cell data in R*,
+[Bioinformatics 32, 1241](
+http://dx.doi.org/10.1038/nmeth.3971).
 
 <a id="ref_coifman05"></a>
-Coifman *et al.* (2005), *Geometric diffusions as a tool for harmonic analysis and
-structure definition of data: Diffusion maps*, [PNAS 102, 7426](
+Coifman *et al.* (2005),
+*Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
+[PNAS 102, 7426](
 http://dx.doi.org/10.1038/nmeth.3971).
 
 <a id="ref_haghverdi15"></a>
-Haghverdi *et al.* (2015), *Diffusion maps for high-dimensional single-cell
-analysis of differentiation data*, [Bioinformatics 31, 2989](
+Haghverdi *et al.* (2015), 
+*Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
+[Bioinformatics 31, 2989](
 http://dx.doi.org/10.1093/bioinformatics/btv325).
 
 <a id="ref_haghverdi16"></a>
-Haghverdi *et al.* (2016), *Diffusion pseudotime robustly
-reconstructs branching cellular lineages*, [Nature Methods 13, 845](
+Haghverdi *et al.* (2016),
+*Diffusion pseudotime robustly reconstructs branching cellular lineages*,
+[Nature Methods 13, 845](
 http://dx.doi.org/10.1038/nmeth.3971).
 
 <a id="ref_krumsiek10"></a>
@@ -270,10 +275,16 @@ Krumsiek *et al.* (2011),
 *Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*,
 [PLoS ONE 6, e22649](http://dx.doi.org/10.1371/journal.pone.0022649).
 
+<a id="ref_maaten08"></a>
+Maaten & Hinton (2008),
+*Visualizing data using t-SNE*,
+[JMLR 9, 2579](
+http://www.jmlr.org/papers/v9/vandermaaten08a.html).
+
 <a id="ref_moignard15"></a>
-Moignard *et al.* (2015), *Decoding the regulatory network of early blood
-development from single-cell gene expression measurements*, [Nature Biotechnology 33,
-269](
+Moignard *et al.* (2015),
+*Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
+[Nature Biotechnology 33, 269](
 http://dx.doi.org/10.1038/nbt.3154).
 
 <a id="ref_pedregosa11"></a>
@@ -288,13 +299,9 @@ Paul *et al.* (2015),
 [Cell 163, 1663](
 http://dx.doi.org/10.1016/j.cell.2015.11.013).
 
-<a id="ref_vandermaaten08"></a>
-van der Maaten & Hinton (2008), *Visualizing data using t-SNE*, [JMLR 9, 2579](
-http://www.jmlr.org/papers/v9/vandermaaten08a.html).
-
 <a id="ref_wittmann09"></a>
-Wittmann *et al.* (2009), *Transforming Boolean models to
-continuous models: methodology and application to T-cell receptor signaling*,
+Wittmann *et al.* (2009),
+*Transforming Boolean models to continuous models: methodology and application to T-cell receptor signaling*,
 [BMC Systems Biology 3, 98](
 http://dx.doi.org/10.1186/1752-0509-3-98).
 
