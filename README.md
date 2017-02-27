@@ -191,9 +191,7 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 
 Download or clone the repository - green button on top of the page - and `cd`
 into its root directory. To install with symbolic links (stay up to date with
-your cloned version after you update with `git pull`) 
-<!-- and for a single user (remove the option `--user` to install as root) -->
-call
+your cloned version after you update with `git pull`) call
 ```
 pip install -e.
 ``` 
@@ -203,8 +201,9 @@ import scanpy as sc
 ```
 in any directory.
 
-Or, call the wrapper `python scripts/scanpy.py` from within the root of the repository,
-which works **without** [installation](#install).
+You can also call the wrapper `python scripts/scanpy.py` from within the root of
+the repository or from within `scripts`, which works **without**
+[installation](#install).
 
 Packages you might need (all default in
 [Anaconda](https://www.continuum.io/downloads)) can be easily installed using

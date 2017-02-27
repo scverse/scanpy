@@ -3,7 +3,7 @@ Tools
 """
 
 from . import diffmap
-from . import difftest
+from . import diffrank
 from . import dpt
 from . import tsne
 from . import sim

@@ -24,7 +24,7 @@ from .tools.diffmap import diffmap, plot_diffmap
 from .tools.tsne import tsne, plot_tsne
 from .tools.dpt import dpt, plot_dpt
 from .tools.pca import pca, plot_pca
-from .tools.difftest import difftest, plot_difftest
+from .tools.diffrank import diffrank, plot_diffrank
 from .tools.sim import sim, plot_sim
 
 # just an equivalent name
@@ -50,7 +50,7 @@ __all__ = [
     # subgroup identification
     'dpt', 'plot_dpt'
     # differential expression testing
-    'difftest', 'plot_difftest'
+    'diffrank', 'plot_diffrank'
     # simulation
     'sim', 'plot_sim'
     # plotting

@@ -77,9 +77,9 @@ scanpy paul15 dpt
 
 We can now test for differential gene expression.
 ```
-scanpy paul15 difftest --prev dpt
+scanpy paul15 diffrank -o smp dpt_groups
 ```
-<img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15_diffrank.png" height="175">
 
 See the [notebook](examples/paul15.ipynb) for more information.
 
@@ -101,10 +101,10 @@ def paul15pca():
 Does this preprocessing change the biology?
 ```
 scanpy paul15pca dpt
-scanpy paul15pca difftest --prev dpt
+scanpy paul15pca diffrank -o smp dpt_groups
 ```
 <img src="http://falexwolf.de/scanpy/figs0/paul15pca_dpt_diffmap_pseudotimes_segments.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/paul15pca_difftest.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_diffrank.png" height="175">
 
 Even though the diffmap representation has changed a lot, the differential genes are still the same.
 Let us check whether the subgroups look much different in tSNE.
@@ -150,7 +150,7 @@ def burczynski06():
 
 Here we go
 ```
-scanpy burczynski06 difftest
+scanpy burczynski06 diffrank
 ```
 
 #### Simulated myeloid progenitor data ([Krumsiek *et al.*, 2011](#ref_krumsiek11)) <a id="krumsiek11"></a>

@@ -13,7 +13,7 @@ from .. import utils
 from .. import plotting as plott
 from .. import settings as sett
 
-def difftest(adata,
+def diffrank(adata,
              smp='groups',
              names='all',
              sig_level=0.05,
@@ -45,8 +45,8 @@ def difftest(adata,
     # for clarity, rename variable
     groups_names = names
     groups_names, groups_masks = utils.select_groups(adata, groups_names, smp)
-    adata['difftest_groups'] = smp
-    adata['difftest_groups_names'] = groups_names
+    adata['diffrank_groups'] = smp
+    adata['diffrank_groups_names'] = groups_names
     X = adata.X
     if log:
         # TODO: treat negativity explicitly
@@ -75,7 +75,7 @@ def difftest(adata,
     # each test provides a ranking of genes
     # we store the name of the ranking, i.e. the name of the test, 
     # in the following list
-    adata['difftest_rankings_names'] = []
+    adata['diffrank_rankings_names'] = []
     
     # test all combinations of groups against each other
     for ipair, (i,j) in enumerate(pairs):
@@ -110,18 +110,18 @@ def difftest(adata,
         rankings_geneidcs[ipair] = ranking_geneidcs
         # names
         ranking_name = groups_names[i] + ' vs '+ groups_names[j]
-        adata['difftest_rankings_names'].append(ranking_name)
+        adata['diffrank_rankings_names'].append(ranking_name)
 
     if False:
-        adata['difftest_pvalues'] = -np.log10(pvalues_all)
+        adata['diffrank_pvalues'] = -np.log10(pvalues_all)
 
-    adata['difftest_zscores'] = zscores_all
-    adata['difftest_rankings_geneidcs'] = rankings_geneidcs
-    adata['difftest_scoreskey'] = 'zscores'
+    adata['diffrank_zscores'] = zscores_all
+    adata['diffrank_rankings_geneidcs'] = rankings_geneidcs
+    adata['diffrank_scoreskey'] = 'zscores'
 
     return adata
 
-def plot_difftest(adata, n_genes=20):
+def plot_diffrank(adata, n_genes=20):
     """
     Plot ranking of genes for all tested comparisons.
 
@@ -132,8 +132,8 @@ def plot_difftest(adata, n_genes=20):
     n_genes : int
         Number of genes to show.
     """
-    plott.ranking(adata, toolkey='difftest', n_genes=n_genes)
-    writekey = sett.basekey + '_difftest_' + adata['difftest_groups'] + sett.plotsuffix
+    plott.ranking(adata, toolkey='diffrank', n_genes=n_genes)
+    writekey = sett.basekey + '_diffrank_' + adata['diffrank_groups'] + sett.plotsuffix
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()

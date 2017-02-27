@@ -25,7 +25,7 @@ dtools = odict([
     ('tsne', 'visualize data using tSNE'),
     ('spring', 'visualize data using force-directed graph drawing'),
     ('dpt', 'perform Diffusion Pseudotime analysis'),
-    ('difftest', 'test for differential expression'),
+    ('diffrank', 'test for differential expression'),
     ('sim', 'simulate stochastic gene expression models'),
 ])
 

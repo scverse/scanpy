@@ -99,19 +99,19 @@ dexamples = {
 'paul15': {
     'paths': {'fates': odict([('GMP', 877), ('MEP', 2156)])},
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'names': 'GMP,MEP'},
+    'diffrank': {'log': False, 'names': 'GMP,MEP'},
     'tgdyn': {'names': 'GMP,MEP'}
     },
 'paul15pca': {
     'datakey': 'paul15',
     'paths': {'fates': odict([('GMP', 193), ('MEP', 2201)])},
     'dpt/diffmap': {'k': 20, 'knn': True},
-    'difftest': {'log': False, 'names': 'GMP,MEP'},
+    'diffrank': {'log': False, 'names': 'GMP,MEP'},
     'tgdyn': {'names': 'GMP,MEP'}
     },
 'toggleswitch': {
     'paths': {'fates': odict([('0', 95), ('1', 189)])},
-    'difftest': {'log': False}
+    'diffrank': {'log': False}
     }
 }
 
