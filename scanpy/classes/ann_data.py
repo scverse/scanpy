@@ -1,7 +1,7 @@
 """
 Annotated Data
 """
-from collections import Mapping
+from collections import Mapping, Sequence
 from collections import OrderedDict
 from enum import Enum
 import numpy as np
@@ -136,7 +136,7 @@ class AnnData(IndexMixin):
         X, smp, var from the Parameters.
         """
         if isinstance(ddata_or_X, Mapping):
-            if smp or var or meta:
+            if any((smp, var, meta)):
                 raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata')
             X, smp, var, meta = self.from_ddata(ddata_or_X)
         else:
@@ -173,7 +173,7 @@ class AnnData(IndexMixin):
     def from_ddata(self, ddata):
         smp, var = OrderedDict(), OrderedDict()
 
-        meta = ddata.copy()
+        meta = dict(ddata.items())
         del ddata
 
         X = meta['X']
@@ -244,16 +244,43 @@ class AnnData(IndexMixin):
                 value[names_col] = names_orig
         object.__setattr__(self, key, value)
 
-    def _unpack_index(self, index):
-        smp, var = super(AnnData, self)._unpack_index(index)
-        if isinstance(smp, int):
-            smp = slice(smp, smp+1)
-        if isinstance(var, int):
-            var = slice(var, var+1)
+    def _normalize_indices(self, packed_index):
+        smp, var = super(AnnData, self)._unpack_index(packed_index)
+        smp = self._normalize_index(smp, self.smp_names)
+        var = self._normalize_index(var, self.var_names)
         return smp, var
 
+    def _normalize_index(self, index, names):
+        def name_idx(i):
+            if isinstance(i, str):
+                # `where` returns an 1-tuple (1D array) of found indices
+                i = np.where(names == i)[0][0]
+                if i is None:
+                    raise IndexError('Index {} not in smp_names/var_names'
+                                     .format(index))
+            return i
+
+        if isinstance(index, slice):
+            start = name_idx(index.start)
+            stop = name_idx(index.stop)
+            # string slices can only be inclusive, so +1 in that case
+            if isinstance(index.stop, str):
+                stop = None if stop is None else stop + 1
+            step = index.step
+        elif isinstance(index, (int, str)):
+            start = name_idx(index)
+            stop = start + 1
+            step = 1
+        elif isinstance(index, Sequence):
+            return np.fromiter(map(name_idx, index), 'int64')
+        else:
+            raise IndexError('Unknown index {!r} of type {}'
+                             .format(index, type(index)))
+
+        return slice(start, stop, step)
+
     def __delitem__(self, index):
-        smp, var = self._unpack_index(index)
+        smp, var = self._normalize_indices(index)
         del self.X[smp, var]
         if var == slice(None):
             del self.smp.iloc[smp, :]
@@ -265,7 +292,7 @@ class AnnData(IndexMixin):
         if isinstance(index, str):
             return self._meta[index]
         # otherwise unpack index
-        smp, var = self._unpack_index(index)
+        smp, var = self._normalize_indices(index)
         X = self.X[smp, var]
         smp_meta = self.smp[smp]
         var_meta = self.var[var]
@@ -279,8 +306,8 @@ class AnnData(IndexMixin):
             self._meta[index] = val
             return
 
-        samp, feat = self._unpack_index(index)
-        self.X[samp, feat] = val
+        smp, var = self._normalize_indices(index)
+        self.X[smp, var] = val
 
     def __contains__(self, item):
         return item in self._meta
@@ -342,6 +369,24 @@ def test_get_subset():
     assert mat[:, 0].X.tolist() == [[1], [4]]
     assert mat[:, [0, 1]].X.tolist() == [[1, 2], [4, 5]]
     assert mat[:, 1:3].X.tolist() == [[2, 3], [5, 6]]
+
+def test_get_subset_names():
+    mat = AnnData(
+        np.array([[1, 2, 3], [4, 5, 6]]),
+        dict(smp_names=['A', 'B']),
+        dict(var_names=['a', 'b', 'c']))
+
+    assert mat['A', 'a'].X.tolist() == [[1]]
+    assert mat['A', :].X.tolist() == [[1, 2, 3]]
+    assert mat[:, 'a'].X.tolist() == [[1], [4]]
+    assert mat[:, ['a', 'b']].X.tolist() == [[1, 2], [4, 5]]
+    assert mat[:, 'b':'c'].X.tolist() == [[2, 3], [5, 6]]
+
+    from pytest import raises
+    with raises(IndexError): _ = mat[:, 'X']
+    with raises(IndexError): _ = mat['X', :]
+    with raises(IndexError): _ = mat['A':'X', :]
+    with raises(IndexError): _ = mat[:, 'a':'X']
 
 def test_get_subset_meta():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]),

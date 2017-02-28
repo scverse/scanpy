@@ -5,7 +5,7 @@ Tools
 from . import diffmap
 from . import diffrank
 from . import dpt
-from . import dbscan
+# from . import dbscan
 from . import tsne
 from . import sim
 from . import spring
