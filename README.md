@@ -129,8 +129,8 @@ scanpy dpt -p help
 
 To work on your own example, make a copy and edit the following
 [notebook](examples/myexample_template.ipynb). If you want to call user examples
-from the command-line, create a file `scanpy_user.py` in your current working
-directory, e.g., by downloading and renaming
+from the command-line, create a file `scanpy_whatevername.py` in your current
+working directory, e.g., by downloading and renaming
 [scanpy_user_template.py](scanpy/examples/scanpy_user_template.py) and changing the function
 `myexample()` to your needs. Consider using copy and paste from
 [scanpy/examples/builtin.py](scanpy/examples/builtin.py). Call your example using `scanpy

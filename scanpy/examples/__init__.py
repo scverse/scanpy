@@ -3,6 +3,7 @@
 Example Data and Example Use Cases
 """
 
+import os
 from . import builtin
 from .. import utils
 from .. import readwrite
@@ -32,18 +33,23 @@ def get_example(exkey, subsample=1, return_module=False):
     exmodule : dict, optional
         Example module.
     """
-    try:
+    loop_over_filenames = [filename for filename in os.listdir('.')
+                           if filename.startswith('scanpy') and filename.endswith('.py')]
+    if len(loop_over_filenames):
+        sett.m(0, '--> did not find user examples, to provide some,\n'
+               '    generate a file scanpy_whatevername.py in your working directory,\n'
+               '    see https://github.com/theislab/scanpy#work-on-your-own-examples')
+    not_found = True
+    from sys import path
+    path.insert(0, '.')
+    for filename in loop_over_filenames:
+        exmodule = __import__(filename.replace('.py',''))
         try:
-            from sys import path
-            path.insert(0, '.')
-            import scanpy_user
-        except ImportError:
-            sett.m(0, '--> did not find user examples, to provide some,\n'
-                   '    generate file scanpy_user.py in your working directory,\n'
-                   '    see https://github.com/theislab/scanpy#work-on-your-own-examples')
-        exfunc = getattr(scanpy_user, exkey)
-        exmodule = scanpy_user
-    except (UnboundLocalError, AttributeError):
+            exfunc = getattr(exmodule, exkey)
+            not_found = False
+        except AttributeError:
+            pass
+    if not_found:
         try:
             # additional possibility to add example module
             from . import builtin_private
