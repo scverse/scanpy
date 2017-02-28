@@ -81,7 +81,8 @@ scanpy moignard15 dpt -p smp exp_groups legendloc none basis tsne
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
 
-This orders cells by segment, and within each segment, by pseudotime.  With
+DPT order orders cells by *dpt groups*, and within each group, by
+pseudotime. Groups are ordered by average pseudotime within the group.  With
 this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
 (2016)](#ref_haghverdi16).
 
