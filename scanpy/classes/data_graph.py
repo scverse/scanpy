@@ -1,16 +1,10 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Data Graph
-"""   
+"""
 
-# standard modules
-from collections import OrderedDict as odict
-# scientific modules
 import numpy as np
 import scipy as sp
-import matplotlib
-from ..compat.matplotlib import pyplot as pl
-# scanpy modules
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
@@ -21,32 +15,35 @@ class DataGraph(object):
     Class for treating graphs.
     """
 
-    def __init__(self, adata_or_X_or_Dsq, params):
+    def __init__(self, adata_or_X, params):
         """ 
         """
-        isadata = isinstance(adata_or_X_or_Dsq, AnnData)
+        isadata = isinstance(adata_or_X, AnnData)
         if isadata:
-            adata = adata_or_X_or_Dsq
+            adata = adata_or_X
+            X = adata_or_X.X
         else:
-            X_or_Dsq = adata_or_X_or_Dsq
-        if isadata:
-            self.Dsq = None
-            if 'X_pca' in adata and adata.X.shape[1] > 50:
+            X = adata_or_X
+        # decide on whether to compute PCA or not
+        if (params['n_pcs_pre'] == 0
+            or X.shape[1] < params['n_pcs_pre']):
+            self.X = X
+            if 'xroot' in adata:
+                self.set_root(adata['xroot'])
+            sett.m(0, '... using X for building graph')
+        elif (isadata
+              and 'X_pca' in adata
+              and adata['X_pca'].shape[1] >= params['n_pcs_pre']):
+            if 'xroot' in adata:
                 self.X = adata['X_pca']
-                sett.m(0, '--> using X_pca for building graph')
-            else:
-                self.X = adata.X
-                sett.m(0, '--> using X for building graph')
+            self.set_root(adata['xroot'])
+            sett.m(0, '... using X_pca for building graph')
         else:
-            if X_or_Dsq.shape[0] == X_or_Dsq.shape[1]:
-                sett.m(0,'--> computing data graph from distance matrix')
-                self.Dsq = X_or_Dsq
-                self.X = None
-            else:
-                sett.m(0,'--> computing data graph from data matrix')
-                self.X = X_or_Dsq
-                self.Dsq = None
-        self.N = self.X.shape[0]
+            if isadata and 'xroot' in adata:
+                self.X = X
+                self.set_root(adata['xroot'])
+            from ..preprocess import pca
+            self.X = pca(X, n_comps=params['n_pcs_pre'])
         self.params = params
         if self.params['sigma'] > 0:
             self.params['method'] = 'global'
@@ -115,12 +112,8 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
-        if self.Dsq is None:
-            if self.X.shape[1] > 1000:
-                sett.m(0, '--> high number of dimensions for computing distance matrix\n'
-                       '    consider preprocessing using PCA')
-            # compute distance matrix in squared Euclidian norm
-            self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
+        # compute distance matrix in squared Euclidian norm
+        self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
         Dsq = self.Dsq
         if self.params['method'] == 'local':
             # choose sigma (width of a Gaussian kernel) according to the
@@ -152,7 +145,7 @@ class DataGraph(object):
             sigmas = np.sqrt(sigmas_sq)
             sett.mt(0, 'determined k =', k, 'nearest neighbors of each point')
         elif self.params['method'] == 'standard':
-            sigmas = self.params['sigma'] * np.ones(self.N)
+            sigmas = self.params['sigma'] * np.ones(self.X.shape[0])
             sigmas_sq = sigmas**2
 
         # compute the symmetric weight matrix
@@ -350,12 +343,12 @@ class DataGraph(object):
         - Is based on the M matrix. 
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
-        if self.M.shape[0] > 1000 and self.params['n_pcs'] == 0:
+        if self.M.shape[0] > 1000 and self.params['n_pcs_post'] == 0:
             sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-                   '    by setting n_pcs > 0 you can speed up the computation')
-        if self.params['n_pcs'] > 0 and self.M.shape[0] > self.params['n_pcs']:
-            import scanpy.preprocess as pp
-            self.M = pp.pca(self.M, n_comps=self.params['n_pcs'])
+                   '    by setting n_pcs_post > 0 you can speed up the computation')
+        if self.params['n_pcs_post'] > 0 and self.M.shape[0] > self.params['n_pcs_post']:
+            from ..preprocess import pca
+            self.M = pca(self.M, n_comps=self.params['n_pcs_post'])
         self.Ddiff = sp.spatial.distance.pdist(self.M)
         self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
         sett.mt(0, 'computed Ddiff distance matrix')
@@ -409,7 +402,7 @@ class DataGraph(object):
         """
         self.pseudotime = self.Dchosen[self.iroot]/np.max(self.Dchosen[self.iroot])
 
-    def find_root(self,xroot):
+    def set_root(self, xroot):
         """ 
         Determine the index of the root cell.
 
@@ -429,7 +422,7 @@ class DataGraph(object):
         # this is the squared distance
         dsqroot = 1e10
         self.iroot = 0
-        for i in range(self.N):
+        for i in range(self.X.shape[0]):
             diff = self.X[i, :]-xroot
             dsq = diff.dot(diff)
             if  dsq < dsqroot:

@@ -1,5 +1,5 @@
 # coding: utf-8
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Diffusion Pseudotime Analysis
 
@@ -24,7 +24,7 @@ from .. import settings as sett
 from .. import utils
 from ..classes import data_graph
 
-def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
+def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
         sigma=0, allow_branching_at_root=False):
     u"""
     Perform DPT analsysis as of Haghverdi et al. (2016).
@@ -42,8 +42,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
             If it exists, dpt will use this instead of adata.X.
         adata['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
-            either as expression vector of shape X.shape[1] or as index. The
-            latter is not recommended.
+            as expression vector of shape X.shape[1].
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     k : int, optional (default: 5)
@@ -55,9 +54,13 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    n_pcs: int, optional (default: 30)
-        Use n_pcs PCs to compute DPT distance matrix -> speeds up the
-        computation at almost no loss of accuracy.
+    n_pcs_pre: int, optional (default: 50)
+        Use n_pcs_pre PCs to compute Euclidian distance matrix. Set to 0 if you
+        don't want preprocessing with PCA.
+    n_pcs_post: int, optional (default: 30)
+        Use n_pcs_post PCs to compute DPT distance matrix -> speeds up the
+        computation at almost no loss of accuracy. Set to 0 if you don't want
+        postprocessing with PCA.
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
         of the Kernel Gaussian (method 'global') - knn needs to be False.
@@ -84,7 +87,8 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
             Array of size (number of samples). Eigenvalues of transition matrix.
     """
     params = locals(); del params['adata']
-    xroot = adata['xroot']
+    if 'xroot' not in adata:
+        raise ValueError('DPT requires specifying the expression "xroot" of a root cell.')
     dpt = DPT(adata, params)
     # diffusion map
     ddmap = dpt.diffmap()
@@ -95,12 +99,6 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
     dpt.compute_M_matrix()
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     dpt.compute_Ddiff_matrix()
-    # set root point, if it's a gene expression value, first locate the root
-    if type(xroot) == np.ndarray:
-        dpt.find_root(xroot)
-    # if it's an index, directly set the index
-    else:
-        dpt.iroot = xroot
     # update iroot, might have changed when subsampling, for example
     adata['iroot'] = dpt.iroot
     # pseudotime are distances from root point
@@ -116,7 +114,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs=30,
                                         else 'dontknow'
                                         for i in dpt.segslabels])
     # the ordering according to segments and pseudotime
-    adata['dpt_indices'] = dpt.indices
+    adata['dpt_order'] = dpt.indices
     adata['dpt_changepoints'] = dpt.changepoints
     adata['dpt_segtips'] = dpt.segstips
     return adata
@@ -166,19 +164,23 @@ def plot_dpt(adata,
     plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
+    from ..compat.matplotlib import pyplot as pl
     X = adata.X
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[adata['dpt_indices']],
-                         varnames = adata.var_names,
+        plott.timeseries(X[adata['dpt_order']],
+                         varnames=adata.var_names,
                          highlightsX=adata['dpt_changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
+        pl.xlabel('dpt order')
         plott.savefig(writekey + '_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[adata['dpt_indices'],:40], adata.var_names,
+        plott.timeseries_as_heatmap(X[adata['dpt_order'], :40], 
+                                    varnames=adata.var_names,
                                     highlightsX=adata['dpt_changepoints'])
+        pl.xlabel('dpt order')
         plott.savefig(writekey + '_heatmap')
 
     smps = ['dpt_pseudotime']
@@ -186,7 +188,7 @@ def plot_dpt(adata,
         smps += ['dpt_groups']
     adata['highlights'] = list([adata['iroot']])
     if smp is not None:
-        smps.append(smp)
+        smps += smp.split(',')
 
     plott.plot_tool(adata,
                     basis=basis,
@@ -210,16 +212,17 @@ def plot_segments_pseudotime(adata, cmap=None, pal=None):
     from .. import plotting as plott
     pl.figure()
     pl.subplot(211)
-    plott.timeseries_subplot(adata.smp['dpt_groups'][adata['dpt_indices'], np.newaxis],
-                             c=adata.smp['dpt_groups'][adata['dpt_indices']],
+    plott.timeseries_subplot(adata.smp['dpt_groups'][adata['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_groups'][adata['dpt_order']],
                              highlightsX=adata['dpt_changepoints'],
                              ylabel='dpt groups',
                              yticks=(np.arange(len(adata['dpt_groups_names']), dtype=int)
                                      if len(adata['dpt_groups_names']) < 5 else None),
                              pal=pal)
     pl.subplot(212)
-    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata['dpt_indices'], np.newaxis],
-                             c=adata.smp['dpt_pseudotime'][adata['dpt_indices']],
+    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_pseudotime'][adata['dpt_order']],
+                             xlabel='dpt order',
                              highlightsX=adata['dpt_changepoints'],
                              ylabel='pseudotime',
                              yticks=[0,1],
@@ -273,7 +276,7 @@ class DPT(data_graph.DataGraph):
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
-        allindices = np.arange(self.N, dtype=int)
+        allindices = np.arange(self.X.shape[0], dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider 'unproper segments'
             if segstips[iseg][0] == -1:
@@ -398,7 +401,7 @@ class DPT(data_graph.DataGraph):
             # otherwise, allow branching at root
             if (np.min(dist_to_root) > 0.01*self.Dchosen[tuple(self.segstips[iseg])]
                 and self.params['allow_branching_at_root']):
-                allindices = np.arange(self.N,dtype=int)
+                allindices = np.arange(self.X.shape[0], dtype=int)
                 tips3_global = np.insert(self.segstips[iseg],0,self.iroot)
                 # map the global position to the position within the segment
                 tips3 = np.array([np.where(allindices[self.segs[iseg]] == tip)[0][0]

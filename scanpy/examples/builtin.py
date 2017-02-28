@@ -93,12 +93,13 @@ dexamples = {
         }
     },
 'moignard15': {
+    'dbscan': {'eps': 1.5},
     'dpt/diffmap': {'k': 5, 'knn': False},
     'paths': {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])},
     },
 'paul15': {
     'paths': {'fates': odict([('GMP', 877), ('MEP', 2156)])},
-    'dpt/diffmap': {'k': 20, 'knn': True},
+    'dpt/diffmap': {'k': 20, 'knn': True, 'n_pcs_pre': 0},
     'diffrank': {'log': False, 'names': 'GMP,MEP'},
     'tgdyn': {'names': 'GMP,MEP'}
     },
@@ -200,12 +201,14 @@ def paul15():
     return adata
 
 def paul15pca():
+    """
+    Same as paul15pca, but in the settings for DPT in dexamples above,
+    we do not switch off an initial PCA.
+    """
     adata = paul15_raw()
     adata.X = sc.pp.log(adata.X)
-    # reduce to 50 components
-    adata['X_pca'] = sc.pca(adata.X, n_comps=50)
     # adjust expression vector of root cell
-    adata['xroot'] = adata['X_pca'][adata['iroot']]
+    adata['xroot'] = adata.X[adata['iroot']]
     return adata    
 
 def toggleswitch():
@@ -245,12 +248,12 @@ def moignard15_raw():
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
-    adata.smp['groups'] = [
+    adata.smp['exp_groups'] = [
         next(gname for gname in groups_names if sname.startswith(gname))
         for sname in adata.smp_names]
     # fix the order and colors of names in "groups"
-    adata['groups_names'] = groups_names
-    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    adata['exp_groups_names'] = groups_names
+    adata['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
 def moignard15_dpt(adata):

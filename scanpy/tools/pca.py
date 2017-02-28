@@ -55,6 +55,7 @@ def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized'):
         return adata
     else:
         X_pca = pp.pca(X, n_comps, zero_center, svd_solver)
+        adata['X_pca'] = X_pca
     if isadata:
         adata['X_pca'] = X_pca
         return adata
@@ -71,7 +72,8 @@ def plot_pca(adata,
          cmap=None,
          pal=None,
          right_margin=None,
-         size=3):
+         size=3,
+         subtitles=None):
     """
     Scatter plots.
 
@@ -102,6 +104,8 @@ def plot_pca(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
+    subtitles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     from .. import plotting as plott
     plott.plot_tool(adata,
@@ -116,5 +120,6 @@ def plot_pca(adata,
                     cmap=cmap,
                     pal=pal,
                     right_margin=right_margin,
-                    size=size)
+                    size=size,
+                    subtitles=subtitles)
 

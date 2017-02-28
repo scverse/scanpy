@@ -77,12 +77,15 @@ def plot_tool(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
+    subtitles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     # compute components
     from numpy import array
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
     comps = array(comps.split(',')).astype(int) - 1
+    subtitles = None if subtitles is None else subtitles.split(',') if isinstance(subtitles, str) else subtitles
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
@@ -113,6 +116,7 @@ def plot_tool(adata,
                     if smp_ not in smps:
                         smp = smp_
                         smps[ismp] = smp
+                        break
             # test whether we have categorial or continuous annotation
             if smp in adata.smp_keys():
                 if adata.smp[smp].dtype.char in ['S', 'U']:
@@ -142,7 +146,7 @@ def plot_tool(adata,
             categoricals.append(ismp)
 
     if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.24
+        right_margin = 0.24        
     if subtitles is None and smps[0] is not None:
         subtitles = [smp.replace('_', ' ') for smp in smps]
 
@@ -169,6 +173,11 @@ def plot_tool(adata,
             adata[smp + '_colors'] = pal[:len(adata['groups_names'])].by_key()['color']
         elif not smp + '_colors' in adata:
             adata[smp + '_colors'] = pal[:len(adata[smp + '_names'])].by_key()['color']
+        if len(adata[smp + '_names']) > len(adata[smp + '_colors']):
+            sett.m(0, 'number of categories/names in', smp, 'so large that color map jet is used')
+            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
+                                                    pl.Normalize()(
+                                                    np.arange(len(adata[smp + '_names']), dtype=int)))
         for iname, name in enumerate(adata[smp + '_names']):
             if (names is None or (names != None and name in names)):
                 group(axs[ismp], smp, iname, adata, Y, layout, size)
@@ -221,7 +230,7 @@ def timeseries_subplot(X,
                        c=None,
                        varnames=(),
                        highlightsX=(),
-                       xlabel='segments / pseudotime order',
+                       xlabel='',
                        ylabel='gene expression',
                        yticks=None,
                        xlim=None,
@@ -326,8 +335,6 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None, cmap='viridis'):
                 '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
-    pl.xlabel('segments / pseudotime order')
-    # pl.tight_layout()
 
 def scatter(Ys,
             c='blue',
@@ -395,8 +402,6 @@ def scatter(Ys,
         right_margin = 0.25
     elif right_margin is None:
         right_margin = 0.01
-
-    from inspect import getcallargs
     gs = gridspec.GridSpec(nrows=len(Ys),
                            ncols=2*len(colors),
                            width_ratios=[r for i in range(len(colors))
@@ -494,98 +499,6 @@ def scatter(Ys,
                 ax.set_zlabel(axlabels[iax][2],labelpad=-7)
     return axs
 
-# the following doesn't use a fixed grid, therefore panels have
-# different sizes depending on whether there is a suplot or not
-def _scatter_auto_grid(Ys,
-             layout='2d',
-             subtitles=['pseudotime', 'segments', 'experimental labels'],
-             c='blue',
-             highlights=[],
-             highlights_labels=[],
-             title='',
-             colorbars=[False],
-             **kwargs):
-    # if we have a single array, transform it into a list with a single array
-    avail_layouts = ['2d', '3d', 'unfolded 3d']
-    if layout not in avail_layouts:
-        raise ValueError('choose layout from',avail_layouts)
-    colors = c
-    if type(Ys) == np.ndarray:
-        Ys = [Ys]
-    if len(colors) == len(Ys[0]) or type(colors) == str:
-        colors = [colors]
-    # make a figure with panels len(colors) x len(Ys)
-    figsize = (4*len(colors), 4*len(Ys))
-    # checks
-    if layout == 'unfolded 3d':
-        if len(Ys) != 1:
-            raise ValueError('use single 3d array')
-        if len(colors) > 1:
-            raise ValueError('choose a single color')
-        figsize = (4*2, 4*2)
-        Y = Ys[0]
-        Ys = [Y[:,[1,2]], Y[:,[0,1]], Y, Y[:,[0,2]]]
-    # try importing Axes3D
-    if '3d' in layout:
-        from mpl_toolkits.mplot3d import Axes3D
-    fig = pl.figure(figsize=figsize,
-                    subplotpars=sppars(left=0.07,right=0.98,bottom=0.08))
-    fig.suptitle(title)
-    count = 1
-    bool3d = True if layout == '3d' else False
-    axs = []
-    for Y in Ys:
-        markersize = (2 if Y.shape[0] > 500 else 10)
-        for icolor, color in enumerate(colors):
-            # set up panel
-            if layout == 'unfolded 3d' and count != 3:
-                ax = fig.add_subplot(2, 2, count)
-                bool3d = False
-            elif layout == 'unfolded 3d' and count == 3:
-                ax = fig.add_subplot(2, 2, count,
-                                     projection='3d')
-                bool3d = True
-            elif layout == '2d':
-                ax = fig.add_subplot(len(Ys), len(colors), count)
-            elif layout == '3d':
-                ax = fig.add_subplot(len(Ys), len(colors), count,
-                                     projection='3d')
-            if not bool3d:
-                data = Y[:,0], Y[:,1]
-            else:
-                data = Y[:,0], Y[:,1], Y[:,2]
-            # do the plotting
-            if type(color) != str or color != 'white':
-                sct = ax.scatter(*data,
-                                 c=color,
-                                 edgecolors='face',
-                                 s=markersize,
-                                 **kwargs)
-            if colorbars[icolor]:
-                cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter))
-            # set the subtitles
-            ax.set_title(subtitles[icolor])
-            # output highlighted data points
-            for iihighlight,ihighlight in enumerate(highlights):
-                data = [Y[ihighlight,0]], [Y[ihighlight,1]]
-                if bool3d:
-                    data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
-                ax.scatter(*data, c='black',
-                           facecolors='black', edgecolors='black',
-                           marker='x', s=40, zorder=20)
-                highlight = (highlights_labels[iihighlight] if
-                             len(highlights_labels) > 0
-                             else str(ihighlight))
-                # the following is a Python 2 compatibility hack
-                ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
-            ax.set_xticks([]); ax.set_yticks([])
-            if bool3d:
-                ax.set_zticks([])
-            axs.append(ax)
-            count += 1
-    # scatter.set_edgecolors = scatter.set_facecolors = lambda *args:None
-    return axs
-
 def _scatter_single(ax,Y,*args,**kwargs):
     """
     Plot scatter plot of data. Just some wrapper of matplotlib.Axis.scatter.
@@ -643,12 +556,22 @@ def ranking(adata, toolkey, n_genes=20):
         n_panels_y = 2
         n_panels_x = int(n_panels/2+0.5)
 
-    fig = pl.figure(figsize=(n_panels_x*4,n_panels_y*4))
-    pl.subplots_adjust(left=0.15,top=0.9,right=0.98,bottom=0.13)
+    fig = pl.figure(figsize=(n_panels_x * 4, n_panels_y * 4))
+
+    from matplotlib import gridspec
+    left = 0.2/n_panels_x
+    bottom = 0.13/n_panels_y
+    gs = gridspec.GridSpec(nrows=n_panels_y,
+                           ncols=n_panels_x,
+                           left=left,
+                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
+                           bottom=bottom,
+                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
+                           wspace=0)
 
     count = 1
     for irank in range(len(adata[toolkey + '_rankings_names'])):
-        fig.add_subplot(n_panels_y,n_panels_x,count)
+        pl.subplot(gs[count-1])
         scores = get_scores(irank)
         for ig,g in enumerate(adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
             marker = (r'\leftarrow' if adata[toolkey + '_zscores'][irank,g] < 0

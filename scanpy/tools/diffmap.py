@@ -26,7 +26,7 @@ from .. import utils
 from .. import settings as sett
 from .. import plotting as plott
 
-def diffmap(adata, n_comps=10, k=5, knn=False, sigma=0):
+def diffmap(adata, n_comps=10, k=5, knn=False, n_pcs_pre=50, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -78,7 +78,8 @@ def plot_diffmap(adata,
          cmap=None,
          pal=None,
          right_margin=None,
-         size=3):
+         size=3,
+         subtitles=None):
     """
     Scatter plots.
 
@@ -109,6 +110,8 @@ def plot_diffmap(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
+    subtitles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     from .. import plotting as plott
     plott.plot_tool(adata,
@@ -123,5 +126,6 @@ def plot_diffmap(adata,
                     cmap=cmap,
                     pal=pal,
                     right_margin=right_margin,
-                    size=size)
+                    size=size,
+                    subtitles=subtitles)
 

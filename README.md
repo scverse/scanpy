@@ -22,7 +22,10 @@ proteome. Please, cite the original references and implementations.
 * [dpt](#dpt) - Infer progression of cells, identify *branching*
 subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-*  [diffrank](#diffrank) - Rank genes according to differential gene
+* [dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
+1996](#ref_ester96), [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+
+*  [diffrank](#diffrank) - Rank genes according to differential 
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
@@ -41,6 +44,7 @@ with the top-level command `scanpy` in any directory (more info [here](#install)
 
 #### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
 
+[[notebook]](https://github.com/theislab/scanpy_notebooks/blob/master/moignard15.ipynb)
 Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
 NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
 ```
@@ -48,9 +52,9 @@ scanpy moignard15 pca
 scanpy moignard15 tsne
 scanpy moignard15 diffmap
 ```
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_pca_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_tsne_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_exp_groups.png" height="175">
 
 Coloring samples/cells by gene expression works analogously,
 ```
@@ -63,28 +67,44 @@ scanpy moignard15 diffmap -p smp HbbbH1
 <img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
-detects the *trunk* of progenitor cells (segment 0) and the *branches* of
-endothelial cells (segment 1/2) and erythrocytes (segment 3). The inferred
+detects the *trunk* of progenitor cells (*dpt group* 0) and the *branches* of
+endothelial cells (*dpt group* 1/2) and erythrocytes (*dpt group* 3). The inferred
 *pseudotime* traces the degree of cells' progression in the differentiation
 process. By default, this is plotted using Diffusion Maps. Using the `-p`
 option, you can specify the tSNE basis, for example.
 ```
-scanpy moignard15 dpt
-scanpy moignard15 dpt -p basis tsne
+scanpy moignard15 dpt -p smp exp_groups legendloc "upper left"
+scanpy moignard15 dpt -p smp exp_groups legendloc none basis tsne
 ```
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_diffmap_pseudotimes_segments_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_segpt.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_tsne_pseudotimes_segments_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_diffmap_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
 
-This orders cells by segment, and within each segment, by pseudotime.
+This orders cells by segment, and within each segment, by pseudotime.  With
+this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
+(2016)](#ref_haghverdi16).
 
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_dpt_heatmap.png" height="250">
+Let us rank genes according to differential expression between groups of cells.
+```
+scanpy moignard15 diffrank -o smp dpt_groups names 0,2,3
+```
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dpt_groups.png" height="150">
 
-With this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
-(2016)](#ref_haghverdi16). See this [notebook](https://github.com/theislab/scanpy_notebooks/blob/master/moignard15.ipynb) for
-more information.
+In contrast to a DPT analysis, a standard clustering in tSNE coordinates blurs
+the continuous nature of the data. Seemingly agreeing clusters display
+considerably different top-ranked genes.
+<a id="moignard15_dbscan"></a>
+```
+scanpy moignard15 dbscan -p smp exp_groups
+scanpy moignard15 diffrank -o smp dbscan_groups names 2,3
+scanpy moignard15 diffrank -o smp exp_groups names names PS,4SG
+```
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dbscan_tsne_dbscan_groups-exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dbscan_groups.png" height="150">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_exp_groups.png" height="150">
 
-If you want to use the results external of scanpy, read the corresponding hdf5
+If you want to use the results externally, read the resulting hdf5
 file (inspect its content using `h5ls write/moignard15_dpt.h5`). If you prefer
 reading and writing csv/txt files, which is much slower, however, use the option
 `--fileformat csv` (or `txt`).
@@ -98,10 +118,11 @@ scanpy exdata
 scanpy examples
 ```
 
-Get general and tool-specific help, respectively.
+Get general help, help on tool parameters and help on plotting the results of a tool.
 ```shell
 scanpy --help
 scanpy dpt --help
+scanpy dpt -p help
 ```
 
 #### Work on your own examples <a id="add_example"></a>
@@ -143,46 +164,70 @@ Also, it'd be awesome if you add your example to [examples](EXAMPLES.md) and
 public data.  Simply make a pull request for this. If you have questions or
 prefer sending your script by email, contact [Alex](http://falexwolf.de).
 
+If you want to use your own tool, put your script into [scanpy/tools](scanpy/tools), 
+update [scanpy/tools/__init__.py](scanpy/tools/__init__.py) and use a wrapper like
+[scripts/diffmap.py](scripts/diffmap.py), which can be called directly.
+```
+./scripts/diffmap.py moignard15
+```
+
 ## Tools <a id="tools"></a>
 
-### [pca](scanpy/tools/pca.py) <a id="pca"></a>
+### Visualization
 
-If `scikit-learn` is installed, the tool uses the implementation of the package
-([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+#### pca <a id="pca"></a>
 
-### [tsne](scanpy/tools/tsne.py) <a id="tsne"></a>
+[[source]](scanpy/tools/pca.py) Uses the implementation of the `scikit-learn` package
+([Pedregosa *et al.*, 2011](#ref_pedregosa11)) if it is installed.
 
-The algorithm has been introduced by [Maaten & Hinton
+#### tsne <a id="tsne"></a>
+
+[[source]](scanpy/tools/tsne.py) The algorithm has been introduced by [Maaten & Hinton
   (2008)](#ref_maaten08) and proposed for single-cell data by [Amir *et
-  al.* (2013)](#ref_amir13). If `scikit-learn` is installed, the tool uses the
-  implementation of the package ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+  al.* (2013)](#ref_amir13). Uses the implementation of the `scikit-learn` package
+([Pedregosa *et al.*, 2011](#ref_pedregosa11)) if it is installed.
 
-### [diffmap](scanpy/tools/diffmap.py) <a id="diffmap"></a>
+#### diffmap <a id="diffmap"></a>
 
-This implements *diffusion maps* ([Coifman
+[[source]](scanpy/tools/diffmap.py) This implements *diffusion maps* ([Coifman
 *et al.*, 2005](#ref_coifman05)), which has been proposed for visualizing
 single-cell data by [Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, it uses
-the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16).
+the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16). The 
+Scanpy implementation is due to [Wolf *et al.* (2017)](#ref_wolf17).
 
-### [diffrank](scanpy/tools/diffrank.py) <a id="diffrank"></a>
+### Discrete clustering of subgroups and continuous progression through subgroups
 
-Rank genes by differential expression.
+#### dpt <a id="dpt"></a>
 
-### [dpt](scanpy/tools/dpt.py) <a id="dpt"></a>
-
-Reconstruct progression in a biological process from snapshot data and detect
+[[source]](scanpy/tools/dpt.py) Reconstruct progression in a biological process from snapshot data and detect
 branching subgroups. Diffusion Pseudotime analysis has been introduced by
-[Haghverdi *et al.* (2016)](#ref_haghverdi16).
+[Haghverdi *et al.* (2016)](#ref_haghverdi16) and has been implemented for Scanpy by 
+[Wolf *et al.* (2017)](#ref_wolf17).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
-### [sim](scanpy/tools/sim.py) <a id="sim"></a>
+#### dbscan <a id="dbscan"></a>
 
-Sample from a stochastic differential equation model built from
-literature-curated boolean gene regulatory networks, as suggested by [Wittmann
-*et al.* (2009)](#ref_wittmann09).
+[[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN), 
+originally proposed by [Ester *et al.*, 1996](#ref_ester96) in the implementation of
+`scikit-learn` ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+
+### Differential expression
+
+#### diffrank <a id="diffrank"></a>
+
+[[source]](scanpy/tools/diffrank.py) Rank genes by differential expression.
+
+### Simulation
+
+#### sim <a id="sim"></a>
+
+[[source]](scanpy/tools/sim.py) Sample from a stochastic differential equation
+model built from literature-curated boolean gene regulatory networks, as
+suggested by [Wittmann *et al.* (2009)](#ref_wittmann09). The Scanpy implementation is
+due to [Wolf *et al.* (2017)](#ref_wolf17).
 
 The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 (2010)](#ref_krumsiek10).
@@ -254,6 +299,12 @@ Coifman *et al.* (2005),
 *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
 [PNAS 102, 7426](
 http://dx.doi.org/10.1038/nmeth.3971).
+
+<a id="ref_ester96"></a>
+Ester *et al.*
+*A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*
+[Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, Portland, OR, AAAI Press, pp. 226-231]
+(http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220)
 
 <a id="ref_haghverdi15"></a>
 Haghverdi *et al.* (2015), 

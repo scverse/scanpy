@@ -143,8 +143,8 @@ def read_params(filename, asheader=False):
     """
     if not asheader:
         sett.m(0,'reading params file',filename)
-    from collections import OrderedDict as odict
-    params = odict([])
+    from collections import OrderedDict
+    params = OrderedDict([])
     for line in open(filename):
         if '=' in line:
             if not asheader or line.startswith('#'):
@@ -633,7 +633,8 @@ def postprocess_reading(key, value):
         value = value.astype(str)
     # get back dictionaries
     if key.endswith('_ann'):
-        dd = {}
+        from collections import OrderedDict
+        dd = OrderedDict()
         for row in value:
             # the type is stored after the "_"
             t = row[0].split('_')[-1]

@@ -23,7 +23,7 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
-def tsne(adata, n_pcs=50, perplexity=30):
+def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
     u"""
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
@@ -34,12 +34,16 @@ def tsne(adata, n_pcs=50, perplexity=30):
         adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, tsne will use this instead of adata.X.
-    n_pcs : int
+    random_state : int, optional (default: 0)
+        Change to use different intial states for the optimization.
+    n_pcs : int, optional (default: 50)
         Number of principal components in preprocessing PCA.
-
-    Parameters as used in sklearn.manifold.TSNE:
     perplexity : float, optional (default: 30)
-        Perplexity.
+        The perplexity is related to the number of nearest neighbors that
+        is used in other manifold learning algorithms. Larger datasets
+        usually require a larger perplexity. Consider selecting a value
+        between 5 and 50. The choice is not extremely critical since t-SNE
+        is quite insensitive to this parameter.    
 
     Returns
     -------
@@ -48,7 +52,6 @@ def tsne(adata, n_pcs=50, perplexity=30):
             tSNE representation of the data.
     """
     sett.m(0,'compute tSNE')
-    sett.m(0,'... mind that this is not deterministic!')
     # preprocessing by PCA
     if 'X_pca' in adata and adata['X_pca'].shape[1] > n_pcs:
         X = adata['X_pca']
@@ -57,14 +60,15 @@ def tsne(adata, n_pcs=50, perplexity=30):
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
             sett.m(0, 'preprocess using PCA with', n_pcs, 'PCs')
             sett.m(0, '--> avoid this by setting n_pcs = 0')
-            X = pca(adata.X, n_comps=n_pcs)
+            X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata['X_pca'] = X
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {'perplexity' : perplexity}
+    params_sklearn = {'perplexity' : perplexity, 'random_state': random_state}
     params_sklearn['verbose'] = sett.verbosity
     # deal with different tSNE implementations
+    np.random.seed(0)
     try:
         from MulticoreTSNE import MulticoreTSNE as TSNE
         tsne = TSNE(n_jobs=4, **params_sklearn)
@@ -97,7 +101,8 @@ def plot_tsne(adata,
          cmap=None,
          pal=None,
          right_margin=None,
-         size=3):
+         size=3,
+         subtitles=None):
     """
     Scatter plots.
 
@@ -130,6 +135,8 @@ def plot_tsne(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
+    subtitles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     from .. import plotting as plott
     plott.plot_tool(adata,
@@ -144,7 +151,8 @@ def plot_tsne(adata,
                     cmap=cmap,
                     pal=pal,
                     right_margin=right_margin,
-                    size=size)
+                    size=size,
+                    subtitles=subtitles)
 
 def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
     """

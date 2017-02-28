@@ -168,7 +168,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
         for iname, name in enumerate(adata[smp + '_names']):
             # if the name is not found, fallback to index retrieval
             if adata[smp + '_names'][iname] in adata.smp[smp]:
-                mask = adata[name + '_names'][iname] == adata.smp[smp]
+                mask = adata[smp + '_names'][iname] == adata.smp[smp]
             else:
                 mask = str(iname) == adata.smp[smp]
             groups_masks[iname] = mask
@@ -179,12 +179,17 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
             groups_names_subset = groups_names_subset.split(',')
         groups_ids = np.where(np.in1d(adata[smp + '_names'], np.array(groups_names_subset)))[0]
         if len(groups_ids) == 0:
+            # fallback to index retrieval
+            groups_ids = np.where(np.in1d(np.arange(len(adata[smp + '_names'])).astype(str),
+                                          np.array(groups_names_subset)))[0]
+        if len(groups_ids) == 0:
             sett.m(0, np.array(groups_names_subset), 
-                   'invalid! specify valid groups_names for testing, one of',
+                   'invalid! specify valid groups_names (or indices) one of',
                    adata[smp + '_names'])
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
+        groups_names_subset = adata[smp + '_names'][groups_ids]
     else:
         groups_names_subset = groups_names
     return groups_names_subset, groups_masks

@@ -63,7 +63,7 @@ def diffrank(adata,
         means[imask] = X[mask].mean(axis=0)
         vars[imask] = X[mask].var(axis=0)
         ns[imask] = np.where(mask)[0].size
-    sett.m(0, 'testing', smp, 'with', groups_names, 'with sample numbers', ns)
+    sett.m(0, 'testing', smp, groups_names, 'with sample numbers', ns)
     sett.m(2, 'means', means) 
     sett.m(2, 'variances', vars)
 
@@ -134,6 +134,7 @@ def plot_diffrank(adata, n_genes=20):
     """
     plott.ranking(adata, toolkey='diffrank', n_genes=n_genes)
     writekey = sett.basekey + '_diffrank_' + adata['diffrank_groups'] + sett.plotsuffix
+    plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()

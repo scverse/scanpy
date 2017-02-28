@@ -202,8 +202,8 @@ class AnnData(IndexMixin):
         return X, smp, var, meta
 
     def to_ddata(self):
-        smp = {k: self.smp[k] for k in self.smp_keys() if k != 'smp_names'}
-        var = {k: self.var[k] for k in self.var_keys() if k != 'var_names'}
+        smp = OrderedDict([(k, self.smp[k]) for k in self.smp_keys()])
+        var = OrderedDict([(k, self.var[k]) for k in self.var_keys()])
         d = {'X': self.X, 'smp': smp, 'var': var,
              'smp_names': self.smp_names, 'var_names': self.var_names}
         for k, v in self._meta.items():
