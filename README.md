@@ -62,9 +62,9 @@ scanpy moignard15 pca -p smp HbbbH1
 scanpy moignard15 tsne -p smp HbbbH1
 scanpy moignard15 diffmap -p smp HbbbH1
 ```
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_pca_HbbbH1.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_tsne_HbbbH1.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs0/moignard15_diffmap_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (*dpt group* 0) and the *branches* of
@@ -302,9 +302,9 @@ Coifman *et al.* (2005),
 http://dx.doi.org/10.1038/nmeth.3971).
 
 <a id="ref_ester96"></a>
-Ester *et al.*
+Ester *et al.* (1996),
 *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*
-[Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, Portland, OR, AAAI Press, pp. 226-231]
+[Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, Portland, OR, pp. 226-231]
 (http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220)
 
 <a id="ref_haghverdi15"></a>
@@ -344,7 +344,7 @@ http://dx.doi.org/10.1038/nbt.3154).
 <a id="ref_pedregosa11"></a>
 Pedregosa *et al.* (2011),
 *Scikit-learn: Machine Learning in Python*, 
-[Journal of Machine Learning Research 12, 2825](
+[JMLR 12, 2825](
 http://www.jmlr.org/papers/v12/pedregosa11a.html).
 
 <a id="ref_paul15"></a>

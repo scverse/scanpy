@@ -16,7 +16,8 @@ from .. import utils
 from .. import preprocess as pp
 from ..classes.ann_data import AnnData
 
-def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized', random_state=0):
+def pca(adata_or_X, n_comps=10, zero_center=True, 
+        svd_solver='randomized', random_state=None):
     """
     Embed data using PCA.
 
@@ -53,7 +54,9 @@ def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized', rando
         X = adata_or_X
     if (isadata and 'X_pca' in adata 
         and adata['X_pca'].shape[1] >= n_comps
-        and sett.recompute is 'none'):
+        and (sett.recompute == 'none'
+             or sett.recompute == 'pp')):
+        sett.m(0, '... using X_pca contained in adata')
         return adata
     else:
         X_pca = pp.pca(X, n_comps, 
@@ -61,7 +64,6 @@ def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized', rando
                        random_state=random_state)
         adata['X_pca'] = X_pca
     if isadata:
-        adata['X_pca'] = X_pca
         return adata
     else:
         return X_pca

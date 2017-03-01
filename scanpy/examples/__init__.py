@@ -3,6 +3,7 @@
 Example Data and Example Use Cases
 """
 
+from __future__ import print_function
 import os
 from . import builtin
 from .. import utils
@@ -162,9 +163,11 @@ def _check_adata(adata):
     if len(adata.smp_keys()) == 0:
         sett.m(0, _howto_specify_subgroups)
     else:
-        for smp in adata.smp_keys():
-            # ordered unique categories
-            if not smp + '_names' in adata:
+        if len(adata.smp_keys()) > 0 and sett.verbosity > 0:
+            print('continuous/categorical sample annotation with ', end='')
+        for ismp, smp in enumerate(adata.smp_keys()):
+            # ordered unique categories for categorical annotation
+            if not smp + '_names' in adata and adata.smp[smp].dtype.char == 'U':
                 adata[smp + '_names'] = np.unique(adata.smp[smp])
                 try:
                     from natsort import natsorted
@@ -174,12 +177,20 @@ def _check_adata(adata):
                 if adata[smp + '_names'].dtype.char == 'U':
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
                                                        np.array(_ignore_groups))
-            # output
-            ann_info = adata[smp + '_names']
-            if len(adata[smp + '_names']) > 20:
-                ann_info = (str(adata[smp + '_names'][0:3]).replace(']','') 
-                            + ' ...' + str(adata[smp + '_names'][-2:]).replace('[',''))
-            sett.m(0,'sample annotation','"' + smp + '"', 'with',  ann_info)
+            if sett.verbosity > 0: 
+                print(smp + ':', end=' ')
+                if adata.smp[smp].dtype.char == 'U':
+                    ann_info = adata[smp + '_names']
+                    if len(adata[smp + '_names']) > 7:
+                        ann_info = (str(adata[smp + '_names'][0:3]).replace(']','') 
+                                    + ' ...' 
+                                    + str(adata[smp + '_names'][-2:]).replace('[',''))
+                    print(ann_info, end='')
+                else:
+                    print('cont', end='')
+                if ismp < len(adata.smp_keys())-1:
+                    print(',', end=' ')
+        sett.m(0, '')
     return adata
 
 def _exkeys_str():
