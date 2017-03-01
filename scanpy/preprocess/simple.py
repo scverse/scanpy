@@ -56,7 +56,7 @@ def log(X):
     X = np.log(X + 1)
     return X
 
-def pca(X, n_comps=50, zero_center=True, svd_solver='randomized'):
+def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0):
     """
     Return PCA representation of data.
 

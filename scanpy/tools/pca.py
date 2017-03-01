@@ -16,7 +16,7 @@ from .. import utils
 from .. import preprocess as pp
 from ..classes.ann_data import AnnData
 
-def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized'):
+def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized', random_state=0):
     """
     Embed data using PCA.
 
@@ -32,9 +32,11 @@ def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized'):
         zero-centering variables, which allows to handle sparse input efficiently.
         For sparse intput, automatically defaults to False.
     svd_solver : str, optional (default: 'randomized')
-        SVD solver to use. Either “arpack” for the ARPACK wrapper in SciPy
-        (scipy.sparse.linalg.svds), or “randomized” for the randomized algorithm
+        SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
+        (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
         due to Halko (2009).
+    random_state : int, optional (default: 0)
+        Change to use different intial states for the optimization.
 
     Returns
     -------
@@ -54,7 +56,9 @@ def pca(adata_or_X, n_comps=10, zero_center=True, svd_solver='randomized'):
         and sett.recompute is 'none'):
         return adata
     else:
-        X_pca = pp.pca(X, n_comps, zero_center, svd_solver)
+        X_pca = pp.pca(X, n_comps, 
+                       zero_center, svd_solver, 
+                       random_state=random_state)
         adata['X_pca'] = X_pca
     if isadata:
         adata['X_pca'] = X_pca
