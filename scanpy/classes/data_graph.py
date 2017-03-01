@@ -34,9 +34,12 @@ class DataGraph(object):
         elif (isadata
               and 'X_pca' in adata
               and adata['X_pca'].shape[1] >= params['n_pcs_pre']):
-            if 'xroot' in adata:
-                self.X = adata['X_pca']
-            self.set_root(adata['xroot'])
+            if 'xroot' in adata and adata['xroot'].size == adata.X.shape[1]:
+                self.X = adata.X
+                self.set_root(adata['xroot'])
+            self.X = adata['X_pca']
+            if 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]:
+                self.set_root(adata['xroot'])
             sett.m(0, '... using X_pca for building graph')
         else:
             if isadata and 'xroot' in adata:
@@ -44,6 +47,8 @@ class DataGraph(object):
                 self.set_root(adata['xroot'])
             from ..preprocess import pca
             self.X = pca(X, n_comps=params['n_pcs_pre'])
+            if isadata:
+                adata['X_pca'] = self.X
         self.params = params
         if self.params['sigma'] > 0:
             self.params['method'] = 'global'
