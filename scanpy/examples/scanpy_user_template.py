@@ -2,6 +2,7 @@
 Template for Copy and Paste.
 """
 
+import numpy as np
 import scanpy as sc
 
 def myexample():
@@ -29,12 +30,12 @@ def myexample():
     #adata = sc.read(path_to_data + 'myexample.soft.gz')
     # if the first column does not store strings, rownames are not detected
     # automatically, hence
-    #adata = sc.read(path_to_data + 'myexample.csv', first_column_names=True) 
+    #adata = sc.read(path_to_data + 'myexample.csv', first_column_names=True)
 
     # transpose if needed to match the convention that rows store samples/cells
     # and columns variables/genes
     # adata = adata.transpose() # rows = samples/cells & columns = variables/genes
-    
+
     # read some annotation from a file, now we want strings, and not a numerical
     # data matrix, the following reads from the first column of the file
     groups = np.genfromtext(path_to_data + 'mygroups.csv', dtype=str)
