@@ -271,7 +271,7 @@ class AnnData(IndexMixin):
             start = name_idx(index)
             stop = start + 1
             step = 1
-        elif isinstance(index, Sequence):
+        elif isinstance(index, (Sequence, np.ndarray)):
             return np.fromiter(map(name_idx, index), 'int64')
         else:
             raise IndexError('Unknown index {!r} of type {}'
