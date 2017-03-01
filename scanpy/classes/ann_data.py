@@ -63,6 +63,23 @@ class BoundRecArr(np.recarray):
 
         return arr
 
+    def flipped(self):
+        old_name_col = self._name_col
+        new_name_col = SMP_NAMES if old_name_col == VAR_NAMES else VAR_NAMES
+
+        flipped = BoundRecArr(self, new_name_col, self._parent, len(self))
+        flipped.dtype.names = tuple(
+            new_name_col if n == old_name_col else n
+            for n in self.dtype.names)
+
+        return flipped
+
+    def copy(self):
+        new = super(BoundRecArr, self).copy()
+        new._name_col = self._name_col
+        new._parent = self._parent
+        return new
+
     @property
     def columns(self):
         return [c for c in self.dtype.names if not c == self._name_col]
@@ -319,13 +336,7 @@ class AnnData(IndexMixin):
         return self.X.shape[0]
 
     def transpose(self):
-        smp = np.rec.array(self.var)
-        smp.dtype.names = [SMP_NAMES if n == VAR_NAMES else n
-                           for n in smp.dtype.names]
-        var = np.rec.array(self.smp)
-        var.dtype.names = [VAR_NAMES if n == SMP_NAMES else n
-                           for n in var.dtype.names]
-        return AnnData(self.X.T, smp, var, **self._meta)
+        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self._meta)
 
     T = property(transpose)
 
@@ -368,6 +379,8 @@ def test_get_subset():
     assert mat[0, :].X.tolist() == [[1, 2, 3]]
     assert mat[:, 0].X.tolist() == [[1], [4]]
     assert mat[:, [0, 1]].X.tolist() == [[1, 2], [4, 5]]
+    assert mat[:, np.array([0, 2])].X.tolist() == [[1, 3], [4, 6]]
+    assert mat[:, np.array([False, True, True])].X.tolist() == [[2, 3], [5, 6]]
     assert mat[:, 1:3].X.tolist() == [[2, 3], [5, 6]]
 
 def test_get_subset_names():
@@ -380,6 +393,7 @@ def test_get_subset_names():
     assert mat['A', :].X.tolist() == [[1, 2, 3]]
     assert mat[:, 'a'].X.tolist() == [[1], [4]]
     assert mat[:, ['a', 'b']].X.tolist() == [[1, 2], [4, 5]]
+    assert mat[:, np.array(['a', 'c'])].X.tolist() == [[1, 3], [4, 6]]
     assert mat[:, 'b':'c'].X.tolist() == [[2, 3], [5, 6]]
 
     from pytest import raises
@@ -387,6 +401,29 @@ def test_get_subset_names():
     with raises(IndexError): _ = mat['X', :]
     with raises(IndexError): _ = mat['A':'X', :]
     with raises(IndexError): _ = mat[:, 'a':'X']
+
+def test_transpose():
+    mat = AnnData(
+        np.array([[1, 2, 3], [4, 5, 6]]),
+        dict(smp_names=['A', 'B']),
+        dict(var_names=['a', 'b', 'c']))
+
+    mt1 = mat.T
+
+    # make sure to not modify the original!
+    assert mat.smp_names.tolist() == ['A', 'B']
+    assert mat.var_names.tolist() == ['a', 'b', 'c']
+
+    assert SMP_NAMES in mt1.smp.dtype.names
+    assert VAR_NAMES in mt1.var.dtype.names
+    assert mt1.smp_names.tolist() == ['a', 'b', 'c']
+    assert mt1.var_names.tolist() == ['A', 'B']
+    assert mt1.X.shape == mat.X.T.shape
+
+    mt2 = mat.transpose()
+    assert np.array_equal(mt1.X, mt2.X)
+    assert np.array_equal(mt1.smp, mt2.smp)
+    assert np.array_equal(mt1.var, mt2.var)
 
 def test_get_subset_meta():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]),
