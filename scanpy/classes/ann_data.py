@@ -84,19 +84,33 @@ class BoundRecArr(np.recarray):
     def columns(self):
         return [c for c in self.dtype.names if not c == self._name_col]
 
-    def __setitem__(self, key, value):
-        if self._parent and key not in self.dtype.names:
+    def __setitem__(self, keys, values):
+        if isinstance(keys, str):
+            keys = [keys]
+            values = [values]
+        keys = np.array(keys)
+        values = np.array(values)  # sequence of arrays or matrix with n_key *rows*
+        if not len(keys) == len(values):
+            raise ValueError('You passed {} column keys but {} arrays as columns. '
+                             'If you passed a matrix instead of a sequence of arrays, try transposing it.'
+                             .format(len(keys), len(values)))
+
+        present = np.intersect1d(keys, self.dtype.names)
+        absent = np.setdiff1d(keys, self.dtype.names)
+
+        if any(present):
+            for k, v in zip(present, values[np.in1d(keys, present)]):
+                super(BoundRecArr, self).__setitem__(k, v)
+
+        if any(absent):
             attr = 'smp' if self._name_col == SMP_NAMES else 'var'
-            value = np.asarray(value)
-            if len(value) > len(self):
+            if values.shape[1] > len(self):
                 raise ValueError('New column has too many entries ({} > {})'
-                                 .format(len(value), len(self)))
-            source = append_fields(self, [key], [value],
+                                 .format(values.shape[1], len(self)))
+            source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
             new = BoundRecArr(source, self._name_col, self._parent)
             setattr(self._parent, attr, new)
-        else:
-            super(BoundRecArr, self).__setitem__(key, value)
 
 def _check_dimensions(data, smp, var):
     n_smp, n_var = data.shape
@@ -436,11 +450,12 @@ def test_get_subset_meta():
 def test_append_meta_col():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
 
-    mat.smp['new_col'] = [1, 2]
+    mat.smp['new'] = [1, 2]
+    mat.smp[['new2', 'new3']] = [['A', 'B'], ['c', 'd']]
 
     from pytest import raises
     with raises(ValueError):
-        mat.smp['new_col2'] = 'far too long'.split()
+        mat.smp['new4'] = 'far too long'.split()
 
 def test_set_meta():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
