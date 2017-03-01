@@ -98,6 +98,11 @@ def add_args(p, dadd_args=None):
         for key, val in dadd_args.items():
             if key != 'arg':
                 aa(key, **val)
+    # make sure there are is no conflict with dadd_args
+    if dadd_args is None or '--opfile' not in dadd_args:
+        aa('--opfile',
+           type=str, default='', metavar='f',
+           help='Path to file with optional parameters (default: "").')
 
     aa = p.add_argument_group('Plot parameters').add_argument
     aa('-p', '--pparams',
@@ -105,17 +110,6 @@ def add_args(p, dadd_args=None):
        help='Plotting parameters as list, '
             'e.g., "layout 3d comps 1,3,4". ' 
             'Display possible paramaters via "-p help" (default: "").')
-
-    aa = p.add_argument_group('Tool chain').add_argument
-    aa('--prev',
-       type=str, default='', metavar='tool',
-       help='Tool whose result should be used as input, ' 
-            'often a tool that detects subgroups (default: tool dependent).')
-    # make sure there are is no conflict with dadd_args
-    if dadd_args is None or '--opfile' not in dadd_args:
-        aa('--opfile',
-           type=str, default='', metavar='f',
-           help='Path to file with optional parameters (default: "").')
 
     # standard arguments
     p = sett.add_args(p)

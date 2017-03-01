@@ -20,27 +20,31 @@ def diffrank(adata,
              correction='Bonferroni',
              log=False):
     """
-    Perform differential gene expression test for groups defined in dgroups.
+    Compare groups by ranking genes according to differential expression.
 
     Parameters
     ----------
-    adata : AnnData object
-    smp : str, optional (default: 'groups')
+    adata : AnnData
+        Annotated data matrix.
+    smp : str, optional (default: 'exp_groups')
         Specify the name of the grouping to consider.
-    names : str, list, np.ndarray
-        Subset of groupnames - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - in
-        dgroups[smp + '_names'] to which comparison shall be restricted.
+    names : str, list, np.ndarray, optional (default: 'all')
+        Subset of categories - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - to which
+        comparison shall be restricted. If not provided all categories will be
+        compared to all other categories.
 
-    Returns
-    -------
-    zscores : np.ndarray
-        Array of shape (number of tests) x (number of genes) storing the
+    Writes to adata
+    ---------------
+    diffrank_zscores : np.ndarray
+        Array of shape (number of comparisons) x (number of genes) storing the
         zscore of the each gene for each test.
-    testlabels : np.ndarray of dtype str
-        Array of shape (number of tests). Stores the labels for each test.
-    genes_sorted : np.ndarray
-        Array of shape (number of tests) x (number of genes) storing genes
-        sorted according the decreasing absolute value of the zscore.
+    diffrank_rankings_names : np.ndarray of dtype str
+        Array of shape (number of comparisons). Stores the labels for each comparison, 
+        for example "C1 vs. C2" when comparing category 'C1' with 'C2'.
+    diffrank_rankings_geneidcs : np.ndarray
+        Array of shape (number of comparisons) x (number of genes) storing gene
+        indices that sort them according to decreasing absolute value of the
+        zscore.
     """
     # for clarity, rename variable
     groups_names = names

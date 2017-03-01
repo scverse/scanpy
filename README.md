@@ -305,7 +305,7 @@ http://dx.doi.org/10.1038/nmeth.3971).
 Ester *et al.* (1996),
 *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*
 [Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, Portland, OR, pp. 226-231]
-(http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220)
+(http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220).
 
 <a id="ref_haghverdi15"></a>
 Haghverdi *et al.* (2015), 

@@ -106,11 +106,11 @@ def add_args(p):
     aa = p.add_argument_group('Save figures').add_argument
     aa('--savefigs',
        type=str, default='', const=extf, nargs='?', metavar='ext',
-       help='Save figures to files, either "png", "svg" or "pdf". Just providing '
+       help='Save figures either as "png", "svg" or "pdf". Just providing '
             '"--savefigs" will save to "png" (default: do not save figures).')
     aa('--figdir',
        type=str, default=figdir, metavar='dir',
-       help='Change figure directory and automatically save figures (default: %(default)s).')
+       help='Change figure directory and save figures (default: %(default)s).')
     aa = p.add_argument_group('Run a tool repeatedly to try out different parameters').add_argument
     aa('-r', '--recomp',
        type=str, default='none', const='tool', nargs='?', metavar='x',
@@ -131,15 +131,15 @@ def add_args(p):
        help='Show this help message and exit.')
     aa('-v', '--verbosity',
        type=int, default=1, metavar='v',
-       help='Specify v = 0 for no output and v > 1 for more output.'
+       help='Specify v = 0 for no output and v > 1 for more output'
             ' (default: %(default)d).')
     aa('--logfile',
        action='store_const', default=False, const=True,
        help='Write to logfile instead of standard output.')
     aa('--fileformat',
        type=str, default=extd, metavar='ext',
-       help='Specify file format for saving results, either "h5", "csv" or '
-            '"xlsx". (default: %(default)s).')
+       help='Specify file format for saving results, either "h5", "csv", '
+            '"txt" or "npz" (default: %(default)s).')
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
        help='Change write directory (default: %(default)s).')
