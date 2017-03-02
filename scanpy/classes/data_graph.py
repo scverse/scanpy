@@ -28,27 +28,32 @@ class DataGraph(object):
         if (params['n_pcs_pre'] == 0
             or X.shape[1] < params['n_pcs_pre']):
             self.X = X
+            sett.m(0, '... using X for building graph')
             if 'xroot' in adata:
                 self.set_root(adata['xroot'])
-            sett.m(0, '... using X for building graph')
         elif (isadata
               and 'X_pca' in adata
               and adata['X_pca'].shape[1] >= params['n_pcs_pre']):
+            sett.m(0, '... using X_pca for building graph')
             if 'xroot' in adata and adata['xroot'].size == adata.X.shape[1]:
                 self.X = adata.X
                 self.set_root(adata['xroot'])
             self.X = adata['X_pca']
             if 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]:
                 self.set_root(adata['xroot'])
-            sett.m(0, '... using X_pca for building graph')
         else:
-            if isadata and 'xroot' in adata:
-                self.X = X
+            self.X = X
+            if (isadata 
+                and 'xroot' in adata 
+                and adata['xroot'].size == adata.X.shape[1]):
                 self.set_root(adata['xroot'])
             from ..preprocess import pca
             self.X = pca(X, n_comps=params['n_pcs_pre'])
-            if isadata:
-                adata['X_pca'] = self.X
+            adata['X_pca'] = self.X
+            if (isadata
+                and 'xroot' in adata
+                and adata['xroot'].size == adata['X_pca'].shape[1]):
+                self.set_root(adata['xroot'])
         self.params = params
         if self.params['sigma'] > 0:
             self.params['method'] = 'global'
@@ -436,7 +441,7 @@ class DataGraph(object):
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2,'root found at machine prec')
                     break
-        sett.m(1,'sample',self.iroot,'has distance',np.sqrt(dsqroot),'from root')
+        sett.m(0, '... set iroot', self.iroot)
         return self.iroot
 
     def _test_embed(self):
