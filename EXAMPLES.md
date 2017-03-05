@@ -1,21 +1,27 @@
 # Examples
 
 <!--- ----------------------------------------------------------------------- -->
-<!--- call "./scanpy.py exdata markup" to get the list below          -->
+<!--- call "./scanpy.py exdata markdown" to get the list below                -->
 
-#### Example Data
+#### Data
 
-* [moignard15](#moignard15) - [Moignard *et al.*, Nature Biotechnology 33, 269 (2015)](http://dx.doi.org/10.1038/nbt.3154)   
-*Decoding the regulatory network of early blood development from single-cell gene expression measurements*
+Examples using scRNAseq data.
 * [paul15](#paul15) - [Paul *et al.*, Cell 163, 1663 (2015)](http://dx.doi.org/10.1016/j.cell.2015.11.013)   
 *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*
+
+Examples using scqPCR data.
+* [moignard15](#moignard15) - [Moignard *et al.*, Nature Biotechnology 33, 269 (2015)](http://dx.doi.org/10.1038/nbt.3154)   
+*Decoding the regulatory network of early blood development from single-cell gene expression measurements*
+
+Examples using bulk data.
+* [burczynski06](#burczynski06) - [Burczynski *et al.*, J Mol Diagn 8, 51 (2006)](http://dx.doi.org/10.2353/jmoldx.2006.050079)   
+*Molecular classification of Crohn's disease and ulcerative colitis patients using transcriptional profiles in peripheral blood mononuclear cells*
 
 Examples using simulated data.
 * [krumsiek11](#krumsiek11) - [Krumsiek *et al.*, PLoS ONE 6, e22649 (2011)](http://dx.doi.org/10.1371/journal.pone.0022649)   
 *Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*
 * [toggleswitch](#toggleswitch)   
-*Simple toggle switch model.*   
-
+*Simple toggle switch model.*
 
 <!--- ----------------------------------------------------------------------- -->
 <!--- start the technical topics list here                                    -->
@@ -23,8 +29,6 @@ Examples using simulated data.
 #### Technical Topics
 
 * preprocessing with PCA - [paul15pca](#paul15pca)
-
-
 
 <!--- ----------------------------------------------------------------------- -->
 <!--- list the actual description of examples here                            -->
@@ -79,7 +83,7 @@ We can now test for differential gene expression.
 ```
 scanpy paul15 diffrank -o smp dpt_groups
 ```
-<img src="http://falexwolf.de/scanpy/figs/paul15_diffrank.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15_difftest.png" height="175">
 
 See the [notebook](examples/paul15.ipynb) for more information.
 
@@ -104,7 +108,7 @@ scanpy paul15pca dpt
 scanpy paul15pca diffrank -o smp dpt_groups
 ```
 <img src="http://falexwolf.de/scanpy/figs0/paul15pca_dpt_diffmap_pseudotimes_segments.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs/paul15pca_diffrank.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs/paul15pca_difftest.png" height="175">
 
 Even though the diffmap representation has changed a lot, the differential genes are still the same.
 Let us check whether the subgroups look much different in tSNE.

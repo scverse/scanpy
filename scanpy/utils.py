@@ -206,33 +206,32 @@ def markdown_dict_string(d):
     Markdown output that can be pasted in the examples/README.md.
     """
     # sort experimental data from simulated data
-    sorted_keys = []
-    sim_keys = []
+    from collections import OrderedDict
+    types = OrderedDict()
     for key, value in sorted(d.items()):
         if 'type' in value:
-            if 'sim' in value['type']:
-                sim_keys.append(key)
+            if value['type'] not in types:
+                types[value['type']] = []
+            types[value['type']].append(key)
         else:
-            sorted_keys.append(key)
-    len_exp = len(sorted_keys) - 1
-    sorted_keys += sim_keys
+            print(key, 'does not define data type!')
     # format output
-    s = 'Examples using experimental data.\n'
-    for ikey, key in enumerate(sorted_keys):
-        value = d[key]
-        s += '* [' + key + '](#' + key + ')'
-        if 'ref' in value:
-            if 'doi' in value:
-                link = 'http://dx.doi.org/' + value['doi']
-            elif 'url' in value:
-                link = value['url']
-            s += (' - [' +  value['ref'].replace('et al.','*et al.*') 
-                         + '](' + link +  ')')
-        if 'title' in value:
-            s += '   \n*' + value['title'] + '*'
-        s += '\n'
-        if ikey == len_exp:
-            s += '\nExamples using simulated data.\n'
+    s = ''
+    for type in ['scRNAseq', 'scqPCR', 'bulk', 'simulated']:
+        s += '\nExamples using ' + type + ' data.\n'
+        for key in types[type]:
+            value = d[key]
+            s += '* [' + key + '](#' + key + ')'
+            if 'ref' in value:
+                if 'doi' in value:
+                    link = 'http://dx.doi.org/' + value['doi']
+                elif 'url' in value:
+                    link = value['url']
+                s += (' - [' +  value['ref'].replace('et al.','*et al.*') 
+                             + '](' + link +  ')')
+            if 'title' in value:
+                s += '   \n*' + value['title'] + '*'
+            s += '\n'
     return s
 
 def merge_dicts(*dicts):

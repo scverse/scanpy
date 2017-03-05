@@ -115,13 +115,13 @@ def show_examples():
 def _dexdata():
     """Example data.
     """
-    all_dex = utils.merge_dicts(builtin.dexdata, {})
-    try:
-        # additional possibility to add example module
-        from . import builtin_private
-        all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
-    except ImportError:
-        pass
+    all_dex = builtin.dexdata
+#     try:
+#         # additional possibility to add example module
+#         from . import builtin_private
+#         all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
+#     except ImportError:
+#         pass
     return all_dex
 
 def _dexamples():
