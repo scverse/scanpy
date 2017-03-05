@@ -74,7 +74,7 @@ def plot_dbscan(adata,
          pal=None,
          right_margin=None,
          size=3,
-         subtitles=None):
+         titles=None):
     """
     Plot results of DPT analysis.
 
@@ -103,25 +103,31 @@ def plot_dbscan(adata,
          Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
-    subtitles : str, optional (default: None)
+    titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
     smps = ['dbscan_groups']
     if smp is not None:
         smps += smp.split(',')
     from .. import plotting as plott
-    plott.plot_tool(adata,
-                    basis=basis,
-                    toolkey='dbscan_' + basis,
-                    smp=smps,
-                    names=names,
-                    comps=comps,
-                    cont=cont,
-                    layout=layout,
-                    legendloc=legendloc,
-                    cmap=cmap,
-                    pal=pal,
-                    right_margin=right_margin,
-                    size=size,
-                    subtitles=subtitles)
+    smps = plott.scatter(adata,
+                basis=basis,
+                smp=smps,
+                names=names,
+                comps=comps,
+                cont=cont,
+                layout=layout,
+                legendloc=legendloc,
+                cmap=cmap,
+                pal=pal,
+                right_margin=right_margin,
+                size=size,
+                titles=titles)
 
+    writekey = sett.basekey + '_dbscan_'+ basis
+    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    plott.savefig(writekey)
+
+    if not sett.savefigs and sett.autoshow:
+        from ..compat.matplotlib import pyplot as pl
+        pl.show()

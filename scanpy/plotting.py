@@ -29,8 +29,7 @@ def default_pal(pal=None):
     elif not isinstance(pal, Cycler):
         return cycler(color=pal)
 
-def plot_tool(adata,
-              toolkey,
+def scatter(adata,
               basis='pca',
               smp=None,
               names=None,
@@ -42,7 +41,7 @@ def plot_tool(adata,
               pal=None,
               right_margin=None,
               size=3,
-              subtitles=None):
+              titles=None):
     """
     Scatter plots.
 
@@ -50,8 +49,6 @@ def plot_tool(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    toolkey : str
-        Toolkey to use for generating filename.
     basis : {'pca', 'tsne', 'diffmap'}
         String that denotes a plotting tool.
     smp : str, optional (default: first annotation)
@@ -77,7 +74,7 @@ def plot_tool(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
-    subtitles : str, optional (default: None)
+    titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
     # compute components
@@ -85,7 +82,7 @@ def plot_tool(adata,
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
     comps = array(comps.split(',')).astype(int) - 1
-    subtitles = None if subtitles is None else subtitles.split(',') if isinstance(subtitles, str) else subtitles
+    titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
@@ -147,11 +144,11 @@ def plot_tool(adata,
 
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.24        
-    if subtitles is None and smps[0] is not None:
-        subtitles = [smp.replace('_', ' ') for smp in smps]
+    if titles is None and smps[0] is not None:
+        titles = [smp.replace('_', ' ') for smp in smps]
 
-    axs = scatter(Y,
-                  subtitles=subtitles,
+    axs = _scatter_base(Y,
+                  titles=titles,
                   component_name=component_name,
                   component_indexnames=comps + 1,
                   layout=layout,
@@ -187,11 +184,8 @@ def plot_tool(adata,
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
 
-    writekey = sett.basekey + '_' + toolkey
-    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
-    savefig(writekey)
-    if not sett.savefigs and sett.autoshow:
-        pl.show()
+    return smps
+
 
 def group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
@@ -336,14 +330,14 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None, cmap='viridis'):
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
 
-def scatter(Ys,
+def _scatter_base(Ys,
             c='blue',
             highlights=[],
             highlights_labels=[],
             title='',
             right_margin=None,
             layout='2d',
-            subtitles=None,
+            titles=None,
             component_name='DC',
             component_indexnames=[1, 2, 3],
             axlabels=None,
@@ -449,9 +443,9 @@ def scatter(Ys,
                 ax_cb = fig.add_axes(rectangle)
                 cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
                                  cax=ax_cb)
-            # set the subtitles
-            if subtitles is not None:
-                ax.set_title(subtitles[icolor])
+            # set the titles
+            if titles is not None:
+                ax.set_title(titles[icolor])
             # output highlighted data points
             for iihighlight,ihighlight in enumerate(highlights):
                 data = [Y[ihighlight,0]], [Y[ihighlight,1]]

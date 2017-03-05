@@ -15,9 +15,7 @@ This module automatically choose from three t-SNE versions from
   Copyright 2008 Laurens van der Maaten, Tilburg University.
 """
 
-from collections import OrderedDict as odict
 import numpy as np
-from ..compat.matplotlib import pyplot as pl
 from ..tools.pca import pca
 from .. import settings as sett
 from .. import plotting as plott
@@ -102,7 +100,7 @@ def plot_tsne(adata,
          pal=None,
          right_margin=None,
          size=3,
-         subtitles=None):
+         titles=None):
     """
     Scatter plots.
 
@@ -135,13 +133,12 @@ def plot_tsne(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
-    subtitles : str, optional (default: None)
+    titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
     from .. import plotting as plott
-    plott.plot_tool(adata,
+    smps = plott.scatter(adata,
                     basis='tsne',
-                    toolkey='tsne',
                     smp=smp,
                     names=names,
                     comps=comps,
@@ -152,7 +149,13 @@ def plot_tsne(adata,
                     pal=pal,
                     right_margin=right_margin,
                     size=size,
-                    subtitles=subtitles)
+                    titles=titles)
+    writekey = sett.basekey + '_tsne'
+    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    plott.savefig(writekey)
+    if not sett.savefigs and sett.autoshow:
+        from ..compat.matplotlib import pyplot as pl
+        pl.show()
 
 def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
     """

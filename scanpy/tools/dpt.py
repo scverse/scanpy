@@ -160,11 +160,34 @@ def plot_dpt(adata,
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     """
-    # plot segments and pseudotime
-    plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
     from ..compat.matplotlib import pyplot as pl
+    # scatter plot
+    smps = ['dpt_pseudotime']
+    if len(adata['dpt_groups_names']) > 1:
+        smps += ['dpt_groups']
+    adata['highlights'] = list([adata['iroot']])
+    if smp is not None:
+        smps += smp.split(',')
+    smps = plott.scatter(adata,
+                    basis=basis,
+                    smp=smps,
+                    names=names,
+                    comps=comps,
+                    cont=cont,
+                    layout=layout,
+                    legendloc=legendloc,
+                    cmap=cmap,
+                    pal=pal,
+                    right_margin=right_margin,
+                    size=size)
+    writekey = sett.basekey + '_dpt_'+ basis
+    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    plott.savefig(writekey)
+    # plot segments and pseudotime
+    plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
+    # time series plot
     X = adata.X
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     if X.shape[1] <= 11:
@@ -182,27 +205,8 @@ def plot_dpt(adata,
                                     highlightsX=adata['dpt_changepoints'])
         pl.xlabel('dpt order')
         plott.savefig(writekey + '_heatmap')
-
-    smps = ['dpt_pseudotime']
-    if len(adata['dpt_groups_names']) > 1:
-        smps += ['dpt_groups']
-    adata['highlights'] = list([adata['iroot']])
-    if smp is not None:
-        smps += smp.split(',')
-
-    plott.plot_tool(adata,
-                    basis=basis,
-                    toolkey='dpt_' + basis,
-                    smp=smps,
-                    names=names,
-                    comps=comps,
-                    cont=cont,
-                    layout=layout,
-                    legendloc=legendloc,
-                    cmap=cmap,
-                    pal=pal,
-                    right_margin=right_margin,
-                    size=size)
+    if not sett.savefigs and sett.autoshow:
+        pl.show()
 
 def plot_segments_pseudotime(adata, cmap=None, pal=None):
     """

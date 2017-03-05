@@ -8,11 +8,8 @@ There are two PCA versions, which are automatically chosen
 - sklearn.decomposition.PCA
 - function _pca_fallback
 """
-
-from ..compat.matplotlib import pyplot as pl
 from .. import settings as sett
 from .. import plotting as plott
-from .. import utils
 from .. import preprocess as pp
 from ..classes.ann_data import AnnData
 
@@ -79,7 +76,7 @@ def plot_pca(adata,
          pal=None,
          right_margin=None,
          size=3,
-         subtitles=None):
+         titles=None):
     """
     Scatter plots.
 
@@ -110,13 +107,12 @@ def plot_pca(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: 3)
          Point size.
-    subtitles : str, optional (default: None)
+    titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
     from .. import plotting as plott
-    plott.plot_tool(adata,
+    smps = plott.scatter(adata,
                     basis='pca',
-                    toolkey='pca',
                     smp=smp,
                     names=names,
                     comps=comps,
@@ -127,5 +123,10 @@ def plot_pca(adata,
                     pal=pal,
                     right_margin=right_margin,
                     size=size,
-                    subtitles=subtitles)
-
+                    titles=titles)
+    writekey = sett.basekey + '_pca'
+    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    plott.savefig(writekey)
+    if not sett.savefigs and sett.autoshow:
+        from ..compat.matplotlib import pyplot as pl
+        pl.show()

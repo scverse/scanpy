@@ -126,9 +126,8 @@ def plot_spring(adata,
 #                'the current step is', dspring['istep'],
 #                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
         from .. import plotting as plott
-        plott.plot_tool(adata,
+        smps = plott.scatter(adata,
                         basis='spring',
-                        toolkey='spring',
                         smp=smp,
                         names=names,
                         comps=comps,
@@ -140,7 +139,13 @@ def plot_spring(adata,
                         right_margin=right_margin,
                         size=size,
                         # defined in plotting
-                        subtitles=['Fruchterman-Reingold step: 12'])
+                        titles=['Fruchterman-Reingold step: 12'])
+        writekey = sett.basekey + '_spring'
+        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+        plott.savefig(writekey)
+        if not sett.savefigs and sett.autoshow:
+            from ..compat.matplotlib import pyplot as pl
+            pl.show()
     else:
         Adj = dspring['Adj']
         istep = dspring['istep']
