@@ -33,7 +33,7 @@ setup(
         'scanpy',
         'scanpy.tools',
         'scanpy.compat',
-        'scanpy.exs',
+        'scanpy.examples',
         'scanpy.preprocess',
         'scanpy.classes',
         'scanpy.sim_models',
