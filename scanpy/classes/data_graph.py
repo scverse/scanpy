@@ -124,7 +124,8 @@ class DataGraph(object):
         """
         import scipy.sparse
         # compute distance matrix in squared Euclidian norm
-        if False and self.params['method'] == 'local' and self.params['knn']:
+        if self.X.shape[0] > 5000 and self.params['method'] == 'local' and self.params['knn']:
+            sett.m(0, '... using sparse format')
             from sklearn.neighbors import NearestNeighbors
             # don't use metric = sqeuclidian, because this requires choosing algorithm 'brute'
             sklearn_neighbors = NearestNeighbors(n_neighbors=self.params['k']-1)
