@@ -748,7 +748,7 @@ ml = ['o', 's', '^', 'd']
 
 # init default values for rcParams
 def init_fig_params():
-    # args figure
+    # figure
     rcParams['figure.figsize'] = (5,4)
     rcParams['figure.subplot.left'] = 0.18
     rcParams['figure.subplot.right'] = 0.96
@@ -759,8 +759,12 @@ def init_fig_params():
     rcParams['lines.markersize'] = 6
     rcParams['lines.markeredgewidth'] = 1
 
-    # args font
-    rcParams['font.family'] = ['Arial','Helvetica']
+    # font
+    rcParams['font.sans-serif'] = ['Arial',
+                                   'Helvetica',
+                                   'DejaVu Sans', 
+                                   'Bitstream Vera Sans',
+                                   'sans-serif']
     fontsize = 14
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92*fontsize
