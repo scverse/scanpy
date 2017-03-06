@@ -121,8 +121,10 @@ def plot_diffmap(adata,
                     size=size,
                     titles=titles)
     writekey = sett.basekey + '_diffmap'
-    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    if smps[0] is not None:
+        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
     plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()
+

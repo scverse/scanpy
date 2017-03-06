@@ -122,24 +122,44 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
+        import scipy.sparse
         # compute distance matrix in squared Euclidian norm
-        self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
-        Dsq = self.Dsq
+        if False and self.params['method'] == 'local' and self.params['knn']:
+            from sklearn.neighbors import NearestNeighbors
+            # don't use metric = sqeuclidian, because this requires choosing algorithm 'brute'
+            sklearn_neighbors = NearestNeighbors(n_neighbors=self.params['k']-1)
+            sklearn_neighbors.fit(self.X)
+            Dsq = sklearn_neighbors.kneighbors_graph(mode='distance')
+            Dsq.data **= 2
+        else:
+            sklearn_neighbors = None
+            Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
+        self.Dsq = Dsq
         if self.params['method'] == 'local':
             # choose sigma (width of a Gaussian kernel) according to the
             # distance of the kth nearest neighbor of each point, including the
             # point itself in the count
             k = self.params['k']
-            # deterimine the distance of the k nearest neighbors
-            indices = np.zeros((Dsq.shape[0], k), dtype=np.int_)
-            distances_sq = np.zeros((Dsq.shape[0], k), dtype=np.float_)
-            for irow, row in enumerate(Dsq):
-                # the last item is already in its sorted position as
-                # argpartition puts the (k-1)th element - starting to count from
-                # zero - in its sorted position
-                idcs = np.argpartition(row, k-1)[:k]
-                indices[irow] = idcs
-                distances_sq[irow] = np.sort(row[idcs])
+            if sklearn_neighbors is None:
+                # deterimine the distance of the k nearest neighbors
+                indices = np.zeros((Dsq.shape[0], k), dtype=np.int_)
+                distances_sq = np.zeros((Dsq.shape[0], k), dtype=np.float_)
+                for irow, row in enumerate(Dsq):
+                    # the last item is already in its sorted position as
+                    # argpartition puts the (k-1)th element - starting to count from
+                    # zero - in its sorted position
+                    idcs = np.argpartition(row, k-1)[:k]
+                    indices[irow] = idcs
+                    argsort = np.argsort(row[idcs])
+                    distances_sq[irow] = row[idcs][argsort]
+                    indices[irow] = indices[irow][argsort]
+                # exclude the point itself
+                distances_sq = distances_sq[:, 1:]
+                indices = indices[:, 1:]
+            else:
+                distances_sq, indices = sklearn_neighbors.kneighbors()
+                distances_sq **= 2
+
             # choose sigma, the heuristic here often makes not much 
             # of a difference, but is used to reproduce the figures
             # of Haghverdi et al. (2016)
@@ -151,7 +171,7 @@ class DataGraph(object):
                 # the last item is already in its sorted position as
                 # argpartition puts the (k-1)th element - starting to count from
                 # zero - in its sorted position
-                sigmas_sq = distances_sq[:,-1]/4
+                sigmas_sq = distances_sq[:, -1]/4
             sigmas = np.sqrt(sigmas_sq)
             sett.mt(0, 'determined k =', k, 'nearest neighbors of each point')
         elif self.params['method'] == 'standard':
@@ -159,28 +179,44 @@ class DataGraph(object):
             sigmas_sq = sigmas**2
 
         # compute the symmetric weight matrix
-        Num = 2 * np.multiply.outer(sigmas,sigmas)
-        Den = np.add.outer(sigmas_sq,sigmas_sq)
-        W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
-        # make the weight matrix sparse
-        if not self.params['knn']:
-            self.Mask = W > 1e-14
-            W[self.Mask == False] = 0
+        if not sp.sparse.issparse(self.Dsq):
+            Num = 2 * np.multiply.outer(sigmas, sigmas)
+            Den = np.add.outer(sigmas_sq, sigmas_sq)
+            W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
+            # make the weight matrix sparse
+            if not self.params['knn']:
+                self.Mask = W > 1e-14
+                W[self.Mask == False] = 0
+            else:
+                # restrict number of neighbors to ~k
+                # build a symmetric mask
+                Mask = np.zeros(Dsq.shape, dtype=bool)
+                for i, row in enumerate(indices):
+                    Mask[i, row] = True
+                    for j in row:
+                        if i not in set(indices[j]):
+                            W[j, i] = W[i, j]
+                            Mask[j, i] = True
+                # set all entries that are not nearest neighbors to zero
+                W[Mask == False] = 0
+                self.Mask = Mask
+            if not weighted:
+                W = Mask.astype(float)
         else:
-            # restrict number of neighbors to k
-            Mask = np.zeros(Dsq.shape, dtype=bool)
-            for irow,row in enumerate(indices):
-                Mask[irow, row] = True
+            W = Dsq
+            for i in range(len(Dsq.indptr[:-1])):
+                row = Dsq.indices[Dsq.indptr[i]: Dsq.indptr[i+1]]
+                num = 2 * sigmas[i] * sigmas[row]
+                den = sigmas_sq[i] + sigmas_sq[row]
+                W.data[Dsq.indptr[i]: Dsq.indptr[i+1]] = np.sqrt(num/den) * np.exp(-Dsq.data[Dsq.indptr[i]: Dsq.indptr[i+1]] / den)
+            W = W.tolil()
+            for i, row in enumerate(indices):
                 for j in row:
-                    if irow not in indices[j]:
-                        Mask[j, irow] = True
-            # set all entries that are not nearest neighbors to zero
-            W[Mask == False] = 0
-            self.Mask = Mask
-
-        if not weighted:
-            W = Mask.astype(float)
-        sett.mt(0,'computed W (weight matrix) with "knn" =', self.params['knn'])
+                    if i not in set(indices[j]):
+                        W[j, i] = W[i, j]
+            W = W.tocsr()
+                        
+        sett.mt(0, 'computed W (weight matrix) with "knn" =', self.params['knn'])
 
         # neglect self-loops
         # also proposed by Haghverdi et al. (2015)
@@ -200,40 +236,59 @@ class DataGraph(object):
         # ensure that kernel matrix is independent of sampling density
         if alpha == 0:
             # nothing happens here, simply use the isotropic similarity matrix
-            self.K = np.array(W)
+            self.K = W
         else:
             # q[i] is an estimate for the sampling density at point x_i
             # it's also the degree of the underlying graph
-            q = np.sum(W, axis=0)
-            # raise to power alpha
-            if alpha != 1: 
-                q = q**alpha
-            Den = np.outer(q, q)
-            self.K = W / Den
+            if not sp.sparse.issparse(W):
+                q = np.sum(W, axis=0)
+                # raise to power alpha
+                if alpha != 1: 
+                    q = q**alpha
+                Den = np.outer(q, q)
+                self.K = W / Den
+            else:
+                q = np.array(np.sum(W, axis=0)).flatten()
+                self.K = W
+                for i in range(len(W.indptr[:-1])):
+                    row = W.indices[W.indptr[i]: W.indptr[i+1]]
+                    num = q[i] * q[row]
+                    W.data[W.indptr[i]: W.indptr[i+1]] = W.data[W.indptr[i]: W.indptr[i+1]] / num
         sett.mt(0,'computed K (anisotropic kernel)')
         if False:
             pl.matshow(self.K)
             pl.title('$ K$')
             pl.colorbar()
 
-        # now compute the row normalization to build the transition matrix T
-        # and the adjoint Ktilde: both have the same spectrum
-        self.z = np.sum(self.K, axis=0)
-        # the following is the transition matrix
-        self.T = self.K / self.z[:, np.newaxis]
-        # now we need the square root of the density
-        self.sqrtz = np.array(np.sqrt(self.z))
-        # now compute the density-normalized Kernel
-        # it's still symmetric
-        szszT = np.outer(self.sqrtz, self.sqrtz)
-        self.Ktilde = self.K / szszT
-        sett.mt(0,'computed Ktilde (normalized anistropic kernel)')
-
-        if False:
-            pl.matshow(self.Ktilde)
-            pl.title('$ \widetilde K$')
-            pl.colorbar()
-            pl.show()
+        if not sp.sparse.issparse(self.K):
+            # now compute the row normalization to build the transition matrix T
+            # and the adjoint Ktilde: both have the same spectrum
+            self.z = np.sum(self.K, axis=0)
+            # the following is the transition matrix
+            self.T = self.K / self.z[:, np.newaxis]
+            # now we need the square root of the density
+            self.sqrtz = np.array(np.sqrt(self.z))
+            # now compute the density-normalized Kernel
+            # it's still symmetric
+            szszT = np.outer(self.sqrtz, self.sqrtz)
+            self.Ktilde = self.K / szszT
+            sett.mt(0,'computed Ktilde (normalized anistropic kernel)')
+            if False:
+                pl.matshow(self.Ktilde)
+                pl.title('$ \widetilde K$')
+                pl.colorbar()
+                pl.show()
+        else:
+            self.z = np.array(np.sum(self.K, axis=0)).flatten()
+            # now we need the square root of the density
+            self.sqrtz = np.array(np.sqrt(self.z))
+            # now compute the density-normalized Kernel
+            # it's still symmetric
+            self.Ktilde = self.K
+            for i in range(len(self.K.indptr[:-1])):
+                row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
+                num = self.sqrtz[i] * self.sqrtz[row]
+                self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
 
     def compute_L_matrix(self):
         """
@@ -299,8 +354,8 @@ class DataGraph(object):
             # The eigenvectors of T are stored in self.rbasis and self.lbasis 
             # and are simple trafos of the eigenvectors of Ktilde.
             # rbasis and lbasis are right and left eigenvectors, respectively
-            self.rbasis = np.array(evecs/self.sqrtz[:,np.newaxis])
-            self.lbasis = np.array(evecs*self.sqrtz[:,np.newaxis])
+            self.rbasis = np.array(evecs / self.sqrtz[:,np.newaxis])
+            self.lbasis = np.array(evecs * self.sqrtz[:,np.newaxis])
             # normalize in L2 norm
             # note that, in contrast to that, a probability distribution
             # on the graph is normalized in L1 norm
