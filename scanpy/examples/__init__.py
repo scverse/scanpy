@@ -36,7 +36,7 @@ def get_example(exkey, subsample=1, return_module=False):
     """
     loop_over_filenames = [filename for filename in os.listdir('.')
                            if filename.startswith('scanpy') and filename.endswith('.py')]
-    if len(loop_over_filenames):
+    if len(loop_over_filenames) == 0:
         sett.m(0, '--> did not find user examples, to provide some,\n'
                '    generate a file scanpy_whatevername.py in your working directory,\n'
                '    see https://github.com/theislab/scanpy#work-on-your-own-examples')
