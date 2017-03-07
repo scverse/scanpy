@@ -73,12 +73,10 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
         dpt_pseudotime : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
-            Serves as 'rowcont' for adata.
         dpt_groups : np.ndarray of dtype int
-            Array of dim (number of samples) that stores the segment=subgroup id
-            - an integer that indexes groupnames - of each cell. The groups
-            might either correspond to 'progenitor cells', 'undecided cells' or
-            'branches'. Serves as 'smp' for adata.
+            Array of dim (number of samples) that stores the subgroup id ("0",
+            "1", ...) for each cell. The groups might either correspond to
+            'progenitor cells', 'undecided cells' or 'branches'.
         X_diffmap : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
@@ -93,7 +91,7 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
     # diffusion map
     ddmap = dpt.diffmap()
     adata['X_diffmap'] = ddmap['Y']
-    sett.m(0, 'perform Diffusion Pseudotime Analysis')
+    sett.m(0, 'perform Diffusion Pseudotime analysis')
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
     dpt.compute_M_matrix()
@@ -120,17 +118,17 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
     return adata
 
 def plot_dpt(adata,
-         basis='diffmap',
-         smp=None,
-         names=None,
-         comps=None,
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=3):
+             basis='diffmap',
+             smp=None,
+             names=None,
+             comps=None,
+             cont=None,
+             layout='2d',
+             legendloc='right margin',
+             cmap=None,
+             pal=None,
+             right_margin=None,
+             size=3):
     """
     Plot results of DPT analysis.
 

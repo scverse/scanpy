@@ -65,7 +65,7 @@ def get_example(exkey, subsample=1, return_module=False):
                        '".\nEither define a function ' + exkey + '() '
                        'in ./scanpy_user.py that returns an AnnData object.\n'
                        'Or, use one of the builtin examples:'
-                       + exkeys_str())
+                       + _exkeys_str())
                 from sys import exit
                 exit(msg)
 
