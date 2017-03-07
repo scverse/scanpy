@@ -1,5 +1,5 @@
 # coding: utf-8
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 t-SNE
 
@@ -49,7 +49,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
         Y : np.ndarray
             tSNE representation of the data.
     """
-    sett.m(0,'compute tSNE')
+    sett.mt(0,'compute tSNE')
     # preprocessing by PCA
     if 'X_pca' in adata and adata['X_pca'].shape[1] > n_pcs:
         X = adata['X_pca']
@@ -87,6 +87,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
                      '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     adata['X_tsne'] = Y
+    sett.mt(0, 'finished tSNE')
     return adata
 
 def plot_tsne(adata,

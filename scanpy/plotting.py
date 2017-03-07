@@ -30,18 +30,18 @@ def default_pal(pal=None):
         return cycler(color=pal)
 
 def scatter(adata,
-              basis='pca',
-              smp=None,
-              names=None,
-              comps=None,
-              cont=None,
-              layout='2d',
-              legendloc='right margin',
-              cmap=None,
-              pal=None,
-              right_margin=None,
-              size=3,
-              titles=None):
+            basis='pca',
+            smp=None,
+            names=None,
+            comps=None,
+            cont=None,
+            layout='2d',
+            legendloc='right margin',
+            cmap=None,
+            pal=None,
+            right_margin=None,
+            size=3,
+            titles=None):
     """
     Scatter plots.
 
@@ -62,7 +62,7 @@ def scatter(adata,
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
@@ -103,6 +103,7 @@ def scatter(adata,
     colors = []
     categoricals = []
     colorbars = []
+    sizes = []
     for ismp, smp in enumerate(smps):
         c = 'grey'
         categorical = False
@@ -139,6 +140,7 @@ def scatter(adata,
             continuous = cont
         colors.append(c)
         colorbars.append(True if continuous else False)
+        sizes.append(size if continuous else size-2)
         if categorical:
             categoricals.append(ismp)
 
@@ -147,17 +149,17 @@ def scatter(adata,
     if titles is None and smps[0] is not None:
         titles = [smp.replace('_', ' ') for smp in smps]
 
-    axs = _scatter_base(Y,
-                  titles=titles,
-                  component_name=component_name,
-                  component_indexnames=comps + 1,
-                  layout=layout,
-                  c=colors,
-                  highlights=highlights,
-                  colorbars=colorbars,
-                  right_margin=right_margin,
-                  cmap='viridis' if cmap is None else cmap,
-                  s=size-2)
+    axs = scatter_base(Y,
+                       titles=titles,
+                       component_name=component_name,
+                       component_indexnames=comps + 1,
+                       layout=layout,
+                       colors=colors,
+                       highlights=highlights,
+                       colorbars=colorbars,
+                       right_margin=right_margin,
+                       sizes=sizes,
+                       cmap='viridis' if cmap is None else cmap)
 
     for ismp in categoricals:
         smp = smps[ismp]
@@ -171,14 +173,13 @@ def scatter(adata,
         elif not smp + '_colors' in adata:
             adata[smp + '_colors'] = pal[:len(adata[smp + '_names'])].by_key()['color']
         if len(adata[smp + '_names']) > len(adata[smp + '_colors']):
-            sett.m(0, 'number of categories/names in', smp, 'so large that color map jet is used')
+            sett.m(0, 'number of categories/names in', smp, 'so large that color map "jet" is used')
             adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
                                                     pl.Normalize()(
                                                     np.arange(len(adata[smp + '_names']), dtype=int)))
         for iname, name in enumerate(adata[smp + '_names']):
             if (names is None or (names != None and name in names)):
-                group(axs[ismp], smp, iname, adata, Y, layout, size)
-        # for the last panel, let's put the legend outside panel
+                scatter_group(axs[ismp], smp, iname, adata, Y, layout, size=3)
         if legendloc == 'right margin':
             axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
@@ -186,8 +187,7 @@ def scatter(adata,
 
     return smps
 
-
-def group(ax, name, imask, adata, Y, layout='2d', size=3):
+def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
     Plot group using representation of data Y.
     """
@@ -209,7 +209,6 @@ def group(ax, name, imask, adata, Y, layout='2d', size=3):
                c=color,
                edgecolors='face',
                s=size,
-               alpha=1,
                label=adata[name + '_names'][imask])
 
 def timeseries(X, **kwargs):
@@ -330,30 +329,29 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None, cmap='viridis'):
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
 
-def _scatter_base(Ys,
-            c='blue',
-            highlights=[],
-            highlights_labels=[],
-            title='',
-            right_margin=None,
-            layout='2d',
-            titles=None,
-            component_name='DC',
-            component_indexnames=[1, 2, 3],
-            axlabels=None,
-            colorbars=[False],
-            **kwargs):
+def scatter_base(Y,
+                 colors='blue',
+                 highlights=[],
+                 highlights_labels=[],
+                 title='',
+                 right_margin=None,
+                 layout='2d',
+                 titles=None,
+                 component_name='DC',
+                 component_indexnames=[1, 2, 3],
+                 axlabels=None,
+                 colorbars=[False],
+                 sizes=[1],
+                 cmap='viridis'):
     """
     Plot scatter plot of data.
 
     Parameters
     ----------
-    Ys : np.ndarray or list of np.ndarray
-        Single data array or list of data arrays. Rows store observations,
-        columns store variables. For example X, or phi or [phi,psi]. Arrays must
-        be of dimension ndim=2.
+    Y : np.ndarray
+        Data array.
     layout : str
-        Choose from '2d', '3d' and 'unfolded 3d', default '2d'.
+        Either '2d' or '3d'.
     comps : iterable
         Iterable that stores the component indices.
 
@@ -364,25 +362,16 @@ def _scatter_base(Ys,
         return a single axis or a list of axes.
     """
     # if we have a single array, transform it into a list with a single array
-    avail_layouts = ['2d', '3d', 'unfolded 3d']
+    avail_layouts = {'2d', '3d'}
     if layout not in avail_layouts:
-        raise ValueError('choose layout from',avail_layouts)
-    colors = c
-    if type(Ys) == np.ndarray:
-        Ys = [Ys]
-    if len(colors) == len(Ys[0]) or type(colors) == str:
+        raise ValueError('choose layout from', avail_layouts)
+    if type(colors) == str:
         colors = [colors]
-    # make a figure with panels len(colors) x len(Ys)
-    figsize = (4*len(colors), 4*len(Ys))
-    # checks
-    if layout == 'unfolded 3d':
-        if len(Ys) != 1:
-            raise ValueError('use single 3d array')
-        if len(colors) > 1:
-            raise ValueError('choose a single color')
-        figsize = (4*2, 4*2)
-        Y = Ys[0]
-        Ys = [Y[:,[1,2]], Y[:,[0,1]], Y, Y[:,[0,2]]]
+    if len(sizes) != len(colors):
+        if len(sizes) == 1:
+            sizes = [sizes[0] for i in range(len(colors))]
+    # make a figure with panels len(colors) x 1
+    figsize = (4*len(colors), 4)
     # try importing Axes3D
     if '3d' in layout:
         from mpl_toolkits.mplot3d import Axes3D
@@ -396,7 +385,7 @@ def _scatter_base(Ys,
         right_margin = 0.25
     elif right_margin is None:
         right_margin = 0.01
-    gs = gridspec.GridSpec(nrows=len(Ys),
+    gs = gridspec.GridSpec(nrows=1,
                            ncols=2*len(colors),
                            width_ratios=[r for i in range(len(colors))
                                          for r in [1-right_margin, right_margin]],
@@ -407,63 +396,65 @@ def _scatter_base(Ys,
     count = 1
     bool3d = True if layout == '3d' else False
     axs = []
-    for Y in Ys:
-        for icolor, color in enumerate(colors):
-            # set up panel
-            if layout == 'unfolded 3d' and count != 3:
-                ax = fig.add_subplot(2, 2, count)
-                bool3d = False
-            elif layout == 'unfolded 3d' and count == 3:
-                ax = fig.add_subplot(2, 2, count,
-                                     projection='3d')
-                bool3d = True
-            elif layout == '2d':
-                ax = pl.subplot(gs[2*(count-1)])
-            elif layout == '3d':
-                ax = pl.subplot(gs[2*(count-1)], projection='3d')
-            if not bool3d:
-                data = Y[:,0], Y[:,1]
-            else:
-                data = Y[:,0], Y[:,1], Y[:,2]
-            # do the plotting
-            if type(color) != str or color != 'white':
-                sct = ax.scatter(*data,
-                                 c=color,
-                                 edgecolors='face',
-                                 **kwargs)
-            if colorbars[icolor]:
-                pos = gs.get_grid_positions(fig)
-                left = pos[2][2*(count-1)+1]
-                bottom = pos[0][0]
-                width = 0.2*(pos[3][2*(count-1)+1] - left)
-                height = pos[1][0] - bottom
-                # again shift to left
-                left = pos[3][2*(count-1)] + 0.1*width
-                rectangle = [left, bottom, width, height]
-                ax_cb = fig.add_axes(rectangle)
-                cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
-                                 cax=ax_cb)
-            # set the titles
-            if titles is not None:
-                ax.set_title(titles[icolor])
-            # output highlighted data points
-            for iihighlight,ihighlight in enumerate(highlights):
-                data = [Y[ihighlight,0]], [Y[ihighlight,1]]
-                if bool3d:
-                    data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
-                ax.scatter(*data, c='black',
-                           facecolors='black', edgecolors='black',
-                           marker='x', s=40, zorder=20)
-                highlight = (highlights_labels[iihighlight] if
-                             len(highlights_labels) > 0
-                             else str(ihighlight))
-                # the following is a Python 2 compatibility hack
-                ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
-            ax.set_xticks([]); ax.set_yticks([])
+    for icolor, color in enumerate(colors):
+        # set up panel
+        if layout == 'unfolded 3d' and count != 3:
+            ax = fig.add_subplot(2, 2, count)
+            bool3d = False
+        elif layout == 'unfolded 3d' and count == 3:
+            ax = fig.add_subplot(2, 2, count,
+                                 projection='3d')
+            bool3d = True
+        elif layout == '2d':
+            ax = pl.subplot(gs[2*(count-1)])
+        elif layout == '3d':
+            ax = pl.subplot(gs[2*(count-1)], projection='3d')
+        if not bool3d:
+            data = Y[:,0], Y[:,1]
+        else:
+            data = Y[:,0], Y[:,1], Y[:,2]
+        # do the plotting
+        if type(color) != str or color != 'white':
+            sct = ax.scatter(*data,
+                             c=color,
+                             edgecolors='face',
+                             s=sizes[icolor],
+                             cmap=cmap)
+        if colorbars[icolor]:
+            pos = gs.get_grid_positions(fig)
+            left = pos[2][2*(count-1)+1]
+            bottom = pos[0][0]
+            width = 0.2*(pos[3][2*(count-1)+1] - left)
+            height = pos[1][0] - bottom
+            # again shift to left
+            left = pos[3][2*(count-1)] + 0.1*width
+            rectangle = [left, bottom, width, height]
+            ax_cb = fig.add_axes(rectangle)
+            cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
+                             cax=ax_cb)
+        # set the titles
+        if titles is not None:
+            ax.set_title(titles[icolor])
+        # output highlighted data points
+        for iihighlight,ihighlight in enumerate(highlights):
+            data = [Y[ihighlight,0]], [Y[ihighlight,1]]
             if bool3d:
-                ax.set_zticks([])
-            axs.append(ax)
-            count += 1
+                data = [Y[ihighlight,0]], [Y[ihighlight,1]], [Y[ihighlight,2]]
+            ax.scatter(*data, c='black',
+                       facecolors='black', edgecolors='black',
+                       marker='x', s=40, zorder=20)
+            highlight = (highlights_labels[iihighlight] if
+                         len(highlights_labels) > 0
+                         else str(ihighlight))
+            # the following is a Python 2 compatibility hack
+            ax.text(*([d[0] for d in data]+[highlight]),zorder=20)
+        ax.set_xticks([]); ax.set_yticks([])
+        if bool3d:
+            ax.set_zticks([])
+        # scale limits to match data
+        ax.autoscale_view()
+        axs.append(ax)
+        count += 1
     # set default axlabels
     if axlabels is None:
         if layout == '2d':
