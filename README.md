@@ -212,7 +212,7 @@ The functionality of diffmap and dpt compare to the R package
 #### dbscan <a id="dbscan"></a>
 
 [[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN), 
-originally proposed by [Ester *et al.*, 1996](#ref_ester96) in the implementation of
+originally proposed by [Ester *et al.*, 1996](#ref_ester96), in the implementation of
 `scikit-learn` ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 ### Differential expression
@@ -239,7 +239,7 @@ Download or clone the repository - green button on top of the page - and `cd`
 into its root directory. To install with symbolic links (stay up to date with
 your cloned version after you update with `git pull`) call
 ```
-pip install -e.
+pip install -e .
 ``` 
 and work with the top-level command `scanpy` or
 ```python
@@ -248,8 +248,7 @@ import scanpy as sc
 in any directory.
 
 You can also call the wrapper `python scripts/scanpy.py` from within the root of
-the repository or from within `scripts`, which works **without**
-[installation](#install).
+the repository or from within `scripts`, which works **without** installation.
 
 Packages you might need (all default in
 [Anaconda](https://www.continuum.io/downloads)) can be easily installed using
@@ -269,17 +268,12 @@ and accept all suggestions. Either reopen a new terminal or `source
 ~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac. Then run
 `conda install scipy matplotlib h5py pandas xlrd scikit-learn enum34`. The whole process takes about 5 min.
 
-<!--- You can install Scanpy, hence `import scanpy` from anywhere on your system, via
-```shell
-pip install .
-```
-Then, `scanpy` becomes a top-level command available from anywhere in the
-system, call `scanpy --help`. The package is
-[registered](https://pypi.python.org/pypi/scanpy/0.1) in the [Python Packaging
-Index](https://pypi.python.org/pypi), but versioning has not started yet. In the
-future, installation will be possible without reference to GitHub via
-`pip install scanpy`.
--->
+#### PyPi
+
+The package is [registered](https://pypi.python.org/pypi/scanpy/0.1) in the
+[Python Packaging Index](https://pypi.python.org/pypi), but versioning has not
+started yet. In the future, installation will be possible without reference to
+GitHub via `pip install scanpy`.
 
 ## References <a id="references"></a>
 
