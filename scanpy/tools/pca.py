@@ -59,7 +59,8 @@ def pca(adata_or_X, n_comps=10, zero_center=True,
         X_pca = pp.pca(X, n_comps, 
                        zero_center, svd_solver, 
                        random_state=random_state)
-        adata['X_pca'] = X_pca
+        if isadata:
+            adata['X_pca'] = X_pca
     if isadata:
         return adata
     else:
