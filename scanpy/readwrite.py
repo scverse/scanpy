@@ -159,7 +159,7 @@ def read_params(filename, asheader=False):
 
 def write_params(filename, *args, **dicts):
     """
-    Write parameters to file, so that it's readable py read_params.
+    Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
     """
