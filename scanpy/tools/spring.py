@@ -20,7 +20,7 @@ from .. import utils
 
 step_size = 10
 
-def spring(adata, k=4, n_comps=2):
+def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
     u"""
     Visualize data using the force-directed Fruchterman-Reingold algorithm.
 
@@ -35,6 +35,12 @@ def spring(adata, k=4, n_comps=2):
         Number of nearest neighbors in graph.
     n_comps : int
         Number of principal components in preprocessing PCA.
+    n_steps : int
+        Number of steps in optimizing the spring representation.
+    rep : float of None (default: None)
+        Repulsion = strength of springs. If None the distance is set to
+        1/sqrt(n) where n is the number of cells. Increase this value to move
+        nodes farther apart.
 
     Returns
     -------
@@ -70,11 +76,10 @@ def spring(adata, k=4, n_comps=2):
     # just sample initial positions, the rest is done by the plotting tool
     np.random.seed(1)
     Y = np.asarray(np.random.random((Adj.shape[0], 2)), dtype=Adj.dtype)
-    n_steps = 12
     sett.m(0, 'is very slow, will be sped up soon')
     for istep in 1 + np.arange(n_steps, dtype=int):
         sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
-        Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
+        Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size, rep=rep)
     adata['X_spring'] = Y
     return adata
 
@@ -203,7 +208,8 @@ def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
 # Authors: Aric Hagberg <aric.hagberg@gmail.com>,
 #          Dan Schult <dschult@colgate.edu>
 
-def fruchterman_reingold_layout(W, rep=None,
+def fruchterman_reingold_layout(W,
+                                rep=None,
                                 Yinit=None,
                                 fixed=None,
                                 iterations=50,
@@ -239,6 +245,7 @@ def fruchterman_reingold_layout(W, rep=None,
     if rep is None:
         nnodes, _ = W.shape
         rep = 1.0 / np.sqrt(nnodes)
+    sett.m(0, 'using repulsion rep =', rep)
     if len(W) >= 500:
         Y = _fruchterman_reingold_sparse(W, rep, Yinit, fixed, iterations, dim)
     else:
@@ -249,8 +256,6 @@ def fruchterman_reingold_layout(W, rep=None,
 
 def _fruchterman_reingold_sparse(A, rep, Y=None, fixed=None,
                                  iterations=50, dim=2):
-    # Position nodes in adjacency matrix A using Fruchterman-Reingold
-    # Sparse version
     try:
         from scipy.sparse import spdiags, coo_matrix
     except ImportError:
