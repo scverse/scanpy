@@ -27,62 +27,65 @@ from ..classes import data_graph
 def dpt(adata, n_branchings=1, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         sigma=0, allow_branching_at_root=False):
     u"""
-    Perform DPT analsysis as of Haghverdi et al. (2016).
+    Diffusion Pseudotime analysis.
+
+    Infer progression of cells, identify branching subgroups.
 
     Reference
     ---------
-    Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
+    Haghverdi et al., Nature Methods 13, 3971 (2016).
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['X_pca']: np.ndarray
-            Result of preprocessing with PCA: observations × variables.
-            If it exists, dpt will use this instead of adata.X.
         adata['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
             as expression vector of shape X.shape[1].
+        adata['X_pca']: np.ndarray
+            PCA representation of the data matrix (result of preprocessing with
+            PCA). If it exists in adata, dpt will use this instead of adata.X.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     k : int, optional (default: 30)
         Number of nearest neighbors on the knn graph. If knn == False, set the
-        Gaussian kernel width to the distance of the kth neighbor (method
-        'local').
+        Gaussian kernel width to the distance of the kth neighbor.
     knn : bool, optional (default: True)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
     n_pcs_pre: int, optional (default: 50)
-        Use n_pcs_pre PCs to compute Euclidian distance matrix. Set to 0 if you
-        don't want preprocessing with PCA.
+        Use n_pcs_pre PCs to compute the Euclidian distance matrix, which is the
+        basis for generating the graph. Set to 0 if you don't want preprocessing
+        with PCA.
     n_pcs_post: int, optional (default: 30)
-        Use n_pcs_post PCs to compute DPT distance matrix -> speeds up the
-        computation at almost no loss of accuracy. Set to 0 if you don't want
-        postprocessing with PCA.
+        Use n_pcs_post PCs to compute the DPT distance matrix. This speeds up
+        the computation at almost no loss of accuracy. Set to 0 if you don't
+        want postprocessing with PCA.
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
-        of the Kernel Gaussian (method 'global') - knn needs to be False.
+        of the Kernel Gaussian - knn needs to be False in this case.
     allow_branching_at_root : bool, optional (default: False)
         Allow to have branching directly at root point.
 
     Returns
     -------
-    Writes the following arrays to adata.
+    Writes the following arrays as sample annotation to adata.smp.
         dpt_pseudotime : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
-        dpt_groups : np.ndarray of dtype int
-            Array of dim (number of samples) that stores the subgroup id ("0",
-            "1", ...) for each cell. The groups might either correspond to
-            'progenitor cells', 'undecided cells' or 'branches'.
+        dpt_groups : np.ndarray of dtype string
+            Array of dim (number of samples) that stores the subgroup id ('0',
+            '1', ...) for each cell. The groups  typically correspond to
+            'progenitor cells', 'undecided cells' or 'branches' of a process.
+    Writes additional arrays as unstructured annotation to adata.
         X_diffmap : np.ndarray
             Array of shape (number of samples) x (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
             basis of the transition matrix with eigenvectors as columns.
         dpt_evals : np.ndarray
-            Array of size (number of samples). Eigenvalues of transition matrix.
+            Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     params = locals(); del params['adata']
     if 'xroot' not in adata:
