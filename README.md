@@ -52,9 +52,7 @@ scanpy moignard15 pca
 scanpy moignard15 tsne
 scanpy moignard15 diffmap
 ```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_exp_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_exp_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_exp_groups.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_exp_groups.png" height="175">
 
 Coloring samples/cells by gene expression works analogously,
 ```
@@ -62,9 +60,7 @@ scanpy moignard15 pca -p smp HbbbH1
 scanpy moignard15 tsne -p smp HbbbH1
 scanpy moignard15 diffmap -p smp HbbbH1
 ```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_HbbbH1.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_HbbbH1.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_HbbbH1.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_HbbbH1.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_HbbbH1.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_HbbbH1.png" height="175">
 
 Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
 detects the *trunk* of progenitor cells (*dpt group* 0) and the *branches* of
@@ -76,10 +72,8 @@ option, you can specify the tSNE basis, for example.
 scanpy moignard15 dpt -p smp exp_groups legendloc "upper left"
 scanpy moignard15 dpt -p smp exp_groups legendloc none basis tsne
 ```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_diffmap_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_segpt.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_diffmap_dpt_pseudotime-dpt_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_segpt.png" height="175">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
 
 DPT orders cells by *dpt groups*, and within each group, by pseudotime. Groups
 are ordered by average pseudotime within the group.  With this, we reproduced
@@ -101,9 +95,7 @@ scanpy moignard15 dbscan -p smp exp_groups
 scanpy moignard15 diffrank -o smp dbscan_groups names 2,3
 scanpy moignard15 diffrank -o smp exp_groups names names PS,4SG
 ```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dbscan_tsne_dbscan_groups-exp_groups.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dbscan_groups.png" height="150">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_exp_groups.png" height="150">
+<img src="http://falexwolf.de/scanpy/figs1/moignard15_dbscan_tsne_dbscan_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dbscan_groups.png" height="150"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_exp_groups.png" height="150">
 
 If you want to use the results externally, read the resulting hdf5
 file (inspect its content using `h5ls write/moignard15.h5`). If you prefer
