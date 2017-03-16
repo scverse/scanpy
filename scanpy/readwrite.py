@@ -854,6 +854,8 @@ def convert_string(string):
         return float(string)
     elif convert_bool(string)[0]:
         return convert_bool(string)[1]
+    elif string == 'None':
+        return None
     else:
         return string
 
