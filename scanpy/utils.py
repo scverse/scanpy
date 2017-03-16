@@ -64,7 +64,8 @@ def update_params(old_params, new_params, check=False):
                                  + '\' is not a valid parameter key, '
                                  + 'consider one of \n' 
                                  + str(list(old_params.keys())))
-            updated_params[key] = val
+            if val is not None:
+                updated_params[key] = val
     return updated_params
 
 #--------------------------------------------------------------------------------
