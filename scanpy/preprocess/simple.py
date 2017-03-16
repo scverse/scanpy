@@ -4,6 +4,7 @@ Preprocessing functions that take X as an argument
 -> "simple" preprocessing functions
 """
 
+from ..classes.ann_data import AnnData
 import numpy as np
 
 def filter_cells(X, min_reads):
@@ -33,9 +34,9 @@ def gene_filter_cv(X, Ecutoff, cvFilter):
     """
     Filter genes by coefficient of variance and mean.
     """
-    mean_filter = np.mean(X,axis=0)> Ecutoff
-    var_filter = np.std(X,axis=0) / (np.mean(X,axis=0)+.0001) > cvFilter
-    gene_filter = np.nonzero(np.all([mean_filter,var_filter],axis=0))[0]
+    mean_filter = np.mean(X, axis=0) > Ecutoff
+    var_filter = np.std(X, axis=0) / (np.mean(X,axis=0) + .0001) > cvFilter
+    gene_filter = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_filter
 
 def gene_filter_fano(X, Ecutoff, Vcutoff):
@@ -51,8 +52,10 @@ def log(X):
     """ 
     Apply logarithm to count data.
 
-    Shifted by one to avoid negative infinities.
+    Shifted by one to map 0 to 0.
     """
+    if isinstance(X, AnnData):
+        return AnnData(log(X.X), X.smp, X.var, **X.add)
     X = np.log(X + 1)
     return X
 
@@ -139,14 +142,44 @@ def row_norm(X, max_fraction=1, mult_with_mean=False):
         return X_norm
     # restrict computation of counts to genes that make up less than
     # constrain_theshold of the total reads
-    tc_tiled = np.tile(total_counts[:,np.newaxis],(1,X.shape[1]))
+    tc_tiled = np.tile(total_counts[:, np.newaxis],(1, X.shape[1]))
     included = np.all(X <= tc_tiled * max_fraction, axis=0)    
-    tc_include = np.sum(X[:,included],axis=1)
-    tc_tiled = np.tile(tc_include[:,np.newaxis],(1,X.shape[1])) + 1e-6
+    tc_include = np.sum(X[:,included], axis=1)
+    tc_tiled = np.tile(tc_include[:, np.newaxis],(1, X.shape[1])) + 1e-6
     X_norm =  X / tc_tiled 
     if mult_with_mean:
         X_norm *= np.mean(total_counts)
     return X_norm
+
+def subsample(adata, subsample, seed=0):
+    """ 
+    Subsample.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    subsample : int
+        Subsample to a fraction of 1/subsample of the data.
+    seed : int
+        Root to change subsampling.
+            
+    Returns
+    -------
+    adata : dict containing modified entries
+        'row_names', 'expindices', 'explabels', 'expcolors'
+    """
+    from .. import utils
+    _, smp_indices = utils.subsample(adata.X,subsample,seed)
+    adata = adata[smp_indices, ]
+    for key in ['X_pca']:
+        if key in adata:
+            adata[key] = adata[key][smp_indices]
+    for k in adata.smp_keys():
+        if k + '_masks' in adata:
+            adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
+    adata['subsample'] = True
+    return adata
 
 def zscore(X):
     """

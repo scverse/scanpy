@@ -19,7 +19,7 @@ See also
 from ..tools import dpt
 from .. import settings as sett
 
-def diffmap(adata, n_comps=10, k=5, knn=False, n_pcs_pre=50, sigma=0):
+def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -36,11 +36,11 @@ def diffmap(adata, n_comps=10, k=5, knn=False, n_pcs_pre=50, sigma=0):
         Annotated data matrix.
     n_comps : int, optional (default: 3)
         The number of dimensions of the representation.
-    k : int, optional (default: 5)
+    k : int, optional (default: 30)
         Specify the number of nearest neighbors in the knn graph. If knn ==
         False, set the Gaussian kernel width to the distance of the kth
         neighbor (method 'local').
-    knn : bool, optional (default: False)
+    knn : bool, optional (default: True)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest

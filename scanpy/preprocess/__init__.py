@@ -4,7 +4,7 @@ Preprocess Data
 """
 
 from .simple import *
-from .advanced import *
+from .recipes import *
 
 __all__ = [
     # from simple
@@ -15,15 +15,15 @@ __all__ = [
     'pca',
     'row_norm',
     'zscore',
-    # from advanced
+    # from recipes
     'subsample',
     'weinreb16'
 ]
 
-def show():
-    from . import advanced, simple
-    str = 'take adata as argument (advanced)'
-    for k in sorted(dir(advanced)):
+def overview():
+    from . import recipes, simple
+    str = 'take adata as argument (recipes)'
+    for k in sorted(dir(recipes)):
         if not k.startswith('_'):
             str += '\n    ' + k
     str += '\ntake X as argument (simple)'

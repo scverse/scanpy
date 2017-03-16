@@ -24,7 +24,7 @@ from .. import settings as sett
 from .. import utils
 from ..classes import data_graph
 
-def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
+def dpt(adata, n_branchings=1, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         sigma=0, allow_branching_at_root=False):
     u"""
     Perform DPT analsysis as of Haghverdi et al. (2016).
@@ -45,11 +45,11 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
             as expression vector of shape X.shape[1].
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
-    k : int, optional (default: 5)
+    k : int, optional (default: 30)
         Number of nearest neighbors on the knn graph. If knn == False, set the
         Gaussian kernel width to the distance of the kth neighbor (method
         'local').
-    knn : bool, optional (default: False)
+    knn : bool, optional (default: True)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
@@ -86,7 +86,15 @@ def dpt(adata, n_branchings=1, k=5, knn=False, n_pcs_pre=50, n_pcs_post=30,
     """
     params = locals(); del params['adata']
     if 'xroot' not in adata:
-        raise ValueError('DPT requires specifying the expression "xroot" of a root cell.')
+        msg = \
+'''DPT requires specifying the expression "xroot" of a root cell.
+   
+   In your preprocessing function, set
+       adata['xroot'] = adata.X[root_cell_index, :]
+   where "root_cell_index" is the integer index of the root cell, or
+       adata['xroot'] = adata[root_cell_name, :].X.flatten()
+   where "root_cell_name" is the name (a string) of the root cell.'''
+        raise ValueError(msg)
     dpt = DPT(adata, params)
     # diffusion map
     ddmap = dpt.diffmap()

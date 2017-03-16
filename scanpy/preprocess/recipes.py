@@ -1,42 +1,10 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
-Preprocessing functions that take adata as argument
--> subsampling
--> whole preprocessing workflows from the literature
+Preprocessing recipes from the literature
 """
 
 from .. import settings as sett
 from .simple import *
-
-def subsample(adata, subsample, seed=0):
-    """ 
-    Subsample.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    subsample : int
-        Subsample to a fraction of 1/subsample of the data.
-    seed : int
-        Root to change subsampling.
-            
-    Returns
-    -------
-    adata : dict containing modified entries
-        'row_names', 'expindices', 'explabels', 'expcolors'
-    """
-    from .. import utils
-    _, smp_indices = utils.subsample(adata.X,subsample,seed)
-    adata = adata[smp_indices, ]
-    for key in ['X_pca']:
-        if key in adata:
-            adata[key] = adata[key][smp_indices]
-    for k in adata.smp_keys():
-        if k + '_masks' in adata:
-            adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
-    adata['subsample'] = True
-    return adata
 
 def weinreb16(adata, mean_threshold=0.01, cv_threshold=2, 
               n_pcs=50, svd_solver='randomized', random_state=0):
@@ -71,6 +39,6 @@ def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
                 n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
     adata['X_pca'] = X_pca
-    sett.m(0, 'X_pca computed from z-scored X has shape n_samples x n_comps =',
+    sett.m(0, 'X_pca (computed from z-scored X) has shape n_samples x n_comps =',
            adata['X_pca'].shape[0], 'x', adata['X_pca'].shape[1])
     return adata

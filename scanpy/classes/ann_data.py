@@ -124,17 +124,16 @@ def _check_dimensions(data, smp, var):
                          .format(n_var, var.shape[0]))
 
 class AnnData(IndexMixin):
-    def __init__(self, ddata_or_X=None, smp=None, var=None, **meta):
+    def __init__(self, ddata_or_X=None, smp=None, var=None, **add):
         """
         Annotated Data
 
         Stores a data matrix X of dimensions n_samples x n_variables,
         e.g. n_cells x n_genes, with the possibility to store an arbitrary
         number of annotations for both samples and variables, and
-        additional arbitrary unstructured via **meta.
+        additional arbitrary unstructured annotation via **add.
 
-        You can access additional metadata elements directly from the AnnData:
-
+        You can access additional annotation elements directly from AnnData:
         >>> adata = AnnData(np.eye(3), k=1)
         >>> assert adata['k'] == 1
 
@@ -159,17 +158,17 @@ class AnnData(IndexMixin):
         var : np.recarray, dict
             The same as `smp`, but of shape n_variables x ? for annotation of
             variables.
-        **meta : dict
-            Unstructured metadata for the whole dataset.
+        **add : dict
+            Unstructured annotation for the whole dataset.
 
         Attributes
         ----------
         X, smp, var from the Parameters.
         """
         if isinstance(ddata_or_X, Mapping):
-            if any((smp, var, meta)):
+            if any((smp, var, add)):
                 raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata')
-            X, smp, var, meta = self.from_ddata(ddata_or_X)
+            X, smp, var, add = self.from_ddata(ddata_or_X)
         else:
             X = ddata_or_X
 
@@ -199,45 +198,45 @@ class AnnData(IndexMixin):
 
         _check_dimensions(X, self.smp, self.var)
 
-        self._meta = meta
+        self.add = add
 
     def from_ddata(self, ddata):
         smp, var = OrderedDict(), OrderedDict()
 
-        meta = dict(ddata.items())
+        add = dict(ddata.items())
         del ddata
 
-        X = meta['X']
-        del meta['X']
+        X = add['X']
+        del add['X']
 
-        if 'row_names' in meta:
-            smp['smp_names'] = meta['row_names']
-            del meta['row_names']
-        elif 'smp_names' in meta:
-            smp['smp_names'] = meta['smp_names']
-            del meta['smp_names']
+        if 'row_names' in add:
+            smp['smp_names'] = add['row_names']
+            del add['row_names']
+        elif 'smp_names' in add:
+            smp['smp_names'] = add['smp_names']
+            del add['smp_names']
 
-        if 'col_names' in meta:
-            var['var_names'] = meta['col_names']
-            del meta['col_names']
-        elif 'var_names' in meta:
-            var['var_names'] = meta['var_names']
-            del meta['var_names']
+        if 'col_names' in add:
+            var['var_names'] = add['col_names']
+            del add['col_names']
+        elif 'var_names' in add:
+            var['var_names'] = add['var_names']
+            del add['var_names']
 
-        smp = odict_merge(smp, meta.get('row', {}), meta.get('smp', {}))
-        var = odict_merge(var, meta.get('col', {}), meta.get('var', {}))
+        smp = odict_merge(smp, add.get('row', {}), add.get('smp', {}))
+        var = odict_merge(var, add.get('col', {}), add.get('var', {}))
         for k in ['row', 'smp', 'col', 'var']:
-            if k in meta:
-                del meta[k]
+            if k in add:
+                del add[k]
 
-        return X, smp, var, meta
+        return X, smp, var, add
 
     def to_ddata(self):
         smp = OrderedDict([(k, self.smp[k]) for k in self.smp_keys()])
         var = OrderedDict([(k, self.var[k]) for k in self.var_keys()])
         d = {'X': self.X, 'smp': smp, 'var': var,
              'smp_names': self.smp_names, 'var_names': self.var_names}
-        for k, v in self._meta.items():
+        for k, v in self.add.items():
             d[k] = v
         return d
 
@@ -319,38 +318,38 @@ class AnnData(IndexMixin):
             del self.var.iloc[var, :]
 
     def __getitem__(self, index):
-        # return element from _meta if index is string
+        # return element from add if index is string
         if isinstance(index, str):
-            return self._meta[index]
+            return self.add[index]
         # otherwise unpack index
         smp, var = self._normalize_indices(index)
         X = self.X[smp, var]
-        smp_meta = self.smp[smp]
-        var_meta = self.var[var]
-        assert smp_meta.shape[0] == X.shape[0], (smp, smp_meta)
-        assert var_meta.shape[0] == X.shape[1], (var, var_meta)
-        adata = AnnData(X, smp_meta, var_meta,  **self._meta)
+        smp_ann = self.smp[smp]
+        var_ann = self.var[var]
+        assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
+        assert var_ann.shape[0] == X.shape[1], (var, var_ann)
+        adata = AnnData(X, smp_ann, var_ann,  **self.add)
         return adata
 
     def __setitem__(self, index, val):
         if isinstance(index, str):
-            self._meta[index] = val
+            self.add[index] = val
             return
 
         smp, var = self._normalize_indices(index)
         self.X[smp, var] = val
 
     def __contains__(self, item):
-        return item in self._meta
+        return item in self.add
 
     def get(self, key, default=None):
-        return self._meta.get(key, default)
+        return self.add.get(key, default)
 
     def __len__(self):
         return self.X.shape[0]
 
     def transpose(self):
-        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self._meta)
+        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self.add)
 
     T = property(transpose)
 
@@ -439,7 +438,7 @@ def test_transpose():
     assert np.array_equal(mt1.smp, mt2.smp)
     assert np.array_equal(mt1.var, mt2.var)
 
-def test_get_subset_meta():
+def test_get_subset_add():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]),
                   dict(Smp=['A', 'B']),
                   dict(Feat=['a', 'b', 'c']))
@@ -447,7 +446,7 @@ def test_get_subset_meta():
     assert mat[0, 0].smp['Smp'].tolist() == ['A']
     assert mat[0, 0].var['Feat'].tolist() == ['a']
 
-def test_append_meta_col():
+def test_append_add_col():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
 
     mat.smp['new'] = [1, 2]
@@ -457,7 +456,7 @@ def test_append_meta_col():
     with raises(ValueError):
         mat.smp['new4'] = 'far too long'.split()
 
-def test_set_meta():
+def test_set_add():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
 
     mat.smp = dict(smp_names=[1, 2])

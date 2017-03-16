@@ -169,14 +169,15 @@ def _check_adata(adata):
             # ordered unique categories for categorical annotation
             if not smp + '_names' in adata and adata.smp[smp].dtype.char == 'U':
                 adata[smp + '_names'] = np.unique(adata.smp[smp])
-                try:
-                    from natsort import natsorted
-                    adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names']))
-                except:
-                    pass
                 if adata[smp + '_names'].dtype.char == 'U':
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
                                                        np.array(_ignore_groups))
+                try:
+                    from natsort import natsorted
+                    adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
+                                                               key=lambda v: v.upper()))
+                except:
+                    pass
             if sett.verbosity > 0: 
                 print(smp + ':', end=' ')
                 if adata.smp[smp].dtype.char == 'U':

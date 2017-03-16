@@ -81,10 +81,9 @@ scanpy moignard15 dpt -p smp exp_groups legendloc none basis tsne
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175">
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
 
-DPT order orders cells by *dpt groups*, and within each group, by
-pseudotime. Groups are ordered by average pseudotime within the group.  With
-this, we reproduced most of Fig. 1 from [Haghverdi *et al.*
-(2016)](#ref_haghverdi16).
+DPT orders cells by *dpt groups*, and within each group, by pseudotime. Groups
+are ordered by average pseudotime within the group.  With this, we reproduced
+most of Fig. 1 from [Haghverdi *et al.* (2016)](#ref_haghverdi16).
 
 Let us rank genes according to differential expression between groups of cells.
 ```
@@ -93,8 +92,9 @@ scanpy moignard15 diffrank -o smp dpt_groups names 0,2,3
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dpt_groups.png" height="150">
 
 In contrast to a DPT analysis, a standard clustering in tSNE coordinates blurs
-the continuous nature of the data. Seemingly agreeing clusters display
-considerably different top-ranked genes.
+the continuous nature of the data. Also, a seemingly close correspondence
+between clusters and experimental groups is *not* confirmed by the top-ranked
+genes.
 <a id="moignard15_dbscan"></a>
 ```
 scanpy moignard15 dbscan -p smp exp_groups
@@ -106,9 +106,9 @@ scanpy moignard15 diffrank -o smp exp_groups names names PS,4SG
 <img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_exp_groups.png" height="150">
 
 If you want to use the results externally, read the resulting hdf5
-file (inspect its content using `h5ls write/moignard15_dpt.h5`). If you prefer
-reading and writing csv/txt files, which is much slower, however, use the option
-`--fileformat csv` (or `txt`).
+file (inspect its content using `h5ls write/moignard15.h5`). If you prefer
+reading and writing csv files, which is much slower, however, use the option
+`--fileformat csv`.
 
 #### More examples and help
 

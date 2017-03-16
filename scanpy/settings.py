@@ -1,4 +1,4 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Settings and Logfile 
 
@@ -104,7 +104,7 @@ def add_args(p):
        help='Specify integer s > 1 if you want to use a fraction of 1/s'
             ' of the data (default: %(default)d).')
     aa = p.add_argument_group('Save figures').add_argument
-    aa('--savefigs',
+    aa('-f', '--savefigs',
        type=str, default='', const=extf, nargs='?', metavar='ext',
        help='Save figures either as "png", "svg" or "pdf". Just providing '
             '"--savefigs" will save to "png" (default: do not save figures).')
@@ -372,11 +372,12 @@ def _jupyter_deprecated(do=True):
     rcParams['legend.fontsize'] = 0.92*fontsize
     rcParams['axes.titlesize'] = fontsize
 
-# further global variables
-start = clock() # clock() is deprecated since version python version 3.3
+# ------------------------------------------------------------------------------
+# Some global variables that track time
+# ------------------------------------------------------------------------------
+
+start = clock() # clock() is deprecated since python version 3.3
 intermediate = start
 logfilename = ''
 separator = 80*"-"
-
-atexit.register(_terminate)
-
+atexit.register(_terminate) # start tracking when importing this module

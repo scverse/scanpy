@@ -4,6 +4,7 @@
 Plotting
 """
 
+import os
 import numpy as np
 from cycler import Cycler, cycler
 
@@ -12,10 +13,62 @@ from matplotlib import rcParams
 from matplotlib import ticker
 from matplotlib.figure import SubplotParams as sppars
 from . import settings as sett
+from . import utils
+from . import readwrite
 
 #--------------------------------------------------------------------------------
 # Scanpy Plotting Functions
 #--------------------------------------------------------------------------------
+
+
+def init_fig_params():
+    """
+    Init default plotting parameters.
+
+    Is called at the very end of this module.
+    """
+
+    # figure
+    rcParams['figure.figsize'] = (4, 4)
+    rcParams['figure.subplot.left'] = 0.18
+    rcParams['figure.subplot.right'] = 0.96
+    rcParams['figure.subplot.bottom'] = 0.15
+    rcParams['figure.subplot.top'] = 0.91
+
+    rcParams['lines.linewidth'] = 1.5
+    rcParams['lines.markersize'] = 6
+    rcParams['lines.markeredgewidth'] = 1
+
+    # font
+    rcParams['font.sans-serif'] = ['Arial',
+                                   'Helvetica',
+                                   'DejaVu Sans', 
+                                   'Bitstream Vera Sans',
+                                   'sans-serif']
+    fontsize = 14
+    rcParams['font.size'] = fontsize
+    rcParams['legend.fontsize'] = 0.92 * fontsize
+    rcParams['axes.titlesize'] = fontsize
+
+    # legend
+    rcParams['legend.numpoints'] = 1
+    rcParams['legend.scatterpoints'] = 1
+    rcParams['legend.handlelength'] = 0.5
+    rcParams['legend.handletextpad'] = 0.4
+
+    # resolution of png output
+    rcParams['savefig.dpi'] = 400
+
+    # color palette
+    # see 'category20' on 
+    # https://github.com/vega/vega/wiki/Scales#scale-range-literals
+    rcParams['axes.prop_cycle'] = cycler(color=
+                                         ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                                          '#9467bd', '#8c564b', '#e377c2', #'#7f7f7f', remove grey
+                                          '#bcbd22', '#17becf',
+                                          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
+                                          '#c5b0d5', '#c49c94', '#f7b6d2', #'#c7c7c7', remove grey
+                                          '#dbdb8d', '#9edae5'])
 
 def savefig(writekey):
     if sett.savefigs:
@@ -77,11 +130,18 @@ def scatter(adata,
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
+    # write params to a config file
+    params = locals(); del params['adata']
+    if os.path.exists('.scanpy_config_plotting'):
+        params = utils.update_params(readwrite.read_params('.scanpy_config_plotting'), params)
+        if right_margin != params['right_margin']:
+            right_margin = params['right_margin']
+            sett.m(0, '... set right_margin to saved value', right_margin)
+    readwrite.write_params('.scanpy_config_plotting', params); del params
     # compute components
-    from numpy import array
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
-    comps = array(comps.split(',')).astype(int) - 1
+    comps = np.array(comps.split(',')).astype(int) - 1
     titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     names = None if names is None else names.split(',') if isinstance(names, str) else names
@@ -105,7 +165,7 @@ def scatter(adata,
     colorbars = []
     sizes = []
     for ismp, smp in enumerate(smps):
-        c = 'grey'
+        c = 'grey' if layout == '2d' else 'white'
         categorical = False
         continuous = False
         if len(adata.smp_keys()) > 0:
@@ -138,11 +198,11 @@ def scatter(adata,
         if cont is not None:
             categorical = not cont
             continuous = cont
-        colors.append(c)
         colorbars.append(True if continuous else False)
         sizes.append(size if continuous else size-2)
         if categorical:
             categoricals.append(ismp)
+        colors.append(c)
 
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.24        
@@ -181,7 +241,7 @@ def scatter(adata,
             if (names is None or (names != None and name in names)):
                 scatter_group(axs[ismp], smp, iname, adata, Y, layout, size=3)
         if legendloc == 'right margin':
-            axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+            legend = axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[ismp].legend(frameon=False, loc=legendloc)
 
@@ -370,28 +430,42 @@ def scatter_base(Y,
     if len(sizes) != len(colors):
         if len(sizes) == 1:
             sizes = [sizes[0] for i in range(len(colors))]
-    # make a figure with panels len(colors) x 1
-    figsize = (4*len(colors), 4)
     # try importing Axes3D
     if '3d' in layout:
         from mpl_toolkits.mplot3d import Axes3D
-
-    fig = pl.figure(figsize=figsize,
-                    subplotpars=sppars(left=0, right=1, bottom=0.08))
-
     from matplotlib import gridspec
     # grid of axes for plotting and legends/colorbars
     if np.any(colorbars) and right_margin is None:
         right_margin = 0.25
     elif right_margin is None:
         right_margin = 0.01
+    # make a figure with panels len(colors) x 1
+    top_offset = 1 - rcParams['figure.subplot.top']
+    bottom_offset = 0.08
+    left_offset = 0.3 # in units of base_height
+    base_height = 4
+    height = base_height
+    draw_region_width = base_height - left_offset - top_offset - 0.5 # this is kept constant throughout
+
+    right_margin_factor = (1 + right_margin/(1-right_margin))
+    width_without_offsets = right_margin_factor * len(colors) * draw_region_width # this is the total width that keeps draw_region_width
+
+    right_offset = (len(colors) - 1) * left_offset
+    width = width_without_offsets + left_offset + right_offset
+    left_offset_frac = left_offset / width
+    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
+
+    figsize = (width, height)
+    fig = pl.figure(figsize=figsize,
+                    subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
     gs = gridspec.GridSpec(nrows=1,
                            ncols=2*len(colors),
                            width_ratios=[r for i in range(len(colors))
                                          for r in [1-right_margin, right_margin]],
-                           left=0.08/len(colors),
-                           right=1-(len(colors)-1)*0.08/len(colors),
+                           left=left_offset_frac,
+                           right=right_offset_frac,
                            wspace=0)
+    pos = gs.get_grid_positions(fig)
     fig.suptitle(title)
     count = 1
     bool3d = True if layout == '3d' else False
@@ -424,10 +498,11 @@ def scatter_base(Y,
             pos = gs.get_grid_positions(fig)
             left = pos[2][2*(count-1)+1]
             bottom = pos[0][0]
-            width = 0.2*(pos[3][2*(count-1)+1] - left)
+            width = 0.006 * draw_region_width
+            # print(0.2*(pos[3][2*(count-1)+1] - left))
             height = pos[1][0] - bottom
             # again shift to left
-            left = pos[3][2*(count-1)] + 0.1*width
+            left = pos[3][2*(count-1)] + width
             rectangle = [left, bottom, width, height]
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
@@ -736,50 +811,6 @@ def data_to_axis_points(ax,points_data):
 lw0 = rcParams['lines.linewidth']
 # list of markers
 ml = ['o', 's', '^', 'd']
-
-# init default values for rcParams
-def init_fig_params():
-    # figure
-    rcParams['figure.figsize'] = (5,4)
-    rcParams['figure.subplot.left'] = 0.18
-    rcParams['figure.subplot.right'] = 0.96
-    rcParams['figure.subplot.bottom'] = 0.15
-    rcParams['figure.subplot.top'] = 0.91
-
-    rcParams['lines.linewidth'] = 1.5
-    rcParams['lines.markersize'] = 6
-    rcParams['lines.markeredgewidth'] = 1
-
-    # font
-    rcParams['font.sans-serif'] = ['Arial',
-                                   'Helvetica',
-                                   'DejaVu Sans', 
-                                   'Bitstream Vera Sans',
-                                   'sans-serif']
-    fontsize = 14
-    rcParams['font.size'] = fontsize
-    rcParams['legend.fontsize'] = 0.92*fontsize
-    rcParams['axes.titlesize'] = fontsize
-
-    # legend
-    rcParams['legend.numpoints'] = 1
-    rcParams['legend.scatterpoints'] = 1
-    rcParams['legend.handlelength'] = 0.5
-    rcParams['legend.handletextpad'] = 0.4
-
-    # resolution of png output
-    rcParams['savefig.dpi'] = 200
-
-    # color palette
-    # see 'category20' on 
-    # https://github.com/vega/vega/wiki/Scales#scale-range-literals
-    rcParams['axes.prop_cycle'] = cycler(color=
-                                         ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                                          '#9467bd', '#8c564b', '#e377c2', #'#7f7f7f', remove grey
-                                          '#bcbd22', '#17becf',
-                                          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-                                          '#c5b0d5', '#c49c94', '#f7b6d2', #'#c7c7c7', remove grey
-                                          '#dbdb8d', '#9edae5'])
 
 init_fig_params()
 
