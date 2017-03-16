@@ -19,7 +19,7 @@ from .classes.ann_data import AnnData
 from .readwrite import read, write, read_params
 from .examples import show_exdata, show_examples, get_example
 from . import preprocess
-from .preprocess.advanced import subsample
+from .preprocess.simple import subsample
 from .tools.diffmap import diffmap, plot_diffmap
 from .tools.tsne import tsne, plot_tsne
 from .tools.dpt import dpt, plot_dpt
