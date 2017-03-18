@@ -1,4 +1,4 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Example Data and Example Use Cases
 """
@@ -101,39 +101,27 @@ def show_exdata(format='plain'):
     """Show available example data.
     """
     if format == 'plain':
-        s = utils.pretty_dict_string(_dexdata())
+        s = utils.pretty_dict_string(builtin.example_data)
     elif format == 'markdown':
-        s = utils.markdown_dict_string(builtin.dexdata)
+        s = utils.markdown_dict_string(builtin.example_data)
     print(s)
 
-def show_examples():
+def show_exparams():
     """Show available example use cases.
     """
-    s = utils.pretty_dict_string(_dexamples())
+    s = utils.pretty_dict_string(_example_parameters())
     print(s)
 
-def _dexdata():
-    """Example data.
-    """
-    all_dex = builtin.dexdata
-#     try:
-#         # additional possibility to add example module
-#         from . import builtin_private
-#         all_dex = utils.merge_dicts(all_dex, builtin_private.dexdata) 
-#     except ImportError:
-#         pass
-    return all_dex
-
-def _dexamples():
+def _example_parameters():
     """Example use cases.
     """
-    builtin_dex = utils.fill_in_datakeys(builtin.dexamples, builtin.dexdata)
+    builtin_dex = utils.fill_in_datakeys(builtin.example_parameters, builtin.example_data)
     all_dex = utils.merge_dicts(builtin_dex, {}) 
     try:
         # additional possibility to add example module
         from . import builtin_private
-        builtin_private_dex = utils.fill_in_datakeys(builtin_private.dexamples, 
-                                                  builtin_private.dexdata)
+        builtin_private_dex = utils.fill_in_datakeys(builtin_private.example_parameters, 
+                                                  builtin_private.example_data)
         all_dex = utils.merge_dicts(all_dex, builtin_private_dex) 
     except ImportError:
         pass
@@ -196,6 +184,6 @@ def _check_adata(adata):
 
 def _exkeys_str():
     str = ''
-    for k in sorted(_dexamples().keys()):
+    for k in sorted(_example_parameters().keys()):
         str += '\n    ' + k
     return str

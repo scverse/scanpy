@@ -98,13 +98,8 @@ def add_args(p):
     p : argparse.ArgumentParser
         Updated parser.
     """
-    aa = p.add_argument_group('Subsampling speeds up computations').add_argument
-    aa('-s', '--subsample',
-       type=int, default=1, metavar='s',
-       help='Specify integer s > 1 if you want to use a fraction of 1/s'
-            ' of the data (default: %(default)d).')
     aa = p.add_argument_group('Save figures').add_argument
-    aa('-f', '--savefigs',
+    aa('-s', '--savefigs',
        type=str, default='', const=extf, nargs='?', metavar='ext',
        help='Save figures either as "png", "svg" or "pdf". Just providing '
             '"--savefigs" will save to "png" (default: do not save figures).')
@@ -125,6 +120,11 @@ def add_args(p):
        type=str, default='', metavar='psuffix',
        help='Is appended to suffix. Useful when only changing plotting '
             'parameters (default: "").')
+    aa = p.add_argument_group('Do subsampling to speedup computations').add_argument
+    aa('-ss', '--subsample',
+       type=int, default=1, metavar='i',
+       help='Specify integer i > 1 if you want to use a fraction of 1/i'
+            ' of the data (default: %(default)d).')
     aa = p.add_argument_group('General settings').add_argument
     aa('-h', '--help',
        action='help',

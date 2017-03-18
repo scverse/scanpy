@@ -121,7 +121,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
 # Reading and writing parameter files
 #--------------------------------------------------------------------------------
 
-def read_params(filename, asheader=False):
+def read_params(filename, asheader=False, verbosity=0):
     """
     Read parameter dictionary from text file.
 
@@ -145,7 +145,7 @@ def read_params(filename, asheader=False):
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if not asheader:
-        sett.m(0,'reading params file',filename)
+        sett.m(verbosity, 'reading params file', filename)
     from collections import OrderedDict
     params = OrderedDict([])
     for line in open(filename):
@@ -179,11 +179,12 @@ def get_params_from_list(params_list):
     """
     Transform params list to dictionary.
     """
-    if len(params_list)%2 != 0:
-        raise ValueError('need to provide a list of key value pairs')
     params = {}
-    for i in range(0,len(params_list),2):
-        key, val = params_list[i:i+2]
+    for i in range(0, len(params_list)):
+        key_val = params_list[i].split('=')
+        if len(key_val) != 2:
+            raise ValueError('Need to provide parameters as list of the form `par1=value1 par2=value2 ...`.')
+        key, val = key_val
         params[key] = convert_string(val)
     return params
 

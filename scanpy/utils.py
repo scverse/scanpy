@@ -1,12 +1,10 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Utility functions and classes
 """
 
 from __future__ import absolute_import
 import os
-from collections import OrderedDict
-
 import numpy as np
 from . import settings as sett
 
@@ -14,9 +12,9 @@ from . import settings as sett
 # Deal with examples
 #--------------------------------------------------------------------------------
 
-def fill_in_datakeys(dexamples, dexdata):
+def fill_in_datakeys(example_parameters, dexdata):
     """
-    Update the 'examples dictionary' _examples.dexamples.
+    Update the 'examples dictionary' _examples.example_parameters.
 
     If a datakey (key in 'datafile dictionary') is not present in the 'examples
     dictionary' it is used to initialize an entry with that key.
@@ -25,13 +23,13 @@ def fill_in_datakeys(dexamples, dexdata):
     used as 'datakey'.
     """
     # default initialization of 'datakey' key with entries from data dictionary
-    for exkey in dexamples:
-        if 'datakey' not in dexamples[exkey]:
+    for exkey in example_parameters:
+        if 'datakey' not in example_parameters[exkey]:
             if exkey in dexdata:
-                dexamples[exkey]['datakey'] = exkey
+                example_parameters[exkey]['datakey'] = exkey
             else:
-                dexamples[exkey]['datakey'] = 'unspecified in dexdata'
-    return dexamples
+                example_parameters[exkey]['datakey'] = 'unspecified in dexdata'
+    return example_parameters
 
 #--------------------------------------------------------------------------------
 # Deal with tool parameters
@@ -82,18 +80,19 @@ def add_args(p, dadd_args=None):
         Dictionary of additional arguments formatted as 
             {'arg': {'type': int, 'default': 0, ... }}
     """
-
-    aa = p.add_argument_group('Tool parameters').add_argument
+    aa = p.add_argument_group('Look up an example').add_argument
     aa('exkey',
        type=str, default='', metavar='exkey',
-       help='The "example key" is used to look up data and default parameters. '
-            'Use subcommand "examples" to display possible values.')
+       help='The "example key" is used to look up an annotated data matrix and, if these have been provided, default parameters of tools. '
+            'It\'s the name of a function that returns an annotated data object and is stored in a user module "scanpy_whatevername.py" in the current working directory. '
+            'There are many builtin examples with such corresponding functions. '
+            'Use the subcommands "exdata" and "exparams" to display the corresponding data and parameters, respectively.')
+    aa = p.add_argument_group('Provide tool parameters').add_argument
     # example key default argument
     aa('-o', '--oparams',
-       nargs='*', default=None, metavar='k v',
-       help='Optional tool parameters as list, e.g., "k 20 knn True", '
-            'see detailed help above, also note the '
-            'option --opfile (default: "").')
+       nargs='*', default=None, metavar='k=v',
+       help='Optional tool parameters as list, e.g., `k=20 knn=True`, '
+            'see detailed help below, also notice the option --opfile (default: "").')
     # arguments from dadd_args
     if dadd_args is not None:
         for key, val in dadd_args.items():
@@ -105,11 +104,10 @@ def add_args(p, dadd_args=None):
            type=str, default='', metavar='f',
            help='Path to file with optional parameters (default: "").')
 
-    aa = p.add_argument_group('Plot parameters').add_argument
+    aa = p.add_argument_group('Provide plotting parameters').add_argument
     aa('-p', '--pparams',
        nargs='*', default=None, metavar='k v',
-       help='Plotting parameters as list, '
-            'e.g., "layout 3d comps 1,3,4". ' 
+       help='Plotting parameters as list, e.g., `comps=1,3 legendloc="upper left"`. '
             'Display possible paramaters via "-p help" (default: "").')
 
     # standard arguments
@@ -117,12 +115,12 @@ def add_args(p, dadd_args=None):
 
     return p
 
-def read_args_tool(toolkey, dexamples, tool_add_args=None):
+def read_args_tool(toolkey, example_parameters, tool_add_args=None):
     """
     Read args for single tool.
     """
     import scanpy as sc
-    p = default_tool_argparser(sc.help(toolkey, string=True), dexamples)
+    p = default_tool_argparser(sc.help(toolkey, string=True), example_parameters)
     if tool_add_args is None:
         p = add_args(p)
     else:
@@ -131,13 +129,13 @@ def read_args_tool(toolkey, dexamples, tool_add_args=None):
     args = sett.process_args(args)
     return args
 
-def default_tool_argparser(description, dexamples):
+def default_tool_argparser(description, example_parameters):
     """
     Create default parser for single tools.
     """
     import argparse
     epilog = '\n'
-    for k,v in sorted(dexamples.items()):
+    for k, v in sorted(example_parameters.items()):
         epilog += '  ' + k + '\n'
     p = argparse.ArgumentParser(
         description=description,
@@ -199,7 +197,7 @@ def pretty_dict_string(d, indent=0):
         if isinstance(value, dict):
              s += '\n' + pretty_dict_string(value, indent+1)
         else:
-             s += ' = ' + str(value) + '\n'
+             s += '=' + str(value) + '\n'
     return s
 
 def markdown_dict_string(d):
@@ -235,7 +233,7 @@ def markdown_dict_string(d):
             s += '\n'
     return s
 
-def merge_dicts(*dicts):
+def merge_dicts(*ds):
     """
     Given any number of dicts, shallow copy and merge into a new dict,
     precedence goes to key value pairs in latter dicts.
@@ -244,8 +242,8 @@ def merge_dicts(*dicts):
     ----
     http://stackoverflow.com/questions/38987/how-to-merge-two-python-dictionaries-in-a-single-expression
     """
-    result = {}
-    for d in dicts:
+    result = ds[0]
+    for d in ds[1:]:
         result.update(d)
     return result
 
@@ -472,9 +470,3 @@ def check_datafile_deprecated(filename, ext=None):
 
     return rel_filename
 
-def odict_merge(*ds):
-    merged = OrderedDict()
-    for d in ds:
-        for k, v in d.items():
-            merged[k] = v
-    return merged

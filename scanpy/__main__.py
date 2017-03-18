@@ -15,7 +15,7 @@ import scanpy as sc
 # description of simple inquiries
 dsimple = odict([
     ('exdata', 'show example data'),
-    ('examples', 'show example use cases'),
+    ('exparams', 'show example parameters'),
 ])
 
 # description of standard tools
@@ -59,12 +59,12 @@ def init_main_parser():
                                              description=main_descr())
 
     for key, help in dtools.items():
-        descr = 78*'-' + '\n' + sc.help(key, string=True) + 78*'-'
+        descr = 78*'-' + '\n' + sc.help(key, string=True)
         sub_p = sub_parsers.add_parser(
                     key,
-                    description=descr,
                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                    add_help=False)
+                    add_help=False,
+                    epilog=descr)
         try:
             sub_p = sc.get_tool(key).add_args(sub_p)
         except:
@@ -83,10 +83,14 @@ def main():
         # same keys as in dsimple
         func = {
             'exdata': sc.show_exdata,
-            'examples': sc.show_examples
+            'exparams': sc.show_exparams
         }
         if len(argv) > 2:
             func[argv[1]](argv[2])
+        elif argv[1] == 'exdata':
+            func[argv[1]]('plain')
+            print('See https://github.com/theislab/scanpy/blob/master/EXAMPLES.md for more.')
+            print('Call `scanpy exdata markdown` for markdown formatted output.')
         else:
             func[argv[1]]()
         exit(0)

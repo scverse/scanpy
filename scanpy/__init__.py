@@ -1,4 +1,5 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http:falexwolf.de)
+#         P. Angerer
 """
 Scanpy - Single-Cell Analysis in Python
 
@@ -17,7 +18,7 @@ from . import utils
 from .tools import get_tool
 from .classes.ann_data import AnnData
 from .readwrite import read, write, read_params
-from .examples import show_exdata, show_examples, get_example
+from .examples import show_exdata, show_exparams, get_example
 from . import preprocess
 from .preprocess.simple import subsample
 from .tools.diffmap import diffmap, plot_diffmap
@@ -26,9 +27,7 @@ from .tools.dpt import dpt, plot_dpt
 from .tools.pca import pca, plot_pca
 from .tools.diffrank import diffrank, plot_diffrank
 from .tools.sim import sim, plot_sim
-
-# just an equivalent name
-pp = preprocess
+pp = preprocess # just an equivalent name
 
 __all__ = [
     # example use cases
@@ -108,15 +107,14 @@ def _run_command_line_args(toolkey, args):
         # try to load tool parameters from dexamples
         try:
             did_not_find_params_in_exmodule = False
-            dexample = exmodule.dexamples[args['exkey']]
+            dexample = exmodule.example_parameters[args['exkey']]
             oparams = {}
             for key in dexample.keys():
                 if toolkey in key:
                     oparams = dexample[key]
-                    sett.m(0, '... appending "-o',
-                           ' '.join([' '.join([k, str(v)]) for k, v in oparams.items()])
-                           + '"',
-                          'to call of', toolkey)
+                    sett.m(0, '... using parameters', '"-o ' +
+                           ' '.join(['='.join([k, str(v)]) for k, v in oparams.items()])
+                           + '"')
                     break
         except:
             did_not_find_params_in_exmodule = True
@@ -130,9 +128,9 @@ def _run_command_line_args(toolkey, args):
         if args['oparams']:
             add_params = readwrite.get_params_from_list(args['oparams'])
             sett.m(0, '... overwriting optional params', '"' + 
-                   ' '.join([' '.join([k, str(v)]) for k, v in add_params.items()])
+                   ' '.join(['='.join([k, str(v)]) for k, v in add_params.items()])
                    + '"',
-                  'to call of', toolkey)
+                  'in call of', toolkey)
             oparams = utils.update_params(oparams, add_params)
         elif did_not_find_params_in_exmodule and args['opfile'] != '':
             sett.m(0, 'using default parameters, change them using "--oparams"')
@@ -190,5 +188,5 @@ def _read_command_line_args_run_single_tool(toolkey):
     """
     Read arguments and run tool specified by toolkey.
     """
-    args = utils.read_args_tool(toolkey, examples._dexamples())
+    args = utils.read_args_tool(toolkey, examples._example_parameters())
     _run_command_line_args(toolkey, args)

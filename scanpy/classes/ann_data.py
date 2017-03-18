@@ -9,7 +9,7 @@ from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
-from ..utils import odict_merge
+from ..utils import merge_dicts
 
 class StorageType(Enum):
     Array = np.ndarray
@@ -223,8 +223,8 @@ class AnnData(IndexMixin):
             var['var_names'] = add['var_names']
             del add['var_names']
 
-        smp = odict_merge(smp, add.get('row', {}), add.get('smp', {}))
-        var = odict_merge(var, add.get('col', {}), add.get('var', {}))
+        smp = merge_dicts(smp, add.get('row', {}), add.get('smp', {}))
+        var = merge_dicts(var, add.get('col', {}), add.get('var', {}))
         for k in ['row', 'smp', 'col', 'var']:
             if k in add:
                 del add[k]

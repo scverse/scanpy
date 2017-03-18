@@ -127,38 +127,21 @@ working directory, e.g., by downloading and renaming
 [scanpy_user_template.py](scanpy/examples/scanpy_user_template.py) and changing the function
 `myexample()` to your needs. Consider using copy and paste from
 [scanpy/examples/builtin.py](scanpy/examples/builtin.py). Call your example using `scanpy
-myexample pca`. For the previous example (`moignard15`) you would define the
-following
-```python
-def moignard15():
-    filename = 'data/moignard15/nbt.3154-S3.xlsx'
-    adata = sc.read(filename, sheet='dCt_values.txt')
-    # filter out genes: the 4th column (Eif2b1), the 31nd (Mrpl19), the 36th
-    # (Polr2a) and the 45th (last,UBC), as done by Haghverdi et al. (2016)
-    genes = np.array([g not in [4, 31, 36, 45] for g in range(adata.X.shape[1])])
-    adata = adata[:, genes] # filter adata
-    # choose root cell as in Haghverdi et al. (2016)
-    adata['iroot'] = iroot = 532 # note that in Matlab/R, counting starts at 1
-    adata['xroot'] = adata.X[iroot]
-    # annotate with Moignard et al. (2015) experimental cell groups
-    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
-    # annotate each sample/cell
-    adata.smp['groups'] = [
-        next(gname for gname in groups_names if sname.startswith(gname))
-        for sname in adata.smp_names]
-    # fix the order and colors of names in "groups"
-    adata['groups_names'] = groups_names
-    adata['groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
-    return adata
-```
+myexample pca`. For the previous example (`moignard15`) you would define the function 
+[here](https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py#L143-L174).
 
-Also, it'd be awesome if you add your example to [examples](EXAMPLES.md) and
-[scanpy/examples/builtin.py](scanpy/examples/builtin.py) together with a link to the
+When you're done trying out parameters, you can conventiently save them by generating
+a dictionary `example_parameters` in your user module, just as 
+[here](https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py#L16-50).
+
+It would be great if you added your example to [examples](EXAMPLES.md) and
+[scanpy/examples/builtin.py](scanpy/examples/builtin.py) together with a link to
 public data.  Simply make a pull request for this. If you have questions or
 prefer sending your script by email, contact [Alex](http://falexwolf.de).
 
-If you want to use your own tool, put your script into [scanpy/tools](scanpy/tools), 
-update [scanpy/tools/__init__.py](scanpy/tools/__init__.py) and use a wrapper like
+Finally, if you want to use your own tool on the command line, put your script
+into [scanpy/tools](scanpy/tools), update
+[scanpy/tools/__init__.py](scanpy/tools/__init__.py) and use a wrapper like
 [scripts/diffmap.py](scripts/diffmap.py), which can be called directly.
 ```
 ./scripts/diffmap.py moignard15
@@ -344,4 +327,3 @@ Wittmann *et al.* (2009),
 *Transforming Boolean models to continuous models: methodology and application to T-cell receptor signaling*,
 [BMC Systems Biology 3, 98](
 http://dx.doi.org/10.1186/1752-0509-3-98).
-
