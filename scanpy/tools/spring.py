@@ -125,6 +125,8 @@ def plot_spring(adata,
     size : float (default: 3)
          Point size.
     """
+    from ..examples import check_adata
+    adata = check_adata(adata)
     Y = adata['X_spring']
     if True:
 #         sett.m(0, 'set parameter add_steps > 0 to iterate. '

@@ -106,6 +106,8 @@ def plot_dbscan(adata,
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
+    from ..examples import check_adata
+    adata = check_adata(adata)
     smps = ['dbscan_groups']
     if smp is not None:
         smps += smp.split(',')

@@ -80,7 +80,7 @@ def get_example(exkey, subsample=1, return_module=False):
         sett.m(0, 'X has shape n_samples x n_variables =', 
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
-        adata = _check_adata(adata)
+        adata = check_adata(adata, verbosity=1)
 
         # subsampling
         if subsample != 1:
@@ -138,7 +138,7 @@ _howto_specify_subgroups = '''sample annotation in adata only consists of sample
     adata.smp['groups'] = ['A', 'B', 'A', ... ]
     adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
 
-def _check_adata(adata):
+def check_adata(adata, verbosity=0):
     """
     Do sanity checks on adata object.
 
@@ -149,10 +149,10 @@ def _check_adata(adata):
     if 'tools' not in adata:
         adata['tools'] = np.array([], dtype=str)
     if len(adata.smp_keys()) == 0:
-        sett.m(0, _howto_specify_subgroups)
+        sett.m(1-verbosity, _howto_specify_subgroups)
     else:
-        if len(adata.smp_keys()) > 0 and sett.verbosity > 0:
-            print('continuous/categorical sample annotation with ', end='')
+        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
+            info = 'continuous/categorical sample annotation with '
         for ismp, smp in enumerate(adata.smp_keys()):
             # ordered unique categories for categorical annotation
             if not smp + '_names' in adata and adata.smp[smp].dtype.char == 'U':
@@ -165,21 +165,24 @@ def _check_adata(adata):
                     adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
                                                                key=lambda v: v.upper()))
                 except:
+                    adata[smp + '_names'] = np.array(sorted(adata[smp + '_names'], 
+                                                            key=lambda v: v.upper()))
                     pass
-            if sett.verbosity > 0: 
-                print(smp + ':', end=' ')
+            if sett.verbosity > 1-verbosity:
+                info += smp + ': '
                 if adata.smp[smp].dtype.char == 'U':
-                    ann_info = adata[smp + '_names']
+                    ann_info = str(adata[smp + '_names'])
                     if len(adata[smp + '_names']) > 7:
                         ann_info = (str(adata[smp + '_names'][0:3]).replace(']','') 
                                     + ' ...' 
                                     + str(adata[smp + '_names'][-2:]).replace('[',''))
-                    print(ann_info, end='')
+                    info += ann_info
                 else:
-                    print('cont', end='')
+                    info += 'cont'
                 if ismp < len(adata.smp_keys())-1:
-                    print(',', end=' ')
-        sett.m(0, '')
+                    info += ','
+                sett.m(1-verbosity, info)
+        sett.m(1-verbosity, '')
     return adata
 
 def _exkeys_str():

@@ -106,6 +106,8 @@ def plot_diffmap(adata,
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
+    from ..examples import check_adata
+    adata = check_adata(adata)
     from .. import plotting as plott
     smps = plott.scatter(adata,
                     basis='diffmap',

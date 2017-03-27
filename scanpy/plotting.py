@@ -496,7 +496,7 @@ def scatter_base(Y,
             # print(0.2*(pos[3][2*(count-1)+1] - left))
             height = pos[1][0] - bottom
             # again shift to left
-            left = pos[3][2*(count-1)] + (1 if layout == '3d' else 0.5) * width
+            left = pos[3][2*(count-1)] + (1 if layout == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),

@@ -169,6 +169,8 @@ def plot_dpt(adata,
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     """
+    from ..examples import check_adata
+    adata = check_adata(adata)
     # if number of genes is not too high, plot time series
     from .. import plotting as plott
     from ..compat.matplotlib import pyplot as pl
