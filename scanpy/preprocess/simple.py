@@ -10,22 +10,22 @@ import numpy as np
 def filter_cells(X, min_reads):
     """
     Filter out cells with total UMI count < min_reads.
-    
+
     Paramaters
     ----------
     X : np.ndarray
         Data matrix. Rows correspond to cells and columns to genes.
     min_reads : int
         Minimum number of reads required for a cell to survive filtering.
-    	
+
     Returns
     -------
     X : np.ndarray
         Filtered data matrix.
     cell_filter : np.ndarray
-        Boolean mask that reports filtering. True means that the cell is 
+        Boolean mask that reports filtering. True means that the cell is
         kept. False means the cell is removed.
-    """	
+    """
     total_counts = np.sum(X, axis=1)
     cell_filter = total_counts >= min_reads
     return X[cell_filter], cell_filter
@@ -170,7 +170,7 @@ def subsample(adata, subsample, seed=0):
         'row_names', 'expindices', 'explabels', 'expcolors'
     """
     from .. import utils
-    _, smp_indices = utils.subsample(adata.X,subsample,seed)
+    _, smp_indices = utils.subsample(adata.X, subsample, seed)
     adata = adata[smp_indices, ]
     for key in ['X_pca']:
         if key in adata:

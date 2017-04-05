@@ -10,6 +10,7 @@ from .. import utils
 from .. import readwrite
 from .. import settings as sett
 
+
 def get_example(exkey, subsample=1, return_module=False):
     """
     Read and preprocess data for predefined example.
@@ -44,7 +45,7 @@ def get_example(exkey, subsample=1, return_module=False):
     from sys import path
     path.insert(0, '.')
     for filename in loop_over_filenames:
-        exmodule = __import__(filename.replace('.py',''))
+        exmodule = __import__(filename.replace('.py', ''))
         try:
             exfunc = getattr(exmodule, exkey)
             not_found = False
@@ -97,6 +98,7 @@ def get_example(exkey, subsample=1, return_module=False):
     else:
         return adata
 
+    
 def show_exdata(format='plain'):
     """Show available example data.
     """
@@ -106,12 +108,14 @@ def show_exdata(format='plain'):
         s = utils.markdown_dict_string(builtin.example_data)
     print(s)
 
+    
 def show_exparams():
     """Show available example use cases.
     """
     s = utils.pretty_dict_string(_example_parameters())
     print(s)
 
+    
 def _example_parameters():
     """Example use cases.
     """
@@ -131,12 +135,13 @@ def _example_parameters():
 # Checks of AnnData object
 #-------------------------------------------------------------------------------
 
+
 _ignore_groups = ['N/A', 'dontknow', 'no_gate']
-# howtos
 _howto_specify_subgroups = '''sample annotation in adata only consists of sample names
 --> you can provide additional annotation by setting, for example,
     adata.smp['groups'] = ['A', 'B', 'A', ... ]
     adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
+
 
 def check_adata(adata, verbosity=0):
     """
@@ -159,7 +164,7 @@ def check_adata(adata, verbosity=0):
                 adata[smp + '_names'] = np.unique(adata.smp[smp])
                 if adata[smp + '_names'].dtype.char == 'U':
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
-                                                       np.array(_ignore_groups))
+                                                         np.array(_ignore_groups))
                 try:
                     from natsort import natsorted
                     adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
@@ -182,8 +187,8 @@ def check_adata(adata, verbosity=0):
                 if ismp < len(adata.smp_keys())-1:
                     info += ','
                 sett.m(1-verbosity, info)
-        sett.m(1-verbosity, '')
     return adata
+
 
 def _exkeys_str():
     str = ''
