@@ -5,6 +5,7 @@ from collections import Mapping, Sequence
 from collections import OrderedDict
 from enum import Enum
 import numpy as np
+import gc
 from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
@@ -167,7 +168,7 @@ class AnnData(IndexMixin):
         """
         if isinstance(ddata_or_X, Mapping):
             if any((smp, var, add)):
-                raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata')
+                raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata.')
             X, smp, var, add = self.from_ddata(ddata_or_X)
         else:
             X = ddata_or_X
@@ -179,10 +180,13 @@ class AnnData(IndexMixin):
                 break
         else:
             class_names = ', '.join(c.__name__ for c in StorageType.classes())
-            raise ValueError(
-                'X needs to be of one of the following types [{}] not {}'
-                .format(class_names, type(X)))
+            raise ValueError('X needs to be of one of the following types [{}] not {}'
+                             .format(class_names, type(X)))
 
+        # use lower precision, is enough for all current applications
+        if X.dtype == np.float64:
+            X = X.astype(np.float32)
+        
         if len(X.shape) == 1:
             X.shape = (X.shape[0], 1)
         if X.dtype.names is None and len(X.shape) != 2:
@@ -328,8 +332,9 @@ class AnnData(IndexMixin):
         var_ann = self.var[var]
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
-        adata = AnnData(X, smp_ann, var_ann,  **self.add)
-        return adata
+        self.__init__(X, smp_ann, var_ann, **self.add)
+        gc.collect()  # release memory of the previous instance
+        return self
 
     def __setitem__(self, index, val):
         if isinstance(index, str):
