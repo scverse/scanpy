@@ -8,6 +8,16 @@ import os
 import numpy as np
 from . import settings as sett
 
+
+def print_memory_usage(newline=False):
+    import psutil
+    _TWO_20 = float(2 ** 20)
+    process = psutil.Process(os.getpid())
+    meminfo_attr = 'memory_info' if hasattr(process, 'memory_info') \
+                    else 'get_memory_info'
+    mem = getattr(process, meminfo_attr)()[0] / _TWO_20
+    print(('\n' if newline else '') + 'Current memory usage: {:.2f} MB'.format(mem))
+
 #--------------------------------------------------------------------------------
 # Deal with examples
 #--------------------------------------------------------------------------------

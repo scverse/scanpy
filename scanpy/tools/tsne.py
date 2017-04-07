@@ -21,7 +21,7 @@ from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 
-def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
+def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
     u"""
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
@@ -41,7 +41,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
         is used in other manifold learning algorithms. Larger datasets
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
-        is quite insensitive to this parameter.    
+        is quite insensitive to this parameter.
+    n_cpus : int
+        Use the multicore implementation, if it is installed.
 
     Returns
     -------
@@ -51,7 +53,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
     """
     sett.mt(0,'compute tSNE')
     # preprocessing by PCA
-    if 'X_pca' in adata and adata['X_pca'].shape[1] > n_pcs:
+    if 'X_pca' in adata and adata['X_pca'].shape[1] >= n_pcs:
         X = adata['X_pca']
         sett.m(0, 'using X_pca for tSNE')
     else:
@@ -63,22 +65,28 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30):
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {'perplexity' : perplexity, 'random_state': random_state}
+    params_sklearn = {'perplexity' : perplexity,
+                      'random_state': random_state}
     params_sklearn['verbose'] = sett.verbosity
+    params_sklearn['learning_rate'] = 200
+    params_sklearn['early_exaggeration'] = 12
     # deal with different tSNE implementations
-    np.random.seed(0)
-    try:
-        from MulticoreTSNE import MulticoreTSNE as TSNE
-        tsne = TSNE(n_jobs=4, **params_sklearn)
-        sett.m(0,'... compute tSNE using MulticoreTSNE')
-        Y = tsne.fit_transform(X)
-    except ImportError:
+    if n_cpus > 1:
+        try:
+            from MulticoreTSNE import MulticoreTSNE as TSNE
+            tsne = TSNE(n_jobs=2, **params_sklearn)
+            sett.m(0,'... compute tSNE using MulticoreTSNE')
+            sett.m(0,'    this currently (170408) ignores the option `random_state` but an Issue is filed')        
+            Y = tsne.fit_transform(X)
+        except ImportError:
+            print('--> did not find package MulticoreTSNE: install it from\n'
+                  '    https://github.com/DmitryUlyanov/Multicore-TSNE')
+            sys.exit()
+    else:    
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
-            sett.m(1,'--> perform tSNE using sklearn!')
-            sett.m(1,'--> can be sped up by installing\n'
-                     '    https://github.com/DmitryUlyanov/Multicore-TSNE')
+            sett.m(0,'--> can be sped up using the option `multi_core`')
             Y = tsne.fit_transform(X)
         except ImportError:
             sett.m(0,'--> perform tSNE using slow/unreliable original\n'

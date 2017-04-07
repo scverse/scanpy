@@ -354,6 +354,8 @@ class AnnData(IndexMixin):
         return self.X.shape[0]
 
     def transpose(self):
+        if sp.issparse and isinstance(self.X, sp.csr_matrix):
+            return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), **self.add)
         return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self.add)
 
     T = property(transpose)

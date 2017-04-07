@@ -70,6 +70,14 @@ def savefig(writekey):
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
 
+def savefig_or_show(writekey):
+    if sett.savefigs:
+        filename = sett.figdir + writekey + '.' + sett.extf
+        sett.m(0, 'saving figure to file', filename)
+        pl.savefig(filename)
+    elif sett.autoshow:
+        pl.show()
+
 def default_pal(pal=None):
     if pal is None:
         return rcParams['axes.prop_cycle']

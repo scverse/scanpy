@@ -251,8 +251,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             return _read_hdf5_single(filename, sheet)
     # read other file formats
     filename_fast = (sett.writedir + 'data/'
-                     + filename[:5].lstrip('./').replace('data/', '')
-                     + filename[5:].replace('.' + ext, '.' + sett.extd))
+                     + filename.lstrip('./').lstrip(
+                         'data/').replace('.' + ext, '.' + sett.extd))
     if not os.path.exists(filename_fast) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
                '\n... writing an', sett.extd,
@@ -933,5 +933,3 @@ def is_filename(filename_or_key,return_ext=False):
                          + avail_exts)
     else:
         return False
-
-
