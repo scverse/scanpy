@@ -32,8 +32,10 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
         adata['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, tsne will use this instead of adata.X.
-    random_state : int, optional (default: 0)
-        Change to use different intial states for the optimization.
+    random_state : unsigned int or -1, optional (default: 0)
+        Change to use different intial states for the optimization, if -1, use
+        default behavior of implementation (sklearn uses np.random.seed,
+        Multicore-TSNE produces a new plot at every call).
     n_pcs : int, optional (default: 50)
         Number of principal components in preprocessing PCA.
     perplexity : float, optional (default: 30)
@@ -45,11 +47,11 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
     n_cpus : int
         Use the multicore implementation, if it is installed.
 
-    Returns
-    -------
-    dtsne : dict containing
-        Y : np.ndarray
-            tSNE representation of the data.
+    Adds annotation
+    ---------------
+    X_tsne : np.ndarray of shape n_samples x 2
+        Array that stores the tSNE representation of the data. Analogous
+        to X_pca, X_diffmap and X_spring.
     """
     sett.mt(0,'compute tSNE')
     # preprocessing by PCA
@@ -66,18 +68,17 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
             X = adata.X
     # params for sklearn
     params_sklearn = {'perplexity' : perplexity,
-                      'random_state': random_state}
-    params_sklearn['verbose'] = sett.verbosity
-    params_sklearn['learning_rate'] = 200
-    params_sklearn['early_exaggeration'] = 12
+                      'random_state': None if random_state == -1 else random_state,
+                      'verbose': sett.verbosity,
+                      'learning_rate': 200,
+                      'early_exaggeration': 12}
     # deal with different tSNE implementations
     if n_cpus > 1:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
             tsne = TSNE(n_jobs=2, **params_sklearn)
             sett.m(0,'... compute tSNE using MulticoreTSNE')
-            sett.m(0,'    this currently (170408) ignores the option `random_state` but an Issue is filed')        
-            Y = tsne.fit_transform(X)
+            Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             print('--> did not find package MulticoreTSNE: install it from\n'
                   '    https://github.com/DmitryUlyanov/Multicore-TSNE')
@@ -86,7 +87,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
-            sett.m(0,'--> can be sped up using the option `multi_core`')
+            sett.m(0,'--> can be sped up using the option `n_cpus`')
             Y = tsne.fit_transform(X)
         except ImportError:
             sett.m(0,'--> perform tSNE using slow/unreliable original\n'
@@ -94,6 +95,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
                      '--> consider installing sklearn\n'
                      '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
+    # update AnnData instance
     adata['X_tsne'] = Y
     sett.mt(0, 'finished tSNE')
     return adata
