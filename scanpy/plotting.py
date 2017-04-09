@@ -201,7 +201,7 @@ def scatter(adata,
             categorical = not cont
             continuous = cont
         colorbars.append(True if continuous else False)
-        sizes.append(size if continuous else size-2)
+        sizes.append(size if continuous else 0.66*size)
         if categorical:
             categoricals.append(ismp)
         colors.append(c)
@@ -241,7 +241,7 @@ def scatter(adata,
                                                     np.arange(len(adata[smp + '_names']), dtype=int)))
         for iname, name in enumerate(adata[smp + '_names']):
             if (names is None or (names != None and name in names)):
-                scatter_group(axs[ismp], smp, iname, adata, Y, layout, size=3)
+                scatter_group(axs[ismp], smp, iname, adata, Y, layout, size=size)
         if legendloc == 'right margin':
             legend = axs[ismp].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':

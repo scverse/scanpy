@@ -19,7 +19,7 @@ See also
 from ..tools import dpt
 from .. import settings as sett
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0):
+def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0, n_cpus=1):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -48,6 +48,8 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0):
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
         of the Kernel Gaussian (method 'global').
+    n_cpus : int
+        Number of CPUs to use (default: 2).
 
     Returns
     -------

@@ -12,7 +12,7 @@ from .ann_data import AnnData
 
 class DataGraph(object):
     """ 
-    Class for treating graphs.
+    Represent data matrix as graph.
     """
 
     def __init__(self, adata_or_X, params):
@@ -24,13 +24,14 @@ class DataGraph(object):
             X = adata_or_X.X
         else:
             X = adata_or_X
-        # decide on whether to compute PCA or not
+        # use the full X as n_pcs_pre == 0
         if (params['n_pcs_pre'] == 0
             or X.shape[1] < params['n_pcs_pre']):
             self.X = X
             sett.m(0, '... using X for building graph')
-            if 'xroot' in adata:
+            if isadata and 'xroot' in adata:
                 self.set_root(adata['xroot'])
+        # use the precomupted X_pca
         elif (isadata
               and 'X_pca' in adata
               and adata['X_pca'].shape[1] >= params['n_pcs_pre']):
@@ -41,6 +42,7 @@ class DataGraph(object):
             self.X = adata['X_pca']
             if 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]:
                 self.set_root(adata['xroot'])
+        # compute X_pca
         else:
             self.X = X
             if (isadata 
@@ -51,14 +53,15 @@ class DataGraph(object):
             self.X = pca(X, n_comps=params['n_pcs_pre'])
             adata['X_pca'] = self.X
             if (isadata
-                and 'xroot' in adata
-                and adata['xroot'].size == adata['X_pca'].shape[1]):
+                and 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]):
                 self.set_root(adata['xroot'])
         self.params = params
         if self.params['sigma'] > 0:
             self.params['method'] = 'global'
         else:
-            self.params['method'] = 'local'            
+            self.params['method'] = 'local'
+        if 'n_cpus' not in params:
+            self.params['n_cpus'] = 1
 
     def diffmap(self):
         """
@@ -106,14 +109,12 @@ class DataGraph(object):
         """ 
         Compute similarity matrix and transition matrix.
 
-        Notes
-        -----
-        In the code, the following two parameters are set.
-
+        Parameters
+        ----------
         alpha : float
             The density rescaling parameter of Coifman and Lafon (2006). Should
             in all practical applications equal 1: Then only the geometry of the
-            data matters, not the sampling density.
+            data matters, not the sampled density.
         neglect_selfloops : bool 
             Discard selfloops.
 
@@ -124,18 +125,17 @@ class DataGraph(object):
         """
         import scipy.sparse
         # compute distance matrix in squared Euclidian norm
-        if self.X.shape[0] > 5000 and self.params['method'] == 'local' and self.params['knn']:
-            sett.m(0, '... using sparse format')
+        if self.X.shape[0] > 2000 and self.params['method'] == 'local' and self.params['knn']:
             from sklearn.neighbors import NearestNeighbors
-            # don't use metric = sqeuclidian, because this requires choosing algorithm 'brute'
-            sklearn_neighbors = NearestNeighbors(n_neighbors=self.params['k']-1)
+            # brute force search often seems to be faster
+            # also, it's chosen anyway for sparse input
+            sklearn_neighbors = NearestNeighbors(n_neighbors=self.params['k']-1,
+                                                 n_jobs=self.params['n_cpus'],
+                                                 algorithm='brute')
             sklearn_neighbors.fit(self.X)
-            Dsq = sklearn_neighbors.kneighbors_graph(mode='distance')
-            Dsq.data **= 2
         else:
             sklearn_neighbors = None
             Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
-        self.Dsq = Dsq
         if self.params['method'] == 'local':
             # choose sigma (width of a Gaussian kernel) according to the
             # distance of the kth nearest neighbor of each point, including the
@@ -160,7 +160,15 @@ class DataGraph(object):
             else:
                 distances_sq, indices = sklearn_neighbors.kneighbors()
                 distances_sq **= 2
-
+                n_neighbors = self.params['k'] - 1
+                n_samples = self.X.shape[0]
+                n_nonzero = n_samples * n_neighbors
+                indptr = np.arange(0, n_nonzero + 1, n_neighbors)
+                Dsq = sp.sparse.csr_matrix((distances_sq.ravel(),
+                                            indices.ravel(),
+                                            indptr),
+                                            shape=(n_samples, n_samples))
+            self.Dsq = Dsq
             # choose sigma, the heuristic here often makes not much 
             # of a difference, but is used to reproduce the figures
             # of Haghverdi et al. (2016)

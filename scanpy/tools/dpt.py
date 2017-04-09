@@ -25,7 +25,7 @@ from .. import utils
 from ..classes import data_graph
 
 def dpt(adata, n_branchings=1, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
-        sigma=0, allow_branching_at_root=False):
+        sigma=0, allow_branching_at_root=False, n_cpus=1):
     u"""
     Diffusion Pseudotime analysis.
 
@@ -68,6 +68,8 @@ def dpt(adata, n_branchings=1, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         of the Kernel Gaussian - knn needs to be False in this case.
     allow_branching_at_root : bool, optional (default: False)
         Allow to have branching directly at root point.
+    n_cpus : int
+        Number of cpus to use for parallel processing (default: 2).
 
     Returns
     -------
@@ -90,7 +92,7 @@ def dpt(adata, n_branchings=1, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
     params = locals(); del params['adata']
     if 'xroot' not in adata:
         msg = \
-'''DPT requires specifying the expression "xroot" of a root cell.
+   '''DPT requires specifying the expression "xroot" of a root cell.
    
    In your preprocessing function, set
        adata['xroot'] = adata.X[root_cell_index, :]

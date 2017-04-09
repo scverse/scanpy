@@ -90,8 +90,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
             sett.m(0,'--> can be sped up using the option `n_cpus`')
             Y = tsne.fit_transform(X)
         except ImportError:
-            sett.m(0,'--> perform tSNE using slow/unreliable original\n'
-                     '    code by L. van der Maaten!?\n'
+            sett.m(0,'--> perform tSNE using slow and unreliable original\n'
+                     '    implementation by L. van der Maaten\n'
                      '--> consider installing sklearn\n'
                      '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
