@@ -165,14 +165,9 @@ def check_adata(adata, verbosity=0):
                 if adata[smp + '_names'].dtype.char == 'U':
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
                                                          np.array(_ignore_groups))
-                try:
-                    from natsort import natsorted
-                    adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
-                                                               key=lambda v: v.upper()))
-                except:
-                    adata[smp + '_names'] = np.array(sorted(adata[smp + '_names'], 
-                                                            key=lambda v: v.upper()))
-                    pass
+                from natsort import natsorted
+                adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
+                                                           key=lambda v: v.upper()))
             if sett.verbosity > 1-verbosity:
                 info += smp + ': '
                 if adata.smp[smp].dtype.char == 'U':

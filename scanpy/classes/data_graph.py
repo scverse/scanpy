@@ -5,18 +5,63 @@ Data Graph
 
 import numpy as np
 import scipy as sp
+import scipy.spatial
+import scipy.sparse
+from joblib import Parallel, delayed
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 from .ann_data import AnnData
 
+class OnFlySymMatrix():
+    """
+    Emulate a matrix where elements are calculated on the fly.
+    """
+    def __init__(self, get_row, shape, rows=None, restrict_array=None):
+        self.get_row = get_row
+        self.shape = shape
+        self.rows = {} if rows is None else rows
+        self.restrict_array = restrict_array  # restrict the array to a subset
+
+    def __getitem__(self, index):
+        if isinstance(index, int) or isinstance(index, np.int64):
+            if self.restrict_array is None:
+                glob_index = index
+            else:
+                # map the index back to the global index
+                glob_index = self.restrict_array[index]
+            if glob_index not in self.rows:
+                self.rows[glob_index] = self.get_row(glob_index)
+            row = self.rows[glob_index]
+            if self.restrict_array is None:
+                return row
+            else:
+                return row[self.restrict_array]
+        else:
+            if self.restrict_array is None:
+                glob_index_0, glob_index_1 = index
+            else:
+                glob_index_0 = self.restrict_array[index[0]]
+                glob_index_1 = self.restrict_array[index[1]]
+            if glob_index_0 not in self.rows:
+                self.rows[glob_index_0] = self.get_row(glob_index_0)
+            return self.rows[glob_index_0][glob_index_1]
+
+    def restrict(self, index_array):
+        """
+        Generate a 1d view of the data.
+        """
+        new_shape = index_array.shape[0], index_array.shape[0]
+        return OnFlySymMatrix(self.get_row, new_shape,
+                           self.rows, restrict_array=index_array)
+
 class DataGraph(object):
-    """ 
+    """
     Represent data matrix as graph.
     """
 
     def __init__(self, adata_or_X, params):
-        """ 
+        """
         """
         isadata = isinstance(adata_or_X, AnnData)
         if isadata:
@@ -45,8 +90,8 @@ class DataGraph(object):
         # compute X_pca
         else:
             self.X = X
-            if (isadata 
-                and 'xroot' in adata 
+            if (isadata
+                and 'xroot' in adata
                 and adata['xroot'].size == adata.X.shape[1]):
                 self.set_root(adata['xroot'])
             from ..preprocess import pca
@@ -56,20 +101,17 @@ class DataGraph(object):
                 and 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]):
                 self.set_root(adata['xroot'])
         self.params = params
-        if self.params['sigma'] > 0:
-            self.params['method'] = 'global'
-        else:
-            self.params['method'] = 'local'
         if 'n_cpus' not in params:
             self.params['n_cpus'] = 1
+        self.Dchosen = None
+        self.n_jobs = self.params['n_cpus']
 
     def diffmap(self):
         """
         Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
-        sett.mt(0, 'start computing Diffusion Map with method',
-                 '"'+self.params['method']+'"')
+        sett.mt(0, 'start computing Diffusion Map')
         self.compute_transition_matrix()
         self.embed()
         # write results to dictionary
@@ -104,9 +146,69 @@ class DataGraph(object):
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
-    def compute_transition_matrix(self, weighted=True, 
+    def get_sparse_distance_matrix(self, indices, distances_sq, n_samples, k):
+        n_neighbors = k - 1
+        n_nonzero = n_samples * n_neighbors
+        indptr = np.arange(0, n_nonzero + 1, n_neighbors)
+        Dsq = sp.sparse.csr_matrix((distances_sq.ravel(),
+                                    indices.ravel(),
+                                    indptr),
+                                    shape=(n_samples, n_samples))
+        return Dsq
+
+    def get_neighbors(self, X, Y, k):
+        Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
+        junk_range = np.arange(Dsq.shape[0])[:, None]
+        indices_junk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+        indices_junk = indices_junk[junk_range, np.argsort(Dsq[junk_range, indices_junk])]
+        indices_junk = indices_junk[:, 1:]  # exclude first data point (point itself)
+        distances_junk = Dsq[junk_range, indices_junk]
+        return indices_junk, distances_junk
+
+    def get_distance_matrix_and_neighbors(self, X, k, n_jobs, sparse=True):
+        # compute distance matrix in squared Euclidian norm
+        if False:
+            from sklearn.neighbors import NearestNeighbors
+            # brute force search often seems to be faster
+            # also, it's chosen anyway for sparse input
+            sklearn_neighbors = NearestNeighbors(n_neighbors=k-1,
+                                                 n_jobs=n_jobs,
+                                                 algorithm='brute')
+            sklearn_neighbors.fit(self.X)
+            distances_sq, indices = sklearn_neighbors.kneighbors()
+            distances_sq **= 2
+        elif not sparse:
+            # Dsq = utils.comp_distance(X, metric='sqeuclidean')
+            Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
+            sample_range = np.arange(Dsq.shape[0])[:, None]
+            indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+            indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
+            indices = indices[:, 1:]  # exclude first data point (point itself)
+            distances_sq = Dsq[sample_range, indices]
+        else:
+            # assume we can fit 30000 data points into memory
+            len_junk = np.ceil(30000 / n_jobs).astype(int)
+            n_junks = np.ceil(X.shape[0] / len_junk).astype(int)
+            junks = [np.arange(start, min(start + len_junk, X.shape[0]))
+                     for start in range(0, n_junks * len_junk, len_junk)]
+            indices = np.zeros((X.shape[0], k-1), dtype=int)
+            distances_sq = np.zeros((X.shape[0], k-1), dtype=np.float32)
+            result_lst = Parallel(n_jobs=n_jobs)(
+                                  delayed(self.get_neighbors)(X[junk], X, k)
+                                  for junk in junks)
+            sett.m(0, 'computed pairwise distances')
+            for i_junk, junk in enumerate(junks):
+                # indices_junk, distances_junk = self.get_neighbors(X[junk], X, k)
+                indices_junk, distances_junk = result_lst[i_junk]
+                indices[junk] = indices_junk
+                distances_sq[junk] = distances_junk
+        if sparse:
+            Dsq = self.get_sparse_distance_matrix(indices, distances_sq, X.shape[0], k)
+        return Dsq, indices, distances_sq
+
+    def compute_transition_matrix(self, weighted=True,
                                   neglect_selfloops=False, alpha=1):
-        """ 
+        """
         Compute similarity matrix and transition matrix.
 
         Parameters
@@ -115,7 +217,7 @@ class DataGraph(object):
             The density rescaling parameter of Coifman and Lafon (2006). Should
             in all practical applications equal 1: Then only the geometry of the
             data matters, not the sampled density.
-        neglect_selfloops : bool 
+        neglect_selfloops : bool
             Discard selfloops.
 
         See also
@@ -123,69 +225,25 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
-        import scipy.sparse
-        # compute distance matrix in squared Euclidian norm
-        if self.X.shape[0] > 2000 and self.params['method'] == 'local' and self.params['knn']:
-            from sklearn.neighbors import NearestNeighbors
-            # brute force search often seems to be faster
-            # also, it's chosen anyway for sparse input
-            sklearn_neighbors = NearestNeighbors(n_neighbors=self.params['k']-1,
-                                                 n_jobs=self.params['n_cpus'],
-                                                 algorithm='brute')
-            sklearn_neighbors.fit(self.X)
+        Dsq, indices, distances_sq = self.get_distance_matrix_and_neighbors(X=self.X,
+                                                                            k=self.params['k'],
+                                                                            n_jobs=2, #self.params['n_cpus'],
+                                                                            sparse=self.params['knn'])
+        self.Dsq = Dsq
+        # choose sigma, the heuristic here often makes not much
+        # of a difference, but is used to reproduce the figures
+        # of Haghverdi et al. (2016)
+        if self.params['knn']:
+            # as the distances are not sorted except for last element
+            # take median
+            sigmas_sq = np.median(distances_sq, axis=1)
         else:
-            sklearn_neighbors = None
-            Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
-        if self.params['method'] == 'local':
-            # choose sigma (width of a Gaussian kernel) according to the
-            # distance of the kth nearest neighbor of each point, including the
-            # point itself in the count
-            k = self.params['k']
-            if sklearn_neighbors is None:
-                # deterimine the distance of the k nearest neighbors
-                indices = np.zeros((Dsq.shape[0], k), dtype=np.int_)
-                distances_sq = np.zeros((Dsq.shape[0], k), dtype=np.float_)
-                for irow, row in enumerate(Dsq):
-                    # the last item is already in its sorted position as
-                    # argpartition puts the (k-1)th element - starting to count from
-                    # zero - in its sorted position
-                    idcs = np.argpartition(row, k-1)[:k]
-                    indices[irow] = idcs
-                    argsort = np.argsort(row[idcs])
-                    distances_sq[irow] = row[idcs][argsort]
-                    indices[irow] = indices[irow][argsort]
-                # exclude the point itself
-                distances_sq = distances_sq[:, 1:]
-                indices = indices[:, 1:]
-            else:
-                distances_sq, indices = sklearn_neighbors.kneighbors()
-                distances_sq **= 2
-                n_neighbors = self.params['k'] - 1
-                n_samples = self.X.shape[0]
-                n_nonzero = n_samples * n_neighbors
-                indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-                Dsq = sp.sparse.csr_matrix((distances_sq.ravel(),
-                                            indices.ravel(),
-                                            indptr),
-                                            shape=(n_samples, n_samples))
-            self.Dsq = Dsq
-            # choose sigma, the heuristic here often makes not much 
-            # of a difference, but is used to reproduce the figures
-            # of Haghverdi et al. (2016)
-            if self.params['knn']:
-                # as the distances are not sorted except for last element
-                # take median
-                sigmas_sq = np.median(distances_sq, axis=1)
-            else:
-                # the last item is already in its sorted position as
-                # argpartition puts the (k-1)th element - starting to count from
-                # zero - in its sorted position
-                sigmas_sq = distances_sq[:, -1]/4
-            sigmas = np.sqrt(sigmas_sq)
-            sett.mt(0, 'determined k =', k, 'nearest neighbors of each point')
-        elif self.params['method'] == 'standard':
-            sigmas = self.params['sigma'] * np.ones(self.X.shape[0])
-            sigmas_sq = sigmas**2
+            # the last item is already in its sorted position as
+            # argpartition puts the (k-1)th element - starting to count from
+            # zero - in its sorted position
+            sigmas_sq = distances_sq[:, -1]/4
+        sigmas = np.sqrt(sigmas_sq)
+        sett.mt(0, 'determined k =', self.params['k'], 'nearest neighbors of each point')
 
         # compute the symmetric weight matrix
         if not sp.sparse.issparse(self.Dsq):
@@ -224,7 +282,7 @@ class DataGraph(object):
                     if i not in set(indices[j]):
                         W[j, i] = W[i, j]
             W = W.tocsr()
-                        
+
         sett.mt(0, 'computed W (weight matrix) with "knn" =', self.params['knn'])
 
         # neglect self-loops
@@ -234,13 +292,13 @@ class DataGraph(object):
         # doesn't matter too much
         if neglect_selfloops:
             np.fill_diagonal(W, 0)
-            
+
         if False:
             pl.matshow(W)
             pl.title('$ W$')
             pl.colorbar()
-            
-        # density normalization 
+
+        # density normalization
         # as discussed in Coifman et al. (2005)
         # ensure that kernel matrix is independent of sampling density
         if alpha == 0:
@@ -252,7 +310,7 @@ class DataGraph(object):
             if not sp.sparse.issparse(W):
                 q = np.sum(W, axis=0)
                 # raise to power alpha
-                if alpha != 1: 
+                if alpha != 1:
                     q = q**alpha
                 Den = np.outer(q, q)
                 self.K = W / Den
@@ -306,30 +364,30 @@ class DataGraph(object):
         self.L = np.diag(self.z) - self.K
 
     def embed(self, matrix=None, number=10, sym=True, sort='decrease'):
-        """ 
+        """
         Compute eigen decomposition of matrix.
 
         Parameters
         ----------
         matrix : np.ndarray
             Matrix to diagonalize.
-        number : int  
+        number : int
             Number of eigenvalues/vectors to be computed, set number = 0 if
             you need all eigenvectors.
         sym : bool
-            Instead of computing the eigendecomposition of the assymetric 
+            Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
 
         Writes class members
         --------------------
-        evals : np.ndarray 
+        evals : np.ndarray
             Eigenvalues of transition matrix
         lbasis : np.ndarray
             Matrix of left eigenvectors (stored in columns).
-        rbasis : np.ndarray 
+        rbasis : np.ndarray
              Matrix of right eigenvectors (stored in columns).
-             self.rbasis is projection of data matrix on right eigenvectors, 
+             self.rbasis is projection of data matrix on right eigenvectors,
              that is, the projection on the diffusion components.
              these are simply the components of the right eigenvectors
              and can directly be used for plotting.
@@ -360,7 +418,7 @@ class DataGraph(object):
         if sym:
             self.rbasis = self.lbasis = evecs
         else:
-            # The eigenvectors of T are stored in self.rbasis and self.lbasis 
+            # The eigenvectors of T are stored in self.rbasis and self.lbasis
             # and are simple trafos of the eigenvectors of Ktilde.
             # rbasis and lbasis are right and left eigenvectors, respectively
             self.rbasis = np.array(evecs / self.sqrtz[:,np.newaxis])
@@ -370,20 +428,23 @@ class DataGraph(object):
             # on the graph is normalized in L1 norm
             # therefore, the eigenbasis in this normalization does not correspond
             # to a probability distribution on the graph
-#             self.rbasis /= np.linalg.norm(self.rbasis,axis=0,ord=2)
-#             self.lbasis /= np.linalg.norm(self.lbasis,axis=0,ord=2)
+            if False:
+                self.rbasis /= np.linalg.norm(self.rbasis,axis=0,ord=2)
+                self.lbasis /= np.linalg.norm(self.lbasis,axis=0,ord=2)
+        # init on-the-fly computed distance "matrix"
+        self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row, shape=self.Dsq.shape)
 
     def compute_M_matrix(self):
-        """ 
+        """
         The M matrix is the matrix that results from summing over all powers of
         T in the subspace without the first eigenspace.
 
         See Haghverdi et al. (2016).
         """
         # the projected inverse therefore is
-        self.M = sum([self.evals[i]/(1-self.evals[i])
-                      * np.outer(self.rbasis[:, i], self.lbasis[:, i])
-                      for i in range(1, self.evals.size)])
+        self.M = sum([self.evals[l]/(1-self.evals[l])
+                      * np.outer(self.rbasis[:, l], self.lbasis[:, l])
+                      for l in range(1, self.evals.size)])
         self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
         sett.mt(0,'computed M matrix')
         if False:
@@ -393,6 +454,50 @@ class DataGraph(object):
             pl.matshow(self.M)
             pl.title('M')
             pl.colorbar()
+
+    def compute_Ddiff_matrix(self):
+        """
+        Returns the distance matrix in the Diffusion Pseudotime metric.
+
+        See Haghverdi et al. (2016).
+
+        Notes
+        -----
+        - Is based on M matrix.
+        - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
+        """
+        if self.M.shape[0] > 1000 and self.params['n_pcs_post'] == 0:
+            sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
+                   '    by setting n_pcs_post > 0 you can speed up the computation')
+        if self.params['n_pcs_post'] > 0 and self.M.shape[0] > self.params['n_pcs_post']:
+            from ..preprocess import pca
+            self.M = pca(self.M, n_comps=self.params['n_pcs_post'])
+        self.Ddiff = sp.spatial.distance.squareform(sp.spatial.distance.pdist(self.M))
+        sett.mt(0, 'computed Ddiff distance matrix')
+        self.Dchosen = self.Ddiff
+
+    def get_M_row(self, i):
+        m_i = sum([self.evals[l]/(1-self.evals[l])
+                   * self.rbasis[i, l] * self.lbasis[:, l]
+                   for l in range(1, self.evals.size)])
+        m_i += self.rbasis[i, 0] * self.lbasis[:, 0]
+        return m_i
+
+    def _get_Ddiff_row(self, m_i, j):
+        m_j = self.get_M_row(j)
+        return sp.spatial.distance.cdist(m_i[None, :], m_j[None, :])[0][0]
+
+    def get_Ddiff_row(self, i):
+        m_i = self.get_M_row(i)
+        if False:  # this is extremely slow, I don't know why
+            d_i = Parallel(n_jobs=self.n_jobs, verbose=1, backend='threading')(
+                           delayed(self._get_Ddiff_row)(m_i, j)
+                           for j in range(self.X.shape[0]))
+        d_i = np.zeros(self.X.shape[0])
+        for j in range(self.X.shape[0]):
+            m_j = self.get_M_row(j)
+            d_i[j] = sp.spatial.distance.cdist(m_i[None, :], m_j[None, :])
+        return np.array(d_i)
 
     def compute_Lp_matrix(self):
         """
@@ -406,28 +511,6 @@ class DataGraph(object):
                       for i in range(1, self.evals.size)])
         sett.mt(0,'computed pseudoinverse of Laplacian')
 
-    def compute_Ddiff_matrix(self):
-        """ 
-        Returns the distance matrix in the Diffusion Pseudotime metric.
-
-        See Haghverdi et al. (2016).
-        
-        Notes
-        -----
-        - Is based on the M matrix. 
-        - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
-        """
-        if self.M.shape[0] > 1000 and self.params['n_pcs_post'] == 0:
-            sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-                   '    by setting n_pcs_post > 0 you can speed up the computation')
-        if self.params['n_pcs_post'] > 0 and self.M.shape[0] > self.params['n_pcs_post']:
-            from ..preprocess import pca
-            self.M = pca(self.M, n_comps=self.params['n_pcs_post'])
-        self.Ddiff = sp.spatial.distance.pdist(self.M)
-        self.Ddiff = sp.spatial.distance.squareform(self.Ddiff)
-        sett.mt(0, 'computed Ddiff distance matrix')
-        self.Dchosen = self.Ddiff
-
     def compute_C_matrix(self):
         """
         See Fouss et al. (2006) and von Luxburg et al. (2007).
@@ -437,7 +520,7 @@ class DataGraph(object):
         """
         self.C = np.repeat(np.diag(self.Lp)[:, np.newaxis],
                            self.Lp.shape[0], axis=1)
-        self.C += np.repeat(np.diag(self.Lp)[np.newaxis, :], 
+        self.C += np.repeat(np.diag(self.Lp)[np.newaxis, :],
                             self.Lp.shape[0], axis=0)
         self.C -= 2*self.Lp
         # the following is much slower
@@ -458,14 +541,14 @@ class DataGraph(object):
 
         Mfp[i, k] := m(k|i) in the notation of Fouss et al. (2006). This
         corresponds to the standard notation for transition matrices (left index
-        initial state, right index final state, i.e. a right-stochastic 
+        initial state, right index final state, i.e. a right-stochastic
         matrix, with each row summing to one).
         """
         self.MFP = np.zeros(self.Lp.shape)
         for i in range(self.Lp.shape[0]):
             for k in range(self.Lp.shape[1]):
                 for j in range(self.Lp.shape[1]):
-                    self.MFP[i, k] += (self.Lp[i, j] - self.Lp[i, k] 
+                    self.MFP[i, k] += (self.Lp[i, j] - self.Lp[i, k]
                                        - self.Lp[k, j] + self.Lp[k, k]) * self.z[j]
         sett.mt(0,'computed mean first passage time matrix')
         self.Dchosen = self.MFP
@@ -474,15 +557,16 @@ class DataGraph(object):
         """
         Return pseudotime with respect to root point.
         """
-        self.pseudotime = self.Dchosen[self.iroot]/np.max(self.Dchosen[self.iroot])
+        self.pseudotime = self.Dchosen[self.iroot]
+        self.pseudotime /= np.max(self.pseudotime)
 
     def set_root(self, xroot):
-        """ 
+        """
         Determine the index of the root cell.
 
         Given an expression vector, find the observation index that is closest
         to this vector.
-        
+
         Parameters
         ----------
         xroot : np.ndarray

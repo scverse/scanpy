@@ -1,5 +1,5 @@
 # Authors: F. Alex Wolf <http://falexwolf.de>
-#          P. Angerer        
+#          P. Angerer
 """
 Plotting
 """
@@ -8,6 +8,9 @@ import os
 import numpy as np
 from cycler import Cycler, cycler
 
+import matplotlib
+if 'DISPLAY' not in os.environ:
+    matplotlib.use('Agg')
 from .compat.matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import ticker
@@ -40,7 +43,7 @@ def init_fig_params():
     # font
     rcParams['font.sans-serif'] = ['Arial',
                                    'Helvetica',
-                                   'DejaVu Sans', 
+                                   'DejaVu Sans',
                                    'Bitstream Vera Sans',
                                    'sans-serif']
     fontsize = 14
@@ -63,6 +66,8 @@ def init_fig_params():
                                           '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
                                           '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
                                           '#dbdb8d', '#9edae5'])
+    if 'DISPLAY' not in os.environ:
+        sett.savefigs = True
 
 def savefig(writekey):
     if sett.savefigs:
@@ -207,7 +212,7 @@ def scatter(adata,
         colors.append(c)
 
     if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.24        
+        right_margin = 0.3
     if titles is None and smps[0] is not None:
         titles = [smp.replace('_', ' ') for smp in smps]
 
@@ -298,7 +303,7 @@ def timeseries_subplot(X,
     X with one column, c continuous
     X with n columns, c is of length n
     """
-    
+
     if c is not None:
         use_cmap = isinstance(c[0], float)
     pal = default_pal(pal)
@@ -815,4 +820,3 @@ lw0 = rcParams['lines.linewidth']
 ml = ['o', 's', '^', 'd']
 
 init_fig_params()
-

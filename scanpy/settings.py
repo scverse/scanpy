@@ -10,7 +10,7 @@ Sets global variables like verbosity, manages log output and timing.
 # http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
 import atexit
-from time import clock
+import time
 from functools import reduce
 from matplotlib import rcParams
 
@@ -275,7 +275,7 @@ def mt(v=0,*msg):
     """
     if verbosity > v:
         global intermediate
-        now = clock()
+        now = time.time()
         elapsed_since_start = now - start
         elapsed = now - intermediate
         intermediate = now
@@ -341,7 +341,7 @@ def _terminate():
     Similar to mt, but writes total runtime.
     """
     if verbosity > 0:
-        now = clock()
+        now = time.time()
         elapsed_since_start = now - start
         mi(27*"_")
         mi(_sec_to_str(elapsed_since_start),'- total runtime')
@@ -376,7 +376,7 @@ def _jupyter_deprecated(do=True):
 # Some global variables that track time
 # ------------------------------------------------------------------------------
 
-start = clock() # clock() is deprecated since python version 3.3
+start = time.time()
 intermediate = start
 logfilename = ''
 separator = 80*"-"

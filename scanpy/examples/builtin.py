@@ -17,6 +17,8 @@ example_parameters = {
     'burczynski06': {},
     'krumsiek11': {
         'dpt/diffmap': {
+            'k': 5,
+            'knn': False,
             'n_branchings': 2,  # detect two branching points (default 1)
             'allow_branching_at_root': True,  # allow branching directly at root
         },

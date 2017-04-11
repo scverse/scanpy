@@ -7,7 +7,7 @@ if sys.version_info[:2] < (3, 5):
 if sys.version_info[:2] < (3, 4):
     more_requires.append('enum34')
 if sys.version_info[:2] < (3, 0):
-    more_requires.append('xlrd') # for reading excel data
+    more_requires.append('xlrd')  # for reading excel data
 
 setup(
     name='scanpy',
@@ -26,8 +26,11 @@ setup(
         'matplotlib',
         'pandas',
         'scipy',
-        'h5py',
-        'scikit-learn',
+        'h5py',          # hdf5 file reading and writing
+        'scikit-learn',  # standard machine-learning algorithms
+        'statsmodels',   # standard statistical models
+        'natsort',       # natural, human-readable sorting
+        'joblib'         # simple parallel computing
     ] + more_requires,
     packages=[
         'scanpy',

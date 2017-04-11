@@ -353,6 +353,9 @@ def subsample_n(X,n=0,seed=0):
     Xsampled = np.array(X[rows])
     return Xsampled, rows
 
+from profilehooks import timecall
+
+@timecall
 def comp_distance(X, metric='euclidean'):
     """ 
     Compute distance matrix for data array X
@@ -370,10 +373,40 @@ def comp_distance(X, metric='euclidean'):
         Distance matrix.
     """
     from scipy.spatial import distance
-    D = distance.pdist(X, metric=metric)
-    D = distance.squareform(D)
-    sett.mt(0, 'computed distance matrix with metric =', metric)
-    return D
+    return distance.squareform(distance.pdist(X, metric=metric))
+
+@timecall
+def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
+    """ 
+    Compute distance matrix for data array X
+
+    Use matrix multiplication as in sklearn.
+    
+    Parameters
+    ----------
+    X : np.ndarray
+        Data array (rows store samples, columns store variables).
+    metric : string
+        For example 'euclidean', 'sqeuclidean', see sp.spatial.distance.pdist.
+
+    Returns
+    -------
+    D : np.ndarray
+        Distance matrix.
+    """
+    XX = np.einsum('ij,ij->i', X, X)[:, np.newaxis]
+    if X is Y:
+        YY = XX
+    else:
+        YY = np.einsum('ij,ij->i', Y, Y)[:, np.newaxis]
+    distances = np.dot(X, Y.T)
+    distances *= -2
+    distances += XX
+    distances += YY.T
+    np.maximum(distances, 0, out=distances)
+    if X is Y:
+        distances.flat[::distances.shape[0] + 1] = 0.
+    return distances
 
 def hierarch_cluster(M):
     """ 
