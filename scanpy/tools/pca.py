@@ -115,20 +115,19 @@ def plot_pca(adata,
     adata = check_adata(adata)
     from .. import plotting as plott
     smps = plott.scatter(adata,
-                    basis='pca',
-                    smp=smp,
-                    names=names,
-                    comps=comps,
-                    cont=cont,
-                    layout=layout,
-                    legendloc=legendloc,
-                    cmap=cmap,
-                    pal=pal,
-                    right_margin=right_margin,
-                    size=size,
-                    titles=titles)
-    writekey = sett.basekey + '_pca'
-    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+                         basis='pca',
+                         smp=smp,
+                         names=names,
+                         comps=comps,
+                         cont=cont,
+                         layout=layout,
+                         legendloc=legendloc,
+                         cmap=cmap,
+                         pal=pal,
+                         right_margin=right_margin,
+                         size=size,
+                         titles=titles)
+    writekey = sett.basekey + '_pca' + sett.plotsuffix
     plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl

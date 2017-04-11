@@ -158,7 +158,7 @@ def plot_dpt(adata,
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
     comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
+         String of the form '1,2' or 'all'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -182,25 +182,32 @@ def plot_dpt(adata,
     if len(np.unique(adata.smp['dpt_groups'])) > 1:
         smps += ['dpt_groups']
     adata['highlights'] = (list([adata['iroot']])   # also plot the tip cell indices
-                           + [adata['dpt_segtips'][i][1] for i in range(len(adata['dpt_segtips'])) 
+                           + [adata['dpt_segtips'][i][1] for i in range(len(adata['dpt_segtips']))
                               if adata['dpt_segtips'][i][1] != -1])
     if smp is not None:
         smps += smp.split(',')
-    smps = plott.scatter(adata,
-                         basis=basis,
-                         smp=smps,
-                         names=names,
-                         comps=comps,
-                         cont=cont,
-                         layout=layout,
-                         legendloc=legendloc,
-                         cmap=cmap,
-                         pal=pal,
-                         right_margin=right_margin,
-                         size=size)
-    writekey = sett.basekey + '_dpt_'+ basis
-    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
-    plott.savefig(writekey)
+    if comps == 'all':
+        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
+    else:
+        if comps is None:
+            comps = '1,2' if '2d' in layout else '1,2,3'
+        comps_list = [comps]
+    for comps in comps_list:
+        smps = plott.scatter(adata,
+                             basis=basis,
+                             smp=smps,
+                             names=names,
+                             comps=comps,
+                             cont=cont,
+                             layout=layout,
+                             legendloc=legendloc,
+                             cmap=cmap,
+                             pal=pal,
+                             right_margin=right_margin,
+                             size=size)
+        writekey = sett.basekey + '_dpt_'+ basis
+        writekey += ('_' + sett.plotsuffix + '_comps' + comps.replace(',',''))
+        plott.savefig(writekey)
     # plot segments and pseudotime
     plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
     # time series plot

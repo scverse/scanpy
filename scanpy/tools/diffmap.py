@@ -90,7 +90,7 @@ def plot_diffmap(adata,
     names : str, optional (default: all names in smp)
         Allows to restrict groups in sample annotation (smp) to a few.
     comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
+         String of the form '1,2' or 'all'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -111,24 +111,30 @@ def plot_diffmap(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     from .. import plotting as plott
-    smps = plott.scatter(adata,
-                    basis='diffmap',
-                    smp=smp,
-                    names=names,
-                    comps=comps,
-                    cont=cont,
-                    layout=layout,
-                    legendloc=legendloc,
-                    cmap=cmap,
-                    pal=pal,
-                    right_margin=right_margin,
-                    size=size,
-                    titles=titles)
-    writekey = sett.basekey + '_diffmap'
-    if smps[0] is not None:
-        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
-    plott.savefig(writekey)
+    if comps == 'all':
+        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
+    else:
+        if comps is None:
+            comps = '1,2' if '2d' in layout else '1,2,3'
+        comps_list = [comps]
+    for comps in comps_list:
+        smps = plott.scatter(adata,
+                             basis='diffmap',
+                             smp=smp,
+                             names=names,
+                             comps=comps,
+                             cont=cont,
+                             layout=layout,
+                             legendloc=legendloc,
+                             cmap=cmap,
+                             pal=pal,
+                             right_margin=right_margin,
+                             size=size,
+                             titles=titles)
+        writekey = sett.basekey + '_diffmap'
+        if smps[0] is not None:
+            writekey += ('_' + sett.plotsuffix + '_comps' + comps.replace(',',''))
+        plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()
-
