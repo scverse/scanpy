@@ -103,17 +103,17 @@ def _run_command_line_args(toolkey, args):
     if os.path.exists(readwrite.get_filename_from_key(sett.basekey)) or toolkey != 'sim':
         adata, exmodule = get_example(args['exkey'], subsample=args['subsample'],
                                       return_module=True)
-        oparams = {}
+        params = {}
         # try to load tool parameters from dexamples
         try:
             did_not_find_params_in_exmodule = False
             dexample = exmodule.example_parameters[args['exkey']]
-            oparams = {}
+            params = {}
             for key in dexample.keys():
                 if toolkey in key:
-                    oparams = dexample[key]
-                    sett.m(0, '... using parameters', '"-o ' +
-                           ' '.join(['='.join([k, str(v)]) for k, v in oparams.items()])
+                    params = dexample[key]
+                    sett.m(0, '... using parameters', '"-p ' +
+                           ' '.join(['='.join([k, str(v)]) for k, v in params.items()])
                            + '"')
                     break
         except:
@@ -121,35 +121,35 @@ def _run_command_line_args(toolkey, args):
             pass
         # if optional parameters have been specified in a parameter file update
         # the current param dict with these
-        if args['opfile'] != '':
-            add_params = read_params(args['opfile'])
-            oparams = utils.update_params(oparams, add_params)
+        if args['pfile'] != '':
+            add_params = read_params(args['pfile'])
+            params = utils.update_params(params, add_params)
         # same if optional parameters have been specified on the command line
-        if args['oparams']:
-            add_params = readwrite.get_params_from_list(args['oparams'])
-            sett.m(0, '... overwriting optional params', '"' + 
+        if args['params']:
+            add_params = readwrite.get_params_from_list(args['params'])
+            sett.m(0, '... overwriting params', '"' + 
                    ' '.join(['='.join([k, str(v)]) for k, v in add_params.items()])
                    + '"',
                   'in call of', toolkey)
-            oparams = utils.update_params(oparams, add_params)
-        elif did_not_find_params_in_exmodule and args['opfile'] != '':
-            sett.m(0, 'using default parameters, change them using "--oparams"')
+            params = utils.update_params(params, add_params)
+        elif did_not_find_params_in_exmodule and args['pfile'] != '':
+            sett.m(0, 'using default parameters, change them using "--params"')
     elif toolkey == 'sim':
-        if args['opfile'] != '':
-            oparams = read_params(args['opfile'])
+        if args['pfile'] != '':
+            params = read_params(args['pfile'])
         else:
             from . import sim_models
-            opfile_sim = os.path.dirname(sim_models.__file__) + '/' + args['exkey'] + '_oparams.txt'
-            oparams = read_params(opfile_sim)
+            pfile_sim = os.path.dirname(sim_models.__file__) + '/' + args['exkey'] + '_params.txt'
+            params = read_params(pfile_sim)
             sett.m(0,'--> you can specify your custom params file using the option\n'
-                     '    "--opfile" or provide parameters directly via "--oparams"')
-        if 'writedir' not in oparams:
-            oparams['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
+                     '    "--pfile" or provide parameters directly via "--params"')
+        if 'writedir' not in params:
+            params['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
 
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey
-    opfile = sett.writedir + writekey + '_oparams.txt'
+    pfile = sett.writedir + writekey + '_params.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
         sett.logfile(logfile)
@@ -160,9 +160,9 @@ def _run_command_line_args(toolkey, args):
         or sett.recompute != 'none'):
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
-            adata = tool(**oparams)
+            adata = tool(**params)
         else:
-            adata = tool(adata, **oparams)
+            adata = tool(adata, **params)
         # append toolkey to tools in adata
         if toolkey not in adata['tools']:
             adata['tools'] = np.append(adata['tools'], toolkey)
@@ -170,7 +170,7 @@ def _run_command_line_args(toolkey, args):
         sett.m(0, 'updated file',
                readwrite.get_filename_from_key(sett.basekey))
         # save a copy of the changed parameters
-        readwrite.write_params(opfile, oparams)
+        readwrite.write_params(pfile, params)
 
     # plotting and postprocessing
     pparams = (readwrite.get_params_from_list(args['pparams']) 

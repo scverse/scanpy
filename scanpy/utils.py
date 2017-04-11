@@ -18,9 +18,11 @@ def print_memory_usage(newline=False):
     mem = getattr(process, meminfo_attr)()[0] / _TWO_20
     print(('\n' if newline else '') + 'Current memory usage: {:.2f} MB'.format(mem))
 
+
 #--------------------------------------------------------------------------------
 # Deal with examples
 #--------------------------------------------------------------------------------
+
 
 def fill_in_datakeys(example_parameters, dexdata):
     """
@@ -41,9 +43,11 @@ def fill_in_datakeys(example_parameters, dexdata):
                 example_parameters[exkey]['datakey'] = 'unspecified in dexdata'
     return example_parameters
 
+
 #--------------------------------------------------------------------------------
 # Deal with tool parameters
 #--------------------------------------------------------------------------------
+
 
 def update_params(old_params, new_params, check=False):
     """
@@ -76,9 +80,11 @@ def update_params(old_params, new_params, check=False):
                 updated_params[key] = val
     return updated_params
 
+
 #--------------------------------------------------------------------------------
 # Command-line argument reading and processing
 #--------------------------------------------------------------------------------
+
 
 def add_args(p, dadd_args=None):
     """
@@ -99,7 +105,7 @@ def add_args(p, dadd_args=None):
             'Use the subcommands "exdata" and "exparams" to display the corresponding data and parameters, respectively.')
     aa = p.add_argument_group('Provide tool parameters').add_argument
     # example key default argument
-    aa('-o', '--oparams',
+    aa('-p', '--params',
        nargs='*', default=None, metavar='k=v',
        help='Optional tool parameters as list, e.g., `k=20 knn=True`, '
             'see detailed help below, also notice the option --opfile (default: "").')
@@ -109,13 +115,13 @@ def add_args(p, dadd_args=None):
             if key != 'arg':
                 aa(key, **val)
     # make sure there are is no conflict with dadd_args
-    if dadd_args is None or '--opfile' not in dadd_args:
-        aa('--opfile',
+    if dadd_args is None or '--pfile' not in dadd_args:
+        aa('--pfile',
            type=str, default='', metavar='f',
            help='Path to file with optional parameters (default: "").')
 
     aa = p.add_argument_group('Provide plotting parameters').add_argument
-    aa('-p', '--pparams',
+    aa('-q', '--pparams',
        nargs='*', default=None, metavar='k v',
        help='Plotting parameters as list, e.g., `comps=1,3 legendloc="upper left"`. '
             'Display possible paramaters via "-p help" (default: "").')
@@ -124,6 +130,7 @@ def add_args(p, dadd_args=None):
     p = sett.add_args(p)
 
     return p
+
 
 def read_args_tool(toolkey, example_parameters, tool_add_args=None):
     """
@@ -138,6 +145,7 @@ def read_args_tool(toolkey, example_parameters, tool_add_args=None):
     args = vars(p.parse_args())
     args = sett.process_args(args)
     return args
+
 
 def default_tool_argparser(description, example_parameters):
     """
@@ -154,9 +162,11 @@ def default_tool_argparser(description, example_parameters):
         epilog=('available values for examples (exkey):'+epilog))
     return p
 
+
 #--------------------------------------------------------------------------------
 # Others
 #--------------------------------------------------------------------------------
+
 
 def select_groups(adata, groups_names_subset='all', smp='groups'):
     """
@@ -197,6 +207,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
         groups_names_subset = groups_names
     return groups_names_subset, groups_masks
 
+
 def pretty_dict_string(d, indent=0):
     """
     Pretty output of nested dictionaries.
@@ -209,6 +220,7 @@ def pretty_dict_string(d, indent=0):
         else:
              s += '=' + str(value) + '\n'
     return s
+
 
 def markdown_dict_string(d):
     """
@@ -243,6 +255,7 @@ def markdown_dict_string(d):
             s += '\n'
     return s
 
+
 def merge_dicts(*ds):
     """
     Given any number of dicts, shallow copy and merge into a new dict,
@@ -256,6 +269,7 @@ def merge_dicts(*ds):
     for d in ds[1:]:
         result.update(d)
     return result
+
 
 def masks(list_of_index_lists,n):
     """
@@ -276,6 +290,7 @@ def masks(list_of_index_lists,n):
     masks = np.array(list_of_index_lists)
     return masks
 
+
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
     """
     Get full tracebacks when warning is raised by setting
@@ -291,6 +306,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     traceback.print_stack()
     log = file if hasattr(file,'write') else sys.stderr
     sett.write(warnings.formatwarning(message, category, filename, lineno, line))
+
 
 def subsample(X,subsample=1,seed=0):
     """ 
@@ -327,6 +343,7 @@ def subsample(X,subsample=1,seed=0):
     sett.m(0,'subsampled to',n,'of',X.shape[0],'data points')
     return Xsampled, rows
 
+
 def subsample_n(X,n=0,seed=0):
     """ 
     Subsample n samples from rows of array.
@@ -353,9 +370,9 @@ def subsample_n(X,n=0,seed=0):
     Xsampled = np.array(X[rows])
     return Xsampled, rows
 
-from profilehooks import timecall
 
-@timecall
+# from profilehooks import timecall
+# @timecall
 def comp_distance(X, metric='euclidean'):
     """ 
     Compute distance matrix for data array X
@@ -375,7 +392,8 @@ def comp_distance(X, metric='euclidean'):
     from scipy.spatial import distance
     return distance.squareform(distance.pdist(X, metric=metric))
 
-@timecall
+
+# @timecall
 def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
     """ 
     Compute distance matrix for data array X
@@ -407,6 +425,7 @@ def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
     if X is Y:
         distances.flat[::distances.shape[0] + 1] = 0.
     return distances
+
 
 def hierarch_cluster(M):
     """ 
