@@ -130,7 +130,8 @@ def log1p(X):
 log = log1p
 """ Same as log1p. For backwards compatibility. """
 
-def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0):
+
+def pca(X, n_comps=50, zero_center=None, svd_solver='randomized', random_state=0):
     """
     Return PCA representation of data.
 
@@ -140,7 +141,7 @@ def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0
         Data matrix.
     n_comps : int, optional (default: 50)
         Number of PCs to compute.
-    zero_center : bool, optional (default: True)
+    zero_center : bool or None, optional (default: None)
         If True, compute standard PCA from Covariance matrix. If False, omit
         zero-centering variables, which allows to handle sparse input efficiently.
         For sparse intput, automatically defaults to False.
@@ -151,7 +152,7 @@ def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0
 
     Returns
     -------
-    Y : np.ndarray
+    X_pca : np.ndarray
         Data projected on n_comps PCs.
     """
     from .. import settings as sett
@@ -160,22 +161,25 @@ def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0
         sett.m(0, 'reducing number of computed PCs to',
                n_comps, 'as dim of data is only', X.shape[1])
     try:
+        from scipy.sparse import issparse
+        zero_center = zero_center if zero_center is not None else False if issparse(X) else True
         from sklearn.decomposition import PCA, TruncatedSVD
         sett.mt(0, 'compute PCA with n_comps =', n_comps)
-        from scipy.sparse import issparse
-        if zero_center and not issparse(X):
-            Y = PCA(n_components=n_comps, svd_solver=svd_solver).fit_transform(X)
+        if zero_center:
+            if issparse(X):
+                X = X.toarray()
+            X_pca = PCA(n_components=n_comps, svd_solver=svd_solver).fit_transform(X)
         else:
             sett.m(0, '... without zero-centering')
-            Y = TruncatedSVD(n_components=n_comps).fit_transform(X)
+            X_pca = TruncatedSVD(n_components=n_comps).fit_transform(X)
         sett.mt(0, 'finished')
         sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
-        Y = _pca_fallback(X, n_comps=n_comps)
+        X_pca = _pca_fallback(X, n_comps=n_comps)
         sett.mt(0, 'preprocess: computed PCA using fallback code\n',
                 '--> can be sped up by installing package scikit-learn\n',
                 '    or by setting the option exact=False')
-    return Y
+    return X_pca
 
 
 def smp_norm(X):
@@ -201,13 +205,13 @@ def smp_norm(X):
     counts_per_gene = np.sum(X, axis=0)
     counts_per_cell = np.sum(X, axis=1)
     if not sp.sparse.issparse(X):
-        X = X[:, counts_per_gene >= 1]  # only consider genes with more than one count
+        gene_filter = counts_per_gene >= 1
         X = X * np.median(counts_per_cell) / (counts_per_cell[:, np.newaxis] + 1e-6)
     else:
-        X = X.tocsc()[:, np.flatnonzero(counts_per_gene.A1 >= 1)].tobsr()
+        gene_filter = np.flatnonzero(counts_per_gene.A1 >= 1)
         Norm = sp.sparse.diags(np.median(counts_per_cell.A1) / (counts_per_cell.A.ravel() + 1e-6))
-        X = Norm.dot(X).tocsr()
-    return X
+        X = Norm.dot(X.tobsr()).tocsr()
+    return X, gene_filter
 
 
 def smp_norm_weinreb16(X, max_fraction=1, mult_with_mean=False):
@@ -344,7 +348,7 @@ def plot_high_var_genes_zheng17(gene_filter, means, dispersions):
     pl.ylabel('dispersions')
     plott.savefig_or_show('high_var_genes')
 
-    
+
 #--------------------------------------------------------------------------------
 # Helper Functions
 #--------------------------------------------------------------------------------
