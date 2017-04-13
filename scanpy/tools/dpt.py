@@ -19,13 +19,15 @@ See also
   arXiv:0711.0189 (2007).
 """
 
+import sys
 import numpy as np
 from .. import settings as sett
 from .. import utils
 from ..classes import data_graph
 
-def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
-        sigma=0, allow_branching_at_root=False, n_cpus=2):
+
+def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
+        allow_branching_at_root=False, n_jobs=2, recompute_diffmap=False):
     u"""
     Diffusion Pseudotime analysis.
 
@@ -45,6 +47,9 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         adata['X_pca']: np.ndarray
             PCA representation of the data matrix (result of preprocessing with
             PCA). If it exists in adata, dpt will use this instead of adata.X.
+        adata['X_diffmap']: np.ndarray
+            Diffmap representation of the data matrix (result of running
+            `diffmap`).  Will be used if option `recompute_diffmap` is False.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     k : int, optional (default: 30)
@@ -55,21 +60,20 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    n_pcs_pre: int, optional (default: 50)
-        Use n_pcs_pre PCs to compute the Euclidian distance matrix, which is the
+    n_pcs: int, optional (default: 50)
+        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
     n_pcs_post: int, optional (default: 30)
         Use n_pcs_post PCs to compute the DPT distance matrix. This speeds up
         the computation at almost no loss of accuracy. Set to 0 if you don't
         want postprocessing with PCA.
-    sigma : float, optional (default: 0)
-        If greater 0, ignore parameter 'k', but directly set a global width
-        of the Kernel Gaussian - knn needs to be False in this case.
     allow_branching_at_root : bool, optional (default: False)
         Allow to have branching directly at root point.
-    n_cpus : int
+    n_jobs : int
         Number of cpus to use for parallel processing (default: 2).
+    recompute_diffmap : bool, (default: False)
+        Recompute diffusion maps.
 
     Returns
     -------
@@ -89,7 +93,6 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
         dpt_evals : np.ndarray
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
-    params = locals(); del params['adata']
     if 'xroot' not in adata:
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
@@ -99,37 +102,45 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs_pre=50, n_pcs_post=30,
    where "root_cell_index" is the integer index of the root cell, or
        adata['xroot'] = adata[root_cell_name, :].X.flatten()
    where "root_cell_name" is the name (a string) of the root cell.'''
-        raise ValueError(msg)
+        sys.exit(msg)
     if n_branchings == 0:
         sett.m(0, '--> set parameter `n_branchings` > 0 to detect branchings')
-    dpt = DPT(adata, params)
+    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_pcs_post=n_pcs_post,
+              n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
+              n_branchings=n_branchings, allow_branching_at_root=allow_branching_at_root)
     # diffusion map
     ddmap = dpt.diffmap()
-    adata['X_diffmap'] = ddmap['Y']
+    adata['X_diffmap'] = ddmap['X_diffmap']
+    adata['diffmap_evals'] = ddmap['evals']
+    adata['diffmap_comp0'] = dpt.rbasis[:, 0]
     sett.m(0, 'perform Diffusion Pseudotime analysis')
-    if False: # adata.X.shape[0] < 10000:
-        # compute M matrix of cumulative transition probabilities,
-        # see Haghverdi et al. (2016)
-        dpt.compute_M_matrix()
-        # compute DPT distance matrix, which we refer to as 'Ddiff'
+    # compute M matrix of cumulative transition probabilities,
+    # see Haghverdi et al. (2016)
+    dpt.compute_M_matrix()
+    # compute DPT distance matrix, which we refer to as 'Ddiff'
+    if False:  # we do not compute the full Ddiff matrix, only the elements we need
         dpt.compute_Ddiff_matrix()
     dpt.set_pseudotime()  # pseudotimes are distances from root point
     adata['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
     adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    # n-vector of groupnames / smp for adata / compare examples._check_adata
+    # vector of length n_groups
     adata['dpt_groups_names'] = np.array([str(i) for i in
                                           np.arange(len(dpt.segs), dtype=int)])
+    # vector of length n_samples of groupnames
     adata.smp['dpt_groups'] = np.array([adata['dpt_groups_names'][i]
                                         if i < len(adata['dpt_groups_names'])
                                         else 'dontknow'
                                         for i in dpt.segslabels])
     # the ordering according to segments and pseudotime
     adata['dpt_order'] = dpt.indices
+    # the changepoints - marking different segments - in the ordering above
     adata['dpt_changepoints'] = dpt.changepoints
+    # the tip points of segments
     adata['dpt_segtips'] = dpt.segstips
     return adata
+
 
 def plot_dpt(adata,
              basis='diffmap',
@@ -206,7 +217,7 @@ def plot_dpt(adata,
                              right_margin=right_margin,
                              size=size)
         writekey = sett.basekey + '_dpt_'+ basis
-        writekey += ('_' + sett.plotsuffix + '_comps' + comps.replace(',',''))
+        writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
         plott.savefig(writekey)
     # plot segments and pseudotime
     plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
@@ -230,6 +241,7 @@ def plot_dpt(adata,
         plott.savefig(writekey + '_heatmap')
     if not sett.savefigs and sett.autoshow:
         pl.show()
+
 
 def plot_segments_pseudotime(adata, cmap=None, pal=None):
     """
@@ -257,16 +269,27 @@ def plot_segments_pseudotime(adata, cmap=None, pal=None):
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     plott.savefig(writekey + '_segpt')
 
+
 class DPT(data_graph.DataGraph):
     """
-    Diffusion Pseudotime Class.
+    Diffusion Pseudotime.
     """
+
+    def __init__(self, adata_or_X, k=30, knn=True,
+                 n_jobs=1, n_pcs=50, n_pcs_post=30,
+                 recompute_diffmap=None, n_branchings=0,
+                 allow_branching_at_root=False):
+        super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
+              n_pcs_post=n_pcs_post, n_jobs=n_jobs,
+              recompute_diffmap=recompute_diffmap)
+        self.n_branchings = n_branchings
+        self.allow_branching_at_root = allow_branching_at_root
 
     def branchings_segments(self):
         """
         Detect branchings and partition the data into corresponding segments.
 
-        Detect all branchings up to params['n_branchings'].
+        Detect all branchings up to `n_branchings`.
 
         Writes
         ------
@@ -289,7 +312,7 @@ class DPT(data_graph.DataGraph):
 
     def detect_branchings(self):
         """
-        Detect all branchings up to params['n_branchings'].
+        Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
@@ -298,7 +321,7 @@ class DPT(data_graph.DataGraph):
         segstips : np.ndarray
             List of indices of the tips of segments.
         """
-        sett.m(0,'detect',self.params['n_branchings'],'branchings')
+        sett.m(0, 'detect', self.n_branchings, 'branchings')
         # a segment is a subset of points of the data set
         # it's completely defined by the indices of the points in the segment
         # initialize the search for branchings with a single segment,
@@ -327,19 +350,21 @@ class DPT(data_graph.DataGraph):
         #
         # let us define the tips of the whole data set
         if False:  # this is safe, but not compatible with on-the-fly computation
-            tips_all = list(np.unravel_index(np.argmax(self.Dchosen), self.Dchosen.shape))
-        tip_0 = np.argmax(self.Dchosen[self.iroot])
-        tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
+            tips_all = np.array(np.unravel_index(np.argmax(self.Dchosen), self.Dchosen.shape))
+        else:
+            tip_0 = np.argmax(self.Dchosen[self.iroot])
+            tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
+        print('starting with', tips_all)
         # we keep a list of the tips of each segment
         segstips = [tips_all]
-        for ibranch in range(self.params['n_branchings']):
+        for ibranch in range(self.n_branchings):
             # out of the list of segments, determine the segment
             # that most strongly deviates from a straight line
             # and provide the three tip points that span the triangle
             # of maximally distant points
             iseg, tips3 = self.select_segment(segs, segstips)
-            sett.m(0,'   branching', ibranch,
-                   'with tip points (indices within segment)', tips3, '= [third start end]')
+            sett.m(0, '   branching', ibranch,
+                   'indices within segment', tips3, '= [third start end]')
             # detect branching and update segs and segstips
             segs, segstips = self.detect_branching(segs, segstips, iseg, tips3)
         # store as class members
@@ -427,7 +452,7 @@ class DPT(data_graph.DataGraph):
             dist_to_root = self.Dchosen[self.iroot, self.segstips[iseg]]
             # otherwise, allow branching at root
             if (np.min(dist_to_root) > 0.01*self.Dchosen[tuple(self.segstips[iseg])]
-                and self.params['allow_branching_at_root']):
+                and self.allow_branching_at_root):
                 allindices = np.arange(self.X.shape[0], dtype=int)
                 tips3_global = np.insert(self.segstips[iseg],0,self.iroot)
                 # map the global position to the position within the segment

@@ -131,7 +131,8 @@ log = log1p
 """ Same as log1p. For backwards compatibility. """
 
 
-def pca(X, n_comps=50, zero_center=None, svd_solver='randomized', random_state=0):
+def pca(X, n_comps=50, zero_center=None, svd_solver='randomized',
+        random_state=0, mute=False):
     """
     Return PCA representation of data.
 
@@ -164,22 +165,22 @@ def pca(X, n_comps=50, zero_center=None, svd_solver='randomized', random_state=0
         from scipy.sparse import issparse
         zero_center = zero_center if zero_center is not None else False if issparse(X) else True
         from sklearn.decomposition import PCA, TruncatedSVD
-        sett.mt(0, 'compute PCA with n_comps =', n_comps)
+        sett.mt(0 if not mute else 10, 'compute PCA with n_comps =', n_comps)
         if zero_center:
             if issparse(X):
                 X = X.toarray()
             X_pca = PCA(n_components=n_comps, svd_solver=svd_solver).fit_transform(X)
         else:
-            sett.m(0, '... without zero-centering')
+            sett.m(0 if not mute else 10, '... without zero-centering')
             X_pca = TruncatedSVD(n_components=n_comps).fit_transform(X)
-        sett.mt(0, 'finished')
+        sett.mt(0 if not mute else 10, 'finished')
         sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
         X_pca = _pca_fallback(X, n_comps=n_comps)
-        sett.mt(0, 'preprocess: computed PCA using fallback code\n',
+        sett.mt(0 if not mute else 10, 'preprocess: computed PCA using fallback code\n',
                 '--> can be sped up by installing package scikit-learn\n',
                 '    or by setting the option exact=False')
-    return X_pca
+    return X_pca.astype(np.float32)
 
 
 def smp_norm(X):

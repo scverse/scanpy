@@ -1,5 +1,25 @@
 import sys
 from setuptools import setup
+from distutils.extension import Extension
+import numpy
+
+use_cython = False  # set this to False
+if use_cython:
+    from Cython.Distutils import build_ext
+
+cmdclass = {}
+ext_modules = []
+if use_cython:
+    ext_modules += [
+        Extension("scanpy.cython.utils_cy",
+                  ["scanpy/cython/utils_cy.pyx"]),
+    ]
+    cmdclass.update({ 'build_ext': build_ext })
+else:
+    ext_modules += [
+        Extension("scanpy.cython.utils_cy",
+                  ["scanpy/cython/utils_cy.c"]),
+    ]
 
 more_requires = []
 if sys.version_info[:2] < (3, 5):
@@ -30,7 +50,7 @@ setup(
         'scikit-learn',  # standard machine-learning algorithms
         'statsmodels',   # standard statistical models
         'natsort',       # natural, human-readable sorting
-        'joblib'         # simple parallel computing
+        'joblib',        # simple parallel computing
     ] + more_requires,
     packages=[
         'scanpy',
@@ -41,5 +61,8 @@ setup(
         'scanpy.classes',
         'scanpy.sim_models',
     ],
+    include_dirs=[numpy.get_include()],
+    cmdclass=cmdclass,
+    ext_modules=ext_modules,
     zip_safe=False,
 )

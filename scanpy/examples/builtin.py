@@ -34,7 +34,7 @@ example_parameters = {
     },
     'paul15': {
         'paths': {'fates': odict([('GMP', 877), ('MEP', 2156)])},
-        'dpt/diffmap': {'k': 20, 'knn': True, 'n_pcs_pre': 0},
+        'dpt/diffmap': {'k': 20, 'knn': True, 'n_pcs': 0},
         'diffrank': {'log': False, 'names': 'GMP,MEP'},
         'tgdyn': {'names': 'GMP,MEP'},
     },
@@ -46,6 +46,7 @@ example_parameters = {
         'tgdyn': {'names': 'GMP,MEP'},
     },
     'toggleswitch': {
+        'dpt/diffmap': {'k': 5, 'knn': False},
         'paths': {'fates': odict([('0', 95), ('1', 189)])},
         'diffrank': {'log': False},
     },
@@ -256,4 +257,3 @@ def paul15_dpt(adata):
 def paul15pca_dpt(adata):
     adata['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
     return adata
-

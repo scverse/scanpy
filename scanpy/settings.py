@@ -1,14 +1,20 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
 """
-Settings and Logfile 
+Settings and Logfile
 
 Sets global variables like verbosity, manages log output and timing.
-"""   
+"""
 # Note
 # ----
 # The very first version (tracking cpu time) of this was based on
 # http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
+import os
+import matplotlib
+if 'DISPLAY' not in os.environ:
+    matplotlib.use('Agg')
+    print('did not find DISPLAY variable needed for interactive plotting'
+          '--> try ssh with `-X` or `-Y`')
 import atexit
 import time
 from functools import reduce
@@ -19,65 +25,69 @@ from matplotlib import rcParams
 #--------------------------------------------------------------------------------
 
 verbosity = 1
-""" Set global verbosity level, choose from {0,...,6}. """
+"""Set global verbosity level, choose from {0,...,6}. """
 
 exkey = ''
-""" Global example key.
+"""Global example key.
 """
 
 suffix = ''
-""" Global suffix, which is appended to basekey of output and figure files.
+"""Global suffix, which is appended to basekey of output and figure files.
 """
 
 plotsuffix = ''
-""" Global suffix which is appended to figure filenames.
+"""Global suffix which is appended to figure filenames.
 
 Is needed when the computation parameters remain unchanged, but only plotting
 parameters are changed.
 """
 
 extd = 'h5'
-""" Global file extension format for data storage. 
+"""Global file extension format for data storage.
 
 Allowed are 'h5' (hdf5), 'xlsx' (Excel) or 'csv' (comma separated value
 file).
 """
 
 extf = 'png'
-""" Global file extension for saving figures.
+"""Global file extension for saving figures.
 
 Recommended are 'png' and 'pdf'. Many other formats work as well (see
 matplotlib.pyplot.savefig).
 """
 
 recompute = 'none'
-""" Don't use the results of previous calculations.
+"""Don't use the results of previous calculations.
 
-Recompute and overwrite previous result and preprocessing files.  
+Recompute and overwrite previous result and preprocessing files.
 """
 
 savefigs = False
-""" Save plots/figures as files in directory 'figs'.
+"""Save plots/figures as files in directory 'figs'.
 
 Do not show plots/figures interactively.
 """
 
 autoshow = True
-""" Show all plots/figures automatically if savefigs == False. 
+"""Show all plots/figures automatically if savefigs == False.
 
 There is no need to call sc.show() in this case.
 """
 
 writedir = 'write/'
-""" Directory where the function scanpy.write writes to by default.
+"""Directory where the function scanpy.write writes to by default.
 """
 
 figdir = 'figs/'
-""" Directory where plots are saved.
+"""Directory where plots are saved.
 """
 
 basekey = ''
-""" Basename for file reading and writing.
+"""Basename for file reading and writing.
+"""
+
+max_memory = 15
+"""Maximal memory usage in Gigabyte.
 """
 
 #--------------------------------------------------------------------------------
@@ -85,7 +95,7 @@ basekey = ''
 #--------------------------------------------------------------------------------
 
 def add_args(p):
-    """ 
+    """
     Add arguments that affect the global variables in settings.
 
     Parameters
@@ -125,17 +135,14 @@ def add_args(p):
        type=int, default=1, metavar='i',
        help='Specify integer i > 1 if you want to use a fraction of 1/i'
             ' of the data (default: %(default)d).')
-    aa = p.add_argument_group('General settings').add_argument
-    aa('-h', '--help',
-       action='help',
-       help='Show this help message and exit.')
+    aa = p.add_argument_group('General settings (all saved in .scanpy/config)').add_argument
     aa('-v', '--verbosity',
        type=int, default=1, metavar='v',
        help='Specify v = 0 for no output and v > 1 for more output'
             ' (default: %(default)d).')
-    aa('--logfile',
-       action='store_const', default=False, const=True,
-       help='Write to logfile instead of standard output.')
+    aa('--max_memory',
+       type=int, default=16, metavar='m',
+       help='Specify maximal memory usage in GB (default: %(default)s).')
     aa('--fileformat',
        type=str, default=extd, metavar='ext',
        help='Specify file format for saving results, either "h5", "csv", '
@@ -143,7 +150,13 @@ def add_args(p):
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
        help='Change write directory (default: %(default)s).')
-
+    aa('--logfile',
+       action='store_const', default=False, const=True,
+       help='Write to logfile instead of standard output.')
+    aa = p.add_argument_group('Other').add_argument
+    aa('-h', '--help',
+       action='help',
+       help='Show this help message and exit.')
     return p
 
 def process_args(args):
@@ -177,7 +190,7 @@ def process_args(args):
     global extf
     if args['savefigs'] == '':
         savefigs = False
-    else:   
+    else:
         savefigs = True
         extf = args['savefigs']
     args.pop('savefigs')
@@ -191,7 +204,7 @@ def process_args(args):
     from os import path, makedirs
     if not path.exists(figdir):
         print('creating directory', figdir, 'for saving figures')
-        makedirs(figdir)    
+        makedirs(figdir)
     args.pop('figdir')
 
     global extd
@@ -199,10 +212,14 @@ def process_args(args):
     args.pop('fileformat')
 
     global writedir
-    writedir = args['writedir'] 
+    writedir = args['writedir']
     if writedir[-1] != '/':
         writedir += '/'
     args.pop('writedir')
+
+    global max_memory
+    max_memory = args['max_memory']
+    args.pop('max_memory')
 
     # from these arguments, init further global variables
     global exkey
@@ -214,7 +231,7 @@ def process_args(args):
         basekey = 'test' + suffix
 
     if args['subsample'] != 1:
-        basekey += '_s{:02}'.format(args['subsample'])
+        basekey += '_ss{:02}'.format(args['subsample'])
 
     return args
 
@@ -223,14 +240,14 @@ def process_args(args):
 #--------------------------------------------------------------------------------
 
 def m(v=0,*msg):
-    """ 
+    """
     Write message to log output, depending on verbosity level.
 
     Parameters
     ----------
     v : int
         Verbosity level of message.
-    *msg : 
+    *msg :
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
@@ -238,12 +255,12 @@ def m(v=0,*msg):
         mi(*msg)
 
 def mi(*msg):
-    """ 
+    """
     Write message to log output, ignoring the verbosity level.
 
     Parameters
     ----------
-    *msg : 
+    *msg :
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
@@ -260,7 +277,7 @@ def mi(*msg):
             f.write(out + '\n')
 
 def mt(v=0,*msg):
-    """ 
+    """
     Write message to log output and show computation time.
 
     Depends on chosen verbosity level.
@@ -282,15 +299,15 @@ def mt(v=0,*msg):
         mi(_sec_to_str(elapsed),'-',*msg)
 
 def logfile(filename=''):
-    """ 
-    Define filename of logfile. 
+    """
+    Define filename of logfile.
 
     If not defined, log output will be to the standard output.
 
     Parameters
     ----------
     filename : str
-        Filename of 
+        Filename of
     """
     global logfilename, verbosity
     logfilename = filename
@@ -312,7 +329,7 @@ def dpi(dpi=200):
 
 def jupyter():
     """
-    Update figure resolution for use in jupyter notebook. 
+    Update figure resolution for use in jupyter notebook.
 
     Avoids that figures get displayed too large. To set a specific value for the
     resolution, use the dpi function.
@@ -322,7 +339,7 @@ def jupyter():
     autoshow = True
 
 def _sec_to_str(t):
-    """ 
+    """
     Format time in seconds.
 
     Parameters
@@ -335,9 +352,9 @@ def _sec_to_str(t):
             [(t*1000,),1000,60,60])
 
 def _terminate():
-    """ 
+    """
     Function called when program terminates.
-    
+
     Similar to mt, but writes total runtime.
     """
     if verbosity > 0:
@@ -362,7 +379,7 @@ def _jupyter_deprecated(do=True):
     # figure unit length and figure scale
     ful = fscale*4
     fontsize = fscale*14
-    
+
     rcParams['lines.linewidth'] = fscale*1.5
     rcParams['lines.markersize'] = fscale**2*6
     rcParams['lines.markeredgewidth'] = fscale**2*1

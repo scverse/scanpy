@@ -9,14 +9,19 @@ import numpy as np
 from . import settings as sett
 
 
-def print_memory_usage(newline=False):
+def get_memory_usage():
     import psutil
-    _TWO_20 = float(2 ** 20)
     process = psutil.Process(os.getpid())
     meminfo_attr = 'memory_info' if hasattr(process, 'memory_info') \
                     else 'get_memory_info'
-    mem = getattr(process, meminfo_attr)()[0] / _TWO_20
-    print(('\n' if newline else '') + 'Current memory usage: {:.2f} MB'.format(mem))
+    mem = getattr(process, meminfo_attr)()[0] / 2**30  # output in GB
+    return mem
+
+
+def print_memory_usage(newline=False):
+    mem = get_memory_usage()
+    print(('\n' if newline else '')
+          + 'Current memory usage: {:.2f} GB'.format(mem))
 
 
 #--------------------------------------------------------------------------------
@@ -30,7 +35,7 @@ def fill_in_datakeys(example_parameters, dexdata):
 
     If a datakey (key in 'datafile dictionary') is not present in the 'examples
     dictionary' it is used to initialize an entry with that key.
-    
+
     If not specified otherwise, any 'exkey' (key in 'examples dictionary') is
     used as 'datakey'.
     """
@@ -72,9 +77,9 @@ def update_params(old_params, new_params, check=False):
     if new_params: # allow for new_params to be None
         for key, val in new_params.items():
             if not key in old_params and check:
-                raise ValueError('\'' + key 
+                raise ValueError('\'' + key
                                  + '\' is not a valid parameter key, '
-                                 + 'consider one of \n' 
+                                 + 'consider one of \n'
                                  + str(list(old_params.keys())))
             if val is not None:
                 updated_params[key] = val
@@ -93,7 +98,7 @@ def add_args(p, dadd_args=None):
     Parameters
     -------
     dadd_args : dict
-        Dictionary of additional arguments formatted as 
+        Dictionary of additional arguments formatted as
             {'arg': {'type': int, 'default': 0, ... }}
     """
     aa = p.add_argument_group('Look up an example').add_argument
@@ -196,7 +201,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
             groups_ids = np.where(np.in1d(np.arange(len(adata[smp + '_names'])).astype(str),
                                           np.array(groups_names_subset)))[0]
         if len(groups_ids) == 0:
-            sett.m(0, np.array(groups_names_subset), 
+            sett.m(0, np.array(groups_names_subset),
                    'invalid! specify valid groups_names (or indices) one of',
                    adata[smp + '_names'])
             from sys import exit
@@ -248,7 +253,7 @@ def markdown_dict_string(d):
                     link = 'http://dx.doi.org/' + value['doi']
                 elif 'url' in value:
                     link = value['url']
-                s += (' - [' +  value['ref'].replace('et al.','*et al.*') 
+                s += (' - [' +  value['ref'].replace('et al.','*et al.*')
                              + '](' + link +  ')')
             if 'title' in value:
                 s += '   \n*' + value['title'] + '*'
@@ -280,7 +285,7 @@ def masks(list_of_index_lists,n):
     n : int
         Maximal index / number of samples.
     """
-    # make a list of mask arrays, it's easier to store 
+    # make a list of mask arrays, it's easier to store
     # as there is a hdf5 equivalent
     for il,l in enumerate(list_of_index_lists):
         mask = np.zeros(n,dtype=bool)
@@ -296,7 +301,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback
-    
+
     See also
     --------
     http://stackoverflow.com/questions/22373927/get-traceback-of-warnings
@@ -309,7 +314,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 
 
 def subsample(X,subsample=1,seed=0):
-    """ 
+    """
     Subsample a fraction of 1/subsample samples from the rows of X.
 
     Parameters
@@ -325,7 +330,7 @@ def subsample(X,subsample=1,seed=0):
     -------
     Xsampled : np.ndarray
         Subsampled X.
-    rows : np.ndarray 
+    rows : np.ndarray
         Indices of rows that are stored in Xsampled.
     """
     if subsample == 1 and seed == 0:
@@ -345,7 +350,7 @@ def subsample(X,subsample=1,seed=0):
 
 
 def subsample_n(X,n=0,seed=0):
-    """ 
+    """
     Subsample n samples from rows of array.
 
     Parameters
@@ -359,7 +364,7 @@ def subsample_n(X,n=0,seed=0):
     -------
     Xsampled : np.ndarray
         Subsampled X.
-    rows : np.ndarray 
+    rows : np.ndarray
         Indices of rows that are stored in Xsampled.
     """
     if n < 0:
@@ -374,9 +379,9 @@ def subsample_n(X,n=0,seed=0):
 # from profilehooks import timecall
 # @timecall
 def comp_distance(X, metric='euclidean'):
-    """ 
+    """
     Compute distance matrix for data array X
-    
+
     Parameters
     ----------
     X : np.ndarray
@@ -395,11 +400,11 @@ def comp_distance(X, metric='euclidean'):
 
 # @timecall
 def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
-    """ 
+    """
     Compute distance matrix for data array X
 
     Use matrix multiplication as in sklearn.
-    
+
     Parameters
     ----------
     X : np.ndarray
@@ -428,7 +433,7 @@ def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
 
 
 def hierarch_cluster(M):
-    """ 
+    """
     Cluster matrix using hierarchical clustering.
 
     Parameters
@@ -438,7 +443,7 @@ def hierarch_cluster(M):
 
     Returns
     -------
-    Mclus : np.ndarray 
+    Mclus : np.ndarray
         Clustered matrix.
     indices : np.ndarray
         Indices used to cluster the matrix.
@@ -481,15 +486,15 @@ def check_datafile_deprecated(filename, ext=None):
         if not os.path.exists(urlfilename):
             urlfilename = '../' + urlfilename
         if not os.path.exists(urlfilename):
-            raise ValueError('Neither ' + filename + 
+            raise ValueError('Neither ' + filename +
                              ' nor ../' + filename +
-                             ' nor files with a url to download from exist \n' + 
+                             ' nor files with a url to download from exist \n' +
                              '--> move your data file to one of these places \n' +
                              '    or cd/browse into scanpy root directory.')
         with open(urlfilename) as f:
             url = f.readline().strip()
-        sett.m(0,'data file is not present \n' + 
-              'try downloading data file from url \n' + url + '\n' + 
+        sett.m(0,'data file is not present \n' +
+              'try downloading data file from url \n' + url + '\n' +
               '... this may take a while but only happens once')
         # download the file
         urlretrieve(url,filename,reporthook=download_progress)
@@ -506,10 +511,10 @@ def check_datafile_deprecated(filename, ext=None):
         # note that this has 'raw' in the address
         github_baseurl = r'https://github.com/theislab/scanpy/raw/master/'
         fileurl = github_baseurl + filename
-        sett.m(0,'size of file',rel_filename,'is below',threshold/1000.,' kilobytes') 
+        sett.m(0,'size of file',rel_filename,'is below',threshold/1000.,' kilobytes')
         sett.m(0,'--> presumably is a placeholder for a git-lfs file')
         sett.m(0,'... if you installed git-lfs, you can use \'git lfs checkout\'')
-        sett.m(0,'... to update all files with their actual content') 
+        sett.m(0,'... to update all files with their actual content')
         sett.m(0,'--> downloading data file from github using url')
         sett.m(0,fileurl)
         sett.m(0,'... this may take a while but only happens once')
@@ -531,4 +536,3 @@ def check_datafile_deprecated(filename, ext=None):
             quit()
 
     return rel_filename
-

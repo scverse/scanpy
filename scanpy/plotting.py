@@ -8,9 +8,6 @@ import os
 import numpy as np
 from cycler import Cycler, cycler
 
-import matplotlib
-if 'DISPLAY' not in os.environ:
-    matplotlib.use('Agg')
 from .compat.matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import ticker
@@ -305,7 +302,7 @@ def timeseries_subplot(X,
     """
 
     if c is not None:
-        use_cmap = isinstance(c[0], float)
+        use_cmap = isinstance(c[0], float) or isinstance(c[0], np.float32)
     pal = default_pal(pal)
     x_range = np.arange(X.shape[0])
     if X.shape[1] > 1:

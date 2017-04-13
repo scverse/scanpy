@@ -8,10 +8,90 @@ import scipy as sp
 import scipy.spatial
 import scipy.sparse
 from joblib import Parallel, delayed
+from profilehooks import timecall, profile
+from ..cython import utils_cy
 from .. import settings as sett
 from .. import plotting as plott
 from .. import utils
 from .ann_data import AnnData
+
+def get_neighbors(X, Y, k):
+    Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
+    junk_range = np.arange(Dsq.shape[0])[:, None]
+    indices_junk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+    indices_junk = indices_junk[junk_range,
+                                np.argsort(Dsq[junk_range, indices_junk])]
+    indices_junk = indices_junk[:, 1:]  # exclude first data point (point itself)
+    distances_junk = Dsq[junk_range, indices_junk]
+    return indices_junk, distances_junk
+
+# @timecall
+def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
+    """
+    Compute distance matrix in squared Euclidian norm.
+    """
+    if False:
+        from sklearn.neighbors import NearestNeighbors
+        # brute force search often seems to be faster
+        # also, it's chosen anyway for sparse input
+        sklearn_neighbors = NearestNeighbors(n_neighbors=k-1,
+                                             n_jobs=n_jobs,
+                                             algorithm='brute')
+        sklearn_neighbors.fit(X)
+        distances, indices = sklearn_neighbors.kneighbors()
+        distances **= 2
+    elif not sparse:
+        if False:  # this is slower
+            Dsq = utils.comp_distance(X, metric='sqeuclidean')
+        else:
+            Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
+        sample_range = np.arange(Dsq.shape[0])[:, None]
+        indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+        indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
+        indices = indices[:, 1:]  # exclude first data point (point itself)
+        distances = Dsq[sample_range, indices]
+    else:
+        sett.m(0, '... start computing pairwise distances')
+        # assume we can fit at max 20000 data points into memory
+        len_junk = np.ceil(min(20000, X.shape[0]) / n_jobs).astype(int)
+        n_junks = np.ceil(X.shape[0] / len_junk).astype(int)
+        junks = [np.arange(start, min(start + len_junk, X.shape[0]))
+                 for start in range(0, n_junks * len_junk, len_junk)]
+        indices = np.zeros((X.shape[0], k-1), dtype=int)
+        distances = np.zeros((X.shape[0], k-1), dtype=np.float32)
+        if n_jobs > 1:
+            sett.m(0, '    using parallel computation with', n_jobs, 'jobs')
+            # set backend threading, said to be meaningful for computations
+            # with compiled code. more important: avoids hangs
+            # when using Parallel below, threading is much slower than
+            # multiprocessing
+            result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
+                                  delayed(get_neighbors)(X[junk], X, k)
+                                  for junk in junks)
+        else:
+            sett.m(0, '--> can be sped up by setting `n_jobs` > 1')
+        for i_junk, junk in enumerate(junks):
+            if n_jobs > 1:
+                indices_junk, distances_junk = result_lst[i_junk]
+            else:
+                indices_junk, distances_junk = get_neighbors(X[junk], X, k)
+            indices[junk] = indices_junk
+            distances[junk] = distances_junk
+    if sparse:
+        Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], k)
+    return Dsq, indices, distances
+
+
+def get_sparse_distance_matrix(indices, distances, n_samples, k):
+    n_neighbors = k - 1
+    n_nonzero = n_samples * n_neighbors
+    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
+    Dsq = sp.sparse.csr_matrix((distances.ravel(),
+                                indices.ravel(),
+                                indptr),
+                                shape=(n_samples, n_samples))
+    return Dsq
+
 
 class OnFlySymMatrix():
     """
@@ -55,23 +135,28 @@ class OnFlySymMatrix():
         return OnFlySymMatrix(self.get_row, new_shape,
                            self.rows, restrict_array=index_array)
 
+
 class DataGraph(object):
     """
     Represent data matrix as graph.
     """
 
-    def __init__(self, adata_or_X, params):
-        """
-        """
+    def __init__(self, adata_or_X, k=30, knn=True,
+                 n_jobs=1, n_pcs=50, n_pcs_post=30,
+                 recompute_diffmap=None):
+        self.k = k
+        self.knn = knn
+        self.n_jobs = n_jobs
+        self.n_pcs = n_pcs
+        self.n_pcs_post = 30
         isadata = isinstance(adata_or_X, AnnData)
         if isadata:
             adata = adata_or_X
             X = adata_or_X.X
         else:
             X = adata_or_X
-        # use the full X as n_pcs_pre == 0
-        if (params['n_pcs_pre'] == 0
-            or X.shape[1] < params['n_pcs_pre']):
+        if (self.n_pcs == 0  # use the full X as n_pcs == 0
+            or X.shape[1] < self.n_pcs):
             self.X = X
             sett.m(0, '... using X for building graph')
             if isadata and 'xroot' in adata:
@@ -79,7 +164,7 @@ class DataGraph(object):
         # use the precomupted X_pca
         elif (isadata
               and 'X_pca' in adata
-              and adata['X_pca'].shape[1] >= params['n_pcs_pre']):
+              and adata['X_pca'].shape[1] >= self.n_pcs):
             sett.m(0, '... using X_pca for building graph')
             if 'xroot' in adata and adata['xroot'].size == adata.X.shape[1]:
                 self.X = adata.X
@@ -95,29 +180,40 @@ class DataGraph(object):
                 and adata['xroot'].size == adata.X.shape[1]):
                 self.set_root(adata['xroot'])
             from ..preprocess import pca
-            self.X = pca(X, n_comps=params['n_pcs_pre'])
+            self.X = pca(X, n_comps=self.n_pcs)
             adata['X_pca'] = self.X
             if (isadata
                 and 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]):
                 self.set_root(adata['xroot'])
-        self.params = params
-        if 'n_cpus' not in params:
-            self.params['n_cpus'] = 1
         self.Dchosen = None
-        self.n_jobs = self.params['n_cpus']
+        # use diffmap from previous calculation
+        if 'X_diffmap' in adata and not recompute_diffmap:
+            sett.m(0, '... using `X_diffmap` for distance computations')
+            self.evals = np.r_[1, adata['diffmap_evals']]
+            self.rbasis = np.c_[adata['diffmap_comp0'][:, None], adata['X_diffmap']]
+            self.lbasis = self.rbasis
+            self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
+                                          shape=(self.X.shape[0], self.X.shape[0]))
+        else:
+            self.evals = None
+            self.rbasis = None
+            self.lbasis = None
+        # further attributes that might be written during the computation
+        self.M = None
 
     def diffmap(self):
         """
         Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
-        sett.mt(0, 'start computing Diffusion Map')
-        self.compute_transition_matrix()
-        self.embed()
+        if self.evals is None:
+            sett.mt(0, 'start computing Diffusion Map')
+            self.compute_transition_matrix()
+            self.embed()
         # write results to dictionary
         ddmap = {}
         # skip the first eigenvalue/eigenvector
-        ddmap['Y'] = self.rbasis[:, 1:]
+        ddmap['X_diffmap'] = self.rbasis[:, 1:]
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
@@ -146,66 +242,6 @@ class DataGraph(object):
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
-    def get_sparse_distance_matrix(self, indices, distances_sq, n_samples, k):
-        n_neighbors = k - 1
-        n_nonzero = n_samples * n_neighbors
-        indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-        Dsq = sp.sparse.csr_matrix((distances_sq.ravel(),
-                                    indices.ravel(),
-                                    indptr),
-                                    shape=(n_samples, n_samples))
-        return Dsq
-
-    def get_neighbors(self, X, Y, k):
-        Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
-        junk_range = np.arange(Dsq.shape[0])[:, None]
-        indices_junk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
-        indices_junk = indices_junk[junk_range, np.argsort(Dsq[junk_range, indices_junk])]
-        indices_junk = indices_junk[:, 1:]  # exclude first data point (point itself)
-        distances_junk = Dsq[junk_range, indices_junk]
-        return indices_junk, distances_junk
-
-    def get_distance_matrix_and_neighbors(self, X, k, n_jobs, sparse=True):
-        # compute distance matrix in squared Euclidian norm
-        if False:
-            from sklearn.neighbors import NearestNeighbors
-            # brute force search often seems to be faster
-            # also, it's chosen anyway for sparse input
-            sklearn_neighbors = NearestNeighbors(n_neighbors=k-1,
-                                                 n_jobs=n_jobs,
-                                                 algorithm='brute')
-            sklearn_neighbors.fit(self.X)
-            distances_sq, indices = sklearn_neighbors.kneighbors()
-            distances_sq **= 2
-        elif not sparse:
-            # Dsq = utils.comp_distance(X, metric='sqeuclidean')
-            Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
-            sample_range = np.arange(Dsq.shape[0])[:, None]
-            indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
-            indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
-            indices = indices[:, 1:]  # exclude first data point (point itself)
-            distances_sq = Dsq[sample_range, indices]
-        else:
-            # assume we can fit 30000 data points into memory
-            len_junk = np.ceil(30000 / n_jobs).astype(int)
-            n_junks = np.ceil(X.shape[0] / len_junk).astype(int)
-            junks = [np.arange(start, min(start + len_junk, X.shape[0]))
-                     for start in range(0, n_junks * len_junk, len_junk)]
-            indices = np.zeros((X.shape[0], k-1), dtype=int)
-            distances_sq = np.zeros((X.shape[0], k-1), dtype=np.float32)
-            result_lst = Parallel(n_jobs=n_jobs)(
-                                  delayed(self.get_neighbors)(X[junk], X, k)
-                                  for junk in junks)
-            sett.m(0, 'computed pairwise distances')
-            for i_junk, junk in enumerate(junks):
-                # indices_junk, distances_junk = self.get_neighbors(X[junk], X, k)
-                indices_junk, distances_junk = result_lst[i_junk]
-                indices[junk] = indices_junk
-                distances_sq[junk] = distances_junk
-        if sparse:
-            Dsq = self.get_sparse_distance_matrix(indices, distances_sq, X.shape[0], k)
-        return Dsq, indices, distances_sq
-
     def compute_transition_matrix(self, weighted=True,
                                   neglect_selfloops=False, alpha=1):
         """
@@ -225,15 +261,16 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
-        Dsq, indices, distances_sq = self.get_distance_matrix_and_neighbors(X=self.X,
-                                                                            k=self.params['k'],
-                                                                            n_jobs=2, #self.params['n_cpus'],
-                                                                            sparse=self.params['knn'])
+        result = get_distance_matrix_and_neighbors(X=self.X,
+                                                   k=self.k,
+                                                   sparse=self.knn,
+                                                   n_jobs=self.n_jobs)
+        Dsq, indices, distances_sq = result
         self.Dsq = Dsq
         # choose sigma, the heuristic here often makes not much
         # of a difference, but is used to reproduce the figures
         # of Haghverdi et al. (2016)
-        if self.params['knn']:
+        if self.knn:
             # as the distances are not sorted except for last element
             # take median
             sigmas_sq = np.median(distances_sq, axis=1)
@@ -243,7 +280,7 @@ class DataGraph(object):
             # zero - in its sorted position
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
-        sett.mt(0, 'determined k =', self.params['k'], 'nearest neighbors of each point')
+        sett.mt(0, 'determined k =', self.k, 'nearest neighbors of each point')
 
         # compute the symmetric weight matrix
         if not sp.sparse.issparse(self.Dsq):
@@ -251,7 +288,7 @@ class DataGraph(object):
             Den = np.add.outer(sigmas_sq, sigmas_sq)
             W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
             # make the weight matrix sparse
-            if not self.params['knn']:
+            if not self.knn:
                 self.Mask = W > 1e-14
                 W[self.Mask == False] = 0
             else:
@@ -282,8 +319,7 @@ class DataGraph(object):
                     if i not in set(indices[j]):
                         W[j, i] = W[i, j]
             W = W.tocsr()
-
-        sett.mt(0, 'computed W (weight matrix) with "knn" =', self.params['knn'])
+        sett.mt(0, 'computed W (weight matrix) with "knn" =', self.knn)
 
         # neglect self-loops
         # also proposed by Haghverdi et al. (2015)
@@ -322,10 +358,6 @@ class DataGraph(object):
                     num = q[i] * q[row]
                     W.data[W.indptr[i]: W.indptr[i+1]] = W.data[W.indptr[i]: W.indptr[i+1]] / num
         sett.mt(0,'computed K (anisotropic kernel)')
-        if False:
-            pl.matshow(self.K)
-            pl.title('$ K$')
-            pl.colorbar()
 
         if not sp.sparse.issparse(self.K):
             # now compute the row normalization to build the transition matrix T
@@ -340,11 +372,6 @@ class DataGraph(object):
             szszT = np.outer(self.sqrtz, self.sqrtz)
             self.Ktilde = self.K / szszT
             sett.mt(0,'computed Ktilde (normalized anistropic kernel)')
-            if False:
-                pl.matshow(self.Ktilde)
-                pl.title('$ \widetilde K$')
-                pl.colorbar()
-                pl.show()
         else:
             self.z = np.array(np.sum(self.K, axis=0)).flatten()
             # now we need the square root of the density
@@ -434,6 +461,15 @@ class DataGraph(object):
         # init on-the-fly computed distance "matrix"
         self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row, shape=self.Dsq.shape)
 
+    def _get_M_row_junk(self, i_range):
+        M_junk = np.zeros((len(i_range), self.X.shape[0]), dtype=np.float32)
+        for i_cnt, i in enumerate(i_range):
+            if False:  # not much slower, but slower
+                M_junk[i_cnt] = self.get_M_row(j)
+            else:
+                M_junk[i_cnt] = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
+        return M_junk
+
     def compute_M_matrix(self):
         """
         The M matrix is the matrix that results from summing over all powers of
@@ -441,19 +477,58 @@ class DataGraph(object):
 
         See Haghverdi et al. (2016).
         """
-        # the projected inverse therefore is
-        self.M = sum([self.evals[l]/(1-self.evals[l])
-                      * np.outer(self.rbasis[:, l], self.lbasis[:, l])
-                      for l in range(1, self.evals.size)])
-        self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
-        sett.mt(0,'computed M matrix')
-        if False:
-            pl.matshow(self.Ktilde)
-            pl.title('Ktilde')
-            pl.colorbar()
-            pl.matshow(self.M)
-            pl.title('M')
-            pl.colorbar()
+        if self.n_jobs >= 4:  # if we have enough cores, skip this step
+            return            # TODO: make sure that this is really the best strategy
+        sett.m(0, '... try computing "M" matrix using up to 90% of `max_memory`')
+        if False:  # Python version
+            self.M = sum([self.evals[l]/(1-self.evals[l])
+                          * np.outer(self.rbasis[:, l], self.lbasis[:, l])
+                          for l in range(1, self.evals.size)])
+            self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
+        else:  # Cython version
+            used_memory = utils.get_memory_usage()
+            memory_for_M = self.X.shape[0]**2 * 23 / 8 / 1e9  # in GB
+            sett.m(0, '... max memory =', sett.max_memory,
+                   ' / used memory = {:.1f}'.format(used_memory),
+                   ' / memory_for_M = {:.1f}'.format(memory_for_M))
+            if used_memory + memory_for_M < 0.9 * sett.max_memory:
+                sett.m(0, '    allocate memory and compute M matrix')
+                len_junk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
+                n_junks = np.ceil(self.X.shape[0] / len_junk).astype(int)
+                junks = [np.arange(start, min(start + len_junk, self.X.shape[0]))
+                         for start in range(0, n_junks * len_junk, len_junk)]
+                # parallel computing does not seem to help
+                if False: # self.n_jobs > 1:
+                    # here backend threading is not necessary, and seems to slow
+                    # down everything considerably
+                    result_lst = Parallel(n_jobs=self.n_jobs, backend='threading')(
+                                          delayed(self._get_M_row_junk)(junk)
+                                          for junk in junks)
+                self.M = np.zeros((self.X.shape[0], self.X.shape[0]),
+                                  dtype=np.float32)
+                for i_junk, junk in enumerate(junks):
+                    if False: # self.n_jobs > 1:
+                        M_junk = result_lst[i_junk]
+                    else:
+                        M_junk = self._get_M_row_junk(junk)
+                    self.M[junk] = M_junk
+                # the following did not work
+                # filename = sett.writedir + 'tmp.npy'
+                # np.save(filename, self.M)
+                # self.M = filename
+                sett.mt(0, 'finished computation of M')
+            else:
+                sett.m(0, 'not enough memory to compute M, using "on-the-fly" computation')
+        # the following is not needed anymore
+        # if self.M is not None:
+             # reduce dimensions using PCA
+             # if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
+             #     sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
+             #            '    by setting n_pcs_post > 0 you can speed up the computation')
+             # if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
+             #     from ..preprocess import pca
+             #     self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
+             # sett.mt(0, 'computed M matrix')
 
     def compute_Ddiff_matrix(self):
         """
@@ -466,38 +541,49 @@ class DataGraph(object):
         - Is based on M matrix.
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
-        if self.M.shape[0] > 1000 and self.params['n_pcs_post'] == 0:
-            sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-                   '    by setting n_pcs_post > 0 you can speed up the computation')
-        if self.params['n_pcs_post'] > 0 and self.M.shape[0] > self.params['n_pcs_post']:
-            from ..preprocess import pca
-            self.M = pca(self.M, n_comps=self.params['n_pcs_post'])
         self.Ddiff = sp.spatial.distance.squareform(sp.spatial.distance.pdist(self.M))
         sett.mt(0, 'computed Ddiff distance matrix')
         self.Dchosen = self.Ddiff
 
-    def get_M_row(self, i):
-        m_i = sum([self.evals[l]/(1-self.evals[l])
-                   * self.rbasis[i, l] * self.lbasis[:, l]
-                   for l in range(1, self.evals.size)])
-        m_i += self.rbasis[i, 0] * self.lbasis[:, 0]
-        return m_i
+    def _get_Ddiff_row_junk(self, m_i, j_range):
+        M = self.M  # caching with a file on disk did not work
+        d_i = np.zeros(len(j_range))
+        for j_cnt, j in enumerate(j_range):
+            if False:  # not much slower, but slower
+                m_j = self.get_M_row(j)
+                d_i[j_cnt] = sp.spatial.distance.cdist(m_i[None, :], m_j[None, :])
+            else:
+                if M is None:
+                    m_j = utils_cy.get_M_row(j, self.evals, self.rbasis, self.lbasis)
+                else:
+                    m_j = M[j]
+                d_i[j_cnt] = utils_cy.c_dist(m_i, m_j)
+        return d_i
 
-    def _get_Ddiff_row(self, m_i, j):
-        m_j = self.get_M_row(j)
-        return sp.spatial.distance.cdist(m_i[None, :], m_j[None, :])[0][0]
-
+    # @timecall
     def get_Ddiff_row(self, i):
-        m_i = self.get_M_row(i)
-        if False:  # this is extremely slow, I don't know why
-            d_i = Parallel(n_jobs=self.n_jobs, verbose=1, backend='threading')(
-                           delayed(self._get_Ddiff_row)(m_i, j)
-                           for j in range(self.X.shape[0]))
+        if self.M is None:
+            m_i = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
+        else:
+            m_i = self.M[i]
+        len_junk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
+        n_junks = np.ceil(self.X.shape[0] / len_junk).astype(int)
+        junks = [np.arange(start, min(start + len_junk, self.X.shape[0]))
+                 for start in range(0, n_junks * len_junk, len_junk)]
+        if self.n_jobs >= 4:  # problems with high memory calculations, we skip computing M above
+            # here backend threading is not necessary, and seems to slow
+            # down everything considerably
+            result_lst = Parallel(n_jobs=self.n_jobs)(
+                                  delayed(self._get_Ddiff_row_junk)(m_i, junk)
+                                  for junk in junks)
         d_i = np.zeros(self.X.shape[0])
-        for j in range(self.X.shape[0]):
-            m_j = self.get_M_row(j)
-            d_i[j] = sp.spatial.distance.cdist(m_i[None, :], m_j[None, :])
-        return np.array(d_i)
+        for i_junk, junk in enumerate(junks):
+            if self.n_jobs >= 4:
+                d_i_junk = result_lst[i_junk]
+            else:
+                d_i_junk = self._get_Ddiff_row_junk(m_i, junk)
+            d_i[junk] = d_i_junk
+        return d_i
 
     def compute_Lp_matrix(self):
         """

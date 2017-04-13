@@ -19,7 +19,7 @@ See also
 from ..tools import dpt
 from .. import settings as sett
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0, n_cpus=1):
+def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=2):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -57,10 +57,12 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs_pre=50, sigma=0, n_cpus=1):
         Array of shape n_samples x n_comps. DiffMap representation of data, which is the right eigen
         basis of transition matrix with eigenvectors as columns.
     """
-    params = locals(); del params['adata']
-    dmap = dpt.DPT(adata, params)
+    dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
+                   n_jobs=n_jobs, recompute_diffmap=True)
     ddmap = dmap.diffmap()
-    adata['X_diffmap'] = ddmap['Y'][:, :n_comps]
+    adata['X_diffmap'] = ddmap['X_diffmap']
+    adata['diffmap_evals'] = ddmap['evals']
+    adata['diffmap_comp0'] = dmap.rbasis[:, 0]
     return adata
 
 def plot_diffmap(adata,
@@ -133,7 +135,7 @@ def plot_diffmap(adata,
                              titles=titles)
         writekey = sett.basekey + '_diffmap'
         if smps[0] is not None:
-            writekey += ('_' + sett.plotsuffix + '_comps' + comps.replace(',',''))
+            writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
         plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
