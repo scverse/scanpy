@@ -13,7 +13,7 @@ import os
 import matplotlib
 if 'DISPLAY' not in os.environ:
     matplotlib.use('Agg')
-    print('did not find DISPLAY variable needed for interactive plotting'
+    print('... WARNING: did not find DISPLAY variable needed for interactive plotting\n'
           '--> try ssh with `-X` or `-Y`')
 import atexit
 import time

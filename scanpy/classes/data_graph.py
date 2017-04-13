@@ -389,6 +389,7 @@ class DataGraph(object):
         Graph Laplacian for K.
         """
         self.L = np.diag(self.z) - self.K
+        sett.mt(0, 'compute graph Laplacian')
 
     def embed(self, matrix=None, number=10, sym=True, sort='decrease'):
         """
@@ -521,14 +522,13 @@ class DataGraph(object):
                 sett.m(0, 'not enough memory to compute M, using "on-the-fly" computation')
         # the following is not needed anymore
         # if self.M is not None:
-             # reduce dimensions using PCA
-             # if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
-             #     sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-             #            '    by setting n_pcs_post > 0 you can speed up the computation')
-             # if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
-             #     from ..preprocess import pca
-             #     self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
-             # sett.mt(0, 'computed M matrix')
+        #      if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
+        #          sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
+        #                 '    by setting n_pcs_post > 0 you can speed up the computation')
+        #      if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
+        #          from ..preprocess import pca
+        #          self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
+        #      sett.mt(0, 'computed M matrix')
 
     def compute_Ddiff_matrix(self):
         """
@@ -617,7 +617,7 @@ class DataGraph(object):
         volG = np.sum(self.z)
         self.C *= volG
         sett.mt(0,'computed commute distance matrix')
-        self.Dchosen =  self.C
+        self.Dchosen = self.C
 
     def compute_MFP_matrix(self):
         """

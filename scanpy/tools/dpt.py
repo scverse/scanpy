@@ -354,7 +354,6 @@ class DPT(data_graph.DataGraph):
         else:
             tip_0 = np.argmax(self.Dchosen[self.iroot])
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
-        print('starting with', tips_all)
         # we keep a list of the tips of each segment
         segstips = [tips_all]
         for ibranch in range(self.n_branchings):
