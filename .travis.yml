@@ -6,5 +6,5 @@ python:
   - "3.5"
   - "3.6"
   - "nightly"
-install: "pip install pytest ."
-script: "pytest scanpy"
+install: "pip install ."
+script: pytest
