@@ -332,9 +332,9 @@ class AnnData(IndexMixin):
         var_ann = self.var[var]
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
-        self.__init__(X, smp_ann, var_ann, **self.add)
+        adata = AnnData(X, smp_ann, var_ann,  **self.add)
         gc.collect()  # release memory of the previous instance
-        return self
+        return adata
 
     def __setitem__(self, index, val):
         if isinstance(index, str):
