@@ -64,20 +64,23 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
             sett.m(0, '--> avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata['X_pca'] = X
+            sett.m(0, 'using X_pca for tSNE')
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {'perplexity' : perplexity,
-                      'random_state': None if random_state == -1 else random_state,
+    params_sklearn = {# 'perplexity' : perplexity,
+                      # 'random_state': None if random_state == -1 else random_state,
                       'verbose': sett.verbosity,
-                      'learning_rate': 200,
-                      'early_exaggeration': 12}
+                      # 'n_iter': 1000,
+                      # 'learning_rate': 200,
+                      # 'early_exaggeration': 12
+                     }
     # deal with different tSNE implementations
     if n_jobs > 1:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            sett.m(0,'... compute tSNE using MulticoreTSNE')
+            sett.m(0, '... compute tSNE using MulticoreTSNE')
             Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             print('--> did not find package MulticoreTSNE: install it from\n'
@@ -90,10 +93,10 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
             sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
             Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
-            sett.m(0,'--> perform tSNE using slow and unreliable original\n'
-                     '    implementation by L. van der Maaten\n'
-                     '--> consider installing sklearn\n'
-                     '    using "conda/pip install scikit-learn"')
+            sett.m(0, '--> perform tSNE using slow original\n'
+                      '    implementation by L. van der Maaten\n'
+                      '--> consider installing sklearn\n'
+                      '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     # update AnnData instance
     adata['X_tsne'] = Y
