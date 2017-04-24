@@ -145,8 +145,8 @@ def pca(X, n_comps=50, zero_center=True, svd_solver='randomized', random_state=0
         zero-centering variables, which allows to handle sparse input efficiently.
         For sparse intput, automatically defaults to False.
     svd_solver : str, optional (default: 'randomized')
-        SVD solver to use. Either “arpack” for the ARPACK wrapper in SciPy
-        (scipy.sparse.linalg.svds), or “randomized” for the randomized algorithm
+        SVD solver to use. Either "arpac" for the ARPACK wrapper in SciPy
+        (scipy.sparse.linalg.svds), or "randomized" for the randomized algorithm
         due to Halko (2009).
 
     Returns

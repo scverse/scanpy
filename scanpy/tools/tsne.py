@@ -87,8 +87,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
-            sett.m(0,'--> can be sped up using the option `n_cpus`')
-            Y = tsne.fit_transform(X)
+            sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
+            print(X)
+            Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             sett.m(0,'--> perform tSNE using slow and unreliable original\n'
                      '    implementation by L. van der Maaten\n'
@@ -97,7 +98,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_cpus=1):
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     # update AnnData instance
     adata['X_tsne'] = Y
-    sett.mt(0, 'finished tSNE')
+    sett.mt(0, 'finished tSNE, added\n'
+               '    "X_tsne" to adata')
     return adata
 
 def plot_tsne(adata,
