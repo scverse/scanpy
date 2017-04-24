@@ -7,4 +7,4 @@ python:
   - "3.6"
   - "nightly"
 install: "pip install pytest ."
-script: pytest
+script: "pytest scanpy"
