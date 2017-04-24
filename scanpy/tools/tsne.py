@@ -53,7 +53,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
         Array that stores the tSNE representation of the data. Analogous
         to X_pca, X_diffmap and X_spring.
     """
-    sett.mt(0,'compute tSNE')
+    sett.mt(0, 'compute tSNE')
     # preprocessing by PCA
     if 'X_pca' in adata and adata['X_pca'].shape[1] >= n_pcs:
         X = adata['X_pca']
@@ -68,13 +68,11 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {# 'perplexity' : perplexity,
-                      # 'random_state': None if random_state == -1 else random_state,
-                      'verbose': sett.verbosity,
-                      # 'n_iter': 1000,
-                      # 'learning_rate': 200,
-                      # 'early_exaggeration': 12
-                     }
+    params_sklearn = {'perplexity' : perplexity,
+                      'random_state': None if random_state == -1 else random_state,
+                      'verbose': sett.verbosity + 1 if sett.verbosity != 0 else 0,
+                      'learning_rate': 200,
+                      'early_exaggeration': 12}
     # deal with different tSNE implementations
     if n_jobs > 1:
         try:
@@ -83,15 +81,15 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
             sett.m(0, '... compute tSNE using MulticoreTSNE')
             Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
-            print('--> did not find package MulticoreTSNE: install it from\n'
-                  '    https://github.com/DmitryUlyanov/Multicore-TSNE')
-            sys.exit()
+            from sys import exit
+            exit('--> did not find package MulticoreTSNE: install it from\n'
+                 '    https://github.com/DmitryUlyanov/Multicore-TSNE')
     else:
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
             sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
-            Y = tsne.fit_transform(X.astype(np.float64))
+            Y = tsne.fit_transform(X)
         except ImportError:
             sett.m(0, '--> perform tSNE using slow original\n'
                       '    implementation by L. van der Maaten\n'
@@ -105,17 +103,17 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
     return adata
 
 def plot_tsne(adata,
-         smp=None,
-         names=None,
-         comps=None,
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=3,
-         titles=None):
+              smp=None,
+              names=None,
+              comps=None,
+              cont=None,
+              layout='2d',
+              legendloc='right margin',
+              cmap=None,
+              pal=None,
+              right_margin=None,
+              size=3,
+              titles=None):
     """
     Scatter plots.
 
@@ -155,25 +153,25 @@ def plot_tsne(adata,
     adata = check_adata(adata)
     from .. import plotting as plott
     smps = plott.scatter(adata,
-                    basis='tsne',
-                    smp=smp,
-                    names=names,
-                    comps=comps,
-                    cont=cont,
-                    layout=layout,
-                    legendloc=legendloc,
-                    cmap=cmap,
-                    pal=pal,
-                    right_margin=right_margin,
-                    size=size,
-                    titles=titles)
+                         basis='tsne',
+                         smp=smp,
+                         names=names,
+                         comps=comps,
+                         cont=cont,
+                         layout=layout,
+                         legendloc=legendloc,
+                         cmap=cmap,
+                         pal=pal,
+                         right_margin=right_margin,
+                         size=size,
+                         titles=titles)
     writekey = sett.basekey + '_tsne' + sett.plotsuffix
     plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()
 
-def _tsne_vandermaaten(X = np.array([]), no_dims = 2, perplexity = 30.0):
+def _tsne_vandermaaten(X=np.array([]), no_dims=2, perplexity=30.0):
     """
     Runs t-SNE on the dataset in the NxD array X to reduce its dimensionality to
     no_dims dimensions.  The syntaxis of the function is Y = tsne.tsne(X,
