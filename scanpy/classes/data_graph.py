@@ -33,7 +33,7 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
     if False:
         from sklearn.neighbors import NearestNeighbors
         # brute force search often seems to be faster
-        # also, it's chosen anyway for sparse input
+        # also, it's required for sparse input
         sklearn_neighbors = NearestNeighbors(n_neighbors=k-1,
                                              n_jobs=n_jobs,
                                              algorithm='brute')
@@ -133,7 +133,7 @@ class OnFlySymMatrix():
         """
         new_shape = index_array.shape[0], index_array.shape[0]
         return OnFlySymMatrix(self.get_row, new_shape,
-                           self.rows, restrict_array=index_array)
+                              self.rows, restrict_array=index_array)
 
 
 class DataGraph(object):
@@ -143,12 +143,13 @@ class DataGraph(object):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=1, n_pcs=50, n_pcs_post=30,
-                 recompute_diffmap=None):
+                 recompute_diffmap=None, sparse=True):
         self.k = k
         self.knn = knn
         self.n_jobs = n_jobs
         self.n_pcs = n_pcs
         self.n_pcs_post = 30
+        self.sparse = sparse
         isadata = isinstance(adata_or_X, AnnData)
         if isadata:
             adata = adata_or_X
@@ -200,7 +201,11 @@ class DataGraph(object):
             self.lbasis = None
         # further attributes that might be written during the computation
         self.M = None
-
+        self.Dsq = None
+        self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
+        print(self.Dsq)
+        # self.Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(self.X, self.X)
+        
     def diffmap(self):
         """
         Diffusion Map as of Coifman et al. (2005) incorparting
@@ -263,7 +268,7 @@ class DataGraph(object):
         """
         result = get_distance_matrix_and_neighbors(X=self.X,
                                                    k=self.k,
-                                                   sparse=self.knn,
+                                                   sparse=self.sparse,
                                                    n_jobs=self.n_jobs)
         Dsq, indices, distances_sq = result
         self.Dsq = Dsq

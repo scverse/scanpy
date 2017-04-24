@@ -188,12 +188,12 @@ def scatter(adata,
                 else:
                     continuous = True
                     c = adata.smp[smp]
-                sett.m(0, '... coloring according to', smp)
+                # sett.m(0, '... coloring according to', smp)
             # coloring according to gene expression
             elif smp in adata.var_names:
                 c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
                 continuous = True
-                sett.m(0, '... coloring according to expression of gene', smp)
+                # sett.m(0, '... coloring according to expression of gene', smp)
             else:
                 raise ValueError('"' + smp + '" is invalid!'
                                  + ' specify valid sample annotation, one of '
