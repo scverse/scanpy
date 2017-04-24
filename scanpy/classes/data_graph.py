@@ -8,7 +8,6 @@ import scipy as sp
 import scipy.spatial
 import scipy.sparse
 from joblib import Parallel, delayed
-from profilehooks import timecall, profile
 from ..cython import utils_cy
 from .. import settings as sett
 from .. import plotting as plott
@@ -25,7 +24,6 @@ def get_neighbors(X, Y, k):
     distances_junk = Dsq[junk_range, indices_junk]
     return indices_junk, distances_junk
 
-# @timecall
 def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
     """
     Compute distance matrix in squared Euclidian norm.
@@ -143,13 +141,13 @@ class DataGraph(object):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=1, n_pcs=50, n_pcs_post=30,
-                 recompute_diffmap=None, sparse=True):
+                 recompute_diffmap=None, sparse=None):
         self.k = k
         self.knn = knn
         self.n_jobs = n_jobs
         self.n_pcs = n_pcs
         self.n_pcs_post = 30
-        self.sparse = sparse
+        self.sparse = knn if sparse is None else sparse
         isadata = isinstance(adata_or_X, AnnData)
         if isadata:
             adata = adata_or_X
@@ -202,9 +200,6 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
         self.Dsq = None
-        self.Dsq = utils.comp_distance(self.X, metric='sqeuclidean')
-        print(self.Dsq)
-        # self.Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(self.X, self.X)
         
     def diffmap(self):
         """
