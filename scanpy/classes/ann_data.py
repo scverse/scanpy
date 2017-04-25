@@ -43,7 +43,7 @@ class BoundRecArr(np.recarray):
     def __new__(cls, source, index_name, parent, n_row=None):
         if source is None:  # empty array
             cols = [np.arange(n_row)]
-            dtype = [(name_col, 'str')]
+            dtype = [(index_name, 'str')]
         elif isinstance(source, np.recarray):
             cols = [source[n] for n in source.dtype.names]
             dtype = source.dtype
@@ -55,8 +55,8 @@ class BoundRecArr(np.recarray):
             # meta is dict-like
             names = list(source.keys())
             cols = [np.asarray(col) for col in source.values()]
-            if name_col not in source:
-                names.append(name_col)
+            if index_name not in source:
+                names.append(index_name)
                 cols.append(np.arange(len(cols[0]) if cols else n_row).astype(str))
             dtype = list(zip(names, [str(c.dtype) for c in cols]))
         try:
@@ -127,7 +127,7 @@ class BoundRecArr(np.recarray):
     def to_df(self):
         """Return pd.dataframe."""
         import pandas as pd
-        return pd.dataframe.from_records(self, index=self._index_name)
+        return pd.DataFrame().from_records(self, index=self._index_name)
 
 
 def _check_dimensions(data, smp, var):
