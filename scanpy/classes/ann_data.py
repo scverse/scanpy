@@ -5,7 +5,6 @@ from collections import Mapping, Sequence
 from collections import OrderedDict
 from enum import Enum
 import numpy as np
-import gc
 from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
@@ -26,9 +25,11 @@ VAR_NAMES = 'var_names'
 
 class BoundRecArr(np.recarray):
     """
-    A np.recarray which can be constructed from a dict.
-    Is bound to AnnData to allow adding fields
+    A np.recarray that can be constructed from a dict.  
+
+    Is bound to AnnData to allow adding fields.
     """
+    
     def __new__(cls, source, name_col, parent, n_row=None):
         if source is None:  # empty array
             cols = [np.arange(n_row)]
@@ -56,8 +57,8 @@ class BoundRecArr(np.recarray):
             raise
 
         arr = np.recarray.__new__(cls, (len(cols[0]),), dtype)
-        arr._parent = parent
-        arr._name_col = name_col
+        arr._parent = parent  # add parent as attribute
+        arr._name_col = name_col  # add name_col as attribute
 
         for i, name in enumerate(dtype.names):
             arr[name] = np.array(cols[i], dtype=dtype[name])
@@ -113,6 +114,12 @@ class BoundRecArr(np.recarray):
             new = BoundRecArr(source, self._name_col, self._parent)
             setattr(self._parent, attr, new)
 
+    def to_df(self):
+        """Return pd.dataframe."""
+        import pandas as pd
+        return pd.dataframe.from_records(self, index=self._name_col)
+
+    
 def _check_dimensions(data, smp, var):
     n_smp, n_var = data.shape
     if len(smp) != n_smp:
@@ -124,7 +131,9 @@ def _check_dimensions(data, smp, var):
                          'rows as data has columns ({}), but has {} rows'
                          .format(n_var, var.shape[0]))
 
+    
 class AnnData(IndexMixin):
+    
     def __init__(self, ddata_or_X=None, smp=None, var=None, **add):
         """
         Annotated Data
@@ -333,7 +342,6 @@ class AnnData(IndexMixin):
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         adata = AnnData(X, smp_ann, var_ann,  **self.add)
-        gc.collect()  # release memory of the previous instance
         return adata
 
     def __setitem__(self, index, val):
@@ -360,6 +368,9 @@ class AnnData(IndexMixin):
 
     T = property(transpose)
 
+    def copy(self):
+        return AnnData(self.X, self.smp, self.var,  **self.add)
+    
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))
     AnnData(ma.array([[1, 2], [3, 4]], mask=[0, 1, 1, 0]))
