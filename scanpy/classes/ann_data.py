@@ -25,12 +25,22 @@ VAR_NAMES = 'var_names'
 
 class BoundRecArr(np.recarray):
     """
-    A np.recarray that can be constructed from a dict.  
+    A np.recarray that can be constructed from a dict.
 
     Is bound to AnnData to allow adding fields.
+
+    The column with name "index_name" plays a role analogous to the `index` in
+    the `pd.Series` class.
+
+    Attributes
+    ----------
+    _index_name : str
+        Either SMP_NAMES or VAR_NAMES.
+    _parent : AnnData
+        The reference to an AnnData object to which the array is bound.
     """
-    
-    def __new__(cls, source, name_col, parent, n_row=None):
+
+    def __new__(cls, source, index_name, parent, n_row=None):
         if source is None:  # empty array
             cols = [np.arange(n_row)]
             dtype = [(name_col, 'str')]
@@ -58,7 +68,7 @@ class BoundRecArr(np.recarray):
 
         arr = np.recarray.__new__(cls, (len(cols[0]),), dtype)
         arr._parent = parent  # add parent as attribute
-        arr._name_col = name_col  # add name_col as attribute
+        arr._index_name = index_name  # add index_name as attribute
 
         for i, name in enumerate(dtype.names):
             arr[name] = np.array(cols[i], dtype=dtype[name])
@@ -66,25 +76,25 @@ class BoundRecArr(np.recarray):
         return arr
 
     def flipped(self):
-        old_name_col = self._name_col
-        new_name_col = SMP_NAMES if old_name_col == VAR_NAMES else VAR_NAMES
+        old_index_name = self._index_name
+        new_index_name = SMP_NAMES if old_index_name == VAR_NAMES else VAR_NAMES
 
-        flipped = BoundRecArr(self, new_name_col, self._parent, len(self))
+        flipped = BoundRecArr(self, new_index_name, self._parent, len(self))
         flipped.dtype.names = tuple(
-            new_name_col if n == old_name_col else n
+            new_index_name if n == old_index_name else n
             for n in self.dtype.names)
 
         return flipped
 
     def copy(self):
         new = super(BoundRecArr, self).copy()
-        new._name_col = self._name_col
+        new._index_name = self._index_name
         new._parent = self._parent
         return new
 
     @property
     def columns(self):
-        return [c for c in self.dtype.names if not c == self._name_col]
+        return [c for c in self.dtype.names if not c == self._index_name]
 
     def __setitem__(self, keys, values):
         if isinstance(keys, str):
@@ -105,21 +115,21 @@ class BoundRecArr(np.recarray):
                 super(BoundRecArr, self).__setitem__(k, v)
 
         if any(absent):
-            attr = 'smp' if self._name_col == SMP_NAMES else 'var'
+            attr = 'smp' if self._index_name == SMP_NAMES else 'var'
             if values.shape[1] > len(self):
                 raise ValueError('New column has too many entries ({} > {})'
                                  .format(values.shape[1], len(self)))
             source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
-            new = BoundRecArr(source, self._name_col, self._parent)
+            new = BoundRecArr(source, self._index_name, self._parent)
             setattr(self._parent, attr, new)
 
     def to_df(self):
         """Return pd.dataframe."""
         import pandas as pd
-        return pd.dataframe.from_records(self, index=self._name_col)
+        return pd.dataframe.from_records(self, index=self._index_name)
 
-    
+
 def _check_dimensions(data, smp, var):
     n_smp, n_var = data.shape
     if len(smp) != n_smp:
@@ -131,9 +141,9 @@ def _check_dimensions(data, smp, var):
                          'rows as data has columns ({}), but has {} rows'
                          .format(n_var, var.shape[0]))
 
-    
+
 class AnnData(IndexMixin):
-    
+
     def __init__(self, ddata_or_X=None, smp=None, var=None, **add):
         """
         Annotated Data
@@ -195,7 +205,7 @@ class AnnData(IndexMixin):
         # use lower precision, is enough for all current applications
         if X.dtype == np.float64:
             X = X.astype(np.float32)
-        
+
         if len(X.shape) == 1:
             X.shape = (X.shape[0], 1)
         if X.dtype.names is None and len(X.shape) != 2:
@@ -370,7 +380,7 @@ class AnnData(IndexMixin):
 
     def copy(self):
         return AnnData(self.X, self.smp, self.var,  **self.add)
-    
+
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))
     AnnData(ma.array([[1, 2], [3, 4]], mask=[0, 1, 1, 0]))
