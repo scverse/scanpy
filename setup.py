@@ -22,10 +22,10 @@ else:
     ]
 
 more_requires = []
-if sys.version_info[:2] < (3, 5):
-    more_requires.append('configparser')
-if sys.version_info[:2] < (3, 4):
-    more_requires.append('enum34')
+# if sys.version_info[:2] < (3, 5):
+more_requires.append('configparser')
+# if sys.version_info[:2] < (3, 4):
+more_requires.append('enum34')  # we specifically seem to need enum34
 if sys.version_info[:2] < (3, 0):
     more_requires.append('xlrd')  # for reading excel data
 
@@ -61,6 +61,7 @@ setup(
         'scanpy.preprocess',
         'scanpy.classes',
         'scanpy.sim_models',
+        'scanpy.cython',
     ],
     include_dirs=[numpy.get_include()],
     cmdclass=cmdclass,
