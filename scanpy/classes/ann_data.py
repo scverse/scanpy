@@ -32,7 +32,7 @@ class BoundRecArr(np.recarray):
     def __new__(cls, source, name_col, parent, n_row=None):
         if source is None:  # empty array
             cols = [np.arange(n_row)]
-            dtype = [(name_col, 'int64')]
+            dtype = [(name_col, 'str')]
         elif isinstance(source, np.recarray):
             cols = [source[n] for n in source.dtype.names]
             dtype = source.dtype
@@ -46,7 +46,7 @@ class BoundRecArr(np.recarray):
             cols = [np.asarray(col) for col in source.values()]
             if name_col not in source:
                 names.append(name_col)
-                cols.append(np.arange(len(cols[0]) if cols else n_row))
+                cols.append(np.arange(len(cols[0]) if cols else n_row).astype(str))
             dtype = list(zip(names, [str(c.dtype) for c in cols]))
         try:
             dtype = np.dtype(dtype)
@@ -60,7 +60,7 @@ class BoundRecArr(np.recarray):
         arr._name_col = name_col
 
         for i, name in enumerate(dtype.names):
-            arr[name] = np.array(cols[i])
+            arr[name] = np.array(cols[i], dtype=dtype[name])
 
         return arr
 
