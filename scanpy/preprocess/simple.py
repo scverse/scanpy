@@ -4,39 +4,92 @@ Preprocessing functions that take X as an argument
 -> "simple" preprocessing functions
 """
 
-from ..classes.ann_data import AnnData
-from .. import settings as sett
+import sys
 import numpy as np
 import scipy as sp
 import pandas as pd
+from joblib import Parallel, delayed
+import statsmodels.api as sm
+from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from collections import OrderedDict
+from scipy.sparse import issparse
+from ..classes.ann_data import AnnData
+from .. import settings as sett
 
 
-def filter_cells(X, min_reads):
+def filter_cells(data, min_counts=None, min_genes=None):
     """
-    Filter out cells with total UMI count < min_reads.
+    Keep cells that have at least `min_counts` UMI counts or `min_genes`
+    genes expressed.
 
     Paramaters
     ----------
-    X : np.ndarray
-        Data matrix. Rows correspond to cells and columns to genes.
-    min_reads : int
-        Minimum number of reads required for a cell to survive filtering.
+    data : np.ndarray or AnnData
+        Data matrix of shape n_sample x n_variables. Rows correspond to cells
+        and columns to genes.
+    min_counts : int
+        Minimum number of counts required for a cell to pass filtering.
 
     Returns
     -------
-    X : np.ndarray
-        Filtered data matrix.
-    cell_filter : np.ndarray
-        Boolean mask that reports filtering. True means that the cell is
-        kept. False means the cell is removed.
+    If data is a data matrix X
+        cell_filter : np.ndarray
+            Boolean index mask that does filtering. True means that the cell is
+            kept. False means the cell is removed.
+        number_per_cell: np.ndarray
+            Either n_counts or n_genes per cell.
+    otherwise:
+        adata : AnnData
+            The filtered adata object, with the count info stored in adata.smp.
     """
-    total_counts = np.sum(X, axis=1)
-    cell_filter = total_counts >= min_reads
-    return X[cell_filter], cell_filter
+    if min_genes is not None and min_counts is not None:
+        raise ValueError('Either provide min_counts or min_genes, but not both.')
+    if min_genes is None and min_counts is None:
+        raise ValueError('Provide one of min_counts or min_genes.')
+    if isinstance(data, AnnData):
+        adata = data
+        cell_filter, number = filter_cells(adata.X, min_counts, min_genes)
+        if min_genes is None:
+            adata.smp['n_counts'] = number
+        else:
+            adata.smp['n_genes'] = number
+        return adata[cell_filter]
+    X = data  # proceed with processing the data matrix
+    min_number = min_counts if min_genes is None else min_genes
+    number_per_cell = np.sum(X if min_genes is None else X > 0, axis=1)
+    if issparse(X):
+       number_per_cell = number_per_cell.A1
+    cell_filter = number_per_cell >= min_number
+    return cell_filter, number_per_cell
 
 
-def high_var_genes_zheng17(X, n_genes=1000):
+def filter_genes(data, min_counts=None, min_cells=None):
+    """
+    Keep genes that have at least `min_counts` counts or are expressed in
+    `min_cells` cells.
+    """
+    if min_cells is not None and min_counts is not None:
+        raise ValueError('Either specify min_counts or min_cells, but not both.')
+    if min_cells is None and min_counts is None:
+        raise ValueError('Provide one of min_counts or min_cells.')
+    if isinstance(data, AnnData):
+        adata = data
+        gene_filter, number = filter_genes(adata.X, min_counts, min_cells)
+        if min_cells is None:
+            adata.var['n_counts'] = number
+        else:
+            adata.var['n_cells'] = number
+        return adata[:, gene_filter]
+    X = data  # proceed with processing the data matrix
+    number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
+    min_number = min_counts if min_cells is None else min_cells
+    if issparse(X):
+       number_per_gene = number_per_gene.A1
+    gene_filter = number_per_gene >= min_number
+    return gene_filter, number_per_gene
+
+
+def filter_genes_zheng17(X, n_genes=1000, return_info=False):
     """
     Highly variable genes as in Zheng et al. (2017).
 
@@ -46,20 +99,23 @@ def high_var_genes_zheng17(X, n_genes=1000):
         Data matrix.
     n_genes : int
         Number of highly-variable genes to keep.
+    return_info : bool (default: False)
+        Return means and dispersions for each gene.
 
     Returns
     -------
     gene_filter : np.ndarray of shape n_genes of dtype bool
         Boolean index array.
-    means : np.ndarray of shape n_genes
-        Means per gene.
-    dispersions : np.ndarray of shape n_genes
-        Dispersions per gene.
+    If return_info, in addition:
+        means : np.ndarray of shape n_genes
+            Means per gene.
+        dispersions : np.ndarray of shape n_genes
+            Dispersions per gene.
     """
     from statsmodels import robust
-    if False: # the following is less efficient and has no support for sparse matrices
+    if False:  # the following is less efficient and has no support for sparse matrices
         mean = np.mean(X, axis=0)
-        std = np.std(X, axis=0, ddof=1) # use R convention
+        std = np.std(X, axis=0, ddof=1)  # use R convention
         var = np.var(X, axis=0, ddof=1)
     else:
         from sklearn.preprocessing import StandardScaler
@@ -91,10 +147,13 @@ def high_var_genes_zheng17(X, n_genes=1000):
     sett.m(0, 'dispersion cutoff', disp_cut_off)
     # boolean index array for highly-variable genes
     gene_filter = df['dispersion_norm'].values >= disp_cut_off
-    return gene_filter, df['mean'].values, df['dispersion'].values
+    if return_info:
+        return gene_filter, df['mean'].values, df['dispersion'].values
+    else:
+        return gene_filter
 
 
-def gene_filter_cv(X, Ecutoff, cvFilter):
+def filter_genes_cv(X, Ecutoff, cvFilter):
     """
     Filter genes by coefficient of variance and mean.
     """
@@ -104,7 +163,7 @@ def gene_filter_cv(X, Ecutoff, cvFilter):
     return gene_filter
 
 
-def gene_filter_fano(X, Ecutoff, Vcutoff):
+def filter_genes_fano(X, Ecutoff, Vcutoff):
     """
     Filter genes by fano factor and mean.
     """
@@ -114,21 +173,18 @@ def gene_filter_fano(X, Ecutoff, Vcutoff):
     return gene_filter
 
 
-def log1p(X):
+def log1p(data):
     """
     Apply logarithm to count data "plus 1".
     """
-    if isinstance(X, AnnData):
-        return AnnData(log1p(X.X), X.smp, X.var, **X.add)
-    if not sp.sparse.issparse(X):
+    if isinstance(data, AnnData):
+        return AnnData(log1p(data.X), data.smp, data.var, **data.add)
+    X = data  # proceed with data matrix
+    if not issparse(X):
         X = np.log1p(X)
     else:
         X = X.log1p()
     return X
-
-
-log = log1p
-""" Same as log1p. For backwards compatibility. """
 
 
 def pca(X, n_comps=50, zero_center=None, svd_solver='randomized',
@@ -156,9 +212,11 @@ def pca(X, n_comps=50, zero_center=None, svd_solver='randomized',
     X_pca : np.ndarray
         Data projected on n_comps PCs.
     """
+    if isinstance(X, AnnData):
+        sys.exit('Use sc.pca(adata, ...) instead. This is function is only defined for a data matrix.')
     from .. import settings as sett
     if X.shape[1] < n_comps:
-        n_comps = X.shape[1]-1
+        n_comps = X.shape[1] - 1
         sett.m(0, 'reducing number of computed PCs to',
                n_comps, 'as dim of data is only', X.shape[1])
     try:
@@ -174,7 +232,6 @@ def pca(X, n_comps=50, zero_center=None, svd_solver='randomized',
             sett.m(0 if not mute else 10, '... without zero-centering')
             X_pca = TruncatedSVD(n_components=n_comps).fit_transform(X)
         sett.mt(0 if not mute else 10, 'finished')
-        sett.m(1, '--> to speed this up, set option exact=False')
     except ImportError:
         X_pca = _pca_fallback(X, n_comps=n_comps)
         sett.mt(0 if not mute else 10, 'preprocess: computed PCA using fallback code\n',
@@ -183,48 +240,55 @@ def pca(X, n_comps=50, zero_center=None, svd_solver='randomized',
     return X_pca.astype(np.float32)
 
 
-def smp_norm(X):
+def normalize_per_cell(data, scale_factor=None):
     """
-    Normalize by UMI, so that every cell has the same total read count.
+    Normalize each cell by UMI count, so that every cell has the same total
+    count.
 
-    Adapted from Zheng et al. (2016), see
-    https://github.com/10XGenomics/single-cell-3prime-paper/.
-
-    Similar functions are used, for example, by Haghverdi et al. (2016) and
-    Weinreb et al. (2016).
+    Similar functions are used, for example, by Cell Ranger (Zheng et al.,
+    2017), Seurat (Macosko et al., 2015), Haghverdi et al. (2016) or Weinreb et
+    al. (2016).
 
     Parameters
     ----------
-    X : np.ndarray
-        Expression matrix. Rows correspond to cells and columns to genes.
+    data : np.ndarray or AnnData
+        Data matrix. Rows correspond to cells and columns to genes.
+    scale_factor : float or None (default: None)
+        If None, multiply by median.
 
     Returns
     -------
     X_norm : np.ndarray
         Normalized version of the original expression matrix.
     """
-    counts_per_gene = np.sum(X, axis=0)
+    if isinstance(data, AnnData):
+        adata = data
+        X = normalize_per_cell(adata.X, scale_factor)
+        return AnnData(X, adata.smp, adata.var, **adata.add)
+    X = data  # proceed with the data matrix
     counts_per_cell = np.sum(X, axis=1)
-    if not sp.sparse.issparse(X):
-        gene_filter = counts_per_gene >= 1
-        X = X * np.median(counts_per_cell) / (counts_per_cell[:, np.newaxis] + 1e-6)
+    if issparse(X):
+        counts_per_cell = counts_per_cell.A1
+    if scale_factor is None:
+        scale_factor = np.median(counts_per_cell)
+    if not issparse(X):
+        X = X / (counts_per_cell[:, np.newaxis] + 1e-6) * scale_factor
     else:
-        gene_filter = np.flatnonzero(counts_per_gene.A1 >= 1)
-        Norm = sp.sparse.diags(np.median(counts_per_cell.A1) / (counts_per_cell.A.ravel() + 1e-6))
+        Norm = sp.sparse.diags(scale_factor / (counts_per_cell + 1e-6))
         X = Norm.dot(X.tobsr()).tocsr()
-    return X, gene_filter
+    return X
 
 
-def smp_norm_weinreb16(X, max_fraction=1, mult_with_mean=False):
+def cell_norm_weinreb16(X, max_fraction=1, mult_with_mean=False):
     """
     Normalize by UMI, so that every cell has the same total read count.
 
     Used, for example, by Haghverdi et al. (2016), Weinreb et al. (2016) or
     Zheng et al. (2016).
 
-    Using Euclidian distance after this normalization will yield the same result
-    as using cosine distance.
-        eucl_dist(Y1, Y2) = (Y1-Y2)^2
+    Using squared Euclidian distance after this normalization will yield the
+    same result as using cosine distance.
+        sq_eucl_dist(Y1, Y2) = (Y1-Y2)^2
         = Y1^2 +Y2^2 - 2Y1*Y2 = 1 + 1 - 2 Y1*Y2 = 2*(1-(Y1*Y2))
         = 2*(1-(X1*X2)/(|X1|*|X2|)) = 2*cosine_dist(X1,X2)
 
@@ -259,6 +323,61 @@ def smp_norm_weinreb16(X, max_fraction=1, mult_with_mean=False):
     if mult_with_mean:
         X_norm *= np.mean(counts_per_cell)
     return X_norm
+
+
+def _regress_out(col_index, responses, regressors):
+    try:
+        result = sm.GLM(responses[:, col_index].todense().A1,
+                        regressors, family=sm.families.Gaussian()).fit()
+        new_column = result.resid_response
+    except PerfectSeparationError:  # this emulates R's behavior
+        new_column = np.zeros(responses.shape[0])
+    return new_column
+
+
+def _regress_out_junk(junk, responses, regressors):
+    junk_array = np.zeros((responses.shape[0], junk.size),
+                           dtype=responses.dtype)
+    for i, col_index in enumerate(junk):
+        junk_array[:, i] = _regress_out(col_index,  responses, regressors)
+    return junk_array
+
+def is_interactive():
+    import __main__ as main
+    return not hasattr(main, '__file__')
+
+def regress_out(adata, smp_keys, n_jobs=2):
+    """
+    Regress out unwanted sources of variation.
+
+    Yields a dense matrix.
+    """
+    sett.mt(0, 'regress out', smp_keys)
+    # the code here can still be much optimized
+    # ensuring a homogeneous data type seems to be necessary for GLM
+    regressors = np.array([adata.smp[key].astype(float)
+                           for key in smp_keys]).T
+    regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
+    adata_corrected = adata.copy()
+    len_junk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
+    n_junks = np.ceil(adata.X.shape[1] / len_junk).astype(int)
+    junks = [np.arange(start, min(start + len_junk, adata.X.shape[1]))
+             for start in range(0, n_junks * len_junk, len_junk)]
+    adata_corrected.X = adata_corrected.X.toarray()
+    if is_interactive():
+        # from tqdm import tqdm_notebook as tqdm  # does not work in Rodeo, should be solved sometime soon
+        sett.m('TODO: nice waitbars also in interactive mode')
+    else:
+        from tqdm import tqdm
+    for junk in tqdm(junks):
+        result_lst = Parallel(n_jobs=n_jobs)(
+                              delayed(_regress_out)(
+                                      col_index, adata.X, regressors)
+                                      for col_index in junk)
+        for i_column, column in enumerate(junk):
+            adata_corrected.X[:, column] = result_lst[i_column]
+    sett.mt(0, 'finished regress out')
+    return adata_corrected
 
 
 def subsample(adata, subsample, seed=0):
