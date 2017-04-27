@@ -4,7 +4,7 @@ Preprocessing recipes from the literature
 """
 
 from .. import settings as sett
-from .simple import smp_norm_weinreb16, gene_filter_cv, pca, zscore
+from .simple import normalize_per_cell_weinreb16, filter_genes_cv, pca, zscore
 
 def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
               n_pcs=50, svd_solver='randomized', random_state=0):
@@ -29,7 +29,7 @@ def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     sett.m(0, 'preprocess: weinreb16, X has shape n_samples x n_variables =',
            adata.X.shape[0], 'x', adata.X.shape[1])
     # row normalize
-    adata.X = smp_norm_weinreb16(adata.X, max_fraction=0.05, mult_with_mean=True)
+    adata.X = cell_norm_weinreb16(adata.X, max_fraction=0.05, mult_with_mean=True)
     # filter out genes with mean expression < 0.1 and
     # coefficient of variance < cv_threshold
     gene_filter = gene_filter_cv(adata.X, mean_threshold, cv_threshold)
