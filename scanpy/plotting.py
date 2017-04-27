@@ -81,12 +81,12 @@ def scatter(adata,
     """
     # write params to a config file
     params = locals(); del params['adata']
-    if os.path.exists('.scanpy_config_plotting'):
-        params = utils.update_params(readwrite.read_params('.scanpy_config_plotting', verbosity=1), params)
+    if os.path.exists('.scanpy/config_plotting.txt'):
+        params = utils.update_params(readwrite.read_params('.scanpy/config_plotting.txt', verbosity=1), params)
         if right_margin != params['right_margin']:
             right_margin = params['right_margin']
-            sett.m(0, '... set right_margin to saved value', right_margin)
-    readwrite.write_params('.scanpy_config_plotting', params); del params
+            sett.m(1, '... setting right_margin to saved value', right_margin)
+    readwrite.write_params('.scanpy/config_plotting.txt', params); del params
     # compute components
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'

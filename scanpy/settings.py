@@ -10,8 +10,10 @@ Sets global variables like verbosity, manages log output and timing.
 # http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
 import os
+if not os.path.exists('.scanpy/'):  # directory for configuration files etc.
+    os.makedirs('.scanpy/')
 import matplotlib
-if 'DISPLAY' not in os.environ:
+if 'DISPLAY' not in os.environ:  # login via ssh but no xserver
     matplotlib.use('Agg')
     print('... WARNING: did not find DISPLAY variable needed for interactive plotting\n'
           '--> try ssh with `-X` or `-Y`')
@@ -74,11 +76,11 @@ autoshow = True
 There is no need to call sc.show() in this case.
 """
 
-writedir = 'write/'
+writedir = './write/'
 """Directory where the function scanpy.write writes to by default.
 """
 
-figdir = 'figs/'
+figdir = './figs/'
 """Directory where plots are saved.
 """
 

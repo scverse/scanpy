@@ -22,6 +22,8 @@ def filter_cells(data, min_counts=None, min_genes=None):
     Keep cells that have at least `min_counts` UMI counts or `min_genes`
     genes expressed.
 
+    This is to filter measurement outliers, i.e., "unreliable" samples.
+
     Paramaters
     ----------
     data : np.ndarray or AnnData
@@ -60,13 +62,17 @@ def filter_cells(data, min_counts=None, min_genes=None):
     if issparse(X):
        number_per_cell = number_per_cell.A1
     cell_filter = number_per_cell >= min_number
+    sett.m(0, '... filtered out', np.sum(~cell_filter), 'outlier cells')
     return cell_filter, number_per_cell
 
 
-def filter_genes(data, min_counts=None, min_cells=None):
+def filter_genes(data, min_cells=None, min_counts=None):
     """
     Keep genes that have at least `min_counts` counts or are expressed in
-    `min_cells` cells.
+    at least `min_cells` cells / samples.
+
+    Filter out genes whose expression is not supported by sufficient statistical
+    evidence.
     """
     if min_cells is not None and min_counts is not None:
         raise ValueError('Either specify min_counts or min_cells, but not both.')
@@ -74,7 +80,8 @@ def filter_genes(data, min_counts=None, min_cells=None):
         raise ValueError('Provide one of min_counts or min_cells.')
     if isinstance(data, AnnData):
         adata = data
-        gene_filter, number = filter_genes(adata.X, min_counts, min_cells)
+        gene_filter, number = filter_genes(adata.X, min_cells=min_cells,
+                                           min_counts=min_counts)
         if min_cells is None:
             adata.var['n_counts'] = number
         else:
@@ -86,12 +93,19 @@ def filter_genes(data, min_counts=None, min_cells=None):
     if issparse(X):
        number_per_gene = number_per_gene.A1
     gene_filter = number_per_gene >= min_number
+    sett.m(0, '... filtered out', np.sum(~gene_filter),
+           'genes that are detected',
+           'in less than ' + str(min_cells)  + ' cells' if min_counts is None
+           else 'with less than ' + str(min_counts) + ' counts')
     return gene_filter, number_per_gene
 
 
 def filter_genes_dispersion(data, log=True,
-                            min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=None,
-                            n_top_genes=None, norm_method='seurat', plot=False):
+                            min_disp=0.5, max_disp=None,
+                            min_mean=0.0125, max_mean=3,
+                            n_top_genes=None,
+                            norm_method='seurat',
+                            plot=False):
     """
     Extract highly variable genes.
 
@@ -124,8 +138,8 @@ def filter_genes_dispersion(data, log=True,
     if isinstance(data, AnnData):
         adata = data
         result = filter_genes_dispersion(adata.X, log=log,
-                                         min_mean=min_mean, max_mean=max_mean,
                                          min_disp=min_disp, max_disp=max_disp,
+                                         min_mean=min_mean, max_mean=max_mean,
                                          n_top_genes=n_top_genes,
                                          norm_method=norm_method, plot=plot)
         gene_filter, means, dispersions, dispersions_norm = result
@@ -135,7 +149,7 @@ def filter_genes_dispersion(data, log=True,
         if plot:
             plot_filter_genes_dispersion(adata, gene_filter=gene_filter, log=not log)
         return adata[:, gene_filter]
-    sett.m(0, 'filter highly variying genes by dispersion')
+    sett.m(0, '... filter highly varying genes by dispersion and mean')
     X = data  # proceed with data matrix
     if False:  # the following is less efficient and has no support for sparse matrices
         mean = np.mean(X, axis=0)
@@ -146,11 +160,11 @@ def filter_genes_dispersion(data, log=True,
         scaler = StandardScaler(with_mean=False).partial_fit(X)
         mean = scaler.mean_
         var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))  # user R convention (unbiased estimator)
+        dispersion = var / (mean + 1e-12)
         if log:  # consider logarithmized mean as in Seurat
-            dispersion = np.log(var / mean)
+            dispersion[dispersion == 0] = np.nan
+            dispersion = np.log(dispersion)
             mean = np.log1p(mean)
-        else:
-            dispersion = var / (mean + 1e-6)
     # all of the following quantities are "per-gene" here
     import pandas as pd
     df = pd.DataFrame()
@@ -191,9 +205,10 @@ def filter_genes_dispersion(data, log=True,
         gene_filter = df['dispersion_norm'].values >= disp_cut_off
         sett.m(0, 'dispersion cutoff', disp_cut_off)
     else:
-        sett.m(0, '... using `min_mean`, `max_mean`, `min_disp` and `max_disp` to filter genes')
+        sett.m(0, '    using `min_disp`, `max_disp`, `min_mean` and `max_mean`')
         sett.m(0, '--> set `n_top_genes` to simply select top-scoring genes instead')
         max_disp = np.inf if max_disp is None else max_disp
+        dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_filter = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
@@ -413,7 +428,7 @@ def regress_out(adata, smp_keys, n_jobs=2):
     """
     sett.mt(0, 'regress out', smp_keys)
     if issparse(adata.X):
-        sett.m(0, 'regress_out: sparse input is densified and may '
+        sett.m(0, '... sparse input is densified and may '
                'lead to huge memory consumption')
     # the code here can still be much optimized
     # ensuring a homogeneous data type seems to be necessary for GLM
@@ -425,7 +440,8 @@ def regress_out(adata, smp_keys, n_jobs=2):
     n_junks = np.ceil(adata.X.shape[1] / len_junk).astype(int)
     junks = [np.arange(start, min(start + len_junk, adata.X.shape[1]))
              for start in range(0, n_junks * len_junk, len_junk)]
-    adata_corrected.X = adata_corrected.X.toarray()
+    if issparse(adata_corrected.X):
+        adata_corrected.X = adata_corrected.X.toarray()
     from ..utils import is_interactive
     if is_interactive():
         # from tqdm import tqdm_notebook as tqdm
@@ -443,7 +459,7 @@ def regress_out(adata, smp_keys, n_jobs=2):
                                       for col_index in junk)
         for i_column, column in enumerate(junk):
             adata_corrected.X[:, column] = result_lst[i_column]
-    sett.mt(0, '    finished regress out')
+    sett.mt(0, 'finished')
     return adata_corrected
 
 
