@@ -442,8 +442,7 @@ def regress_out(adata, smp_keys, n_jobs=2):
              for start in range(0, n_junks * len_junk, len_junk)]
     if issparse(adata_corrected.X):
         adata_corrected.X = adata_corrected.X.toarray()
-    from ..utils import is_interactive
-    if is_interactive():
+    if sett._is_interactive:
         # from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
         # tqdm = lambda x: x
@@ -597,7 +596,7 @@ def plot_filter_genes_dispersion(adata, gene_filter, log=True):
             pl.ylim(y_min, 1.05*np.max(dispersions))
         pl.legend()
         pl.xlabel('mean expression of gene')
-        pl.ylabel('dispersion of gene' + ' (normalized)' if 'norm' in d else '')
+        pl.ylabel('dispersion of gene' + (' (normalized)' if 'norm' in d else ' (not normalized)'))
     from .. import plotting as plott
     plott.savefig_or_show('high_var_genes')
 

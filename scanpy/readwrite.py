@@ -22,10 +22,10 @@ def write(filename_or_key, dict_or_adata):
     Write AnnData objects and dictionaries to file.
 
     If a key is specified, the filename is generated as
-        filename = sett.writedir + key + sett.extd
+        filename = sett.writedir + key + sett.file_format_data
     This defaults to
         filename = 'write/' + key + '.h5'
-    and can be changed by reseting sett.writedir and sett.extd.
+    and can be changed by reseting sett.writedir and sett.file_format_data.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def write(filename_or_key, dict_or_adata):
     else:
         key = filename_or_key
         filename = get_filename_from_key(key)
-    write_dict_to_file(filename, dictionary, ext=sett.extd)
+    write_dict_to_file(filename, dictionary, ext=sett.file_format_data)
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
          as_strings=False, backup_url='', return_dict=False):
@@ -102,7 +102,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
 
     # generate filename and read to dict
     key = filename_or_key
-    filename = sett.writedir + key + '.' + sett.extd
+    filename = sett.writedir + key + '.' + sett.file_format_data
     if not os.path.exists(filename):
         raise ValueError('Reading with key ' + key + ' failed! ' +
                          'Provide valid key or valid filename directly: ' +
@@ -111,7 +111,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
                          'use a filename on one of the available extensions\n' +
                          str(avail_exts) +
                          '\nor provide the parameter "ext" to sc.read.')
-    d = read_file_to_dict(filename, ext=sett.extd)
+    d = read_file_to_dict(filename, ext=sett.file_format_data)
     if return_dict:
         return d
     else:
@@ -245,7 +245,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     # read hdf5 files
     if ext == 'h5':
         if sheet == '':
-            return read_file_to_dict(filename, ext=sett.extd)
+            return read_file_to_dict(filename, ext=sett.file_format_data)
         else:
             sett.m(0, 'reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
@@ -254,10 +254,10 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     if filename_stripped.startswith('data/'):
         filename_stripped = filename_stripped[5:]
     filename_fast = (sett.writedir + 'data/'
-                     + filename_stripped.replace('.' + ext, '.' + sett.extd))
+                     + filename_stripped.replace('.' + ext, '.' + sett.file_format_data))
     if not os.path.exists(filename_fast) or sett.recompute == 'read':
         sett.m(0,'reading file', filename,
-               '\n... writing an', sett.extd,
+               '\n... writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
                filename_fast)
         if not os.path.exists(os.path.dirname(filename_fast)):
@@ -287,9 +287,9 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         else:
             raise ValueError('Unkown extension', ext)
         # write as fast for faster reading when calling the next time
-        write_dict_to_file(filename_fast, ddata, sett.extd)
+        write_dict_to_file(filename_fast, ddata, sett.file_format_data)
     else:
-        ddata = read_file_to_dict(filename_fast, sett.extd)
+        ddata = read_file_to_dict(filename_fast, sett.file_format_data)
     return ddata
 
 def _read_mtx(filename):
@@ -867,7 +867,7 @@ def convert_string(string):
 
 
 def get_filename_from_key(key):
-    filename = sett.writedir + key + '.' + sett.extd
+    filename = sett.writedir + key + '.' + sett.file_format_data
     return filename
 
 

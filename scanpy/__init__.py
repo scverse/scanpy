@@ -79,7 +79,7 @@ def _run_command_line_args(toolkey, args):
     Run specified tool, do preprocessing and read/write outfiles.
 
     Result files store the dictionary returned by the tool. File type is
-    determined by variable sett.extd allowed are 'h5' (hdf5), 'xlsx' (Excel) or
+    determined by variable sett.file_format_data allowed are 'h5' (hdf5), 'xlsx' (Excel) or
     'csv' (comma separated value file).
 
     If called twice with the same settings the existing result file is used.

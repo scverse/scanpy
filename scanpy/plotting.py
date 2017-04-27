@@ -238,12 +238,12 @@ def init_fig_params():
     # color palette
     # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
     rcParams['axes.prop_cycle'] = cycler(color=
-                                         ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                                          '#9467bd', '#8c564b', '#e377c2', # '#7f7f7f', remove grey
-                                          '#bcbd22', '#17becf',
-                                          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-                                          '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
-                                          '#dbdb8d', '#9edae5'])
+        ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+         '#9467bd', '#8c564b', '#e377c2', # '#7f7f7f', remove grey
+         '#bcbd22', '#17becf',
+         '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
+         '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
+         '#dbdb8d', '#9edae5'])
     if 'DISPLAY' not in os.environ:
         sett.m(0, '    setting `sett.savefigs = True`')
         sett.savefigs = True
@@ -251,14 +251,14 @@ def init_fig_params():
 
 def savefig(writekey):
     if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.extf
+        filename = sett.figdir + writekey + '.' + sett.file_format_figures
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
 
 
 def savefig_or_show(writekey):
     if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.extf
+        filename = sett.figdir + writekey + '.' + sett.file_format_figures
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
     elif sett.autoshow:
@@ -403,7 +403,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX = None, cmap='viridis'):
             hold = h
         Xnew[:, _hold:] = X[:, hold:]
 
-    fig = pl.figure(figsize=(1.5*4,2*4))
+    fig = pl.figure(figsize=(1.5*4, 2*4))
     im = pl.imshow(np.array(X,dtype=np.float_), aspect='auto',
               interpolation='nearest', cmap=cmap)
     pl.colorbar(shrink=0.5)
@@ -468,9 +468,10 @@ def scatter_base(Y,
     top_offset = 1 - rcParams['figure.subplot.top']
     bottom_offset = 0.08
     left_offset = 0.3 # in units of base_height
-    base_height = 4
+    base_height = rcParams['figure.figsize'][1]
     height = base_height
-    draw_region_width = base_height - left_offset - top_offset - 0.5 # this is kept constant throughout
+    base_width = rcParams['figure.figsize'][0]
+    draw_region_width = base_width - left_offset - top_offset - 0.5 # this is kept constant throughout
 
     right_margin_factor = (1 + right_margin/(1-right_margin))
     width_without_offsets = right_margin_factor * len(colors) * draw_region_width # this is the total width that keeps draw_region_width

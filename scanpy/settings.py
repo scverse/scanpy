@@ -1,8 +1,8 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
 """
-Settings and Logfile
+Settings, Logging and Timing
 
-Sets global variables like verbosity, manages log output and timing.
+Sets global variables like verbosity, manages logging and timing.
 """
 # Note
 # ----
@@ -23,38 +23,39 @@ from functools import reduce
 from matplotlib import rcParams
 
 #--------------------------------------------------------------------------------
-# Global Settings
+# Global Settings Attributes
 #--------------------------------------------------------------------------------
 
 verbosity = 1
-"""Set global verbosity level, choose from {0,...,6}. """
+"""Set global verbosity level, choose from {0,...,6}.
+"""
 
 exkey = ''
 """Global example key.
 """
 
 suffix = ''
-"""Global suffix, which is appended to basekey of output and figure files.
+"""Global suffix that is appended to basekey of output and figure files.
 """
 
 plotsuffix = ''
-"""Global suffix which is appended to figure filenames.
+"""Global suffix that is appended to figure filenames.
 
 Is needed when the computation parameters remain unchanged, but only plotting
 parameters are changed.
 """
 
-extd = 'h5'
-"""Global file extension format for data storage.
+file_format_data = 'h5'
+"""File format for saving AnnData objects.
 
 Allowed are 'h5' (hdf5), 'xlsx' (Excel) or 'csv' (comma separated value
 file).
 """
 
-extf = 'png'
-"""Global file extension for saving figures.
+file_format_figures = 'png'
+"""File format for saving figures.
 
-Recommended are 'png' and 'pdf'. Many other formats work as well (see
+For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
 matplotlib.pyplot.savefig).
 """
 
@@ -92,9 +93,74 @@ max_memory = 15
 """Maximal memory usage in Gigabyte.
 """
 
+
 #--------------------------------------------------------------------------------
-# Command-line arguments for global variables in settings
+# Global Setting Functions
 #--------------------------------------------------------------------------------
+
+
+def set_logfile(filename=''):
+    """
+    Define filename of logfile.
+
+    If not defined, log output will be to the standard output.
+
+    Parameters
+    ----------
+    filename : str
+        Filename of
+    """
+    global _logfilename, verbosity
+    _logfilename = filename
+    # if providing a logfile name, automatically set verbosity to a very high level
+    verbosity = 5
+
+
+def set_dpi(dpi=200):
+    """
+    Set resolution of png figures.
+
+    Parameters
+    ----------
+    dpi : int, optional
+        Resolution of png output in dots per inch.
+    """
+    # default setting as in scanpy.plot
+    rcParams['savefig.dpi'] = dpi
+
+
+def set_jupyter():
+    """
+    Update figure resolution for use in jupyter notebook.
+
+    Avoids that figures get displayed too large. To set a specific value for the
+    resolution, use the dpi function.
+    """
+    dpi(60)
+    global autoshow
+    autoshow = True
+
+
+# ------------------------------------------------------------------------------
+# Private global variables
+# ------------------------------------------------------------------------------
+
+import __main__ as main
+_start = time.time()
+"""Time when the settings module is first imported."""
+_intermediate = _start
+"""Variable for timing program parts."""
+_logfilename = ''
+"""Name of logfile."""
+_is_interactive = not hasattr(main, '__file__')
+"""Determines whether run as file or imported as package."""
+atexit.register(_terminate)  # start tracking when importing this module
+
+
+#--------------------------------------------------------------------------------
+# Command-line arguments for global attributes
+#--------------------------------------------------------------------------------
+
 
 def add_args(p):
     """
@@ -112,7 +178,7 @@ def add_args(p):
     """
     aa = p.add_argument_group('Save figures').add_argument
     aa('-s', '--savefigs',
-       type=str, default='', const=extf, nargs='?', metavar='ext',
+       type=str, default='', const=file_format_figures, nargs='?', metavar='ext',
        help='Save figures either as "png", "svg" or "pdf". Just providing '
             '"--savefigs" will save to "png" (default: do not save figures).')
     aa('--figdir',
@@ -146,7 +212,7 @@ def add_args(p):
        type=int, default=16, metavar='m',
        help='Specify maximal memory usage in GB (default: %(default)s).')
     aa('--fileformat',
-       type=str, default=extd, metavar='ext',
+       type=str, default=file_format_data, metavar='ext',
        help='Specify file format for saving results, either "h5", "csv", '
             '"txt" or "npz" (default: %(default)s).')
     aa('--writedir',
@@ -160,6 +226,7 @@ def add_args(p):
        action='help',
        help='Show this help message and exit.')
     return p
+
 
 def process_args(args):
     """
@@ -189,12 +256,12 @@ def process_args(args):
     args.pop('verbosity')
 
     global savefigs
-    global extf
+    global file_format_figures
     if args['savefigs'] == '':
         savefigs = False
     else:
         savefigs = True
-        extf = args['savefigs']
+        file_format_figures = args['savefigs']
     args.pop('savefigs')
 
     global figdir
@@ -209,8 +276,8 @@ def process_args(args):
         makedirs(figdir)
     args.pop('figdir')
 
-    global extd
-    extd = args['fileformat']
+    global file_format_data
+    file_format_data = args['fileformat']
     args.pop('fileformat')
 
     global writedir
@@ -237,9 +304,11 @@ def process_args(args):
 
     return args
 
+
 #--------------------------------------------------------------------------------
-# Output
+# Logging
 #--------------------------------------------------------------------------------
+
 
 def m(v=0,*msg):
     """
@@ -256,6 +325,7 @@ def m(v=0,*msg):
     if verbosity > v:
         mi(*msg)
 
+
 def mi(*msg):
     """
     Write message to log output, ignoring the verbosity level.
@@ -266,7 +336,7 @@ def mi(*msg):
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
-    if logfilename == '':
+    if _logfilename == '':
         # in python 3, the following works
         # print(*msg)
         # due to compatibility with the print statement in python 2 we choose
@@ -275,8 +345,9 @@ def mi(*msg):
         out = ''
         for s in msg:
             out += str(s) + ' '
-        with open(logfilename) as f:
+        with open(_logfilename) as f:
             f.write(out + '\n')
+
 
 def mt(v=0,*msg):
     """
@@ -293,52 +364,13 @@ def mt(v=0,*msg):
         function.
     """
     if verbosity > v:
-        global intermediate
+        global _intermediate
         now = time.time()
-        elapsed_since_start = now - start
-        elapsed = now - intermediate
-        intermediate = now
+        elapsed_since_start = now - _start
+        elapsed = now - _intermediate
+        _intermediate = now
         mi(_sec_to_str(elapsed),'-',*msg)
 
-def logfile(filename=''):
-    """
-    Define filename of logfile.
-
-    If not defined, log output will be to the standard output.
-
-    Parameters
-    ----------
-    filename : str
-        Filename of
-    """
-    global logfilename, verbosity
-    logfilename = filename
-    # if providing a logfile name, automatically set verbosity to a very high level
-    verbosity = 5
-
-
-def dpi(dpi=200):
-    """
-    Set resolution of png figures.
-
-    Parameters
-    ----------
-    dpi : int, optional
-        Resolution of png output in dots per inch.
-    """
-    # default setting as in scanpy.plot
-    rcParams['savefig.dpi'] = dpi
-
-def jupyter():
-    """
-    Update figure resolution for use in jupyter notebook.
-
-    Avoids that figures get displayed too large. To set a specific value for the
-    resolution, use the dpi function.
-    """
-    dpi(60)
-    global autoshow
-    autoshow = True
 
 def _sec_to_str(t):
     """
@@ -361,7 +393,7 @@ def _terminate():
     """
     if verbosity > 0:
         now = time.time()
-        elapsed_since_start = now - start
+        elapsed_since_start = now - _start
         mi(27*"_")
         mi(_sec_to_str(elapsed_since_start),'- total runtime')
 
@@ -390,13 +422,3 @@ def _jupyter_deprecated(do=True):
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92*fontsize
     rcParams['axes.titlesize'] = fontsize
-
-# ------------------------------------------------------------------------------
-# Some global variables that track time
-# ------------------------------------------------------------------------------
-
-start = time.time()
-intermediate = start
-logfilename = ''
-separator = 80*"-"
-atexit.register(_terminate) # start tracking when importing this module
