@@ -16,75 +16,20 @@ from . import settings as sett
 from . import utils
 from . import readwrite
 
-#--------------------------------------------------------------------------------
-# Scanpy Plotting Functions
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Toplevel Plotting Functions
+#-------------------------------------------------------------------------------
 
 
-def init_fig_params():
-    """
-    Init default plotting parameters.
+def violin(adata, smp):
+    smp_df = adata.smp.to_df()
+    smp_tidy = pd.melt(smp_df, value_vars=smp)
+    sns.set_style('whitegrid')
+    g = sns.FacetGrid(smp_tidy, col='variable', sharey=False).map(
+            sns.violinplot, 'value', inner='quartile', orient='vertical').set_titles(
+                col_template='{col_name}').set_xlabels('')
+    return g
 
-    Is called at the very end of this module.
-    """
-    # figure
-    rcParams['figure.figsize'] = (4, 4)
-    rcParams['figure.subplot.left'] = 0.18
-    rcParams['figure.subplot.right'] = 0.96
-    rcParams['figure.subplot.bottom'] = 0.15
-    rcParams['figure.subplot.top'] = 0.91
-
-    rcParams['lines.linewidth'] = 1.5
-    rcParams['lines.markersize'] = 6
-    rcParams['lines.markeredgewidth'] = 1
-    # font
-    rcParams['font.sans-serif'] = ['Arial',
-                                   'Helvetica',
-                                   'DejaVu Sans',
-                                   'Bitstream Vera Sans',
-                                   'sans-serif']
-    fontsize = 14
-    rcParams['font.size'] = fontsize
-    rcParams['legend.fontsize'] = 0.92 * fontsize
-    rcParams['axes.titlesize'] = fontsize
-    # legend
-    rcParams['legend.numpoints'] = 1
-    rcParams['legend.scatterpoints'] = 1
-    rcParams['legend.handlelength'] = 0.5
-    rcParams['legend.handletextpad'] = 0.4
-    # resolution of png output
-    rcParams['savefig.dpi'] = 400
-    # color palette
-    # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-    rcParams['axes.prop_cycle'] = cycler(color=
-                                         ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                                          '#9467bd', '#8c564b', '#e377c2', # '#7f7f7f', remove grey
-                                          '#bcbd22', '#17becf',
-                                          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-                                          '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
-                                          '#dbdb8d', '#9edae5'])
-    if 'DISPLAY' not in os.environ:
-        sett.savefigs = True
-
-def savefig(writekey):
-    if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.extf
-        sett.m(0, 'saving figure to file', filename)
-        pl.savefig(filename)
-
-def savefig_or_show(writekey):
-    if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.extf
-        sett.m(0, 'saving figure to file', filename)
-        pl.savefig(filename)
-    elif sett.autoshow:
-        pl.show()
-
-def default_pal(pal=None):
-    if pal is None:
-        return rcParams['axes.prop_cycle']
-    elif not isinstance(pal, Cycler):
-        return cycler(color=pal)
 
 def scatter(adata,
             basis='pca',
@@ -250,6 +195,82 @@ def scatter(adata,
             axs[ismp].legend(frameon=False, loc=legendloc)
 
     return smps
+
+
+#-------------------------------------------------------------------------------
+# Helper Functions
+#-------------------------------------------------------------------------------
+
+
+def init_fig_params():
+    """
+    Init default plotting parameters.
+
+    Is called at the very end of this module.
+    """
+    # figure
+    rcParams['figure.figsize'] = (4, 4)
+    rcParams['figure.subplot.left'] = 0.18
+    rcParams['figure.subplot.right'] = 0.96
+    rcParams['figure.subplot.bottom'] = 0.15
+    rcParams['figure.subplot.top'] = 0.91
+
+    rcParams['lines.linewidth'] = 1.5
+    rcParams['lines.markersize'] = 6
+    rcParams['lines.markeredgewidth'] = 1
+    # font
+    rcParams['font.sans-serif'] = ['Arial',
+                                   'Helvetica',
+                                   'DejaVu Sans',
+                                   'Bitstream Vera Sans',
+                                   'sans-serif']
+    fontsize = 14
+    rcParams['font.size'] = fontsize
+    rcParams['legend.fontsize'] = 0.92 * fontsize
+    rcParams['axes.titlesize'] = fontsize
+    # legend
+    rcParams['legend.numpoints'] = 1
+    rcParams['legend.scatterpoints'] = 1
+    rcParams['legend.handlelength'] = 0.5
+    rcParams['legend.handletextpad'] = 0.4
+    # resolution of png output
+    rcParams['savefig.dpi'] = 400
+    # color palette
+    # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
+    rcParams['axes.prop_cycle'] = cycler(color=
+                                         ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                                          '#9467bd', '#8c564b', '#e377c2', # '#7f7f7f', remove grey
+                                          '#bcbd22', '#17becf',
+                                          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
+                                          '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
+                                          '#dbdb8d', '#9edae5'])
+    if 'DISPLAY' not in os.environ:
+        sett.m(0, '    setting `sett.savefigs = True`')
+        sett.savefigs = True
+
+
+def savefig(writekey):
+    if sett.savefigs:
+        filename = sett.figdir + writekey + '.' + sett.extf
+        sett.m(0, 'saving figure to file', filename)
+        pl.savefig(filename)
+
+
+def savefig_or_show(writekey):
+    if sett.savefigs:
+        filename = sett.figdir + writekey + '.' + sett.extf
+        sett.m(0, 'saving figure to file', filename)
+        pl.savefig(filename)
+    elif sett.autoshow:
+        pl.show()
+
+
+def default_pal(pal=None):
+    if pal is None:
+        return rcParams['axes.prop_cycle']
+    elif not isinstance(pal, Cycler):
+        return cycler(color=pal)
+
 
 def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
@@ -699,9 +720,7 @@ def arrows_transitions(ax,X,indices,weight=None):
                              head_width=head_widthi,
                              alpha=alphai,
                              color='grey')
-#-------------------------------------------------------------------------------
-# Helper Functions
-#-------------------------------------------------------------------------------
+
 
 def ticks_formatter(x, pos):
     # pretty scientific notation
@@ -712,11 +731,13 @@ def ticks_formatter(x, pos):
     else:
         return ('%.3f'%(x)).rstrip('0').rstrip('.')
 
+
 def pimp_axis(ax):
     """
     Remove trailing zeros.
     """
     ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
+
 
 def scale_to_zero_one(x):
     """
@@ -725,6 +746,7 @@ def scale_to_zero_one(x):
     xscaled = x - np.min(x)
     xscaled /= np.max(xscaled)
     return xscaled
+
 
 def zoom(ax,xy='x',factor=1):
     """
@@ -741,6 +763,7 @@ def zoom(ax,xy='x',factor=1):
     else:
         ax.set_ylim(new_limits)
 
+
 def get_ax_size(ax,fig):
     """
     Get axis size
@@ -756,6 +779,7 @@ def get_ax_size(ax,fig):
     width, height = bbox.width, bbox.height
     width *= fig.dpi
     height *= fig.dpi
+
 
 def axis_to_data(ax,width):
     """
@@ -775,6 +799,7 @@ def axis_to_data(ax,width):
     widthy = width*(ylim[1] - ylim[0])
     return 0.5*(widthx + widthy)
 
+
 def axis_to_data_points(ax,points_axis):
     """
     Map points in axis coordinates to data coordinates.
@@ -791,6 +816,7 @@ def axis_to_data_points(ax,points_axis):
     axis_to_data = ax.transAxes + ax.transData.inverted()
     return axis_to_data.transform(points_axis)
 
+
 def data_to_axis_points(ax,points_data):
     """
     Map points in data coordinates to axis coordinates.
@@ -806,6 +832,7 @@ def data_to_axis_points(ax,points_data):
     """
     data_to_axis = axis_to_data.inverted()
     return data_to_axis(points_data)
+
 
 #--------------------------------------------------------------------------------
 # Global Plotting Variables

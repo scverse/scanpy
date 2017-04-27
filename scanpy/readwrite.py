@@ -281,8 +281,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
         elif ext == 'txt.gz':
-            print('TODO: implement similar to read_softgz')
-            sys.exit()
+            sys.exit('TODO: implement similar to read_softgz')
         else:
             raise ValueError('Unkown extension', ext)
         # write as fast for faster reading when calling the next time
@@ -864,9 +863,11 @@ def convert_string(string):
 # Helper functions for reading and writing
 #--------------------------------------------------------------------------------
 
+
 def get_filename_from_key(key):
     filename = sett.writedir + key + '.' + sett.extd
     return filename
+
 
 def ddata_from_df(df):
     """
@@ -879,10 +880,12 @@ def ddata_from_df(df):
         }
     return ddata
 
+
 def download_progress(count, blockSize, totalSize):
     percent = int(count*blockSize*100/totalSize)
     sys.stdout.write("\r" + "... %d%%" % percent)
     sys.stdout.flush()
+
 
 def check_datafile_present(filename, backup_url=''):
     """
@@ -901,11 +904,10 @@ def check_datafile_present(filename, backup_url=''):
             return '../' + filename
         else:
             # download the file
-            sett.m(0, 'file ' + filename + ' is not present')
             if backup_url == '':
-                sys.exit(0)
+                sys.exit('file ' + filename + ' does not exist')
             sett.m(0, 'try downloading from url\n' + backup_url + '\n' +
-                  '... this may take a while but only happens once')
+                   '... this may take a while but only happens once')
             d = os.path.dirname(filename)
             if not os.path.exists(d):
                 sett.m(0, 'creating directory', d+'/', 'for saving data')
@@ -915,6 +917,7 @@ def check_datafile_present(filename, backup_url=''):
             sett.m(0,'')
 
     return filename
+
 
 def is_filename(filename_or_key,return_ext=False):
     """ Check whether it is a filename. """

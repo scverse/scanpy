@@ -11,6 +11,11 @@ from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
 from ..utils import merge_dicts
 
+
+SMP_NAMES = 'smp_names'
+VAR_NAMES = 'var_names'
+
+
 class StorageType(Enum):
     Array = np.ndarray
     Masked = ma.MaskedArray
@@ -20,8 +25,6 @@ class StorageType(Enum):
     def classes(cls):
         return tuple(c.value for c in cls.__members__.values())
 
-SMP_NAMES = 'smp_names'
-VAR_NAMES = 'var_names'
 
 class BoundRecArr(np.recarray):
     """
@@ -264,10 +267,16 @@ class AnnData(IndexMixin):
         return d
 
     def smp_keys(self):
+        """Show keys of sample annotation."""
         return [n for n in self.smp.dtype.names if n != SMP_NAMES]
 
     def var_keys(self):
+        """Show keys of variable annotation."""
         return [n for n in self.var.dtype.names if n != VAR_NAMES]
+
+    def add_keys():
+        """Show keys of addtional unstructured annotation."""
+        return self.add.keys()
 
     @property
     def smp_names(self):
@@ -379,7 +388,7 @@ class AnnData(IndexMixin):
     T = property(transpose)
 
     def copy(self):
-        return AnnData(self.X, self.smp, self.var,  **self.add)
+        return AnnData(self.X, self.smp, self.var, **self.add)
 
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))

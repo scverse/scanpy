@@ -78,7 +78,7 @@ def get_example(exkey, subsample=1, return_module=False):
         adata = exfunc()
         # add exkey to adata
         # adata['exkey'] = exkey
-        sett.m(0, 'X has shape n_samples x n_variables =', 
+        sett.m(0, 'X has shape n_samples x n_variables =',
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
         adata = check_adata(adata, verbosity=1)
@@ -98,7 +98,7 @@ def get_example(exkey, subsample=1, return_module=False):
     else:
         return adata
 
-    
+
 def show_exdata(format='plain'):
     """Show available example data.
     """
@@ -108,25 +108,25 @@ def show_exdata(format='plain'):
         s = utils.markdown_dict_string(builtin.example_data)
     print(s)
 
-    
+
 def show_exparams():
     """Show available example use cases.
     """
     s = utils.pretty_dict_string(_example_parameters())
     print(s)
 
-    
+
 def _example_parameters():
     """Example use cases.
     """
     builtin_dex = utils.fill_in_datakeys(builtin.example_parameters, builtin.example_data)
-    all_dex = utils.merge_dicts(builtin_dex, {}) 
+    all_dex = utils.merge_dicts(builtin_dex, {})
     try:
         # additional possibility to add example module
         from . import builtin_private
-        builtin_private_dex = utils.fill_in_datakeys(builtin_private.example_parameters, 
+        builtin_private_dex = utils.fill_in_datakeys(builtin_private.example_parameters,
                                                   builtin_private.example_data)
-        all_dex = utils.merge_dicts(all_dex, builtin_private_dex) 
+        all_dex = utils.merge_dicts(all_dex, builtin_private_dex)
     except ImportError:
         pass
     return all_dex
@@ -166,22 +166,23 @@ def check_adata(adata, verbosity=0):
                     adata[smp + '_names'] = np.setdiff1d(adata[smp + '_names'],
                                                          np.array(_ignore_groups))
                 from natsort import natsorted
-                adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'], 
+                adata[smp + '_names'] = np.array(natsorted(adata[smp + '_names'],
                                                            key=lambda v: v.upper()))
             if sett.verbosity > 1-verbosity:
                 info += smp + ': '
                 if adata.smp[smp].dtype.char == 'U':
                     ann_info = str(adata[smp + '_names'])
                     if len(adata[smp + '_names']) > 7:
-                        ann_info = (str(adata[smp + '_names'][0:3]).replace(']','') 
-                                    + ' ...' 
+                        ann_info = (str(adata[smp + '_names'][0:3]).replace(']','')
+                                    + ' ...'
                                     + str(adata[smp + '_names'][-2:]).replace('[',''))
                     info += ann_info
                 else:
                     info += 'cont'
                 if ismp < len(adata.smp_keys())-1:
-                    info += ','
-                sett.m(1-verbosity, info)
+                    info += ', '
+        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
+            sett.m(1-verbosity, info)
     return adata
 
 

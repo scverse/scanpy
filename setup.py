@@ -51,7 +51,8 @@ setup(
         'statsmodels',   # standard statistical models
         'natsort',       # natural, human-readable sorting
         'joblib',        # simple parallel computing
-        'profilehooks'   # profiling
+        'profilehooks',  # profiling
+        'tqdm'           # wait bars
     ] + more_requires,
     packages=[
         'scanpy',

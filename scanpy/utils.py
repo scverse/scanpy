@@ -9,6 +9,11 @@ import numpy as np
 from . import settings as sett
 
 
+def is_interactive():
+    import __main__ as main
+    return not hasattr(main, '__file__')
+
+
 def get_memory_usage():
     import psutil
     process = psutil.Process(os.getpid())

@@ -27,15 +27,15 @@ from .tools.dpt import dpt, plot_dpt
 from .tools.pca import pca, plot_pca
 from .tools.diffrank import diffrank, plot_diffrank
 from .tools.sim import sim, plot_sim
-pp = preprocess # just an equivalent name
+pp = preprocess  # just an equivalent name
 
 __all__ = [
     # example use cases
-    'get_example', # call example
-    'show_exdata', # show available example data
-    'show_examples', # show available example use cases
+    'get_example',  # call example
+    'show_exdata',  # show available example data
+    'show_examples',  # show available example use cases
     # help
-    'help', # show help for a given tool
+    'help',  # show help for a given tool
     # elementary operations
     'read',
     'write',
@@ -127,7 +127,7 @@ def _run_command_line_args(toolkey, args):
         # same if optional parameters have been specified on the command line
         if args['params']:
             add_params = readwrite.get_params_from_list(args['params'])
-            sett.m(0, '... overwriting params', '"' + 
+            sett.m(0, '... overwriting params', '"' +
                    ' '.join(['='.join([k, str(v)]) for k, v in add_params.items()])
                    + '"',
                   'in call of', toolkey)
@@ -153,7 +153,7 @@ def _run_command_line_args(toolkey, args):
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
         sett.logfile(logfile)
-    
+
     # actual call of tool
     if (adata is None
         or toolkey not in adata['tools']
@@ -161,6 +161,8 @@ def _run_command_line_args(toolkey, args):
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
             adata = tool(**params)
+        elif toolkey == 'pca':
+            adata = tool(adata, recompute=False, **params)
         else:
             adata = tool(adata, **params)
         # append toolkey to tools in adata
@@ -173,7 +175,7 @@ def _run_command_line_args(toolkey, args):
         readwrite.write_params(pfile, params)
 
     # plotting and postprocessing
-    pparams = (readwrite.get_params_from_list(args['pparams']) 
+    pparams = (readwrite.get_params_from_list(args['pparams'])
                if args['pparams'] else {})
     # post-processing specific to example and tool
     # - only if we are not subsampling
@@ -183,7 +185,7 @@ def _run_command_line_args(toolkey, args):
             adata = getattr(exmodule, postprocess)(adata)
             write(sett.basekey, adata)
     getattr(get_tool(toolkey), 'plot_' + toolkey)(adata, **pparams)
-   
+
 def _read_command_line_args_run_single_tool(toolkey):
     """
     Read arguments and run tool specified by toolkey.

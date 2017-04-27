@@ -14,6 +14,7 @@ from .. import plotting as plott
 from .. import utils
 from .ann_data import AnnData
 
+
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
     junk_range = np.arange(Dsq.shape[0])[:, None]
@@ -23,6 +24,7 @@ def get_neighbors(X, Y, k):
     indices_junk = indices_junk[:, 1:]  # exclude first data point (point itself)
     distances_junk = Dsq[junk_range, indices_junk]
     return indices_junk, distances_junk
+
 
 def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
     """
