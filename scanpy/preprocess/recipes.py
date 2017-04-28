@@ -38,7 +38,7 @@ def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     X_pca = pca(zscore(adata.X),
                 n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
-    adata['X_pca'] = X_pca
+    adata.smp['X_pca'] = X_pca
     sett.m(0, 'X_pca (computed from z-scored X) has shape n_samples x n_comps =',
-           adata['X_pca'].shape[0], 'x', adata['X_pca'].shape[1])
+           X_pca.shape[0], 'x', X_pca.shape[1])
     return adata

@@ -640,22 +640,6 @@ def _read_softgz(filename):
 # Reading and writing for dictionaries
 #--------------------------------------------------------------------------------
 
-def postprocess_reading(key, value):
-    if value.dtype.kind == 'S':
-        value = value.astype(str)
-    # get back dictionaries
-    if key.endswith('_ann'):
-        from collections import OrderedDict
-        dd = OrderedDict()
-        for row in value:
-            # the type is stored after the "_"
-            t = row[0].split('_')[-1]
-            k = '_'.join(row[0].split('_')[:-1])
-            dd[k] = row[1:].astype(t)
-        return key[:-4], dd
-    else:
-        return key, value
-
 def read_file_to_dict(filename, ext='h5'):
     """
     Read file and return dict with keys.
@@ -701,21 +685,42 @@ def read_file_to_dict(filename, ext='h5'):
         d = load_sparse_csr(d)
     return d
 
-def prepare_writing(key, value, ext):
+
+def postprocess_reading(key, value):
+    if value.dtype.kind == 'S':
+        value = value.astype(str)
+    # get back dictionaries
+    if key.endswith('_ann'):
+        if key.startswith('smp'):
+            value = value.T
+        from collections import OrderedDict
+        dd = OrderedDict()
+        for row in value:
+            # the type is stored after the "_"
+            t = row[0].split('_')[-1]
+            k = '_'.join(row[0].split('_')[:-1])
+            dd[k] = row[1:].astype(t)
+        return key[:-4], dd
+    else:
+        return key, value
+
+
+def preprocess_writing(key, value, ext):
     # if is a dict, build an array from it
     if isinstance(value, dict):
         array = []
         for k, v in value.items():
+            k += '_' + v.dtype.char
+            k = np.array([k])
             v = np.array(v)
-            t = v.dtype.char
-            # the type is stored after the "_"
-            array.append(np.r_[np.array([k + '_' + t]), v])
+            array.append(np.r_[k, v])
         value = np.array(array)
-        if ext not in {'h5', 'npz'}:
+        # if ext not in {'h5', 'npz'}:
+        #     value = value.T
+        if key == 'smp':
             value = value.T
         key = key + '_ann'
-    if type(value) != np.ndarray:
-        value = np.array(value)
+    value = np.array(value)
     # some output about the data to write
     sett.m(1, key, type(value),
            value.dtype, value.dtype.kind, value.shape)
@@ -723,6 +728,7 @@ def prepare_writing(key, value, ext):
     if value.dtype.kind == 'U':
         value = value.astype(np.string_)
     return key, value
+
 
 def write_dict_to_file(filename, d, ext='h5'):
     """
@@ -751,7 +757,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 for k, v in save_sparse_csr(value).items():
                     d_write[k] = v
             else:
-                key, value = prepare_writing(key, value, ext)
+                key, value = preprocess_writing(key, value, ext)
                 d_write[key] = value
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
@@ -770,7 +776,7 @@ def write_dict_to_file(filename, d, ext='h5'):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         for key, value in d.items():
-            key, value = prepare_writing(key, value, ext)
+            key, value = preprocess_writing(key, value, ext)
             if value.dtype.kind == 'S':
                 value = value.astype('U')
             if len(value.shape) > 0:

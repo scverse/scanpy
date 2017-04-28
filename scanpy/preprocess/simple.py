@@ -249,8 +249,8 @@ def log1p(data):
     return X
 
 
-def pca(data, n_comps=10, zero_center=None,
-        svd_solver='auto', random_state=None, recompute=True, mute=False, return_info=None):
+def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
+        random_state=None, recompute=True, mute=False, return_info=None):
     """
     Embed data using PCA.
 
@@ -293,22 +293,27 @@ def pca(data, n_comps=10, zero_center=None,
     """
     if isinstance(data, AnnData):
         adata = data
-        if ('X_pca' in adata
-            and adata['X_pca'].shape[1] >= n_comps
+        from .. import settings as sett  # why is this necessary?
+        if ('X_pca' in adata.smp
+            and adata.smp['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
             sett.m(0, '... not recomputing, using X_pca contained '
                    'in adata (set `recompute` to avoid this)')
             return adata
         else:
+            sett.mt(0, 'compute PCA with n_comps =', n_comps, start=True)
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio = result
-            adata['X_pca'] = X_pca
+            adata.smp['X_pca'] = X_pca  # this is multicolumn-sample annotation
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp)] = comp
-            adata['pca_variance_ratio'] = pca_variance_ratio
+            adata.add['pca_variance_ratio'] = pca_variance_ratio
+            sett.mt(0, 'finished, added\n'
+                    '    "X_pca" to adata.smp, "PC1", "PC2", ... to adata.var\n'
+                    '    and "pca_variance_ratio" to adata.add')
         return adata
     X = data  # proceed with data matrix
     from .. import settings as sett
@@ -319,7 +324,6 @@ def pca(data, n_comps=10, zero_center=None,
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     from sklearn.decomposition import PCA, TruncatedSVD
     verbosity_level = np.inf if mute else 0
-    sett.mt(verbosity_level, 'compute PCA with n_comps =', n_comps)
     if zero_center:
         if issparse(X):
             sett.m(0, 'pca: as `zero_center=True`, '
@@ -331,7 +335,6 @@ def pca(data, n_comps=10, zero_center=None,
         sett.m(verbosity_level, '... without zero-centering')
         pca_ = TruncatedSVD(n_components=n_comps)
     X_pca = pca_.fit_transform(X)
-    sett.mt(verbosity_level, 'finished')
     if False if return_info is None else return_info:
         return X_pca.astype(np.float32), pca_.components_, pca_.explained_variance_ratio_
     else:
@@ -529,13 +532,10 @@ def subsample(data, subsample, seed=0):
     adata = data
     _, smp_indices = utils.subsample(adata.X, subsample, seed)
     adata = adata[smp_indices, ]
-    for key in ['X_pca']:
-        if key in adata:
-            adata[key] = adata[key][smp_indices]
     for k in adata.smp_keys():
-        if k + '_masks' in adata:
+        if k + '_masks' in adata.adata:  # TODO: this should also be taken into account when slicing
             adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
-    adata['subsampled'] = True
+    adata.add['subsampled'] = True
     return adata
 
 

@@ -154,7 +154,6 @@ _logfilename = ''
 """Name of logfile."""
 _is_interactive = not hasattr(main, '__file__')
 """Determines whether run as file or imported as package."""
-atexit.register(_terminate)  # start tracking when importing this module
 
 
 #--------------------------------------------------------------------------------
@@ -290,18 +289,6 @@ def process_args(args):
     max_memory = args['max_memory']
     args.pop('max_memory')
 
-    # from these arguments, init further global variables
-    global exkey
-    global basekey
-    if 'exkey' in args:
-        exkey = args['exkey']
-        basekey = args['exkey'] + suffix
-    else:
-        basekey = 'test' + suffix
-
-    if args['subsample'] != 1:
-        basekey += '_ss{:02}'.format(args['subsample'])
-
     return args
 
 
@@ -349,7 +336,7 @@ def mi(*msg):
             f.write(out + '\n')
 
 
-def mt(v=0,*msg):
+def mt(v=0,*msg, start=False):
     """
     Write message to log output and show computation time.
 
@@ -366,6 +353,8 @@ def mt(v=0,*msg):
     if verbosity > v:
         global _intermediate
         now = time.time()
+        if start:
+            _intermediate = now
         elapsed_since_start = now - _start
         elapsed = now - _intermediate
         _intermediate = now
@@ -395,7 +384,13 @@ def _terminate():
         now = time.time()
         elapsed_since_start = now - _start
         mi(27*"_")
-        mi(_sec_to_str(elapsed_since_start),'- total runtime')
+        mi(_sec_to_str(elapsed_since_start),'- total wall time')
+
+
+# report total runtime upon shutdown
+if not _is_interactive:
+    atexit.register(_terminate)
+
 
 def _jupyter_deprecated(do=True):
     """

@@ -28,7 +28,7 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['X_pca']: np.ndarray
+        adata.smp['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, spring will use this instead of adata.X.
     k : int
@@ -49,15 +49,15 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
          n_variables x n_comps.
     """
     sett.m(0,'draw knn graph')
-    if 'X_pca' in adata:
-        X = adata['X_pca']
+    if 'X_pca' in adata.smp:
+        X = adata.smp['X_pca']
         sett.m(0, '--> using X_pca for building graph')
     else:
         X = adata.X
         sett.m(0, '--> using X for building graph')
     D = utils.comp_distance(X, metric='euclidean')
     # deterimine the distance of the k nearest neighbors
-    indices = np.zeros((D.shape[0],k),dtype=np.int_)
+    indices = np.zeros((D.shape[0], k), dtype=np.int_)
     for irow, row in enumerate(D):
         # the last item is already in its sorted position as
         # argpartition puts the (k-1)th element - starting to count from
@@ -80,7 +80,7 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
     for istep in 1 + np.arange(n_steps, dtype=int):
         sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
         Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size, rep=rep)
-    adata['X_spring'] = Y
+    adata.smp['X_spring'] = Y
     return adata
 
 def plot_spring(adata,
@@ -127,7 +127,7 @@ def plot_spring(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    Y = adata['X_spring']
+    Y = adata.smp['X_spring']
     if True:
 #         sett.m(0, 'set parameter add_steps > 0 to iterate. '
 #                'the current step is', dspring['istep'],

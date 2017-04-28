@@ -99,10 +99,12 @@ example_data = {
     },
 }
 
+
 #--------------------------------------------------------------------------------
 # One function per example that reads, annotates and preprocesses data
 # - one function 'exkey()' per 'exkey' (key in example_parameters)
 #--------------------------------------------------------------------------------
+
 
 def burczynski06():
     """
@@ -124,6 +126,7 @@ def burczynski06():
     adata = sc.read(filename, backup_url=url)
     return adata
 
+
 def krumsiek11():
     """
     Simulated myeloid progenitor data.
@@ -140,8 +143,9 @@ def krumsiek11():
     """
     filename = 'write/krumsiek11_sim/sim_000000.txt'
     adata = sc.read(filename, first_column_names=True)
-    adata['xroot'] = adata.X[0]
+    adata.add['xroot'] = adata.X[0]
     return adata
+
 
 def moignard15():
     """
@@ -164,7 +168,7 @@ def moignard15():
     gene_filter = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_filter]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata['xroot'] = adata.X[532] # note that in Matlab/R, counting starts at 1
+    adata.add['xroot'] = adata.X[532] # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
@@ -172,9 +176,10 @@ def moignard15():
         next(gname for gname in groups_names if sname.startswith(gname))
         for sname in adata.smp_names]
     # fix the order and colors of names in "groups"
-    adata['exp_groups_names'] = groups_names
-    adata['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    adata.add['exp_groups_names'] = groups_names
+    adata.add['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
+
 
 def paul15():
     """
@@ -190,9 +195,10 @@ def paul15():
     Cell 163, 1663 (2015)
     """
     adata = paul15_raw()
-    adata.X = sc.pp.log(adata.X)
-    adata['xroot'] = adata.X[adata['iroot']] # adjust expression vector of root cell
+    adata.X = sc.pp.log1p(adata.X)
+    adata.add['xroot'] = adata.X[adata.add['iroot']] # adjust expression vector of root cell
     return adata
+
 
 def paul15pca():
     """
@@ -200,9 +206,10 @@ def paul15pca():
     do not switch off an initial PCA.
     """
     adata = paul15_raw()
-    adata.X = sc.pp.log(adata.X)
-    adata['xroot'] = adata.X[adata['iroot']] # adjust expression vector of root cell
+    adata.X = sc.pp.log1p(adata.X)
+    adata.add['xroot'] = adata.X[adata.add['iroot']] # adjust expression vector of root cell
     return adata
+
 
 def toggleswitch():
     """
@@ -212,7 +219,7 @@ def toggleswitch():
     """
     filename = 'write/toggleswitch_sim/sim_000000.txt'
     adata = sc.read(filename, first_column_names=True)
-    adata['xroot'] = adata.X[0]
+    adata.add['xroot'] = adata.X[0]
     return adata
 
 #--------------------------------------------------------------------------------
@@ -223,10 +230,10 @@ def toggleswitch():
 #--------------------------------------------------------------------------------
 
 def moignard15_dpt(adata):
-    if len(adata['dpt_groups_names']) > 1:
+    if len(adata.add['dpt_groups_names']) > 1:
         groups_names = ['trunk', 'undecided',
                         'endothelial', 'erythrocytes']
-        adata['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
+        adata.add['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
     return adata
 
 def paul15_raw():
@@ -246,14 +253,14 @@ def paul15_raw():
     # restrict data array to the 3461 informative genes
     adata = adata[:, infogenes_names]
     # set root cell as in Haghverdi et al. (2016)
-    adata['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
-    adata['xroot'] = adata.X[iroot]
+    adata.add['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
+    adata.add['xroot'] = adata.X[iroot]
     return adata
 
 def paul15_dpt(adata):
-    adata['dpt_groups_names'] = ['', 'GMP', '', 'MEP']
+    adata.add['dpt_groups_names'] = ['', 'GMP', '', 'MEP']
     return adata
 
 def paul15pca_dpt(adata):
-    adata['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
+    adata.add['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
     return adata

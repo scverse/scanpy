@@ -60,10 +60,11 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=2):
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
                    n_jobs=n_jobs, recompute_diffmap=True)
     ddmap = dmap.diffmap()
-    adata['X_diffmap'] = ddmap['X_diffmap']
-    adata['diffmap_evals'] = ddmap['evals']
-    adata['diffmap_comp0'] = dmap.rbasis[:, 0]
+    adata.smp['X_diffmap'] = ddmap['X_diffmap']
+    adata.add['diffmap_evals'] = ddmap['evals']
+    adata.add['diffmap_comp0'] = dmap.rbasis[:, 0]
     return adata
+
 
 def plot_diffmap(adata,
          smp=None,
@@ -91,8 +92,8 @@ def plot_diffmap(adata,
         allows to switch between these default choices.
     names : str, optional (default: all names in smp)
         Allows to restrict groups in sample annotation (smp) to a few.
-    comps : str, optional (default: '1,2')
-         String of the form '1,2' or 'all'.
+    comps : str or list, optional (default: '1,2')
+         String of the form '1,2' or 'all' or list. First component is 1 or '1'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
@@ -135,6 +136,8 @@ def plot_diffmap(adata,
                              titles=titles)
         writekey = sett.basekey + '_diffmap'
         if smps[0] is not None:
+            if isinstance(comps, list):
+                comps = ','.join([str(comp) for comp in comps])
             writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
         if sett.savefigs:
             plott.savefig(writekey)

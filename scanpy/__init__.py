@@ -8,8 +8,8 @@ Reference
 Wolf, Angerer & Theis, bioRxiv doi:... (2017)
 """
 
+import os, sys
 import numpy as np
-import os
 
 from . import settings as sett
 from . import tools
@@ -58,6 +58,7 @@ __all__ = [
     'AnnData'
 ]
 
+
 def help(toolkey,string=False):
     """
     Display help for tool.
@@ -67,12 +68,14 @@ def help(toolkey,string=False):
         return doc
     print(doc)
 
+
 def show():
     """
     Show plots.
     """
     from .compat.matplotlib import pyplot as pl
     pl.show()
+
 
 def _run_command_line_args(toolkey, args):
     """
@@ -95,14 +98,17 @@ def _run_command_line_args(toolkey, args):
     # help on plot parameters
     if args['pparams']:
         if args['pparams'][0] == 'help':
-            from sys import exit
-            exit(getattr(get_tool(toolkey), 'plot_' + toolkey).__doc__)
+            sys.exit(getattr(get_tool(toolkey), 'plot_' + toolkey).__doc__)
 
     # read parameters
     adata = None
     if os.path.exists(readwrite.get_filename_from_key(sett.basekey)) or toolkey != 'sim':
-        adata, exmodule = get_example(args['exkey'], subsample=args['subsample'],
-                                      return_module=True)
+        adata, exmodule = get_example(args['exkey'],
+                                      subsample=args['subsample'],
+                                      suffix=sett.suffix,
+                                      return_module=True,
+                                      recompute=sett.recompute == 'pp',
+                                      reread=sett.recompute == 'read')
         params = {}
         # try to load tool parameters from dexamples
         try:
@@ -156,7 +162,7 @@ def _run_command_line_args(toolkey, args):
 
     # actual call of tool
     if (adata is None
-        or toolkey not in adata['tools']
+        or toolkey not in adata.add['tools']
         or sett.recompute != 'none'):
         tool = get_tool(toolkey, func=True)
         if toolkey == 'sim':
@@ -166,8 +172,8 @@ def _run_command_line_args(toolkey, args):
         else:
             adata = tool(adata, **params)
         # append toolkey to tools in adata
-        if toolkey not in adata['tools']:
-            adata['tools'] = np.append(adata['tools'], toolkey)
+        if toolkey not in adata.add['tools']:
+            adata.add['tools'] = np.append(adata.add['tools'], toolkey)
         write(sett.basekey, adata)
         sett.m(0, 'updated file',
                readwrite.get_filename_from_key(sett.basekey))
@@ -185,6 +191,7 @@ def _run_command_line_args(toolkey, args):
             adata = getattr(exmodule, postprocess)(adata)
             write(sett.basekey, adata)
     getattr(get_tool(toolkey), 'plot_' + toolkey)(adata, **pparams)
+
 
 def _read_command_line_args_run_single_tool(toolkey):
     """

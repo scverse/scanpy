@@ -29,7 +29,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['X_pca']: np.ndarray
+        adata.smp['X_pca']: np.ndarray
             Result of preprocessing with PCA: observations × variables.
             If it exists, tsne will use this instead of adata.X.
     random_state : unsigned int or -1, optional (default: 0)
@@ -55,15 +55,15 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
     """
     sett.mt(0, 'compute tSNE')
     # preprocessing by PCA
-    if 'X_pca' in adata and adata['X_pca'].shape[1] >= n_pcs:
-        X = adata['X_pca']
+    if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
+        X = adata.smp['X_pca']
         sett.m(0, 'using X_pca for tSNE')
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
             sett.m(0, 'preprocess using PCA with', n_pcs, 'PCs')
             sett.m(0, '--> avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
-            adata['X_pca'] = X
+            adata.smp['X_pca'] = X
             sett.m(0, 'using X_pca for tSNE')
         else:
             X = adata.X
@@ -97,9 +97,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
                       '    using "conda/pip install scikit-learn"')
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     # update AnnData instance
-    adata['X_tsne'] = Y
+    adata.smp['X_tsne'] = Y
     sett.mt(0, 'finished tSNE, added\n'
-               '    "X_tsne" to adata')
+               '    "X_tsne" to adata.smp')
     return adata
 
 def plot_tsne(adata,

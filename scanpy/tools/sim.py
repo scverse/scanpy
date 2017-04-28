@@ -64,9 +64,9 @@ def sim(model='sim/toggleswitch.txt',
     """
     params = locals()
     adata = sample_dynamic_data(params)
-    if 'tools' not in adata:
-        adata['tools'] = np.array([], dtype=str)
-    adata['xroot'] = adata.X[0]
+    if 'tools' not in adata.add:
+        adata.add['tools'] = np.array([], dtype=str)
+    adata.add['xroot'] = adata.X[0]
     return adata
 
 def plot_sim(adata, params=None):
@@ -75,7 +75,7 @@ def plot_sim(adata, params=None):
     """
     X = adata.X
     genenames = adata.var_names
-    tmax = adata['tmax_write']
+    tmax = adata.add['tmax_write']
     n_real = X.shape[0]/tmax
     plott.timeseries(X, 
                      varnames=genenames,

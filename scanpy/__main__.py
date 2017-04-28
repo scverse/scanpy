@@ -5,6 +5,7 @@ Scanpy - Single-Cell Analysis in Python
 This is the general purpose command-line utility.
 """
 
+
 # this is necessary to import scanpy from within package
 from __future__ import absolute_import
 import argparse
@@ -12,11 +13,13 @@ from collections import OrderedDict as odict
 from sys import argv, exit
 import scanpy as sc
 
+
 # description of simple inquiries
 dsimple = odict([
     ('exdata', 'show example data'),
     ('exparams', 'show example parameters'),
 ])
+
 
 # description of standard tools
 dtools = odict([
@@ -29,6 +32,7 @@ dtools = odict([
     ('diffrank', 'test for differential expression'),
     ('sim', 'simulate stochastic gene expression models'),
 ])
+
 
 # assemble main description
 def main_descr():
@@ -45,6 +49,7 @@ def main_descr():
     descr += ('\n{:12}'.format('exkey tool')
                    + 'shortcut for providing exkey argument to tool')
     return descr
+
 
 def init_main_parser():
     """
@@ -72,6 +77,7 @@ def init_main_parser():
         sub_p.set_defaults(toolkey=key)
     
     return main_parser
+
 
 def main():
     # check whether at least one subcommand has been supplied
@@ -112,6 +118,7 @@ def main():
     args = sc.sett.process_args(args)
     # run Scanpy
     sc._run_command_line_args(args['toolkey'], args)
+
 
 if __name__ == '__main__':
     main()

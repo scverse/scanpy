@@ -46,7 +46,7 @@ def myexample():
 
     # as with a dict, you can add arbitrary additional data to an data
     # for example, DPT needs a the expression vector of a root cell
-    adata['xroot'] = adata.X[336]
+    adata.add['xroot'] = adata.X[336]
     return adata
 
 

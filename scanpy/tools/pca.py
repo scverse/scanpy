@@ -16,17 +16,17 @@ from ..classes.ann_data import AnnData
 pca = pp.pca
 
 def plot_pca(adata,
-         smp=None,
-         names=None,
-         comps=None,
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=3,
-         titles=None):
+             smp=None,
+             names=None,
+             comps=None,
+             cont=None,
+             layout='2d',
+             legendloc='right margin',
+             cmap=None,
+             pal=None,
+             right_margin=None,
+             size=3,
+             titles=None):
     """
     Scatter plots.
 

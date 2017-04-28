@@ -49,8 +49,8 @@ def diffrank(adata,
     # for clarity, rename variable
     groups_names = names
     groups_names, groups_masks = utils.select_groups(adata, groups_names, smp)
-    adata['diffrank_groups'] = smp
-    adata['diffrank_groups_names'] = groups_names
+    adata.add['diffrank_groups'] = smp
+    adata.add['diffrank_groups_names'] = groups_names
     X = adata.X
     if log:
         # TODO: treat negativity explicitly
@@ -79,7 +79,7 @@ def diffrank(adata,
     # each test provides a ranking of genes
     # we store the name of the ranking, i.e. the name of the test, 
     # in the following list
-    adata['diffrank_rankings_names'] = []
+    adata.add['diffrank_rankings_names'] = []
     
     # test all combinations of groups against each other
     for ipair, (i,j) in enumerate(pairs):
@@ -114,14 +114,14 @@ def diffrank(adata,
         rankings_geneidcs[ipair] = ranking_geneidcs
         # names
         ranking_name = groups_names[i] + ' vs '+ groups_names[j]
-        adata['diffrank_rankings_names'].append(ranking_name)
+        adata.add['diffrank_rankings_names'].append(ranking_name)
 
     if False:
-        adata['diffrank_pvalues'] = -np.log10(pvalues_all)
+        adata.add['diffrank_pvalues'] = -np.log10(pvalues_all)
 
-    adata['diffrank_zscores'] = zscores_all
-    adata['diffrank_rankings_geneidcs'] = rankings_geneidcs
-    adata['diffrank_scoreskey'] = 'zscores'
+    adata.add['diffrank_zscores'] = zscores_all
+    adata.add['diffrank_rankings_geneidcs'] = rankings_geneidcs
+    adata.add['diffrank_scoreskey'] = 'zscores'
 
     return adata
 
@@ -137,7 +137,7 @@ def plot_diffrank(adata, n_genes=20):
         Number of genes to show.
     """
     plott.ranking(adata, toolkey='diffrank', n_genes=n_genes)
-    writekey = sett.basekey + '_diffrank_' + adata['diffrank_groups'] + sett.plotsuffix
+    writekey = sett.basekey + '_diffrank_' + adata.add['diffrank_groups'] + sett.plotsuffix
     plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl

@@ -160,38 +160,38 @@ class DataGraph(object):
             or X.shape[1] < self.n_pcs):
             self.X = X
             sett.m(0, '... using X for building graph')
-            if isadata and 'xroot' in adata:
-                self.set_root(adata['xroot'])
+            if isadata and 'xroot' in adata.add:
+                self.set_root(adata.add['xroot'])
         # use the precomupted X_pca
         elif (isadata
-              and 'X_pca' in adata
-              and adata['X_pca'].shape[1] >= self.n_pcs):
+              and 'X_pca' in adata.smp
+              and adata.smp['X_pca'].shape[1] >= self.n_pcs):
             sett.m(0, '... using X_pca for building graph')
-            if 'xroot' in adata and adata['xroot'].size == adata.X.shape[1]:
+            if 'xroot' in adata.add and adata.add['xroot'].size == adata.X.shape[1]:
                 self.X = adata.X
-                self.set_root(adata['xroot'])
-            self.X = adata['X_pca']
-            if 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]:
-                self.set_root(adata['xroot'])
+                self.set_root(adata.add['xroot'])
+            self.X = adata.smp['X_pca']
+            if 'xroot' in adata.add and adata.add['xroot'].size == adata.smp['X_pca'].shape[1]:
+                self.set_root(adata.add['xroot'])
         # compute X_pca
         else:
             self.X = X
             if (isadata
-                and 'xroot' in adata
-                and adata['xroot'].size == adata.X.shape[1]):
-                self.set_root(adata['xroot'])
+                and 'xroot' in adata.add
+                and adata.add['xroot'].size == adata.X.shape[1]):
+                self.set_root(adata.add['xroot'])
             from ..preprocess import pca
             self.X = pca(X, n_comps=self.n_pcs)
-            adata['X_pca'] = self.X
+            adata.smp['X_pca'] = self.X
             if (isadata
-                and 'xroot' in adata and adata['xroot'].size == adata['X_pca'].shape[1]):
-                self.set_root(adata['xroot'])
+                and 'xroot' in adata.add and adata.add['xroot'].size == adata.smp['X_pca'].shape[1]):
+                self.set_root(adata.add['xroot'])
         self.Dchosen = None
         # use diffmap from previous calculation
-        if 'X_diffmap' in adata and not recompute_diffmap:
+        if 'X_diffmap' in adata.smp and not recompute_diffmap:
             sett.m(0, '... using `X_diffmap` for distance computations')
-            self.evals = np.r_[1, adata['diffmap_evals']]
-            self.rbasis = np.c_[adata['diffmap_comp0'][:, None], adata['X_diffmap']]
+            self.evals = np.r_[1, adata.add['diffmap_evals']]
+            self.rbasis = np.c_[adata.add['diffmap_comp0'][:, None], adata.smp['X_diffmap']]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))

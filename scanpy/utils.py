@@ -178,7 +178,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
     Get subset of groups in adata.smp[smp].
     """
     groups_names = adata[smp + '_names']
-    if smp + '_masks' in adata:
+    if smp + '_masks' in adata.add:
         groups_masks = adata[smp + '_masks']
     else:
         groups_masks = np.zeros((len(adata[smp + '_names']),

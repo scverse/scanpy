@@ -41,13 +41,13 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
     ----------
     adata : AnnData
         Annotated data matrix, optionally with metadata:
-        adata['xroot'] : np.ndarray
+        adata.add['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
             as expression vector of shape X.shape[1].
-        adata['X_pca']: np.ndarray
+        adata.smp['X_pca']: np.ndarray
             PCA representation of the data matrix (result of preprocessing with
             PCA). If it exists in adata, dpt will use this instead of adata.X.
-        adata['X_diffmap']: np.ndarray
+        adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
             `diffmap`).  Will be used if option `recompute_diffmap` is False.
     n_branchings : int, optional (default: 1)
@@ -93,14 +93,14 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         dpt_evals : np.ndarray
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
-    if 'xroot' not in adata:
+    if 'xroot' not in adata.add:
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
 
    In your preprocessing function, set
-       adata['xroot'] = adata.X[root_cell_index, :]
+       adata.add['xroot'] = adata.X[root_cell_index, :]
    where "root_cell_index" is the integer index of the root cell, or
-       adata['xroot'] = adata[root_cell_name, :].X.flatten()
+       adata.add['xroot'] = adata[root_cell_name, :].X.flatten()
    where "root_cell_name" is the name (a string) of the root cell.'''
         sys.exit(msg)
     if n_branchings == 0:
@@ -110,9 +110,9 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
               n_branchings=n_branchings, allow_branching_at_root=allow_branching_at_root)
     # diffusion map
     ddmap = dpt.diffmap()
-    adata['X_diffmap'] = ddmap['X_diffmap']
-    adata['diffmap_evals'] = ddmap['evals']
-    adata['diffmap_comp0'] = dpt.rbasis[:, 0]
+    adata.smp['X_diffmap'] = ddmap['X_diffmap']
+    adata.add['diffmap_evals'] = ddmap['evals']
+    adata.add['diffmap_comp0'] = dpt.rbasis[:, 0]
     sett.m(0, 'perform Diffusion Pseudotime analysis')
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
@@ -121,24 +121,24 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
     if False:  # we do not compute the full Ddiff matrix, only the elements we need
         dpt.compute_Ddiff_matrix()
     dpt.set_pseudotime()  # pseudotimes are distances from root point
-    adata['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+    adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
     adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
-    adata['dpt_groups_names'] = np.array([str(i) for i in
+    adata.add['dpt_groups_names'] = np.array([str(i) for i in
                                           np.arange(len(dpt.segs), dtype=int)])
     # vector of length n_samples of groupnames
-    adata.smp['dpt_groups'] = np.array([adata['dpt_groups_names'][i]
-                                        if i < len(adata['dpt_groups_names'])
+    adata.smp['dpt_groups'] = np.array([adata.add['dpt_groups_names'][i]
+                                        if i < len(adata.add['dpt_groups_names'])
                                         else 'dontknow'
                                         for i in dpt.segslabels])
     # the ordering according to segments and pseudotime
-    adata['dpt_order'] = dpt.indices
+    adata.add['dpt_order'] = dpt.indices
     # the changepoints - marking different segments - in the ordering above
-    adata['dpt_changepoints'] = dpt.changepoints
+    adata.add['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
-    adata['dpt_segtips'] = dpt.segstips
+    adata.add['dpt_segtips'] = dpt.segstips
     return adata
 
 
@@ -192,9 +192,9 @@ def plot_dpt(adata,
     smps = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1:
         smps += ['dpt_groups']
-    adata['highlights'] = (list([adata['iroot']])   # also plot the tip cell indices
-                           + [adata['dpt_segtips'][i][1] for i in range(len(adata['dpt_segtips']))
-                              if adata['dpt_segtips'][i][1] != -1])
+    adata.add['highlights'] = (list([adata.add['iroot']])   # also plot the tip cell indices
+                           + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
+                              if adata.add['dpt_segtips'][i][1] != -1])
     if smp is not None:
         smps += smp.split(',')
     if comps == 'all':
@@ -226,17 +226,17 @@ def plot_dpt(adata,
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[adata['dpt_order']],
+        plott.timeseries(X[adata.add['dpt_order']],
                          varnames=adata.var_names,
-                         highlightsX=adata['dpt_changepoints'],
+                         highlightsX=adata.add['dpt_changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
         pl.xlabel('dpt order')
         plott.savefig(writekey + '_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[adata['dpt_order'], :40],
+        plott.timeseries_as_heatmap(X[adata.add['dpt_order'], :40],
                                     varnames=adata.var_names,
-                                    highlightsX=adata['dpt_changepoints'])
+                                    highlightsX=adata.add['dpt_changepoints'])
         pl.xlabel('dpt order')
         plott.savefig(writekey + '_heatmap')
     if not sett.savefigs and sett.autoshow:
@@ -251,18 +251,18 @@ def plot_segments_pseudotime(adata, cmap=None, pal=None):
     from .. import plotting as plott
     pl.figure()
     pl.subplot(211)
-    plott.timeseries_subplot(adata.smp['dpt_groups'][adata['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_groups'][adata['dpt_order']],
-                             highlightsX=adata['dpt_changepoints'],
+    plott.timeseries_subplot(adata.smp['dpt_groups'][adata.add['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_groups'][adata.add['dpt_order']],
+                             highlightsX=adata.add['dpt_changepoints'],
                              ylabel='dpt groups',
-                             yticks=(np.arange(len(adata['dpt_groups_names']), dtype=int)
-                                     if len(adata['dpt_groups_names']) < 5 else None),
+                             yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
+                                     if len(adata.add['dpt_groups_names']) < 5 else None),
                              pal=pal)
     pl.subplot(212)
-    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_pseudotime'][adata['dpt_order']],
+    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata.add['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_pseudotime'][adata.add['dpt_order']],
                              xlabel='dpt order',
-                             highlightsX=adata['dpt_changepoints'],
+                             highlightsX=adata.add['dpt_changepoints'],
                              ylabel='pseudotime',
                              yticks=[0,1],
                              cmap=cmap)

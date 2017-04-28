@@ -90,14 +90,16 @@ def scatter(adata,
     # compute components
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
-    comps = np.array(comps.split(',')).astype(int) - 1
+    if isinstance(comps, str):
+        comps = comps.split(',')
+    comps = np.array(comps).astype(int) - 1
     titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
     smps = [None] if smp is None else smp.split(',') if isinstance(smp, str) else smp
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
-    highlights = adata['highlights'] if 'highlights' in adata else []
+    highlights = adata.add['highlights'] if 'highlights' in adata.smp else []
     try:
-        Y = adata['X_' + basis][:, comps]
+        Y = adata.smp['X_' + basis][:, comps]
     except KeyError:
         sett.mi('--> compute the basis using plotting tool', basis, 'first')
         raise
@@ -172,21 +174,21 @@ def scatter(adata,
 
     for ismp in categoricals:
         smp = smps[ismp]
-        if (smp != 'groups' and 'groups_names' in adata
-            and len(np.setdiff1d(adata['groups_names'], adata[smp + '_names']))
-                < len(adata['groups_names'])):
+        if (smp != 'groups' and 'groups_names' in adata.add
+            and len(np.setdiff1d(adata.add['groups_names'], adata.add[smp + '_names']))
+                < len(adata.add['groups_names'])):
             # if there is a correspondence between smp and the 'groups' defined
             # in adata, that is, if smp has corresponding categories with those
-            # in adata['groups_names']
-            adata[smp + '_colors'] = pal[:len(adata['groups_names'])].by_key()['color']
-        elif not smp + '_colors' in adata:
-            adata[smp + '_colors'] = pal[:len(adata[smp + '_names'])].by_key()['color']
-        if len(adata[smp + '_names']) > len(adata[smp + '_colors']):
+            # in adata.add['groups_names']
+            adata.add[smp + '_colors'] = pal[:len(adata.add['groups_names'])].by_key()['color']
+        elif not smp + '_colors' in adata.add:
+            adata.add[smp + '_colors'] = pal[:len(adata.add[smp + '_names'])].by_key()['color']
+        if len(adata.add[smp + '_names']) > len(adata.add[smp + '_colors']):
             sett.m(0, 'number of categories/names in', smp, 'so large that color map "jet" is used')
-            adata[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
+            adata.add[smp + '_colors'] = pl.cm.get_cmap('jet' if cmap is None else cmap)(
                                                     pl.Normalize()(
-                                                    np.arange(len(adata[smp + '_names']), dtype=int)))
-        for iname, name in enumerate(adata[smp + '_names']):
+                                                    np.arange(len(adata.add[smp + '_names']), dtype=int)))
+        for iname, name in enumerate(adata.add[smp + '_names']):
             if (names is None or (names != None and name in names)):
                 scatter_group(axs[ismp], smp, iname, adata, Y, layout, size=size)
         if legendloc == 'right margin':
@@ -276,17 +278,17 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     """
     Plot group using representation of data Y.
     """
-    if name + '_masks' in adata:
-        mask = adata[name + '_masks'][imask]
+    if name + '_masks' in adata.add:
+        mask = adata.add[name + '_masks'][imask]
     else:
-        if adata[name + '_names'][imask] in adata.smp[name]:
-            mask = adata[name + '_names'][imask] == adata.smp[name]
+        if adata.add[name + '_names'][imask] in adata.smp[name]:
+            mask = adata.add[name + '_names'][imask] == adata.smp[name]
         else:
             mask = str(imask) == adata.smp[name]
-    color = adata[name + '_colors'][imask]
+    color = adata.add[name + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
-        color = rgb2hex(adata[name + '_colors'][imask])
+        color = rgb2hex(adata.add[name + '_colors'][imask])
     data = [Y[mask, 0], Y[mask, 1]]
     if layout == '3d':
         data.append(Y[mask, 2])
@@ -294,7 +296,7 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
                c=color,
                edgecolors='face',
                s=size,
-               label=adata[name + '_names'][imask])
+               label=adata.add[name + '_names'][imask])
 
 def timeseries(X, **kwargs):
     """

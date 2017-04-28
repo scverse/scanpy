@@ -34,10 +34,10 @@ def dbscan(adata, eps=None, min_samples=None):
 
     Pedregosa et al. (2011) ...
     """
-    if 'X_tsne' in adata:
-        X = adata['X_tsne']
-    elif 'X_pca' in adata:
-        X = adata['X_pca']
+    if 'X_tsne' in adata.smp:
+        X = adata.smp['X_tsne']
+    elif 'X_pca' in adata.smp:
+        X = adata.smp['X_pca']
     else:
         raise ValueError('perform tSNE first')
     if eps is None:
@@ -59,7 +59,7 @@ def dbscan(adata, eps=None, min_samples=None):
     labels[mask] = '?'
     # loop_over_labels = (label for label in np.unique(labels) if label >= 0)
     adata.smp['dbscan_groups'] = labels
-    adata['dbscan_groups_names'] = np.unique(labels)
+    adata.add['dbscan_groups_names'] = np.unique(labels)
     return adata
 
 def plot_dbscan(adata,
