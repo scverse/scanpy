@@ -1,26 +1,37 @@
 # Scanpy
+.scanpy
+archive/
 data/
 figs/
 */figs*/
 write/
-sim/hill*
-sim/var*
+examples/
 scanpy.egg-info/
+scanpy_user/
 scanpy_save/
+scanpy_later/
 thirdp/
+setup.cfg
+test.py
 
 # private files
-scanpy/exs/builtin_private.py
+scanpy/examples/builtin_private.py
 scanpy/tools/paths.py
 scanpy/tools/tgdyn.py
-scanpy/tools/scdg.py
+scanpy/tools/tgdyn_simple.py
+scripts/paths.py
+scripts/test_private.sh
+scripts/tgdyn.py
+scripts/tgdyn_simple.py
+
 
 # always-ignore extensions
 *~
 
-# Python / Byte-compiled / optimized / DLL 
+# Python / Byte-compiled / optimized / DLL
 __pycache__/
 *.py[cod]
+*.so
 
 # OS or Editor files and folders
 .DS_Store
@@ -32,4 +43,3 @@ Thumbs.db
 # always-ignore directories
 /dist/
 /build/
-

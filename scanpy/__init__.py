@@ -59,11 +59,11 @@ __all__ = [
 ]
 
 
-def help(toolkey,string=False):
+def help(toolkey, string=False):
     """
     Display help for tool.
     """
-    doc = get_tool(toolkey, func=True).__doc__.replace('\n    ','\n')
+    doc = get_tool(toolkey, func=True).__doc__.replace('\n    ', '\n')
     if string:
         return doc
     print(doc)
@@ -135,8 +135,7 @@ def _run_command_line_args(toolkey, args):
             add_params = readwrite.get_params_from_list(args['params'])
             sett.m(0, '... overwriting params', '"' +
                    ' '.join(['='.join([k, str(v)]) for k, v in add_params.items()])
-                   + '"',
-                  'in call of', toolkey)
+                   + '"', 'in call of', toolkey)
             params = utils.update_params(params, add_params)
         elif did_not_find_params_in_exmodule and args['pfile'] != '':
             sett.m(0, 'using default parameters, change them using "--params"')
@@ -147,11 +146,10 @@ def _run_command_line_args(toolkey, args):
             from . import sim_models
             pfile_sim = os.path.dirname(sim_models.__file__) + '/' + args['exkey'] + '_params.txt'
             params = read_params(pfile_sim)
-            sett.m(0,'--> you can specify your custom params file using the option\n'
-                     '    "--pfile" or provide parameters directly via "--params"')
+            sett.m(0, '--> you can specify your custom params file using the option\n'
+                   '    "--pfile" or provide parameters directly via "--params"')
         if 'writedir' not in params:
             params['writedir'] = sett.writedir + sett.basekey + '_' + toolkey
-
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey
