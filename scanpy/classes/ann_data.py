@@ -32,7 +32,7 @@ class BoundRecArr(np.recarray):
 
     Is bound to AnnData to allow adding fields.
 
-    The column with name "index_name" plays a role analogous to the `index` in
+    The column "smp_name"/"var_name" plays a role analogous to the `index` in
     the `pd.Series` class.
 
     Attributes
@@ -45,8 +45,8 @@ class BoundRecArr(np.recarray):
 
     def __new__(cls, source, index_name, parent, n_row=None):
         if source is None:  # empty array
-            cols = [np.arange(n_row)]
-            dtype = [(index_name, 'str')]
+            cols = [np.arange(n_row).astype(str)]
+            dtype = [(index_name, cols[0].dtype)]
         elif isinstance(source, np.recarray):
             cols = [source[n] for n in source.dtype.names]
             dtype = source.dtype
@@ -99,16 +99,60 @@ class BoundRecArr(np.recarray):
     def columns(self):
         return [c for c in self.dtype.names if not c == self._index_name]
 
+    def _keys_view(self, arr, keys):
+        """Get a multi-column view rather than a copy.
+
+        This is consistent with the behavior of single columns.
+
+        Will be implemented that way from numpy 1.13 on anyways, so we do not use
+        in __getitem__, instead suppress the warning raised there.
+
+        Note
+        ----
+        http://stackoverflow.com/questions/15182381/how-to-return-a-view-of-several-columns-in-numpy-structured-array
+        """
+        dtype2 = np.dtype({name:arr.dtype.fields[name] for name in keys})
+        return np.ndarray(arr.shape, dtype2, arr, 0, arr.strides)
+
+    def __getitem__(self, k):
+        """Either a single one- or multi-column or mulitiple one-colum items."""
+        import warnings  # ignore FutureWarning about multi-column access of structured arrays
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            try:
+                return super(BoundRecArr, self).__getitem__(k)
+            except:  # access multiple columns with single key k
+                keys = []
+                i = 0
+                for name in self.dtype.names:
+                    if name.startswith(k) and 'of' in name:
+                        keys.append(k + str(i) + 'of' + name.split('of')[-1])
+                        i += 1
+                        if i == int(name.split('of')[-1]):
+                            break
+                if i == 0:
+                    raise ValueError('Could not find item corresponding to key' + k)
+                return super(BoundRecArr, self).__getitem__(keys)
+
     def __setitem__(self, keys, values):
+        """Either a single one- or multi-column or mulitiple one-colum items."""
         if isinstance(keys, str):
             keys = [keys]
-            values = [values]
+            if (not hasattr(values[0], '__len__')  # check if values is nested
+                or len(values[0]) == 1 or isinstance(values[0], str)):
+                values = [values]
         keys = np.array(keys)
-        values = np.array(values)  # sequence of arrays or matrix with n_key *rows*
-        if not len(keys) == len(values):
+        values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
+        if not (len(keys) == len(values) or len(keys) == 1):
             raise ValueError('You passed {} column keys but {} arrays as columns. '
-                             'If you passed a matrix instead of a sequence of arrays, try transposing it.'
+                             'If you passed a matrix instead of a sequence '
+                             'of arrays, try transposing it.'
                              .format(len(keys), len(values)))
+
+        # if we have several values but a single key, generate unique keys
+        if len(values) > len(keys):
+            keys = [keys[0] + str(i) + 'of' + str(len(values))
+                    for i in range(len(values))]
 
         present = np.intersect1d(keys, self.dtype.names)
         absent = np.setdiff1d(keys, self.dtype.names)
@@ -147,7 +191,7 @@ def _check_dimensions(data, smp, var):
 
 class AnnData(IndexMixin):
 
-    def __init__(self, ddata_or_X=None, smp=None, var=None, **add):
+    def __init__(self, data=None, smp=None, var=None, **add):
         """
         Annotated Data
 
@@ -162,18 +206,19 @@ class AnnData(IndexMixin):
 
         Parameters
         ----------
-        ddata_or_X : dict, np.ndarray, np.ma.MaskedArray, sp.spmatrix
-            The data matrix or a dict containing the data matrix and possibly
+        data : dict, np.ndarray, np.ma.MaskedArray, sp.spmatrix
+            The data matrix `X`
             X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
                 A n_samples x n_variables data matrix.
-            row_names / smp_names : list, np.ndarray, optional
+            or a dict containing `X` as 'X' and possibly
+            'row_names' / 'smp_names' : list, np.ndarray, optional
                 A n_samples array storing names for samples.
-            col_names / var_names : list, np.ndarray, optional
+            'col_names' / 'var_names' : list, np.ndarray, optional
                 A n_variables array storing names for variables.
-            row / smp : dict, optional
+            'row' / 'smp' : dict, optional
                 A dict with row annotation.
-            col / var : dict, optional
-                A dict with row annotation.
+            'col' / 'var' : dict, optional
+                A dict with column annotation.
         smp : np.recarray, dict
             A n_samples x ? record array containing sample names (`smp_names`)
             and other sample annotation in the columns. A passed dict is
@@ -188,12 +233,12 @@ class AnnData(IndexMixin):
         ----------
         X, smp, var from the Parameters.
         """
-        if isinstance(ddata_or_X, Mapping):
+        if isinstance(data, Mapping):
             if any((smp, var, add)):
-                raise ValueError('If ddata_or_X is a dict, it needs to contain all metadata.')
-            X, smp, var, add = self.from_ddata(ddata_or_X)
+                raise ValueError('If `data` is a dict no further arguments must be provided.')
+            X, smp, var, add = self.from_ddata(data)
         else:
-            X = ddata_or_X
+            X = data
 
         # check data type of X
         for s_type in StorageType:
@@ -225,6 +270,14 @@ class AnnData(IndexMixin):
         _check_dimensions(X, self.smp, self.var)
 
         self.add = add
+
+    def __repr__(self):
+        return ('AnnData object with attributes\n'
+                '    X : array-like data matrix of shape n_samples x n_variables = '
+                + str(self.X.shape[0]) + ' x ' + str(self.X.shape[1]) + '\n'
+                '    smp : dict-like annotation for each sample (e.g., the sample names)\n'
+                '    var : dict-like annotation for each variable (e.g., the variable names)\n'
+                '    add : dict-like additional unstructured annotation')
 
     def from_ddata(self, ddata):
         smp, var = OrderedDict(), OrderedDict()
@@ -267,15 +320,15 @@ class AnnData(IndexMixin):
         return d
 
     def smp_keys(self):
-        """Show keys of sample annotation."""
+        """Return keys of sample annotation, excluding `smp_names`."""
         return [n for n in self.smp.dtype.names if n != SMP_NAMES]
 
     def var_keys(self):
-        """Show keys of variable annotation."""
+        """Return keys of variable annotation, excluding `var_names`."""
         return [n for n in self.var.dtype.names if n != VAR_NAMES]
 
     def add_keys():
-        """Show keys of addtional unstructured annotation."""
+        """Return keys of addtional unstructured annotation."""
         return self.add.keys()
 
     @property
@@ -381,6 +434,10 @@ class AnnData(IndexMixin):
         return self.X.shape[0]
 
     def transpose(self):
+        """Return a transposed view of the object.
+
+        Sample axis (rows) and variable axis are interchanged. No additional memory.
+        """
         if sp.issparse and isinstance(self.X, sp.csr_matrix):
             return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), **self.add)
         return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self.add)
@@ -388,7 +445,9 @@ class AnnData(IndexMixin):
     T = property(transpose)
 
     def copy(self):
-        return AnnData(self.X, self.smp, self.var, **self.add)
+        """Full copy with memory allocated."""
+        return AnnData(self.X.copy(), self.smp.copy(), self.var.copy(), **self.add.copy())
+
 
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))
@@ -406,12 +465,14 @@ def test_creation():
            np.array([[1, 2], [3, 4]]),
            dict(TooLong=[1, 2, 3, 4]))
 
+
 def test_ddata():
     ddata = dict(
         X=np.array([[1, 2, 3], [4, 5, 6]]),
         row_names=['A', 'B'],
         col_names=['a', 'b', 'c'])
     AnnData(ddata)
+
 
 def test_names():
     adata = AnnData(
@@ -421,6 +482,7 @@ def test_names():
 
     assert adata.smp_names.tolist() == 'A B'.split()
     assert adata.var_names.tolist() == 'a b c'.split()
+
 
 def test_get_subset():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -432,6 +494,7 @@ def test_get_subset():
     assert mat[:, np.array([0, 2])].X.tolist() == [[1, 3], [4, 6]]
     assert mat[:, np.array([False, True, True])].X.tolist() == [[2, 3], [5, 6]]
     assert mat[:, 1:3].X.tolist() == [[2, 3], [5, 6]]
+
 
 def test_get_subset_names():
     mat = AnnData(
@@ -451,6 +514,7 @@ def test_get_subset_names():
     with raises(IndexError): _ = mat['X', :]
     with raises(IndexError): _ = mat['A':'X', :]
     with raises(IndexError): _ = mat[:, 'a':'X']
+
 
 def test_transpose():
     mat = AnnData(
@@ -475,6 +539,7 @@ def test_transpose():
     assert np.array_equal(mt1.smp, mt2.smp)
     assert np.array_equal(mt1.var, mt2.var)
 
+
 def test_get_subset_add():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]),
                   dict(Smp=['A', 'B']),
@@ -482,6 +547,7 @@ def test_get_subset_add():
 
     assert mat[0, 0].smp['Smp'].tolist() == ['A']
     assert mat[0, 0].var['Feat'].tolist() == ['a']
+
 
 def test_append_add_col():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -492,6 +558,7 @@ def test_append_add_col():
     from pytest import raises
     with raises(ValueError):
         mat.smp['new4'] = 'far too long'.split()
+
 
 def test_set_add():
     mat = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -508,3 +575,19 @@ def test_set_add():
     from pytest import raises
     with raises(ValueError):
         mat.smp = dict(a=[1, 2, 3])
+
+def test_multi_column_getitem():
+    adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    adata.smp[['a', 'b']] = np.array([[0, 1], [2, 3]])
+    print(adata.smp[['a', 'b']])
+
+def test_multi_column_single_key_getitem():
+    adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    adata.smp[['c0of2', 'c1of2']] = np.array([[0, 1], [2, 3]])
+    print(adata.smp)
+    print(adata.smp['c'])
+
+def test_multi_column_single_key_setitem():
+    adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    adata.smp['c'] = np.array([[0, 1], [2, 3]])
+    print(adata.smp)
