@@ -26,6 +26,13 @@ class StorageType(Enum):
         return tuple(c.value for c in cls.__members__.values())
 
 
+def _key_belongs_to_which_multicolum_key(key, keys_multicolumn):
+    for imk, mk in enumerate(keys_multicolumn):
+        if key.startswith(mk) and 'of' in key:
+            return imk
+    return -1
+
+
 class BoundRecArr(np.recarray):
     """
     A np.recarray that can be constructed from a dict.
@@ -43,7 +50,7 @@ class BoundRecArr(np.recarray):
         The reference to an AnnData object to which the array is bound.
     """
 
-    def __new__(cls, source, index_name, parent, n_row=None):
+    def __new__(cls, source, index_name, parent, n_row=None, _keys_multicolumn=None):
         if source is None:  # empty array
             cols = [np.arange(n_row).astype(str)]
             dtype = [(index_name, cols[0].dtype)]
@@ -71,12 +78,41 @@ class BoundRecArr(np.recarray):
 
         arr = np.recarray.__new__(cls, (len(cols[0]),), dtype)
         arr._parent = parent  # add parent as attribute
-        arr._index_name = index_name  # add index_name as attribute
+        arr._index_name = index_name  # add index_name as attribue
 
+        # only the multicolumn keys
+        arr._keys_multicolumn = () if _keys_multicolumn is None else tuple(_keys_multicolumn)
+        # fast lookup of single-column keys
+        arr._keys_multicolumn_lookup = {} if _keys_multicolumn is None else dict.fromkeys(_keys_multicolumn)
+        # all keys
+        arr._keys = () # quickly access the `dtype.names` and multi-column keys for quick lookup
+        for key in arr.dtype.names:
+            imk = _key_belongs_to_which_multicolum_key(key, arr._keys_multicolumn)
+            if imk < 0:
+                arr._keys += (key,)
+            else:
+                if arr._keys_multicolumn[imk] not in arr._keys:
+                    arr._keys += (arr._keys_multicolumn[imk],)
+                    arr._keys_multicolumn_lookup[arr._keys_multicolumn[imk]] = [key]
+                else:
+                    arr._keys_multicolumn_lookup[arr._keys_multicolumn[imk]].append(
+                        key)
+
+        # TODO: would be nicer to make not use of __setitem__ here but instead
+        # call the constructor with the data in the corresponding form
+        # interestingly this doesn't call __setitem__ of np.recarray, but of
+        # BoundRecArray
         for i, name in enumerate(dtype.names):
             arr[name] = np.array(cols[i], dtype=dtype[name])
 
         return arr
+
+    def __contains__(self, k):
+        return k in set(self._keys)
+
+    def keys(self):
+        """Get keys of fields."""
+        return self._keys
 
     def flipped(self):
         old_index_name = self._index_name
@@ -114,6 +150,8 @@ class BoundRecArr(np.recarray):
         dtype2 = np.dtype({name:arr.dtype.fields[name] for name in keys})
         return np.ndarray(arr.shape, dtype2, arr, 0, arr.strides)
 
+    # TODO: delete item should be aware of _keys_multicolumn and _keys
+
     def __getitem__(self, k):
         """Either a single one- or multi-column or mulitiple one-colum items."""
         import warnings  # ignore FutureWarning about multi-column access of structured arrays
@@ -121,18 +159,10 @@ class BoundRecArr(np.recarray):
             warnings.simplefilter('ignore')
             try:
                 return super(BoundRecArr, self).__getitem__(k)
-            except:  # access multiple columns with single key k
-                keys = []
-                i = 0
-                for name in self.dtype.names:
-                    if name.startswith(k) and 'of' in name:
-                        keys.append(k + str(i) + 'of' + name.split('of')[-1])
-                        i += 1
-                        if i == int(name.split('of')[-1]):
-                            break
-                if i == 0:
-                    raise ValueError('Could not find item corresponding to key' + k)
-                return super(BoundRecArr, self).__getitem__(keys)
+            except ValueError:  # access multiple columns with key k
+                keys = self._keys_multicolumn_lookup[k]
+                return super(BoundRecArr, self).__getitem__(keys).view(
+                    self.dtype[keys[0]]).reshape(self.shape + (len(self._keys_multicolumn_lookup[k]),))
 
     def __setitem__(self, keys, values):
         """Either a single one- or multi-column or mulitiple one-colum items."""
@@ -141,8 +171,25 @@ class BoundRecArr(np.recarray):
             if (not hasattr(values[0], '__len__')  # check if values is nested
                 or len(values[0]) == 1 or isinstance(values[0], str)):
                 values = [values]
+            else:  # add the multi_column_key
+                if keys[0] not in self._keys_multicolumn:
+                    self._keys_multicolumn += (keys[0],)
+                    self._keys += (keys[0],)
+                values = np.array(values)
+                if values.shape[0] == self.shape[0]:
+                    values = values.T
+                else:
+                    raise ValueError('You passed an array with ' + str(values.shape[0])
+                                     + ' rows but it need to have ' + str(self.shape[0]))
         keys = np.array(keys)
         values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
+        # update keys, don't use set here, we want to keep the order
+        # for key in keys:
+        for key in keys:
+            if (key not in self._keys
+                and _key_belongs_to_which_multicolum_key(key, self._keys_multicolumn) < 0):
+                self._keys += (key,)
+
         if not (len(keys) == len(values) or len(keys) == 1):
             raise ValueError('You passed {} column keys but {} arrays as columns. '
                              'If you passed a matrix instead of a sequence '
@@ -151,8 +198,14 @@ class BoundRecArr(np.recarray):
 
         # if we have several values but a single key, generate unique keys
         if len(values) > len(keys):
-            keys = [keys[0] + str(i) + 'of' + str(len(values))
+            key_multicolumn = keys[0]
+            keys = [key_multicolumn + str(i) + 'of' + str(len(values))
                     for i in range(len(values))]
+            self._keys_multicolumn_lookup[key_multicolumn] = keys
+
+        if values.shape[1] != self.shape[0]:
+            raise ValueError('You passed an array with ' + str(values.shape[0])
+                             + ' rows but it need to have ' + str(self.shape[1]))
 
         present = np.intersect1d(keys, self.dtype.names)
         absent = np.setdiff1d(keys, self.dtype.names)
@@ -168,7 +221,8 @@ class BoundRecArr(np.recarray):
                                  .format(values.shape[1], len(self)))
             source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
-            new = BoundRecArr(source, self._index_name, self._parent)
+            new = BoundRecArr(source, self._index_name, self._parent,
+                              _keys_multicolumn=self._keys_multicolumn)
             setattr(self._parent, attr, new)
 
     def to_df(self):
@@ -199,10 +253,6 @@ class AnnData(IndexMixin):
         e.g. n_cells x n_genes, with the possibility to store an arbitrary
         number of annotations for both samples and variables, and
         additional arbitrary unstructured annotation via add.
-
-        You can access additional annotation elements directly from AnnData:
-        >>> adata = AnnData(np.eye(3), k=1)
-        >>> assert adata['k'] == 1
 
         Parameters
         ----------
@@ -264,12 +314,22 @@ class AnnData(IndexMixin):
 
         self.X = X
 
-        self.smp = BoundRecArr(smp, SMP_NAMES, self, n_smp)
-        self.var = BoundRecArr(var, VAR_NAMES, self, n_var)
+        smp_keys_multicolumn = None
+        if 'smp_keys_multicolumn' in add:
+            smp_keys_multicolumn = add['smp_keys_multicolumn']
+        var_keys_multicolumn = None
+        if 'var_keys_multicolumn' in add:
+            var_keys_multicolumn = add['var_keys_multicolumn']
+
+        self.smp = BoundRecArr(smp, SMP_NAMES, self, n_smp, smp_keys_multicolumn)
+        self.var = BoundRecArr(var, VAR_NAMES, self, n_var, var_keys_multicolumn)
 
         _check_dimensions(X, self.smp, self.var)
 
         self.add = add
+
+    def __contains__(self, k):
+        raise AttributeError("AnnData has no attribute __contains__, don't check `in adata`.")
 
     def __repr__(self):
         return ('AnnData object with attributes\n'
@@ -311,21 +371,23 @@ class AnnData(IndexMixin):
         return X, smp, var, add
 
     def to_ddata(self):
-        smp = OrderedDict([(k, self.smp[k]) for k in self.smp_keys()])
-        var = OrderedDict([(k, self.var[k]) for k in self.var_keys()])
+        smp = OrderedDict([(k, self.smp[k]) for k in self.smp.dtype.names])
+        var = OrderedDict([(k, self.var[k]) for k in self.var.dtype.names])
         d = {'X': self.X, 'smp': smp, 'var': var,
              'smp_names': self.smp_names, 'var_names': self.var_names}
         for k, v in self.add.items():
             d[k] = v
+        d['smp_keys_multicolumn'] = self.smp._keys_multicolumn
+        d['var_keys_multicolumn'] = self.var._keys_multicolumn
         return d
 
     def smp_keys(self):
         """Return keys of sample annotation, excluding `smp_names`."""
-        return [n for n in self.smp.dtype.names if n != SMP_NAMES]
+        return [n for n in self.smp.keys() if n != SMP_NAMES]
 
     def var_keys(self):
         """Return keys of variable annotation, excluding `var_names`."""
-        return [n for n in self.var.dtype.names if n != VAR_NAMES]
+        return [n for n in self.var.keys() if n != VAR_NAMES]
 
     def add_keys():
         """Return keys of addtional unstructured annotation."""
@@ -421,9 +483,6 @@ class AnnData(IndexMixin):
         smp, var = self._normalize_indices(index)
         self.X[smp, var] = val
 
-    def __contains__(self, item):
-        return item in self.add
-
     def get(self, key, default=None):
         return self.add.get(key, default)
 
@@ -448,7 +507,7 @@ class AnnData(IndexMixin):
 
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))
-    AnnData(ma.array([[1, 2], [3, 4]], add={'mask': [0, 1, 1, 0]})
+    AnnData(ma.array([[1, 2], [3, 4]], add={'mask': [0, 1, 1, 0]}))
     AnnData(sp.eye(2))
     AnnData(
         np.array([[1, 2, 3], [4, 5, 6]]),
@@ -591,3 +650,15 @@ def test_multi_column_single_key_setitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
     adata.smp['c'] = np.array([[0, 1], [2, 3]])
     print(adata.smp)
+
+
+def test_boundrecarray_keys():
+    adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    adata.smp['c'] = np.array([[0, 1], [2, 3]])
+    print(adata.smp_keys())
+    print(adata.smp.dtype.names)
+    print(adata.smp.keys())
+    adata.smp['d'] = np.array([[0, 1], [2, 3]])
+    print(adata.smp.keys())
+    print('d' in adata.smp)
+    print('e' in adata.smp)
