@@ -191,14 +191,14 @@ def _check_dimensions(data, smp, var):
 
 class AnnData(IndexMixin):
 
-    def __init__(self, data=None, smp=None, var=None, **add):
+    def __init__(self, data=None, smp=None, var=None, add=None):
         """
         Annotated Data
 
         Stores a data matrix X of dimensions n_samples x n_variables,
         e.g. n_cells x n_genes, with the possibility to store an arbitrary
         number of annotations for both samples and variables, and
-        additional arbitrary unstructured annotation via **add.
+        additional arbitrary unstructured annotation via add.
 
         You can access additional annotation elements directly from AnnData:
         >>> adata = AnnData(np.eye(3), k=1)
@@ -226,7 +226,7 @@ class AnnData(IndexMixin):
         var : np.recarray, dict
             The same as `smp`, but of shape n_variables x ? for annotation of
             variables.
-        **add : dict
+        add : dict
             Unstructured annotation for the whole dataset.
 
         Attributes
@@ -403,9 +403,6 @@ class AnnData(IndexMixin):
             del self.var.iloc[var, :]
 
     def __getitem__(self, index):
-        # return element from add if index is string
-        if isinstance(index, str):
-            return self.add[index]
         # otherwise unpack index
         smp, var = self._normalize_indices(index)
         X = self.X[smp, var]
@@ -413,7 +410,7 @@ class AnnData(IndexMixin):
         var_ann = self.var[var]
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
-        adata = AnnData(X, smp_ann, var_ann,  **self.add)
+        adata = AnnData(X, smp_ann, var_ann,  self.add)
         return adata
 
     def __setitem__(self, index, val):
@@ -439,19 +436,19 @@ class AnnData(IndexMixin):
         Sample axis (rows) and variable axis are interchanged. No additional memory.
         """
         if sp.issparse and isinstance(self.X, sp.csr_matrix):
-            return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), **self.add)
-        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), **self.add)
+            return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), self.add)
+        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), self.add)
 
     T = property(transpose)
 
     def copy(self):
         """Full copy with memory allocated."""
-        return AnnData(self.X.copy(), self.smp.copy(), self.var.copy(), **self.add.copy())
+        return AnnData(self.X.copy(), self.smp.copy(), self.var.copy(), self.add.copy())
 
 
 def test_creation():
     AnnData(np.array([[1, 2], [3, 4]]))
-    AnnData(ma.array([[1, 2], [3, 4]], mask=[0, 1, 1, 0]))
+    AnnData(ma.array([[1, 2], [3, 4]], add={'mask': [0, 1, 1, 0]})
     AnnData(sp.eye(2))
     AnnData(
         np.array([[1, 2, 3], [4, 5, 6]]),
@@ -576,16 +573,19 @@ def test_set_add():
     with raises(ValueError):
         mat.smp = dict(a=[1, 2, 3])
 
+
 def test_multi_column_getitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
     adata.smp[['a', 'b']] = np.array([[0, 1], [2, 3]])
     print(adata.smp[['a', 'b']])
+
 
 def test_multi_column_single_key_getitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
     adata.smp[['c0of2', 'c1of2']] = np.array([[0, 1], [2, 3]])
     print(adata.smp)
     print(adata.smp['c'])
+
 
 def test_multi_column_single_key_setitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
