@@ -139,8 +139,7 @@ def plot_diffmap(adata,
             if isinstance(comps, list):
                 comps = ','.join([str(comp) for comp in comps])
             writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
-        if sett.savefigs:
-            plott.savefig(writekey)
+        plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()
