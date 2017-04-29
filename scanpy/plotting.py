@@ -9,8 +9,7 @@ import numpy as np
 from cycler import Cycler, cycler
 
 from .compat.matplotlib import pyplot as pl
-from matplotlib import rcParams
-from matplotlib import ticker
+from matplotlib import rcParams, ticker, is_interactive
 from matplotlib.figure import SubplotParams as sppars
 from . import settings as sett
 from . import utils
@@ -63,8 +62,8 @@ def init_fig_params():
                                           '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
                                           '#c5b0d5', '#c49c94', '#f7b6d2', # '#c7c7c7', remove grey
                                           '#dbdb8d', '#9edae5'])
-    if 'DISPLAY' not in os.environ:
-        sett.savefigs = True
+    # we show plots instead of saving when running interactively, including in a jupyter notebook/terminal
+    sett.savefigs = not is_interactive()
 
 def savefig(writekey):
     if sett.savefigs:
