@@ -39,7 +39,7 @@ def _gen_keys_from_key_multicol(key_multicol, n_keys):
     return keys
 
 
-class StructDict(np.recarray):
+class StructDict(np.ndarray):
 
     INDEX_KEY = '--INDEX--'
 
@@ -74,7 +74,7 @@ class StructDict(np.recarray):
         if source is None:  # empty array
             cols = [np.arange(n_row).astype(str)]
             dtype = [(cls.INDEX_KEY, cols[0].dtype)]
-        elif isinstance(source, np.recarray):
+        elif isinstance(source, np.ndarray):
             cols = [source[n] for n in source.dtype.names]
             dtype = source.dtype
         else:
@@ -105,7 +105,7 @@ class StructDict(np.recarray):
             # print(dtype, file=sys.stderr)
             raise
 
-        arr = np.recarray.__new__(cls, (len(cols[0]),), dtype)
+        arr = np.ndarray.__new__(cls, (len(cols[0]),), dtype)
         arr._is_attr_of = is_attr_of
 
         # only the multicol keys
@@ -131,7 +131,7 @@ class StructDict(np.recarray):
 
         # TODO: would be nicer to make not use of __setitem__ here but instead
         # call the constructor with the data in the corresponding form
-        # especially because this call __setitem__ of np.recarray, but of
+        # especially because this call __setitem__ of np.ndarray, but of
         # StructDict
         for i, name in enumerate(dtype.names):
             arr[name] = np.array(cols[i], dtype=dtype[name])
