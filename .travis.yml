@@ -5,6 +5,8 @@ python:
   #- "3.4"  # scikit-learn requires SciPy >= 0.9, SciPy 0.9 requires Python >= 3.5
   - "3.5"
   - "3.6"
-  - "nightly"
-install: "pip install ."
+  #- "nightly"  # takes long and is unlikely to fail
+install:
+  - "pip install -r requirements.txt"
+  - "python setup.py build_ext --inplace"
 script: pytest

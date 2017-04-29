@@ -188,7 +188,7 @@ class DataGraph(object):
                 self.set_root(adata.add['xroot'])
         self.Dchosen = None
         # use diffmap from previous calculation
-        if 'X_diffmap' in adata.smp and not recompute_diffmap:
+        if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
             sett.m(0, '... using `X_diffmap` for distance computations')
             self.evals = np.r_[1, adata.add['diffmap_evals']]
             self.rbasis = np.c_[adata.add['diffmap_comp0'][:, None], adata.smp['X_diffmap']]
@@ -329,7 +329,7 @@ class DataGraph(object):
         # then anymore and is not positive semidefinite anymore in practice, it
         # doesn't matter too much
         if neglect_selfloops:
-            np.fill_diagonal(W, 0)
+            W.setdiag(0)
 
         if False:
             pl.matshow(W)

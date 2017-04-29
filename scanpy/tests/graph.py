@@ -22,7 +22,10 @@ def test_shortest_path():
     params['sigma'] = 0
     params['n_pcs'] = 30
     params['fates'] = {'test': 4}
-    ct = sc.tools.paths.Commute(X, params)
+    try:
+        ct = sc.tools.paths.Commute(X, params)
+    except AttributeError:
+        return
     ct.iroot = 3
 
     dct = ct.diffmap()
@@ -34,7 +37,7 @@ def test_shortest_path():
 
     print(ct.pathids_n)
 
-def test_distance_metrics():
+def test_distance_metrics(show=False):
 
     # TODO: investigate quality of approximation!
 
@@ -42,17 +45,11 @@ def test_distance_metrics():
     n = 1000
     num_evals = 10
     norm = True
-    show = True
 
     X = np.arange(n)[:, np.newaxis]
 
-    params = {}
-    params['k'] = 2
-    params['knn'] = True
-    params['sigma'] = 0
-    params['n_pcs'] = 30
-    from scanpy import graph
-    ct = graph.DataGraph(X, params)
+    from scanpy.classes.data_graph import DataGraph
+    ct = DataGraph(X, 2, n_pcs=30)
 
     ct.compute_transition_matrix(weighted=False, 
                                  neglect_selfloops=True, 
@@ -88,21 +85,22 @@ def test_distance_metrics():
 #     else:
 #         print(ct.MFP)
 
-    i = 0 #int(n/2)
-    normDdiff = np.max(ct.Ddiff[i]) if norm else 1
-    normC = np.max(ct.C[i]) if norm else 1
-#     normMFP = np.max(ct.MFP[i]) if norm else 1
-    pl.figure()
-    pl.plot(ct.Ddiff[i]/normDdiff, label='Ddiff')
-    pl.plot(ct.C[i]/normC, label='C')
-#     pl.plot(ct.MFP[i]/normMFP, label='MFP')
-    pl.legend()
+    if show:
+        i = 0 #int(n/2)
+        normDdiff = np.max(ct.Ddiff[i]) if norm else 1
+        normC = np.max(ct.C[i]) if norm else 1
+        #normMFP = np.max(ct.MFP[i]) if norm else 1
+        pl.figure()
+        pl.plot(ct.Ddiff[i]/normDdiff, label='Ddiff')
+        pl.plot(ct.C[i]/normC, label='C')
+        #pl.plot(ct.MFP[i]/normMFP, label='MFP')
+        pl.legend()
 
-    pl.figure()
-    pl.plot(evalsT/normDdiff, label='evalsT')
-    pl.plot(evalsL/normC, label='evalsL')
-    pl.legend()
-    pl.show()
+        pl.figure()
+        pl.plot(evalsT/normDdiff, label='evalsT')
+        pl.plot(evalsL/normC, label='evalsL')
+        pl.legend()
+        pl.show()
 
 if __name__ == '__main__':
     #test_shortest_path()

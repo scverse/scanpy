@@ -1,0 +1,19 @@
+matplotlib
+pandas
+scipy
+# use memory optimally
+psutil
+# speed up
+cython
+# hdf5 file reading and writing
+h5py
+# standard machine-learning algorithms
+scikit-learn
+# standard statistical models
+statsmodels
+# natural human-readable sorting
+natsort
+# simple parallel computing
+joblib
+# profiling
+profilehooks

@@ -3,31 +3,18 @@ from setuptools import setup
 from distutils.extension import Extension
 import numpy
 
-use_cython = False  # set this to False
-if use_cython:
-    from Cython.Distutils import build_ext
+from Cython.Distutils import build_ext
 
-cmdclass = {}
-ext_modules = []
-if use_cython:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.pyx"]),
-    ]
-    cmdclass.update({ 'build_ext': build_ext })
-else:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.c"]),
-    ]
+with open('requirements.txt') as requirements:
+    requires = [l.strip() for l in requirements]
 
 more_requires = []
-# if sys.version_info[:2] < (3, 5):
-more_requires.append('configparser')
-# if sys.version_info[:2] < (3, 4):
-more_requires.append('enum34')  # we specifically seem to need enum34
-if sys.version_info[:2] < (3, 0):
-    more_requires.append('xlrd')  # for reading excel data
+if sys.version_info[0] == 2:
+    more_requires = [
+        'configparser',  # named ConfigParser in py2
+        'xlrd',          # pandas on py2 reads XSL files with that
+        'enum34',        # enum module introduced in python 3.4
+    ]
 
 setup(
     name='scanpy',
@@ -42,18 +29,7 @@ setup(
             'scanpy = scanpy.__main__:main',
         ],
     },
-    install_requires=[
-        'matplotlib',
-        'pandas',
-        'scipy',
-        'h5py',          # hdf5 file reading and writing
-        'scikit-learn',  # standard machine-learning algorithms
-        'statsmodels',   # standard statistical models
-        'natsort',       # natural, human-readable sorting
-        'joblib',        # simple parallel computing
-        'profilehooks',  # profiling
-        'tqdm'           # wait bars
-    ] + more_requires,
+    install_requires=requires + more_requires,
     packages=[
         'scanpy',
         'scanpy.tools',
@@ -65,7 +41,12 @@ setup(
         'scanpy.cython',
     ],
     include_dirs=[numpy.get_include()],
-    cmdclass=cmdclass,
-    ext_modules=ext_modules,
+    cmdclass={
+        'build_ext': build_ext,
+    },
+    ext_modules=[
+        Extension("scanpy.cython.utils_cy",
+                  ["scanpy/cython/utils_cy.pyx"]),
+    ],
     zip_safe=False,
 )
