@@ -39,24 +39,30 @@ def _gen_keys_from_key_multicol(key_multicol, n_keys):
     return keys
 
 
-class BoundRecArr(np.recarray):
-    """
-    A np.recarray that can be constructed from a dict.
-
-    Is bound to AnnData to allow adding fields.
-
-    The column "smp_name"/ "var_name" plays a role analogous to the `index` in
-    the `pd.Series` class.
-
-    Attributes
-    ----------
-    _index_name : str
-        Either SMP_INDEX or VAR_INDEX.
-    _parent : AnnData
-        The reference to an AnnData object to which the array is bound.
-    """
+class StructDict(np.recarray):
 
     def __new__(cls, source, index_name, parent, n_row=None, keys_multicol=None):
+        """Dimensionally structured dict, lowlevel alternative to pandas dataframe.
+
+        Behaves like a dict except that
+        - data has to match shape constraints
+        - slicing in the row-dimension is possible
+
+        Behaves like a numpy array except that:
+        - single and multiple columns can be accessed with keys (strings)
+        - the `index` column is hidden from the user and enables sclicing in AnnData
+        - you can add new columns via [] (`__setitem__`)
+        - it is bound to AnnData
+
+        Can be exported to a pandas dataframe via `.to_df()`.
+
+        Attributes
+        ----------
+        _index_name : str
+            Either SMP_INDEX or VAR_INDEX.
+        _parent : AnnData
+            The reference to an AnnData object to which the array is bound.
+        """
         if source is None:  # empty array
             cols = [np.arange(n_row).astype(str)]
             dtype = [(index_name, cols[0].dtype)]
@@ -114,37 +120,45 @@ class BoundRecArr(np.recarray):
         # TODO: would be nicer to make not use of __setitem__ here but instead
         # call the constructor with the data in the corresponding form
         # especially because this call __setitem__ of np.recarray, but of
-        # BoundRecArray
+        # StructDict
         for i, name in enumerate(dtype.names):
             arr[name] = np.array(cols[i], dtype=dtype[name])
 
         return arr
 
+    def __array_finalize__(self, arr):
+        if arr is None: return
+        self._index_name = getattr(arr, '_index_name', None)
+
     def __contains__(self, k):
         return k in set(self._keys)  # should be about as fast as for dict, pd.dataframe
 
     def keys(self):
-        """Get keys of fields excluding the index."""
+        """Get keys of fields excluding the index (same as `columns()`)."""
         # this replaces the columns property / also pd.dataframes yield
         # the keys as an index object upon calling .keys(), dicts anyway
         # this therefore emulates pd.dataframes and dicts well enough
         return self._keys
 
+    def columns(self):
+        """Get keys of fields excluding the index (same as `keys()`)."""
+        return self._keys
+
     def flipped(self):
         old_index_name = self._index_name
         new_index_name = SMP_INDEX if old_index_name == VAR_INDEX else VAR_INDEX
-
-        flipped = BoundRecArr(self, new_index_name, self._parent, len(self))
+        flipped = StructDict(self, new_index_name, self._parent, len(self),
+                             keys_multicol=self._keys_multicol)
         flipped.dtype.names = tuple(
             new_index_name if n == old_index_name else n
             for n in self.dtype.names)
-
         return flipped
 
     def copy(self):
-        new = super(BoundRecArr, self).copy()
+        new = super(StructDict, self).copy()
         new._index_name = self._index_name
         new._parent = self._parent
+        new._keys_multicol = self._keys_multicol
         return new
 
     def _multicol_view(self, arr, keys):
@@ -170,10 +184,10 @@ class BoundRecArr(np.recarray):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                return super(BoundRecArr, self).__getitem__(k)
+                return super(StructDict, self).__getitem__(k)
             except ValueError:  # access multiple columns with key k
                 keys = self._keys_multicol_lookup[k]
-                return super(BoundRecArr, self).__getitem__(keys).view(
+                return super(StructDict, self).__getitem__(keys).view(
                     self.dtype[keys[0]]).reshape(self.shape + (len(self._keys_multicol_lookup[k]),))
 
     def __setitem__(self, keys, values):
@@ -224,7 +238,7 @@ class BoundRecArr(np.recarray):
 
         if any(present):
             for k, v in zip(present, values[np.in1d(keys, present)]):
-                super(BoundRecArr, self).__setitem__(k, v)
+                super(StructDict, self).__setitem__(k, v)
 
         if any(absent):
             attr = 'smp' if self._index_name == SMP_INDEX else 'var'
@@ -233,7 +247,7 @@ class BoundRecArr(np.recarray):
                                  .format(values.shape[1], len(self)))
             source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
-            new = BoundRecArr(source, self._index_name, self._parent,
+            new = StructDict(source, self._index_name, self._parent,
                               keys_multicol=self._keys_multicol)
             setattr(self._parent, attr, new)
 
@@ -342,8 +356,8 @@ class AnnData(IndexMixin):
         if add and 'var_keys_multicol' in add:
             var_keys_multicol = add['var_keys_multicol']
 
-        self.smp = BoundRecArr(smp, SMP_INDEX, self, self.n_smps, smp_keys_multicol)
-        self.var = BoundRecArr(var, VAR_INDEX, self, self.n_vars, var_keys_multicol)
+        self.smp = StructDict(smp, SMP_INDEX, self, self.n_smps, smp_keys_multicol)
+        self.var = StructDict(var, VAR_INDEX, self, self.n_vars, var_keys_multicol)
         self._check_dimensions()
 
         self.add = add
@@ -398,10 +412,10 @@ class AnnData(IndexMixin):
     def __setattr__(self, key, value):
         names_col = dict(smp=SMP_INDEX, var=VAR_INDEX).get(key)
         # if smp/ var is set, give it the right class
-        if names_col and not isinstance(value, BoundRecArr):
+        if names_col and not isinstance(value, StructDict):
             names_orig, dim = ((self.smp_names, 0) if names_col == SMP_INDEX
                                else (self.var_names, 1))
-            value_orig, value = value, BoundRecArr(value, names_col, self)
+            value_orig, value = value, StructDict(value, names_col, self)
             if len(value) != self.X.shape[dim]:
                 raise ValueError('New value for {!r} was converted to a '
                                  'reacarray of length {} instead of {}'
@@ -478,6 +492,8 @@ class AnnData(IndexMixin):
         """
         if sp.issparse and isinstance(self.X, sp.csr_matrix):
             return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), self.add)
+        print('from transpose', self.var.flipped()._index_name)
+        print('from transpose', self.var._index_name)
         return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), self.add)
 
     T = property(transpose)
@@ -663,11 +679,11 @@ def test_set_add():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
 
     adata.smp = dict(smp_names=['1', '2'])
-    assert isinstance(adata.smp, BoundRecArr)
+    assert isinstance(adata.smp, StructDict)
     assert len(adata.smp.dtype) == 1
 
     adata.smp = dict(a=[3, 4])  # keep smp_names and add a custom column
-    assert isinstance(adata.smp, BoundRecArr)
+    assert isinstance(adata.smp, StructDict)
     assert len(adata.smp.dtype) == 2
     assert adata.smp_names.tolist() == ['1', '2']  # still the same names
 
