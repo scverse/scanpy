@@ -9,8 +9,7 @@ import numpy as np
 from cycler import Cycler, cycler
 
 from .compat.matplotlib import pyplot as pl
-from matplotlib import rcParams
-from matplotlib import ticker
+from matplotlib import rcParams, ticker, is_interactive
 from matplotlib.figure import SubplotParams as sppars
 from . import settings as sett
 from . import utils
@@ -19,7 +18,6 @@ from . import readwrite
 #-------------------------------------------------------------------------------
 # Toplevel Plotting Functions
 #-------------------------------------------------------------------------------
-
 
 def violin(adata, smp):
     smp_df = adata.smp.to_df()
@@ -249,6 +247,9 @@ def init_fig_params():
     if 'DISPLAY' not in os.environ:
         sett.m(0, '    setting `sett.savefigs = True`')
         sett.savefigs = True
+
+    # we show plots instead of saving when running interactively, including in a jupyter notebook/terminal
+    sett.savefigs = not is_interactive()
 
 
 def savefig(writekey):
