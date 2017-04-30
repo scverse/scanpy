@@ -526,7 +526,7 @@ class AnnData(IndexMixin):
 
         Sample axis (rows) and variable axis are interchanged. No additional memory.
         """
-        if sp.issparse and isinstance(self.X, sp.csr_matrix):
+        if sp.isspmatrix_csr(self.X):
             return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), self.add)
         return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), self.add)
 
