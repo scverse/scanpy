@@ -87,7 +87,7 @@ class BoundStructArray(np.ndarray):
         # create from None or Dict
         else:
             if source is None:  # empty array
-                cols = [np.arange(n_row).astype(str)]
+                cols = [np.arange(n_row).astype(np.string_)]
                 dtype = [(new_index_key, cols[0].dtype)]
             else:
                 if not isinstance(source, Mapping):
@@ -95,13 +95,18 @@ class BoundStructArray(np.ndarray):
                                      .format(type(source)))
                 # meta is dict-like
                 names = list(source.keys())
-                cols = [np.asarray(col) for col in source.values()]
+                try:  # transform to byte-strings
+                    cols = [np.asarray(col) if np.array(col[0]).dtype.char != 'U'
+                            else np.asarray(col).astype('S') for col in source.values()]
+                except UnicodeEncodeError:
+                    raise ValueError('Currently only support ascii strings. Don\'t use "ö" etc. for sample annotation.')
+
                 if old_index_key not in source:
                     names.append(new_index_key)
-                    cols.append(np.arange(len(cols[0]) if cols else n_row).astype(str))
+                    cols.append(np.arange(len(cols[0]) if cols else n_row).astype(np.string_))
                 else:
                     names[names.index(old_index_key)] = new_index_key
-                    if not isinstance(source[old_index_key][0], str):
+                    if isinstance(source[old_index_key][0], np.string_):
                         raise ValueError('Value for key "{}" for initializing index of BoundStructArray '
                                          'needs to be of type str, not {}.'
                                          .format(index_key, type(source[index_key][0])))
@@ -214,11 +219,15 @@ class BoundStructArray(np.ndarray):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                return super(BoundStructArray, self).__getitem__(k).view(np.ndarray)
+                view = super(BoundStructArray, self).__getitem__(k).view(np.ndarray)
             except ValueError:  # access multiple columns with key k
                 keys = self._keys_multicol_lookup[k]
-                return super(BoundStructArray, self).__getitem__(keys).view(
-                    self.dtype[keys[0]]).reshape(self.shape + (len(self._keys_multicol_lookup[k]),))
+                view = super(BoundStructArray, self).__getitem__(keys).view(
+                    self.dtype[keys[0]]).reshape(
+                        self.shape + (len(self._keys_multicol_lookup[k]),))
+            if view.dtype.char == 'S':
+                return view.astype('U')
+            return view
 
     def __setitem__(self, keys, values):
         """Either a single one- or multi-column or mulitiple one-colum items."""
@@ -258,6 +267,11 @@ class BoundStructArray(np.ndarray):
                                  .format(values.shape[0], self.shape[0]))
         keys = np.array(keys)
         values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
+        if values.dtype.char == 'U':
+            try:
+                values = values.astype('S')
+            except UnicodeEncodeError:
+                raise ValueError('Currently only support ascii strings. Don\'t use "ö" etc. for sample annotation.')
         # update keys
         for key in keys:
             if (key != self.index_key
@@ -366,7 +380,7 @@ class AnnData(IndexMixin):
         if isinstance(data, Mapping):
             if any((smp, var, add)):
                 raise ValueError('If `data` is a dict no further arguments must be provided.')
-            X, smp, var, add = self.from_ddata(data)
+            X, smp, var, add = self.from_dict(data)
         else:
             X = data
 
@@ -565,47 +579,54 @@ class AnnData(IndexMixin):
                              'rows as data has columns ({}), but has {} rows'
                              .format(self.n_vars, self.var.shape[0]))
 
-    def from_ddata(self, ddata):
-        smp, var = OrderedDict(), OrderedDict()
+    def to_dict(self):
+        """A dict that stores data and annotation.
 
-        add = dict(ddata.items())
-        del ddata
-
-        X = add['X']
-        del add['X']
-
-        if 'row_names' in add:
-            smp['smp_names'] = add['row_names']
-            del add['row_names']
-        elif 'smp_names' in add:
-            smp['smp_names'] = add['smp_names']
-            del add['smp_names']
-
-        if 'col_names' in add:
-            var['var_names'] = add['col_names']
-            del add['col_names']
-        elif 'var_names' in add:
-            var['var_names'] = add['var_names']
-            del add['var_names']
-
-        smp = merge_dicts(smp, add.get('row', {}), add.get('smp', {}))
-        var = merge_dicts(var, add.get('col', {}), add.get('var', {}))
-        for k in ['row', 'smp', 'col', 'var']:
-            if k in add:
-                del add[k]
-
-        return X, smp, var, add
-
-    def to_ddata(self):
-        smp = OrderedDict([(k, self.smp[k]) for k in self.smp.dtype.names])
-        var = OrderedDict([(k, self.var[k]) for k in self.var.dtype.names])
-        d = {'X': self.X, 'smp': smp, 'var': var,
-             'smp_names': self.smp_names, 'var_names': self.var_names}
+        It is sufficient for reconstructing the object.
+        """
+        d = {'X': self.X, 'smp': self.smp, 'var': self.var}
         for k, v in self.add.items():
             d[k] = v
         d['smp_keys_multicol'] = self.smp._keys_multicol
         d['var_keys_multicol'] = self.var._keys_multicol
         return d
+
+    def from_dict(self, ddata):
+        """Allows to construct an instance of AnnData from a dictionary.
+        """
+        add = dict(ddata.items())
+        del ddata
+        X = add['X']
+        del add['X']
+        if ('smp' in add and isinstance(add['smp'], np.ndarray)
+            and 'var' in add and isinstance(add['var'], np.ndarray)):
+            smp = add['smp']
+            del add['smp']
+            var = add['var']
+            del add['var']
+        else:
+            smp, var = OrderedDict(), OrderedDict()
+            if 'row_names' in add:
+                smp['smp_names'] = add['row_names']
+                del add['row_names']
+            elif 'smp_names' in add:
+                smp['smp_names'] = add['smp_names']
+                del add['smp_names']
+
+            if 'col_names' in add:
+                var['var_names'] = add['col_names']
+                del add['col_names']
+            elif 'var_names' in add:
+                var['var_names'] = add['var_names']
+                del add['var_names']
+
+            smp = merge_dicts(smp, add.get('row', {}), add.get('smp', {}))
+            var = merge_dicts(var, add.get('col', {}), add.get('var', {}))
+            for k in ['row', 'smp', 'col', 'var']:
+                if k in add:
+                    del add[k]
+
+        return X, smp, var, add
 
 
 def test_creation():
@@ -660,6 +681,8 @@ def test_indices_dtypes():
         # this is not possible currently as we store
         # datatypes of fixed length
         adata.smp_names = ['hello', 'b']
+        # unicode not allowed for annotation
+        adata.smp_names = ['ö', 'a']
 
 def test_creation_from_vector():
     adata = AnnData(np.array([1, 2, 3]))
