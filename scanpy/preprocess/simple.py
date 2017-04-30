@@ -91,11 +91,11 @@ def filter_genes(data, min_cells=None, min_counts=None):
     number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
     min_number = min_counts if min_cells is None else min_cells
     if issparse(X):
-       number_per_gene = number_per_gene.A1
+        number_per_gene = number_per_gene.A1
     gene_filter = number_per_gene >= min_number
     sett.m(0, '... filtered out', np.sum(~gene_filter),
            'genes that are detected',
-           'in less than ' + str(min_cells)  + ' cells' if min_counts is None
+           'in less than ' + str(min_cells) + ' cells' if min_counts is None
            else 'with less than ' + str(min_counts) + ' counts')
     return gene_filter, number_per_gene
 

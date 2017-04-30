@@ -24,8 +24,8 @@ def violin(adata, smp):
     smp_tidy = pd.melt(smp_df, value_vars=smp)
     sns.set_style('whitegrid')
     g = sns.FacetGrid(smp_tidy, col='variable', sharey=False).map(
-            sns.violinplot, 'value', inner='quartile', orient='vertical').set_titles(
-                col_template='{col_name}').set_xlabels('')
+                      sns.violinplot, 'value', inner='quartile', orient='vertical').set_titles(
+                      col_template='{col_name}').set_xlabels('')
     return g
 
 
@@ -78,13 +78,15 @@ def scatter(adata,
          Provide titles for panels as "my title1,another title,...".
     """
     # write params to a config file
-    params = locals(); del params['adata']
+    params = locals()
+    del params['adata']
     if os.path.exists('.scanpy/config_plotting.txt'):
         params = utils.update_params(readwrite.read_params('.scanpy/config_plotting.txt', verbosity=1), params)
         if right_margin != params['right_margin']:
             right_margin = params['right_margin']
             sett.m(1, '... setting right_margin to saved value', right_margin)
-    readwrite.write_params('.scanpy/config_plotting.txt', params); del params
+    readwrite.write_params('.scanpy/config_plotting.txt', params)
+    del params
     # compute components
     if comps is None:
         comps = '1,2' if '2d' in layout else '1,2,3'
@@ -101,7 +103,7 @@ def scatter(adata,
     except KeyError:
         sett.mi('--> compute the basis using plotting tool', basis, 'first')
         raise
-
+    
     pal = default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
@@ -136,7 +138,7 @@ def scatter(adata,
                 # sett.m(0, '... coloring according to', smp)
             # coloring according to gene expression
             elif smp in adata.var_names:
-                c = adata.X[:, np.where(smp==adata.var_names)[0][0]]
+                c = adata.X[:, np.where(smp == adata.var_names)[0][0]]
                 continuous = True
                 # sett.m(0, '... coloring according to expression of gene', smp)
             else:
@@ -169,7 +171,7 @@ def scatter(adata,
                        right_margin=right_margin,
                        sizes=sizes,
                        cmap='viridis' if cmap is None else cmap)
-
+    
     for ismp in categoricals:
         smp = smps[ismp]
         if (smp != 'groups' and 'groups_names' in adata.add

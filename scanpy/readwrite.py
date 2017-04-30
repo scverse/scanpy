@@ -1,4 +1,4 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Reading and Writing
 """
@@ -13,15 +13,16 @@ from . import settings as sett
 avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for reading data. """
 
-#--------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # Reading and Writing data files and result dictionaries
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
-def write(filename_or_key, dict_or_adata):
-    """
-    Write AnnData objects and dictionaries to file.
 
-    If a key is specified, the filename is generated as
+def write(filename_or_key, data, ext=None):
+    """Write AnnData objects and dictionaries to file.
+
+    If a key is passed, the filename is generated as
         filename = sett.writedir + key + sett.file_format_data
     This defaults to
         filename = 'write/' + key + '.h5'
@@ -29,28 +30,39 @@ def write(filename_or_key, dict_or_adata):
 
     Parameters
     ----------
-    filename_or_key : str, Path
-        Filename of data file or key used in function write(key,dict).
-    dict_or_adata : dict, AnnData
-        Annotated data matrix or dictionary convertible to one.
+    filename_or_key : str
+        Filename of data file or key.
+    data : dict, AnnData
+        Annotated data object or dict storing arrays as values.
     """
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
     from .classes.ann_data import AnnData
-    if isinstance(dict_or_adata, AnnData):
-        dictionary = dict_or_adata.to_ddata()
+    if isinstance(data, AnnData):
+        d = data.to_dict()
     else:
-        dictionary = dict_or_adata
+        d = data
     if is_filename(filename_or_key):
         filename = filename_or_key
+        ext_ = is_filename(filename, return_ext=True)
+        if ext is None:
+            ext = ext_
+        elif ext != ext_:
+            raise ValueError('It suffices to provide the file type by '
+                             'providing a proper extension to the filename.'
+                             'One of "txt", "csv", "h5" or "npz".')
     else:
         key = filename_or_key
         filename = get_filename_from_key(key)
-    write_dict_to_file(filename, dictionary, ext=sett.file_format_data)
+    ext = sett.file_format_data if ext is None else ext
+    write_dict_to_file(filename, d, ext=ext)
+    if ext in {'txt', 'csv'}:
+        filename = get_filename_from_key(key, ext='h5')
+        write_dict_to_file(filename, d, ext='h5')
+
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
          as_strings=False, backup_url='', return_dict=False):
-    """
-    Read file or dictionary and return data dictionary.
+    """Read file or dictionary and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
     it's not present yet.
@@ -89,6 +101,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
             Array storing the names of rows (experimental labels of samples).
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
+        Maybe more items, if they are found in the file.
     """
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
     from .classes.ann_data import AnnData
@@ -117,9 +130,11 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     else:
         return AnnData(d)
 
-#--------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # Reading and writing parameter files
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
 
 def read_params(filename, asheader=False, verbosity=0):
     """
@@ -153,9 +168,11 @@ def read_params(filename, asheader=False, verbosity=0):
             if not asheader or line.startswith('#'):
                 line = line[1:] if line.startswith('#') else line
                 key, val = line.split('=')
-                key = key.strip(); val = val.strip()
+                key = key.strip()
+                val = val.strip()
                 params[key] = convert_string(val)
     return params
+
 
 def write_params(filename, *args, **dicts):
     """
@@ -163,6 +180,8 @@ def write_params(filename, *args, **dicts):
 
     Uses INI file format.
     """
+    if not os.path.exists(filename):
+        os.makedirs(os.path.dirname(filename))
     if len(args) == 1:
         d = args[0]
         with open(filename, 'w') as f:
@@ -174,6 +193,7 @@ def write_params(filename, *args, **dicts):
                 f.write('[' + k + ']\n')
                 for key, val in d.items():
                     f.write(key + ' = ' + str(val) + '\n')
+
 
 def get_params_from_list(params_list):
     """
@@ -188,9 +208,11 @@ def get_params_from_list(params_list):
         params[key] = convert_string(val)
     return params
 
-#--------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # Reading and Writing data files
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
 
 def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
               as_strings=False, backup_url=''):
@@ -253,10 +275,11 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     filename_stripped = filename.lstrip('./')
     if filename_stripped.startswith('data/'):
         filename_stripped = filename_stripped[5:]
+    fast_ext = sett.file_format_data if sett.file_format_data in {'h5', 'npz'} else 'h5'
     filename_fast = (sett.writedir + 'data/'
-                     + filename_stripped.replace('.' + ext, '.' + sett.file_format_data))
+                     + filename_stripped.replace('.' + ext, '.' + fast_ext))
     if not os.path.exists(filename_fast) or sett.recompute == 'read':
-        sett.m(0,'reading file', filename,
+        sett.m(0, 'reading file', filename,
                '\n... writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
                filename_fast)
@@ -279,7 +302,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                 sett.m(0, '... assuming ".data" means tab or white-space separated text file')
                 sett.m(0, '--> change this by specifying ext to sc.read')
             ddata = read_txt(filename, delim, first_column_names,
-                               as_strings=as_strings)
+                             as_strings=as_strings)
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
         elif ext == 'txt.gz':
@@ -371,7 +394,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
             line_list = line.split(delim)
             if not is_float(line_list[0]):
                 col_names = line_list
-                sett.m(0, '--> assuming first line in file stores column names')
+                sett.m(0, '... assuming first line in file stores column names')
             else:
                 if not is_float(line_list[0]) or first_column_names:
                     first_column_names = True
@@ -383,11 +406,11 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
     if not col_names:
         # try reading col_names from the last comment line
         if len(header) > 0:
-            sett.m(0,'--> assuming last comment line stores variable names')
+            sett.m(0, '... assuming last comment line stores variable names')
             col_names = np.array(header.split('\n')[-2].strip('#').split())
         # just numbers as col_names
         else:
-            sett.m(0,'--> did not find column names in file')
+            sett.m(0, '... did not find column names in file')
             col_names = np.arange(len(data[0])).astype(str)
     col_names = np.array(col_names, dtype=str)
     # check if first column contains row names or not
@@ -396,7 +419,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
     for line in f:
         line_list = line.split(delim)
         if not is_float(line_list[0]) or first_column_names:
-            sett.m(0, '--> assuming first column in file stores row names')
+            sett.m(0, '... assuming first column in file stores row names')
             first_column_names = True
             row_names.append(line_list[0])
             data.append(line_list[1:])
@@ -422,7 +445,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
     # transform row_names
     if not row_names:
         row_names = np.arange(len(data)).astype(str)
-        sett.m(0,'--> did not find row names in file')
+        sett.m(0, '... did not find row names in file')
     else:
         row_names = np.array(row_names)
         for iname, name in enumerate(row_names):
@@ -454,7 +477,7 @@ def read_txt_as_strings(filename, delim):
         X = np.array(data).astype(str)
         col_names = None
         row_names = None
-        sett.m(0,'--> the whole content of the file is in X')
+        sett.m(0, '... the whole content of the file is in X')
     else:
         # strip quotation marks
         if data[0][0].startswith('"'):
@@ -467,9 +490,9 @@ def read_txt_as_strings(filename, delim):
         data = np.array(data[1:]).astype(str)
         row_names = data[:, 0]
         X = data[:, 1:]
-        sett.m(0,'--> first row is stored in "col_names"')
-        sett.m(0,'--> first column is stored in "row_names"')
-        sett.m(0,'--> data is stored in X')
+        sett.m(0, '... first row is stored in "col_names"')
+        sett.m(0, '... first column is stored in "row_names"')
+        sett.m(0, '... data is stored in X')
     ddata = {'X': X, 'col_names': col_names, 'row_names': row_names}
     return ddata
 
@@ -514,7 +537,7 @@ def _read_hdf5_single(filename, key=''):
         # init dict
         ddata = {'X' : X}
         # try to find row and column names
-        for iname, name in enumerate(['row_names','col_names']):
+        for iname, name in enumerate(['row_names', 'col_names']):
             if name in keys:
                 ddata[name] = f[name][()]
             elif key + '_' + name.replace('_', '') in keys:
@@ -636,9 +659,9 @@ def _read_softgz(filename):
              'row': {'groups': groups}}
     return ddata
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Reading and writing for dictionaries
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 def read_file_to_dict(filename, ext='h5'):
     """
@@ -660,9 +683,9 @@ def read_file_to_dict(filename, ext='h5'):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    sett.m(0,'reading file', filename)
+    sett.m(0, 'reading file', filename)
     d = {}
-    if ext == 'h5':
+    if ext in {'h5', 'txt', 'csv'}:
         with h5py.File(filename, 'r') as f:
             for key in f.keys():
                 # the '()' means 'read everything' (by contrast, ':' only works
@@ -675,13 +698,7 @@ def read_file_to_dict(filename, ext='h5'):
         for key, value in d_read.items():
             key, value = postprocess_reading(key, value)
             d[key] = value
-    elif ext == 'xlsx':
-        raise ValueError('TODO: this is broke.')
-        import pandas as pd
-        xl = pd.ExcelFile(filename)
-        for sheet in xl.sheet_names:
-            d[sheet] = xl.parse(sheet).values
-    if 'X_sparse_data' in d:
+    if 'X_csr_data' in d:
         d = load_sparse_csr(d)
     return d
 
@@ -689,37 +706,10 @@ def read_file_to_dict(filename, ext='h5'):
 def postprocess_reading(key, value):
     if value.dtype.kind == 'S':
         value = value.astype(str)
-    # get back dictionaries
-    if key.endswith('_ann'):
-        if key.startswith('smp'):
-            value = value.T
-        from collections import OrderedDict
-        dd = OrderedDict()
-        for row in value:
-            # the type is stored after the "_"
-            t = row[0].split('_')[-1]
-            k = '_'.join(row[0].split('_')[:-1])
-            dd[k] = row[1:].astype(t)
-        return key[:-4], dd
-    else:
-        return key, value
+    return key, value
 
 
-def preprocess_writing(key, value, ext):
-    # if is a dict, build an array from it
-    if isinstance(value, dict):
-        array = []
-        for k, v in value.items():
-            k += '_' + v.dtype.char
-            k = np.array([k])
-            v = np.array(v)
-            array.append(np.r_[k, v])
-        value = np.array(array)
-        # if ext not in {'h5', 'npz'}:
-        #     value = value.T
-        if key == 'smp':
-            value = value.T
-        key = key + '_ann'
+def preprocess_writing(key, value):
     value = np.array(value)
     # some output about the data to write
     sett.m(1, key, type(value),
@@ -732,7 +722,9 @@ def preprocess_writing(key, value, ext):
 
 def write_dict_to_file(filename, d, ext='h5'):
     """
-    Write content of dictionary to file.
+    Write dictionary to file.
+
+    Values need to be np.arrays or transformable to numpy arrays.
 
     Parameters
     ----------
@@ -757,7 +749,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 for k, v in save_sparse_csr(value).items():
                     d_write[k] = v
             else:
-                key, value = preprocess_writing(key, value, ext)
+                key, value = preprocess_writing(key, value)
                 d_write[key] = value
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
@@ -772,50 +764,63 @@ def write_dict_to_file(filename, d, ext='h5'):
     elif ext == 'csv' or ext == 'txt':
         # here this is actually a directory that corresponds to the
         # single hdf5 file
-        dirname = filename.replace('.' + ext, '')
+        dirname = filename.replace('.' + ext, '/')
+        sett.m(0, '... exporting', ext, 'files to', dirname)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         for key, value in d.items():
-            key, value = preprocess_writing(key, value, ext)
-            if value.dtype.kind == 'S':
-                value = value.astype('U')
-            if len(value.shape) > 0:
-                np.savetxt(dirname + '/' + key + '.' + ext, value,
-                           fmt = ('%.14e' if value.dtype.char == 'f'
-                                  else '%s' if value.dtype.char == 'U'
-                                  else '%d' if (value.dtype.char == 'b' or value.dtype.char == 'i')
-                                  else '%f'),
-                           delimiter=' ' if ext == 'txt' else ',')
-    elif ext == 'xlsx':
-        raise ValueError('TODO: this is broke.')
-        import pandas as pd
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            for key, value in d.items():
-                pd.DataFrame(value).to_excel(writer,key)
+            key, value = preprocess_writing(key, value)
+            from pandas import DataFrame
+            filename = dirname + '/' + key + '.' + ext
+            if value.dtype.names is None:
+                if value.dtype.char == 'S':
+                    df = DataFrame(value.astype('U'))
+                else:
+                    df = DataFrame(value)
+                df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
+                          header=False, index=False)
+            else:
+                df = DataFrame.from_records(value)
+                cols = list(df.select_dtypes(include=[object]).columns)
+                # convert to unicode string
+                df[cols] = df[cols].values.astype('U')
+                if key == 'var':
+                    df = df.T
+                    df.to_csv(filename,
+                              sep=(' ' if ext == 'txt' else ','),
+                              header=False)
+                else:
+                    df.to_csv(filename,
+                              sep=(' ' if ext == 'txt' else ','),
+                              index=False)
 
-#--------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # Type conversion
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
 
 def save_sparse_csr(X):
     from scipy.sparse.csr import csr_matrix
     X = csr_matrix(X)
-    return {'X_sparse_data': X.data,
-            'X_sparse_indices': X.indices,
-            'X_sparse_indptr': X.indptr,
-            'X_sparse_shape': X.shape}
+    return {'X_csr_data': X.data,
+            'X_csr_indices': X.indices,
+            'X_csr_indptr': X.indptr,
+            'X_csr_shape': X.shape}
+
 
 def load_sparse_csr(d):
     from scipy.sparse.csr import csr_matrix
-    d['X'] = csr_matrix((d['X_sparse_data'],
-                         d['X_sparse_indices'],
-                         d['X_sparse_indptr']),
-                         shape=d['X_sparse_shape'])
-    del d['X_sparse_data']
-    del d['X_sparse_indices']
-    del d['X_sparse_indptr']
-    del d['X_sparse_shape']
+    d['X'] = csr_matrix((d['X_csr_data'],
+                         d['X_csr_indices'],
+                         d['X_csr_indptr']),
+                        shape=d['X_csr_shape'])
+    del d['X_csr_data']
+    del d['X_csr_indices']
+    del d['X_csr_indptr']
+    del d['X_csr_shape']
     return d
+
 
 def is_float(string):
     """
@@ -831,6 +836,7 @@ def is_float(string):
     except ValueError:
         return False
 
+
 def is_int(string):
     """
     Check whether string is integer.
@@ -840,6 +846,7 @@ def is_int(string):
         return True
     except ValueError:
         return False
+
 
 def convert_bool(string):
     """
@@ -851,6 +858,7 @@ def convert_bool(string):
         return True, False
     else:
         return False, False
+
 
 def convert_string(string):
     """
@@ -867,13 +875,15 @@ def convert_string(string):
     else:
         return string
 
-#--------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # Helper functions for reading and writing
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
-def get_filename_from_key(key):
-    filename = sett.writedir + key + '.' + sett.file_format_data
+def get_filename_from_key(key, ext=None):
+    ext = sett.file_format_data if ext is None else ext
+    filename = sett.writedir + key + '.' + ext
     return filename
 
 
@@ -882,10 +892,9 @@ def ddata_from_df(df):
     Write pandas.dataframe to ddata dictionary.
     """
     ddata = {
-        'X': df.values[:,1:].astype(float),
-        'row_names': df.iloc[:,0].values.astype(str),
-        'col_names': np.array(df.columns[1:], dtype=str)
-        }
+        'X': df.values[:, 1:].astype(float),
+        'row_names': df.iloc[:, 0].values.astype(str),
+        'col_names': np.array(df.columns[1:], dtype=str)}
     return ddata
 
 
@@ -922,12 +931,12 @@ def check_datafile_present(filename, backup_url=''):
                 os.makedirs(d)
             from .compat.urllib_request import urlretrieve
             urlretrieve(backup_url, filename, reporthook=download_progress)
-            sett.m(0,'')
+            sett.m(0, '')
 
     return filename
 
 
-def is_filename(filename_or_key,return_ext=False):
+def is_filename(filename_or_key, return_ext=False):
     """ Check whether it is a filename. """
     for ext in avail_exts:
         l = len('.' + ext)

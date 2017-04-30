@@ -9,9 +9,7 @@ There are two PCA versions, which are automatically chosen
 - function _pca_fallback
 """
 from .. import settings as sett
-from .. import plotting as plott
 from .. import preprocess as pp
-from ..classes.ann_data import AnnData
 
 pca = pp.pca
 

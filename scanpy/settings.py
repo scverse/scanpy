@@ -48,8 +48,8 @@ parameters are changed.
 file_format_data = 'h5'
 """File format for saving AnnData objects.
 
-Allowed are 'h5' (hdf5), 'xlsx' (Excel) or 'csv' (comma separated value
-file).
+Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5'
+(hdf5) and 'npz' for importing and exporting.
 """
 
 file_format_figures = 'png'
@@ -210,10 +210,10 @@ def add_args(p):
     aa('--max_memory',
        type=int, default=16, metavar='m',
        help='Specify maximal memory usage in GB (default: %(default)s).')
-    aa('--fileformat',
+    aa('-ff', '--fileformat',
        type=str, default=file_format_data, metavar='ext',
-       help='Specify file format for saving results, either "h5", "csv", '
-            '"txt" or "npz" (default: %(default)s).')
+       help='Specify file format for exporting results, either "csv", '
+            '"txt", "h5" or "npz" (default: %(default)s).')
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
        help='Change write directory (default: %(default)s).')

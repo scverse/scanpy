@@ -32,6 +32,7 @@ scripts/tgdyn_simple.py
 __pycache__/
 *.py[cod]
 *.so
+.cache
 
 # OS or Editor files and folders
 .DS_Store

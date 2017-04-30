@@ -9,9 +9,9 @@ from collections import OrderedDict as odict
 import numpy as np
 import scanpy as sc
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # The 'example_parameters' dictionary allows to set optional tool parameters
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 example_parameters = {
     'burczynski06': {},
@@ -52,11 +52,11 @@ example_parameters = {
     },
 }
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # The 'example_data dictionary' stores information about example data.
 # - please respect formatting of the 'addedby' entry as
 #   "Initials Surname (github_name), 2016-12-15"
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 example_data = {
     'burczynski06': {
@@ -100,10 +100,10 @@ example_data = {
 }
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # One function per example that reads, annotates and preprocesses data
 # - one function 'exkey()' per 'exkey' (key in example_parameters)
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def burczynski06():
@@ -222,12 +222,12 @@ def toggleswitch():
     adata.add['xroot'] = adata.X[0]
     return adata
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Optional functions for reading Raw Data and Postprocessing, respectively
 # - this is useful, if one wants to experiment with different preprocessing
 #   steps, all of which require the same raw data, annotation, and
 #   postprocessing steps
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 def moignard15_dpt(adata):
     if len(adata.add['dpt_groups_names']) > 1:

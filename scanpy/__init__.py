@@ -153,7 +153,7 @@ def _run_command_line_args(toolkey, args):
 
     # read/write files
     writekey = sett.basekey + '_' + toolkey
-    pfile = sett.writedir + writekey + '_params.txt'
+    pfile = sett.writedir + sett.basekey + '_params/' + toolkey + '.txt'
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
         sett.logfile(logfile)
@@ -173,8 +173,9 @@ def _run_command_line_args(toolkey, args):
         if toolkey not in adata.add['tools']:
             adata.add['tools'] = np.append(adata.add['tools'], toolkey)
         write(sett.basekey, adata)
-        sett.m(0, 'updated file',
-               readwrite.get_filename_from_key(sett.basekey))
+        if sett.file_format_data in {'h5', 'npz'}:
+            sett.m(0, 'updated file',
+                   readwrite.get_filename_from_key(sett.basekey))
         # save a copy of the changed parameters
         readwrite.write_params(pfile, params)
 
