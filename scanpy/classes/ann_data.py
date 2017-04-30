@@ -279,8 +279,22 @@ class BoundStructArray(np.ndarray):
         present = np.intersect1d(keys, self.dtype.names)
         absent = np.setdiff1d(keys, self.dtype.names)
 
+        re_initialize = False
         if any(present):
             for k, v in zip(present, values[np.in1d(keys, present)]):
+                if (v.dtype != self.dtype[k]
+                    and v.dtype.itemsize > self.dtype[k].itemsize):
+                    # TODO: need to reallocate memory
+                    # or allow storing objects, or use pd.dataframes
+                    raise ValueError(
+                        'Currently you cannot implicitly reallocate '
+                        'memory: setting the array for key {} with dtype {} requires '
+                        'too much memory, you should init AnnData with '
+                        'a large enough data type from the beginning. '
+                        'Probably you try to assign a unicode string of length {} '
+                        'although the array can only store strings of length {}.'
+                        .format(k, v.dtype,
+                                int(v.dtype.itemsize/4), int(self.dtype[k].itemsize/4)))
                 super(BoundStructArray, self).__setitem__(k, v)
 
         if any(absent):
@@ -632,6 +646,20 @@ def test_names():
                     var={'var_names': ['a', 'b']})
     assert adata.var_names.tolist() == ['a', 'b']
 
+
+def test_indices_dtypes():
+    adata = AnnData(
+        np.array([[1, 2, 3], [4, 5, 6]]),
+        dict(smp_names=['A', 'B']),
+        dict(var_names=['a', 'b', 'c']))
+
+    # this assignment is nice
+    adata.smp_names = ['d', 'b']
+    from pytest import raises
+    with raises(ValueError):
+        # this is not possible currently as we store
+        # datatypes of fixed length
+        adata.smp_names = ['hello', 'b']
 
 def test_creation_from_vector():
     adata = AnnData(np.array([1, 2, 3]))
