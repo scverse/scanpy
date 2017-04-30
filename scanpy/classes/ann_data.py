@@ -35,15 +35,15 @@ def _key_belongs_to_which_key_multicol(key, keys_multicol):
 
 def _gen_keys_from_key_multicol(key_multicol, n_keys):
     """Generates single-column keys from multicolumn key."""
-    keys = [key_multicol + str(i+1) + 'of' + str(n_keys) for i in range(n_keys)]
+    keys = [key_multicol
+            + ('{:0' + str(int(np.ceil(np.log10(n_keys+1)))) + '}').format(i+1)
+            + 'of' + str(n_keys) for i in range(n_keys)]
     return keys
 
 
-class StructDict(np.ndarray):
+class BoundStructArray(np.ndarray):
 
-    INDEX_KEY = '--INDEX--'
-
-    def __new__(cls, source, index_key, is_attr_of, n_row=None, keys_multicol=None):
+    def __new__(cls, source, index_key, is_attr_of, n_row=None, keys_multicol=None, new_index_key=None):
         """Dimensionally structured dict, lowlevel alternative to pandas dataframe.
 
         Behaves like a dict except that
@@ -61,53 +61,71 @@ class StructDict(np.ndarray):
         Parameters
         ----------
         index_key : str
-            The key or field name that shall be used as the index.
+            The key or field name that shall be used as the index. If not found
+            generate a dummy index np.array(['0', '1', '2' ...]).
         is_attr_of : (object, x)
             Tuple `(o, x)` containing the object `o` to which the instance is
             bound and the name `x` of the attribute.
+        new_index_key : str or None
+            Only needed if the internal index_key of the object should differ from
+            `index_key`.
 
         Attributes
         ----------
         index : np.ndarray
             Access to the index column. Can also be accessed via ['index'].
         """
-        if source is None:  # empty array
-            cols = [np.arange(n_row).astype(str)]
-            dtype = [(cls.INDEX_KEY, cols[0].dtype)]
-        elif isinstance(source, np.ndarray):
-            cols = [source[n] for n in source.dtype.names]
-            dtype = source.dtype
+        old_index_key = index_key
+        new_index_key = index_key if new_index_key is None else new_index_key
+        # create from existing array
+        if isinstance(source, np.ndarray):
+            # we need to explicitly make a deep copy of the dtype
+            arr = np.array(source, dtype=[t for t in source.dtype.descr])
+            # rename the index
+            arr.dtype.names = tuple(new_index_key if n == old_index_key else n
+                                    for n in source.dtype.names)
+        # create from None or Dict
         else:
-            if not isinstance(source, Mapping):
-                raise ValueError('Expected recarray or dictlike type, not {}.'
-                                 .format(type(source)))
-            # meta is dict-like
-            names = list(source.keys())
-            cols = [np.asarray(col) for col in source.values()]
-            if cls.INDEX_KEY in source and index_key != cls.INDEX_KEY:
-                raise ValueError('Your dict contains the key {} that StructDict '
-                                 'reserves for the index. Either pass it as index_key '
-                                 'or rename the item.'.format(cls.INDEX_KEY))
-            if index_key not in source:
-                names.append(cls.INDEX_KEY)
-                cols.append(np.arange(len(cols[0]) if cols else n_row).astype(str))
+            if source is None:  # empty array
+                cols = [np.arange(n_row).astype(str)]
+                dtype = [(new_index_key, cols[0].dtype)]
             else:
-                names[names.index(index_key)] = cls.INDEX_KEY
-                if not isinstance(source[index_key][0], str):
-                    raise ValueError('Value for key "{}" for initializing index of StructDict '
-                                     'needs to be of type str, not {}.'
-                                     .format(index_key, type(source[index_key][0])))
-            dtype = list(zip(names, [str(c.dtype) for c in cols]))
-        try:
-            dtype = np.dtype(dtype)
-        except TypeError:
-            # TODO: fix compat with Python 2
-            # print(dtype, file=sys.stderr)
-            raise
+                if not isinstance(source, Mapping):
+                    raise ValueError('Expected np.ndarray or dictlike type, not {}.'
+                                     .format(type(source)))
+                # meta is dict-like
+                names = list(source.keys())
+                cols = [np.asarray(col) for col in source.values()]
+                if old_index_key not in source:
+                    names.append(new_index_key)
+                    cols.append(np.arange(len(cols[0]) if cols else n_row).astype(str))
+                else:
+                    names[names.index(old_index_key)] = new_index_key
+                    if not isinstance(source[old_index_key][0], str):
+                        raise ValueError('Value for key "{}" for initializing index of BoundStructArray '
+                                         'needs to be of type str, not {}.'
+                                         .format(index_key, type(source[index_key][0])))
+                dtype = list(zip(names, [str(c.dtype) for c in cols]))
+            try:
+                dtype = np.dtype(dtype)
+            except TypeError:
+                # TODO: fix compat with Python 2
+                # print(dtype, file=sys.stderr)
+                raise
 
-        arr = np.ndarray.__new__(cls, (len(cols[0]),), dtype)
+            arr = np.zeros((len(cols[0]),), dtype)
+            # here, we do not want to call BoundStructArray.__getitem__
+            # but np.ndarray.__getitem__, therefore we avoid the following line
+            # arr = np.ndarray.__new__(cls, (len(cols[0]),), dtype)
+            for i, name in enumerate(dtype.names):
+                arr[name] = np.array(cols[i], dtype=dtype[name])
+
+        # generate an instance of BoundStructArray
+        arr = np.asarray(arr).view(cls)
+        # the index_key used to look up the index column
+        arr.index_key = new_index_key
+        #
         arr._is_attr_of = is_attr_of
-
         # only the multicol keys
         arr._keys_multicol = ([] if keys_multicol is None
                               else list(keys_multicol))
@@ -115,8 +133,10 @@ class StructDict(np.ndarray):
         arr._keys_multicol_lookup = ({} if keys_multicol is None
                                      else dict.fromkeys(keys_multicol))
         # all keys (multi- and single-col keys that do not belong to multicol)
-        arr._keys = []  # this excludes self.INDEX_KEY
-        loop_over_keys = (key for key in arr.dtype.names if key != cls.INDEX_KEY)
+        arr._keys = []  # this excludes self.index_key
+
+        # initialize arr._keys
+        loop_over_keys = (key for key in arr.dtype.names if key != index_key)
         for key in loop_over_keys:
             imk = _key_belongs_to_which_key_multicol(key, arr._keys_multicol)
             if imk < 0:
@@ -129,25 +149,19 @@ class StructDict(np.ndarray):
                     arr._keys_multicol_lookup[arr._keys_multicol[imk]].append(
                         key)
 
-        # TODO: would be nicer to make not use of __setitem__ here but instead
-        # call the constructor with the data in the corresponding form
-        # especially because this call __setitem__ of np.ndarray, but of
-        # StructDict
-        for i, name in enumerate(dtype.names):
-            arr[name] = np.array(cols[i], dtype=dtype[name])
-
         return arr
 
-    # def __array_finalize__(self, arr):
-    #     if arr is None: return
+    def __array_finalize__(self, arr):
+        if arr is None: return
+        self._keys = getattr(arr, '_keys', None)
 
     @property
     def index(self):
-        return self[self.INDEX_KEY]
+        return self[self.index_key]
 
     @index.setter
     def index(self, names):
-        self[index] = names
+        self[self.index_key] = names
 
     def __contains__(self, k):
         return k in set(self._keys)  # should be about as fast as for dict, pd.dataframe
@@ -164,14 +178,18 @@ class StructDict(np.ndarray):
         return self._keys
 
     def flipped(self):
-        # TODO: change order of arguments, putting the constant self.INDEX_KEY
+        # TODO: change order of arguments, putting the constant self.index_key
         # should not be necessary. rather None would apply here
-        flipped = StructDict(self, self.INDEX_KEY, self._is_attr_of, len(self),
-                             keys_multicol=self._keys_multicol)
+        new_index_key, new_attr = (SMP_INDEX, 'smp') if self.index_key == VAR_INDEX else (VAR_INDEX, 'var')
+        flipped = BoundStructArray(self, self.index_key,
+                                   (self._is_attr_of[0], new_attr),
+                                   len(self),
+                                   keys_multicol=self._keys_multicol,
+                                   new_index_key=new_index_key)
         return flipped
 
     def copy(self):
-        new = super(StructDict, self).copy()
+        new = super(BoundStructArray, self).copy()
         new._is_attr_of = self._is_attr_of
         new._keys_multicol = self._keys_multicol
         return new
@@ -199,20 +217,20 @@ class StructDict(np.ndarray):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                return super(StructDict, self).__getitem__(k)
+                return super(BoundStructArray, self).__getitem__(k).view(np.ndarray)
             except ValueError:  # access multiple columns with key k
                 keys = self._keys_multicol_lookup[k]
-                return super(StructDict, self).__getitem__(keys).view(
+                return super(BoundStructArray, self).__getitem__(keys).view(
                     self.dtype[keys[0]]).reshape(self.shape + (len(self._keys_multicol_lookup[k]),))
 
     def __setitem__(self, keys, values):
         """Either a single one- or multi-column or mulitiple one-colum items."""
         if isinstance(keys, str):
             # TODO: check that no-one accidentally overwrites the index?
-            # quite unlikely though as self.INDEX_KEY is not common
-            # if keys == self.INDEX_KEY:
-            #     raise ValueError('The key {} is reserved for the index in StructDict. '
-            #                      .format(self.INDEX_KEY))
+            # quite unlikely though as self.index_key is not common
+            # if keys == self.index_key:
+            #     raise ValueError('The key {} is reserved for the index in BoundStructArray. '
+            #                      .format(self.index_key))
             keys = [keys]
             # check if values is nested, if not, it's not multicolumn
             if (not hasattr(values[0], '__len__')
@@ -237,7 +255,7 @@ class StructDict(np.ndarray):
         values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
         # update keys
         for key in keys:
-            if (key != self.INDEX_KEY
+            if (key != self.index_key
                 and key not in self._keys
                 and _key_belongs_to_which_key_multicol(key, self._keys_multicol) < 0):
                 self._keys += [key]
@@ -258,7 +276,7 @@ class StructDict(np.ndarray):
 
         if any(present):
             for k, v in zip(present, values[np.in1d(keys, present)]):
-                super(StructDict, self).__setitem__(k, v)
+                super(BoundStructArray, self).__setitem__(k, v)
 
         if any(absent):
             if values.shape[1] > len(self):
@@ -266,14 +284,14 @@ class StructDict(np.ndarray):
                                  .format(values.shape[1], len(self)))
             source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
-            new = StructDict(source, self.INDEX_KEY, self._is_attr_of,
-                             keys_multicol=self._keys_multicol)
+            new = BoundStructArray(source, self.index_key, self._is_attr_of,
+                                   keys_multicol=self._keys_multicol)
             setattr(self._is_attr_of[0], self._is_attr_of[1], new)
 
     def to_df(self):
         """Return pd.dataframe with index filled either with smp_names or var_names."""
         import pandas as pd
-        return pd.DataFrame().from_records(self, index=self.INDEX_KEY)
+        return pd.DataFrame().from_records(self, index=self.index_key)
 
 
 class AnnData(IndexMixin):
@@ -375,8 +393,8 @@ class AnnData(IndexMixin):
         if add and 'var_keys_multicol' in add:
             var_keys_multicol = add['var_keys_multicol']
 
-        self.smp = StructDict(smp, SMP_INDEX, (self, 'smp'), self.n_smps, smp_keys_multicol)
-        self.var = StructDict(var, VAR_INDEX, (self, 'var'), self.n_vars, var_keys_multicol)
+        self.smp = BoundStructArray(smp, SMP_INDEX, (self, 'smp'), self.n_smps, smp_keys_multicol)
+        self.var = BoundStructArray(var, VAR_INDEX, (self, 'var'), self.n_vars, var_keys_multicol)
         self._check_dimensions()
 
         self.add = add
@@ -429,17 +447,17 @@ class AnnData(IndexMixin):
         return self.add.keys()
 
     def __setattr__(self, key, value):
-        # if smp/ var is set, make it a StructDict
-        if key in {'smp', 'var'} and not isinstance(value, StructDict):
-            names_orig, dim = ((self.smp_names, 0) if key == 'smp'
-                               else (self.var_names, 1))
-            value_orig, value = value, StructDict(value, StructDict.INDEX_KEY, self)
+        # if smp/ var is set, make it a BoundStructArray
+        if key in {'smp', 'var'} and not isinstance(value, BoundStructArray):
+            index_key, names_orig, dim = ((SMP_INDEX, self.smp_names, 0) if key == 'smp'
+                                          else (VAR_INDEX, self.var_names, 1))
+            value_orig, value = value, BoundStructArray(value, index_key, self)
             if len(value) != self.X.shape[dim]:
                 raise ValueError('New value for {!r} was converted to a '
                                  'reacarray of length {} instead of {}'
                                  .format(key, len(value_orig), len(self)))
-            if (value[StructDict.INDEX_KEY] == np.arange(self.X.shape[dim]).astype(str)).all():  # TODO: add to constructor
-                value[StructDict.INDEX_KEY] = names_orig
+            if (value[index_key] == np.arange(self.X.shape[dim]).astype(str)).all():  # TODO: add to constructor
+                value[index_key] = names_orig
         object.__setattr__(self, key, value)
 
     def _normalize_indices(self, packed_index):
@@ -605,6 +623,10 @@ def test_names():
     assert adata.smp_names.tolist() == 'A B'.split()
     assert adata.var_names.tolist() == 'a b c'.split()
 
+    adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]),
+                    var={'var_names': ['a', 'b']})
+    assert adata.var_names.tolist() == ['a', 'b']
+
 
 def test_creation_from_vector():
     adata = AnnData(np.array([1, 2, 3]))
@@ -668,7 +690,7 @@ def test_transpose():
     assert adata.smp_names.tolist() == ['A', 'B']
     assert adata.var_names.tolist() == ['a', 'b', 'c']
 
-    assert adata1.smp.INDEX_KEY in adata1.smp.dtype.names
+    assert SMP_INDEX in adata1.smp.dtype.names
     assert adata1.smp_names.tolist() == ['a', 'b', 'c']
     assert adata1.var_names.tolist() == ['A', 'B']
     assert adata1.X.shape == adata.X.T.shape
@@ -693,12 +715,12 @@ def test_append_add_col():
 def test_set_add():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
 
-    adata.smp = {StructDict.INDEX_KEY: ['1', '2']}
-    assert isinstance(adata.smp, StructDict)
+    adata.smp = {SMP_INDEX: ['1', '2']}
+    assert isinstance(adata.smp, BoundStructArray)
     assert len(adata.smp.dtype) == 1
-    
+
     adata.smp = dict(a=[3, 4])
-    assert isinstance(adata.smp, StructDict)
+    assert isinstance(adata.smp, BoundStructArray)
     assert len(adata.smp.dtype) == 2
     assert adata.smp_names.tolist() == ['1', '2']  # still the same smp_names
 
@@ -716,15 +738,21 @@ def test_print():
 
 def test_multicol_getitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    # 'a' and 'b' correspond to rows
     adata.smp[['a', 'b']] = np.array([[0, 1], [2, 3]])
-    print(adata.smp[['a', 'b']])
+
+    assert adata.smp['b'].tolist() == [2, 3]
+    # TODO the following fails
+    # assert adata.smp[['a', 'b']].tolist() == [[0, 1], [2, 3]]
 
 
 def test_multicol_single_key_setitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    # 'c' keeps the columns as should be
     adata.smp['c'] = np.array([[0, 1], [2, 3]])
-    print(adata.smp.dtype.names)
-    print(adata.smp['c'])
+    assert adata.smp.dtype.names == (SMP_INDEX, 'c1of2', 'c2of2')
+    assert adata.smp.keys() == ['c']
+    assert adata.smp['c'].tolist() == np.array([[0, 1], [2, 3]]).tolist()
 
 
 def test_structdict_keys():
@@ -732,7 +760,7 @@ def test_structdict_keys():
     adata.smp['foo'] = np.array([[0, 1], [2, 3]])
     assert adata.smp_keys() == ['foo']
     assert adata.smp.keys() == ['foo']
-    assert adata.smp.dtype.names == (StructDict.INDEX_KEY, 'foo1of2', 'foo2of2')
+    assert adata.smp.dtype.names == (SMP_INDEX, 'foo1of2', 'foo2of2')
 
     adata.smp['d'] = np.array([[0, 1], [2, 3]])
     assert adata.smp.keys() == ['foo', 'd']
@@ -747,3 +775,13 @@ def test_n_smps():
     assert adata.n_smps == 3
     adata1 = adata[:2, ]
     assert adata1.n_smps == 2
+
+
+def test_structdict_index():
+    adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]))
+
+    assert adata.var.index.tolist() == ['0', '1']
+    adata.var.index = ['1', '2']
+    assert adata.var.index.tolist() == ['1', '2']
+    adata.var_names = ['3', '4']
+    assert adata.var.index.tolist() == ['3', '4']
