@@ -177,22 +177,19 @@ class BoundStructArray(np.ndarray):
         """Get keys of fields excluding the index (same as `keys()`)."""
         return self._keys
 
-    def flipped(self):
-        # TODO: change order of arguments, putting the constant self.index_key
-        # should not be necessary. rather None would apply here
-        new_index_key, new_attr = (SMP_INDEX, 'smp') if self.index_key == VAR_INDEX else (VAR_INDEX, 'var')
-        flipped = BoundStructArray(self, self.index_key,
-                                   (self._is_attr_of[0], new_attr),
-                                   len(self),
-                                   keys_multicol=self._keys_multicol,
-                                   new_index_key=new_index_key)
-        return flipped
-
     def copy(self):
-        new = super(BoundStructArray, self).copy()
-        new._is_attr_of = self._is_attr_of
-        new._keys_multicol = self._keys_multicol
-        return new
+        return BoundStructArray(self, self.index_key,
+                                self._is_attr_of,
+                                len(self),
+                                keys_multicol=self._keys_multicol.copy())
+
+    def copy_index_exchanged(self):
+        new_index_key, new_attr = (SMP_INDEX, 'smp') if self.index_key == VAR_INDEX else (VAR_INDEX, 'var')
+        return BoundStructArray(self, self.index_key,
+                                (self._is_attr_of[0], new_attr),
+                                len(self),
+                                keys_multicol=self._keys_multicol.copy(),
+                                new_index_key=new_index_key)
 
     def _multicol_view(self, arr, keys):
         """Get a multi-column view rather than a copy.
@@ -251,6 +248,14 @@ class BoundStructArray(np.ndarray):
                     raise ValueError('You provided an array with {} rows but it need'
                                      'to have {}.'
                                      .format(values.shape[0], self.shape[0]))
+        else:
+            values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
+            if values.shape[0] == self.shape[0]:
+                values = values.T
+            else:
+                raise ValueError('You provided an array with {} rows but it need'
+                                 'to have {}.'
+                                 .format(values.shape[0], self.shape[0]))
         keys = np.array(keys)
         values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
         # update keys
@@ -527,8 +532,8 @@ class AnnData(IndexMixin):
         Sample axis (rows) and variable axis are interchanged. No additional memory.
         """
         if sp.isspmatrix_csr(self.X):
-            return AnnData(self.X.T.tocsr(), self.var.flipped(), self.smp.flipped(), self.add)
-        return AnnData(self.X.T, self.var.flipped(), self.smp.flipped(), self.add)
+            return AnnData(self.X.T.tocsr(), self.var.copy_index_exchanged(), self.smp.copy_index_exchanged(), self.add)
+        return AnnData(self.X.T, self.var.copy_index_exchanged(), self.smp.copy_index_exchanged(), self.add)
 
     T = property(transpose)
 
@@ -700,6 +705,9 @@ def test_transpose():
     assert np.array_equal(adata1.smp, adata2.smp)
     assert np.array_equal(adata1.var, adata2.var)
 
+    assert adata1.smp._is_attr_of[1] == 'smp' == adata2.smp._is_attr_of[1]
+    assert adata1.var._is_attr_of[1] == 'var' == adata2.var._is_attr_of[1]
+
 
 def test_append_add_col():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -738,12 +746,11 @@ def test_print():
 
 def test_multicol_getitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
-    # 'a' and 'b' correspond to rows
-    adata.smp[['a', 'b']] = np.array([[0, 1], [2, 3]])
-
-    assert adata.smp['b'].tolist() == [2, 3]
-    # TODO the following fails
-    # assert adata.smp[['a', 'b']].tolist() == [[0, 1], [2, 3]]
+    # 'a' and 'b' label columns
+    adata.smp[['a', 'b']] = [[0, 1], [2, 3]]
+    assert 0 in adata.smp['a']
+    assert adata.smp['b'].tolist() == [1, 3]
+    assert adata.smp[['a', 'b']].tolist() == [(0, 1), (2, 3)]
 
 
 def test_multicol_single_key_setitem():
@@ -785,3 +792,10 @@ def test_structdict_index():
     assert adata.var.index.tolist() == ['1', '2']
     adata.var_names = ['3', '4']
     assert adata.var.index.tolist() == ['3', '4']
+
+
+def test_struct_dict_copy():
+    adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
+    scp = adata.smp.copy()
+
+    assert adata.smp.__dict__.keys() == scp.__dict__.keys()
