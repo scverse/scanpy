@@ -38,8 +38,7 @@ del get_versions
 def help(toolkey, string=False):
     """Display help for tool.
     """
-    from .tools import get_tool
-    doc = get_tool(toolkey, func=True).__doc__
+    doc = getattr(tools, toolkey).__doc__
     if string:
         return doc
     print(doc)
@@ -62,7 +61,6 @@ def _run_command_line_args(toolkey, args):
         exkey : str
             String that identifies the example use key.
     """
-    from .tools import get_tool
     # help on plot parameters
     if args['pparams']:
         if args['pparams'][0] == 'help':
@@ -130,7 +128,7 @@ def _run_command_line_args(toolkey, args):
     if (adata is None
         or toolkey not in adata.add['tools']
         or sett.recompute != 'none'):
-        tool = get_tool(toolkey, func=True)
+        tool = getattr(tools, toolkey)
         if toolkey == 'sim':
             adata = tool(**params)
         elif toolkey == 'pca':

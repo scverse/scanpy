@@ -61,15 +61,6 @@ def init_plotting_params():
     sett.savefigs = not is_interactive()
 
 
-def savefig_or_show(writekey):
-    if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.file_format_figures
-        sett.m(0, 'saving figure to file', filename)
-        pl.savefig(filename)
-    elif sett.autoshow:
-        pl.show()
-
-
 def default_pal(pal=None):
     if pal is None:
         return rcParams['axes.prop_cycle']
@@ -114,7 +105,8 @@ def scatter_base(Y,
                  axis_labels=None,
                  colorbars=[False],
                  sizes=[1],
-                 cmap='viridis'):
+                 cmap='viridis',
+                 show_ticks=True):
     """Plot scatter plot of data.
 
     Parameters
@@ -233,10 +225,10 @@ def scatter_base(Y,
                          else str(ihighlight))
             # the following is a Python 2 compatibility hack
             ax.text(*([d[0] for d in data] + [highlight]), zorder=20)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        if bool3d:
-            ax.set_zticks([])
+        if not show_ticks:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            if bool3d: ax.set_zticks([])
         # scale limits to match data
         ax.autoscale_view()
         axs.append(ax)

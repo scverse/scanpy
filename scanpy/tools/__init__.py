@@ -1,46 +1,22 @@
-"""
-Tools
+"""Tools
+
+The user only sees convenience functions.
 """
 
-from . import diffmap
-from . import diffrank
-from . import dpt
-from . import dbscan
-from . import tsne
-from . import sim
-from . import spring
+# order alphabetically
+from .dbscan import dbscan
+from .diffmap import diffmap
+from .diffrank import diffrank
+from .dpt import dpt
+from .pca import pca
+from .sim import sim
+from .spring import spring
+from .tsne import tsne
 
 try:
     # development tools
-    from . import paths
-    from . import tgdyn
-    from . import tgdyn_simple
+    from .paths import paths
+    from .tgdyn import tgdyn
+    from .tgdyn_simple import tgdyn_simple
 except ImportError:
     pass
-
-def get_tool(toolkey, func=False):
-    """
-    Parameters
-    ----------
-    func : bool, optional
-        If True, return function, otherwise, return module.
-    """
-    tool_module = globals().get(toolkey)
-    if func:
-        return getattr(tool_module, toolkey)
-    else:
-        return tool_module
-
-def get_plot_tool(toolkey, func=False):
-    """
-    Parameters
-    ----------
-    func : bool, optional
-        If True, return function, otherwise, return module.
-    """
-    tool = globals().get(toolkey)
-    if func:
-        return getattr(tool, 'plot_' + toolkey)
-    else:
-        return tool
-

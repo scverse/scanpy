@@ -1,24 +1,11 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
-"""
-Preprocess Data
+# Author: F. Alex Wolf (http://falexwolf.de)
+"""Preprocessing Functions
+
+Simple functions and whole recipes.
 """
 
 from .simple import *
 from .recipes import *
-
-__all__ = [
-    # from simple
-    'filter_cells',
-    'gene_cv_filter',
-    'filter_genes_fano',
-    'log',
-    'pca',
-    'row_norm',
-    'zscore',
-    # from recipes
-    'subsample',
-    'weinreb16'
-]
 
 def overview():
     from . import recipes, simple

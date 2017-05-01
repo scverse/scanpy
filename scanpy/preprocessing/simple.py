@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Simple Preprocessing Functions
+"""Simple Preprocessing Functions
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """

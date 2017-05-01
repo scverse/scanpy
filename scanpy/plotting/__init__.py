@@ -9,7 +9,7 @@ from ..compat.matplotlib import pyplot as pl
 from .toplevel import scatter, violin
 from .toplevel import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .toplevel import ranking
-from .toplevel import savefig
+from .toplevel import savefig, savefig_or_show
 from . import utils
 from .. import sett
 

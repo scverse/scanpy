@@ -29,12 +29,29 @@ def savefig(writekey):
     pl.savefig(filename)
 
 
+def savefig_or_show(writekey, show=None):
+    show = sett.autoshow if show is None else show
+    if sett.savefigs:
+        filename = sett.figdir + writekey + '.' + sett.file_format_figures
+        sett.m(0, 'saving figure to file', filename)
+        pl.savefig(filename)
+    elif show: pl.show()
+
+
 # -------------------------------------------------------------------------------
 # Toplevel Plotting Functions
 # -------------------------------------------------------------------------------
 
 
 def violin(adata, smp, show=True):
+    """Violin plot.
+
+    Wraps seaborn.violinplot.
+    
+    Returns
+    -------
+    A seaborn.FacetGrid that allows to access the matplotlib.Axis objects.
+    """
     import pandas as pd
     import seaborn as sns
     smp_df = adata.smp.to_df()
@@ -101,6 +118,10 @@ def scatter(adata,
          Point size.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
+
+    Returns
+    -------
+    A list of matplotlib.Axis objects.
     """
     # write params to a config file
     params = locals()
@@ -142,6 +163,7 @@ def scatter(adata,
                       else 'PC' if basis == 'pca'
                       else None)
     axis_labels = (x, y) if component_name is None else None
+    show_ticks = True if component_name is None else False
 
     # the actual color ids, e.g. 'grey' or '#109482'
     color_ids = [None if not is_color_like(color_key) else color_key for color_key in color_keys]
@@ -210,7 +232,8 @@ def scatter(adata,
                        colorbars=colorbars,
                        right_margin=right_margin,
                        sizes=sizes,
-                       cmap='viridis' if cmap is None else cmap)
+                       cmap='viridis' if cmap is None else cmap,
+                       show_ticks=show_ticks)
 
     for icolor_key in categoricals:
         color_key = color_keys[icolor_key]
@@ -234,7 +257,7 @@ def scatter(adata,
             legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[icolor_key].legend(frameon=False, loc=legendloc)
-    return color_keys
+    return axs
 
 
 def timeseries(X, **kwargs):
