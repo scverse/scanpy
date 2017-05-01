@@ -10,6 +10,7 @@ from sys import path
 path.insert(0, '.')
 import scanpy as sc
 
+
 def test_shortest_path():
 
     # chain layout
@@ -37,6 +38,7 @@ def test_shortest_path():
 
     print(ct.pathids_n)
 
+
 def test_distance_metrics(show=False):
 
     # TODO: investigate quality of approximation!
@@ -48,7 +50,7 @@ def test_distance_metrics(show=False):
 
     X = np.arange(n)[:, np.newaxis]
 
-    from scanpy.classes.data_graph import DataGraph
+    from scanpy.data_structs import DataGraph
     ct = DataGraph(X, 2, n_pcs=30)
 
     ct.compute_transition_matrix(weighted=False, 
