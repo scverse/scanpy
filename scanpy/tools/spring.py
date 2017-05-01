@@ -15,12 +15,12 @@ References
 
 import numpy as np
 from .. import settings as sett
-from .. import plotting as plott
 from .. import utils
 
 step_size = 10
 
-def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
+
+def spring(adata, k=4, n_comps=2, n_steps=12, rep=None, copy=False):
     u"""
     Visualize data using the force-directed Fruchterman-Reingold algorithm.
 
@@ -48,7 +48,8 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
          Force-directed graph drawing representation of the data with shape
          n_variables x n_comps.
     """
-    sett.m(0,'draw knn graph')
+    adata = adata.copy() if copy else adata
+    sett.m(0, 'draw knn graph')
     if 'X_pca' in adata.smp:
         X = adata.smp['X_pca']
         sett.m(0, '--> using X_pca for building graph')
@@ -62,7 +63,7 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
         # the last item is already in its sorted position as
         # argpartition puts the (k-1)th element - starting to count from
         # zero - in its sorted position
-        idcs = np.argpartition(row,k-1)[:k]
+        idcs = np.argpartition(row, k-1)[:k]
         indices[irow] = idcs
     # compute adjacency matrix
     # make this float, as we might put a weight matrix here
@@ -81,97 +82,8 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None):
         sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
         Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size, rep=rep)
     adata.smp['X_spring'] = Y
-    return adata
+    return adata if copy else None
 
-def plot_spring(adata,
-         smp=None,
-         names=None,
-         comps='1,2',
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=3):
-    """
-    Scatter plots.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    smp : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
-         Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
-         Options for keyword argument 'loc'.
-    cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
-         Colors cycle to use for categorical groups.
-    right_margin : float (default: 0.2)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
-         Point size.
-    """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    Y = adata.smp['X_spring']
-    if True:
-#         sett.m(0, 'set parameter add_steps > 0 to iterate. '
-#                'the current step is', dspring['istep'],
-#                '\n--> append, for example, "--plotparams add_steps 1", for a single step')
-        from .. import plotting as plott
-        smps = plott.scatter(adata,
-                        basis='spring',
-                        smp=smp,
-                        names=names,
-                        comps=comps,
-                        cont=cont,
-                        layout=layout,
-                        legendloc=legendloc,
-                        cmap=cmap,
-                        pal=pal,
-                        right_margin=right_margin,
-                        size=size,
-                        # defined in plotting
-                        titles=['Fruchterman-Reingold step: 12'])
-        writekey = sett.basekey + '_spring'
-        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
-        plott.savefig(writekey)
-        if not sett.savefigs and sett.autoshow:
-            from ..compat.matplotlib import pyplot as pl
-            pl.show()
-    else:
-        Adj = dspring['Adj']
-        istep = dspring['istep']
-        # TODO: don't save the adjacency matrix!!!
-        import scanpy as sc
-        sc.write(dspring['writekey']+'_step{:02}'.format(istep), dspring)
-        # compute the next steps
-        istep_init = istep + 1
-        add_steps = params['add_steps']
-        del params['add_steps']
-        for istep in istep_init + np.arange(add_steps, dtype=int):
-            sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
-            Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
-            sett.mt(0, 'finished computation')
-            _plot({'Y': Y}, adata, istep, **params)
-        # save state of Y to outfile
-        dspring['Y'] = Y
-        dspring['istep'] = istep
-        sc.write(dspring['writekey'], dspring)
 
 def fruchterman_reingold_layout_networkX(Adj, Yinit=None):
     """

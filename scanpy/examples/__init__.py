@@ -87,13 +87,10 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
 
     from os.path import exists
     exfile = readwrite.get_filename_from_key(sett.basekey)
-    if (not exists(exfile)
-        or recompute
-        or reread):
+    if not exists(exfile) or recompute or reread:
         # run the function
         adata = exfunc()
         # add exkey to adata
-        # adata.add['exkey'] = exkey
         sett.m(0, 'X has shape n_samples x n_variables =',
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
@@ -101,8 +98,8 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
         # subsampling
         if subsample != 1:
             from ..preprocess import subsample as subsample_function
-            adata = subsample_function(adata, subsample)
-
+            subsample_function(adata, subsample)
+        # write the prepocessed data
         readwrite.write(sett.basekey, adata)
         sett.m(0, 'wrote preprocessed data to', exfile)
     else:

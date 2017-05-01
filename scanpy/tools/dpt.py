@@ -1,10 +1,9 @@
 # coding: utf-8
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Diffusion Pseudotime Analysis
+"""Diffusion Pseudotime Analysis
 
 Perform Diffusion Pseudotime analysis of an expression matrix, given the
-expression vector of an "initial state" = "root cell".
+expression vector of an "initial state", the "root cell".
 
 Reference
 ---------
@@ -22,13 +21,12 @@ See also
 import sys
 import numpy as np
 from .. import settings as sett
-from ..classes import data_graph
+from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False, copy=False):
-    u"""
-    Diffusion Pseudotime analysis.
+    u"""Diffusion Pseudotime Analysis
 
     Infer progression of cells, identify branching subgroups.
 
@@ -95,8 +93,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         dpt_evals : np.ndarray
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
-    if copy:
-        adata = adata.copy()
+    adata = adata.copy() if copy else adata
     if 'xroot' not in adata.add:
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
@@ -149,137 +146,8 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
             '    "dpt_pseudotime" stores pseudotime (adata.smp),\n'
             '    "dpt_groups" the segments of the tree trajectory (adata.smp),\n'
             '    "dpt_order" is an index array for sorting the cells (adata.smp),\n'
-            '    "dpt_setips" stores the indices of tip cells')
-    if copy:
-        return adata
-
-
-def plot_dpt(adata,
-             basis='diffmap',
-             smp=None,
-             names=None,
-             comps=None,
-             cont=None,
-             layout='2d',
-             legendloc='right margin',
-             cmap=None,
-             pal=None,
-             right_margin=None,
-             size=3):
-    """
-    Plot results of DPT analysis.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'spring'}
-        Choose the basis in which to plot.
-    smp : str, optional (default: first annotation)
-        Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    comps : str, optional (default: '1,2')
-         String of the form '1,2' or 'all'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
-         Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
-    cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
-         Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
-    """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    # if number of genes is not too high, plot time series
-    from .. import plotting as plott
-    from ..compat.matplotlib import pyplot as pl
-    # scatter plot
-    smps = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1:
-        smps += ['dpt_groups']
-    adata.add['highlights'] = (list([adata.add['iroot']])   # also plot the tip cell indices
-                               + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
-                               if adata.add['dpt_segtips'][i][1] != -1])
-    if smp is not None:
-        smps += smp.split(',')
-    if comps == 'all':
-        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
-    else:
-        if comps is None:
-            comps = '1,2' if '2d' in layout else '1,2,3'
-        comps_list = [comps]
-    for comps in comps_list:
-        smps = plott.scatter(adata,
-                             basis=basis,
-                             smp=smps,
-                             names=names,
-                             comps=comps,
-                             cont=cont,
-                             layout=layout,
-                             legendloc=legendloc,
-                             cmap=cmap,
-                             pal=pal,
-                             right_margin=right_margin,
-                             size=size)
-        writekey = sett.basekey + '_dpt_' + basis
-        writekey += (sett.plotsuffix + '_comps' + comps.replace(',', ''))
-        plott.savefig(writekey)
-    # plot segments and pseudotime
-    plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
-    # time series plot
-    X = adata.X
-    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
-    if X.shape[1] <= 11:
-        # plot time series as gene expression vs time
-        plott.timeseries(X[adata.smp['dpt_order']],
-                         varnames=adata.var_names,
-                         highlightsX=adata.add['dpt_changepoints'],
-                         xlim=[0, 1.3*X.shape[0]])
-        pl.xlabel('dpt order')
-        plott.savefig(writekey + '_vsorder')
-    elif X.shape[1] < 50:
-        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[adata.smp['dpt_order'], :40],
-                                    varnames=adata.var_names,
-                                    highlightsX=adata.add['dpt_changepoints'])
-        pl.xlabel('dpt order')
-        plott.savefig(writekey + '_heatmap')
-    if not sett.savefigs and sett.autoshow:
-        pl.show()
-
-
-def plot_segments_pseudotime(adata, cmap=None, pal=None):
-    """
-    Helper function for plot.
-    """
-    from ..compat.matplotlib import pyplot as pl
-    from .. import plotting as plott
-    pl.figure()
-    pl.subplot(211)
-    plott.timeseries_subplot(adata.smp['dpt_groups'][adata.smp['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_groups'][adata.smp['dpt_order']],
-                             highlightsX=adata.add['dpt_changepoints'],
-                             ylabel='dpt groups',
-                             yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
-                                     if len(adata.add['dpt_groups_names']) < 5 else None),
-                             pal=pal)
-    pl.subplot(212)
-    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata.smp['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_pseudotime'][adata.smp['dpt_order']],
-                             xlabel='dpt order',
-                             highlightsX=adata.add['dpt_changepoints'],
-                             ylabel='pseudotime',
-                             yticks=[0, 1],
-                             cmap=cmap)
-    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
-    plott.savefig(writekey + '_segpt')
+            '    "dpt_setips" stores the indices of tip cells (adata.add)')
+    return adata if copy else None
 
 
 class DPT(data_graph.DataGraph):

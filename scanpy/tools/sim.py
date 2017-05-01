@@ -1,6 +1,5 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
-"""
-Simulate Artificial Data
+# Author: F. Alex Wolf (http://falexwolf.de)
+"""Simulate Artificial Data
 
 Simulate stochastic dynamic systems to model gene expression dynamics and
 cause-effect data.
@@ -10,31 +9,29 @@ TODO
 Beta Version. The code will be reorganized soon.
 """
 
-import argparse
 import os
 import itertools
 import collections
 from collections import OrderedDict as odict
 import numpy as np
 import scipy as sp
-import scipy.optimize
 import scipy.stats
+import scipy.optimize
 from .. import utils
 from .. import readwrite
-from .. import plotting as plott
 from .. import settings as sett
 
-def sim(model='sim/toggleswitch.txt', 
-        tmax=100, 
-        branching=True, 
-        nrRealizations=2, 
-        noiseObs=0.01, 
-        noiseDyn=0.001, 
+
+def sim(model='sim/toggleswitch.txt',
+        tmax=100,
+        branching=True,
+        nrRealizations=2,
+        noiseObs=0.01,
+        noiseDyn=0.001,
         step=1,
         seed=0,
         writedir=''):
-    """
-    Sample dynamic single-cell data.
+    """Simulate dynamic single-cell data
 
     Parameters
     ----------
@@ -69,31 +66,6 @@ def sim(model='sim/toggleswitch.txt',
     adata.add['xroot'] = adata.X[0]
     return adata
 
-def plot_sim(adata, params=None):
-    """
-    Plot results of simulation.
-    """
-    X = adata.X
-    genenames = adata.var_names
-    tmax = adata.add['tmax_write']
-    n_real = X.shape[0]/tmax
-    plott.timeseries(X, 
-                     varnames=genenames,
-                     xlim=[0,1.25*X.shape[0]],
-                     highlightsX=np.arange(tmax,n_real*tmax,tmax),
-                     xlabel='realizations / time steps')
-    plott.savefig(sett.basekey + '_sim')
-    # shuffled data
-    X, rows = utils.subsample(X, seed=1)
-    plott.timeseries(X,
-                     varnames=genenames,
-                     xlim=[0,1.25*X.shape[0]],
-                     highlightsX=np.arange(tmax,n_real*tmax,tmax),
-                     xlabel='index (arbitrary order)')
-    plott.savefig(sett.basekey + '_sim_shuffled')
-    if not sett.savefigs and sett.autoshow:
-        from ..compat.matplotlib import pyplot as pl
-        pl.show()
 
 def add_args(p):
     """
@@ -107,14 +79,11 @@ def add_args(p):
             'default': '',
             'metavar': 'f',
             'type': str,
-            'help': 'Specify a parameter file ' 
-                    '(default: "sim/${exkey}_params.txt")'
-            }
-        }
-
-    p = utils.add_args(p,dadd_args)
-
+            'help': 'Specify a parameter file '
+                    '(default: "sim/${exkey}_params.txt")'}}
+    p = utils.add_args(p, dadd_args)
     return p
+
 
 def sample_dynamic_data(params):
     """
@@ -261,13 +230,13 @@ def sample_dynamic_data(params):
     filename = dir+'/sim_000000.txt'
     ddata = readwrite.read_file(filename, first_column_names=True)
     ddata['tmax_write'] = tmax/step
-    from ..classes.ann_data import AnnData
+    from ..data_structs import AnnData
     adata = AnnData(ddata)
     return adata
     
-def write_data(X,dir='sim/test',append=False,header='',
-              varNames={},Adj=np.array([]),Coupl=np.array([]),
-              boolRules={},model='',modelType='',invTimeStep=1):
+def write_data(X, dir='sim/test', append=False, header='',
+               varNames={}, Adj=np.array([]), Coupl=np.array([]),
+               boolRules={}, model='', modelType='', invTimeStep=1):
     """ Write simulated data.
 
         Accounts for saving at the same time an ID 
@@ -1110,6 +1079,7 @@ def sample_static_data(model,dir,verbosity=0):
         write_data(X,dir,Adj=Adj)
 
 if __name__ == '__main__':
+    import argparse
 #     epilog = ('    1: 2dim, causal direction X_1 -> X_0, constraint signs\n'
 #               + '    2: 2dim, causal direction X_1 -> X_0, arbitrary signs\n'
 #               + '    3: 2dim, causal direction X_1 <-> X_0, arbitrary signs\n'
@@ -1174,4 +1144,3 @@ if __name__ == '__main__':
     else:
         sample_dynamic_data(model=model,dir=dir)
     
-

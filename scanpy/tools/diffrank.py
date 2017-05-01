@@ -1,26 +1,25 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Differential Gene Expression Analysis
+"""Differential Gene Expression Analysis
 
 This is a Beta Version of a tool for differential gene expression testing
 between sets detected in previous tools. Tools such as dpt, cluster,...
-"""   
+"""
 
-from itertools import combinations
 import numpy as np
+from itertools import combinations
 from scipy.stats.distributions import norm
 from .. import utils
-from .. import plotting as plott
 from .. import settings as sett
+
 
 def diffrank(adata,
              smp='groups',
              names='all',
              sig_level=0.05,
              correction='Bonferroni',
-             log=False):
-    """
-    Compare groups by ranking genes according to differential expression.
+             log=False,
+             copy=False):
+    """Compare groups by ranking genes according to differential expression.
 
     Parameters
     ----------
@@ -39,13 +38,14 @@ def diffrank(adata,
         Array of shape (number of comparisons) x (number of genes) storing the
         zscore of the each gene for each test.
     diffrank_rankings_names : np.ndarray of dtype str
-        Array of shape (number of comparisons). Stores the labels for each comparison, 
+        Array of shape (number of comparisons). Stores the labels for each comparison,
         for example "C1 vs. C2" when comparing category 'C1' with 'C2'.
     diffrank_rankings_geneidcs : np.ndarray
         Array of shape (number of comparisons) x (number of genes) storing gene
         indices that sort them according to decreasing absolute value of the
         zscore.
     """
+    adata = adata.copy() if copy else adata
     # for clarity, rename variable
     groups_names = names
     groups_names, groups_masks = utils.select_groups(adata, groups_names, smp)
@@ -68,42 +68,42 @@ def diffrank(adata,
         vars[imask] = X[mask].var(axis=0)
         ns[imask] = np.where(mask)[0].size
     sett.m(0, 'testing', smp, groups_names, 'with sample numbers', ns)
-    sett.m(2, 'means', means) 
+    sett.m(2, 'means', means)
     sett.m(2, 'variances', vars)
 
     igroups_masks = np.arange(len(groups_masks), dtype=int)
     pairs = list(combinations(igroups_masks, 2))
     pvalues_all = np.zeros((len(pairs), nr_genes))
     zscores_all = np.zeros((len(pairs), nr_genes))
-    rankings_geneidcs = np.zeros((len(pairs), nr_genes),dtype=int)
+    rankings_geneidcs = np.zeros((len(pairs), nr_genes), dtype=int)
     # each test provides a ranking of genes
-    # we store the name of the ranking, i.e. the name of the test, 
+    # we store the name of the ranking, i.e. the name of the test,
     # in the following list
     adata.add['diffrank_rankings_names'] = []
-    
+
     # test all combinations of groups against each other
-    for ipair, (i,j) in enumerate(pairs):
+    for ipair, (i, j) in enumerate(pairs):
         # z-scores
         denom = np.sqrt(vars[i]/ns[i] + vars[j]/ns[j])
-        zeros = np.flatnonzero(denom==0)
+        zeros = np.flatnonzero(denom == 0)
         denom[zeros] = np.nan
         zscores = (means[i] - means[j]) / denom
-        # the following is equivalent with 
+        # the following is equivalent with
         # zscores = np.ma.masked_invalid(zscores)
         zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
-        
+
         zscores_all[ipair] = zscores
         abs_zscores = np.abs(zscores)
 
         # p-values
         if False:
-            pvalues = 2 * norm.sf(abs_zscores) # two-sided test
+            pvalues = 2 * norm.sf(abs_zscores)  # two-sided test
             pvalues = np.ma.masked_invalid(pvalues)
             sig_genes = np.flatnonzero(pvalues < 0.05/zscores.shape[0])
             pvalues_all[ipair] = pvalues
 
         # sort genes according to score
-        ranking_geneidcs = np.argsort(abs_zscores)[::-1]        
+        ranking_geneidcs = np.argsort(abs_zscores)[::-1]
         # move masked values to the end of the index array
         masked = abs_zscores[ranking_geneidcs].mask
         len_not_masked = len(ranking_geneidcs[masked == False])
@@ -113,7 +113,7 @@ def diffrank(adata,
         # write to global rankings_genedics
         rankings_geneidcs[ipair] = ranking_geneidcs
         # names
-        ranking_name = groups_names[i] + ' vs '+ groups_names[j]
+        ranking_name = groups_names[i] + ' vs ' + groups_names[j]
         adata.add['diffrank_rankings_names'].append(ranking_name)
 
     if False:
@@ -123,23 +123,4 @@ def diffrank(adata,
     adata.add['diffrank_rankings_geneidcs'] = rankings_geneidcs
     adata.add['diffrank_scoreskey'] = 'zscores'
 
-    return adata
-
-def plot_diffrank(adata, n_genes=20):
-    """
-    Plot ranking of genes for all tested comparisons.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    n_genes : int
-        Number of genes to show.
-    """
-    plott.ranking(adata, toolkey='diffrank', n_genes=n_genes)
-    writekey = sett.basekey + '_diffrank_' + adata.add['diffrank_groups'] + sett.plotsuffix
-    plott.savefig(writekey)
-    if not sett.savefigs and sett.autoshow:
-        from ..compat.matplotlib import pyplot as pl
-        pl.show()
-
+    return adata if copy else None

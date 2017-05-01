@@ -11,8 +11,8 @@ from joblib import Parallel, delayed
 from scipy.sparse import issparse
 import statsmodels.api as sm
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from ..classes.ann_data import AnnData
-from .. import settings as sett
+from ..data_structs import AnnData
+from .. import sett
 
 
 def filter_cells(data, min_counts=None, min_genes=None, copy=False):
@@ -345,7 +345,7 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
                 adata.var['PC' + str(icomp)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
             sett.mt(0, 'finished, added\n'
-                    '    the data representation "X_pca" (adata.smp)'
+                    '    the data representation "X_pca" (adata.smp)\n'
                     '    the loadings "PC1", "PC2", ... (adata.var)\n'
                     '    and "pca_variance_ratio" (adata.add)')
         return adata if copy else None

@@ -1,5 +1,4 @@
-"""
-Annotated Data
+"""Annotated Data
 """
 from collections import Mapping, Sequence
 from collections import OrderedDict

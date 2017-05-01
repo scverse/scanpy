@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Reading and Writing
+"""Reading and Writing
 """
 
 import os
@@ -9,8 +8,8 @@ import h5py
 import numpy as np
 
 from . import utils
-from . import settings as sett
-from .classes.ann_data import AnnData
+from . import sett
+from .data_structs import AnnData
 
 avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for reading data. """
@@ -107,7 +106,6 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         Maybe more items, if they are found in the file.
     """
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
-    from .classes.ann_data import AnnData
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names,
                       as_strings, backup_url, reread)
@@ -517,7 +515,7 @@ def read_txt_as_strings(filename, delim):
     return ddata
 
 
-def _read_hdf5_single(filename, key='', dtype='float32'):
+def _read_hdf5_single(filename, key=''):
     """
     Read a single dataset from an hdf5 file.
 
@@ -556,7 +554,7 @@ def _read_hdf5_single(filename, key='', dtype='float32'):
         if X.dtype.kind == 'S':
             X = X.astype(str)
         # init dict
-        ddata = {'X': X.astype(dtype)}
+        ddata = {'X': X}
         # try to find row and column names
         for iname, name in enumerate(['row_names', 'col_names']):
             if name in keys:
@@ -986,12 +984,13 @@ def is_filename(filename_or_key, return_ext=False):
         return False
 
 
-def test_profile_memory():
-    print()
-    utils.print_memory_usage()
-    # filename = 'data/paul15/paul15.h5'
-    # url = 'http://falexwolf.de/data/paul15.h5'
-    # adata = read(filename, 'data.debatched', backup_url=url)
-    filename = 'data/maehr17/blood_counts_raw.data'
-    adata = read(filename, reread=True)
-    utils.print_memory_usage()
+# need data files to run this test
+# def test_profile_memory():
+#     print()
+#     utils.print_memory_usage()
+#     # filename = 'data/paul15/paul15.h5'
+#     # url = 'http://falexwolf.de/data/paul15.h5'
+#     # adata = read(filename, 'data.debatched', backup_url=url)
+#     filename = 'data/maehr17/blood_counts_raw.data'
+#     adata = read(filename, reread=True)
+#     utils.print_memory_usage()

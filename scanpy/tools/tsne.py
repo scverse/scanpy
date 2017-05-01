@@ -1,18 +1,14 @@
 # coding: utf-8
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-t-SNE
+"""tSNE
 
-References
-----------
+Notes
+-----
 This module automatically choose from three t-SNE versions from
 - sklearn.manifold.TSNE
 - Dmitry Ulyanov (multicore, fastest)
   https://github.com/DmitryUlyanov/Multicore-TSNE
   install via 'pip install psutil cffi', get code from github
-- Laurens van der Maaten (slowest, oldest), slow fall back option
-  https://lvdmaaten.github.io/tsne/
-  Copyright 2008 Laurens van der Maaten, Tilburg University.
 """
 
 import numpy as np
@@ -21,8 +17,13 @@ from .. import settings as sett
 
 
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
-    u"""
-    Visualize data using t-SNE as of van der Maaten & Hinton (2008).
+    u"""tSNE
+
+    Reference
+    ---------
+    L.J.P. van der Maaten and G.E. Hinton.
+    Visualizing High-Dimensional Data Using t-SNE.
+    Journal of Machine Learning Research 9(Nov):2579-2605, 2008.
 
     Parameters
     ----------
@@ -46,14 +47,15 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
     n_jobs : int or None
         Use the multicore implementation, if it is installed.
 
-
-    Adds annotation
-    ---------------
+    Notes
+    -----
     X_tsne : np.ndarray of shape n_samples x 2
         Array that stores the tSNE representation of the data. Analogous
         to X_pca, X_diffmap and X_spring.
+    is added to adata.smp.
     """
-    sett.mt(0, 'compute tSNE')
+    sett.mt(0, 'compute tSNE', start=True)
+    adata = adata.copy() if copy else adata
     # preprocessing by PCA
     if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
         X = adata.smp['X_pca']
@@ -73,8 +75,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
                       'verbose': sett.verbosity,
                       'learning_rate': 200,
                       'early_exaggeration': 12}
-    # deal with different tSNE implementations
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+    # deal with different tSNE implementations
     multicore_failed = False
     if n_jobs > 1:
         try:
@@ -87,227 +89,12 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
             sett.m(0, '--> did not find package MulticoreTSNE: to speed up the computation install it from\n'
                    '    https://github.com/DmitryUlyanov/Multicore-TSNE')
     if n_jobs == 1 or multicore_failed:
-        try:
-            from sklearn.manifold import TSNE
-            tsne = TSNE(**params_sklearn)
-            sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
-            Y = tsne.fit_transform(X)
-        except ImportError:
-            sett.m(0, '--> perform tSNE using slow original\n'
-                      '    implementation by L. van der Maaten\n'
-                      '--> consider installing sklearn\n'
-                      '    using "conda/pip install scikit-learn"')
-            Y = _tsne_vandermaaten(X, 2, params['perplexity'])
+        from sklearn.manifold import TSNE
+        tsne = TSNE(**params_sklearn)
+        sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
+        Y = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = Y
     sett.mt(0, 'finished, added\n'
-               '    "X_tsne" to adata.smp')
-    if copy:
-        return adata
-
-
-def plot_tsne(adata,
-              smp=None,
-              names=None,
-              comps=None,
-              cont=None,
-              layout='2d',
-              legendloc='right margin',
-              cmap=None,
-              pal=None,
-              right_margin=None,
-              size=3,
-              titles=None):
-    """
-    Scatter plots.
-
-    Parameters
-    ----------
-    dplot : dict
-        Dict returned by plotting tool.
-    adata : AnnData
-        Annotated data matrix.
-    smp : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
-         Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
-    cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
-         Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
-         Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
-    """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    from .. import plotting as plott
-    smps = plott.scatter(adata,
-                         basis='tsne',
-                         smp=smp,
-                         names=names,
-                         comps=comps,
-                         cont=cont,
-                         layout=layout,
-                         legendloc=legendloc,
-                         cmap=cmap,
-                         pal=pal,
-                         right_margin=right_margin,
-                         size=size,
-                         titles=titles)
-    writekey = sett.basekey + '_tsne' + sett.plotsuffix
-    plott.savefig(writekey)
-    if not sett.savefigs and sett.autoshow:
-        from ..compat.matplotlib import pyplot as pl
-        pl.show()
-
-
-def _tsne_vandermaaten(X=np.array([]), no_dims=2, perplexity=30.0):
-    """
-    Runs t-SNE on the dataset in the NxD array X to reduce its dimensionality to
-    no_dims dimensions.  The syntaxis of the function is Y = tsne.tsne(X,
-    no_dims, perplexity), where X is an NxD NumPy array.
-    """
-
-    # Initialize variables
-    (n, d) = X.shape;
-    max_iter = 1000;
-    initial_momentum = 0.5;
-    final_momentum = 0.8;
-    eta = 500;
-    min_gain = 0.01;
-    Y = np.random.randn(n, no_dims);
-    dY = np.zeros((n, no_dims));
-    iY = np.zeros((n, no_dims));
-    gains = np.ones((n, no_dims));
-
-    # Compute P-values
-    P = _x2p_vandermaaten(X, 1e-5, perplexity);
-    P = P + np.transpose(P);
-    P = P / np.sum(P);
-    P = P * 4;                                    # early exaggeration
-    P = np.maximum(P, 1e-12);
-
-    # Run iterations
-    for iter in range(max_iter):
-
-        # Compute pairwise affinities
-        sum_Y = np.sum(np.square(Y), 1);
-        num = 1 / (1 + np.add(np.add(-2 * np.dot(Y, Y.T), sum_Y).T, sum_Y));
-        num[range(n), range(n)] = 0;
-        Q = num / np.sum(num);
-        Q = np.maximum(Q, 1e-12);
-
-        # Compute gradient
-        PQ = P - Q;
-        for i in range(n):
-            dY[i,:] = np.sum(np.tile(PQ[:,i] * num[:,i], (no_dims, 1)).T * (Y[i,:] - Y), 0);
-
-        # Perform the update
-        if iter < 20:
-            momentum = initial_momentum
-        else:
-            momentum = final_momentum
-        gains = (gains + 0.2) * ((dY > 0) != (iY > 0)) + (gains * 0.8) * ((dY > 0) == (iY > 0));
-        gains[gains < min_gain] = min_gain;
-        iY = momentum * iY - eta * (gains * dY);
-        Y = Y + iY;
-        Y = Y - np.tile(np.mean(Y, 0), (n, 1));
-
-        # Compute current value of cost function
-        if (iter + 1) % 10 == 0:
-            C = np.sum(P * np.log(P / Q));
-            sett.m(0,"Iteration " + str(iter + 1) + ": error is " + str(C))
-
-        # Stop lying about P-values
-        if iter == 100:
-            P = P / 4;
-
-    # Return solution
-    return Y;
-
-def _Hbeta_vandermaaten(D = np.array([]), beta = 1.0):
-    """
-    Compute the perplexity and the P-row for a specific value of the
-    precision of a Gaussian distribution.
-    """
-
-    # Compute P-row and corresponding perplexity
-    P = np.exp(-D.copy() * beta);
-    sumP = sum(P);
-    H = np.log(sumP) + beta * np.sum(D * P) / sumP;
-    P = P / sumP;
-    return H, P;
-
-def _x2p_vandermaaten(X = np.array([]), tol = 1e-5, perplexity = 30.0):
-    """
-    Performs a binary search to get P-values in such a way that each
-    conditional Gaussian has the same perplexity.
-    """
-
-    # Initialize some variables
-    sett.m(0,"Computing pairwise distances...")
-    (n, d) = X.shape;
-    sum_X = np.sum(np.square(X), 1);
-    D = np.add(np.add(-2 * np.dot(X, X.T), sum_X).T, sum_X);
-    P = np.zeros((n, n));
-    beta = np.ones((n, 1));
-    logU = np.log(perplexity);
-
-    # Loop over all datapoints
-    for i in range(n):
-
-        # Print progress
-        if i % 500 == 0:
-            sett.m(0,"Computing P-values for point ", i, " of ", n, "...")
-
-        # Compute the Gaussian kernel and entropy for the current precision
-        betamin = -np.inf;
-        betamax =  np.inf;
-        Di = D[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))];
-        (H, thisP) = _Hbeta_vandermaaten(Di, beta[i]);
-
-        # Evaluate whether the perplexity is within tolerance
-        Hdiff = H - logU;
-        tries = 0;
-        while np.abs(Hdiff) > tol and tries < 50:
-
-            # If not, increase or decrease precision
-            if Hdiff > 0:
-                betamin = beta[i].copy();
-                if betamax == np.inf or betamax == -np.inf:
-                    beta[i] = beta[i] * 2;
-                else:
-                    beta[i] = (beta[i] + betamax) / 2;
-            else:
-                betamax = beta[i].copy();
-                if betamin == np.inf or betamin == -np.inf:
-                    beta[i] = beta[i] / 2;
-                else:
-                    beta[i] = (beta[i] + betamin) / 2;
-
-            # Recompute the values
-            (H, thisP) = _Hbeta_vandermaaten(Di, beta[i]);
-            Hdiff = H - logU;
-            tries = tries + 1;
-
-        # Set the final row of P
-        P[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))] = thisP;
-
-    # Return final P-matrix
-    sett.m(0,"Mean value of sigma: ", np.mean(np.sqrt(1 / beta)))
-    return P;
+               '    "X_tsne" coordinates (tSNE representation of X) to adata.smp')
+    return adata if copy else adata

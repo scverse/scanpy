@@ -492,7 +492,7 @@ class DataGraph(object):
                           for l in range(1, self.evals.size)])
             self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
         else:  # Cython version
-            used_memory = utils.get_memory_usage()
+            used_memory, _ = utils.get_memory_usage()
             memory_for_M = self.X.shape[0]**2 * 23 / 8 / 1e9  # in GB
             sett.m(0, '... max memory =', sett.max_memory,
                    ' / used memory = {:.1f}'.format(used_memory),

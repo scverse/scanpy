@@ -28,7 +28,7 @@ example_parameters = {
         },
     },
     'moignard15': {
-        'dbscan': {'eps': 1.5},
+        'dbscan': {'eps': 3, 'min_samples': 30},
         'dpt/diffmap': {'k': 5, 'knn': False},
         'paths': {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])},
     },
