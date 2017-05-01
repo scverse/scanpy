@@ -79,6 +79,9 @@ class BoundStructArray(np.ndarray):
         new_index_key = index_key if new_index_key is None else new_index_key
         # create from existing array
         if isinstance(source, np.ndarray):
+            # create from existing BoundStructArray
+            if isinstance(source, BoundStructArray):
+                keys_multicol = source._keys_multicol if keys_multicol is None else keys_multicol
             # we need to explicitly make a deep copy of the dtype
             arr = np.array(source, dtype=[t for t in source.dtype.descr])
             # rename the index
@@ -157,8 +160,13 @@ class BoundStructArray(np.ndarray):
         return arr
 
     def __array_finalize__(self, arr):
+        # determines the behavior of views
         if arr is None: return
+        self.index_key = getattr(arr, 'index_key', None)
+        self._is_attr_of = getattr(arr, 'is_attr_of', None)
         self._keys = getattr(arr, '_keys', None)
+        self._keys_multicol = getattr(arr, '_keys_multicol', None)
+        self._keys_multicol_lookup = getattr(arr, '_keys_multicol_lookup', None)
 
     @property
     def index(self):
@@ -219,7 +227,21 @@ class BoundStructArray(np.ndarray):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                view = super(BoundStructArray, self).__getitem__(k).view(np.ndarray)
+                # column slicing
+                col_slice = False
+                if isinstance(k, str):
+                    col_slice = True
+                elif isinstance(k, list) and isinstance(k[0], str):
+                    col_slice = True
+                elif isinstance(k, np.ndarray) and len(k.shape) > 0:
+                    if k.shape == (0,):  # empty array
+                        print('warning: slicing with empty list returns None')
+                        return None
+                    if isinstance(k[0], str):
+                        col_slice = True
+                view = super(BoundStructArray, self).__getitem__(k)
+                if col_slice:
+                    view = view.view(np.ndarray)
             except ValueError:  # access multiple columns with key k
                 keys = self._keys_multicol_lookup[k]
                 view = super(BoundStructArray, self).__getitem__(keys).view(
@@ -295,7 +317,6 @@ class BoundStructArray(np.ndarray):
         present = np.intersect1d(keys, self.dtype.names)
         absent = np.setdiff1d(keys, self.dtype.names)
 
-        re_initialize = False
         if any(present):
             for k, v in zip(present, values[np.in1d(keys, present)]):
                 if (v.dtype != self.dtype[k]
@@ -396,7 +417,8 @@ class AnnData(IndexMixin):
             raise ValueError('X needs to be of one of the following types [{}] not {}'
                              .format(class_names, type(X)))
 
-        X = X.astype(dtype)  # type conversion
+        # type conversion: if type doesn't match, a copy is made
+        X = X.astype(dtype, copy=False)
         if X.dtype.names is None and len(X.shape) not in {0, 1, 2}:
             raise ValueError('X needs to be 2-dimensional, not '
                              '{}D'.format(len(X.shape)))
@@ -549,7 +571,7 @@ class AnnData(IndexMixin):
         adata = AnnData(X, smp_ann, var_ann, self.add)
         return adata
 
-    def slice_var(self, index):
+    def filter_var(self, index):
         """Slice in variable dimension."""
         self.X = self.X[:, index]
         self.var = self.var[index]
@@ -866,3 +888,39 @@ def test_struct_dict_copy():
     scp = adata.smp.copy()
 
     assert adata.smp.__dict__.keys() == scp.__dict__.keys()
+
+
+def test_profile_memory():
+    from .. import utils
+    import gc
+    print()
+    utils.print_memory_usage('start profiling')
+    X = np.random.rand(10000, 20000).astype('float32')
+    utils.print_memory_usage('allocated X')
+    var_filter = np.array([0, 1])
+    X = X[:, var_filter]
+    utils.print_memory_usage('sliced X')
+    X = np.random.rand(10000, 20000).astype('float32')
+    utils.print_memory_usage('allocated X')
+    adata = AnnData(X)
+    utils.print_memory_usage('init adata with reference to X')
+    adata.var['multi'] = np.random.rand(20000, 3)
+    utils.print_memory_usage('added some annotation')
+    # ------------------------------------------------
+    # compare adata.__getitem__ with adata.filter_var
+    # ------------------------------------------------
+    # here, it doesn't make a difference in other scenarios
+    # (e.g. sc.preprocess.weinreb16), filter_var seems to invoke earlier garbage
+    # collection than slicing
+    # adata.filter_var(var_filter)  # inplace
+    adata = adata[:, var_filter]  # with copy
+    utils.print_memory_usage('sliced adata')
+    gc.collect()
+    utils.print_memory_usage('after calling gc.collect()')
+    return adata
+
+
+def test_profile_memory_2():
+    from .. import utils
+    adata = test_profile_memory()
+    utils.print_memory_usage('after leaving function')
