@@ -432,7 +432,7 @@ class AnnData(IndexMixin):
         self.var = BoundStructArray(var, VAR_INDEX, (self, 'var'), self.n_vars, var_keys_multicol)
         self._check_dimensions()
 
-        self.add = add
+        self.add = add or {}
 
     def __contains__(self, k):
         raise AttributeError("AnnData has no attribute __contains__, don't check `in adata`.")
