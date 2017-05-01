@@ -163,7 +163,7 @@ class BoundStructArray(np.ndarray):
         # determines the behavior of views
         if arr is None: return
         self.index_key = getattr(arr, 'index_key', None)
-        self._is_attr_of = getattr(arr, 'is_attr_of', None)
+        self._is_attr_of = getattr(arr, '_is_attr_of', None)
         self._keys = getattr(arr, '_keys', None)
         self._keys_multicol = getattr(arr, '_keys_multicol', None)
         self._keys_multicol_lookup = getattr(arr, '_keys_multicol_lookup', None)
@@ -222,7 +222,12 @@ class BoundStructArray(np.ndarray):
     # TODO: __delitem__ should be aware of _keys_multicol and _keys
 
     def __getitem__(self, k):
-        """Either a single one- or multi-column or mulitiple one-colum items."""
+        """Either a single one- or multi-column or mulitiple one-colum items.
+
+        Column slices are uniform numpy arrays.
+
+        Row slices are BoundStructArrays.
+        """
         import warnings  # ignore FutureWarning about multi-column access of structured arrays
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
@@ -344,6 +349,9 @@ class BoundStructArray(np.ndarray):
                                    keys_multicol=self._keys_multicol)
             setattr(self._is_attr_of[0], self._is_attr_of[1], new)
 
+    def __str__(self):
+        return self.to_df().__str__()
+
     def to_df(self):
         """Return pd.dataframe with index filled either with smp_names or var_names."""
         import pandas as pd
@@ -418,9 +426,9 @@ class AnnData(IndexMixin):
                              .format(class_names, type(X)))
 
         # type conversion: if type doesn't match, a copy is made
-        if ((sp.issparse(X) or isinstance(X, ma.MaskedArray))
-            and X.dtype.descr != np.dtype(dtype).descr):
-            X = X.astype(dtype)
+        if sp.issparse(X) or isinstance(X, ma.MaskedArray):
+            if X.dtype.descr != np.dtype(dtype).descr:
+                X = X.astype(dtype)
         else:  # is plain np.ndarray
             X = X.astype(dtype, copy=False)
 
@@ -575,6 +583,28 @@ class AnnData(IndexMixin):
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         adata = AnnData(X, smp_ann, var_ann, self.add)
         return adata
+
+    def get_smp_array(self, k):
+        """Get an array along the sample dimension by first looking up
+        smp_keys and then var_names."""
+        x = (self.smp[k] if k in self.smp_keys()
+             else self[:, k] if k in set(self.var_names)
+             else None)
+        if x is None:
+            raise ValueError('Did not find {} in smp_keys or var_names.'
+                             .format(k))
+        return x
+
+    def get_var_array(self, k):
+        """Get an array along the variables dimension by first looking up
+        var_keys and then smp_names."""
+        x = (self.var[k] if k in self.var_keys()
+             else self[k] if k in set(self.smp_names)
+             else None)
+        if x is None:
+            raise ValueError('Did not find {} in var_keys or smp_names.'
+                             .format(k))
+        return x
 
     def filter_var(self, index):
         """Filter along variables dimension."""
@@ -836,6 +866,8 @@ def test_print():
                     dict(foo=['A', 'B']),
                     dict(bar=['a', 'b', 'c']))
     print(adata)
+    print('>>> print(adata.smp)')
+    print(adata.smp)
 
 
 def test_multicol_getitem():
@@ -898,18 +930,19 @@ def test_struct_dict_copy():
 def test_profile_memory():
     from .. import utils
     import gc
+    dim = 10  # increase this when profiling
     print()
     utils.print_memory_usage('start profiling')
-    X = np.random.rand(10000, 20000).astype('float32')
+    X = np.random.rand(dim, dim).astype('float32')
     utils.print_memory_usage('allocated X')
     var_filter = np.array([0, 1])
     X = X[:, var_filter]
     utils.print_memory_usage('sliced X')
-    X = np.random.rand(10000, 20000).astype('float32')
+    X = np.random.rand(dim, dim).astype('float32')
     utils.print_memory_usage('allocated X')
     adata = AnnData(X)
     utils.print_memory_usage('init adata with reference to X')
-    adata.var['multi'] = np.random.rand(20000, 3)
+    adata.var['multi'] = np.random.rand(dim, 3)
     utils.print_memory_usage('added some annotation')
     # ------------------------------------------------
     # compare adata.__getitem__ with adata.filter_var
