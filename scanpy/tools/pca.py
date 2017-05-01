@@ -1,6 +1,6 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
 """Principal Component Analysis
 """
-from .. import preprocess as pp
+from .. import preprocessing as pp
 pca = pp.pca
 

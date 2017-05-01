@@ -20,8 +20,8 @@ tl = tools       # abbreviation
 from . import plotting
 pl = plotting    # abbreviation
 """Plotting functions"""
-from . import preprocess
-pp = preprocess  # abbreviation
+from . import preprocessing
+pp = preprocessing  # abbreviation
 """Preprocessing functions"""
 # user convenience functions
 from .readwrite import read, write, read_params, write_params
