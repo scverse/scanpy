@@ -198,3 +198,7 @@ def _read_command_line_args_run_single_tool(toolkey):
     """
     args = utils.read_args_tool(toolkey, examples._example_parameters())
     _run_command_line_args(toolkey, args)
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

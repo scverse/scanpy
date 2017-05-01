@@ -2,7 +2,7 @@ import sys
 from setuptools import setup
 from distutils.extension import Extension
 import numpy
-
+import versioneer
 from Cython.Distutils import build_ext
 
 with open('requirements.txt') as requirements:
@@ -18,7 +18,7 @@ if sys.version_info[0] == 2:
 
 setup(
     name='scanpy',
-    version='0.1',
+    version=versioneer.get_version(),
     description='Single-Cell Analysis in Python.',
     url='http://github.com/theislab/scanpy',
     author='F. Alexander Wolf, P. Angerer',
@@ -41,9 +41,10 @@ setup(
         'scanpy.cython',
     ],
     include_dirs=[numpy.get_include()],
-    cmdclass={
-        'build_ext': build_ext,
-    },
+    # cmdclass={
+    #     'build_ext': build_ext,
+    # },
+    cmdclass=versioneer.get_cmdclass({'build_ext': build_ext}),
     ext_modules=[
         Extension("scanpy.cython.utils_cy",
                   ["scanpy/cython/utils_cy.pyx"]),
