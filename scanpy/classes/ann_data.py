@@ -242,14 +242,16 @@ class BoundStructArray(np.ndarray):
             if (not hasattr(values[0], '__len__')
                 or len(values[0]) == 1 or isinstance(values[0], str)):
                 values = [values]
-            else:  # otherwise add the multi_column_key
+            else:  # otherwise it's a multicolumn key
+                key_multicol = keys[0]
                 if keys[0] not in self._keys_multicol:
-                    key_multicol = keys[0]
                     self._keys_multicol += [key_multicol]
                     self._keys += [key_multicol]
                     # generate single-column keys
                     keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
                     self._keys_multicol_lookup[key_multicol] = keys
+                else:
+                    keys = self._keys_multicol_lookup[key_multicol]
                 values = np.array(values)
                 if values.shape[0] == self.shape[0]:
                     values = values.T
@@ -546,6 +548,20 @@ class AnnData(IndexMixin):
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         adata = AnnData(X, smp_ann, var_ann, self.add)
         return adata
+
+    def slice_var(self, index):
+        """Slice in variable dimension."""
+        self.X = self.X[:, index]
+        self.var = self.var[index]
+        self.n_vars = self.X.shape[1]
+        return None
+
+    def slice_smp(self, index):
+        """Slice in variable dimension."""
+        self.X = self.X[index, :]
+        self.smp = self.smp[index]
+        self.n_smps = self.X.shape[0]
+        return None
 
     def __setitem__(self, index, val):
         smp, var = self._normalize_indices(index)

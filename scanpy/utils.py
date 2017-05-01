@@ -24,9 +24,9 @@ def print_memory_usage(newline=False):
           + 'Current memory usage: {:.2f} GB'.format(mem))
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Deal with examples
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def fill_in_datakeys(example_parameters, dexdata):
@@ -49,9 +49,9 @@ def fill_in_datakeys(example_parameters, dexdata):
     return example_parameters
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Deal with tool parameters
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def update_params(old_params, new_params, check=False):
@@ -86,9 +86,9 @@ def update_params(old_params, new_params, check=False):
     return updated_params
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Command-line argument reading and processing
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def add_args(p, dadd_args=None):
@@ -168,25 +168,25 @@ def default_tool_argparser(description, example_parameters):
     return p
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Others
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def select_groups(adata, groups_names_subset='all', smp='groups'):
     """
     Get subset of groups in adata.smp[smp].
     """
-    groups_names = adata[smp + '_names']
+    groups_names = adata.add[smp + '_names']
     if smp + '_masks' in adata.add:
-        groups_masks = adata[smp + '_masks']
+        groups_masks = adata.add[smp + '_masks']
     else:
-        groups_masks = np.zeros((len(adata[smp + '_names']),
-                                        adata.smp[smp].size), dtype=bool)
-        for iname, name in enumerate(adata[smp + '_names']):
+        groups_masks = np.zeros((len(adata.add[smp + '_names']),
+                                 adata.smp[smp].size), dtype=bool)
+        for iname, name in enumerate(adata.add[smp + '_names']):
             # if the name is not found, fallback to index retrieval
-            if adata[smp + '_names'][iname] in adata.smp[smp]:
-                mask = adata[smp + '_names'][iname] == adata.smp[smp]
+            if adata.add[smp + '_names'][iname] in adata.smp[smp]:
+                mask = adata.add[smp + '_names'][iname] == adata.smp[smp]
             else:
                 mask = str(iname) == adata.smp[smp]
             groups_masks[iname] = mask
@@ -195,19 +195,19 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
         # get list from string
         if isinstance(groups_names_subset, str):
             groups_names_subset = groups_names_subset.split(',')
-        groups_ids = np.where(np.in1d(adata[smp + '_names'], np.array(groups_names_subset)))[0]
+        groups_ids = np.where(np.in1d(adata.add[smp + '_names'], np.array(groups_names_subset)))[0]
         if len(groups_ids) == 0:
             # fallback to index retrieval
-            groups_ids = np.where(np.in1d(np.arange(len(adata[smp + '_names'])).astype(str),
+            groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_names'])).astype(str),
                                           np.array(groups_names_subset)))[0]
         if len(groups_ids) == 0:
             sett.m(0, np.array(groups_names_subset),
                    'invalid! specify valid groups_names (or indices) one of',
-                   adata[smp + '_names'])
+                   adata.add[smp + '_names'])
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-        groups_names_subset = adata[smp + '_names'][groups_ids]
+        groups_names_subset = adata.add[smp + '_names'][groups_ids]
     else:
         groups_names_subset = groups_names
     return groups_names_subset, groups_masks

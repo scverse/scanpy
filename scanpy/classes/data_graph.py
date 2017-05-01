@@ -10,20 +10,19 @@ import scipy.sparse
 from joblib import Parallel, delayed
 from ..cython import utils_cy
 from .. import settings as sett
-from .. import plotting as plott
 from .. import utils
 from .ann_data import AnnData
 
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
-    junk_range = np.arange(Dsq.shape[0])[:, None]
-    indices_junk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
-    indices_junk = indices_junk[junk_range,
-                                np.argsort(Dsq[junk_range, indices_junk])]
-    indices_junk = indices_junk[:, 1:]  # exclude first data point (point itself)
-    distances_junk = Dsq[junk_range, indices_junk]
-    return indices_junk, distances_junk
+    chunk_range = np.arange(Dsq.shape[0])[:, None]
+    indices_chunk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+    indices_chunk = indices_chunk[chunk_range,
+                                np.argsort(Dsq[chunk_range, indices_chunk])]
+    indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
+    distances_chunk = Dsq[chunk_range, indices_chunk]
+    return indices_chunk, distances_chunk
 
 
 def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
@@ -53,10 +52,10 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
     else:
         sett.m(0, '... start computing pairwise distances')
         # assume we can fit at max 20000 data points into memory
-        len_junk = np.ceil(min(20000, X.shape[0]) / n_jobs).astype(int)
-        n_junks = np.ceil(X.shape[0] / len_junk).astype(int)
-        junks = [np.arange(start, min(start + len_junk, X.shape[0]))
-                 for start in range(0, n_junks * len_junk, len_junk)]
+        len_chunk = np.ceil(min(20000, X.shape[0]) / n_jobs).astype(int)
+        n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
+        chunks = [np.arange(start, min(start + len_chunk, X.shape[0]))
+                 for start in range(0, n_chunks * len_chunk, len_chunk)]
         indices = np.zeros((X.shape[0], k-1), dtype=int)
         distances = np.zeros((X.shape[0], k-1), dtype=np.float32)
         if n_jobs > 1:
@@ -66,17 +65,17 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
             # when using Parallel below, threading is much slower than
             # multiprocessing
             result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
-                                  delayed(get_neighbors)(X[junk], X, k)
-                                  for junk in junks)
+                                  delayed(get_neighbors)(X[chunk], X, k)
+                                  for chunk in chunks)
         else:
             sett.m(0, '--> can be sped up by setting `n_jobs` > 1')
-        for i_junk, junk in enumerate(junks):
+        for i_chunk, chunk in enumerate(chunks):
             if n_jobs > 1:
-                indices_junk, distances_junk = result_lst[i_junk]
+                indices_chunk, distances_chunk = result_lst[i_chunk]
             else:
-                indices_junk, distances_junk = get_neighbors(X[junk], X, k)
-            indices[junk] = indices_junk
-            distances[junk] = distances_junk
+                indices_chunk, distances_chunk = get_neighbors(X[chunk], X, k)
+            indices[chunk] = indices_chunk
+            distances[chunk] = distances_chunk
     if sparse:
         Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], k)
     return Dsq, indices, distances
@@ -142,11 +141,11 @@ class DataGraph(object):
     """
 
     def __init__(self, adata_or_X, k=30, knn=True,
-                 n_jobs=1, n_pcs=50, n_pcs_post=30,
+                 n_jobs=None, n_pcs=50, n_pcs_post=30,
                  recompute_diffmap=None, sparse=None):
         self.k = k
         self.knn = knn
-        self.n_jobs = n_jobs
+        self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
         self.n_pcs = n_pcs
         self.n_pcs_post = 30
         self.sparse = knn if sparse is None else sparse
@@ -191,7 +190,7 @@ class DataGraph(object):
         if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
             sett.m(0, '... using `X_diffmap` for distance computations')
             self.evals = np.r_[1, adata.add['diffmap_evals']]
-            self.rbasis = np.c_[adata.add['diffmap_comp0'][:, None], adata.smp['X_diffmap']]
+            self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
@@ -202,14 +201,14 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
         self.Dsq = None
-        
+
     def diffmap(self):
         """
         Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
         if self.evals is None:
-            sett.mt(0, 'start computing Diffusion Map')
+            sett.mt(0, 'start computing Diffusion Map', start=True)
             self.compute_transition_matrix()
             self.embed()
         # write results to dictionary
@@ -217,6 +216,10 @@ class DataGraph(object):
         # skip the first eigenvalue/eigenvector
         ddmap['X_diffmap'] = self.rbasis[:, 1:]
         ddmap['evals'] = self.evals[1:]
+        if self.evals is None:
+            sett.mt(0, 'finished, added\n'
+                    '    "X_diffmap" stores the diffmap representation of data (adata.smp)\n'
+                    '    "diffmap_evals store the eigenvalues of the transition matrix (adata.add)"')
         return ddmap
 
     def compute_Ddiff_all(self, num_evals=10):
@@ -464,14 +467,14 @@ class DataGraph(object):
         # init on-the-fly computed distance "matrix"
         self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row, shape=self.Dsq.shape)
 
-    def _get_M_row_junk(self, i_range):
-        M_junk = np.zeros((len(i_range), self.X.shape[0]), dtype=np.float32)
+    def _get_M_row_chunk(self, i_range):
+        M_chunk = np.zeros((len(i_range), self.X.shape[0]), dtype=np.float32)
         for i_cnt, i in enumerate(i_range):
             if False:  # not much slower, but slower
-                M_junk[i_cnt] = self.get_M_row(j)
+                M_chunk[i_cnt] = self.get_M_row(j)
             else:
-                M_junk[i_cnt] = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
-        return M_junk
+                M_chunk[i_cnt] = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
+        return M_chunk
 
     def compute_M_matrix(self):
         """
@@ -482,7 +485,7 @@ class DataGraph(object):
         """
         if self.n_jobs >= 4:  # if we have enough cores, skip this step
             return            # TODO: make sure that this is really the best strategy
-        sett.m(0, '... try computing "M" matrix using up to 90% of `max_memory`')
+        sett.m(0, '... try computing "M" matrix using up to 90% of `sett.max_memory`')
         if False:  # Python version
             self.M = sum([self.evals[l]/(1-self.evals[l])
                           * np.outer(self.rbasis[:, l], self.lbasis[:, l])
@@ -496,25 +499,25 @@ class DataGraph(object):
                    ' / memory_for_M = {:.1f}'.format(memory_for_M))
             if used_memory + memory_for_M < 0.9 * sett.max_memory:
                 sett.m(0, '    allocate memory and compute M matrix')
-                len_junk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
-                n_junks = np.ceil(self.X.shape[0] / len_junk).astype(int)
-                junks = [np.arange(start, min(start + len_junk, self.X.shape[0]))
-                         for start in range(0, n_junks * len_junk, len_junk)]
+                len_chunk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
+                n_chunks = np.ceil(self.X.shape[0] / len_chunk).astype(int)
+                chunks = [np.arange(start, min(start + len_chunk, self.X.shape[0]))
+                         for start in range(0, n_chunks * len_chunk, len_chunk)]
                 # parallel computing does not seem to help
                 if False: # self.n_jobs > 1:
                     # here backend threading is not necessary, and seems to slow
                     # down everything considerably
                     result_lst = Parallel(n_jobs=self.n_jobs, backend='threading')(
-                                          delayed(self._get_M_row_junk)(junk)
-                                          for junk in junks)
+                                          delayed(self._get_M_row_chunk)(chunk)
+                                          for chunk in chunks)
                 self.M = np.zeros((self.X.shape[0], self.X.shape[0]),
                                   dtype=np.float32)
-                for i_junk, junk in enumerate(junks):
+                for i_chunk, chunk in enumerate(chunks):
                     if False: # self.n_jobs > 1:
-                        M_junk = result_lst[i_junk]
+                        M_chunk = result_lst[i_chunk]
                     else:
-                        M_junk = self._get_M_row_junk(junk)
-                    self.M[junk] = M_junk
+                        M_chunk = self._get_M_row_chunk(chunk)
+                    self.M[chunk] = M_chunk
                 # the following did not work
                 # filename = sett.writedir + 'tmp.npy'
                 # np.save(filename, self.M)
@@ -547,7 +550,7 @@ class DataGraph(object):
         sett.mt(0, 'computed Ddiff distance matrix')
         self.Dchosen = self.Ddiff
 
-    def _get_Ddiff_row_junk(self, m_i, j_range):
+    def _get_Ddiff_row_chunk(self, m_i, j_range):
         M = self.M  # caching with a file on disk did not work
         d_i = np.zeros(len(j_range))
         for j_cnt, j in enumerate(j_range):
@@ -568,23 +571,23 @@ class DataGraph(object):
             m_i = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
         else:
             m_i = self.M[i]
-        len_junk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
-        n_junks = np.ceil(self.X.shape[0] / len_junk).astype(int)
-        junks = [np.arange(start, min(start + len_junk, self.X.shape[0]))
-                 for start in range(0, n_junks * len_junk, len_junk)]
+        len_chunk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
+        n_chunks = np.ceil(self.X.shape[0] / len_chunk).astype(int)
+        chunks = [np.arange(start, min(start + len_chunk, self.X.shape[0]))
+                  for start in range(0, n_chunks * len_chunk, len_chunk)]
         if self.n_jobs >= 4:  # problems with high memory calculations, we skip computing M above
             # here backend threading is not necessary, and seems to slow
             # down everything considerably
             result_lst = Parallel(n_jobs=self.n_jobs)(
-                                  delayed(self._get_Ddiff_row_junk)(m_i, junk)
-                                  for junk in junks)
+                                  delayed(self._get_Ddiff_row_chunk)(m_i, chunk)
+                                  for chunk in chunks)
         d_i = np.zeros(self.X.shape[0])
-        for i_junk, junk in enumerate(junks):
+        for i_chunk, chunk in enumerate(chunks):
             if self.n_jobs >= 4:
-                d_i_junk = result_lst[i_junk]
+                d_i_chunk = result_lst[i_chunk]
             else:
-                d_i_junk = self._get_Ddiff_row_junk(m_i, junk)
-            d_i[junk] = d_i_junk
+                d_i_chunk = self._get_Ddiff_row_chunk(m_i, chunk)
+            d_i[chunk] = d_i_chunk
         return d_i
 
     def compute_Lp_matrix(self):

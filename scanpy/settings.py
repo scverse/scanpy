@@ -22,9 +22,9 @@ import time
 from functools import reduce
 from matplotlib import rcParams
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Global Settings Attributes
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 verbosity = 1
 """Set global verbosity level, choose from {0,...,6}.
@@ -93,10 +93,13 @@ max_memory = 15
 """Maximal memory usage in Gigabyte.
 """
 
+n_jobs = 2
+"""Maximal number of jobs/ CPUs to use for parallel computing.
+"""
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Global Setting Functions
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def set_logfile(filename=''):
@@ -156,9 +159,9 @@ _is_interactive = not hasattr(main, '__file__')
 """Determines whether run as file or imported as package."""
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Command-line arguments for global attributes
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def add_args(p):
@@ -208,8 +211,11 @@ def add_args(p):
        help='Specify v = 0 for no output and v > 1 for more output'
             ' (default: %(default)d).')
     aa('--max_memory',
-       type=int, default=16, metavar='m',
+       type=int, default=max_memory, metavar='m',
        help='Specify maximal memory usage in GB (default: %(default)s).')
+    aa('--n_jobs',
+       type=int, default=n_jobs, metavar='n',
+       help='Maximal number of CPUs to use (default: %(default)s).')
     aa('-ff', '--fileformat',
        type=str, default=file_format_data, metavar='ext',
        help='Specify file format for exporting results, either "csv", '
@@ -289,15 +295,23 @@ def process_args(args):
     max_memory = args['max_memory']
     args.pop('max_memory')
 
+    global n_jobs
+    n_jobs = args['n_jobs']
+    args.pop('n_jobs')
+
+    global exkey, basekey
+    exkey = args['exkey']
+    basekey = exkey + suffix
+
     return args
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Logging
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
-def m(v=0,*msg):
+def m(v=0, *msg):
     """
     Write message to log output, depending on verbosity level.
 
@@ -336,7 +350,7 @@ def mi(*msg):
             f.write(out + '\n')
 
 
-def mt(v=0,*msg, start=False):
+def mt(v=0, *msg, start=False):
     """
     Write message to log output and show computation time.
 
@@ -358,7 +372,7 @@ def mt(v=0,*msg, start=False):
         elapsed_since_start = now - _start
         elapsed = now - _intermediate
         _intermediate = now
-        mi(_sec_to_str(elapsed),'-',*msg)
+        mi(_sec_to_str(elapsed), '-', *msg)
 
 
 def _sec_to_str(t):
@@ -372,7 +386,8 @@ def _sec_to_str(t):
     """
     return "%d:%02d:%02d.%03d" % \
         reduce(lambda ll,b : divmod(ll[0],b) + ll[1:],
-            [(t*1000,),1000,60,60])
+               [(t*1000,),1000,60,60])
+
 
 def _terminate():
     """
@@ -413,7 +428,7 @@ def _jupyter_deprecated(do=True):
     rcParams['lines.markersize'] = fscale**2*6
     rcParams['lines.markeredgewidth'] = fscale**2*1
 
-    rcParams['figure.figsize'] = (1.25*ful,ful)
+    rcParams['figure.figsize'] = (1.25*ful, ful)
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92*fontsize
     rcParams['axes.titlesize'] = fontsize

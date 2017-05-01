@@ -15,9 +15,9 @@ from . import settings as sett
 from . import utils
 from . import readwrite
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Toplevel Plotting Functions
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 def violin(adata, smp):
     smp_df = adata.smp.to_df()
@@ -199,9 +199,9 @@ def scatter(adata,
     return smps
 
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Helper Functions
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def init_fig_params():
@@ -621,19 +621,19 @@ def ranking(adata, toolkey, n_genes=20):
     """
 
     # one panel for each ranking
-    scoreskey = adata[toolkey + '_scoreskey']
-    n_panels = len(adata[toolkey + '_rankings_names'])
+    scoreskey = adata.add[toolkey + '_scoreskey']
+    n_panels = len(adata.add[toolkey + '_rankings_names'])
 
     def get_scores(irank):
-        allscores = adata[toolkey + '_' + scoreskey][irank]
-        scores = allscores[adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
+        allscores = adata.add[toolkey + '_' + scoreskey][irank]
+        scores = allscores[adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
         scores = np.abs(scores)
         return scores
 
     # the limits for the y axis
     ymin = 1e100
     ymax = -1e100
-    for irank in range(len(adata[toolkey + '_rankings_names'])):
+    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
         scores = get_scores(irank)
         ymin = np.min([ymin,np.min(scores)])
         ymax = np.max([ymax,np.max(scores)])
@@ -661,19 +661,19 @@ def ranking(adata, toolkey, n_genes=20):
                            wspace=0)
 
     count = 1
-    for irank in range(len(adata[toolkey + '_rankings_names'])):
+    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
         pl.subplot(gs[count-1])
         scores = get_scores(irank)
-        for ig,g in enumerate(adata[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
-            marker = (r'\leftarrow' if adata[toolkey + '_zscores'][irank,g] < 0
+        for ig, g in enumerate(adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
+            marker = (r'\leftarrow' if adata.add[toolkey + '_zscores'][irank,g] < 0
                                     else r'\rightarrow')
             pl.text(ig,scores[ig],
                     r'$ ' + marker + '$ ' + adata.var_names[g],
-                    color = 'red' if adata[toolkey + '_zscores'][irank,g] < 0 else 'green',
+                    color = 'red' if adata.add[toolkey + '_zscores'][irank,g] < 0 else 'green',
                     rotation='vertical',verticalalignment='bottom',
                     horizontalalignment='center',
                     fontsize=8)
-        title = adata[toolkey + '_rankings_names'][irank]
+        title = adata.add[toolkey + '_rankings_names'][irank]
         pl.title(title)
         if n_panels <= 5 or count > n_panels_x:
             pl.xlabel('ranking')
@@ -681,8 +681,8 @@ def ranking(adata, toolkey, n_genes=20):
             pl.ylabel(scoreskey)
         else:
             pl.yticks([])
-        pl.ylim([ymin,ymax])
-        pl.xlim(-0.9,ig+1-0.1)
+        pl.ylim([ymin, ymax])
+        pl.xlim(-0.9, ig+1-0.1)
         count += 1
 
 def arrows_transitions(ax,X,indices,weight=None):
@@ -840,9 +840,9 @@ def data_to_axis_points(ax,points_data):
     return data_to_axis(points_data)
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Global Plotting Variables
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 # standard linewidth
 lw0 = rcParams['lines.linewidth']

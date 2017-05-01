@@ -102,7 +102,7 @@ def _run_command_line_args(toolkey, args):
 
     # read parameters
     adata = None
-    if os.path.exists(readwrite.get_filename_from_key(sett.basekey)) or toolkey != 'sim':
+    if toolkey != 'sim':
         adata, exmodule = get_example(args['exkey'],
                                       subsample=args['subsample'],
                                       suffix=sett.suffix,
@@ -157,7 +157,7 @@ def _run_command_line_args(toolkey, args):
     if args['logfile']:
         logfile = sett.writedir + writekey + '_log.txt'
         sett.logfile(logfile)
-
+        
     # actual call of tool
     if (adata is None
         or toolkey not in adata.add['tools']
@@ -166,9 +166,9 @@ def _run_command_line_args(toolkey, args):
         if toolkey == 'sim':
             adata = tool(**params)
         elif toolkey == 'pca':
-            adata = tool(adata, recompute=False, **params)
+            tool(adata, recompute=False, **params)
         else:
-            adata = tool(adata, **params)
+            tool(adata, **params)
         # append toolkey to tools in adata
         if toolkey not in adata.add['tools']:
             adata.add['tools'] = np.append(adata.add['tools'], toolkey)

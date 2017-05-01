@@ -107,8 +107,7 @@ example_data = {
 
 
 def burczynski06():
-    """
-    Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
+    """Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 
     The study assesses transcriptional profiles in peripheral blood mononuclear
     cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by

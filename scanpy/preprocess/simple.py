@@ -250,7 +250,7 @@ def log1p(data):
 
 
 def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
-        random_state=None, recompute=True, mute=False, return_info=None):
+        random_state=None, recompute=True, mute=False, return_info=None, copy=False):
     """
     Embed data using PCA.
 
@@ -293,6 +293,8 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
     """
     if isinstance(data, AnnData):
         adata = data
+        if copy:
+            adata = adata.copy()
         from .. import settings as sett  # why is this necessary?
         if ('X_pca' in adata.smp
             and adata.smp['X_pca'].shape[1] >= n_comps
@@ -314,7 +316,10 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
             sett.mt(0, 'finished, added\n'
                     '    "X_pca" to adata.smp, "PC1", "PC2", ... to adata.var\n'
                     '    and "pca_variance_ratio" to adata.add')
-        return adata
+        if copy:
+            return adata
+        else:
+            return None
     X = data  # proceed with data matrix
     from .. import settings as sett
     if X.shape[1] < n_comps:
@@ -423,7 +428,7 @@ def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
     return X_norm
 
 
-def regress_out(adata, smp_keys, n_jobs=2):
+def regress_out_return_copy(adata, smp_keys, n_jobs=2, copy=True):
     """
     Regress out unwanted sources of variation.
 
@@ -438,7 +443,8 @@ def regress_out(adata, smp_keys, n_jobs=2):
     regressors = np.array([adata.smp[key].astype(float)
                            for key in smp_keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
-    adata_corrected = adata.copy()
+    if copy:
+        adata_corrected = adata.copy()
     len_junk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_junks = np.ceil(adata.X.shape[1] / len_junk).astype(int)
     junks = [np.arange(start, min(start + len_junk, adata.X.shape[1]))
@@ -462,7 +468,8 @@ def regress_out(adata, smp_keys, n_jobs=2):
         for i_column, column in enumerate(junk):
             adata_corrected.X[:, column] = result_lst[i_column]
     sett.mt(0, 'finished')
-    return adata_corrected
+    if copy:
+        return adata_corrected
 
 
 def scale(data, zero_center=None, max_value=None):
@@ -526,14 +533,14 @@ def subsample(data, subsample, seed=0):
         'row_names', 'expindices', 'explabels', 'expcolors'
     """
     from .. import utils
-    if not isinstance(X, AnnData):
+    if not isinstance(data, AnnData):
         X = data
         return utils.subsample(X, subsample, seed)
     adata = data
     _, smp_indices = utils.subsample(adata.X, subsample, seed)
     adata = adata[smp_indices, ]
     for k in adata.smp_keys():
-        if k + '_masks' in adata.adata:  # TODO: this should also be taken into account when slicing
+        if k + '_masks' in adata.add:  # TODO: this should also be taken into account when slicing
             adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
     adata.add['subsampled'] = True
     return adata
@@ -553,14 +560,14 @@ def zscore(X):
     XZ : np.ndarray
         Z-score standardized version of the data matrix.
     """
-    means = np.tile(np.mean(X,axis=0)[None,:],(X.shape[0],1))
-    stds = np.tile(np.std(X,axis=0)[None,:],(X.shape[0],1))
+    means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
+    stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))
     return (X - means) / (stds + .0001)
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def plot_filter_genes_dispersion(adata, gene_filter, log=True):
@@ -601,9 +608,9 @@ def plot_filter_genes_dispersion(adata, gene_filter, log=True):
     plott.savefig_or_show('high_var_genes')
 
 
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # Helper Functions
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 
 def _regress_out(col_index, responses, regressors):

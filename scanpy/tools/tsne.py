@@ -18,10 +18,9 @@ This module automatically choose from three t-SNE versions from
 import numpy as np
 from ..tools.pca import pca
 from .. import settings as sett
-from .. import plotting as plott
-from .. import utils
 
-def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
+
+def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
     u"""
     Visualize data using t-SNE as of van der Maaten & Hinton (2008).
 
@@ -44,8 +43,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
         is quite insensitive to this parameter.
-    n_jobs : int
+    n_jobs : int or None
         Use the multicore implementation, if it is installed.
+
 
     Adds annotation
     ---------------
@@ -68,12 +68,14 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
         else:
             X = adata.X
     # params for sklearn
-    params_sklearn = {'perplexity' : perplexity,
+    params_sklearn = {'perplexity': perplexity,
                       'random_state': None if random_state == -1 else random_state,
-                      'verbose': sett.verbosity + 1 if sett.verbosity != 0 else 0,
+                      'verbose': sett.verbosity,
                       'learning_rate': 200,
                       'early_exaggeration': 12}
     # deal with different tSNE implementations
+    n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+    multicore_failed = False
     if n_jobs > 1:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
@@ -81,10 +83,10 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
             sett.m(0, '... compute tSNE using MulticoreTSNE')
             Y = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
-            from sys import exit
-            exit('--> did not find package MulticoreTSNE: install it from\n'
-                 '    https://github.com/DmitryUlyanov/Multicore-TSNE')
-    else:
+            multicore_failed = True
+            sett.m(0, '--> did not find package MulticoreTSNE: to speed up the computation install it from\n'
+                   '    https://github.com/DmitryUlyanov/Multicore-TSNE')
+    if n_jobs == 1 or multicore_failed:
         try:
             from sklearn.manifold import TSNE
             tsne = TSNE(**params_sklearn)
@@ -98,9 +100,11 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=1):
             Y = _tsne_vandermaaten(X, 2, params['perplexity'])
     # update AnnData instance
     adata.smp['X_tsne'] = Y
-    sett.mt(0, 'finished tSNE, added\n'
+    sett.mt(0, 'finished, added\n'
                '    "X_tsne" to adata.smp')
-    return adata
+    if copy:
+        return adata
+
 
 def plot_tsne(adata,
               smp=None,
@@ -170,6 +174,7 @@ def plot_tsne(adata,
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
         pl.show()
+
 
 def _tsne_vandermaaten(X=np.array([]), no_dims=2, perplexity=30.0):
     """

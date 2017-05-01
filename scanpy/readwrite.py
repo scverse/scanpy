@@ -111,7 +111,8 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         if return_dict:
             return d
         else:
-            return AnnData(d)
+            adata = AnnData(d)
+            return adata
 
     # generate filename and read to dict
     key = filename_or_key
@@ -180,7 +181,7 @@ def write_params(filename, *args, **dicts):
 
     Uses INI file format.
     """
-    if not os.path.exists(filename):
+    if not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     if len(args) == 1:
         d = args[0]
@@ -585,6 +586,7 @@ def _read_excel(filename, sheet=''):
         raise e
     return ddata_from_df(df)
 
+
 def _read_softgz(filename):
     """
     Read a SOFT format data file.
@@ -655,8 +657,12 @@ def _read_softgz(filename):
     X = np.array(X).T
     row_names = sample_names
     col_names = gene_names
-    ddata = {'X': X, 'row_names': row_names, 'col_names': col_names,
-             'row': {'groups': groups}}
+    smp = np.zeros((len(row_names),), dtype=[('smp_names', 'S21'), ('groups', 'S21')])
+    smp['smp_names'] = sample_names
+    smp['groups'] = groups
+    var = np.zeros((len(gene_names),), dtype=[('var_names', 'S21')])
+    var['var_names'] = gene_names
+    ddata = {'X': X, 'smp': smp, 'var': var}
     return ddata
 
 # --------------------------------------------------------------------------------
@@ -710,6 +716,9 @@ def postprocess_reading(key, value):
 
 
 def preprocess_writing(key, value):
+    if isinstance(key, dict):
+        for k, v in value.items():
+            return preprocess_writing(k, v)
     value = np.array(value)
     # some output about the data to write
     sett.m(1, key, type(value),

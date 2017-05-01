@@ -22,12 +22,11 @@ See also
 import sys
 import numpy as np
 from .. import settings as sett
-from .. import utils
 from ..classes import data_graph
 
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
-        allow_branching_at_root=False, n_jobs=2, recompute_diffmap=False):
+        allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False, copy=False):
     u"""
     Diffusion Pseudotime analysis.
 
@@ -70,13 +69,16 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         want postprocessing with PCA.
     allow_branching_at_root : bool, optional (default: False)
         Allow to have branching directly at root point.
-    n_jobs : int
-        Number of cpus to use for parallel processing (default: 2).
+    n_jobs : int or None (default: None)
+        Number of cpus to use for parallel processing (default: sett.n_jobs).
     recompute_diffmap : bool, (default: False)
         Recompute diffusion maps.
+    copy : bool, optional (default: False)
+        Copy instance before computation and return a copy. Otherwise, perform
+        computation inplace and return None.
 
-    Returns
-    -------
+    Notes
+    -----
     Writes the following arrays as sample annotation to adata.smp.
         dpt_pseudotime : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each
@@ -93,6 +95,8 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         dpt_evals : np.ndarray
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
+    if copy:
+        adata = adata.copy()
     if 'xroot' not in adata.add:
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
@@ -111,9 +115,10 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
     # diffusion map
     ddmap = dpt.diffmap()
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
+    # also store the 0th comp, which is skipped for plotting
+    adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
-    adata.add['diffmap_comp0'] = dpt.rbasis[:, 0]
-    sett.m(0, 'perform Diffusion Pseudotime analysis')
+    sett.mt(0, 'perform Diffusion Pseudotime analysis', start=True)
     # compute M matrix of cumulative transition probabilities,
     # see Haghverdi et al. (2016)
     dpt.compute_M_matrix()
@@ -127,19 +132,26 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
     dpt.branchings_segments()
     # vector of length n_groups
     adata.add['dpt_groups_names'] = np.array([str(i) for i in
-                                          np.arange(len(dpt.segs), dtype=int)])
+                                             np.arange(len(dpt.segs),
+                                             dtype=int)])
     # vector of length n_samples of groupnames
     adata.smp['dpt_groups'] = np.array([adata.add['dpt_groups_names'][i]
                                         if i < len(adata.add['dpt_groups_names'])
                                         else 'dontknow'
                                         for i in dpt.segslabels])
     # the ordering according to segments and pseudotime
-    adata.add['dpt_order'] = dpt.indices
+    adata.smp['dpt_order'] = dpt.indices
     # the changepoints - marking different segments - in the ordering above
     adata.add['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
     adata.add['dpt_segtips'] = dpt.segstips
-    return adata
+    sett.mt(0, 'finished, added\n'
+            '    "dpt_pseudotime" stores pseudotime (adata.smp),\n'
+            '    "dpt_groups" the segments of the tree trajectory (adata.smp),\n'
+            '    "dpt_order" is an index array for sorting the cells (adata.smp),\n'
+            '    "dpt_setips" stores the indices of tip cells')
+    if copy:
+        return adata
 
 
 def plot_dpt(adata,
@@ -164,7 +176,7 @@ def plot_dpt(adata,
     basis : {'diffmap', 'pca', 'tsne', 'spring'}
         Choose the basis in which to plot.
     smp : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+        Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
@@ -193,8 +205,8 @@ def plot_dpt(adata,
     if len(np.unique(adata.smp['dpt_groups'])) > 1:
         smps += ['dpt_groups']
     adata.add['highlights'] = (list([adata.add['iroot']])   # also plot the tip cell indices
-                           + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
-                              if adata.add['dpt_segtips'][i][1] != -1])
+                               + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
+                               if adata.add['dpt_segtips'][i][1] != -1])
     if smp is not None:
         smps += smp.split(',')
     if comps == 'all':
@@ -216,8 +228,8 @@ def plot_dpt(adata,
                              pal=pal,
                              right_margin=right_margin,
                              size=size)
-        writekey = sett.basekey + '_dpt_'+ basis
-        writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
+        writekey = sett.basekey + '_dpt_' + basis
+        writekey += (sett.plotsuffix + '_comps' + comps.replace(',', ''))
         plott.savefig(writekey)
     # plot segments and pseudotime
     plot_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
@@ -226,7 +238,7 @@ def plot_dpt(adata,
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     if X.shape[1] <= 11:
         # plot time series as gene expression vs time
-        plott.timeseries(X[adata.add['dpt_order']],
+        plott.timeseries(X[adata.smp['dpt_order']],
                          varnames=adata.var_names,
                          highlightsX=adata.add['dpt_changepoints'],
                          xlim=[0, 1.3*X.shape[0]])
@@ -234,7 +246,7 @@ def plot_dpt(adata,
         plott.savefig(writekey + '_vsorder')
     elif X.shape[1] < 50:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        plott.timeseries_as_heatmap(X[adata.add['dpt_order'], :40],
+        plott.timeseries_as_heatmap(X[adata.smp['dpt_order'], :40],
                                     varnames=adata.var_names,
                                     highlightsX=adata.add['dpt_changepoints'])
         pl.xlabel('dpt order')
@@ -251,20 +263,20 @@ def plot_segments_pseudotime(adata, cmap=None, pal=None):
     from .. import plotting as plott
     pl.figure()
     pl.subplot(211)
-    plott.timeseries_subplot(adata.smp['dpt_groups'][adata.add['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_groups'][adata.add['dpt_order']],
+    plott.timeseries_subplot(adata.smp['dpt_groups'][adata.smp['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_groups'][adata.smp['dpt_order']],
                              highlightsX=adata.add['dpt_changepoints'],
                              ylabel='dpt groups',
                              yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
                                      if len(adata.add['dpt_groups_names']) < 5 else None),
                              pal=pal)
     pl.subplot(212)
-    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata.add['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_pseudotime'][adata.add['dpt_order']],
+    plott.timeseries_subplot(adata.smp['dpt_pseudotime'][adata.smp['dpt_order'], np.newaxis],
+                             c=adata.smp['dpt_pseudotime'][adata.smp['dpt_order']],
                              xlabel='dpt order',
                              highlightsX=adata.add['dpt_changepoints'],
                              ylabel='pseudotime',
-                             yticks=[0,1],
+                             yticks=[0, 1],
                              cmap=cmap)
     writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
     plott.savefig(writekey + '_segpt')
@@ -280,8 +292,8 @@ class DPT(data_graph.DataGraph):
                  recompute_diffmap=None, n_branchings=0,
                  allow_branching_at_root=False):
         super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
-              n_pcs_post=n_pcs_post, n_jobs=n_jobs,
-              recompute_diffmap=recompute_diffmap)
+                                  n_pcs_post=n_pcs_post, n_jobs=n_jobs,
+                                  recompute_diffmap=recompute_diffmap)
         self.n_branchings = n_branchings
         self.allow_branching_at_root = allow_branching_at_root
 
@@ -322,8 +334,8 @@ class DPT(data_graph.DataGraph):
             List of indices of the tips of segments.
         """
         sett.m(0, 'detect', self.n_branchings, 'branchings')
-        # a segment is a subset of points of the data set
-        # it's completely defined by the indices of the points in the segment
+        # a segment is a subset of points of the data set (defined by the
+        # indices of the points in the segment)
         # initialize the search for branchings with a single segment,
         # that is, get the indices of the whole data set
         indices_all = np.arange(self.X.shape[0], dtype=int)
@@ -369,7 +381,6 @@ class DPT(data_graph.DataGraph):
         # store as class members
         self.segs = segs
         self.segstips = segstips
-        sett.mt(0, 'finished branching detection')
 
     def select_segment(self, segs, segstips):
         """
@@ -426,7 +437,7 @@ class DPT(data_graph.DataGraph):
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
         for iseg, seg in enumerate(self.segs):
-            mask = np.zeros(self.X.shape[0],dtype=bool)
+            mask = np.zeros(self.X.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
         # convert to arrays
@@ -438,7 +449,7 @@ class DPT(data_graph.DataGraph):
         Perform checks on segments and sort them according to pseudotime.
         """
         # find the segment that contains the root cell
-        for iseg,seg in enumerate(self.segs):
+        for iseg, seg in enumerate(self.segs):
             if self.iroot in seg:
                 isegroot = iseg
                 break
@@ -453,7 +464,7 @@ class DPT(data_graph.DataGraph):
             if (np.min(dist_to_root) > 0.01*self.Dchosen[tuple(self.segstips[iseg])]
                 and self.allow_branching_at_root):
                 allindices = np.arange(self.X.shape[0], dtype=int)
-                tips3_global = np.insert(self.segstips[iseg],0,self.iroot)
+                tips3_global = np.insert(self.segstips[iseg], 0, self.iroot)
                 # map the global position to the position within the segment
                 tips3 = np.array([np.where(allindices[self.segs[iseg]] == tip)[0][0]
                                   for tip in tips3_global])
@@ -491,8 +502,8 @@ class DPT(data_graph.DataGraph):
         """
         Return a single array that stores integer segment labels.
         """
-        segslabels = np.zeros(self.X.shape[0],dtype=int)
-        for iseg,seg in enumerate(self.segs):
+        segslabels = np.zeros(self.X.shape[0], dtype=int)
+        for iseg, seg in enumerate(self.segs):
             segslabels[seg] = iseg
         self.segslabels = segslabels
 
@@ -514,9 +525,9 @@ class DPT(data_graph.DataGraph):
         indices = np.argsort(self.segslabels)
         segslabels = self.segslabels[indices]
         # find changepoints of segments
-        changepoints = np.arange(indices.size-1)[np.diff(segslabels)==1]+1
+        changepoints = np.arange(indices.size-1)[np.diff(segslabels) == 1] + 1
         pseudotime = self.pseudotime[indices]
-        for iseg,seg in enumerate(self.segs):
+        for iseg, seg in enumerate(self.segs):
             # only consider one segment, it's already ordered by segment
             seg_sorted = seg[indices]
             # consider the pseudotime on this segment and sort them
@@ -617,11 +628,11 @@ class DPT(data_graph.DataGraph):
         # compute new tips within new segments
         ssegstips = []
         for inewseg, newseg in enumerate(ssegs):
-            if len(np.flatnonzero(newseg)) > 3: # terrible hack
+            if len(np.flatnonzero(newseg)) > 3:  # terrible hack
                 secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
                 ssegstips.append([tips[inewseg], secondtip])
             else:
-                ssegstips.append(np.array([-1, -1])) # terrible hack
+                ssegstips.append(np.array([-1, -1]))  # terrible hack
                 sett.m(0, inewseg, 'contains less than 4 data points')
         # for the points that cannot be assigned to the three segments of the
         # branching, hence have no tip cells, but form a subset of their own,
@@ -639,10 +650,10 @@ class DPT(data_graph.DataGraph):
         mask[[i for l in ssegs for i in l]] = True
         # append all the points that have not been assigned. in Haghverdi et
         # al. (2016), we call them 'undecided cells'
-        ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask==False])
+        ssegs.append(np.arange(Dseg.shape[0], dtype=int)[mask == False])
         return ssegs, ssegstips
 
-    def _detect_branching_single(self,Dseg,tips):
+    def _detect_branching_single(self, Dseg, tips):
         """
         Detect branching on given segment.
         """
@@ -651,15 +662,14 @@ class DPT(data_graph.DataGraph):
         # matter
         ssegs = []
         # permutations of tip cells
-        ps = [[0,1,2], # start by computing distances from the first tip
-              [1,2,0], #             -"-                       second tip
-              [2,0,1], #             -"-                       third tip
-              ]
-        for i,p in enumerate(ps):
+        ps = [[0, 1, 2],  # start by computing distances from the first tip
+              [1, 2, 0],  #             -"-                       second tip
+              [2, 0, 1]]  #             -"-                       third tip
+        for i, p in enumerate(ps):
             ssegs.append(self.__detect_branching(Dseg, tips[p])[0])
         return ssegs
 
-    def _detect_branching_versions(self,Dseg,tips):
+    def _detect_branching_versions(self, Dseg, tips):
         """
         Detect branching on given segment using three different versions.
 
@@ -670,16 +680,14 @@ class DPT(data_graph.DataGraph):
         # matter
         ssegs_versions = []
         # permutations of tip cells
-        ps = [[0,1,2], # start by computing distances from the first tip
-              [1,2,0], #             -"-                       second tip
-              [2,0,1], #             -"-                       third tip
-              ]
+        ps = [[0, 1, 2],  # start by computing distances from the first tip
+              [1, 2, 0],  #             -"-                       second tip
+              [2, 0, 1]]  #             -"-                       third tip
         # invert permutations
-        inv_ps = [[0,1,2],
-                  [2,0,1],
-                  [1,2,0],
-                  ]
-        for i,p in enumerate(ps):
+        inv_ps = [[0, 1, 2],
+                  [2, 0, 1],
+                  [1, 2, 0]]
+        for i, p in enumerate(ps):
             ssegs = self.__detect_branching(Dseg,
                                             tips[p])
             ssegs_versions.append(np.array(ssegs)[inv_ps[i]])
@@ -697,9 +705,8 @@ class DPT(data_graph.DataGraph):
 
         return ssegs
 
-    def __detect_branching(self,Dseg,tips):
-        """
-        Detect branching on given segment.
+    def __detect_branching(self, Dseg, tips):
+        """Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -745,17 +752,16 @@ class DPT(data_graph.DataGraph):
         # ibranch = int(0.95*imax) # more conservative here
         ssegs.append(idcs[:ibranch])
         # define nomalized distances to tip points for the rest of the data
-        dist1 = Dseg[tips[1],idcs[ibranch:]] / Dseg[tips[1],idcs[ibranch-1]]
-        dist2 = Dseg[tips[2],idcs[ibranch:]] / Dseg[tips[2],idcs[ibranch-1]]
+        dist1 = Dseg[tips[1], idcs[ibranch:]] / Dseg[tips[1], idcs[ibranch-1]]
+        dist2 = Dseg[tips[2], idcs[ibranch:]] / Dseg[tips[2], idcs[ibranch-1]]
         # assign points according to whether being closer to tip cell 1 or 2
         ssegs.append(idcs[ibranch:][dist1 <= dist2])
         ssegs.append(idcs[ibranch:][dist1 > dist2])
 
         return ssegs
 
-    def kendall_tau_split(self,a,b):
-        """
-        Return splitting index that maximizes correlation in the sequences.
+    def kendall_tau_split(self, a, b):
+        """Return splitting index that maximizes correlation in the sequences.
 
         Compute difference in Kendall tau for all splitted sequences.
 
@@ -783,44 +789,43 @@ class DPT(data_graph.DataGraph):
         import scipy as sp
         min_length = 5
         n = a.size
-        idx_range = np.arange(min_length,a.size-min_length-1,dtype=int)
+        idx_range = np.arange(min_length, a.size-min_length-1, dtype=int)
         corr_coeff = np.zeros(idx_range.size)
-        pos_old = sp.stats.kendalltau(a[:min_length],b[:min_length])[0]
-        neg_old = sp.stats.kendalltau(a[min_length:],b[min_length:])[0]
-        for ii,i in enumerate(idx_range):
+        pos_old = sp.stats.kendalltau(a[:min_length], b[:min_length])[0]
+        neg_old = sp.stats.kendalltau(a[min_length:], b[min_length:])[0]
+        for ii, i in enumerate(idx_range):
             if True:
                 # compute differences in concordance when adding a[i] and b[i]
                 # to the first subsequence, and removing these elements from
                 # the second subsequence
-                diff_pos, diff_neg = self._kendall_tau_diff(a,b,i)
-                pos = pos_old + self._kendall_tau_add(i,diff_pos,pos_old)
-                neg = neg_old + self._kendall_tau_subtract(n-i,diff_neg,neg_old)
+                diff_pos, diff_neg = self._kendall_tau_diff(a, b, i)
+                pos = pos_old + self._kendall_tau_add(i, diff_pos, pos_old)
+                neg = neg_old + self._kendall_tau_subtract(n-i, diff_neg, neg_old)
                 pos_old = pos
                 neg_old = neg
             if False:
                 # computation using sp.stats.kendalltau, takes much longer!
                 # just for debugging purposes
-                pos = sp.stats.kendalltau(a[:i+1],b[:i+1])[0]
-                neg = sp.stats.kendalltau(a[i+1:],b[i+1:])[0]
+                pos = sp.stats.kendalltau(a[:i+1], b[:i+1])[0]
+                neg = sp.stats.kendalltau(a[i+1:], b[i+1:])[0]
             if False:
                 # the following is much slower than using sp.stats.kendalltau,
                 # it is only good for debugging because it allows to compute the
                 # tau-a version, which does not account for ties, whereas
                 # sp.stats.kendalltau computes tau-b version, which accounts for
                 # ties
-                pos = sp.stats.mstats.kendalltau(a[:i],b[:i],use_ties=False)[0]
-                neg = sp.stats.mstats.kendalltau(a[i:],b[i:],use_ties=False)[0]
+                pos = sp.stats.mstats.kendalltau(a[:i], b[:i], use_ties=False)[0]
+                neg = sp.stats.mstats.kendalltau(a[i:], b[i:], use_ties=False)[0]
             corr_coeff[ii] = pos - neg
         iimax = np.argmax(corr_coeff)
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            sett.m(1,'  -> is root itself, never obtain significant correlation')
+            sett.m(1, '... is root itself, never obtain significant correlation')
         return imax
 
-    def _kendall_tau_add(self,len_old,diff_pos,tau_old):
-        """
-        Compute Kendall tau delta.
+    def _kendall_tau_add(self, len_old, diff_pos, tau_old):
+        """Compute Kendall tau delta.
 
         The new sequence has length len_old + 1.
 
@@ -835,9 +840,8 @@ class DPT(data_graph.DataGraph):
         """
         return 2./(len_old+1)*(float(diff_pos)/len_old-tau_old)
 
-    def _kendall_tau_subtract(self,len_old,diff_neg,tau_old):
-        """
-        Compute Kendall tau delta.
+    def _kendall_tau_subtract(self, len_old, diff_neg, tau_old):
+        """Compute Kendall tau delta.
 
         The new sequence has length len_old - 1.
 
@@ -852,9 +856,8 @@ class DPT(data_graph.DataGraph):
         """
         return 2./(len_old-2)*(-float(diff_neg)/(len_old-1)+tau_old)
 
-    def _kendall_tau_diff(self,a,b,i):
-        """
-        Compute difference in concordance of pairs in split sequences.
+    def _kendall_tau_diff(self, a, b, i):
+        """Compute difference in concordance of pairs in split sequences.
 
         Consider splitting a and b at index i.
 
@@ -870,22 +873,22 @@ class DPT(data_graph.DataGraph):
         """
         # compute ordering relation of the single points a[i] and b[i]
         # with all previous points of the sequences a and b, respectively
-        a_pos = np.zeros(a[:i].size,dtype=int)
-        a_pos[a[:i]>a[i]] = 1
-        a_pos[a[:i]<a[i]] = -1
-        b_pos = np.zeros(b[:i].size,dtype=int)
-        b_pos[b[:i]>b[i]] = 1
-        b_pos[b[:i]<b[i]] = -1
-        diff_pos = np.dot(a_pos,b_pos).astype(float)
+        a_pos = np.zeros(a[:i].size, dtype=int)
+        a_pos[a[:i] > a[i]] = 1
+        a_pos[a[:i] < a[i]] = -1
+        b_pos = np.zeros(b[:i].size, dtype=int)
+        b_pos[b[:i] > b[i]] = 1
+        b_pos[b[:i] < b[i]] = -1
+        diff_pos = np.dot(a_pos, b_pos).astype(float)
 
         # compute ordering relation of the single points a[i] and b[i]
         # with all later points of the sequences
-        a_neg = np.zeros(a[i:].size,dtype=int)
-        a_neg[a[i:]>a[i]] = 1
-        a_neg[a[i:]<a[i]] = -1
-        b_neg = np.zeros(b[i:].size,dtype=int)
-        b_neg[b[i:]>b[i]] = 1
-        b_neg[b[i:]<b[i]] = -1
-        diff_neg = np.dot(a_neg,b_neg)
+        a_neg = np.zeros(a[i:].size, dtype=int)
+        a_neg[a[i:] > a[i]] = 1
+        a_neg[a[i:] < a[i]] = -1
+        b_neg = np.zeros(b[i:].size, dtype=int)
+        b_neg[b[i:] > b[i]] = 1
+        b_neg[b[i:] < b[i]] = -1
+        diff_neg = np.dot(a_neg, b_neg)
 
         return diff_pos, diff_neg

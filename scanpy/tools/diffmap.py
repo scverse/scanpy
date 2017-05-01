@@ -1,4 +1,4 @@
-# Copyright 2016-2017 F. Alexander Wolf (http://falexwolf.de).
+# Author: F. Alex Wolf (http://falexwolf.de)
 """
 Diffusion Maps
 
@@ -19,7 +19,7 @@ See also
 from ..tools import dpt
 from .. import settings as sett
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=2):
+def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None, copy=False):
     """
     Compute diffusion map embedding as of Coifman et al. (2005).
 
@@ -48,36 +48,46 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=2):
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
         of the Kernel Gaussian (method 'global').
-    n_cpus : int
-        Number of CPUs to use (default: 2).
+    n_cpus : int or None
+        Number of CPUs to use (default: sett.n_cpus).
+    copy : bool (default: False)
+        Return a copy instead of writing to adata.
 
-    Returns
+    Notes
     -------
+    The following is added to adata.smp
     X_diffmap : np.ndarray
-        Array of shape n_samples x n_comps. DiffMap representation of data, which is the right eigen
-        basis of transition matrix with eigenvectors as columns.
+        Array of shape n_samples x n_comps. DiffMap representation of data,
+        which is the right eigen basis of transition matrix with eigenvectors as
+        columns.
+    The following is added to adata.add
+    diffmap_evals : np.ndarray
+        Eigenvalues of the transition matrix.
     """
+    if copy:
+        adata = adata.copy()
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
                    n_jobs=n_jobs, recompute_diffmap=True)
     ddmap = dmap.diffmap()
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
+    adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
-    adata.add['diffmap_comp0'] = dmap.rbasis[:, 0]
-    return adata
+    if copy:
+        return adata
 
 
 def plot_diffmap(adata,
-         smp=None,
-         names=None,
-         comps=None,
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=3,
-         titles=None):
+                 smp=None,
+                 names=None,
+                 comps=None,
+                 cont=None,
+                 layout='2d',
+                 legendloc='right margin',
+                 cmap=None,
+                 pal=None,
+                 right_margin=None,
+                 size=3,
+                 titles=None):
     """
     Scatter plots.
 
@@ -138,7 +148,7 @@ def plot_diffmap(adata,
         if smps[0] is not None:
             if isinstance(comps, list):
                 comps = ','.join([str(comp) for comp in comps])
-            writekey += (sett.plotsuffix + '_comps' + comps.replace(',',''))
+            writekey += (sett.plotsuffix + '_comps' + comps.replace(',', ''))
         plott.savefig(writekey)
     if not sett.savefigs and sett.autoshow:
         from ..compat.matplotlib import pyplot as pl
