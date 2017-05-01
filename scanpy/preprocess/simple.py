@@ -240,7 +240,7 @@ def log1p(data):
     Apply logarithm to count data "plus 1".
     """
     if isinstance(data, AnnData):
-        return AnnData(log1p(data.X), data.smp, data.var, **data.add)
+        return AnnData(log1p(data.X), data.smp, data.var, data.add)
     X = data  # proceed with data matrix
     if not issparse(X):
         X = np.log1p(X)
@@ -370,7 +370,7 @@ def normalize_per_cell(data, scale_factor=None):
     if isinstance(data, AnnData):
         adata = data
         X = normalize_per_cell(adata.X, scale_factor)
-        return AnnData(X, adata.smp, adata.var, **adata.add)
+        return AnnData(X, adata.smp, adata.var, adata.add)
     X = data  # proceed with the data matrix
     counts_per_cell = np.sum(X, axis=1)
     if issparse(X):
@@ -489,7 +489,7 @@ def scale(data, zero_center=None, max_value=None):
     if isinstance(data, AnnData):
         adata = data
         X = scale(adata.X, zero_center)
-        return AnnData(X, adata.smp, adata.var, **adata.add)
+        return AnnData(X, adata.smp, adata.var, adata.add)
     X = data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if zero_center and max_value:
