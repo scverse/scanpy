@@ -5,11 +5,9 @@ Simple Preprocessing Functions
 Compositions of these functions are found in sc.preprocess.recipes.
 """
 
-import sys
 import numpy as np
 import scipy as sp
 from joblib import Parallel, delayed
-from collections import OrderedDict
 from scipy.sparse import issparse
 import statsmodels.api as sm
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
@@ -17,7 +15,7 @@ from ..classes.ann_data import AnnData
 from .. import settings as sett
 
 
-def filter_cells(data, min_counts=None, min_genes=None):
+def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     """
     Keep cells that have at least `min_counts` UMI counts or `min_genes`
     genes expressed.
@@ -31,16 +29,18 @@ def filter_cells(data, min_counts=None, min_genes=None):
         and columns to genes.
     min_counts : int
         Minimum number of counts required for a cell to pass filtering.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
 
-    Returns
-    -------
-    If data is a data matrix X
+    Notes
+    -----
+    If data is a data matrix X, the following to arrays are returned
         cell_filter : np.ndarray
             Boolean index mask that does filtering. True means that the cell is
             kept. False means the cell is removed.
         number_per_cell: np.ndarray
             Either n_counts or n_genes per cell.
-    otherwise:
+    otherwise, if copy == False, the adata object is updated, otherwise a copy is returned
         adata : AnnData
             The filtered adata object, with the count info stored in adata.smp.
     """
@@ -49,44 +49,49 @@ def filter_cells(data, min_counts=None, min_genes=None):
     if min_genes is None and min_counts is None:
         raise ValueError('Provide one of min_counts or min_genes.')
     if isinstance(data, AnnData):
-        adata = data
+        adata = data.copy() if copy else data
         cell_filter, number = filter_cells(adata.X, min_counts, min_genes)
         if min_genes is None:
             adata.smp['n_counts'] = number
         else:
             adata.smp['n_genes'] = number
-        return adata[cell_filter]
+        adata.filter_smp(cell_filter)
+        return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     number_per_cell = np.sum(X if min_genes is None else X > 0, axis=1)
     if issparse(X):
-       number_per_cell = number_per_cell.A1
+        number_per_cell = number_per_cell.A1
     cell_filter = number_per_cell >= min_number
     sett.m(0, '... filtered out', np.sum(~cell_filter), 'outlier cells')
     return cell_filter, number_per_cell
 
 
-def filter_genes(data, min_cells=None, min_counts=None):
-    """
-    Keep genes that have at least `min_counts` counts or are expressed in
-    at least `min_cells` cells / samples.
+def filter_genes(data, min_cells=None, min_counts=None, copy=False):
+    """Filter genes.
 
-    Filter out genes whose expression is not supported by sufficient statistical
-    evidence.
+    Keep genes that have at least `min_counts` counts or are expressed in at
+    least `min_cells` cells / samples. The latter means that genes are filtered
+    whose expression is not supported by sufficient statistical evidence.
+
+    Parameters
+    ----------
+    See filter_cells.
     """
     if min_cells is not None and min_counts is not None:
         raise ValueError('Either specify min_counts or min_cells, but not both.')
     if min_cells is None and min_counts is None:
         raise ValueError('Provide one of min_counts or min_cells.')
     if isinstance(data, AnnData):
-        adata = data
+        adata = data.copy() if copy else data
         gene_filter, number = filter_genes(adata.X, min_cells=min_cells,
                                            min_counts=min_counts)
         if min_cells is None:
             adata.var['n_counts'] = number
         else:
             adata.var['n_cells'] = number
-        return adata[:, gene_filter]
+        adata.filter_var(gene_filter)
+        return adata if copy else None
     X = data  # proceed with processing the data matrix
     number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
     min_number = min_counts if min_cells is None else min_cells
@@ -104,10 +109,9 @@ def filter_genes_dispersion(data, log=True,
                             min_disp=0.5, max_disp=None,
                             min_mean=0.0125, max_mean=3,
                             n_top_genes=None,
-                            norm_method='seurat',
-                            plot=False):
-    """
-    Extract highly variable genes.
+                            flavor='seurat',
+                            plot=False, copy=False):
+    """Extract highly variable genes.
 
     Similar functions are used, for example, by Cell Ranger (Zheng et al., 2017)
     and Seurat (Macosko et al., 2015).
@@ -119,36 +123,47 @@ def filter_genes_dispersion(data, log=True,
     log : bool
         Use the logarithm of mean and variance.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=None : float
-        Cutoffs for the gene expression.
+        Cutoffs for the gene expression, used if n_top_genes is None.
     n_top_genes : int or None (default: None)
         Number of highly-variable genes to keep.
+    flavor : {'seurat', 'cell_ranger'}
+        Choose method for computing normalized dispersion. Note that Seurat
+        passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
     plot : bool (default: False)
         Plot the result.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
 
-    Returns
-    -------
+    Notes
+    -----
+    If an AnnData is passed and copy == True, the following is returned, otherwise, adata is updated.
     adata : AnnData
         Filtered AnnData object.
-    Writes the following fields to adata.var:
+    with the following fields to adata.var:
         means : np.ndarray of shape n_genes
             Means per gene.
         dispersions : np.ndarray of shape n_genes
             Dispersions per gene.
+        dispersions_norm : np.ndarray of shape n_genes
+            Dispersions per gene.
+    If a data matrix is passed, the information is returned as tuple.
+        gene_filter, means, dispersions, dispersion_norm
     """
     if isinstance(data, AnnData):
-        adata = data
+        adata = data.copy() if copy else data
         result = filter_genes_dispersion(adata.X, log=log,
                                          min_disp=min_disp, max_disp=max_disp,
                                          min_mean=min_mean, max_mean=max_mean,
                                          n_top_genes=n_top_genes,
-                                         norm_method=norm_method, plot=plot)
+                                         flavor=flavor, plot=plot)
         gene_filter, means, dispersions, dispersions_norm = result
         adata.var['means'] = means
         adata.var['dispersions'] = dispersions
         adata.var['dispersions_norm'] = dispersions_norm
         if plot:
             plot_filter_genes_dispersion(adata, gene_filter=gene_filter, log=not log)
-        return adata[:, gene_filter]
+        adata.filter_var(gene_filter)
+        return adata if copy else None
     sett.m(0, '... filter highly varying genes by dispersion and mean')
     X = data  # proceed with data matrix
     if False:  # the following is less efficient and has no support for sparse matrices
@@ -170,7 +185,7 @@ def filter_genes_dispersion(data, log=True,
     df = pd.DataFrame()
     df['mean'] = mean
     df['dispersion'] = dispersion
-    if norm_method == 'seurat':
+    if flavor == 'seurat':
         df['mean_bin'] = pd.cut(df['mean'], bins=20)
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_mean_bin = disp_grouped.mean()
@@ -178,7 +193,7 @@ def filter_genes_dispersion(data, log=True,
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
                                  - disp_mean_bin[df['mean_bin']].values) \
                                  / disp_std_bin[df['mean_bin']].values
-    elif norm_method == 'cell_ranger':
+    elif flavor == 'cell_ranger':
         df['mean_bin'] = pd.cut(df['mean'],
                                 np.r_[-np.inf, np.percentile(df['mean'],
                                                              np.arange(10, 105, 5)),
@@ -197,7 +212,7 @@ def filter_genes_dispersion(data, log=True,
                                        - df['bin_disp_median']) \
                                        / df['bin_disp_mad']
     else:
-        raise ValueError('norm_method needs to be `seurat` or `cell_ranger`')
+        raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = np.array(df['dispersion_norm'].values)
     if n_top_genes is not None:
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
@@ -215,44 +230,56 @@ def filter_genes_dispersion(data, log=True,
     return gene_filter, df['mean'].values, df['dispersion'].values, df['dispersion_norm'].values
 
 
-def filter_genes_cv(X, Ecutoff, cvFilter):
+def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
+    """Filter genes by coefficient of variance and mean.
+
+    See `filter_genes_dispersion`.
     """
-    Filter genes by coefficient of variance and mean.
-    """
+    if issparse(X):
+        raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
     mean_filter = np.mean(X, axis=0) > Ecutoff
     var_filter = np.std(X, axis=0) / (np.mean(X, axis=0) + .0001) > cvFilter
     gene_filter = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_filter
 
 
-def filter_genes_fano(X, Ecutoff, Vcutoff):
+def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
+    """Filter genes by fano factor and mean.
+
+    See `filter_genes_dispersion`.
     """
-    Filter genes by fano factor and mean.
-    """
+    if issparse(X):
+        raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
     mean_filter = np.mean(X, axis=0) > Ecutoff
     var_filter = np.var(X, axis=0) / (np.mean(X, axis=0) + .0001) > Vcutoff
     gene_filter = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
     return gene_filter
 
 
-def log1p(data):
-    """
-    Apply logarithm to count data "plus 1".
+def log1p(data, copy=False):
+    """Apply logarithm to count data "plus 1".
+
+    Parameters
+    ----------
+    data : array-like or AnnData
+        The data matrix.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
     """
     if isinstance(data, AnnData):
-        return AnnData(log1p(data.X), data.smp, data.var, data.add)
+        adata = data.copy() if copy else data
+        data.X = log1p(data.X)
+        return adata if copy else None
     X = data  # proceed with data matrix
     if not issparse(X):
-        X = np.log1p(X)
+        return np.log1p(X)
     else:
-        X = X.log1p()
-    return X
+        return X.log1p()
 
 
 def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
-        random_state=None, recompute=True, mute=False, return_info=None, copy=False):
-    """
-    Embed data using PCA.
+        random_state=None, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
+    """Embed data using PCA.
 
     Parameters
     ----------
@@ -277,9 +304,15 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
     return_info : bool or None, optional (default: None)
         If providing an array, this defaults to False, if providing an AnnData,
         defaults to true.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
+    dtype : str
+        Numpy data type string to which to convert the result.
 
-    Returns
-    -------
+    Notes
+    -----
+    If X is array-like and return_info == True, returns, otherwise adds to (a copy
+    of) AnnData:
     X_pca : np.ndarray
          PCA representation of the data with shape n_variables x n_comps.
          Depending on whether an AnnData or a data matrix has been
@@ -292,9 +325,7 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
          adata, if provided.
     """
     if isinstance(data, AnnData):
-        adata = data
-        if copy:
-            adata = adata.copy()
+        adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
         if ('X_pca' in adata.smp
             and adata.smp['X_pca'].shape[1] >= n_comps
@@ -314,12 +345,10 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
                 adata.var['PC' + str(icomp)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
             sett.mt(0, 'finished, added\n'
-                    '    "X_pca" to adata.smp, "PC1", "PC2", ... to adata.var\n'
-                    '    and "pca_variance_ratio" to adata.add')
-        if copy:
-            return adata
-        else:
-            return None
+                    '    the data representation "X_pca" (adata.smp)'
+                    '    the loadings "PC1", "PC2", ... (adata.var)\n'
+                    '    and "pca_variance_ratio" (adata.add)')
+        return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
     if X.shape[1] < n_comps:
@@ -340,14 +369,17 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
         sett.m(verbosity_level, '... without zero-centering')
         pca_ = TruncatedSVD(n_components=n_comps)
     X_pca = pca_.fit_transform(X)
+    if X_pca.dtype.descr != np.dtype(dtype).descr:
+        X_pca = X_pca.astype(dtype)
     if False if return_info is None else return_info:
-        return X_pca.astype(np.float32), pca_.components_, pca_.explained_variance_ratio_
+        return X_pca, pca_.components_, pca_.explained_variance_ratio_
     else:
-        return X_pca.astype(np.float32)
+        return X_pca
 
 
-def normalize_per_cell(data, scale_factor=None):
-    """
+def normalize_per_cell(data, scale_factor=None, copy=False):
+    """Normalize each cell.
+
     Normalize each cell by UMI count, so that every cell has the same total
     count.
 
@@ -361,6 +393,8 @@ def normalize_per_cell(data, scale_factor=None):
         Data matrix. Rows correspond to cells and columns to genes.
     scale_factor : float or None (default: None)
         If None, multiply by median.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
 
     Returns
     -------
@@ -368,9 +402,9 @@ def normalize_per_cell(data, scale_factor=None):
         Normalized version of the original expression matrix.
     """
     if isinstance(data, AnnData):
-        adata = data
-        X = normalize_per_cell(adata.X, scale_factor)
-        return AnnData(X, adata.smp, adata.var, adata.add)
+        adata = data.copy() if copy else data
+        adata.X = normalize_per_cell(adata.X, scale_factor)
+        return adata if copy else None
     X = data  # proceed with the data matrix
     counts_per_cell = np.sum(X, axis=1)
     if issparse(X):
@@ -386,11 +420,12 @@ def normalize_per_cell(data, scale_factor=None):
 
 
 def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
-    """
+    """Normalize each cell.
+
+    This is a legacy version. See `normalize_per_cell` instead.
+
     Normalize each cell by UMI count, so that every cell has the same total
     count.
-
-    See normalize_per_cell(...).
 
     Parameters
     ----------
@@ -428,29 +463,34 @@ def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
     return X_norm
 
 
-def regress_out_return_copy(adata, smp_keys, n_jobs=2, copy=True):
-    """
-    Regress out unwanted sources of variation.
+def regress_out(adata, smp_keys, n_jobs=None, copy=False):
+    """Regress out unwanted sources of variation.
 
     Yields a dense matrix.
+
+    Parameters
+    ----------
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
     """
     sett.mt(0, 'regress out', smp_keys)
     if issparse(adata.X):
         sett.m(0, '... sparse input is densified and may '
                'lead to huge memory consumption')
+    if not copy:
+        sett.m(0, '... note that this is an inplace computation '
+               'and will return None, set copy true if you want a copy')
+    adata = adata.copy() if copy else adata
+    n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # the code here can still be much optimized
-    # ensuring a homogeneous data type seems to be necessary for GLM
-    regressors = np.array([adata.smp[key].astype(float)
-                           for key in smp_keys]).T
+    regressors = np.array([adata.smp[key] for key in smp_keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
-    if copy:
-        adata_corrected = adata.copy()
-    len_junk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
-    n_junks = np.ceil(adata.X.shape[1] / len_junk).astype(int)
-    junks = [np.arange(start, min(start + len_junk, adata.X.shape[1]))
-             for start in range(0, n_junks * len_junk, len_junk)]
-    if issparse(adata_corrected.X):
-        adata_corrected.X = adata_corrected.X.toarray()
+    len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
+    n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
+    chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
+              for start in range(0, n_chunks * len_chunk, len_chunk)]
+    if issparse(adata.X):
+        adata.X = adata.X.toarray()
     if sett._is_interactive:
         # from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
@@ -460,21 +500,18 @@ def regress_out_return_copy(adata, smp_keys, n_jobs=2, copy=True):
         sett.m(0, '... nicer progress bars as on command line come soon')
     else:
         from tqdm import tqdm
-    for junk in tqdm(junks):
+    for chunk in tqdm(chunks):
         result_lst = Parallel(n_jobs=n_jobs)(
-                              delayed(_regress_out)(
-                                      col_index, adata.X, regressors)
-                                      for col_index in junk)
-        for i_column, column in enumerate(junk):
-            adata_corrected.X[:, column] = result_lst[i_column]
+            delayed(_regress_out)(
+                col_index, adata.X, regressors) for col_index in chunk)
+        for i_column, column in enumerate(chunk):
+            adata.X[:, column] = result_lst[i_column]
     sett.mt(0, 'finished')
-    if copy:
-        return adata_corrected
+    return adata if copy else None
 
 
-def scale(data, zero_center=None, max_value=None):
-    """
-    Scale data to unit variance and zero mean (`if zero_center`).
+def scale(data, zero_center=None, max_value=None, copy=False):
+    """Scale data to unit variance and zero mean (`if zero_center`).
 
     Parameters
     ----------
@@ -485,11 +522,13 @@ def scale(data, zero_center=None, max_value=None):
     max_value : float or None, optional (default: None)
         Clip to this value after scaling. Defaults to 10 if zero_center is True,
         otherwise np.inf (no cutoff).
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
     """
     if isinstance(data, AnnData):
-        adata = data
-        X = scale(adata.X, zero_center)
-        return AnnData(X, adata.smp, adata.var, adata.add)
+        adata = data.copy() if copy else data
+        adata.X = scale(adata.X, zero_center)
+        return adata if copy else None
     X = data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if zero_center and max_value:
@@ -514,9 +553,8 @@ def scale(data, zero_center=None, max_value=None):
     return X_scaled
 
 
-def subsample(data, subsample, seed=0):
-    """
-    Subsample.
+def subsample(data, subsample, seed=0, copy=False):
+    """Subsample.
 
     Parameters
     ----------
@@ -525,12 +563,14 @@ def subsample(data, subsample, seed=0):
     subsample : int
         Subsample to a fraction of 1/subsample of the data.
     seed : int
-        Root to change subsampling.
+        Random seed to change subsampling.
+    copy : bool (default: False)
+        If an AnnData is passed, determines whether a copy is returned.
 
-    Returns
-    -------
-    adata : dict containing modified entries
-        'row_names', 'expindices', 'explabels', 'expcolors'
+    Notes
+    -----
+    Returns X, smp_indices if data is array-like, otherwise subsamples the passed
+    AnnData (copy == False) or a copy of it (copy == True).
     """
     from .. import utils
     if not isinstance(data, AnnData):
@@ -538,17 +578,18 @@ def subsample(data, subsample, seed=0):
         return utils.subsample(X, subsample, seed)
     adata = data
     _, smp_indices = utils.subsample(adata.X, subsample, seed)
-    adata = adata[smp_indices, ]
+    adata = adata[smp_indices]
     for k in adata.smp_keys():
-        if k + '_masks' in adata.add:  # TODO: this should also be taken into account when slicing
-            adata[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
-    adata.add['subsampled'] = True
-    return adata
+        # TODO: this should also be taken into account when slicing
+        if k + '_masks' in adata.add:
+            adata.add[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
+    return adata if copy else None
 
 
-def zscore(X):
-    """
-    Z-score standardize each variable/gene in X.
+def zscore_deprecated(X):
+    """Z-score standardize each variable/gene in X.
+
+    Use `scale` instead.
 
     Parameters
     ----------
@@ -571,8 +612,7 @@ def zscore(X):
 
 
 def plot_filter_genes_dispersion(adata, gene_filter, log=True):
-    """
-    Plot dispersions vs. means for genes.
+    """Plot dispersions vs. means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
@@ -586,7 +626,7 @@ def plot_filter_genes_dispersion(adata, gene_filter, log=True):
         Plot on logarithmic axes.
     """
     from matplotlib import pyplot as pl
-    for d in [ 'dispersions_norm', 'dispersions']:
+    for d in ['dispersions_norm', 'dispersions']:
         means, dispersions = adata.var['means'], adata.var[d]
         pl.figure()
         for label, color, mask in zip(['highly variable genes', 'other genes'],
@@ -615,7 +655,7 @@ def plot_filter_genes_dispersion(adata, gene_filter, log=True):
 
 def _regress_out(col_index, responses, regressors):
     try:
-        result = sm.GLM(responses[:, col_index].todense().A1,
+        result = sm.GLM(responses[:, col_index],
                         regressors, family=sm.families.Gaussian()).fit()
         new_column = result.resid_response
     except PerfectSeparationError:  # this emulates R's behavior
@@ -624,12 +664,12 @@ def _regress_out(col_index, responses, regressors):
     return new_column
 
 
-def _regress_out_junk(junk, responses, regressors):
-    junk_array = np.zeros((responses.shape[0], junk.size),
+def _regress_out_chunk(chunk, responses, regressors):
+    chunk_array = np.zeros((responses.shape[0], chunk.size),
                            dtype=responses.dtype)
-    for i, col_index in enumerate(junk):
-        junk_array[:, i] = _regress_out(col_index,  responses, regressors)
-    return junk_array
+    for i, col_index in enumerate(chunk):
+        chunk_array[:, i] = _regress_out(col_index, responses, regressors)
+    return chunk_array
 
 
 def _pca_fallback(data, n_comps=2):

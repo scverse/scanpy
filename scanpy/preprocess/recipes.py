@@ -4,8 +4,7 @@ Preprocessing recipes from the literature
 """
 
 from .. import settings as sett
-from .. import utils
-from .simple import normalize_per_cell_weinreb16, filter_genes_cv, pca, zscore
+from .simple import normalize_per_cell_weinreb16, filter_genes_cv_deprecated, pca, zscore_deprecated
 
 def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
               n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
@@ -38,18 +37,16 @@ def weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
                                            mult_with_mean=True)
     # filter out genes with mean expression < 0.1 and coefficient of variance <
     # cv_threshold
-    gene_filter = filter_genes_cv(adata.X, mean_threshold, cv_threshold)
+    gene_filter = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
+    # three alternative ways of slicing
+    adata.filter_var(gene_filter)    # this modifies the object itself
     # adata = adata[:, gene_filter]  # this does a copy
-    adata.filter_var(gene_filter)  # this modifies the object itself
     # adata[:, ~gene_filter] = None  # this doesn't work yet
     # compute zscore of filtered matrix and compute PCA
-    X_pca = pca(zscore(adata.X),
+    X_pca = pca(zscore_deprecated(adata.X),
                 n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
     adata.smp['X_pca'] = X_pca
     sett.m(0, 'X_pca (computed from z-scored X) has shape n_samples x n_comps =',
            X_pca.shape[0], 'x', X_pca.shape[1])
-    if copy:
-        return adata
-    else:
-        return None
+    return adata if copy else None
