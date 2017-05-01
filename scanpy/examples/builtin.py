@@ -167,7 +167,7 @@ def moignard15():
     gene_filter = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_filter]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata.add['xroot'] = adata.X[532] # note that in Matlab/R, counting starts at 1
+    adata.add['xroot'] = adata.X[532]  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
@@ -195,7 +195,7 @@ def paul15():
     """
     adata = paul15_raw()
     adata.X = sc.pp.log1p(adata.X)
-    adata.add['xroot'] = adata.X[adata.add['iroot']] # adjust expression vector of root cell
+    adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
 
@@ -206,7 +206,7 @@ def paul15pca():
     """
     adata = paul15_raw()
     adata.X = sc.pp.log1p(adata.X)
-    adata.add['xroot'] = adata.X[adata.add['iroot']] # adjust expression vector of root cell
+    adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
 

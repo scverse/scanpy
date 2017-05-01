@@ -8,7 +8,9 @@ import sys
 import h5py
 import numpy as np
 
+from . import utils
 from . import settings as sett
+from .classes.ann_data import AnnData
 
 avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
 """ Available file formats for reading data. """
@@ -36,7 +38,6 @@ def write(filename_or_key, data, ext=None):
         Annotated data object or dict storing arrays as values.
     """
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
-    from .classes.ann_data import AnnData
     if isinstance(data, AnnData):
         d = data.to_dict()
     else:
@@ -61,7 +62,7 @@ def write(filename_or_key, data, ext=None):
 
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
-         as_strings=False, backup_url='', return_dict=False):
+         as_strings=False, backup_url='', return_dict=False, reread=None):
     """Read file or dictionary and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -89,6 +90,8 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         Retrieve the file from a URL if not present on disk.
     return_dict : bool, optional (default: False)
         Return dictionary instead of AnnData object.
+    reread : bool or None (default: None)
+        Reread source file instead of cached file if reading from a slow format.
 
     Returns
     -------
@@ -107,12 +110,20 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     from .classes.ann_data import AnnData
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names,
-                      as_strings, backup_url)
-        if return_dict:
-            return d
+                      as_strings, backup_url, reread)
+        if isinstance(d, dict):
+            if return_dict:
+                return d
+            else:
+                adata = AnnData(d)
+                return adata
+        elif isinstance(d, AnnData):
+            if return_dict:
+                return d.to_dict()
+            else:
+                return d
         else:
-            adata = AnnData(d)
-            return adata
+            raise ValueError('Do not know how to process read data.')
 
     # generate filename and read to dict
     key = filename_or_key
@@ -216,7 +227,7 @@ def get_params_from_list(params_list):
 
 
 def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
-              as_strings=False, backup_url=''):
+              as_strings=False, backup_url='', reread=None):
     """
     Read file and return data dictionary.
 
@@ -242,6 +253,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         Read names instead of numbers.
     backup_url : str
         URL for download of file in case it's not present.
+    reread : bool or None (default: None)
+        Reread source file instead of cached file if reading from a slow format.
 
     Returns
     -------
@@ -279,7 +292,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     fast_ext = sett.file_format_data if sett.file_format_data in {'h5', 'npz'} else 'h5'
     filename_fast = (sett.writedir + 'data/'
                      + filename_stripped.replace('.' + ext, '.' + fast_ext))
-    if not os.path.exists(filename_fast) or sett.recompute == 'read':
+    reread = sett.recompute == 'read' if reread is None else reread
+    if not os.path.exists(filename_fast) or reread:
         sett.m(0, 'reading file', filename,
                '\n... writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
@@ -301,7 +315,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         elif ext in ['txt', 'tab', 'data']:
             if ext == 'data':
                 sett.m(0, '... assuming ".data" means tab or white-space separated text file')
-                sett.m(0, '--> change this by specifying ext to sc.read')
+                sett.m(0, '--> change this by passing `ext` to sc.read')
             ddata = read_txt(filename, delim, first_column_names,
                              as_strings=as_strings)
         elif ext == 'soft.gz':
@@ -310,26 +324,27 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             sys.exit('TODO: implement similar to read_softgz')
         else:
             raise ValueError('Unkown extension', ext)
-        # write as fast for faster reading when calling the next time
+        # write for faster reading when calling the next time
         write_dict_to_file(filename_fast, ddata, sett.file_format_data)
     else:
         ddata = read_file_to_dict(filename_fast, sett.file_format_data)
     return ddata
 
-def _read_mtx(filename):
-    """
-    Read mtx file.
+def _read_mtx(filename, return_dict=True):
+    """Read mtx file.
     """
     from scipy.io import mmread
     X = mmread(filename)
     from scipy.sparse.csr import csr_matrix
     X = csr_matrix(X)
     sett.m(0, '... did not find row_names or col_names')
-    return {'X': X}
+    if return_dict:
+        return {'X': X}
+    else:
+        return AnnData(X)
 
 def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
-    """
-    Return ddata dictionary.
+    """Return data dictionary or AnnData object.
 
     Parameters
     ----------
@@ -360,7 +375,8 @@ def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
         ddata = read_txt_as_floats(filename, delim, first_column_names)
     return ddata
 
-def read_txt_as_floats(filename, delim=None, first_column_names=None):
+
+def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='float32', return_dict=True):
     """
     Return data as list of lists of strings and the header as string.
 
@@ -441,7 +457,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
     # - we don't use the latter as it would involve another slicing step
     #   in the end, to separate row_names from float data, slicing takes
     #   a lot of memory and cpu time
-    data = np.array(data, dtype=np.float64)
+    data = np.array(data, dtype=dtype)
     sett.mt(0, 'constructed array from list of list')
     # transform row_names
     if not row_names:
@@ -456,8 +472,11 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None):
         col_names = col_names[1:]
     for iname, name in enumerate(col_names):
         col_names[iname] = name.strip('"')
-    ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
-    return ddata
+    if return_dict:
+        return {'X': data, 'col_names': col_names, 'row_names': row_names}
+    else:
+        return AnnData(data, smp={'smp_names': row_names}, var={'var_names': col_names})
+
 
 def read_txt_as_strings(filename, delim):
     """
@@ -494,10 +513,11 @@ def read_txt_as_strings(filename, delim):
         sett.m(0, '... first row is stored in "col_names"')
         sett.m(0, '... first column is stored in "row_names"')
         sett.m(0, '... data is stored in X')
-    ddata = {'X': X, 'col_names': col_names, 'row_names': row_names}
+    ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
     return ddata
 
-def _read_hdf5_single(filename, key=''):
+
+def _read_hdf5_single(filename, key='', dtype='float32'):
     """
     Read a single dataset from an hdf5 file.
 
@@ -536,7 +556,7 @@ def _read_hdf5_single(filename, key=''):
         if X.dtype.kind == 'S':
             X = X.astype(str)
         # init dict
-        ddata = {'X' : X}
+        ddata = {'X': X.astype(dtype)}
         # try to find row and column names
         for iname, name in enumerate(['row_names', 'col_names']):
             if name in keys:
@@ -578,7 +598,7 @@ def _read_excel(filename, sheet=''):
     # rely on pandas for reading an excel file
     try:
         from pandas import read_excel
-        df = read_excel(filename,sheet)
+        df = read_excel(filename, sheet)
     except Exception as e:
         # in case this raises an error using Python 2.7
         print('if on Python 2.7 '
@@ -631,7 +651,7 @@ def _read_softgz(filename):
         # Next line is the column headers (sample id's)
         sample_names = file.readline().decode("utf-8").split("\t")
         # The column indices that contain gene expression data
-        I = [i for i,x in enumerate(sample_names) if x.startswith("GSM")]
+        I = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
         sample_names = [sample_names[i] for i in I]
         # Get a list of sample labels
@@ -650,7 +670,7 @@ def _read_softgz(filename):
             # and convert the strings to numbers
             x = [float(V[i]) for i in I]
             X.append(x)
-            gene_names.append(#V[0] + ";" + # only use the second gene name
+            gene_names.append(#  V[0] + ";" + # only use the second gene name
                               V[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
@@ -665,9 +685,11 @@ def _read_softgz(filename):
     ddata = {'X': X, 'smp': smp, 'var': var}
     return ddata
 
+
 # --------------------------------------------------------------------------------
 # Reading and writing for dictionaries
 # --------------------------------------------------------------------------------
+
 
 def read_file_to_dict(filename, ext='h5'):
     """
@@ -962,3 +984,14 @@ def is_filename(filename_or_key, return_ext=False):
                          + avail_exts)
     else:
         return False
+
+
+def test_profile_memory():
+    print()
+    utils.print_memory_usage()
+    # filename = 'data/paul15/paul15.h5'
+    # url = 'http://falexwolf.de/data/paul15.h5'
+    # adata = read(filename, 'data.debatched', backup_url=url)
+    filename = 'data/maehr17/blood_counts_raw.data'
+    adata = read(filename, reread=True)
+    utils.print_memory_usage()

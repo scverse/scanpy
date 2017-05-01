@@ -8,20 +8,28 @@ import os
 import numpy as np
 from . import settings as sett
 
+previous_memory_usage = -1
 
 def get_memory_usage():
     import psutil
     process = psutil.Process(os.getpid())
-    meminfo_attr = 'memory_info' if hasattr(process, 'memory_info') \
-                    else 'get_memory_info'
+    meminfo_attr = ('memory_info' if hasattr(process, 'memory_info')
+                    else 'get_memory_info')
     mem = getattr(process, meminfo_attr)()[0] / 2**30  # output in GB
-    return mem
+    mem_diff = mem
+    global previous_memory_usage
+    if previous_memory_usage != -1:
+        mem_diff = mem - previous_memory_usage
+    previous_memory_usage = mem
+    return mem, mem_diff
 
 
-def print_memory_usage(newline=False):
-    mem = get_memory_usage()
+def print_memory_usage(msg='', newline=False):
+    mem, diff = get_memory_usage()
     print(('\n' if newline else '')
-          + 'Current memory usage: {:.2f} GB'.format(mem))
+          + msg + (' \n... ' if msg != '' else '')
+          + 'memory usage: current / difference: {:.2f} GB / {:+.2f} GB'
+          .format(mem, diff))
 
 
 # --------------------------------------------------------------------------------
@@ -309,11 +317,11 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     import warnings
     import traceback
     traceback.print_stack()
-    log = file if hasattr(file,'write') else sys.stderr
+    log = file if hasattr(file, 'write') else sys.stderr
     sett.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
-def subsample(X,subsample=1,seed=0):
+def subsample(X, subsample=1, seed=0):
     """
     Subsample a fraction of 1/subsample samples from the rows of X.
 
@@ -334,22 +342,22 @@ def subsample(X,subsample=1,seed=0):
         Indices of rows that are stored in Xsampled.
     """
     if subsample == 1 and seed == 0:
-        return X, np.arange(X.shape[0],dtype=int)
+        return X, np.arange(X.shape[0], dtype=int)
     if seed == 0:
         # this sequence is defined simply by skipping rows
         # is faster than sampling
-        rows = np.arange(0,X.shape[0],subsample,dtype=int)
+        rows = np.arange(0, X.shape[0], subsample, dtype=int)
         n = rows.size
         Xsampled = np.array(X[rows])
     if seed > 0:
         n = int(X.shape[0]/subsample)
         np.random.seed(seed)
-        Xsampled, rows = subsample_n(X,n=n)
-    sett.m(0,'subsampled to',n,'of',X.shape[0],'data points')
+        Xsampled, rows = subsample_n(X, n=n)
+    sett.m(0, 'subsampled to', n, 'of', X.shape[0], 'data points')
     return Xsampled, rows
 
 
-def subsample_n(X,n=0,seed=0):
+def subsample_n(X, n=0, seed=0):
     """
     Subsample n samples from rows of array.
 
