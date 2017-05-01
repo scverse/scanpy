@@ -11,7 +11,6 @@ scanpy_user/
 scanpy_save/
 scanpy_later/
 thirdp/
-setup.cfg
 test.py
 
 # private files
