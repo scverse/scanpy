@@ -572,14 +572,14 @@ class AnnData(IndexMixin):
         return adata
 
     def filter_var(self, index):
-        """Slice in variable dimension."""
+        """Filter along variables dimension."""
         self.X = self.X[:, index]
         self.var = self.var[index]
         self.n_vars = self.X.shape[1]
         return None
 
-    def slice_smp(self, index):
-        """Slice in variable dimension."""
+    def filter_smp(self, index):
+        """Filter along samples dimension."""
         self.X = self.X[index, :]
         self.smp = self.smp[index]
         self.n_smps = self.X.shape[0]
