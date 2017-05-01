@@ -115,8 +115,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
             if return_dict:
                 return d
             else:
-                adata = AnnData(d)
-                return adata
+                return AnnData(d)
         elif isinstance(d, AnnData):
             if return_dict:
                 return d.to_dict()
@@ -330,11 +329,12 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         ddata = read_file_to_dict(filename_fast, sett.file_format_data)
     return ddata
 
-def _read_mtx(filename, return_dict=True):
+def _read_mtx(filename, return_dict=True, dtype='float32'):
     """Read mtx file.
     """
     from scipy.io import mmread
-    X = mmread(filename)
+    # could be rewritten accounting for dtype to be more performant
+    X = mmread(filename).astype(dtype)
     from scipy.sparse.csr import csr_matrix
     X = csr_matrix(X)
     sett.m(0, '... did not find row_names or col_names')
