@@ -418,10 +418,12 @@ class AnnData(IndexMixin):
                              .format(class_names, type(X)))
 
         # type conversion: if type doesn't match, a copy is made
-        if isinstance(X, np.ndarray):
-            X = X.astype(dtype, copy=False)
-        elif sp.issparse(X) and X.dtype.descr != np.dtype(dtype).descr:
+        if ((sp.issparse(X) or isinstance(X, ma.MaskedArray))
+            and X.dtype.descr != np.dtype(dtype).descr):
             X = X.astype(dtype)
+        else:  # is plain np.ndarray
+            X = X.astype(dtype, copy=False)
+
         if X.dtype.names is None and len(X.shape) not in {0, 1, 2}:
             raise ValueError('X needs to be 2-dimensional, not '
                              '{}D'.format(len(X.shape)))
