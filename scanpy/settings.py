@@ -11,22 +11,31 @@ Sets global variables like verbosity, manages logging and timing.
 import os
 if not os.path.exists('.scanpy/'):  # directory for configuration files etc.
     os.makedirs('.scanpy/')
-import matplotlib
-if 'DISPLAY' not in os.environ:  # login via ssh but no xserver
-    matplotlib.use('Agg')
-    print('... WARNING: did not find DISPLAY variable needed for interactive plotting\n'
-          '--> try ssh with `-X` or `-Y`')
+# we shouldn't do that here
+# import matplotlib
+# if 'DISPLAY' not in os.environ:  # login via ssh but no xserver
+#     matplotlib.use('Agg')
+#     print('... WARNING: did not find DISPLAY variable needed for interactive plotting\n'
+#           '--> try ssh with `-X` or `-Y`')
 import atexit
 import time
 from functools import reduce
-from matplotlib import rcParams
+from matplotlib import is_interactive
 
 # --------------------------------------------------------------------------------
 # Global Settings Attributes
 # --------------------------------------------------------------------------------
 
-verbosity = 1
-"""Set global verbosity level, choose from {0,...,6}.
+verbosity = 3
+"""Set global verbosity level.
+
+Level 0: only show 'error' messages.
+Level 1: also show 'warning' messages.
+Level 2: also show 'info' messages.
+Level 3: also show 'hint' messages.
+Level 4: also show very detailed progress.
+Level 5: also show even more detailed progress.
+etc.
 """
 
 exkey = ''
@@ -73,7 +82,7 @@ Do not show plots/figures interactively.
 autoshow = True
 """Show all plots/figures automatically if savefigs == False.
 
-There is no need to call sc.show() in this case.
+There is no need to call the matplotlib pl.show() in this case.
 """
 
 writedir = './write/'
@@ -96,26 +105,25 @@ n_jobs = 2
 """Maximal number of jobs/ CPUs to use for parallel computing.
 """
 
+logfile = ''
+"""Name of logfile. By default is set to '' and writes to standard output."""
+
+# import __main__ as main          # not needed, use matplotlib.is_interactive() function instead
+is_interactive = is_interactive()  # not hasattr(main, '__file__')
+"""Determines whether run interactively.
+
+Defaults to matplotlib.is_interactive().
+
+Currently only affects the style of progress bars and whether total computation
+time since importing this module is output after leaving the session.
+
+If your progress bars are ugly, try changing the value.
+"""
+
+
 # --------------------------------------------------------------------------------
 # Global Setting Functions
 # --------------------------------------------------------------------------------
-
-
-def set_logfile(filename=''):
-    """
-    Define filename of logfile.
-
-    If not defined, log output will be to the standard output.
-
-    Parameters
-    ----------
-    filename : str
-        Filename of
-    """
-    global _logfilename, verbosity
-    _logfilename = filename
-    # if providing a logfile name, automatically set verbosity to a very high level
-    verbosity = 5
 
 
 def set_dpi(dpi=200):
@@ -127,36 +135,23 @@ def set_dpi(dpi=200):
     dpi : int, optional
         Resolution of png output in dots per inch.
     """
-    # default setting as in scanpy.plot
+    from matplotlib import rcParams
+    # default setting as in scanpy.plotting
     rcParams['savefig.dpi'] = dpi
-
-
-def set_jupyter():
-    """
-    Update figure resolution for use in jupyter notebook.
-
-    Avoids that figures get displayed too large. To set a specific value for the
-    resolution, use the dpi function.
-    """
-    dpi(60)
-    global autoshow
-    autoshow = True
 
 
 # ------------------------------------------------------------------------------
 # Private global variables
 # ------------------------------------------------------------------------------
 
-import __main__ as main
 _start = time.time()
 """Time when the settings module is first imported."""
-_intermediate = _start
-"""Variable for timing program parts."""
-_logfilename = ''
-"""Name of logfile."""
-_is_interactive = not hasattr(main, '__file__')
-"""Determines whether run as file or imported as package."""
 
+_previous_time = _start
+"""Variable for timing program parts."""
+
+_previous_memory_usage = -1
+"""Stores the previous memory usage."""
 
 # --------------------------------------------------------------------------------
 # Command-line arguments for global attributes
@@ -202,22 +197,23 @@ def add_args(p):
     aa = p.add_argument_group('Do subsampling to speedup computations').add_argument
     aa('-ss', '--subsample',
        type=int, default=1, metavar='i',
-       help='Specify integer i > 1 if you want to use a fraction of 1/i'
-            ' of the data (default: %(default)d).')
+       help='Pass integer i > 1 if you want to use a fraction of 1/i '
+            'of the data (default: %(default)d).')
     aa = p.add_argument_group('General settings (all saved in .scanpy/config)').add_argument
     aa('-v', '--verbosity',
-       type=int, default=1, metavar='v',
-       help='Specify v = 0 for no output and v > 1 for more output'
-            ' (default: %(default)d).')
+       type=int, default=verbosity, metavar='v',
+       help='Pass v = 2 (no hints "-->", only info, warnings, errors) for less output, '
+            'v = 1 (no info), v = 0 (no warnings, only errors) '
+            'and v > 3 for more output (default: %(default)d).')
     aa('--max_memory',
        type=int, default=max_memory, metavar='m',
-       help='Specify maximal memory usage in GB (default: %(default)s).')
+       help='Pass maximal memory usage in GB (default: %(default)s).')
     aa('--n_jobs',
        type=int, default=n_jobs, metavar='n',
        help='Maximal number of CPUs to use (default: %(default)s).')
     aa('-ff', '--fileformat',
        type=str, default=file_format_data, metavar='ext',
-       help='Specify file format for exporting results, either "csv", '
+       help='Pass file format for exporting results, either "csv", '
             '"txt", "h5" or "npz" (default: %(default)s).')
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
@@ -310,9 +306,32 @@ def process_args(args):
 # --------------------------------------------------------------------------------
 
 
-def m(v=0, *msg):
+def mi(*msg):
+    """Write message to log output, ignoring the verbosity level.
+
+    Parameters
+    ----------
+    *msg :
+        One or more arguments to be formatted as string. Same behavior as print
+        function.
     """
-    Write message to log output, depending on verbosity level.
+    if logfile == '':
+        # in python 3, the following works
+        # print(*msg)
+        # due to compatibility with the print statement in python 2 we choose
+        print(' '.join([str(m) for m in msg]))
+    else:
+        out = ''
+        for s in msg:
+            out += str(s) + ' '
+        with open(logfile, 'a') as f:
+            f.write(out + '\n')
+
+
+def m(v=0, *msg):
+    """Write message to log output, depending on verbosity level.
+
+    Now is deprecatd. See logging.m().
 
     Parameters
     ----------
@@ -322,38 +341,16 @@ def m(v=0, *msg):
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
-    if verbosity > v:
+    if v < verbosity - 2:
         mi(*msg)
 
 
-def mi(*msg):
-    """
-    Write message to log output, ignoring the verbosity level.
-
-    Parameters
-    ----------
-    *msg :
-        One or more arguments to be formatted as string. Same behavior as print
-        function.
-    """
-    if _logfilename == '':
-        # in python 3, the following works
-        # print(*msg)
-        # due to compatibility with the print statement in python 2 we choose
-        print(' '.join([str(m) for m in msg]))
-    else:
-        out = ''
-        for s in msg:
-            out += str(s) + ' '
-        with open(_logfilename) as f:
-            f.write(out + '\n')
-
-
 def mt(v=0, *msg, start=False):
-    """
-    Write message to log output and show computation time.
+    """Write message to log output and show computation time.
 
     Depends on chosen verbosity level.
+
+    Now is deprecatd. See logging.m().
 
     Parameters
     ----------
@@ -363,20 +360,18 @@ def mt(v=0, *msg, start=False):
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
-    if verbosity > v:
-        global _intermediate
+    if v < verbosity - 2:
+        global _previous_time
         now = time.time()
         if start:
-            _intermediate = now
-        elapsed_since_start = now - _start
-        elapsed = now - _intermediate
-        _intermediate = now
+            _previous_time = now
+        elapsed = now - _previous_time
+        _previous_time = now
         mi(_sec_to_str(elapsed), '-', *msg)
 
 
 def _sec_to_str(t):
-    """
-    Format time in seconds.
+    """Format time in seconds.
 
     Parameters
     ----------
@@ -389,8 +384,7 @@ def _sec_to_str(t):
 
 
 def _terminate():
-    """
-    Function called when program terminates.
+    """Function called when program terminates.
 
     Similar to mt, but writes total runtime.
     """
@@ -402,32 +396,5 @@ def _terminate():
 
 
 # report total runtime upon shutdown
-if not _is_interactive:
+if not is_interactive:
     atexit.register(_terminate)
-
-
-def _jupyter_deprecated(do=True):
-    """
-    Update figure params for particular environments like jupyter.
-    """
-
-    fscale = 1
-    fontsize = 14
-    rcParams['savefig.dpi'] = 100
-
-    if do:
-        fscale = 0.375
-        fontsize = 6
-
-    # figure unit length and figure scale
-    ful = fscale*4
-    fontsize = fscale*14
-
-    rcParams['lines.linewidth'] = fscale*1.5
-    rcParams['lines.markersize'] = fscale**2*6
-    rcParams['lines.markeredgewidth'] = fscale**2*1
-
-    rcParams['figure.figsize'] = (1.25*ful, ful)
-    rcParams['font.size'] = fontsize
-    rcParams['legend.fontsize'] = 0.92*fontsize
-    rcParams['axes.titlesize'] = fontsize

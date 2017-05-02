@@ -9,7 +9,7 @@ from . import builtin
 from .. import utils
 from .. import readwrite
 from .. import settings as sett
-
+from .. import logging as logg
 
 def get_example(exkey, subsample=1, return_module=False, suffix='',
                 recompute=True, reread=False):
@@ -54,9 +54,10 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
                                or filename.startswith('scanpy'))  # for backwards compat
                            and filename.endswith('.py')]
     if len(loop_over_filenames) == 0:
-        sett.m(0, '--> did not find user examples, to provide some,\n'
+        logg.m('did not find user examples, to provide some,\n'
                '    generate a file preprocessing_whatevername.py in your working directory,\n'
-               '    see https://github.com/theislab/scanpy#work-on-your-own-examples')
+               '    see https://github.com/theislab/scanpy#work-on-your-own-examples',
+               v='hint')
     not_found = True
     from sys import path
     path.insert(0, '.')

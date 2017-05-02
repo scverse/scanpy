@@ -1,14 +1,11 @@
 # Authors: F. Alex Wolf <http://falexwolf.de>
 #          P. Angerer
 
-import os
 import numpy as np
 from ..compat.matplotlib import pyplot as pl
-from matplotlib import rcParams, ticker, is_interactive
+from matplotlib import rcParams, ticker
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
-
-from .. import sett
 
 def init_plotting_params():
     """Init default plotting parameters.
@@ -51,14 +48,6 @@ def init_plotting_params():
                '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
                '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7', remove grey
                '#dbdb8d', '#9edae5'])
-
-    if 'DISPLAY' not in os.environ:
-        sett.m(0, '    setting `sett.savefigs = True`')
-        sett.savefigs = True
-
-    # we show plots instead of saving when running interactively, including in a
-    # jupyter notebook/terminal
-    sett.savefigs = not is_interactive()
 
 
 def default_pal(pal=None):

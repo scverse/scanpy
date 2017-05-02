@@ -8,29 +8,6 @@ import os
 import numpy as np
 from . import settings as sett
 
-previous_memory_usage = -1
-
-def get_memory_usage():
-    import psutil
-    process = psutil.Process(os.getpid())
-    meminfo_attr = ('memory_info' if hasattr(process, 'memory_info')
-                    else 'get_memory_info')
-    mem = getattr(process, meminfo_attr)()[0] / 2**30  # output in GB
-    mem_diff = mem
-    global previous_memory_usage
-    if previous_memory_usage != -1:
-        mem_diff = mem - previous_memory_usage
-    previous_memory_usage = mem
-    return mem, mem_diff
-
-
-def print_memory_usage(msg='', newline=False):
-    mem, diff = get_memory_usage()
-    print(('\n' if newline else '')
-          + msg + (' \n... ' if msg != '' else '')
-          + 'memory usage: current / difference: {:.2f} GB / {:+.2f} GB'
-          .format(mem, diff))
-
 
 # --------------------------------------------------------------------------------
 # Deal with examples

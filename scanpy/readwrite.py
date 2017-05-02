@@ -7,8 +7,8 @@ import sys
 import h5py
 import numpy as np
 
-from . import utils
 from . import sett
+from . import logging as logg
 from .data_structs import AnnData
 
 avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
@@ -291,7 +291,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                      + filename_stripped.replace('.' + ext, '.' + fast_ext))
     reread = sett.recompute == 'read' if reread is None else reread
     if not os.path.exists(filename_fast) or reread:
-        sett.m(0, 'reading file', filename,
+        logg.m('reading file', filename,
                '\n... writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
                filename_fast)
@@ -709,7 +709,7 @@ def read_file_to_dict(filename, ext='h5'):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    sett.m(0, 'reading file', filename)
+    logg.m('reading file', filename)
     d = {}
     if ext in {'h5', 'txt', 'csv'}:
         with h5py.File(filename, 'r') as f:
@@ -987,10 +987,10 @@ def is_filename(filename_or_key, return_ext=False):
 # need data files to run this test
 # def test_profile_memory():
 #     print()
-#     utils.print_memory_usage()
+#     logg.print_memory_usage()
 #     # filename = 'data/paul15/paul15.h5'
 #     # url = 'http://falexwolf.de/data/paul15.h5'
 #     # adata = read(filename, 'data.debatched', backup_url=url)
 #     filename = 'data/maehr17/blood_counts_raw.data'
 #     adata = read(filename, reread=True)
-#     utils.print_memory_usage()
+#     logg.print_memory_usage()

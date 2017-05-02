@@ -493,13 +493,13 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
               for start in range(0, n_chunks * len_chunk, len_chunk)]
     if issparse(adata.X):
         adata.X = adata.X.toarray()
-    if sett._is_interactive:
-        # from tqdm import tqdm_notebook as tqdm
+    if sett.is_interactive:
+        from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
         # tqdm = lambda x: x
-        from tqdm import tqdm
+        # from tqdm import tqdm
         # sett.m(1, 'TODO: get nice waitbars also in interactive mode')
-        sett.m(0, '... nicer progress bars as on command line come soon')
+        # sett.m(0, '... nicer progress bars as on command line come soon')
     else:
         from tqdm import tqdm
     for chunk in tqdm(chunks):

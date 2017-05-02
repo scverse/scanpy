@@ -938,22 +938,22 @@ def test_struct_dict_copy():
 
 
 def test_profile_memory():
-    from .. import utils
+    from .. import logging as logg
     import gc
     dim = 10  # increase this when profiling
     print()
-    utils.print_memory_usage('start profiling')
+    logg.print_memory_usage('start profiling')
     X = np.random.rand(dim, dim).astype('float32')
-    utils.print_memory_usage('allocated X')
+    logg.print_memory_usage('allocated X')
     var_filter = np.array([0, 1])
     X = X[:, var_filter]
-    utils.print_memory_usage('sliced X')
+    logg.print_memory_usage('sliced X')
     X = np.random.rand(dim, dim).astype('float32')
-    utils.print_memory_usage('allocated X')
+    logg.print_memory_usage('allocated X')
     adata = AnnData(X)
-    utils.print_memory_usage('init adata with reference to X')
+    logg.print_memory_usage('init adata with reference to X')
     adata.var['multi'] = np.random.rand(dim, 3)
-    utils.print_memory_usage('added some annotation')
+    logg.print_memory_usage('added some annotation')
     # ------------------------------------------------
     # compare adata.__getitem__ with adata.filter_var
     # ------------------------------------------------
@@ -962,13 +962,13 @@ def test_profile_memory():
     # collection than slicing
     # adata.filter_var(var_filter)  # inplace
     adata = adata[:, var_filter]  # with copy
-    utils.print_memory_usage('sliced adata')
+    logg.print_memory_usage('sliced adata')
     gc.collect()
-    utils.print_memory_usage('after calling gc.collect()')
+    logg.print_memory_usage('after calling gc.collect()')
     return adata
 
 
 def test_profile_memory_2():
-    from .. import utils
+    from .. import logging as logg
     adata = test_profile_memory()
-    utils.print_memory_usage('after leaving function')
+    logg.print_memory_usage('after leaving function')

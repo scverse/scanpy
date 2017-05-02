@@ -121,8 +121,7 @@ def _run_command_line_args(toolkey, args):
     writekey = sett.basekey + '_' + toolkey
     pfile = sett.writedir + sett.basekey + '_params/' + toolkey + '.txt'
     if args['logfile']:
-        logfile = sett.writedir + writekey + '_log.txt'
-        sett.logfile(logfile)
+        sett.logfile = sett.writedir + sett.basekey + '_log.txt'
 
     # actual call of tool
     if (adata is None
