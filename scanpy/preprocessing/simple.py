@@ -341,7 +341,7 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
             X_pca, components, pca_variance_ratio = result
             adata.smp['X_pca'] = X_pca  # this is multicolumn-sample annotation
             for icomp, comp in enumerate(components):
-                adata.var['PC' + str(icomp)] = comp
+                adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
             sett.mt(0, 'finished, added\n'
                     '    the data representation "X_pca" (adata.smp)\n'

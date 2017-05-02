@@ -43,11 +43,16 @@ def savefig_or_show(writekey, show=None):
 # -------------------------------------------------------------------------------
 
 
-def violin(adata, smp, show=True):
+def violin(adata, smp, jitter=True, size=1, color='black', show=None):
     """Violin plot.
 
     Wraps seaborn.violinplot.
-    
+
+    Parameters
+    ----------
+    jitter : float or bool (default: True)
+        See sns.stripplot.
+
     Returns
     -------
     A seaborn.FacetGrid that allows to access the matplotlib.Axis objects.
@@ -57,11 +62,13 @@ def violin(adata, smp, show=True):
     smp_df = adata.smp.to_df()
     smp_tidy = pd.melt(smp_df, value_vars=smp)
     sns.set_style('whitegrid')
-    g = sns.FacetGrid(smp_tidy, col='variable', sharey=False).map(
-        sns.violinplot, 'value', inner='quartile', orient='vertical').set_titles(
-            col_template='{col_name}').set_xlabels('')
-    if show:
-        pl.show()
+    g = sns.FacetGrid(smp_tidy, col='variable', sharey=False)
+    g = g.map(sns.violinplot, 'value', inner=None, orient='vertical')
+    g = g.map(sns.stripplot, 'value', orient='vertical', jitter=jitter, size=size,
+                 color=color).set_titles(
+                     col_template='{col_name}').set_xlabels('')
+    show = sett.autoshow if show else show
+    if show: pl.show()
     return g
 
 
@@ -82,6 +89,9 @@ def scatter(adata,
             titles=None,
             show=True):
     """Scatter plots.
+
+    Color with sample annotation (`color in adata.smp_keys()`) or gene
+    expression (`color in adata.var_names`).
 
     Parameters
     ----------
@@ -134,10 +144,8 @@ def scatter(adata,
     readwrite.write_params('.scanpy/config_plotting.txt', params)
     del params
     # compute components
-    if comps is None:
-        comps = '1,2' if '2d' in layout else '1,2,3'
-    if isinstance(comps, str):
-        comps = comps.split(',')
+    if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
+    if isinstance(comps, str): comps = comps.split(',')
     comps = np.array(comps).astype(int) - 1
     titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
     color_keys = [None] if color is None else color.split(',') if isinstance(color, str) else color
@@ -260,6 +268,133 @@ def scatter(adata,
     return axs
 
 
+def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
+    """Plot rankings.
+
+    See, for example, how this is used in pl.pca_ranking.
+    
+    Parameters
+    ----------
+    adata : AnnData
+        The data.
+    attr : {'var', 'add', 'smp'}
+        An attribute of AnnData.
+    keys : str or list of str
+        Used to look up an array from the attribute of adata.
+
+    Returns
+    -------
+    Returns matplotlib gridspec with access to the axes.
+    """
+    if labels is None:
+        labels = adata.var_names if attr == 'var' else np.arange(n_points).astype(str)
+    if isinstance(labels, str):
+        labels = [labels + str(i+1) for i in range(n_points)]
+    from matplotlib import gridspec
+    scores = getattr(adata, attr)[keys]
+    n_panels = len(keys) if isinstance(keys, list) else 1
+    if n_panels == 1: scores, keys = scores[:, None], [keys]
+    if n_panels <= 5: n_rows, n_cols = 1, n_panels
+    else: n_rows, n_cols = 2, int(n_panels/2 + 0.5)
+    fig = pl.figure(figsize=(n_cols * rcParams['figure.figsize'][0],
+                             n_rows * rcParams['figure.figsize'][1]))
+    left, bottom = 0.2/n_cols, 0.13/n_rows
+    gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, wspace=0.2,
+                           left=left, bottom=bottom,
+                           right=1-(n_cols-1)*left-0.01/n_cols,
+                           top=1-(n_rows-1)*bottom-0.1/n_rows)
+    for iscore, score in enumerate(scores.T):
+        pl.subplot(gs[iscore])
+        indices = np.argsort(score)[::-1][:n_points+1]
+        for ig, g in enumerate(indices):
+            pl.text(ig, score[g], labels[g], color=color,
+                    rotation='vertical', verticalalignment='bottom',
+                    horizontalalignment='center', fontsize=8)
+        pl.title(keys[iscore].replace('_', ' '))
+        if n_panels <= 5 or count > n_cols: pl.xlabel('ranking')
+        pl.xlim(-0.9, ig + 0.9)
+        score_min, score_max = np.min(score[indices]), np.max(score[indices])
+        pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
+                (1.05 if score_max > 0 else 0.95) * score_max)
+    return gs
+
+def ranking_deprecated(adata, toolkey, n_genes=20):
+    """Plot ranking of genes
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    n_genes : int
+        Number of genes.
+    """
+
+    # one panel for each ranking
+    scoreskey = adata.add[toolkey + '_scoreskey']
+    n_panels = len(adata.add[toolkey + '_rankings_names'])
+
+    def get_scores(irank):
+        allscores = adata.add[toolkey + '_' + scoreskey][irank]
+        scores = allscores[adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
+        scores = np.abs(scores)
+        return scores
+
+    # the limits for the y axis
+    ymin = 1e100
+    ymax = -1e100
+    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
+        scores = get_scores(irank)
+        ymin = np.min([ymin, np.min(scores)])
+        ymax = np.max([ymax, np.max(scores)])
+    ymax += 0.3*(ymax-ymin)
+
+    # number of panels
+    if n_panels <= 5:
+        n_panels_y = 1
+        n_panels_x = n_panels
+    else:
+        n_panels_y = 2
+        n_panels_x = int(n_panels/2+0.5)
+
+    fig = pl.figure(figsize=(n_panels_x * 4, n_panels_y * 4))
+
+    from matplotlib import gridspec
+    left = 0.2/n_panels_x
+    bottom = 0.13/n_panels_y
+    gs = gridspec.GridSpec(nrows=n_panels_y,
+                           ncols=n_panels_x,
+                           left=left,
+                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
+                           bottom=bottom,
+                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
+                           wspace=0)
+
+    count = 1
+    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
+        pl.subplot(gs[count-1])
+        scores = get_scores(irank)
+        for ig, g in enumerate(adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
+            marker = (r'\leftarrow' if adata.add[toolkey + '_zscores'][irank, g] < 0
+                                    else r'\rightarrow')
+            pl.text(ig, scores[ig],
+                    r'$ ' + marker + '$ ' + adata.var_names[g],
+                    color='red' if adata.add[toolkey + '_zscores'][irank, g] < 0 else 'green',
+                    rotation='vertical', verticalalignment='bottom',
+                    horizontalalignment='center',
+                    fontsize=8)
+        title = adata.add[toolkey + '_rankings_names'][irank]
+        pl.title(title)
+        if n_panels <= 5 or count > n_panels_x:
+            pl.xlabel('ranking')
+        if count == 1 or count == n_panels_x+1:
+            pl.ylabel(scoreskey)
+        else:
+            pl.yticks([])
+        pl.ylim([ymin, ymax])
+        pl.xlim(-0.9, ig+1-0.1)
+        count += 1
+
+
 def timeseries(X, **kwargs):
     """Plot X. See timeseries_subplot."""
     pl.figure(figsize=(2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]),
@@ -375,81 +510,3 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX=None, cmap='viridis'):
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
-
-
-def ranking(adata, toolkey, n_genes=20):
-    """
-    Plot ranking of genes
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    n_genes : int
-        Number of genes.
-    """
-
-    # one panel for each ranking
-    scoreskey = adata.add[toolkey + '_scoreskey']
-    n_panels = len(adata.add[toolkey + '_rankings_names'])
-
-    def get_scores(irank):
-        allscores = adata.add[toolkey + '_' + scoreskey][irank]
-        scores = allscores[adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
-        scores = np.abs(scores)
-        return scores
-
-    # the limits for the y axis
-    ymin = 1e100
-    ymax = -1e100
-    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
-        scores = get_scores(irank)
-        ymin = np.min([ymin, np.min(scores)])
-        ymax = np.max([ymax, np.max(scores)])
-    ymax += 0.3*(ymax-ymin)
-
-    # number of panels
-    if n_panels <= 5:
-        n_panels_y = 1
-        n_panels_x = n_panels
-    else:
-        n_panels_y = 2
-        n_panels_x = int(n_panels/2+0.5)
-
-    fig = pl.figure(figsize=(n_panels_x * 4, n_panels_y * 4))
-
-    from matplotlib import gridspec
-    left = 0.2/n_panels_x
-    bottom = 0.13/n_panels_y
-    gs = gridspec.GridSpec(nrows=n_panels_y,
-                           ncols=n_panels_x,
-                           left=left,
-                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-                           bottom=bottom,
-                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0)
-
-    count = 1
-    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
-        pl.subplot(gs[count-1])
-        scores = get_scores(irank)
-        for ig, g in enumerate(adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
-            marker = (r'\leftarrow' if adata.add[toolkey + '_zscores'][irank, g] < 0
-                                    else r'\rightarrow')
-            pl.text(ig, scores[ig],
-                    r'$ ' + marker + '$ ' + adata.var_names[g],
-                    color='red' if adata.add[toolkey + '_zscores'][irank, g] < 0 else 'green',
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=8)
-        title = adata.add[toolkey + '_rankings_names'][irank]
-        pl.title(title)
-        if n_panels <= 5 or count > n_panels_x:
-            pl.xlabel('ranking')
-        if count == 1 or count == n_panels_x+1:
-            pl.ylabel(scoreskey)
-        else:
-            pl.yticks([])
-        pl.ylim([ymin, ymax])
-        pl.xlim(-0.9, ig+1-0.1)
-        count += 1

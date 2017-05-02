@@ -8,7 +8,7 @@ import numpy as np
 from ..compat.matplotlib import pyplot as pl
 from .toplevel import scatter, violin
 from .toplevel import timeseries, timeseries_subplot, timeseries_as_heatmap
-from .toplevel import ranking
+from .toplevel import ranking, ranking_deprecated
 from .toplevel import savefig, savefig_or_show
 from . import utils
 from .. import sett
@@ -16,21 +16,12 @@ from .. import sett
 utils.init_plotting_params()
 
 
-def pca(adata,
-        smp=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
-        legendloc='right margin',
-        cmap=None,
-        pal=None,
-        right_margin=None,
-        size=3,
-        titles=None,
-        show=None):
+def pca(adata, **params):
     """
-    Plot PCA scatter.
+    Plot PCA results.
+
+    The parameters are the ones of the scatter plot. Call pca_ranking separately
+    if you want to change the default settings.
 
     Parameters
     ----------
@@ -62,6 +53,26 @@ def pca(adata,
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
+    show = params['show'] if 'show' in params else None
+    pca_scatter(adata, **params, show=False)
+    pca_ranking(adata, show)
+
+
+def pca_scatter(adata,
+                smp=None,
+                names=None,
+                comps=None,
+                cont=None,
+                layout='2d',
+                legendloc='right margin',
+                cmap=None,
+                pal=None,
+                right_margin=None,
+                size=3,
+                titles=None,
+                show=None):
+    """See parameters of pl.pca().
+    """
     from ..examples import check_adata
     adata = check_adata(adata)
     smps = scatter(adata,
@@ -77,7 +88,22 @@ def pca(adata,
                    right_margin=right_margin,
                    size=size,
                    titles=titles)
-    writekey = sett.basekey + '_pca' + sett.plotsuffix
+    writekey = sett.basekey + '_pca_scatter' + sett.plotsuffix
+    show = sett.autoshow if show is None else show
+    if sett.savefigs: savefig(writekey)
+    elif show: pl.show()
+
+
+def pca_ranking(adata, comps=None, show=None):
+    """Rank genes according to contributions to PCs.
+    """
+    if isinstance(comps, str): comps = comps.split(',')
+    keys = ['PC1', 'PC2', 'PC3'] if comps is None else ['PC{}'.format(c) for c in comps]
+    ranking(adata, 'var', keys)
+    writekey = sett.basekey + '_pca_ranking_components' + sett.plotsuffix
+    if sett.savefigs: savefig(writekey)
+    ranking(adata, 'add', 'pca_variance_ratio', labels='PC')
+    writekey = sett.basekey + '_pca_ranking_variance' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
     elif show: pl.show()
@@ -625,7 +651,7 @@ def diffrank(adata, n_genes=20, show=None):
     n_genes : int
         Number of genes to show.
     """
-    ranking(adata, toolkey='diffrank', n_genes=n_genes)
+    ranking_deprecated(adata, toolkey='diffrank', n_genes=n_genes)
     writekey = sett.basekey + '_diffrank_' + adata.add['diffrank_groups'] + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)

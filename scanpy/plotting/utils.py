@@ -124,6 +124,7 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
+    from matplotlib import gridspec
     # if we have a single array, transform it into a list with a single array
     avail_layouts = {'2d', '3d'}
     if layout not in avail_layouts:
@@ -133,13 +134,9 @@ def scatter_base(Y,
     if len(sizes) != len(colors):
         if len(sizes) == 1:
             sizes = [sizes[0] for i in range(len(colors))]
-    # try importing Axes3D
-    from matplotlib import gridspec
     # grid of axes for plotting and legends/colorbars
-    if np.any(colorbars) and right_margin is None:
-        right_margin = 0.25
-    elif right_margin is None:
-        right_margin = 0.01
+    if np.any(colorbars) and right_margin is None: right_margin = 0.25
+    elif right_margin is None: right_margin = 0.01
     # make a figure with panels len(colors) x 1
     top_offset = 1 - rcParams['figure.subplot.top']
     bottom_offset = 0.08

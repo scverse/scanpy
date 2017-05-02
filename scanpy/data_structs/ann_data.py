@@ -223,7 +223,8 @@ class BoundStructArray(np.ndarray):
     def __getitem__(self, k):
         """Either a single one- or multi-column or mulitiple one-colum items.
 
-        Column slices are uniform numpy arrays.
+        Column slices yield conventional *homogeneous* numpy arrays, as is
+        useful for the user.
 
         Row slices are BoundStructArrays.
         """
@@ -235,18 +236,24 @@ class BoundStructArray(np.ndarray):
                 col_slice = False
                 if isinstance(k, str):
                     col_slice = True
+                    shape = self.shape
+                    dtype = self.dtype[k]
                 elif isinstance(k, list) and isinstance(k[0], str):
                     col_slice = True
+                    shape = self.shape + (len(k),)
+                    dtype = self.dtype[k[0]]
                 elif isinstance(k, np.ndarray) and len(k.shape) > 0:
                     if k.shape == (0,):  # empty array
                         print('warning: slicing with empty list returns None')
                         return None
                     if isinstance(k[0], str):
                         col_slice = True
+                        shape = self.shape + (len(k),)
+                        dtype = self.dtype[k[0]]
                 view = super(BoundStructArray, self).__getitem__(k)
                 if col_slice:
-                    view = view.view(np.ndarray)
-            except ValueError:  # access multiple columns with key k
+                    view = view.view(dtype, type=np.ndarray).reshape(shape)
+            except (ValueError, KeyError):  # access multiple columns with key k
                 keys = self._keys_multicol_lookup[k]
                 view = super(BoundStructArray, self).__getitem__(keys).view(
                     self.dtype[keys[0]]).reshape(
@@ -875,7 +882,7 @@ def test_multicol_getitem():
     adata.smp[['a', 'b']] = [[0, 1], [2, 3]]
     assert 0 in adata.smp['a']
     assert adata.smp['b'].tolist() == [1, 3]
-    assert adata.smp[['a', 'b']].tolist() == [(0, 1), (2, 3)]
+    assert adata.smp[['a', 'b']].tolist() == [[0, 1], [2, 3]]
 
 
 def test_multicol_single_key_setitem():
@@ -884,7 +891,7 @@ def test_multicol_single_key_setitem():
     adata.smp['c'] = np.array([[0, 1], [2, 3]])
     assert adata.smp.dtype.names == (SMP_INDEX, 'c1of2', 'c2of2')
     assert adata.smp.keys() == ['c']
-    assert adata.smp['c'].tolist() == np.array([[0, 1], [2, 3]]).tolist()
+    assert adata.smp['c'].tolist() == [[0, 1], [2, 3]]
 
 
 def test_structdict_keys():
