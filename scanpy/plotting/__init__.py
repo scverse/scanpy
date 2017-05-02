@@ -54,6 +54,7 @@ def pca(adata, **params):
          Provide titles for panels as "my title1,another title,...".
     """
     show = params['show'] if 'show' in params else None
+    if 'show' in params: del params['show']
     pca_scatter(adata, **params, show=False)
     pca_ranking(adata, show)
 

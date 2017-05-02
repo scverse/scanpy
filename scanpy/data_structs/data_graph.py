@@ -674,11 +674,11 @@ class DataGraph(object):
         for i in range(self.X.shape[0]):
             diff = self.X[i, :]-xroot
             dsq = diff.dot(diff)
-            if  dsq < dsqroot:
+            if dsq < dsqroot:
                 dsqroot = dsq
                 self.iroot = i
                 if np.sqrt(dsqroot) < 1e-10:
-                    sett.m(2,'root found at machine prec')
+                    sett.m(2, 'root found at machine prec')
                     break
         sett.m(0, '... set iroot', self.iroot)
         return self.iroot

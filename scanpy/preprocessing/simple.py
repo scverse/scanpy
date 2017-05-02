@@ -365,7 +365,10 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
             X = X.toarray()
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver)
     else:
-        sett.m(verbosity_level, '... without zero-centering')
+        sett.m(verbosity_level, '... without zero-centering: \n'
+               '    the explained variance does not correspond to the exact statistical defintion\n'
+               '    the first component, e.g., might be heavily influenced by different means\n'
+               '    the following components often resemble the exact PCA very closely')
         pca_ = TruncatedSVD(n_components=n_comps)
     X_pca = pca_.fit_transform(X)
     if X_pca.dtype.descr != np.dtype(dtype).descr:

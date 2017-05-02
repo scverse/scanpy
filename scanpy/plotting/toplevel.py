@@ -273,7 +273,7 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
     """Plot rankings.
 
     See, for example, how this is used in pl.pca_ranking.
-    
+
     Parameters
     ----------
     adata : AnnData
@@ -287,14 +287,14 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
     -------
     Returns matplotlib gridspec with access to the axes.
     """
-    if labels is None:
-        labels = adata.var_names if attr == 'var' else np.arange(n_points).astype(str)
-    if isinstance(labels, str):
-        labels = [labels + str(i+1) for i in range(n_points)]
-    from matplotlib import gridspec
     scores = getattr(adata, attr)[keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
+    if labels is None:
+        labels = adata.var_names if attr == 'var' else np.arange(scores.shape[0]).astype(str)
+    if isinstance(labels, str):
+        labels = [labels + str(i+1) for i in range(scores.shape[0])]
+    from matplotlib import gridspec
     if n_panels <= 5: n_rows, n_cols = 1, n_panels
     else: n_rows, n_cols = 2, int(n_panels/2 + 0.5)
     fig = pl.figure(figsize=(n_cols * rcParams['figure.figsize'][0],
