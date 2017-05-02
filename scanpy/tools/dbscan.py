@@ -8,7 +8,7 @@ import numpy as np
 from .. import settings as sett
 
 
-def dbscan(adata, eps=None, min_samples=None, copy=False):
+def dbscan(adata, basis='tsne', n_comps=10, eps=None, min_samples=None, copy=False):
     """Cluster using DBSCAN
 
     Parameters
@@ -33,17 +33,24 @@ def dbscan(adata, eps=None, min_samples=None, copy=False):
     """
     sett.mt(0, 'starting DBSCAN', start=True)
     adata = adata.copy() if copy else adata
-    if 'X_tsne' in adata.smp:
+    found = False
+    if 'X_tsne' in adata.smp and basis == 'tsne':
         X = adata.smp['X_tsne']
-    elif 'X_pca' in adata.smp:
+        found = True
+    if 'X_pca' in adata.smp and basis == 'pca':
         X = adata.smp['X_pca']
-    else:
-        raise ValueError('perform tSNE first')
+        found = True
+    if basis not in {'tsne', 'pca'}:
+        raise ValueError('`basis` needs to be "tsne" or "pca"')
+    if not found: raise ValueError('Run {} first.'.format(basis))
     if eps is None:
-        # average area per point
-        avg_area_per_point = ((np.max(X[:, 0]) - np.min(X[:, 0]))
-                              * (np.max(X[:, 1]) - np.min(X[:, 1])) / X.shape[0])
-        eps = 3*np.sqrt(avg_area_per_point)  # reduce a bit further
+        if n_comps == 2:
+            # average area per point
+            avg_area_per_point = ((np.max(X[:, 0]) - np.min(X[:, 0]))
+                                  * (np.max(X[:, 1]) - np.min(X[:, 1])) / X.shape[0])
+            eps = 3*np.sqrt(avg_area_per_point)  # reduce a bit further
+        else:
+            eps = 5
         sett.m(0, '... using eps', eps)
     if min_samples is None:
         min_samples = int(X.shape[0] / 120)

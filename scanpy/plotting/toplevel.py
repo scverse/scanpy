@@ -265,6 +265,7 @@ def scatter(adata,
             legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
             axs[icolor_key].legend(frameon=False, loc=legendloc)
+    if show: pl.show()
     return axs
 
 

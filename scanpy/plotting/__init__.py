@@ -510,7 +510,7 @@ def dbscan(adata,
     smps = ['dbscan_groups']
     if smp is not None:
         smps += smp.split(',')
-    smps = scatter(adata,
+    axs = scatter(adata,
                    basis=basis,
                    color=smps,
                    names=names,
@@ -523,8 +523,7 @@ def dbscan(adata,
                    right_margin=right_margin,
                    size=size,
                    titles=titles)
-    writekey = sett.basekey + '_dbscan_' + basis
-    writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+    writekey = sett.basekey + '_dbscan_' + basis + '_' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
     elif show: pl.show()

@@ -627,7 +627,7 @@ def plot_filter_genes_dispersion(adata, gene_filter, log=True):
     from matplotlib import pyplot as pl
     for d in ['dispersions_norm', 'dispersions']:
         means, dispersions = adata.var['means'], adata.var[d]
-        pl.figure()
+        pl.figure(figsize=(4, 4))
         for label, color, mask in zip(['highly variable genes', 'other genes'],
                                       ['black', 'grey'],
                                       [gene_filter, ~gene_filter]):

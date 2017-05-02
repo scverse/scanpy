@@ -129,8 +129,7 @@ def scatter_base(Y,
     avail_layouts = {'2d', '3d'}
     if layout not in avail_layouts:
         raise ValueError('choose layout from', avail_layouts)
-    if type(colors) == str:
-        colors = [colors]
+    if type(colors) == str: colors = [colors]
     if len(sizes) != len(colors):
         if len(sizes) == 1:
             sizes = [sizes[0] for i in range(len(colors))]

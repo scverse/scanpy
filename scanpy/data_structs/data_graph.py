@@ -179,7 +179,7 @@ class DataGraph(object):
                 and 'xroot' in adata.add
                 and adata.add['xroot'].size == adata.X.shape[1]):
                 self.set_root(adata.add['xroot'])
-            from ..preprocess import pca
+            from ..preprocessing import pca
             self.X = pca(X, n_comps=self.n_pcs)
             adata.smp['X_pca'] = self.X
             if (isadata
@@ -531,7 +531,7 @@ class DataGraph(object):
         #          sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
         #                 '    by setting n_pcs_post > 0 you can speed up the computation')
         #      if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
-        #          from ..preprocess import pca
+        #          from ..preprocessing import pca
         #          self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
         #      sett.mt(0, 'computed M matrix')
 

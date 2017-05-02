@@ -16,7 +16,7 @@ from ..tools.pca import pca
 from .. import settings as sett
 
 
-def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
+def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False):
     u"""tSNE
 
     Reference
@@ -44,8 +44,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
         is quite insensitive to this parameter.
-    n_jobs : int or None
-        Use the multicore implementation, if it is installed.
+    n_jobs : int or None (default: None)
+        Use the multicore implementation, if it is installed. Defaults to
+        sett.n_jobs.
 
     Notes
     -----
@@ -97,4 +98,4 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=2, copy=False):
     adata.smp['X_tsne'] = Y
     sett.mt(0, 'finished, added\n'
                '    "X_tsne" coordinates (tSNE representation of X) to adata.smp')
-    return adata if copy else adata
+    return adata if copy else None
