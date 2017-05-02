@@ -283,8 +283,12 @@ class BoundStructArray(np.ndarray):
                     # generate single-column keys
                     keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
                     self._keys_multicol_lookup[key_multicol] = keys
-                else:
+                elif len(self._keys_multicol_lookup[key_multicol]) == len(values[0]):
                     keys = self._keys_multicol_lookup[key_multicol]
+                else:
+                    # regenerate single-column keys
+                    keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
+                    self._keys_multicol_lookup[key_multicol] = keys
                 values = np.array(values)
                 if values.shape[0] == self.shape[0]:
                     values = values.T
