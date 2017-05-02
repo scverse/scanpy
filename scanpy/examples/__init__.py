@@ -97,7 +97,7 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
         adata = check_adata(adata, verbosity=1)
         # subsampling
         if subsample != 1:
-            from ..preprocess import subsample as subsample_function
+            from ..preprocessing import subsample as subsample_function
             subsample_function(adata, subsample)
         # write the prepocessed data
         readwrite.write(sett.basekey, adata)

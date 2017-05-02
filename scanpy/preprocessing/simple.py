@@ -575,9 +575,9 @@ def subsample(data, subsample, seed=0, copy=False):
     if not isinstance(data, AnnData):
         X = data
         return utils.subsample(X, subsample, seed)
-    adata = data
+    adata = data.copy() if copy else data
     _, smp_indices = utils.subsample(adata.X, subsample, seed)
-    adata = adata[smp_indices]
+    adata.filter_smp(smp_indices)
     for k in adata.smp_keys():
         # TODO: this should also be taken into account when slicing
         if k + '_masks' in adata.add:

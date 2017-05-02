@@ -87,7 +87,8 @@ def pca_scatter(adata,
                    pal=pal,
                    right_margin=right_margin,
                    size=size,
-                   titles=titles)
+                   titles=titles,
+                   show=False)
     writekey = sett.basekey + '_pca_scatter' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
@@ -175,7 +176,8 @@ def diffmap(adata,
                 pal=pal,
                 right_margin=right_margin,
                 size=size,
-                titles=titles)
+                titles=titles,
+                show=False)
         writekey = sett.basekey + '_diffmap'
         if isinstance(comps, list):
             comps = ','.join([str(comp) for comp in comps])
@@ -244,7 +246,8 @@ def tsne(adata,
             pal=pal,
             right_margin=right_margin,
             size=size,
-            titles=titles)
+            titles=titles,
+            show=False)
     writekey = sett.basekey + '_tsne' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
@@ -310,7 +313,8 @@ def spring(adata,
                        right_margin=right_margin,
                        size=size,
                        # defined in plotting
-                       titles=['Fruchterman-Reingold step: 12'])
+                       titles=['Fruchterman-Reingold step: 12'],
+                       show=False)
         writekey = sett.basekey + '_spring'
         writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
         show = sett.autoshow if show is None else show
@@ -408,7 +412,8 @@ def dpt(adata,
                        cmap=cmap,
                        pal=pal,
                        right_margin=right_margin,
-                       size=size)
+                       size=size,
+                       show=False)
         writekey = sett.basekey + '_dpt_' + basis
         writekey += (sett.plotsuffix + '_comps' + comps.replace(',', ''))
         if sett.savefigs: savefig(writekey)
@@ -522,7 +527,8 @@ def dbscan(adata,
                    pal=pal,
                    right_margin=right_margin,
                    size=size,
-                   titles=titles)
+                   titles=titles,
+                   show=False)
     writekey = sett.basekey + '_dbscan_' + basis + '_' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
@@ -607,7 +613,8 @@ def paths(adata,
                        cmap=cmap,
                        right_margin=right_margin,
                        size=size,
-                       titles=titles)
+                       titles=titles,
+                       show=False)
         writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
         writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
         if sett.savefigs: savefig(writekey)
@@ -630,7 +637,8 @@ def paths(adata,
                            cmap=cmap,
                            right_margin=right_margin,
                            size=size,
-                           titles=titles)
+                           titles=titles,
+                           show=False)
             del smp_base[-1]
             writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
             writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + '_' + name + sett.plotsuffix

@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Settings, Logging and Timing
+"""Settings, Logging and Timing
 
 Sets global variables like verbosity, manages logging and timing.
 """
