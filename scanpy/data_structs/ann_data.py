@@ -14,6 +14,7 @@ from ..utils import merge_dicts
 SMP_INDEX = 'smp_names'
 VAR_INDEX = 'var_names'
 
+STRING_TYPE = 'S50'
 
 class StorageType(Enum):
     Array = np.ndarray
@@ -98,14 +99,14 @@ class BoundStructArray(np.ndarray):
                 # meta is dict-like
                 names = list(source.keys())
                 try:  # transform to byte-strings
-                    cols = [np.asarray(col) if np.array(col[0]).dtype.char != 'U'
-                            else np.asarray(col).astype('S') for col in source.values()]
+                    cols = [np.asarray(col) if np.array(col[0]).dtype.char not in {'U', 'S'}
+                            else np.asarray(col).astype(STRING_TYPE) for col in source.values()]
                 except UnicodeEncodeError:
                     raise ValueError('Currently only support ascii strings. Don\'t use "ö" etc. for sample annotation.')
 
                 if old_index_key not in source:
                     names.append(new_index_key)
-                    cols.append(np.arange(len(cols[0]) if cols else n_row).astype(np.string_))
+                    cols.append(np.arange(len(cols[0]) if cols else n_row).astype(STRING_TYPE))
                 else:
                     names[names.index(old_index_key)] = new_index_key
                     if isinstance(source[old_index_key][0], np.string_):
@@ -232,7 +233,8 @@ class BoundStructArray(np.ndarray):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             try:
-                # column slicing
+                # determine if we are retrieving a column
+                # TODO: rewrite this in a nicer way!
                 col_slice = False
                 if isinstance(k, str):
                     col_slice = True
@@ -273,7 +275,8 @@ class BoundStructArray(np.ndarray):
             keys = [keys]
             # check if values is nested, if not, it's not multicolumn
             if (not hasattr(values[0], '__len__')
-                or len(values[0]) == 1 or isinstance(values[0], str)):
+                or len(values[0]) == 1  # seems that we do not need this, as the previous line matches already
+                or np.array(values[0]).dtype.char in {'S', 'U'}):  # a string is passed
                 values = [values]
             else:  # otherwise it's a multicolumn key
                 key_multicol = keys[0]
@@ -306,11 +309,6 @@ class BoundStructArray(np.ndarray):
                                  .format(values.shape[0], self.shape[0]))
         keys = np.array(keys)
         values = np.array(values)  # sequence of arrays or matrix with n_keys *rows*
-        if values.dtype.char == 'U':
-            try:
-                values = values.astype('S')
-            except UnicodeEncodeError:
-                raise ValueError('Currently only support ascii strings. Don\'t use "ö" etc. for sample annotation.')
         # update keys
         for key in keys:
             if (key != self.index_key
@@ -319,6 +317,7 @@ class BoundStructArray(np.ndarray):
                 self._keys += [key]
 
         if len(keys) != len(values):
+            print(keys, values)
             raise ValueError('You passed {} column keys but {} arrays as columns. '
                              'If you passed a matrix instead of a sequence '
                              'of arrays, try transposing it.'
@@ -329,6 +328,17 @@ class BoundStructArray(np.ndarray):
                              'but it need to have {} rows.'
                              .format(values.shape[1], self.shape[0]))
 
+        if values.dtype.char in {'U', 'S'}:
+            try:
+                itemsize = values.dtype.itemsize
+                if values.dtype.char == 'U': itemsize /= 4
+                if itemsize > np.dtype(STRING_TYPE).itemsize:
+                    logg.m('WARNING: truncating strings to length {}'
+                           .format(np.dtype(STRING_TYPE).itemsize))
+                values = values.astype(STRING_TYPE)
+            except UnicodeEncodeError:
+                raise ValueError('Currently only support ascii strings. Don\'t use "ö" etc. for sample annotation.')
+
         present = np.intersect1d(keys, self.dtype.names)
         absent = np.setdiff1d(keys, self.dtype.names)
 
@@ -338,15 +348,16 @@ class BoundStructArray(np.ndarray):
                     and v.dtype.itemsize > self.dtype[k].itemsize):
                     # TODO: need to reallocate memory
                     # or allow storing objects, or use pd.dataframes
+                    # TODO: this is no longer raised as we are truncating all strings at 50 bytes
                     raise ValueError(
                         'Currently you cannot implicitly reallocate '
                         'memory: setting the array for key {} with dtype {} requires '
                         'too much memory, you should init AnnData with '
                         'a large enough data type from the beginning. '
-                        'Probably you try to assign a unicode string of length {} '
+                        'Probably you try to assign a string of length {} '
                         'although the array can only store strings of length {}.'
                         .format(k, v.dtype,
-                                int(v.dtype.itemsize/4), int(self.dtype[k].itemsize/4)))
+                                int(v.dtype.itemsize), int(self.dtype[k].itemsize)))
                 super(BoundStructArray, self).__setitem__(k, v)
 
         if any(absent):
@@ -416,7 +427,17 @@ class AnnData(IndexMixin):
 
         Attributes
         ----------
-        X, smp, var, add from the Parameters.
+        X : array-like data matrix
+        n_smps : number of samples
+        n_vars : number of variables
+        smp_names : sample names/index
+        var_names : variable names/index
+        smp_keys : keys to samples annotation
+        var_keys : keys to variables annotation
+        add_keys : keys to unstructured annotation
+        smp : sample annotation (shape n_smps x n_smp_keys)
+        var : variable annotation (shape n_vars x n_var_keys)
+        add : unstructured annotation
         """
         if isinstance(data, Mapping):
             if any((smp, var, add)):
@@ -483,18 +504,14 @@ class AnnData(IndexMixin):
         raise AttributeError("AnnData has no attribute __contains__, don't check `in adata`.")
 
     def __repr__(self):
-        return ('AnnData object with attributes\n'
-                '    X : array-like data matrix of shape\n'
-                '    n_smps x n_vars = {} x {}\n'
-                '    smp_names : the samples index {}\n'
-                '    var_names : the variables index {}\n'
-                '    smp_keys : keys to samples annotation {}\n'
-                '    var_keys : keys to variables annotation {}\n'
-                '    smp : key-based access to sample annotation (shape n_smps x n_smp_keys)\n'
-                '    var : key-based access to variable annotation (shape n_vars x n_var_keys)\n'
-                '    add : key-based access to unstructured annotation'
+        return ('AnnData object with n_smps x n_vars = {} x {}\n'
+                '    smp_names = {}\n'
+                '    var_names = {}\n'
+                '    smp_keys = {}\n'
+                '    var_keys = {}\n'
+                '    add_keys = {}\n'
                 .format(self.n_smps, self.n_vars, self.smp_names, self.var_names,
-                        self.smp_keys(), self.var_keys()))
+                        self.smp.keys(), self.var.keys(), list(self.add.keys())))
 
     @property
     def smp_names(self):
@@ -598,7 +615,7 @@ class AnnData(IndexMixin):
         """Get an array along the sample dimension by first looking up
         smp_keys and then var_names."""
         x = (self.smp[k] if k in self.smp_keys()
-             else self[:, k] if k in set(self.var_names)
+             else self[:, k].X if k in set(self.var_names)
              else None)
         if x is None:
             raise ValueError('Did not find {} in smp_keys or var_names.'

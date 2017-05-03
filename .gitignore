@@ -10,6 +10,7 @@ scanpy.egg-info/
 scanpy_user/
 scanpy_save/
 scanpy_later/
+scripts_test/
 thirdp/
 test.py
 

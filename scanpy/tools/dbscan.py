@@ -68,4 +68,4 @@ def dbscan(adata, basis='tsne', n_comps=10, eps=None, min_samples=None, copy=Fal
     sett.mt(0, 'finished, added\n'
             '    "dbscan_groups", the cluster labels (adata.smp)\n'
             '    "dbscan_groups_names", the unique cluster labels (adata.smp_names)')
-    return adata if copy else adata
+    return adata if copy else None

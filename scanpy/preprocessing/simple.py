@@ -12,7 +12,7 @@ import statsmodels.api as sm
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from ..data_structs import AnnData
 from .. import sett
-
+from .. import plotting as pl
 
 def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     """
@@ -109,8 +109,10 @@ def filter_genes_dispersion(data, log=True,
                             min_mean=0.0125, max_mean=3,
                             n_top_genes=None,
                             flavor='seurat',
-                            plot=False, copy=False):
+                            copy=False):
     """Extract highly variable genes.
+
+    If trying out parameters, pass the data matrix instead of AnnData.
 
     Similar functions are used, for example, by Cell Ranger (Zheng et al., 2017)
     and Seurat (Macosko et al., 2015).
@@ -128,8 +130,6 @@ def filter_genes_dispersion(data, log=True,
     flavor : {'seurat', 'cell_ranger'}
         Choose method for computing normalized dispersion. Note that Seurat
         passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
-    plot : bool (default: False)
-        Plot the result.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
@@ -155,30 +155,22 @@ def filter_genes_dispersion(data, log=True,
                                          min_mean=min_mean, max_mean=max_mean,
                                          n_top_genes=n_top_genes,
                                          flavor=flavor, plot=plot)
-        gene_filter, means, dispersions, dispersions_norm = result
-        adata.var['means'] = means
-        adata.var['dispersions'] = dispersions
-        adata.var['dispersions_norm'] = dispersions_norm
-        if plot:
-            plot_filter_genes_dispersion(adata, gene_filter=gene_filter, log=not log)
-        adata.filter_var(gene_filter)
+        adata.var['means'] = result['means']
+        adata.var['dispersions'] = result['dispersions']
+        adata.var['dispersions_norm'] = result['dispersions_norm']
+        adata.filter_var(result['gene_filter'])
         return adata if copy else None
     sett.m(0, '... filter highly varying genes by dispersion and mean')
     X = data  # proceed with data matrix
-    if False:  # the following is less efficient and has no support for sparse matrices
-        mean = np.mean(X, axis=0)
-        std = np.std(X, axis=0, ddof=1)  # use R convention
-        var = np.var(X, axis=0, ddof=1)
-    else:
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler(with_mean=False).partial_fit(X)
-        mean = scaler.mean_
-        var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))  # user R convention (unbiased estimator)
-        dispersion = var / (mean + 1e-12)
-        if log:  # consider logarithmized mean as in Seurat
-            dispersion[dispersion == 0] = np.nan
-            dispersion = np.log(dispersion)
-            mean = np.log1p(mean)
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler(with_mean=False).partial_fit(X)
+    mean = scaler.mean_
+    var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))  # use R convention (unbiased estimator)
+    dispersion = var / (mean + 1e-12)
+    if log:  # logarithmized mean as in Seurat
+        dispersion[dispersion == 0] = np.nan
+        dispersion = np.log(dispersion)
+        mean = np.log1p(mean)
     # all of the following quantities are "per-gene" here
     import pandas as pd
     df = pd.DataFrame()
@@ -193,31 +185,25 @@ def filter_genes_dispersion(data, log=True,
                                  - disp_mean_bin[df['mean_bin']].values) \
                                  / disp_std_bin[df['mean_bin']].values
     elif flavor == 'cell_ranger':
-        df['mean_bin'] = pd.cut(df['mean'],
-                                np.r_[-np.inf, np.percentile(df['mean'],
-                                                             np.arange(10, 105, 5)),
-                                      np.inf])
-        var_by_bin = pd.DataFrame()
         from statsmodels import robust
-        import warnings  # this raises a warning we do not want to display
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            var_by_bin['bin_disp_median'] = df.groupby('mean_bin').apply(
-                lambda group: np.median(group['dispersion']))
-            var_by_bin['bin_disp_mad'] = df.groupby('mean_bin').apply(
-                lambda group: robust.mad(group['dispersion']))
-        df = df.merge(var_by_bin, left_on='mean_bin', right_index=True)
-        df['dispersion_norm'] = np.abs(df['dispersion']
-                                       - df['bin_disp_median']) \
-                                       / df['bin_disp_mad']
+        df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
+            np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf])
+        disp_grouped = df.groupby('mean_bin')['dispersion']
+        disp_median_bin = disp_grouped.median()
+        disp_mad_bin = disp_grouped.apply(robust.mad)
+        df['dispersion_norm'] = np.abs((df['dispersion'].values
+                                 - disp_median_bin[df['mean_bin']].values)) \
+                                 / disp_mad_bin[df['mean_bin']].values
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
-    dispersion_norm = np.array(df['dispersion_norm'].values)
+    dispersion_norm = df['dispersion_norm'].values.copy()
     if n_top_genes is not None:
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_filter = df['dispersion_norm'].values >= disp_cut_off
-        sett.m(0, 'dispersion cutoff', disp_cut_off)
+        sett.m(0, '... the', n_top_genes,
+               'top genes correspond to a normalized dispersion cutoff of',
+               disp_cut_off)
     else:
         sett.m(0, '    using `min_disp`, `max_disp`, `min_mean` and `max_mean`')
         sett.m(0, '--> set `n_top_genes` to simply select top-scoring genes instead')
@@ -226,7 +212,10 @@ def filter_genes_dispersion(data, log=True,
         gene_filter = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
-    return gene_filter, df['mean'].values, df['dispersion'].values, df['dispersion_norm'].values
+    result = {'gene_filter': gene_filter, 'means': df['mean'].values,
+              'dispersions': df['dispersion'].values,
+              'dispersions_norm': df['dispersion_norm'].values}
+    return result
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
@@ -276,7 +265,7 @@ def log1p(data, copy=False):
         return X.log1p()
 
 
-def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
+def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
         random_state=None, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
     """Embed data using PCA.
 
@@ -288,9 +277,10 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
     n_comps : int, optional (default: 10)
         Number of principal components to compute.
     zero_center : bool or None, optional (default: None)
-        If True, compute standard PCA from Covariance matrix. Default for dense
-        input. If False, omit zero-centering variables, which allows to handle
-        sparse input efficiently. Defaults for sparse input.
+        If True, compute standard PCA from Covariance matrix. If False, omit
+        zero-centering variables, which allows to handle sparse input
+        efficiently. If None, defaults to True for dense and to False for sparse
+        input.
     svd_solver : str, optional (default: 'auto')
         SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
         (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
@@ -371,8 +361,7 @@ def pca(data, n_comps=10, zero_center=None, svd_solver='auto',
                '    the following components often resemble the exact PCA very closely')
         pca_ = TruncatedSVD(n_components=n_comps)
     X_pca = pca_.fit_transform(X)
-    if X_pca.dtype.descr != np.dtype(dtype).descr:
-        X_pca = X_pca.astype(dtype)
+    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
     if False if return_info is None else return_info:
         return X_pca, pca_.components_, pca_.explained_variance_ratio_
     else:
@@ -475,7 +464,7 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
-    sett.mt(0, 'regress out', smp_keys)
+    sett.mt(0, 'regress out', smp_keys, start=True)
     if issparse(adata.X):
         sett.m(0, '... sparse input is densified and may '
                'lead to huge memory consumption')
@@ -512,37 +501,36 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
     return adata if copy else None
 
 
-def scale(data, zero_center=None, max_value=None, copy=False):
+def scale(data, zero_center=True, max_value=None, copy=False):
     """Scale data to unit variance and zero mean (`if zero_center`).
 
     Parameters
     ----------
     zero_center : bool or None, optional (default: None)
         If False, omit zero-centering variables, which allows to handle sparse
-        input efficiently. For dense input, defaults to True, for sparse input,
-        defaults to False.
-    max_value : float or None, optional (default: None)
-        Clip to this value after scaling. Defaults to 10 if zero_center is True,
-        otherwise np.inf (no cutoff).
+        input efficiently. If None, for dense input, defaults to True, for
+        sparse input, defaults to False.
+    max_value : None or float, optional (default: None)
+        Clip to this value after scaling. If None, do not clip.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = scale(adata.X, zero_center)
+        adata.X = scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
         return adata if copy else None
-    X = data  # proceed with the data matrix
+    X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
-    if zero_center and max_value:
-        sett.m(0, 'scale_data: be very careful to use `max_value` without `zero_center`')
     if zero_center and max_value is None:
-        max_value = 10
-    if not zero_center and max_value is None:
-        max_value = np.inf
+        sett.m(0, 'scale_data: be very careful to use `max_value` without `zero_center`')
+    if not zero_center:
+        sett.m(0, 'omitting to zero_center the data')
+    if max_value is not None:
+        sett.m(0, 'clipping at max_value', max_value)
     if zero_center and issparse(X):
         sett.m(0, 'scale_data: as `zero_center=True`, '
                'sparse input is densified and may '
-               'lead to huge memory consumption')
+               'lead to large memory consumption')
         X = X.toarray()
     from sklearn.preprocessing import StandardScaler
     # the following doesn't use the unbiased estimator for variance
@@ -551,7 +539,8 @@ def scale(data, zero_center=None, max_value=None, copy=False):
     # user R convention (unbiased estimator)
     scaler.scale_ = scaler.scale_ * np.sqrt(X.shape[0]/(X.shape[0]-1))
     X_scaled = scaler.transform(X)
-    X_scaled[X_scaled > max_value] = max_value  # np.clip not implementd for sparse matrices?
+    if max_value is not None:
+        X_scaled[X_scaled > max_value] = max_value  # np.clip not implementd for sparse matrices
     return X_scaled
 
 
@@ -606,48 +595,6 @@ def zscore_deprecated(X):
     means = np.tile(np.mean(X, axis=0)[None, :], (X.shape[0], 1))
     stds = np.tile(np.std(X, axis=0)[None, :], (X.shape[0], 1))
     return (X - means) / (stds + .0001)
-
-
-# --------------------------------------------------------------------------------
-# Plot result of preprocessing functions
-# --------------------------------------------------------------------------------
-
-
-def plot_filter_genes_dispersion(adata, gene_filter, log=True):
-    """Plot dispersions vs. means for genes.
-
-    Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data object.
-    gene_filter : np.ndarray of shape n_top_genes of dtype bool
-        Boolean index array.
-    log : bool
-        Plot on logarithmic axes.
-    """
-    from matplotlib import pyplot as pl
-    for d in ['dispersions_norm', 'dispersions']:
-        means, dispersions = adata.var['means'], adata.var[d]
-        pl.figure(figsize=(4, 4))
-        for label, color, mask in zip(['highly variable genes', 'other genes'],
-                                      ['black', 'grey'],
-                                      [gene_filter, ~gene_filter]):
-            pl.scatter(means[mask], dispersions[mask],
-                       label=label, c=color, s=1)
-        if log:  # there's a bug in autoscale
-            pl.xscale('log')
-            pl.yscale('log')
-            min_dispersion = np.min(dispersions)
-            y_min = 0.95*min_dispersion if min_dispersion > 0 else 1e-3
-            pl.xlim(0.95*np.min(means), 1.05*np.max(means))
-            pl.ylim(y_min, 1.05*np.max(dispersions))
-        pl.legend()
-        pl.xlabel('mean expression of gene')
-        pl.ylabel('dispersion of gene' + (' (normalized)' if 'norm' in d else ' (not normalized)'))
-    from .. import plotting as plott
-    plott.savefig_or_show('high_var_genes')
 
 
 # --------------------------------------------------------------------------------

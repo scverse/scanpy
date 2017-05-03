@@ -16,23 +16,29 @@ from .. import readwrite
 from . import utils
 from .utils import scatter_base, scatter_group
 
+
 # -------------------------------------------------------------------------------
 # Toplevel Helper Functions
 # -------------------------------------------------------------------------------
 
 
 def savefig(writekey):
-    """Save figure to `sett.figdir + writekey + '.' + sett.file_format_figures`
+    """Save figure to `sett.figdir + writekey + '.' + sett.file_format_figs`
     """
-    filename = sett.figdir + writekey + '.' + sett.file_format_figures
+    filename = sett.figdir + writekey + '.' + sett.file_format_figs
     sett.m(0, 'saving figure to file', filename)
     pl.savefig(filename)
 
 
 def savefig_or_show(writekey, show=None):
+    """Save figure to `sett.figdir + writekey + '.' + sett.file_format_figs`
+    if `sett.savefigs == True` else show the figure if `show == True`.
+
+    If `show` is not passed, show figures based on `sett.autoshow`.
+    """
     show = sett.autoshow if show is None else show
     if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.file_format_figures
+        filename = sett.figdir + writekey + '.' + sett.file_format_figs
         sett.m(0, 'saving figure to file', filename)
         pl.savefig(filename)
     elif show: pl.show()
@@ -69,6 +75,8 @@ def violin(adata, smp, jitter=True, size=1, color='black', show=None):
                      col_template='{col_name}').set_xlabels('')
     show = sett.autoshow if show else show
     if show: pl.show()
+    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
+    sett.set_dpi() # reset resolution
     return g
 
 
@@ -207,7 +215,7 @@ def scatter(adata,
                     # sett.m(0, '... coloring according to', color_key)
                 # coloring according to gene expression
                 elif color_key in set(adata.var_names):
-                    c = adata.X[:, color_key]
+                    c = adata[:, color_key].X
                     continuous = True
                     # sett.m(0, '... coloring according to expression of gene', color_key)
                 else:
@@ -227,7 +235,7 @@ def scatter(adata,
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.3
     if titles is None and color_keys[0] is not None:
-        titles = [color_key.replace('_', ' ') for color_key in color_keys]
+        titles = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
 
     axs = scatter_base(Y,
                        titles=titles,

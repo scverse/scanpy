@@ -20,7 +20,7 @@ if not os.path.exists('.scanpy/'):  # directory for configuration files etc.
 import atexit
 import time
 from functools import reduce
-from matplotlib import is_interactive
+# from matplotlib import is_interactive
 
 # --------------------------------------------------------------------------------
 # Global Settings Attributes
@@ -60,7 +60,7 @@ Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5'
 (hdf5) and 'npz' for importing and exporting.
 """
 
-file_format_figures = 'png'
+file_format_figs = 'png'
 """File format for saving figures.
 
 For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
@@ -108,8 +108,10 @@ n_jobs = 2
 logfile = ''
 """Name of logfile. By default is set to '' and writes to standard output."""
 
-# import __main__ as main          # not needed, use matplotlib.is_interactive() function instead
-is_interactive = is_interactive()  # not hasattr(main, '__file__')
+# not sure what's the better method to choose
+import __main__ as main
+is_interactive = not hasattr(main, '__file__')
+# is_interactive = is_interactive()
 """Determines whether run interactively.
 
 Defaults to matplotlib.is_interactive().
@@ -120,15 +122,21 @@ time since importing this module is output after leaving the session.
 If your progress bars are ugly, try changing the value.
 """
 
+_dpi = 200
+"""Resolution of png figures.
+
+We also need a global variable as, for example, Seaborn resets the rcParams.
+"""
 
 # --------------------------------------------------------------------------------
 # Global Setting Functions
 # --------------------------------------------------------------------------------
 
 
-def set_dpi(dpi=200):
-    """
-    Set resolution of png figures.
+def set_dpi(dots_per_inch=None):
+    """Set resolution of png figures.
+
+    We also need a global variable as, for example, Seaborn resets the rcParams.
 
     Parameters
     ----------
@@ -136,8 +144,10 @@ def set_dpi(dpi=200):
         Resolution of png output in dots per inch.
     """
     from matplotlib import rcParams
-    # default setting as in scanpy.plotting
-    rcParams['savefig.dpi'] = dpi
+    global _dpi
+    if dots_per_inch is not None:
+        _dpi = dots_per_inch
+    rcParams['savefig.dpi'] = _dpi
 
 
 # ------------------------------------------------------------------------------
@@ -174,7 +184,7 @@ def add_args(p):
     """
     aa = p.add_argument_group('Save figures').add_argument
     aa('-s', '--savefigs',
-       type=str, default='', const=file_format_figures, nargs='?', metavar='ext',
+       type=str, default='', const=file_format_figs, nargs='?', metavar='ext',
        help='Save figures either as "png", "svg" or "pdf". Just providing '
             '"--savefigs" will save to "png" (default: do not save figures).')
     aa('--figdir',
@@ -256,12 +266,12 @@ def process_args(args):
     args.pop('verbosity')
 
     global savefigs
-    global file_format_figures
+    global file_format_figs
     if args['savefigs'] == '':
         savefigs = False
     else:
         savefigs = True
-        file_format_figures = args['savefigs']
+        file_format_figs = args['savefigs']
     args.pop('savefigs')
 
     global figdir

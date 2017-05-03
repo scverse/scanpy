@@ -3,6 +3,7 @@
 """
 
 import os
+import datetime
 from . import settings as sett
 
 
@@ -75,7 +76,7 @@ def format_memory_usage(mem_usage, msg='', newline=False):
     mem, diff = mem_usage
     string = (('\n' if newline else '')
               + msg + (' \n... ' if msg != '' else '')
-              + 'memory usage: current / difference: {:.2f} GB / {:+.2f} GB'
+              + 'Memory usage: current {:.2f} GB, difference {:+.2f} GB'
               .format(mem, diff))
     return string
 
@@ -83,3 +84,7 @@ def format_memory_usage(mem_usage, msg='', newline=False):
 def print_memory_usage(msg='', newline=False):
     string = format_memory_usage(get_memory_usage(), msg, newline)
     print(string)
+
+
+def get_date():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")

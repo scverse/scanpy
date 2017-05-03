@@ -6,10 +6,13 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 
 import numpy as np
 from ..compat.matplotlib import pyplot as pl
+# general functions
 from .toplevel import scatter, violin
 from .toplevel import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .toplevel import ranking, ranking_deprecated
 from .toplevel import savefig, savefig_or_show
+# preprocessing
+from .preprocessing import filter_genes_dispersion
 from . import utils
 from .. import sett
 
@@ -60,7 +63,7 @@ def pca(adata, **params):
 
 
 def pca_scatter(adata,
-                smp=None,
+                color=None,
                 names=None,
                 comps=None,
                 cont=None,
@@ -78,7 +81,7 @@ def pca_scatter(adata,
     adata = check_adata(adata)
     smps = scatter(adata,
                    basis='pca',
-                   color=smp,
+                   color=color,
                    names=names,
                    comps=comps,
                    cont=cont,
@@ -112,7 +115,7 @@ def pca_ranking(adata, comps=None, show=None):
 
 
 def diffmap(adata,
-            smp=None,
+            color=None,
             names=None,
             comps=None,
             cont=None,
@@ -130,13 +133,13 @@ def diffmap(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
+    names : str, optional (default: all names in color)
+        Allows to restrict groups in sample annotation (color) to a few.
     comps : str or list, optional (default: '1,2')
          String of the form '1,2' or 'all' or list. First component is 1 or '1'.
     cont : bool, None (default: None)
@@ -167,7 +170,7 @@ def diffmap(adata,
     for comps in comps_list:
         scatter(adata,
                 basis='diffmap',
-                color=smp,
+                color=color,
                 names=names,
                 comps=comps,
                 cont=cont,
@@ -189,7 +192,7 @@ def diffmap(adata,
 
 
 def tsne(adata,
-         smp=None,
+         color=None,
          names=None,
          comps=None,
          cont=None,
@@ -207,13 +210,13 @@ def tsne(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
+    names : str, optional (default: all names in color)
+        Allows to restrict groups in sample annotation (color) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -237,7 +240,7 @@ def tsne(adata,
     adata = check_adata(adata)
     scatter(adata,
             basis='tsne',
-            color=smp,
+            color=color,
             names=names,
             comps=comps,
             cont=cont,
@@ -256,7 +259,7 @@ def tsne(adata,
 
 
 def spring(adata,
-           smp=None,
+           color=None,
            names=None,
            comps='1,2',
            cont=None,
@@ -273,13 +276,13 @@ def spring(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
+    names : str, optional (default: all names in color)
+        Allows to restrict groups in sample annotation (color) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -299,11 +302,11 @@ def spring(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    Y = adata.smp['X_spring']
+    Y = adata.color['X_spring']
     if True:
-        smps = scatter(adata,
+        scatter(adata,
                        basis='spring',
-                       color=smp,
+                       color=color,
                        names=names,
                        comps=comps,
                        cont=cont,
@@ -317,7 +320,7 @@ def spring(adata,
                        titles=['Fruchterman-Reingold step: 12'],
                        show=False)
         writekey = sett.basekey + '_spring'
-        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+        writekey += '_' + sett.plotsuffix
         show = sett.autoshow if show is None else show
         if sett.savefigs: savefig(writekey)
         elif show: pl.show()
@@ -344,7 +347,7 @@ def spring(adata,
 
 def dpt(adata,
         basis='diffmap',
-        smp=None,
+        color=None,
         names=None,
         comps=None,
         cont=None,
@@ -364,7 +367,7 @@ def dpt(adata,
         Annotated data matrix.
     basis : {'diffmap', 'pca', 'tsne', 'spring'}
         Choose the basis in which to plot.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
@@ -387,14 +390,14 @@ def dpt(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     # scatter plot
-    smps = ['dpt_pseudotime']
+    colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1:
-        smps += ['dpt_groups']
+        colors += ['dpt_groups']
     adata.add['highlights'] = (list([adata.add['iroot']])   # also plot the tip cell indices
                                + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
                                if adata.add['dpt_segtips'][i][1] != -1])
-    if smp is not None:
-        smps += smp.split(',')
+    if color is not None:
+        colors += color.split(',')
     if comps == 'all':
         comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
     else:
@@ -402,9 +405,9 @@ def dpt(adata,
             comps = '1,2' if '2d' in layout else '1,2,3'
         comps_list = [comps]
     for comps in comps_list:
-        smps = scatter(adata,
+        colors = scatter(adata,
                        basis=basis,
-                       color=smps,
+                       color=colors,
                        names=names,
                        comps=comps,
                        cont=cont,
@@ -468,7 +471,7 @@ def dpt_segments_pseudotime(adata, cmap=None, pal=None):
 
 def dbscan(adata,
            basis='tsne',
-           smp=None,
+           color=None,
            names=None,
            comps=None,
            cont=None,
@@ -489,7 +492,7 @@ def dbscan(adata,
         Annotated data matrix.
     basis : {'diffmap', 'pca', 'tsne', 'spring'}
         Choose the basis in which to plot.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
@@ -513,12 +516,12 @@ def dbscan(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    smps = ['dbscan_groups']
-    if smp is not None:
-        smps += smp.split(',')
+    colors = ['dbscan_groups']
+    if color is not None:
+        colors += color.split(',')
     axs = scatter(adata,
                    basis=basis,
-                   color=smps,
+                   color=colors,
                    names=names,
                    comps=comps,
                    cont=cont,
@@ -540,7 +543,7 @@ def paths(adata,
           basis='diffmap',
           dist_threshold=None,
           single_panel=True,
-          smp=None,
+          color=None,
           names=None,
           comps=None,
           cont=None,
@@ -561,13 +564,13 @@ def paths(adata,
         Distance threshold to decide what still belongs in the path.
     single_panel : bool (default: True)
         If False, show separate panel for each group.
-    smp : str, optional (default: first annotation)
+    color : str, optional (default: first annotation)
         Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
+    names : str, optional (default: all names in color)
+        Allows to restrict groups in sample annotation (color) to a few.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -589,9 +592,9 @@ def paths(adata,
     from ..tools.paths import process_dists_from_paths
     process_dists_from_paths(adata, dist_threshold)
 
-    smp_base = ['paths_groups']
-    if smp is not None:
-        smp_base += [smp]
+    color_base = ['paths_groups']
+    if color is not None:
+        color_base += [color]
     adata.add['highlights'] = [adata.add['iroot']]
 
     # add continuous distance coloring
@@ -600,12 +603,12 @@ def paths(adata,
             if names is None or (names is not None and name in names):
                 title = 'dist_from_path_' + name
                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                smp_base.append(title)
+                color_base.append(title)
                 adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
 
-        smps = scatter(adata,
+        colors = scatter(adata,
                        basis=basis,
-                       color=smp_base,
+                       color=color_base,
                        names=names,
                        comps=comps,
                        cont=cont,
@@ -617,19 +620,19 @@ def paths(adata,
                        titles=titles,
                        show=False)
         writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
-        writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + sett.plotsuffix
+        writekey += '_' + ('-'.join(colors) if colors[0] is not None else '') + sett.plotsuffix
         if sett.savefigs: savefig(writekey)
     else:
         for iname, name in enumerate(adata.add['paths_groups_names']):
             if names is None or (names is not None and name in names):
                 title = 'dist_from_path_' + name
                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                smp_base.append(title)
+                color_base.append(title)
                 adata.add['highlights'] = ([adata.add['iroot']]
                                        + [adata.add['paths_groups_fateidx'][iname]])
-            smps = scatter(adata,
+            colors = scatter(adata,
                            basis=basis,
-                           color=smp_base,
+                           color=color_base,
                            names=[name],
                            comps=comps,
                            cont=cont,
@@ -640,9 +643,9 @@ def paths(adata,
                            size=size,
                            titles=titles,
                            show=False)
-            del smp_base[-1]
+            del color_base[-1]
             writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
-            writekey += '_' + ('-'.join(smps) if smps[0] is not None else '') + '_' + name + sett.plotsuffix
+            writekey += '_' + ('-'.join(colors) if colors[0] is not None else '') + '_' + name + sett.plotsuffix
             if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()

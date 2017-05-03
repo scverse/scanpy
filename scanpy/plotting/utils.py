@@ -7,6 +7,7 @@ from matplotlib import rcParams, ticker
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 
+
 def init_plotting_params():
     """Init default plotting parameters.
 
@@ -48,7 +49,8 @@ def init_plotting_params():
                '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
                '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7', remove grey
                '#dbdb8d', '#9edae5'])
-
+    # same as seaborn default
+    rcParams['axes.grid'] = True
 
 def default_pal(pal=None):
     if pal is None:
@@ -80,6 +82,7 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
                edgecolors='face',
                s=size,
                label=adata.add[name + '_names'][imask])
+
 
 def scatter_base(Y,
                  colors='blue',
@@ -127,11 +130,12 @@ def scatter_base(Y,
     elif right_margin is None: right_margin = 0.01
     # make a figure with panels len(colors) x 1
     top_offset = 1 - rcParams['figure.subplot.top']
-    bottom_offset = 0.08
-    left_offset = 0.3  # in units of base_height
+    bottom_offset = 0.15 if show_ticks else 0.08
+    left_offset = 1 if show_ticks else 0.3  # in units of base_height
     base_height = rcParams['figure.figsize'][1]
     height = base_height
     base_width = rcParams['figure.figsize'][0]
+    if show_ticks: base_width *= 1.1
     draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
 
     right_margin_factor = (1 + right_margin/(1-right_margin))
