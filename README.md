@@ -1,5 +1,4 @@
 [Quick Start](#quick_start) |
-[Examples](EXAMPLES.md) |
 [Tools](#tools) |
 [Installation](#install) |
 [References](#references)
@@ -8,7 +7,31 @@
 
 Tools for analyzing and simulating single-cell data that aim at an understanding
 of dynamic biological processes from snapshots of transcriptome or
-proteome. Please, cite the original references and implementations.
+proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, cite original references in [Tools](#tools). Any comments are appreciated!
+
+Take a look at the use cases compiled in [scanpy_usage](https://github.com/theislab/scanpy_usage). Among other features, Scanpy is about a factor 10 faster and more memory efficient than comparable R packages, see [170503_zheng17](https://github.com/theislab/scanpy_usage). For large-scale data, this becomes crucial for an interactive analysis.
+
+Also, DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
+
+## Quick Start <a id="quick_start"></a>
+
+Download or clone the repository - green button on top of the page - and `cd`
+into its root directory. Type 
+```
+pip install -e .
+```
+Aside from enabling `import scanpy` anywhere on your system, you can also work 
+with the top-level command `scanpy` on the command-line (more info [here](#install)).
+
+## Tools
+
+### Overview
+
+#### Preprocessing
+
+* [pp](scanpy/preprocessing) Filtering of highly-varying genes, batch-effect correction, UMI-normalization etc.
+
+#### Visualization
 
 * [pca](#pca) - Visualize data using PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
@@ -19,133 +42,23 @@ proteome. Please, cite the original references and implementations.
 * [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13); 
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
+* [spring](#spring) - [Force-directed graph drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing), suggested by [Weinreb *et al.*, (2016)](http://biorxiv.org/content/early/2016/11/29/090332).
+
+#### Branching trajectories and pseudotime, clustering, differential expression
+
 * [dpt](#dpt) - Infer progression of cells, identify *branching*
 subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
 1996](#ref_ester96), [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-*  [diffrank](#diffrank) - Rank genes according to differential 
+* [diffrank](#diffrank) - Rank genes according to differential 
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
+
+#### Simulation
 
 * [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17)).
-
-The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf)
-explains conceptual ideas and usage as a library. Potential coauthors who would
-like to work on software and manuscript are welcome! Any comments are
-appreciated!
-
-## Quick Start <a id="quick_start"></a>
-
-Download or clone the repository - green button on top of the page - and `cd`
-into its root directory. Type `pip install -e .` and you can immediately work
-with the top-level command `scanpy` in any directory (more info [here](#install)).
-
-#### Data of [Moignard *et al.* (2015)](#ref_moignard15) <a id="moignard15"></a>
-
-[[notebook]](https://github.com/theislab/scanpy_notebooks/blob/master/moignard15.ipynb)
-Early mesoderm cells in mouse differentiate through three subsequent stages (PS,
-NP, HF) and then branch into erythorytes (4SG) and endothelial cells (4SFG).
-```
-scanpy moignard15 pca
-scanpy moignard15 tsne
-scanpy moignard15 diffmap
-```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_exp_groups.png" height="175">
-
-Coloring samples/cells by gene expression works analogously,
-```
-scanpy moignard15 pca -p smp HbbbH1
-scanpy moignard15 tsne -p smp HbbbH1
-scanpy moignard15 diffmap -p smp HbbbH1
-```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_pca_HbbbH1.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_tsne_HbbbH1.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffmap_HbbbH1.png" height="175">
-
-Diffusion Pseudotime (DPT) analysis reveals differentation and branching. It
-detects the *trunk* of progenitor cells (*dpt group* 0) and the *branches* of
-endothelial cells (*dpt group* 1/2) and erythrocytes (*dpt group* 3). The inferred
-*pseudotime* traces the degree of cells' progression in the differentiation
-process. By default, this is plotted using Diffusion Maps. Using the `-p`
-option, you can specify the tSNE basis, for example.
-```
-scanpy moignard15 dpt -p smp exp_groups legendloc "upper left"
-scanpy moignard15 dpt -p smp exp_groups legendloc none basis tsne
-```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_diffmap_dpt_pseudotime-dpt_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_segpt.png" height="175">
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_tsne_dpt_pseudotime-dpt_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_dpt_heatmap.png" height="175">
-
-DPT orders cells by *dpt groups*, and within each group, by pseudotime. Groups
-are ordered by average pseudotime within the group.  With this, we reproduced
-most of Fig. 1 from [Haghverdi *et al.* (2016)](#ref_haghverdi16).
-
-Let us rank genes according to differential expression between groups of cells.
-```
-scanpy moignard15 diffrank -o smp dpt_groups names 0,2,3
-```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dpt_groups.png" height="150">
-
-In contrast to a DPT analysis, a standard clustering in tSNE coordinates blurs
-the continuous nature of the data. Also, a seemingly close correspondence
-between clusters and experimental groups is *not* confirmed by the top-ranked
-genes.
-<a id="moignard15_dbscan"></a>
-```
-scanpy moignard15 dbscan -p smp exp_groups
-scanpy moignard15 diffrank -o smp dbscan_groups names 2,3
-scanpy moignard15 diffrank -o smp exp_groups names names PS,4SG
-```
-<img src="http://falexwolf.de/scanpy/figs1/moignard15_dbscan_tsne_dbscan_groups-exp_groups.png" height="175"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_dbscan_groups.png" height="150"><img src="http://falexwolf.de/scanpy/figs1/moignard15_diffrank_exp_groups.png" height="150">
-
-If you want to use the results externally, read the resulting hdf5
-file (inspect its content using `h5ls write/moignard15.h5`). If you prefer
-reading and writing csv files, which is much slower, however, use the option
-`--fileformat csv`.
-
-#### More examples and help
-
-For more examples, read [this](EXAMPLES.md), or display them on the command line
-(example data and example use cases, respectively).
-```shell
-scanpy exdata
-scanpy examples
-```
-
-Get general help, help on tool parameters and help on plotting the results of a tool.
-```shell
-scanpy --help
-scanpy dpt --help
-scanpy dpt -p help
-```
-
-#### Work on your own examples <a id="add_example"></a>
-
-To work on your own example, make a copy and edit the following
-[notebook](examples/myexample_template.ipynb). If you want to call user examples
-from the command-line, create a file `scanpy_whatevername.py` in your current
-working directory, e.g., by downloading and renaming
-[scanpy_user_template.py](scanpy/examples/scanpy_user_template.py) and changing the function
-`myexample()` to your needs. Consider using copy and paste from
-[scanpy/examples/builtin.py](scanpy/examples/builtin.py). Call your example using `scanpy
-myexample pca`. For the previous example (`moignard15`) you would define the function 
-[here](https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py#L143-L174).
-
-When you're done trying out parameters, you can conventiently save them by generating
-a dictionary `example_parameters` in your user module, just as 
-[here](https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py#L16-50).
-
-It would be great if you added your example to [examples](EXAMPLES.md) and
-[scanpy/examples/builtin.py](scanpy/examples/builtin.py) together with a link to
-public data.  Simply make a pull request for this. If you have questions or
-prefer sending your script by email, contact [Alex](http://falexwolf.de).
-
-Finally, if you want to use your own tool on the command line, put your script
-into [scanpy/tools](scanpy/tools), update
-[scanpy/tools/__init__.py](scanpy/tools/__init__.py) and use a wrapper like
-[scripts/diffmap.py](scripts/diffmap.py), which can be called directly.
-```
-./scripts/diffmap.py moignard15
-```
 
 ## Tools <a id="tools"></a>
 
