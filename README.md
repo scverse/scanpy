@@ -13,7 +13,7 @@ Take a look at the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage). Among others, you will
 learn that Scanpy is about a factor 10 faster and more memory efficient than
 comparable R packages, see
-[170503_zheng17](https://github.com/theislab/scanpy_usage/170503_zheng17). For large-scale
+[170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17). For large-scale
 data, this becomes crucial for an interactive analysis.
 
 Note that [DPT](#dpt), one of the core tools of Scanpy, has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
