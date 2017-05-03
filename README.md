@@ -5,13 +5,18 @@
 
 # Scanpy - Single-Cell Analysis in Python
 
-Tools for analyzing and simulating single-cell data that aim at an understanding
+Efficient tools for analyzing and simulating large-scale single-cell data that aim at an understanding
 of dynamic biological processes from snapshots of transcriptome or
-proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, cite original references in [Tools](#tools). Any comments are appreciated!
+proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, also cite the original literature referenced in [Tools](#tools) and throughout the package. Any comments are appreciated!
 
-Take a look at the use cases compiled in [scanpy_usage](https://github.com/theislab/scanpy_usage). Among other features, Scanpy is about a factor 10 faster and more memory efficient than comparable R packages, see [170503_zheng17](https://github.com/theislab/scanpy_usage). For large-scale data, this becomes crucial for an interactive analysis.
+Take a look at the use cases compiled in
+[scanpy_usage](https://github.com/theislab/scanpy_usage). Among others, you will
+learn that Scanpy is about a factor 10 faster and more memory efficient than
+comparable R packages, see
+[170503_zheng17](https://github.com/theislab/scanpy_usage/170503_zheng17). For large-scale
+data, this becomes crucial for an interactive analysis.
 
-Also, DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
+Note that [DPT](#dpt), one of the core tools of Scanpy, has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 ## Quick Start <a id="quick_start"></a>
 
@@ -20,16 +25,19 @@ into its root directory. Type
 ```
 pip install -e .
 ```
-Aside from enabling `import scanpy` anywhere on your system, you can also work 
+Aside from enabling `import scanpy as sc` anywhere on your system, you can also work 
 with the top-level command `scanpy` on the command-line (more info [here](#install)).
 
 ## Tools
 
 ### Overview
 
-#### Preprocessing
-
-* [pp](scanpy/preprocessing) Filtering of highly-varying genes, batch-effect correction, UMI-normalization etc.
+Machine Learning and statistics tools are functions in the module
+[`sc.tl.*`](scanpy/tools). Furthermore there is a module for preprocessing,
+[`sc.pp.*`](scanpy/preprocessing), which stores functions for filtering of
+highly-varying genes, batch-effect correction, per-cell (UMI) normalization and
+more. Also, you find a module for plotting in [`sc.pl.*`](scanpy/plotting) and for
+settings in [`sc.sett.*`](scanpy/settings.py).
 
 #### Visualization
 
