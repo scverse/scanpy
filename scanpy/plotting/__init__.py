@@ -79,24 +79,25 @@ def pca_scatter(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    smps = scatter(adata,
-                   basis='pca',
-                   color=color,
-                   names=names,
-                   comps=comps,
-                   cont=cont,
-                   layout=layout,
-                   legendloc=legendloc,
-                   cmap=cmap,
-                   pal=pal,
-                   right_margin=right_margin,
-                   size=size,
-                   titles=titles,
-                   show=False)
+    axs = scatter(adata,
+                  basis='pca',
+                  color=color,
+                  names=names,
+                  comps=comps,
+                  cont=cont,
+                  layout=layout,
+                  legendloc=legendloc,
+                  cmap=cmap,
+                  pal=pal,
+                  right_margin=right_margin,
+                  size=size,
+                  titles=titles,
+                  show=False)
     writekey = sett.basekey + '_pca_scatter' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
     elif show: pl.show()
+    return axs
 
 
 def pca_ranking(adata, comps=None, show=None):
@@ -168,20 +169,20 @@ def diffmap(adata,
             comps = '1,2' if '2d' in layout else '1,2,3'
         comps_list = [comps]
     for comps in comps_list:
-        scatter(adata,
-                basis='diffmap',
-                color=color,
-                names=names,
-                comps=comps,
-                cont=cont,
-                layout=layout,
-                legendloc=legendloc,
-                cmap=cmap,
-                pal=pal,
-                right_margin=right_margin,
-                size=size,
-                titles=titles,
-                show=False)
+        axs = scatter(adata,
+                      basis='diffmap',
+                      color=color,
+                      names=names,
+                      comps=comps,
+                      cont=cont,
+                      layout=layout,
+                      legendloc=legendloc,
+                      cmap=cmap,
+                      pal=pal,
+                      right_margin=right_margin,
+                      size=size,
+                      titles=titles,
+                      show=False)
         writekey = sett.basekey + '_diffmap'
         if isinstance(comps, list):
             comps = ','.join([str(comp) for comp in comps])
@@ -189,7 +190,7 @@ def diffmap(adata,
         if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
-
+    return axs
 
 def tsne(adata,
          color=None,
@@ -235,28 +236,32 @@ def tsne(adata,
          Point size.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
+
+    Returns
+    -------
+    matplotlib.Axes object
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    scatter(adata,
-            basis='tsne',
-            color=color,
-            names=names,
-            comps=comps,
-            cont=cont,
-            layout=layout,
-            legendloc=legendloc,
-            cmap=cmap,
-            pal=pal,
-            right_margin=right_margin,
-            size=size,
-            titles=titles,
-            show=False)
+    axs = scatter(adata,
+                  basis='tsne',
+                  color=color,
+                  names=names,
+                  comps=comps,
+                  cont=cont,
+                  layout=layout,
+                  legendloc=legendloc,
+                  cmap=cmap,
+                  pal=pal,
+                  right_margin=right_margin,
+                  size=size,
+                  titles=titles,
+                  show=False)
     writekey = sett.basekey + '_tsne' + sett.plotsuffix
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)
     elif show: pl.show()
-
+    return axs
 
 def spring(adata,
            color=None,

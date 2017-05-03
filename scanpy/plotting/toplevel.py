@@ -270,7 +270,7 @@ def scatter(adata,
             if names is None or (names is not None and name in names):
                 scatter_group(axs[icolor_key], color_key, iname, adata, Y, layout, size=size)
         if legendloc == 'right margin':
-            legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+            legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5), markerscale=2)
         elif legendloc != 'none':
             axs[icolor_key].legend(frameon=False, loc=legendloc)
     if show: pl.show()
