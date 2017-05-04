@@ -3,13 +3,14 @@
 from collections import Mapping, Sequence
 from collections import OrderedDict
 from enum import Enum
+
 import numpy as np
 from numpy import ma
 from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
-from ..utils import merge_dicts
 
+from ..utils import merge_dicts
 
 SMP_INDEX = 'smp_names'
 VAR_INDEX = 'var_names'
@@ -39,6 +40,18 @@ def _gen_keys_from_key_multicol(key_multicol, n_keys):
             + ('{:0' + str(int(np.ceil(np.log10(n_keys+1)))) + '}').format(i+1)
             + 'of' + str(n_keys) for i in range(n_keys)]
     return keys
+
+
+class SetKeyError(ValueError):
+    template = '''Currently you cannot implicitly reallocate memory:
+Setting the array for key {} with dtype {} requires too much memory, \
+you should init AnnData with a large enough data type from the beginning.
+Probably you try to assign a string of length {} \
+although the array can only store strings of length {}.'''
+
+    def __init__(self, k, dtype, dtype_expected):
+        msg = SetKeyError.template.format(k, dtype, int(dtype.itemsize), int(dtype_expected.itemsize))
+        super(ValueError, self).__init__(msg)
 
 
 class BoundStructArray(np.ndarray):
@@ -345,19 +358,10 @@ class BoundStructArray(np.ndarray):
         if any(present):
             for k, v in zip(present, values[np.in1d(keys, present)]):
                 if (v.dtype != self.dtype[k]
-                    and v.dtype.itemsize > self.dtype[k].itemsize):
+                        and v.dtype.itemsize > self.dtype[k].itemsize):
                     # TODO: need to reallocate memory
                     # or allow storing objects, or use pd.dataframes
-                    # TODO: this is no longer raised as we are truncating all strings at 50 bytes
-                    raise ValueError(
-                        'Currently you cannot implicitly reallocate '
-                        'memory: setting the array for key {} with dtype {} requires '
-                        'too much memory, you should init AnnData with '
-                        'a large enough data type from the beginning. '
-                        'Probably you try to assign a string of length {} '
-                        'although the array can only store strings of length {}.'
-                        .format(k, v.dtype,
-                                int(v.dtype.itemsize), int(self.dtype[k].itemsize)))
+                    raise SetKeyError(k, v.dtype, self.dtype[k])
                 super(BoundStructArray, self).__setitem__(k, v)
 
         if any(absent):
@@ -539,7 +543,7 @@ class AnnData(IndexMixin):
         """Return keys of variable annotation, excluding the index `var_names`."""
         return self.var.keys()
 
-    def add_keys():
+    def add_keys(self):
         """Return keys of addtional unstructured annotation."""
         return self.add.keys()
 
@@ -936,7 +940,15 @@ def test_n_smps():
     adata1 = adata[:2, ]
     assert adata1.n_smps == 2
 
+try:
+    from pytest import mark
+except ImportError:
+    class mark:  # so this module can be imported without pytest installed
+        @staticmethod
+        def xfail(**_):
+            pass
 
+@mark.xfail(strict=True)
 def test_structdict_index():
     adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]))
 

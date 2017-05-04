@@ -3,6 +3,8 @@
 [Installation](#install) |
 [References](#references)
 
+[![Build Status](https://travis-ci.org/theislab/scanpy.svg?branch=master)](https://travis-ci.org/theislab/scanpy)
+
 # Scanpy - Single-Cell Analysis in Python
 
 Efficient tools for analyzing and simulating large-scale single-cell data that aim at an understanding
@@ -22,7 +24,7 @@ with the top-level command `scanpy` on the command-line (more info [here](#insta
 Then go through the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
 * [170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) - Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
-* [170503_moignard15](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/). 
+* [170503_moignard15](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 ## Tools
 
