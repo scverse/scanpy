@@ -1,6 +1,8 @@
 matplotlib
 pandas
 scipy
+# neat visualizations
+seaborn
 # use memory optimally
 psutil
 # speed up

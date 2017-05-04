@@ -9,24 +9,20 @@ Efficient tools for analyzing and simulating large-scale single-cell data that a
 of dynamic biological processes from snapshots of transcriptome or
 proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, also cite the original literature referenced in [Tools](#tools) and throughout the package. Any comments are appreciated!
 
-Take a look at the use cases compiled in
-[scanpy_usage](https://github.com/theislab/scanpy_usage). Among others, you will
-learn that Scanpy is about a factor 10 faster and more memory efficient than
-comparable R packages, see
-[170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17). For large-scale
-data, this becomes crucial for an interactive analysis.
-
-Note that [DPT](#dpt), one of the core tools of Scanpy, has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
-
 ## Quick Start <a id="quick_start"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
-into its root directory. Type 
+into its root directory. With Python 3.5 or 3.6 (preferably [Miniconda](http://conda.pydata.org/miniconda.html)) installed, type
 ```
 pip install -e .
 ```
-Aside from enabling `import scanpy as sc` anywhere on your system, you can also work 
+Aside from enabling `import scanpy as sc` anywhere on your system, you can also work
 with the top-level command `scanpy` on the command-line (more info [here](#install)).
+
+Then go through the use cases compiled in
+[scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
+* [170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) - Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
+* [170503_moignard15](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/). 
 
 ## Tools
 
@@ -47,7 +43,7 @@ settings in [`sc.sett.*`](scanpy/settings.py).
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-* [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13); 
+* [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [spring](#spring) - [Force-directed graph drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing), suggested by [Weinreb *et al.*, (2016)](http://biorxiv.org/content/early/2016/11/29/090332).
@@ -60,7 +56,7 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#
 * [dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
 1996](#ref_ester96), [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [diffrank](#diffrank) - Rank genes according to differential 
+* [diffrank](#diffrank) - Rank genes according to differential
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
 
 #### Simulation
@@ -89,7 +85,7 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#
 [[source]](scanpy/tools/diffmap.py) This implements *diffusion maps* ([Coifman
 *et al.*, 2005](#ref_coifman05)), which has been proposed for visualizing
 single-cell data by [Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, it uses
-the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16). The 
+the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16). The
 Scanpy implementation is due to [Wolf *et al.* (2017)](#ref_wolf17).
 
 ### Discrete clustering of subgroups and continuous progression through subgroups
@@ -98,16 +94,18 @@ Scanpy implementation is due to [Wolf *et al.* (2017)](#ref_wolf17).
 
 [[source]](scanpy/tools/dpt.py) Reconstruct progression in a biological process from snapshot data and detect
 branching subgroups. Diffusion Pseudotime analysis has been introduced by
-[Haghverdi *et al.* (2016)](#ref_haghverdi16) and has been implemented for Scanpy by 
+[Haghverdi *et al.* (2016)](#ref_haghverdi16) and has been implemented for Scanpy by
 [Wolf *et al.* (2017)](#ref_wolf17).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
+**Examples:** See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
+
 #### dbscan <a id="dbscan"></a>
 
-[[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN), 
+[[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN),
 originally proposed by [Ester *et al.*, 1996](#ref_ester96), in the implementation of
 `scikit-learn` ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
@@ -131,28 +129,22 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek *et al.*
 
 ## Installation <a id="install"></a>
 
-Download or clone the repository - green button on top of the page - and `cd`
+If you do not have a current Python distribution (Python 3.5 or 3.6), download
+and install [Miniconda](http://conda.pydata.org/miniconda.html) (see below).
+
+Then, download or clone the repository - green button on top of the page - and `cd`
 into its root directory. To install with symbolic links (stay up to date with
 your cloned version after you update with `git pull`) call
 ```
 pip install -e .
-``` 
+```
 and work with the top-level command `scanpy` or
 ```python
 import scanpy as sc
 ```
 in any directory.
 
-You can also call the wrapper `python scripts/scanpy.py` from within the root of
-the repository or from within `scripts`, which works **without** installation.
-
-Packages you might need (all default in
-[Anaconda](https://www.continuum.io/downloads)) can be easily installed using
-[Miniconda](http://conda.pydata.org/miniconda.html). Then run `conda install
-scipy matplotlib h5py scikit-learn pandas xlrd enum34`. Scanpy is written in Python 3
-and compatible with Python 2.
-
-#### Package Managment via Miniconda
+#### Installing Miniconda
 
 After downloading [Miniconda](http://conda.pydata.org/miniconda.html), in a unix shell (Linux, Mac), run
 ```shell
@@ -161,15 +153,14 @@ chmod +x Miniconda3-latest-VERSION.sh
 ./Miniconda3-latest-VERSION.sh
 ```
 and accept all suggestions. Either reopen a new terminal or `source
-~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac. Then run
-`conda install scipy matplotlib h5py pandas xlrd scikit-learn enum34`. The whole process takes about 5 min.
+~/.bashrc` on Linux/ `source ~/.bash_profile` on Mac. The whole process takes just a couple of minutes.
 
 #### PyPi
 
 The package is [registered](https://pypi.python.org/pypi/scanpy/0.1) in the
 [Python Packaging Index](https://pypi.python.org/pypi), but versioning has not
-started yet. In the future, installation will be possible without reference to
-GitHub via `pip install scanpy`.
+started yet. In the future, installation will also be possible without reference
+to GitHub via `pip install scanpy`.
 
 ## References <a id="references"></a>
 
@@ -198,7 +189,7 @@ Ester *et al.* (1996),
 http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220).
 
 <a id="ref_haghverdi15"></a>
-Haghverdi *et al.* (2015), 
+Haghverdi *et al.* (2015),
 *Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
 [Bioinformatics 31, 2989](
 http://dx.doi.org/10.1093/bioinformatics/btv325).
@@ -233,13 +224,13 @@ http://dx.doi.org/10.1038/nbt.3154).
 
 <a id="ref_pedregosa11"></a>
 Pedregosa *et al.* (2011),
-*Scikit-learn: Machine Learning in Python*, 
+*Scikit-learn: Machine Learning in Python*,
 [JMLR 12, 2825](
 http://www.jmlr.org/papers/v12/pedregosa11a.html).
 
 <a id="ref_paul15"></a>
 Paul *et al.* (2015),
-*Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*, 
+*Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*,
 [Cell 163, 1663](
 http://dx.doi.org/10.1016/j.cell.2015.11.013).
 
