@@ -1,5 +1,5 @@
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 from distutils.extension import Extension
 import numpy
 import versioneer
@@ -30,20 +30,8 @@ setup(
         ],
     },
     install_requires=requires + more_requires,
-    packages=[
-        'scanpy',
-        'scanpy.tools',
-        'scanpy.compat',
-        'scanpy.examples',
-        'scanpy.preprocess',
-        'scanpy.classes',
-        'scanpy.sim_models',
-        'scanpy.cython',
-    ],
+    packages=find_packages(exclude=['scripts', 'scripts.*']),
     include_dirs=[numpy.get_include()],
-    # cmdclass={
-    #     'build_ext': build_ext,
-    # },
     cmdclass=versioneer.get_cmdclass({'build_ext': build_ext}),
     ext_modules=[
         Extension("scanpy.cython.utils_cy",
