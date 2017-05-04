@@ -7,8 +7,9 @@ seaborn
 psutil
 # speed up
 cython
-# hdf5 file reading and writing
+# hdf5/xls file IO
 h5py
+xlrd
 # standard machine-learning algorithms
 scikit-learn
 # standard statistical models

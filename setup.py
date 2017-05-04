@@ -12,7 +12,6 @@ more_requires = []
 if sys.version_info[0] == 2:
     more_requires = [
         'configparser',  # named ConfigParser in py2
-        'xlrd',          # pandas on py2 reads XSL files with that
         'enum34',        # enum module introduced in python 3.4
     ]
 
