@@ -307,7 +307,7 @@ def spring(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    Y = adata.color['X_spring']
+    Y = adata.smp['X_spring']
     if True:
         scatter(adata,
                        basis='spring',
