@@ -945,8 +945,8 @@ try:
 except ImportError:
     class mark:  # so this module can be imported without pytest installed
         @staticmethod
-        def xfail(**_):
-            pass
+        def xfail(f=None, **_):
+            return (lambda f: f) if f is None else f
 
 @mark.xfail(strict=True)
 def test_structdict_index():
