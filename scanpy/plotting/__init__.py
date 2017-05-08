@@ -648,7 +648,7 @@ def paths(adata,
                            titles=titles,
                            show=False)
             del color_base[-1]
-            writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + sett.plotsuffix
+            writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + '_' + name + sett.plotsuffix
             if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
