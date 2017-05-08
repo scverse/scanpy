@@ -611,7 +611,7 @@ def paths(adata,
                 color_base.append(title)
                 adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
 
-        colors = scatter(adata,
+        axs = scatter(adata,
                        basis=basis,
                        color=color_base,
                        names=names,
@@ -624,8 +624,7 @@ def paths(adata,
                        size=size,
                        titles=titles,
                        show=False)
-        writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
-        writekey += '_' + ('-'.join(colors) if colors[0] is not None else '') + sett.plotsuffix
+        writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + sett.plotsuffix
         if sett.savefigs: savefig(writekey)
     else:
         for iname, name in enumerate(adata.add['paths_groups_names']):
@@ -635,7 +634,7 @@ def paths(adata,
                 color_base.append(title)
                 adata.add['highlights'] = ([adata.add['iroot']]
                                        + [adata.add['paths_groups_fateidx'][iname]])
-            colors = scatter(adata,
+            axs = scatter(adata,
                            basis=basis,
                            color=color_base,
                            names=[name],
@@ -649,8 +648,7 @@ def paths(adata,
                            titles=titles,
                            show=False)
             del color_base[-1]
-            writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type']
-            writekey += '_' + ('-'.join(colors) if colors[0] is not None else '') + '_' + name + sett.plotsuffix
+            writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + sett.plotsuffix
             if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
