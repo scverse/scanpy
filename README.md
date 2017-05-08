@@ -117,7 +117,7 @@ The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
-**Examples:** See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipnb)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
+*Examples:* See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
 
 #### dbscan <a id="dbscan"></a>
 
