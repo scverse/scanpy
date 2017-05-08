@@ -1,5 +1,5 @@
-[Quick Start](#quick_start) |
-[Tools](#tools) |
+[Getting Started](#getting_started) |
+[Features](#features) |
 [Installation](#install) |
 [References](#references)
 
@@ -11,7 +11,7 @@ Efficient tools for analyzing and simulating large-scale single-cell data that a
 of dynamic biological processes from snapshots of transcriptome or
 proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, also cite the original literature referenced in [Tools](#tools) and throughout the package. Any comments are appreciated!
 
-## Quick Start <a id="quick_start"></a>
+## Getting started <a id="getting_started"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
 into its root directory. With Python 3.5 or 3.6 (preferably [Miniconda](http://conda.pydata.org/miniconda.html)) installed, type
@@ -26,84 +26,98 @@ Then go through the use cases compiled in
 * [170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) - Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
 * [170503_moignard15](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
-## Tools
 
-### Overview
+## Features <a id="features"></a>
 
-Machine Learning and statistics tools are functions in the module
-[`sc.tl.*`](scanpy/tools). Furthermore there is a module for preprocessing,
-[`sc.pp.*`](scanpy/preprocessing), which stores functions for filtering of
-highly-varying genes, batch-effect correction, per-cell (UMI) normalization and
-more. Also, you find a module for plotting in [`sc.pl.*`](scanpy/plotting) and for
-settings in [`sc.sett.*`](scanpy/settings.py).
+Scanpy functions are grouped into the following modules
+
+* [`sc.tools`/`sc.tl`](scanpy/tools) - Machine Learning and statistics tools.
+* [`sc.preprocessing`/`sc.pp.`](scanpy/preprocessing) - Preprocessing functions (filtering of
+highly-variable genes, batch-effect correction, per-cell (UMI) normalization...).
+* [`sc.plotting`/`sc.pl`](scanpy/plotting) - Plotting.
+
+Settings are found in [`sc.settings`/`sc.sett`](scanpy/settings.py).
+
+#### Preprocessing
+
+* [`pp.*`](scanpy/preprocessing) - Filtering of highly-variable genes,
+batch-effect correction, per-cell (UMI) normalization.
 
 #### Visualization
 
-* [pca](#pca) - Visualize data using PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+* [tl.pca](#pca) - Visualize data using PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [diffmap](#diffmap) - Visualize data using Diffusion Maps
+* [tl.diffmap](#diffmap) - Visualize data using Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-* [tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
+* [tl.tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [spring](#spring) - [Force-directed graph drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing), suggested by [Weinreb *et al.*, (2016)](http://biorxiv.org/content/early/2016/11/29/090332).
+* [tl.spring](#spring) - [Force-directed graph
+  drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing),
+  suggested by [Weinreb *et al.*,
+  (2016)](http://biorxiv.org/content/early/2016/11/29/090332) for single-cell
+  analysis.
 
 #### Branching trajectories and pseudotime, clustering, differential expression
 
-* [dpt](#dpt) - Infer progression of cells, identify *branching*
+* [tl.dpt](#dpt) - Infer progression of cells, identify *branching*
 subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-* [dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
+* [tl.dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
 1996](#ref_ester96), [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [diffrank](#diffrank) - Rank genes according to differential
+* [tl.diffrank](#diffrank) - Rank genes according to differential
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
 
 #### Simulation
 
-* [sim](#sim) - Simulate dynamic gene expression data ([Wittmann
+* [tl.sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-## Tools <a id="tools"></a>
 
 ### Visualization
 
 #### pca <a id="pca"></a>
 
-[[source]](scanpy/tools/pca.py) Uses the implementation of the `scikit-learn` package
-([Pedregosa *et al.*, 2011](#ref_pedregosa11)) if it is installed.
+[[source]](scanpy/tools/pca.py) Computes the PCA representation `X_pca` of data, principal components
+and variance decomposition. Uses the implementation of the `scikit-learn`
+package ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 #### tsne <a id="tsne"></a>
 
-[[source]](scanpy/tools/tsne.py) The algorithm has been introduced by [Maaten & Hinton
+[[source]](scanpy/tools/tsne.py) Computes the tSNE representation `X_tsne` of data.
+
+The algorithm has been introduced by [Maaten & Hinton
   (2008)](#ref_maaten08) and proposed for single-cell data by [Amir *et
   al.* (2013)](#ref_amir13). Uses the implementation of the `scikit-learn` package
-([Pedregosa *et al.*, 2011](#ref_pedregosa11)) if it is installed.
+([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 #### diffmap <a id="diffmap"></a>
 
-[[source]](scanpy/tools/diffmap.py) This implements *diffusion maps* ([Coifman
-*et al.*, 2005](#ref_coifman05)), which has been proposed for visualizing
-single-cell data by [Haghverdi *et al.* (2015)](#ref_haghverdi15). Also, it uses
-the kernel suggested by [Haghverdi *et al.* (2016)](#ref_haghverdi16). The
-Scanpy implementation is due to [Wolf *et al.* (2017)](#ref_wolf17).
+[[source]](scanpy/tools/diffmap.py) Computes the diffusion maps representation `X_diffmap` of data.
+
+Diffusion maps ([Coifman *et al.*, 2005](#ref_coifman05)) has been proposed for
+visualizing single-cell data by [Haghverdi *et al.*
+(2015)](#ref_haghverdi15). The tool uses the kernel suggested by [Haghverdi *et
+al.* (2016)](#ref_haghverdi16). The Scanpy implementation is due to [Wolf *et
+al.* (2017)](#ref_wolf17).
 
 ### Discrete clustering of subgroups and continuous progression through subgroups
 
 #### dpt <a id="dpt"></a>
 
-[[source]](scanpy/tools/dpt.py) Reconstruct progression in a biological process from snapshot data and detect
-branching subgroups. Diffusion Pseudotime analysis has been introduced by
-[Haghverdi *et al.* (2016)](#ref_haghverdi16) and has been implemented for Scanpy by
-[Wolf *et al.* (2017)](#ref_wolf17).
+[[source]](scanpy/tools/dpt.py) Reconstruct progression in a biological process
+from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis
+has been introduced by [Haghverdi *et al.* (2016)](#ref_haghverdi16) and
+implemented by [Wolf *et al.* (2017)](#ref_wolf17).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
 [Angerer *et al.* (2015)](#ref_angerer16).
 
-**Examples:** See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
+**Examples:** See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipnb)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
 
 #### dbscan <a id="dbscan"></a>
 
