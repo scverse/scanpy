@@ -182,8 +182,8 @@ def filter_genes_dispersion(data, log=True,
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
-                                 - disp_mean_bin[df['mean_bin']].values) \
-                                 / disp_std_bin[df['mean_bin']].values
+                                 - disp_mean_bin[df['mean_bin'].cat.codes].values) \
+                                 / disp_std_bin[df['mean_bin'].cat.codes].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
         df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
