@@ -183,7 +183,7 @@ def filter_genes_dispersion(data, log=True,
         disp_std_bin = disp_grouped.std(ddof=1)
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
                                  - disp_mean_bin[df['mean_bin'].cat.codes].values) \
-                                 / disp_std_bin[df['mean_bin'].cat.codes].values
+                                 / disp_std_bin[df['mean_bin'].cat.codes].values  # appending .cat.codes only necessary for old pandas versions
     elif flavor == 'cell_ranger':
         from statsmodels import robust
         df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
@@ -192,8 +192,8 @@ def filter_genes_dispersion(data, log=True,
         disp_median_bin = disp_grouped.median()
         disp_mad_bin = disp_grouped.apply(robust.mad)
         df['dispersion_norm'] = np.abs((df['dispersion'].values
-                                 - disp_median_bin[df['mean_bin']].values)) \
-                                 / disp_mad_bin[df['mean_bin']].values
+                                 - disp_median_bin[df['mean_bin'].cat.codes].values)) \
+                                / disp_mad_bin[df['mean_bin'].cat.codes].values  # appending .cat.codes only necessary for old pandas versions
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.copy()

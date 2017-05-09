@@ -23,8 +23,8 @@ with the top-level command `scanpy` on the command-line (more info [here](#insta
 
 Then go through the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
-* [170503_zheng17](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) - Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
-* [170503_moignard15](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
+* 170503 ([link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17)) - Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
+* 170503 ([link](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb)) - Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 
 ## Features <a id="features"></a>
@@ -45,20 +45,19 @@ batch-effect correction, per-cell (UMI) normalization.
 
 #### Visualization
 
-* [tl.pca](#pca) - Visualize data using PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+* [tl.pca](#pca) - PCA ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [tl.diffmap](#diffmap) - Visualize data using Diffusion Maps
+* [tl.diffmap](#diffmap) - Diffusion Maps
 ([Coifman *et al.*, 2005](#ref_coifman05); [Haghverdi *et al.*,
 2015](#ref_haghverdi15); [Wolf *et al.*, 2017](#ref_wolf17)).
 
-* [tl.tsne](#tsne) - Visualize data using t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
+* [tl.tsne](#tsne) - t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [tl.spring](#spring) - [Force-directed graph
-  drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing),
-  suggested by [Weinreb *et al.*,
-  (2016)](http://biorxiv.org/content/early/2016/11/29/090332) for single-cell
-  analysis.
+  drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing)
+  [(Fruchterman & Reingold, 1991;](http://doi.org:10.1002/spe.4380211102)
+  [Weinreb *et al.*, 2016)](https://doi.org/10.1101/090332).
 
 #### Branching trajectories and pseudotime, clustering, differential expression
 
@@ -89,10 +88,13 @@ package ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 [[source]](scanpy/tools/tsne.py) Computes the tSNE representation `X_tsne` of data.
 
-The algorithm has been introduced by [Maaten & Hinton
-  (2008)](#ref_maaten08) and proposed for single-cell data by [Amir *et
-  al.* (2013)](#ref_amir13). Uses the implementation of the `scikit-learn` package
-([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+The algorithm has been introduced by [Maaten & Hinton (2008)](#ref_maaten08) and
+  proposed for single-cell data by [Amir *et al.* (2013)](#ref_amir13). By
+  default, Scanpy uses the implementation of the `scikit-learn` package
+  ([Pedregosa *et al.*, 2011](#ref_pedregosa11)). You can achieve a huge speedup
+  if you install the Multicore-TSNE package by [Ulyanov
+  (2016)](https://github.com/DmitryUlyanov/Multicore-TSNE), which will be
+  automatically detected by Scanpy.
 
 #### diffmap <a id="diffmap"></a>
 
@@ -103,6 +105,19 @@ visualizing single-cell data by [Haghverdi *et al.*
 (2015)](#ref_haghverdi15). The tool uses the kernel suggested by [Haghverdi *et
 al.* (2016)](#ref_haghverdi16). The Scanpy implementation is due to [Wolf *et
 al.* (2017)](#ref_wolf17).
+
+#### spring <a id="spring"></a>
+
+Beta version.
+
+[[source]](scanpy/tools/spring.py) Force-directed graph drawing is a
+long-established algorithm for visualizing graphs, see [Wikipedia](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
+It has been suggested for visualizing single-cell data by [Weinreb *et al.*, 2016)](https://doi.org/10.1101/090332).
+
+Here, the [Fruchterman & Reingold (1991)](http://doi.org:10.1002/spe.4380211102)
+algorithm is used. The implementation uses elements of the NetworkX [(Hagberg
+*et al.*, 2008)](http://conference.scipy.org/proceedings/SciPy2008/paper_2/)
+implementation.
 
 ### Discrete clustering of subgroups and continuous progression through subgroups
 
@@ -124,6 +139,8 @@ The functionality of diffmap and dpt compare to the R package
 [[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN),
 originally proposed by [Ester *et al.*, 1996](#ref_ester96), in the implementation of
 `scikit-learn` ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+
+This is a very simple clustering method. A better one - in the same framework as DPT and Diffusion Maps - will come soon.
 
 ### Differential expression
 
