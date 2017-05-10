@@ -9,7 +9,7 @@
 
 Efficient tools for analyzing and simulating large-scale single-cell data that aim at an understanding
 of dynamic biological processes from snapshots of transcriptome or
-proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Please, also cite the original literature referenced in [Tools](#tools) and throughout the package. Any comments are appreciated!
+proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Any comments are appreciated!
 
 ## Getting started <a id="getting_started"></a>
 
@@ -54,10 +54,9 @@ batch-effect correction, per-cell (UMI) normalization.
 * [tl.tsne](#tsne) - t-SNE ([Maaten & Hinton, 2008](#ref_maaten08); [Amir *et al.*, 2013](#ref_amir13);
   [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
-* [tl.spring](#spring) - [Force-directed graph
-  drawing](https://en.wikipedia.org/wiki/Force-directed_graph_drawing)
-  [(Fruchterman & Reingold, 1991;](http://doi.org:10.1002/spe.4380211102)
-  [Weinreb *et al.*, 2016)](https://doi.org/10.1101/090332).
+* [tl.spring](#spring) - Force-directed graph drawing
+  ([Wikipedia;](https://en.wikipedia.org/wiki/Force-directed_graph_drawing)
+  [Weinreb *et al.*, 2016](https://doi.org/10.1101/090332)).
 
 #### Branching trajectories and pseudotime, clustering, differential expression
 
@@ -65,7 +64,7 @@ batch-effect correction, per-cell (UMI) normalization.
 subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#ref_wolf17)).
 
 * [tl.dbscan](#dbscan) - Cluster cells into subgroups ([Ester *et al.*,
-1996](#ref_ester96), [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
+1996](#ref_ester96); [Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 * [tl.diffrank](#diffrank) - Rank genes according to differential
   expression ([Wolf *et al.*, 2017](#ref_wolf17)).
@@ -102,7 +101,7 @@ The algorithm has been introduced by [Maaten & Hinton (2008)](#ref_maaten08) and
 
 Diffusion maps ([Coifman *et al.*, 2005](#ref_coifman05)) has been proposed for
 visualizing single-cell data by [Haghverdi *et al.*
-(2015)](#ref_haghverdi15). The tool uses the kernel suggested by [Haghverdi *et
+(2015)](#ref_haghverdi15). The tool uses the adapted Gaussian kernel suggested by [Haghverdi *et
 al.* (2016)](#ref_haghverdi16). The Scanpy implementation is due to [Wolf *et
 al.* (2017)](#ref_wolf17).
 
@@ -112,21 +111,21 @@ Beta version.
 
 [[source]](scanpy/tools/spring.py) Force-directed graph drawing is a
 long-established algorithm for visualizing graphs, see [Wikipedia](https://en.wikipedia.org/wiki/Force-directed_graph_drawing).
-It has been suggested for visualizing single-cell data by [Weinreb *et al.*, 2016)](https://doi.org/10.1101/090332).
+It has been suggested for visualizing single-cell data by [Weinreb *et al.* (2016)](https://doi.org/10.1101/090332).
 
 Here, the [Fruchterman & Reingold (1991)](http://doi.org:10.1002/spe.4380211102)
-algorithm is used. The implementation uses elements of the NetworkX [(Hagberg
-*et al.*, 2008)](http://conference.scipy.org/proceedings/SciPy2008/paper_2/)
-implementation.
+algorithm is used. The implementation uses elements of the NetworkX
+implementation [(Hagberg
+*et al.*, 2008)](http://conference.scipy.org/proceedings/SciPy2008/paper_2/).
 
 ### Discrete clustering of subgroups and continuous progression through subgroups
 
 #### dpt <a id="dpt"></a>
 
-[[source]](scanpy/tools/dpt.py) Reconstruct progression in a biological process
+[[source]](scanpy/tools/dpt.py) Reconstruct the progression of a biological process
 from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis
 has been introduced by [Haghverdi *et al.* (2016)](#ref_haghverdi16) and
-implemented by [Wolf *et al.* (2017)](#ref_wolf17).
+implemented for Scanpy by [Wolf *et al.* (2017)](#ref_wolf17).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
@@ -136,8 +135,7 @@ The functionality of diffmap and dpt compare to the R package
 
 #### dbscan <a id="dbscan"></a>
 
-[[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN),
-originally proposed by [Ester *et al.*, 1996](#ref_ester96), in the implementation of
+[[source]](scanpy/tools/dbscan.py) Cluster cells using [DBSCAN](https://en.wikipedia.org/wiki/DBSCAN) ([Ester *et al.*, 1996](#ref_ester96)), in the implementation of
 `scikit-learn` ([Pedregosa *et al.*, 2011](#ref_pedregosa11)).
 
 This is a very simple clustering method. A better one - in the same framework as DPT and Diffusion Maps - will come soon.
