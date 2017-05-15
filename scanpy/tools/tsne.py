@@ -94,8 +94,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     if n_jobs == 1 or multicore_failed:
         from sklearn.manifold import TSNE
         tsne = TSNE(**params_sklearn)
-        logg.m('it is recommended to install the package MulticoreTSNE from'
-               '    https://github.com/DmitryUlyanov/Multicore-TSNE'
+        logg.m('it is recommended to install the package MulticoreTSNE from\n'
+               '    https://github.com/DmitryUlyanov/Multicore-TSNE\n'
                '    and setting `n_jobs >= 2`for speeding up the computation considerably',
                v='hint')
         Y = tsne.fit_transform(X)
