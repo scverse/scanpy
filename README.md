@@ -98,7 +98,7 @@ Instantiate `AnnData` via
 ```
 adata = sc.AnnData(X[, smp][, var][, add])
 ```
-The instance `adata` stores *X* as `adata.X` and sample annotation as `adata.smp`, variable annotation as `adata.var` and additional unstructured annotation as `adata.add`. While `adata.X` is array-like and `adata.add` is a conventional dictionary, `adata.smp` and  `adata.var` are instances of a  dictionary-like class, which is based on a Numpy array and requires its values to be iterables with *n* or *d* entries, respectively.  Values can be retrieved and appended via `adata.smp['foo_key']` and `adata.var['bar_key']`. These keys can be retrieved via `data.smp_keys()` and `data.var_keys()`, respectively. Sample and variable names can be accessed via `adata.smp_names` and `adata.var_names`, respectively. AnnData objects can be sliced like Pandas dataframes, for example, `adata = adata[:, list_of_gene_names]`. The AnnData class is similar to R's ExpressionSet ([Huber *et al.*, 2015](https://doi.org/10.1038/nmeth.3252)).
+The instance `adata` stores *X* as `adata.X` and sample annotation as `adata.smp`, variable annotation as `adata.var` and additional unstructured annotation as `adata.add`. While `adata.X` is array-like and `adata.add` is a conventional dictionary, `adata.smp` and  `adata.var` are instances of a  dictionary-like class, which is based on a Numpy array and requires its values to be iterables with *n* or *d* entries, respectively.  Values can be retrieved and appended via `adata.smp['foo_key']` and `adata.var['bar_key']`. Sample and variable names can be accessed via `adata.smp_names` and `adata.var_names`, respectively. AnnData objects can be sliced like Pandas dataframes, for example, `adata = adata[:, list_of_gene_names]`. The AnnData class is similar to R's ExpressionSet ([Huber *et al.*, 2015](https://doi.org/10.1038/nmeth.3252)).
 
 #### Reading and writing data files and AnnData objects
 
@@ -114,8 +114,8 @@ For each tool, there is an associated plotting function
 ```
 sc.pl.tool(adata)
 ```
-which retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To save all plots to default locations, you can set `sc.sett.savefigs = True`.
-By default, figures are saved as *png*. If you prefer *pdf* or another format set `sc.sett.file_format_figs = 'pdf'`. Scanpy's plotting module can be viewed similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
+that retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To not display figures interactively but save all plots to default locations, you can set `sc.sett.savefigs = True`.
+By default, figures are saved as *png* to `./figs/`. Reset `sc.sett.file_format_figs` and `sc.sett.figdir` if you want to change this. Scanpy's plotting module can be viewed similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
 
 #### Builtin examples
 
