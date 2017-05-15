@@ -34,14 +34,16 @@ Then go through the use cases compiled in
 
 ## Features <a id="features"></a>
 
-Scanpy functions are grouped into the following modules
+Let us give an [overview](#overview) of the toplevel user functions, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1).
 
-* [`sc.tools`/`sc.tl`](scanpy/tools) - Machine Learning and statistics tools.
-* [`sc.preprocessing`/`sc.pp.`](scanpy/preprocessing) - Preprocessing functions (filtering of
-highly-variable genes, batch-effect correction, per-cell (UMI) normalization...).
-* [`sc.plotting`/`sc.pl`](scanpy/plotting) - Plotting.
+### Overview
 
-Settings are found in [`sc.settings`/`sc.sett`](scanpy/settings.py).
+Scanpy user functions are grouped into the following modules
+
+* [`sc.tools`](scanpy/tools) - Machine Learning and statistics tools. Abbreviation `sc.tl`.
+* [`sc.preprocessing`](scanpy/preprocessing) - Preprocessing. Abbreviation `sc.pp`.
+* [`sc.plotting`](scanpy/plotting) - Plotting. Abbreviation `sc.pl`.
+* [`sc.settings`](scanpy/settings.py) - Settings. Abbreviation `sc.sett`.
 
 #### Preprocessing
 
@@ -79,6 +81,50 @@ subgroups ([Haghverdi *et al.*, 2016](#ref_haghverdi16); [Wolf *et al.*, 2017](#
 * [tl.sim](#sim) - Simulate dynamic gene expression data ([Wittmann
 *et al.*, 2009](#ref_wittmann09); [Wolf *et al.*, 2017](#ref_wolf17)).
 
+### Basic features
+
+The typical workflow consists of subsequent calls of data analysis tools of the form
+```
+sc.tl.tool(adata, **params)
+```
+where `adata` is an `AnnData` object and  `params` is a dictionary that stores optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n* *d*-dimensional gene expression measurements. By default, Scanpy tools operate *inplace* and return `None`. If you want to copy the `AnnData` object, pass the `copy` argument
+```
+adata_copy = sc.tl.tool(adata, copy=True, **params)
+```
+
+#### AnnData objects
+
+Instantiate `AnnData` via
+```
+adata = sc.AnnData(X[, smp][, var][, add])
+```
+The instance `adata` stores *X* as `adata.X` and sample annotation as `adata.smp`, variable annotation as `adata.var` and additional unstructured annotation as `adata.add`. While `adata.X` is array-like and `adata.add` is a conventional dictionary, `adata.smp` and  `adata.var` are instances of a  dictionary-like class, which is based on a Numpy array and requires its values to be iterables with *n* or *d* entries, respectively.  Values can be retrieved and appended via `adata.smp['foo_key']` and `adata.var['bar_key']`. These keys can be retrieved via `data.smp_keys()` and `data.var_keys()`, respectively. Sample and variable names can be accessed via `adata.smp_names` and `adata.var_names`, respectively. AnnData objects can be sliced like Pandas dataframes, for example, `adata = adata[:, list_of_gene_names]`. The AnnData class is similar to R's ExpressionSet ([Huber *et al.*, 2015](https://doi.org/10.1038/nmeth.3252)).
+
+#### Reading and writing data files and AnnData objects
+
+Instead of invoking the explicit constructor, one usually calls
+```
+adata = sc.read(filename)
+```
+to initialize an AnnData object, and `sc.write(filename, adata)` to write it back to a file. Reading foresees filenames with extensions *h5*,  *xlsx*,  *mtx*,  *txt*, *csv* and others. Writing foresees writing *h5*,  *csv* and *txt*. Scanpy is smart about file storage and extensions. Instead of providing a full filename, you can provide *filekeys*. By default, Scanpy writes to `./write/filekey.h5`, an *hdf5* file, which is configurable by setting `sc.sett.writedir` and `sc.sett.file_format_data`.
+
+#### Plotting
+
+For each tool, there is an associated plotting function
+```
+sc.pl.tool(adata)
+```
+which retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To save all plots to default locations, you can set `sc.sett.savefigs = True`.
+By default, figures are saved as *png*. If you prefer *pdf* or another format set `sc.sett.file_format_figs = 'pdf'`. Scanpy's plotting module can be viewed similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
+
+#### Builtin examples
+
+Show all builtin example data using `sc.show_exdata()` 
+and all builtin example use cases via `sc.show_examples()`. Load annotated and preprocessed data using an *example key*, here 'paul15', via
+```
+adata = sc.get_example('paul15')
+```
+The key 'paul15' can also be used within `sc.read('paul15')` and `sc.write('paul15')` to write the current state of the AnnData object to disk. 
 
 ### Visualization
 
