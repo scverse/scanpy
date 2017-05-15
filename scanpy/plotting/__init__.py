@@ -594,12 +594,15 @@ def paths(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     names = None if names is None else names.split(',') if isinstance(names, str) else names
-    from ..tools.paths import process_dists_from_paths
-    process_dists_from_paths(adata, dist_threshold)
+    # from ..tools.paths import process_dists_from_paths
+    # process_dists_from_paths(adata, dist_threshold)
 
     color_base = ['paths_groups']
     if color is not None:
-        color_base += [color]
+        if isinstance(color, list):
+            color_base += color
+        else:
+            color_base += [color]
     adata.add['highlights'] = [adata.add['iroot']]
 
     # add continuous distance coloring
@@ -608,7 +611,7 @@ def paths(adata,
             if names is None or (names is not None and name in names):
                 title = 'dist_from_path_' + name
                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                color_base.append(title)
+                # color_base.append(title)
                 adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
 
         axs = scatter(adata,
@@ -631,7 +634,7 @@ def paths(adata,
             if names is None or (names is not None and name in names):
                 title = 'dist_from_path_' + name
                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                color_base.append(title)
+                # color_base.append(title)
                 adata.add['highlights'] = ([adata.add['iroot']]
                                        + [adata.add['paths_groups_fateidx'][iname]])
             axs = scatter(adata,

@@ -15,7 +15,7 @@ from .tsne import tsne
 
 try:
     # development tools
-    from .paths import paths
+    from .paths_ import paths
     from .tgdyn import tgdyn
     from .tgdyn_simple import tgdyn_simple
 except ImportError:

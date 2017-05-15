@@ -128,6 +128,10 @@ _dpi = 200
 We also need a global variable as, for example, Seaborn resets the rcParams.
 """
 
+_ignore_categories = ['N/A', 'dontknow', 'no_gate', '?']
+"""Categories that are omitted in plotting etc.
+"""
+
 # --------------------------------------------------------------------------------
 # Global Setting Functions
 # --------------------------------------------------------------------------------

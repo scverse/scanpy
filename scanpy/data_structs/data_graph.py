@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Data Graph
+"""Data Graph
 """
 
 import numpy as np
@@ -94,8 +93,7 @@ def get_sparse_distance_matrix(indices, distances, n_samples, k):
 
 
 class OnFlySymMatrix():
-    """
-    Emulate a matrix where elements are calculated on the fly.
+    """Emulate a matrix where elements are calculated on the fly.
     """
     def __init__(self, get_row, shape, rows=None, restrict_array=None):
         self.get_row = get_row
@@ -137,8 +135,7 @@ class OnFlySymMatrix():
 
 
 class DataGraph(object):
-    """
-    Represent data matrix as graph.
+    """Represent data matrix as graph of closeby data points.
     """
 
     def __init__(self, adata_or_X, k=30, knn=True,
@@ -190,6 +187,7 @@ class DataGraph(object):
         # use diffmap from previous calculation
         if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
             sett.m(0, '... using `X_diffmap` for distance computations')
+            self.X_diffmap = adata.smp['X_diffmap']
             self.evals = np.r_[1, adata.add['diffmap_evals']]
             self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
             self.lbasis = self.rbasis
@@ -204,8 +202,7 @@ class DataGraph(object):
         self.Dsq = None
 
     def diffmap(self):
-        """
-        Diffusion Map as of Coifman et al. (2005) incorparting
+        """Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
         if self.evals is None:
@@ -236,8 +233,6 @@ class DataGraph(object):
         self.compute_C_matrix()
 
     def spec_layout(self):
-        """
-        """
         self.compute_transition_matrix()
         self.compute_L_matrix()
         self.embed(self.L, sort='increase')
@@ -250,8 +245,7 @@ class DataGraph(object):
 
     def compute_transition_matrix(self, weighted=True,
                                   neglect_selfloops=False, alpha=1):
-        """
-        Compute similarity matrix and transition matrix.
+        """Compute similarity and transition matrix.
 
         Parameters
         ----------
@@ -526,15 +520,6 @@ class DataGraph(object):
                 sett.mt(0, 'finished computation of M')
             else:
                 sett.m(0, 'not enough memory to compute M, using "on-the-fly" computation')
-        # the following is not needed anymore
-        # if self.M is not None:
-        #      if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
-        #          sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
-        #                 '    by setting n_pcs_post > 0 you can speed up the computation')
-        #      if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
-        #          from ..preprocessing import pca
-        #          self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
-        #      sett.mt(0, 'computed M matrix')
 
     def compute_Ddiff_matrix(self):
         """
@@ -547,6 +532,12 @@ class DataGraph(object):
         - Is based on M matrix.
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
+        if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
+            sett.m(0, '--> high number of dimensions for computing DPT distance matrix\n'
+                   '    by setting n_pcs_post > 0 you can speed up the computation')
+        if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
+            from ..preprocessing import pca
+            self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
         self.Ddiff = sp.spatial.distance.squareform(sp.spatial.distance.pdist(self.M))
         sett.mt(0, 'computed Ddiff distance matrix')
         self.Dchosen = self.Ddiff

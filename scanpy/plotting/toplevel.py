@@ -156,10 +156,10 @@ def scatter(adata,
     if isinstance(comps, str): comps = comps.split(',')
     comps = np.array(comps).astype(int) - 1
     titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
-    color_keys = [None] if color is None else color.split(',') if isinstance(color, str) else color
+    color_keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
-    highlights = adata.add['highlights'] if 'highlights' in adata.smp else []
+    highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
         try:
             Y = adata.smp['X_' + basis][:, comps]
@@ -196,33 +196,26 @@ def scatter(adata,
             c = 'grey' if layout == '2d' else 'white'
             categorical = False
             continuous = False
-            if len(adata.smp_keys()) > 0:
-                if color_key is None:
-                    for color_key_ in adata.smp_keys():
-                        if color_key_ not in color_keys:
-                            color_key = color_key_
-                            color_keys[icolor_key] = color_key
-                            break
-                # test whether we have categorial or continuous annotation
-                if color_key in adata.smp_keys():
-                    if adata.smp[color_key].dtype.char in ['S', 'U']:
-                        categorical = True
-                        if cont is True:
-                            c = adata.smp[color_key]
-                    else:
-                        continuous = True
+            # test whether we have categorial or continuous annotation
+            if color_key in adata.smp_keys():
+                if adata.smp[color_key].dtype.char in ['S', 'U']:
+                    categorical = True
+                    if cont is True:
                         c = adata.smp[color_key]
-                    # sett.m(0, '... coloring according to', color_key)
-                # coloring according to gene expression
-                elif color_key in set(adata.var_names):
-                    c = adata[:, color_key].X
-                    continuous = True
-                    # sett.m(0, '... coloring according to expression of gene', color_key)
                 else:
-                    raise ValueError('"' + color_key + '" is invalid!'
-                                     + ' specify valid sample annotation, one of '
-                                     + str(adata.smp_keys()) + ' or a gene name '
-                                     + str(adata.var_names))
+                    continuous = True
+                    c = adata.smp[color_key]
+                # sett.m(0, '... coloring according to', color_key)
+            # coloring according to gene expression
+            elif color_key in set(adata.var_names):
+                c = adata[:, color_key].X
+                continuous = True
+                # sett.m(0, '... coloring according to expression of gene', color_key)
+            else:
+                raise ValueError('"' + color_key + '" is invalid!'
+                                 + ' specify valid sample annotation, one of '
+                                 + str(adata.smp_keys()) + ' or a gene name '
+                                 + str(adata.var_names))
             if cont is not None:
                 categorical = not cont
                 continuous = cont
@@ -231,7 +224,7 @@ def scatter(adata,
         if categorical:
             categoricals.append(icolor_key)
         color_ids[icolor_key] = c
-
+        
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.3
     if titles is None and color_keys[0] is not None:

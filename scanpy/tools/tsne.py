@@ -14,7 +14,7 @@ This module automatically choose from three t-SNE versions from
 import numpy as np
 from ..tools.pca import pca
 from .. import settings as sett
-
+from .. import logging as logg
 
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False):
     u"""tSNE
@@ -75,7 +75,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
                       'random_state': None if random_state == -1 else random_state,
                       'verbose': sett.verbosity,
                       'learning_rate': 200,
-                      'early_exaggeration': 12}
+                      'early_exaggeration': 12,
+                      # 'method': 'exact'
+                      }
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # deal with different tSNE implementations
     multicore_failed = False
@@ -92,7 +94,10 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     if n_jobs == 1 or multicore_failed:
         from sklearn.manifold import TSNE
         tsne = TSNE(**params_sklearn)
-        sett.m(0, '--> can be sped up considerably by setting `n_jobs` > 1')
+        logg.m('it is recommended to install the package MulticoreTSNE from'
+               '    https://github.com/DmitryUlyanov/Multicore-TSNE'
+               '    and setting `n_jobs >= 2`for speeding up the computation considerably',
+               v='hint')
         Y = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = Y

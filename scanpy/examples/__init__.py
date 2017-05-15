@@ -144,12 +144,10 @@ def _example_parameters():
         pass
     return all_dex
 
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Checks of AnnData object
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
-
-_ignore_groups = ['N/A', 'dontknow', 'no_gate']
 _howto_specify_subgroups = '''sample annotation in adata only consists of sample names
 --> you can provide additional annotation by setting, for example,
     adata.smp['groups'] = ['A', 'B', 'A', ... ]
@@ -157,13 +155,11 @@ _howto_specify_subgroups = '''sample annotation in adata only consists of sample
 
 
 def check_adata(adata, verbosity=0):
-    """
-    Do sanity checks on adata object.
+    """Do sanity checks on adata object.
 
     Checks whether adata contains annotation.
     """
     import numpy as np
-    import sys
     if 'tools' not in adata.add:
         adata.add['tools'] = np.array([], dtype=str)
     if len(adata.smp_keys()) == 0:
@@ -173,22 +169,16 @@ def check_adata(adata, verbosity=0):
             info = 'continuous/categorical sample annotation with '
         for ismp, smp in enumerate(adata.smp_keys()):
             # ordered unique categories for categorical annotation
-            if not smp + '_names' in adata.add and adata.smp[smp].dtype.char == 'U':
-                adata.add[smp + '_names'] = np.unique(adata.smp[smp])
-                if adata.add[smp + '_names'].dtype.char == 'U':
-                    adata.add[smp + '_names'] = np.setdiff1d(adata.add[smp + '_names'],
-                                                         np.array(_ignore_groups))
-                from natsort import natsorted
-                adata.add[smp + '_names'] = np.array(natsorted(adata.add[smp + '_names'],
-                                                           key=lambda v: v.upper()))
+            if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
+                adata.add[smp + '_names'] = utils.unique_categories(adata.smp[smp])
             if sett.verbosity > 1-verbosity:
                 info += smp + ': '
-                if adata.smp[smp].dtype.char == 'U':
+                if adata.smp[smp].dtype.char in {'U', 'S'}:
                     ann_info = str(adata.add[smp + '_names'])
                     if len(adata.add[smp + '_names']) > 7:
-                        ann_info = (str(adata.add[smp + '_names'][0:3]).replace(']','')
+                        ann_info = (str(adata.add[smp + '_names'][0:3]).replace(']', '')
                                     + ' ...'
-                                    + str(adata.add[smp + '_names'][-2:]).replace('[',''))
+                                    + str(adata.add[smp + '_names'][-2:]).replace('[', ''))
                     info += ann_info
                 else:
                     info += 'cont'

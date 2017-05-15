@@ -770,6 +770,7 @@ def write_dict_to_file(filename, d, ext='h5'):
     if not os.path.exists(directory):
         sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
+    sett.m(0, 'writing', filename)
     if ext == 'h5' or ext == 'npz':
         d_write = {}
         from scipy.sparse import issparse

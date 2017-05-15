@@ -6,12 +6,21 @@ Utility functions and classes
 from __future__ import absolute_import
 import os
 import numpy as np
+from natsort import natsorted
 from . import settings as sett
 
 
 # --------------------------------------------------------------------------------
-# Deal with examples
+# Deal with stuff
 # --------------------------------------------------------------------------------
+
+
+def unique_categories(categories):
+    """Pass array-like categories, return sorted cleaned unique categories."""
+    categories = np.unique(categories)
+    categories = np.setdiff1d(categories, np.array(sett._ignore_categories))
+    categories = np.array(natsorted(categories, key=lambda v: v.upper()))
+    return categories
 
 
 def fill_in_datakeys(example_parameters, dexdata):
