@@ -11,6 +11,7 @@ Efficient tools for analyzing and simulating large-scale single-cell data that a
 of dynamic biological processes from snapshots of transcriptome or
 proteome. The draft [Wolf, Angerer & Theis (2017)](http://falexwolf.de/docs/scanpy.pdf) explains conceptual ideas of the package. Any comments are appreciated!
 
+
 ## Getting started <a id="getting_started"></a>
 
 Download or clone the repository - green button on top of the page - and `cd`
@@ -24,9 +25,11 @@ with the top-level command `scanpy` on the command-line (more info [here](#insta
 Then go through the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
 
-* 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing *10x Genomics* data sets from [Zheng *et al.*, Nat. Comm. (2017)](https://dx.doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than comparable R packages such as [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) and [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](http://dx.doi.org/10.1016/j.cell.2015.05.002). For large-scale data, this becomes crucial for interactive analysis.
+* 17-05-05 | [link](https://github.com/theislab/scanpy_usage/tree/master/170505_seurat) | We reproduce some of the recent [Guided Clustering tutorial](http://satijalab.org/seurat/pbmc-tutorial.html) of [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](https://doi.org/10.1016/j.cell.2015.05.002).
 
-* 17-05-01 | [link](https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15/notebook.ipynb) | Diffusion Pseudotime Analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](http://dx.doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](http://10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](http://biorxiv.org/content/early/2017/02/21/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
+* 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing 64 000 cells from [(Zheng *et al.*, Nat. Comms. 2017)](https://doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the optimized [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) pipeline. For large-scale data, this becomes crucial for interactive analysis.
+
+* 17-05-01 | [link](https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15/notebook.ipynb) | Diffusion Pseudotime analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](https://doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](https://doi.org/10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](https://doi.org/10.1101/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 
 ## Features <a id="features"></a>
