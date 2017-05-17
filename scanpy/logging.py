@@ -3,6 +3,7 @@
 """
 
 import os
+import time
 import datetime
 from . import settings as sett
 
@@ -47,9 +48,9 @@ def m(*msg, v='info', t=False, m=False, r=False):
             sett._previous_time = time.time()
         if t or r:
             elapsed = get_passed_time()
-            mi(sett._sec_to_str(elapsed), '-', *msg)
+            sett.mi(sett._sec_to_str(elapsed), '-', *msg)
         if m:
-            mi(format_memory_usage(get_memory_usage()), msg='' if t else msg)
+            sett.mi(format_memory_usage(get_memory_usage()), msg='' if t else msg)
 
 
 def get_passed_time():

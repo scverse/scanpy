@@ -15,22 +15,20 @@ def filter_genes_dispersion(result, log=False):
 
     Parameters
     ----------
-    adata : AnnData or data matrix
-        If passing X, you should also pass the
-    gene_filter : np.ndarray of shape n_top_genes of dtype bool
-        Boolean index array.
+    result: np.recarray
+        Result of sc.pp.filter_genes_dispersion.
     log : bool
         Plot on logarithmic axes.
     """
-    gene_filter = result['gene_filter']
-    means = result['means']
-    dispersions = result['dispersions']
-    dispersions_norm = result['dispersions_norm']
+    gene_subset = result.gene_subset
+    means = result.means
+    dispersions = result.dispersions
+    dispersions_norm = result.dispersions_norm
     for id, d in enumerate([dispersions_norm, dispersions]):
         pl.figure(figsize=rcParams['figure.figsize'])
         for label, color, mask in zip(['highly variable genes', 'other genes'],
                                       ['black', 'grey'],
-                                      [gene_filter, ~gene_filter]):
+                                      [gene_subset, ~gene_subset]):
             if False: means_, disps_ = np.log10(means[mask]), np.log10(d[mask])
             else: means_, disps_ = means[mask], d[mask]
             pl.scatter(means_, disps_, label=label, c=color, s=1)
@@ -45,6 +43,4 @@ def filter_genes_dispersion(result, log=False):
         pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expression of gene')
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersion of gene'
                   + (' (normalized)' if id == 0 else ' (not normalized)'))
-    savefig_or_show('high_var_genes')
-
-
+    savefig_or_show('filter_genes_dispersion')

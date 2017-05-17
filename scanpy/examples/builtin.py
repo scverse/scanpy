@@ -164,8 +164,8 @@ def moignard15():
     url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     adata = sc.read(filename, sheet='dCt_values.txt', backup_url=url)
     # filter out 4 genes as in Haghverdi et al. (2016)
-    gene_filter = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
-    adata = adata[:, gene_filter]  # retain non-removed genes
+    gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
+    adata = adata[:, gene_subset]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
     adata.add['xroot'] = adata.X[532]  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups

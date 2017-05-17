@@ -9,7 +9,7 @@ from .. import settings as sett
 
 
 def dbscan(adata, basis='tsne', n_comps=10, eps=None, min_samples=None, copy=False):
-    """Cluster using DBSCAN
+    """Cluster cells using DBSCAN
 
     Parameters
     ----------

@@ -32,7 +32,7 @@ def write(filename_or_key, data, ext=None):
     Parameters
     ----------
     filename_or_key : str
-        Filename of data file or key.
+        Filename of data file or key to generate filename.
     data : dict, AnnData
         Annotated data object or dict storing arrays as values.
     """
@@ -41,6 +41,7 @@ def write(filename_or_key, data, ext=None):
         d = data.to_dict()
     else:
         d = data
+
     if is_filename(filename_or_key):
         filename = filename_or_key
         ext_ = is_filename(filename, return_ext=True)
@@ -52,12 +53,9 @@ def write(filename_or_key, data, ext=None):
                              'One of "txt", "csv", "h5" or "npz".')
     else:
         key = filename_or_key
-        filename = get_filename_from_key(key)
-    ext = sett.file_format_data if ext is None else ext
+        ext = sett.file_format_data if ext is None else ext
+        filename = get_filename_from_key(key, ext)
     write_dict_to_file(filename, d, ext=ext)
-    if ext in {'txt', 'csv'}:
-        filename = get_filename_from_key(key, ext='h5')
-        write_dict_to_file(filename, d, ext='h5')
 
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
@@ -138,6 +136,48 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         return d
     else:
         return AnnData(d)
+
+
+def read_10x_h5(filename, genome):
+    """Get annotated 10X expression matrix from hdf5 file.
+
+    Uses the naming conventions of 10x hdf5 files.
+
+    Returns
+    -------
+    adata : AnnData object where samples/cells are named by their barcode and
+            variables/genes by gene name. The data is stored in adata.X, cell
+            names in adata.smp_names and gene names in adata.var_names.
+    """
+    logg.m('reading file', filename, r=True)
+    import tables
+    with tables.open_file(filename, 'r') as f:
+        try:
+            dsets = {}
+            for node in f.walk_nodes('/' + genome, 'Array'):
+                dsets[node.name] = node.read()
+            # AnnData works with csr matrices
+            # 10x stores the transposed data, so we do the transposition right away
+            from scipy.sparse import csr_matrix
+            M, N = dsets['shape']
+            data = dsets['data']
+            if dsets['data'].dtype == np.dtype('int32'):
+                data = dsets['data'].view('float32')
+                data[:] = dsets['data']
+            matrix = csr_matrix((data, dsets['indices'], dsets['indptr']),
+                                shape=(N, M))
+            # the csc matrix is automatically the transposed csr matrix
+            # as scanpy expects it, so, no need for a further transpostion
+            adata = AnnData(matrix,
+                           {'smp_names': dsets['barcodes']},
+                           {'var_names': dsets['gene_names'],
+                            'gene_ids': dsets['genes']})
+            logg.m('finished', t=True)
+            return adata
+        except tables.NoSuchNodeError:
+            raise Exception("Genome %s does not exist in this file." % genome)
+        except KeyError:
+            raise Exception("File is missing one or more required datasets.")
 
 
 # --------------------------------------------------------------------------------
@@ -333,7 +373,7 @@ def _read_mtx(filename, return_dict=True, dtype='float32'):
     from scipy.io import mmread
     # could be rewritten accounting for dtype to be more performant
     X = mmread(filename).astype(dtype)
-    from scipy.sparse.csr import csr_matrix
+    from scipy.sparse import csr_matrix
     X = csr_matrix(X)
     sett.m(0, '... did not find row_names or col_names')
     if return_dict:
@@ -770,17 +810,16 @@ def write_dict_to_file(filename, d, ext='h5'):
     if not os.path.exists(directory):
         sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
-    sett.m(0, 'writing', filename)
-    if ext == 'h5' or ext == 'npz':
-        d_write = {}
-        from scipy.sparse import issparse
-        for key, value in d.items():
-            if key == 'X' and issparse(value):
-                for k, v in save_sparse_csr(value).items():
-                    d_write[k] = v
-            else:
-                key, value = preprocess_writing(key, value)
-                d_write[key] = value
+    if ext in {'h5', 'npz'}: logg.m('writing', filename)
+    d_write = {}
+    from scipy.sparse import issparse
+    for key, value in d.items():
+        if key == 'X' and issparse(value):
+            for k, v in save_sparse_csr(value).items():
+                d_write[k] = v
+        else:
+            key, value = preprocess_writing(key, value)
+            d_write[key] = value
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d_write.items():
@@ -795,12 +834,10 @@ def write_dict_to_file(filename, d, ext='h5'):
         # here this is actually a directory that corresponds to the
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
-        sett.m(0, '... exporting', ext, 'files to', dirname)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        for key, value in d.items():
-            key, value = preprocess_writing(key, value)
-            from pandas import DataFrame
+        sett.m(0, 'writing', ext, 'files to', dirname)
+        if not os.path.exists(dirname): os.makedirs(dirname)
+        from pandas import DataFrame
+        for key, value in d_write.items():
             filename = dirname + '/' + key + '.' + ext
             if value.dtype.names is None:
                 if value.dtype.char == 'S':
@@ -836,7 +873,7 @@ def save_sparse_csr(X):
     return {'X_csr_data': X.data,
             'X_csr_indices': X.indices,
             'X_csr_indptr': X.indptr,
-            'X_csr_shape': X.shape}
+            'X_csr_shape': np.array(X.shape)}
 
 
 def load_sparse_csr(d):

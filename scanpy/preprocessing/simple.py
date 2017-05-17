@@ -12,7 +12,7 @@ import statsmodels.api as sm
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from ..data_structs import AnnData
 from .. import sett
-from .. import plotting as pl
+
 
 def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     """
@@ -34,7 +34,7 @@ def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     Notes
     -----
     If data is a data matrix X, the following to arrays are returned
-        cell_filter : np.ndarray
+        cell_subset : np.ndarray
             Boolean index mask that does filtering. True means that the cell is
             kept. False means the cell is removed.
         number_per_cell: np.ndarray
@@ -49,21 +49,24 @@ def filter_cells(data, min_counts=None, min_genes=None, copy=False):
         raise ValueError('Provide one of min_counts or min_genes.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        cell_filter, number = filter_cells(adata.X, min_counts, min_genes)
+        cell_subset, number = filter_cells(adata.X, min_counts, min_genes)
         if min_genes is None:
             adata.smp['n_counts'] = number
         else:
             adata.smp['n_genes'] = number
-        adata.filter_smp(cell_filter)
+        adata.inplace_subset_smp(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     number_per_cell = np.sum(X if min_genes is None else X > 0, axis=1)
     if issparse(X):
         number_per_cell = number_per_cell.A1
-    cell_filter = number_per_cell >= min_number
-    sett.m(0, '... filtered out', np.sum(~cell_filter), 'outlier cells')
-    return cell_filter, number_per_cell
+    cell_subset = number_per_cell >= min_number
+    sett.m(0, '... filtered out', np.sum(~cell_subset),
+           'cells that have less than',
+           str(min_genes) + ' genes expressed' if min_counts is None
+           else str(min_counts) + ' counts')
+    return cell_subset, number_per_cell
 
 
 def filter_genes(data, min_cells=None, min_counts=None, copy=False):
@@ -83,25 +86,25 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
         raise ValueError('Provide one of min_counts or min_cells.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        gene_filter, number = filter_genes(adata.X, min_cells=min_cells,
+        gene_subset, number = filter_genes(adata.X, min_cells=min_cells,
                                            min_counts=min_counts)
         if min_cells is None:
             adata.var['n_counts'] = number
         else:
             adata.var['n_cells'] = number
-        adata.filter_var(gene_filter)
+        adata.inplace_subset_var(gene_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
     min_number = min_counts if min_cells is None else min_cells
     if issparse(X):
         number_per_gene = number_per_gene.A1
-    gene_filter = number_per_gene >= min_number
-    sett.m(0, '... filtered out', np.sum(~gene_filter),
+    gene_subset = number_per_gene >= min_number
+    sett.m(0, '... filtered out', np.sum(~gene_subset),
            'genes that are detected',
            'in less than ' + str(min_cells) + ' cells' if min_counts is None
            else 'with less than ' + str(min_counts) + ' counts')
-    return gene_filter, number_per_gene
+    return gene_subset, number_per_gene
 
 
 def filter_genes_dispersion(data, log=True,
@@ -146,7 +149,7 @@ def filter_genes_dispersion(data, log=True,
         dispersions_norm : np.ndarray of shape n_genes
             Dispersions per gene.
     If a data matrix is passed, the information is returned as np.recarray with the columns:
-        gene_filter, means, dispersions, dispersion_norm
+        gene_subset, means, dispersions, dispersion_norm
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -158,7 +161,7 @@ def filter_genes_dispersion(data, log=True,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata.filter_var(result['gene_filter'])
+        adata.inplace_subset_var(result['gene_subset'])
         return adata if copy else None
     sett.m(0, '... filter highly varying genes by dispersion and mean')
     X = data  # proceed with data matrix
@@ -196,11 +199,11 @@ def filter_genes_dispersion(data, log=True,
                                 / disp_mad_bin[df['mean_bin'].cat.codes].values  # appending .cat.codes only necessary for old pandas versions
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
-    dispersion_norm = df['dispersion_norm'].values.copy()
+    dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
-        gene_filter = df['dispersion_norm'].values >= disp_cut_off
+        gene_subset = df['dispersion_norm'].values >= disp_cut_off
         sett.m(0, '... the', n_top_genes,
                'top genes correspond to a normalized dispersion cutoff of',
                disp_cut_off)
@@ -209,20 +212,17 @@ def filter_genes_dispersion(data, log=True,
         sett.m(0, '--> set `n_top_genes` to simply select top-scoring genes instead')
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_filter = np.logical_and.reduce((mean > min_mean, mean < max_mean,
+        gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
-    return np.rec.fromarrays((
-        gene_filter,
-        df['mean'].values,
-        df['dispersion'].values,
-        df['dispersion_norm'].values,
-    ), dtype=[
-        ('gene_filter', bool),
-        ('means', 'float32'),
-        ('dispersions', 'float32'),
-        ('dispersions_norm', 'float64'),
-    ])
+    return np.rec.fromarrays((gene_subset,
+                              df['mean'].values,
+                              df['dispersion'].values,
+                              df['dispersion_norm'].values.astype('float32', copy=False)),
+                              dtype=[('gene_subset', bool),
+                                     ('means', 'float32'),
+                                     ('dispersions', 'float32'),
+                                     ('dispersions_norm', 'float32')])
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
@@ -234,8 +234,8 @@ def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
     mean_filter = np.mean(X, axis=0) > Ecutoff
     var_filter = np.std(X, axis=0) / (np.mean(X, axis=0) + .0001) > cvFilter
-    gene_filter = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
-    return gene_filter
+    gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
+    return gene_subset
 
 
 def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
@@ -247,8 +247,8 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
     mean_filter = np.mean(X, axis=0) > Ecutoff
     var_filter = np.var(X, axis=0) / (np.mean(X, axis=0) + .0001) > Vcutoff
-    gene_filter = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
-    return gene_filter
+    gene_subset = np.nonzero(np.all([mean_filter, var_filter], axis=0))[0]
+    return gene_subset
 
 
 def log1p(data, copy=False):
@@ -528,7 +528,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
-    if zero_center and max_value is None:
+    if zero_center and max_value is not None:
         sett.m(0, 'scale_data: be very careful to use `max_value` without `zero_center`')
     if not zero_center:
         sett.m(0, 'omitting to zero_center the data')
@@ -576,7 +576,7 @@ def subsample(data, subsample, seed=0, copy=False):
         return utils.subsample(X, subsample, seed)
     adata = data.copy() if copy else data
     _, smp_indices = utils.subsample(adata.X, subsample, seed)
-    adata.filter_smp(smp_indices)
+    adata.inplace_subset_smp(smp_indices)
     for k in adata.smp_keys():
         # TODO: this should also be taken into account when slicing
         if k + '_masks' in adata.add:

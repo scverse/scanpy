@@ -122,10 +122,7 @@ class BoundStructArray(np.ndarray):
                     cols.append(np.arange(len(cols[0]) if cols else n_row).astype(STRING_TYPE))
                 else:
                     names[names.index(old_index_key)] = new_index_key
-                    if isinstance(source[old_index_key][0], np.string_):
-                        raise ValueError('Value for key "{}" for initializing index of BoundStructArray '
-                                         'needs to be of type str, not {}.'
-                                         .format(index_key, type(source[index_key][0])))
+                    cols[names.index(old_index_key)] = cols[names.index(old_index_key)].astype(STRING_TYPE)
                 dtype = list(zip(names, [str(c.dtype) for c in cols]))
             try:
                 dtype = np.dtype(dtype)
@@ -462,9 +459,10 @@ class AnnData(IndexMixin):
 
         # type conversion: if type doesn't match, a copy is made
         if sp.issparse(X) or isinstance(X, ma.MaskedArray):
-            if X.dtype.descr != np.dtype(dtype).descr:
-                X = X.astype(dtype)
-        else:  # is plain np.ndarray
+            # TODO: maybe use view on data attribute of sparse matrix
+            #       as in readwrite.read_10x_h5
+            if X.dtype != np.dtype(dtype): X = X.astype(dtype)
+        else:  # is np.ndarray
             X = X.astype(dtype, copy=False)
 
         if X.dtype.names is None and len(X.shape) not in {0, 1, 2}:
@@ -605,7 +603,8 @@ class AnnData(IndexMixin):
             del self.var.iloc[var, :]
 
     def __getitem__(self, index):
-        # otherwise unpack index
+        # Note: this cannot be made inplace
+        # http://stackoverflow.com/questions/31916617/using-keyword-arguments-in-getitem-method-in-python
         smp, var = self._normalize_indices(index)
         X = self.X[smp, var]
         smp_ann = self.smp[smp]
@@ -614,6 +613,26 @@ class AnnData(IndexMixin):
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         adata = AnnData(X, smp_ann, var_ann, self.add)
         return adata
+
+    def inplace_subset_var(self, index):
+        """Inplace subsetting along variables dimension.
+
+        Same as adata = adata[:, index], but inplace.
+        """
+        self.X = self.X[:, index]
+        self.var = self.var[index]
+        self.n_vars = self.X.shape[1]
+        return None
+
+    def inplace_subset_smp(self, index):
+        """Inplace subsetting along variables dimension.
+
+        Same as adata = adata[index, :], but inplace.
+        """
+        self.X = self.X[index, :]
+        self.smp = self.smp[index]
+        self.n_smps = self.X.shape[0]
+        return None
 
     def get_smp_array(self, k):
         """Get an array along the sample dimension by first looking up
@@ -636,20 +655,6 @@ class AnnData(IndexMixin):
             raise ValueError('Did not find {} in var_keys or smp_names.'
                              .format(k))
         return x
-
-    def filter_var(self, index):
-        """Filter along variables dimension."""
-        self.X = self.X[:, index]
-        self.var = self.var[index]
-        self.n_vars = self.X.shape[1]
-        return None
-
-    def filter_smp(self, index):
-        """Filter along samples dimension."""
-        self.X = self.X[index, :]
-        self.smp = self.smp[index]
-        self.n_smps = self.X.shape[0]
-        return None
 
     def __setitem__(self, index, val):
         smp, var = self._normalize_indices(index)
