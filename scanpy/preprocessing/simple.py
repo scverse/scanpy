@@ -145,7 +145,7 @@ def filter_genes_dispersion(data, log=True,
             Dispersions per gene.
         dispersions_norm : np.ndarray of shape n_genes
             Dispersions per gene.
-    If a data matrix is passed, the information is returned as tuple.
+    If a data matrix is passed, the information is returned as np.recarray with the columns:
         gene_filter, means, dispersions, dispersion_norm
     """
     if isinstance(data, AnnData):
@@ -212,10 +212,17 @@ def filter_genes_dispersion(data, log=True,
         gene_filter = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
-    result = {'gene_filter': gene_filter, 'means': df['mean'].values,
-              'dispersions': df['dispersion'].values,
-              'dispersions_norm': df['dispersion_norm'].values}
-    return result
+    return np.rec.fromarrays((
+        gene_filter,
+        df['mean'].values,
+        df['dispersion'].values,
+        df['dispersion_norm'].values,
+    ), dtype=[
+        ('gene_filter', bool),
+        ('means', 'float32'),
+        ('dispersions', 'float32'),
+        ('dispersions_norm', 'float64'),
+    ])
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
