@@ -3,8 +3,28 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 import numpy
 import versioneer
-from Cython.Distutils import build_ext
 
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    use_cython = False
+else:
+    use_cython = True
+
+cmdclass = {}
+ext_modules = []
+if use_cython:
+    ext_modules += [
+        Extension("scanpy.cython.utils_cy",
+                  ["scanpy/cython/utils_cy.pyx"]),
+    ]
+    cmdclass.update({'build_ext': build_ext})
+else:
+    ext_modules += [
+        Extension("scanpy.cython.utils_cy",
+                  ["scanpy/cython/utils_cy.c"]),
+]
+    
 with open('requirements.txt') as requirements:
     requires = [l.strip() for l in requirements]
 
@@ -31,10 +51,7 @@ setup(
     install_requires=requires + more_requires,
     packages=find_packages(exclude=['scripts', 'scripts.*']),
     include_dirs=[numpy.get_include()],
-    cmdclass=versioneer.get_cmdclass({'build_ext': build_ext}),
-    ext_modules=[
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.pyx"]),
-    ],
+    cmdclass=versioneer.get_cmdclass(cmdclass),
+    ext_modules=ext_modules,
     zip_safe=False,
 )
