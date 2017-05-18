@@ -4,27 +4,22 @@ from distutils.extension import Extension
 import numpy
 import versioneer
 
+# Pip calls setup.py egg_info to get static dependency information,
+# then installs them, and finally it calls setup.py develop/bdist.
+# We create a dummy build_ext so egg_info can be called before pip installs Cython
 try:
     from Cython.Distutils import build_ext
-except ImportError:
-    use_cython = False
-else:
-    use_cython = True
+except ImportError as e:
+    from distutils.cmd import Command
+    class build_ext(Command):
+        extensions = []
+        def initialize_options(self): pass
+        def finalize_options(self): pass
+        def get_source_files(self): return []
+        def run(self):
+            if 'egg_info' not in sys.argv:
+                raise e
 
-cmdclass = {}
-ext_modules = []
-if use_cython:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.pyx"]),
-    ]
-    cmdclass.update({'build_ext': build_ext})
-else:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.c"]),
-]
-    
 with open('requirements.txt') as requirements:
     requires = [l.strip() for l in requirements]
 
@@ -51,7 +46,11 @@ setup(
     install_requires=requires + more_requires,
     packages=find_packages(exclude=['scripts', 'scripts.*']),
     include_dirs=[numpy.get_include()],
-    cmdclass=versioneer.get_cmdclass(cmdclass),
-    ext_modules=ext_modules,
+    cmdclass=versioneer.get_cmdclass({'build_ext': build_ext}),
+    ext_modules=[
+        Extension('scanpy.cython.utils_cy', [
+            'scanpy/cython/utils_cy.pyx',
+        ]),
+    ],
     zip_safe=False,
 )

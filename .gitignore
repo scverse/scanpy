@@ -13,6 +13,7 @@ scanpy_later/
 scripts_test/
 thirdp/
 test.py
+scanpy/cython/utils_cy.c
 
 # private files
 scanpy/examples/builtin_private.py
