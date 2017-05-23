@@ -102,7 +102,7 @@ class OnFlySymMatrix():
         self.restrict_array = restrict_array  # restrict the array to a subset
 
     def __getitem__(self, index):
-        if isinstance(index, int) or isinstance(index, np.int64):
+        if isinstance(index, int) or isinstance(index, np.integer):
             if self.restrict_array is None:
                 glob_index = index
             else:
