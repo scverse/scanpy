@@ -29,7 +29,7 @@ Then go through the use cases compiled in
 
 * 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing 68 000 cells from [(Zheng *et al.*, Nat. Comms. 2017)](https://doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) R kit for secondary analysis. For large-scale data, this becomes crucial for an interactive analysis.
 
-* 17-05-01 | [link](https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15/notebook.ipynb) | Diffusion Pseudotime analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](https://doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](https://doi.org/10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](https://doi.org/10.1101/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
+* 17-05-01 | [link](https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15) | Diffusion Pseudotime analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](https://doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](https://doi.org/10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](https://doi.org/10.1101/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 
 ## Features <a id="features"></a>
