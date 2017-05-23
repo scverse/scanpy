@@ -1,56 +1,12 @@
-"""
-Builtin Examples
+"""Builtin Examples.
 
-Provides functions for preprocessing data for various examples.
+Provides functions for preprocessing data and default parameters.
 """
 
-from __future__ import absolute_import, print_function
 from collections import OrderedDict as odict
 import numpy as np
-import scanpy as sc
+from . import api_without_examples as sc
 
-# --------------------------------------------------------------------------------
-# The 'example_parameters' dictionary allows to set optional tool parameters
-# --------------------------------------------------------------------------------
-
-example_parameters = {
-    'burczynski06': {},
-    'krumsiek11': {
-        'dpt/diffmap': {
-            'k': 5,
-            'knn': False,
-            'n_branchings': 2,  # detect two branching points (default 1)
-            'allow_branching_at_root': True,  # allow branching directly at root
-        },
-        'paths': {
-            'k': 5,
-            'num_fates': 4,  # detect two branching points (default 1)
-        },
-    },
-    'moignard15': {
-        'dbscan': {'eps': 3, 'min_samples': 30},
-        'dpt/diffmap': {'k': 5, 'knn': False},
-        'paths': {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])},
-    },
-    'paul15': {
-        'paths': {'fates': odict([('GMP', 877), ('MEP', 2156)])},
-        'dpt/diffmap': {'k': 20, 'knn': True, 'n_pcs': 0},
-        'diffrank': {'log': False, 'names': 'GMP,MEP'},
-        'tgdyn': {'names': 'GMP,MEP'},
-    },
-    'paul15pca': {
-        'datakey': 'paul15',
-        'paths': {'fates': odict([('GMP', 193), ('MEP', 2201)])},
-        'dpt/diffmap': {'k': 20, 'knn': True},
-        'diffrank': {'log': False, 'names': 'GMP,MEP'},
-        'tgdyn': {'names': 'GMP,MEP'},
-    },
-    'toggleswitch': {
-        'dpt/diffmap': {'k': 5, 'knn': False},
-        'paths': {'fates': odict([('0', 95), ('1', 189)])},
-        'diffrank': {'log': False},
-    },
-}
 
 # --------------------------------------------------------------------------------
 # The 'example_data dictionary' stores information about example data.
@@ -127,8 +83,7 @@ def burczynski06():
 
 
 def krumsiek11():
-    """
-    Simulated myeloid progenitor data.
+    """Simulated myeloid progenitor data.
 
     Uses a literature-curated boolean network from the reference below.
 
@@ -145,10 +100,14 @@ def krumsiek11():
     adata.add['xroot'] = adata.X[0]
     return adata
 
+krumsiek11_diffmap_params = {'k': 5, 'knn': False}
+krumsiek11_dpt_params = {'k': 5, 'knn': False, 'n_branchings': 2,
+        'allow_branching_at_root': True}
+krumsiek11_paths_params = {'k': 5, 'num_fates': 4}
+
 
 def moignard15():
-    """
-    Hematopoiesis in early mouse embryos.
+    """Hematopoiesis in early mouse embryos.
 
     1. Filter out a few genes.
     2. Choose 'root cell'.
@@ -179,10 +138,14 @@ def moignard15():
     adata.add['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
+moignard15_dbscan_params = {'eps': 3, 'min_samples': 30}
+moignard15_dpt_params = {'k': 5, 'knn': False}
+moignard15_diffmap_params = {'k': 5, 'knn': False}
+moignard15_paths_params = {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])}
+
 
 def paul15():
-    """
-    Get preprocessed data matrix, gene names, cell names, and root cell.
+    """Myeloid Progenitors.
 
     This largely follows an R tutorial by Maren Buttner.
     https://github.com/theislab/scAnalysisTutorial
@@ -198,28 +161,42 @@ def paul15():
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
+paul15_paths_params = {'fates': odict([('GMP', 877), ('MEP', 2156)])}
+paul15_dpt_params = {'k': 20, 'knn': True, 'n_pcs': 0}
+paul15_diffmap_params = {'k': 20, 'knn': True, 'n_pcs': 0}
+paul15_diffrank_params = {'log': False, 'names': 'GMP,MEP'}
+paul15_tgdyn_params = {'names': 'GMP,MEP'}
+
 
 def paul15pca():
-    """
-    Same as paul15, but in the settings for DPT in example_parameters above, we
-    do not switch off an initial PCA.
+    """Same as paul15.
     """
     adata = paul15_raw()
     adata.X = sc.pp.log1p(adata.X)
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
+paul15pca_paths_params = {'fates': odict([('GMP', 193), ('MEP', 2201)])}
+paul15pca_dpt_params = {'k': 20, 'knn': True}
+paul15pca_diffrank_params = {'log': False, 'names': 'GMP,MEP'}
+paul15pca_tgdyn_params = {'names': 'GMP,MEP'}
+
 
 def toggleswitch():
-    """
-    Simple toggleswitch from simulated data.
+    """Simple toggleswitch from simulated data.
 
-    Simulate the data by running "scanpy krumsiek11 sim" on the command line.
+    Simulate the data by running "scanpy toggleswitch sim" on the command line.
     """
     filename = 'write/toggleswitch_sim/sim_000000.txt'
     adata = sc.read(filename, first_column_names=True)
     adata.add['xroot'] = adata.X[0]
     return adata
+
+toggleswitch_dpt_params = {'k': 5, 'knn': False}
+toggleswitch_diffmap_params = toggleswitch_dpt_params
+toggleswitch_paths_params = {'fates': odict([('0', 95), ('1', 189)])}
+toggleswitch_diffrank_params = {'log': False}
+
 
 # --------------------------------------------------------------------------------
 # Optional functions for reading Raw Data and Postprocessing, respectively
@@ -228,12 +205,14 @@ def toggleswitch():
 #   postprocessing steps
 # --------------------------------------------------------------------------------
 
+
 def moignard15_dpt(adata):
     if len(adata.add['dpt_groups_names']) > 1:
         groups_names = ['trunk', 'undecided',
                         'endothelial', 'erythrocytes']
         adata.add['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
     return adata
+
 
 def paul15_raw():
     filename = 'data/paul15/paul15.h5'
@@ -256,10 +235,10 @@ def paul15_raw():
     adata.add['xroot'] = adata.X[iroot]
     return adata
 
+
 def paul15_dpt(adata):
     adata.add['dpt_groups_names'] = ['', 'GMP', '', 'MEP']
-    return adata
+
 
 def paul15pca_dpt(adata):
     adata.add['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
-    return adata

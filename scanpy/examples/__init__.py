@@ -11,21 +11,22 @@ from .. import readwrite
 from .. import settings as sett
 from .. import logging as logg
 
-def get_example(exkey, subsample=1, return_module=False, suffix='',
+
+def get_example(run_name, subsample=1, return_module=False, suffix='',
                 recompute=True, reread=False):
     """
     Read and preprocess data for predefined example.
 
     Parameters
     ----------
-    exkey : str
+    run_name : str
         Key for looking up an example-preprocessing function.
     subsample : int, optional (default: 1)
         Subsample to a fraction of 1/subsample of the data.
     return_module : bool, optional (default: False)
         Return example module.
     suffix : str, optional (default: '')
-        Set suffix to be appended to `exkey` in naming output files.
+        Set suffix to be appended to `run_name` in naming output files.
     recompute : bool, optional (default: True)
         Recompute preprocessing.
     reread : bool, optional (default: False)
@@ -42,12 +43,10 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
     exmodule : dict, optional
         Example module.
     """
-    # set global variables
-    sett.exkey = exkey
-    sett.suffix = suffix
-    sett.basekey = exkey + suffix
-    if subsample != 1:
-        sett.basekey += '_ss{:02}'.format(subsample)
+    sett._run_basename = run_name
+    sett._run_suffix = suffix
+    sett.run_name = sett._run_basename + sett._run_suffix
+    if subsample != 1: sett.run_name += '_ss{:02}'.format(subsample)
     # find and load the preprocessing function
     loop_over_filenames = [filename for filename in os.listdir('.')
                            if (filename.startswith('preprocessing')  # make configurable
@@ -64,7 +63,7 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
     for filename in loop_over_filenames:
         exmodule = __import__(filename.replace('.py', ''))
         try:
-            exfunc = getattr(exmodule, exkey)
+            exfunc = getattr(exmodule, run_name)
             not_found = False
         except AttributeError:
             pass
@@ -72,26 +71,27 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
         try:
             # additional possibility to add example module
             from . import builtin_private
-            exfunc = getattr(builtin_private, exkey)
+            exfunc = getattr(builtin_private, run_name)
             exmodule = builtin_private
         except (ImportError, AttributeError):
             try:
-                exfunc = getattr(builtin, exkey)
+                exfunc = getattr(builtin, run_name)
                 exmodule = builtin
             except AttributeError:
-                msg = ('Do not know how to run example "' + exkey +
-                       '".\nEither define a function ' + exkey + '() '
-                       'in ./scanpy_user.py that returns an AnnData object.\n'
+                msg = ('Do not know how to run example "' + run_name +
+                       '".\nEither define a function ' + run_name + '() '
+                       'in ./preprocessing_whatevername.py that returns an AnnData object.\n'
                        'Or, use one of the builtin examples:'
-                       + _exkeys_str())
+                       + _run_names_str())
                 sys.exit(msg)
 
     from os.path import exists
-    exfile = readwrite.get_filename_from_key(sett.basekey)
+    exfile = readwrite.get_filename_from_key(sett.run_name)
     if not exists(exfile) or recompute or reread:
+        logg.m('reading and preprocessing data')
         # run the function
         adata = exfunc()
-        # add exkey to adata
+        # add run_name to adata
         sett.m(0, 'X has shape n_samples x n_variables =',
                adata.X.shape[0], 'x', adata.X.shape[1])
         # do sanity checks on data dictionary
@@ -101,10 +101,9 @@ def get_example(exkey, subsample=1, return_module=False, suffix='',
             from ..preprocessing import subsample as subsample_function
             subsample_function(adata, subsample)
         # write the prepocessed data
-        readwrite.write(sett.basekey, adata)
-        sett.m(0, 'wrote preprocessed data to', exfile)
+        readwrite.write(sett.run_name, adata)
     else:
-        adata = readwrite.read(sett.basekey)
+        adata = readwrite.read(sett.run_name)
 
     if return_module:
         return adata, exmodule
@@ -166,13 +165,13 @@ def check_adata(adata, verbosity=0):
         sett.m(1-verbosity, _howto_specify_subgroups)
     else:
         if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
-            info = 'continuous/categorical sample annotation with '
+            info = 'sample annotation: '
         for ismp, smp in enumerate(adata.smp_keys()):
             # ordered unique categories for categorical annotation
             if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
                 adata.add[smp + '_names'] = utils.unique_categories(adata.smp[smp])
             if sett.verbosity > 1-verbosity:
-                info += smp + ': '
+                info += '"' + smp + '" = '
                 if adata.smp[smp].dtype.char in {'U', 'S'}:
                     ann_info = str(adata.add[smp + '_names'])
                     if len(adata.add[smp + '_names']) > 7:
@@ -181,7 +180,7 @@ def check_adata(adata, verbosity=0):
                                     + str(adata.add[smp + '_names'][-2:]).replace('[', ''))
                     info += ann_info
                 else:
-                    info += 'cont'
+                    info += 'continuous'
                 if ismp < len(adata.smp_keys())-1:
                     info += ', '
         if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
@@ -189,7 +188,7 @@ def check_adata(adata, verbosity=0):
     return adata
 
 
-def _exkeys_str():
+def _run_names_str():
     str = ''
     for k in sorted(_example_parameters().keys()):
         str += '\n    ' + k

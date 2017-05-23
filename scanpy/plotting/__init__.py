@@ -4,6 +4,7 @@
 Plotting functions for each tool and toplevel plotting functions for AnnData.
 """
 
+import warnings
 import numpy as np
 from ..compat.matplotlib import pyplot as pl
 # general functions
@@ -14,14 +15,14 @@ from .toplevel import savefig, savefig_or_show
 # preprocessing
 from .preprocessing import filter_genes_dispersion
 from . import utils
-from .. import sett
+from .. import settings as sett
+
 
 utils.init_plotting_params()
 
 
 def pca(adata, **params):
-    """
-    Plot PCA results.
+    """Plot PCA results.
 
     The parameters are the ones of the scatter plot. Call pca_ranking separately
     if you want to change the default settings.
@@ -78,7 +79,7 @@ def pca_scatter(adata,
     """See parameters of pl.pca().
     """
     from ..examples import check_adata
-    adata = check_adata(adata)
+    adata = check_adata(adata, verbosity=-1)
     axs = scatter(adata,
                   basis='pca',
                   color=color,
@@ -93,10 +94,7 @@ def pca_scatter(adata,
                   size=size,
                   titles=titles,
                   show=False)
-    writekey = sett.basekey + '_pca_scatter' + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
-    elif show: pl.show()
+    savefig_or_show('pca_scatter')
     return axs
 
 
@@ -106,13 +104,9 @@ def pca_ranking(adata, comps=None, show=None):
     if isinstance(comps, str): comps = comps.split(',')
     keys = ['PC1', 'PC2', 'PC3'] if comps is None else ['PC{}'.format(c) for c in comps]
     ranking(adata, 'var', keys)
-    writekey = sett.basekey + '_pca_ranking_components' + sett.plotsuffix
-    if sett.savefigs: savefig(writekey)
+    if sett.savefigs: savefig('pca_ranking_components')
     ranking(adata, 'add', 'pca_variance_ratio', labels='PC')
-    writekey = sett.basekey + '_pca_ranking_variance' + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
-    elif show: pl.show()
+    savefig_or_show('pca_ranking_variance')
 
 
 def diffmap(adata,
@@ -125,7 +119,7 @@ def diffmap(adata,
             cmap=None,
             pal=None,
             right_margin=None,
-            size=3,
+            size=None,
             titles=None,
             show=None):
     """Scatter plot in Diffusion Map basis.
@@ -155,7 +149,7 @@ def diffmap(adata,
          Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
+    size : float (default: None)
          Point size.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
@@ -163,11 +157,21 @@ def diffmap(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     if comps == 'all':
-        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
+        comps_list = ['1,2', '1,3', '1,4', '1,5', '1,6',
+                      '2,3', '2,4', '2,5', '2,6', '2,7',
+                      '3,4', '3,5', '3,6', '3,7',
+                      '4,5', '4,6', '4,7',
+                      '5,6', '5,7',
+                      '6,7']
+        comps_list = ['{},{}'.format(i, j)
+                      for i in range(1, 10) for j in range(1, 10) if i != j]
     else:
         if comps is None:
             comps = '1,2' if '2d' in layout else '1,2,3'
-        comps_list = [comps]
+        if not isinstance(comps, list):
+            comps_list = [comps]
+        else:
+            comps_list = comps
     for comps in comps_list:
         axs = scatter(adata,
                       basis='diffmap',
@@ -183,14 +187,14 @@ def diffmap(adata,
                       size=size,
                       titles=titles,
                       show=False)
-        writekey = sett.basekey + '_diffmap'
-        if isinstance(comps, list):
-            comps = ','.join([str(comp) for comp in comps])
-        writekey += sett.plotsuffix + '_comps' + comps.replace(',', '')
+        writekey = 'diffmap'
+        if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
+        writekey += '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
     return axs
+
 
 def tsne(adata,
          color=None,
@@ -202,7 +206,7 @@ def tsne(adata,
          cmap=None,
          pal=None,
          right_margin=None,
-         size=3,
+         size=None,
          titles=None,
          show=None):
     """Scatter in tSNE basis.
@@ -232,7 +236,7 @@ def tsne(adata,
          Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
+    size : float (default: None)
          Point size.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
@@ -257,11 +261,9 @@ def tsne(adata,
                   size=size,
                   titles=titles,
                   show=False)
-    writekey = sett.basekey + '_tsne' + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
-    elif show: pl.show()
+    savefig_or_show('tsne')
     return axs
+
 
 def spring(adata,
            color=None,
@@ -273,7 +275,8 @@ def spring(adata,
            cmap=None,
            pal=None,
            right_margin=None,
-           size=3,
+           size=None,
+           titles=None,
            show=None):
     """Plot spring scatter plot.
 
@@ -302,33 +305,31 @@ def spring(adata,
          Colors cycle to use for categorical groups.
     right_margin : float (default: 0.2)
          Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
+    size : float (default: None)
          Point size.
+    titles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     from ..examples import check_adata
     adata = check_adata(adata)
     Y = adata.smp['X_spring']
     if True:
-        scatter(adata,
-                       basis='spring',
-                       color=color,
-                       names=names,
-                       comps=comps,
-                       cont=cont,
-                       layout=layout,
-                       legendloc=legendloc,
-                       cmap=cmap,
-                       pal=pal,
-                       right_margin=right_margin,
-                       size=size,
-                       # defined in plotting
-                       titles=['Fruchterman-Reingold step: 12'],
-                       show=False)
-        writekey = sett.basekey + '_spring'
-        writekey += '_' + sett.plotsuffix
-        show = sett.autoshow if show is None else show
-        if sett.savefigs: savefig(writekey)
-        elif show: pl.show()
+        axs = scatter(adata,
+                      basis='spring',
+                      color=color,
+                      names=names,
+                      comps=comps,
+                      cont=cont,
+                      layout=layout,
+                      legendloc=legendloc,
+                      cmap=cmap,
+                      pal=pal,
+                      right_margin=right_margin,
+                      size=size,
+                      # defined in plotting
+                      titles=titles,
+                      show=False)
+        savefig_or_show('spring')
     else:
         Adj = dspring['Adj']
         istep = dspring['istep']
@@ -361,10 +362,9 @@ def dpt(adata,
         cmap=None,
         pal=None,
         right_margin=None,
-        size=3,
+        size=None,
         show=None):
-    """
-    Plot results of DPT analysis.
+    """Plot results of DPT analysis.
 
     Parameters
     ----------
@@ -398,55 +398,71 @@ def dpt(adata,
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1:
         colors += ['dpt_groups']
-    adata.add['highlights'] = (list([adata.add['iroot']])   # also plot the tip cell indices
-                               + [adata.add['dpt_segtips'][i][1] for i in range(len(adata.add['dpt_segtips']))
-                               if adata.add['dpt_segtips'][i][1] != -1])
+    adata.add['highlights'] = (list([adata.add['iroot']]))   # also plot the tip cell indices
+                               # + [adata.add['dpt_grouptips'][i][1]
+                               #    for i in range(len(adata.add['dpt_grouptips']))
+                               #    if adata.add['dpt_grouptips'][i][1] != -1])
+                               # + [adata.add['dpt_grouptips'][i][0]
+                               #    for i in range(len(adata.add['dpt_grouptips']))
+                               # if adata.add['dpt_grouptips'][i][1] != -1])
     if color is not None:
-        colors += color.split(',')
+        if not isinstance(color, list): colors = color.split(',')
+        else: colors = color
     if comps == 'all':
         comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
     else:
         if comps is None:
             comps = '1,2' if '2d' in layout else '1,2,3'
-        comps_list = [comps]
+        if not isinstance(comps, list): comps_list = [comps]
+        else: comps_list = comps
     for comps in comps_list:
-        colors = scatter(adata,
-                       basis=basis,
-                       color=colors,
-                       names=names,
-                       comps=comps,
-                       cont=cont,
-                       layout=layout,
-                       legendloc=legendloc,
-                       cmap=cmap,
-                       pal=pal,
-                       right_margin=right_margin,
-                       size=size,
-                       show=False)
-        writekey = sett.basekey + '_dpt_' + basis
-        writekey += (sett.plotsuffix + '_comps' + comps.replace(',', ''))
+        axs = scatter(adata,
+                      basis=basis,
+                      color=colors,
+                      names=names,
+                      comps=comps,
+                      cont=cont,
+                      layout=layout,
+                      legendloc=legendloc,
+                      cmap=cmap,
+                      pal=pal,
+                      right_margin=right_margin,
+                      size=size,
+                      show=False)
+        writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
+    # plot the tree
+    import networkx as nx
+    pl.figure()
+    colors = adata.add['dpt_groups_colors']
+    for iname, name in enumerate(adata.add['dpt_groups_names']):
+        if name in sett._ignore_categories:
+            colors[iname] = 'grey'
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']),
+                       with_labels=True, node_color=colors)
+    if sett.savefigs: savefig('dpt_tree')
     # plot segments and pseudotime
-    dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
-    # time series plot
-    # only if number of genes is not too high
-    X = adata.X
-    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
-    if X.shape[1] <= 11:
-        # plot time series as gene expression vs time
-        timeseries(X[adata.smp['dpt_order']],
-                         varnames=adata.var_names,
-                         highlightsX=adata.add['dpt_changepoints'],
-                         xlim=[0, 1.3*X.shape[0]])
-        pl.xlabel('dpt order')
-        if sett.savefigs: savefig(writekey + '_vsorder')
-    elif X.shape[1] < 50:
-        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(X[adata.smp['dpt_order'], :40],
-                                    varnames=adata.var_names,
-                                    highlightsX=adata.add['dpt_changepoints'])
-        pl.xlabel('dpt order')
-        if sett.savefigs: savefig(writekey + '_heatmap')
+    if False:
+        dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
+        # time series plot
+        # only if number of genes is not too high
+        if adata.X.shape[1] <= 11:
+            # plot time series as gene expression vs time
+            timeseries(adata.X[adata.smp['dpt_order']],
+                             varnames=adata.var_names,
+                             highlightsX=adata.add['dpt_changepoints'],
+                             xlim=[0, 1.3*X.shape[0]])
+            pl.xlabel('dpt order')
+            if sett.savefigs: savefig('dpt_vsorder')
+        elif adata.X.shape[1] < 50:
+            # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+            timeseries_as_heatmap(adata.X[adata.smp['dpt_order'], :40],
+                                        varnames=adata.var_names,
+                                        highlightsX=adata.add['dpt_changepoints'])
+            pl.xlabel('dpt order')
+            if sett.savefigs: savefig('dpt_heatmap')
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
 
@@ -470,8 +486,7 @@ def dpt_segments_pseudotime(adata, cmap=None, pal=None):
                              ylabel='pseudotime',
                              yticks=[0, 1],
                              cmap=cmap)
-    writekey = sett.basekey + '_' + 'dpt' + sett.plotsuffix
-    if sett.savefigs: savefig(writekey + '_segpt')
+    if sett.savefigs: savefig('dpt_segpt')
 
 
 def dbscan(adata,
@@ -488,8 +503,7 @@ def dbscan(adata,
            size=3,
            titles=None,
            show=None):
-    """
-    Plot results of DBSCAN clustering.
+    """Plot results of DBSCAN clustering.
 
     Parameters
     ----------
@@ -522,8 +536,7 @@ def dbscan(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     colors = ['dbscan_groups']
-    if color is not None:
-        colors += color.split(',')
+    if color is not None: colors += color.split(',')
     axs = scatter(adata,
                    basis=basis,
                    color=colors,
@@ -538,10 +551,7 @@ def dbscan(adata,
                    size=size,
                    titles=titles,
                    show=False)
-    writekey = sett.basekey + '_dbscan_' + basis + '_' + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
-    elif show: pl.show()
+    savefig_or_show('dbscan_' + basis)
 
 
 def paths(adata,
@@ -559,7 +569,7 @@ def paths(adata,
           size=3,
           titles=None,
           show=None):
-    """Plot paths
+    """Plot paths.
 
     Parameters
     ----------
@@ -627,7 +637,7 @@ def paths(adata,
                        size=size,
                        titles=titles,
                        show=False)
-        writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + sett.plotsuffix
+        writekey = 'paths_' + basis + '_' + adata.add['paths_type']
         if sett.savefigs: savefig(writekey)
     else:
         for iname, name in enumerate(adata.add['paths_groups_names']):
@@ -651,15 +661,14 @@ def paths(adata,
                            titles=titles,
                            show=False)
             del color_base[-1]
-            writekey = sett.basekey + '_paths_' + basis + '_' + adata.add['paths_type'] + '_' + name + sett.plotsuffix
+            writekey = 'paths_' + basis + '_' + adata.add['paths_type'] + '_' + name
             if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
 
 
 def diffrank(adata, n_genes=20, show=None):
-    """
-    Plot ranking of genes for all tested comparisons.
+    """Plot ranking of genes for all tested comparisons.
 
     Parameters
     ----------
@@ -669,10 +678,8 @@ def diffrank(adata, n_genes=20, show=None):
         Number of genes to show.
     """
     ranking_deprecated(adata, toolkey='diffrank', n_genes=n_genes)
-    writekey = sett.basekey + '_diffrank_' + adata.add['diffrank_groups'] + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
-    elif show: pl.show()
+    writekey = 'diffrank_' + adata.add['diffrank_groups']
+    savefig_or_show(writekey)
 
 
 def tgdyn_simple(adata, n_genes=10, show=None):
@@ -751,15 +758,12 @@ def tgdyn_simple_ranking(adata, n_genes=10, show=None):
             pl.yticks([])
         count += 1
 
-    writekey = sett.basekey + '_tgdyn_simple_' + adata.add['tgdyn_simple_groups'] + sett.plotsuffix
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey + '_ranking')
-    elif show: pl.show()
+    writekey = 'tgdyn_simple_' + adata.add['tgdyn_simple_groups']
+    savefig_or_show(writekey)
 
 
 def sim(adata, params=None, show=None):
-    """
-    Plot results of simulation.
+    """Plot results of simulation.
     """
     from .. import utils as sc_utils
     X = adata.X
@@ -771,7 +775,7 @@ def sim(adata, params=None, show=None):
                xlim=[0, 1.25*X.shape[0]],
                highlightsX=np.arange(tmax, n_real * tmax, tmax),
                xlabel='realizations / time steps')
-    if sett.savefigs: savefig(sett.basekey + '_sim')
+    if sett.savefigs: savefig('sim')
     # shuffled data
     X, rows = sc_utils.subsample(X, seed=1)
     timeseries(X,
@@ -779,6 +783,4 @@ def sim(adata, params=None, show=None):
                xlim=[0, 1.25*X.shape[0]],
                highlightsX=np.arange(tmax, n_real * tmax, tmax),
                xlabel='index (arbitrary order)')
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(sett.basekey + '_sim_shuffled')
-    elif show: pl.show()
+    savefig_or_show('sim_shuffled')

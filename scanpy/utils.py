@@ -68,9 +68,9 @@ def update_params(old_params, new_params, check=False):
     updated_params : dict
     """
     updated_params = dict(old_params)
-    if new_params: # allow for new_params to be None
+    if new_params:  # allow for new_params to be None
         for key, val in new_params.items():
-            if not key in old_params and check:
+            if key not in old_params and check:
                 raise ValueError('\'' + key
                                  + '\' is not a valid parameter key, '
                                  + 'consider one of \n'
@@ -83,52 +83,6 @@ def update_params(old_params, new_params, check=False):
 # --------------------------------------------------------------------------------
 # Command-line argument reading and processing
 # --------------------------------------------------------------------------------
-
-
-def add_args(p, dadd_args=None):
-    """
-    Add arguments to parser.
-
-    Parameters
-    -------
-    dadd_args : dict
-        Dictionary of additional arguments formatted as
-            {'arg': {'type': int, 'default': 0, ... }}
-    """
-    aa = p.add_argument_group('Look up an example').add_argument
-    aa('exkey',
-       type=str, default='', metavar='exkey',
-       help='The "example key" is used to look up an annotated data matrix and, if these have been provided, default parameters of tools. '
-            'It\'s the name of a function that returns an annotated data object and is stored in a user module "scanpy_whatevername.py" in the current working directory. '
-            'There are many builtin examples with such corresponding functions. '
-            'Use the subcommands "exdata" and "exparams" to display the corresponding data and parameters, respectively.')
-    aa = p.add_argument_group('Provide tool parameters').add_argument
-    # example key default argument
-    aa('-p', '--params',
-       nargs='*', default=None, metavar='k=v',
-       help='Optional tool parameters as list, e.g., `k=20 knn=True`, '
-            'see detailed help below, also notice the option --opfile (default: "").')
-    # arguments from dadd_args
-    if dadd_args is not None:
-        for key, val in dadd_args.items():
-            if key != 'arg':
-                aa(key, **val)
-    # make sure there are is no conflict with dadd_args
-    if dadd_args is None or '--pfile' not in dadd_args:
-        aa('--pfile',
-           type=str, default='', metavar='f',
-           help='Path to file with optional parameters (default: "").')
-
-    aa = p.add_argument_group('Provide plotting parameters').add_argument
-    aa('-q', '--pparams',
-       nargs='*', default=None, metavar='k v',
-       help='Plotting parameters as list, e.g., `comps=1,3 legendloc="upper left"`. '
-            'Display possible paramaters via "-p help" (default: "").')
-
-    # standard arguments
-    p = sett.add_args(p)
-
-    return p
 
 
 def read_args_tool(toolkey, example_parameters, tool_add_args=None):

@@ -90,7 +90,7 @@ def sample_dynamic_data(params):
     Helper function.
     """
     if params['writedir'] == '':
-        params['writedir'] = (sett.basekey + '_sim')
+        params['writedir'] = (sett.run_name + '_sim')
     sett.m(0,'writing to directory', params['writedir'])
     if not os.path.exists(params['writedir']):
         os.makedirs(params['writedir'])

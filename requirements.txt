@@ -1,12 +1,10 @@
-matplotlib
+matplotlib>=2
 pandas
 scipy
 # neat visualizations
 seaborn
 # use memory optimally
 psutil
-# speed up
-cython
 # hdf5/xls file IO
 h5py
 xlrd

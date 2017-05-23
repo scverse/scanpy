@@ -19,22 +19,22 @@ into its root directory. With Python 3.5 or 3.6 (preferably [Miniconda](http://c
 ```
 pip install -e .
 ```
-Aside from enabling `import scanpy as sc` anywhere on your system, you can also work
-with the top-level command `scanpy` on the command-line (more info [here](#install)).
+Aside from enabling `import scanpya.pi as sc` anywhere on your system, you can also work
+with the top-level command `scanpy` on the command-line (more info on installation [here](#install)).
 
 Then go through the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
 
-* 17-05-05 | [link](https://github.com/theislab/scanpy_usage/tree/master/170505_seurat) | We reproduce some of the recent [Guided Clustering tutorial](http://satijalab.org/seurat/pbmc-tutorial.html) of [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](https://doi.org/10.1016/j.cell.2015.05.002).
+* 17-05-05 | [link](https://github.com/theislab/scanpy_usage/tree/master/170505_seurat) | We reproduce parts of the recent [Guided Clustering tutorial](http://satijalab.org/seurat/pbmc-tutorial.html) of [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](https://doi.org/10.1016/j.cell.2015.05.002).
 
-* 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing 64 000 cells from [(Zheng *et al.*, Nat. Comms. 2017)](https://doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the optimized [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) pipeline. For large-scale data, this becomes crucial for interactive analysis.
+* 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing 68 000 cells from [(Zheng *et al.*, Nat. Comms. 2017)](https://doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) R kit for secondary analysis. For large-scale data, this becomes crucial for an interactive analysis.
 
 * 17-05-01 | [link](https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15/notebook.ipynb) | Diffusion Pseudotime analysis resolves developmental processes in data of [Moignard *et al*, Nat. Biotechn. (2015)](https://doi.org/10.1038/nbt.3154), reproducing results of [Haghverdi *et al.*, Nat. Meth. (2016)](https://doi.org/10.1038/nmeth.3971). Also, note that DPT has recently been very [favorably discussed](https://doi.org/10.1101/110668) by the authors of [Monocle](http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/).
 
 
 ## Features <a id="features"></a>
 
-Let us give an [overview](#overview) of the toplevel user functions, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1).
+We first give an [overview](#overview) of the toplevel user functions of `scanpy.api`, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1). For usage of the command-line interface, which is very similar to usage of the API, see this introductory [example](https://github.com/theislab/scanpy_usage/blob/master/EXAMPLES.md#moignard15).
 
 ### Overview
 
@@ -115,16 +115,16 @@ For each tool, there is an associated plotting function
 sc.pl.tool(adata)
 ```
 that retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To not display figures interactively but save all plots to default locations, you can set `sc.sett.savefigs = True`.
-By default, figures are saved as *png* to `./figs/`. Reset `sc.sett.file_format_figs` and `sc.sett.figdir` if you want to change this. Scanpy's plotting module can be viewed similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
+By default, figures are saved as *png* to `./figs/`. Reset `sc.sett.file_format_figs` and `sc.sett.figdir` if you want to change this. Scanpy's plotting module can be seen similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
 
 #### Builtin examples
 
-Show all builtin example data using `sc.show_exdata()` 
+Show all builtin example data using `sc.show_exdata()`
 and all builtin example use cases via `sc.show_examples()`. Load annotated and preprocessed data using an *example key*, here 'paul15', via
 ```
 adata = sc.get_example('paul15')
 ```
-The key 'paul15' can also be used within `sc.read('paul15')` and `sc.write('paul15')` to write the current state of the AnnData object to disk. 
+The key 'paul15' can also be used within `sc.read('paul15')` and `sc.write('paul15', adata)` to write the current state of the AnnData object to disk.
 
 ### Visualization
 

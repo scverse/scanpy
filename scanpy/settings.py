@@ -9,18 +9,13 @@ Sets global variables like verbosity, manages logging and timing.
 # http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
 import os
-if not os.path.exists('.scanpy/'):  # directory for configuration files etc.
-    os.makedirs('.scanpy/')
-# we shouldn't do that here
-# import matplotlib
-# if 'DISPLAY' not in os.environ:  # login via ssh but no xserver
-#     matplotlib.use('Agg')
-#     print('... WARNING: did not find DISPLAY variable needed for interactive plotting\n'
-#           '--> try ssh with `-X` or `-Y`')
 import atexit
 import time
 from functools import reduce
-# from matplotlib import is_interactive
+
+# directory for configuration files etc.
+if not os.path.exists('.scanpy/'):
+    os.makedirs('.scanpy/')
 
 # --------------------------------------------------------------------------------
 # Global Settings Attributes
@@ -38,12 +33,23 @@ Level 5: also show even more detailed progress.
 etc.
 """
 
-exkey = ''
-"""Global example key.
+run_name = ''
+"""Run name. Often associated with a certain way of preprocessing of parameter combination.
+
+All files generated during the run have this name as prefix.
 """
 
-suffix = ''
-"""Global suffix that is appended to basekey of output and figure files.
+_run_basename = ''
+"""Basename of the run.
+
+This usually associated with a certain way of preprocessing the data and running
+several tools after that.
+
+Determines the naming of all output files.
+"""
+
+_run_suffix = ''
+"""Global suffix that is appended to project identifier.
 """
 
 plotsuffix = ''
@@ -93,10 +99,6 @@ figdir = './figs/'
 """Directory where plots are saved.
 """
 
-basekey = ''
-"""Basename for file reading and writing.
-"""
-
 max_memory = 15
 """Maximal memory usage in Gigabyte.
 """
@@ -111,10 +113,7 @@ logfile = ''
 # not sure what's the better method to choose
 import __main__ as main
 is_interactive = not hasattr(main, '__file__')
-# is_interactive = is_interactive()
 """Determines whether run interactively.
-
-Defaults to matplotlib.is_interactive().
 
 Currently only affects the style of progress bars and whether total computation
 time since importing this module is output after leaving the session.
@@ -203,7 +202,7 @@ def add_args(p):
             '(default: do not recompute).')
     aa('--suffix',
        type=str, default='', metavar='suffix',
-       help='Is appended to exkey in result filename (default: "").')
+       help='Is appended to ppkey in result filename (default: "").')
     aa('--psuffix',
        type=str, default='', metavar='psuffix',
        help='Is appended to suffix. Useful when only changing plotting '
@@ -232,7 +231,7 @@ def add_args(p):
     aa('--writedir',
        type=str, default=writedir, metavar='dir',
        help='Change write directory (default: %(default)s).')
-    aa('--logfile',
+    aa('-l', '--logfile',
        action='store_const', default=False, const=True,
        help='Write to logfile instead of standard output.')
     aa = p.add_argument_group('Other').add_argument
@@ -253,8 +252,8 @@ def process_args(args):
     """
 
     # set the arguments as global variables
-    global suffix
-    suffix = args['suffix']
+    global _run_suffix
+    _run_suffix = args['suffix']
     args.pop('suffix')
 
     global plotsuffix
@@ -276,6 +275,11 @@ def process_args(args):
     else:
         savefigs = True
         file_format_figs = args['savefigs']
+        if args['savefigs'] == 'png':
+            import matplotlib
+            matplotlib.use('Agg')
+            print('... you passed `--savefigs png`, now '
+                  'using matplotlib "Agg" backend')
     args.pop('savefigs')
 
     global figdir
@@ -308,9 +312,13 @@ def process_args(args):
     n_jobs = args['n_jobs']
     args.pop('n_jobs')
 
-    global exkey, basekey
-    exkey = args['exkey']
-    basekey = exkey + suffix
+    global _run_basename, run_name
+    _run_basename = args['run_name']
+    run_name = _run_basename + _run_suffix
+
+    global logfile
+    if args['logfile']:
+        logfile = writedir + run_name + '_log.txt'
 
     return args
 
@@ -320,7 +328,7 @@ def process_args(args):
 # --------------------------------------------------------------------------------
 
 
-def mi(*msg):
+def mi(*msg, end='\n'):
     """Write message to log output, ignoring the verbosity level.
 
     Parameters
@@ -331,15 +339,16 @@ def mi(*msg):
     """
     if logfile == '':
         # in python 3, the following works
-        # print(*msg)
+        print(*msg, end=end)
+        # we do not bother for compat anymore?
         # due to compatibility with the print statement in python 2 we choose
-        print(' '.join([str(m) for m in msg]))
+        # print(' '.join([str(m) for m in msg]))
     else:
         out = ''
         for s in msg:
             out += str(s) + ' '
         with open(logfile, 'a') as f:
-            f.write(out + '\n')
+            f.write(out + end)
 
 
 def m(v=0, *msg):
@@ -393,8 +402,8 @@ def _sec_to_str(t):
         Time in seconds.
     """
     return "%d:%02d:%02d.%03d" % \
-        reduce(lambda ll,b : divmod(ll[0],b) + ll[1:],
-               [(t*1000,),1000,60,60])
+        reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
+               [(t*1000,), 1000, 60, 60])
 
 
 def _terminate():
@@ -405,8 +414,8 @@ def _terminate():
     if verbosity > 0:
         now = time.time()
         elapsed_since_start = now - _start
-        mi(27*"_")
-        mi(_sec_to_str(elapsed_since_start),'- total wall time')
+        mi(29*"_")
+        mi(_sec_to_str(elapsed_since_start), '- total wall time')
 
 
 # report total runtime upon shutdown

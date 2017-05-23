@@ -16,6 +16,7 @@ from ..tools.pca import pca
 from .. import settings as sett
 from .. import logging as logg
 
+
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False):
     u"""tSNE
 
@@ -28,10 +29,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with metadata:
-        adata.smp['X_pca']: np.ndarray
-            Result of preprocessing with PCA: observations × variables.
-            If it exists, tsne will use this instead of adata.X.
+        Annotated data matrix, optionally with adata.smp['X_pca'], which is
+        written when running sc.pca(adata). Is directly used for tSNE.
     random_state : unsigned int or -1, optional (default: 0)
         Change to use different intial states for the optimization, if -1, use
         default behavior of implementation (sklearn uses np.random.seed,
@@ -55,21 +54,21 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         to X_pca, X_diffmap and X_spring.
     is added to adata.smp.
     """
-    sett.mt(0, 'compute tSNE', start=True)
+    logg.m('compute tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
     if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
-        X = adata.smp['X_pca']
-        sett.m(0, 'using X_pca for tSNE')
+        X = adata.smp['X_pca'][:, :n_pcs]
+        logg.m('... using X_pca for tSNE')
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            sett.m(0, 'preprocess using PCA with', n_pcs, 'PCs')
-            sett.m(0, '--> avoid this by setting n_pcs = 0')
+            logg.m('... preprocess using PCA with', n_pcs, 'PCs')
+            logg.m('avoid this by setting n_pcs = 0', v='hint')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.smp['X_pca'] = X
-            sett.m(0, 'using X_pca for tSNE')
         else:
             X = adata.X
+    logg.m('... using', n_pcs, 'principal components')
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': None if random_state == -1 else random_state,
@@ -85,8 +84,8 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            sett.m(0, '... compute tSNE using MulticoreTSNE')
-            Y = tsne.fit_transform(X.astype(np.float64))
+            logg.m('... using MulticoreTSNE')
+            X_tsne = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             multicore_failed = True
             sett.m(0, '--> did not find package MulticoreTSNE: to speed up the computation install it from\n'
@@ -94,13 +93,15 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     if n_jobs == 1 or multicore_failed:
         from sklearn.manifold import TSNE
         tsne = TSNE(**params_sklearn)
-        logg.m('it is recommended to install the package MulticoreTSNE from\n'
-               '    https://github.com/DmitryUlyanov/Multicore-TSNE\n'
-               '    and setting `n_jobs >= 2`for speeding up the computation considerably',
+        logg.m('consider installing the package MulticoreTSNE from\n'
+               '        https://github.com/DmitryUlyanov/Multicore-TSNE\n'
+               '    Even for `n_jobs=1` this speeds up the computation considerably.',
                v='hint')
-        Y = tsne.fit_transform(X)
+        logg.m('... using sklearn.manifold.TSNE')
+        X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.smp['X_tsne'] = Y
-    sett.mt(0, 'finished, added\n'
-               '    "X_tsne" coordinates (tSNE representation of X) to adata.smp')
+    adata.smp['X_tsne'] = X_tsne
+    logg.m('finished', t=True, end=' ')
+    logg.m('and added\n'
+           '    "X_tsne" coordinates, the tSNE representation of X (adata.smp)')
     return adata if copy else None

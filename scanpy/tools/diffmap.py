@@ -18,7 +18,8 @@ See also
 from ..tools import dpt
 
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None, copy=False):
+def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
+            flavor='haghverdi16', copy=False):
     """Diffusion Map Embedding
 
     Also implements the modifications to diffusion map introduced by Haghverdi
@@ -64,9 +65,10 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None, c
     """
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
-                   n_jobs=n_jobs, recompute_diffmap=True)
+                   n_jobs=n_jobs, recompute_diffmap=True, flavor=flavor)
     ddmap = dmap.diffmap()
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
+    if knn: adata.add['distance'] = dmap.Dsq
     return adata if copy else None

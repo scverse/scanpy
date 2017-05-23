@@ -6,18 +6,20 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 import numpy as np
 import scipy as sp
+import warnings
 from joblib import Parallel, delayed
 from scipy.sparse import issparse
 import statsmodels.api as sm
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from sklearn.utils import sparsefuncs
 from ..data_structs import AnnData
-from .. import sett
+from .. import settings as sett
+from .. import logging as logg
 
 
 def filter_cells(data, min_counts=None, min_genes=None, copy=False):
-    """
-    Keep cells that have at least `min_counts` UMI counts or `min_genes`
-    genes expressed.
+    """Keep cells with at least `min_counts` UMI counts or `min_genes` genes
+    expressed.
 
     This is to filter measurement outliers, i.e., "unreliable" samples.
 
@@ -50,22 +52,21 @@ def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         cell_subset, number = filter_cells(adata.X, min_counts, min_genes)
-        if min_genes is None:
-            adata.smp['n_counts'] = number
-        else:
-            adata.smp['n_genes'] = number
+        if min_genes is None: adata.smp['n_counts'] = number
+        else: adata.smp['n_genes'] = number
         adata.inplace_subset_smp(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
     number_per_cell = np.sum(X if min_genes is None else X > 0, axis=1)
-    if issparse(X):
-        number_per_cell = number_per_cell.A1
+    if issparse(X): number_per_cell = number_per_cell.A1
     cell_subset = number_per_cell >= min_number
-    sett.m(0, '... filtered out', np.sum(~cell_subset),
-           'cells that have less than',
-           str(min_genes) + ' genes expressed' if min_counts is None
-           else str(min_counts) + ' counts')
+    s = np.sum(~cell_subset)
+    if s > 0:
+        logg.m('... filtered out', s,
+               'cells that have less than',
+               str(min_genes) + ' genes expressed' if min_counts is None
+               else str(min_counts) + ' counts')
     return cell_subset, number_per_cell
 
 
@@ -138,17 +139,19 @@ def filter_genes_dispersion(data, log=True,
 
     Notes
     -----
-    If an AnnData is passed and copy == True, the following is returned, otherwise, adata is updated.
-    adata : AnnData
-        Filtered AnnData object.
-    with the following fields to adata.var:
-        means : np.ndarray of shape n_genes
-            Means per gene.
-        dispersions : np.ndarray of shape n_genes
-            Dispersions per gene.
-        dispersions_norm : np.ndarray of shape n_genes
-            Dispersions per gene.
-    If a data matrix is passed, the information is returned as np.recarray with the columns:
+    If an AnnData is passed and `copy` is True, the following is returned,
+    otherwise, the AnnData is updated:
+        adata : AnnData
+            Filtered AnnData object.
+        with the following fields to adata.var:
+            means : np.ndarray of shape n_genes
+                Means per gene.
+            dispersions : np.ndarray of shape n_genes
+                Dispersions per gene.
+            dispersions_norm : np.ndarray of shape n_genes
+                Dispersions per gene.
+    If a data matrix is passed, the information is returned as np.recarray with
+    the columns:
         gene_subset, means, dispersions, dispersion_norm
     """
     if isinstance(data, AnnData):
@@ -157,19 +160,17 @@ def filter_genes_dispersion(data, log=True,
                                          min_disp=min_disp, max_disp=max_disp,
                                          min_mean=min_mean, max_mean=max_mean,
                                          n_top_genes=n_top_genes,
-                                         flavor=flavor, plot=plot)
+                                         flavor=flavor)
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
         adata.inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    sett.m(0, '... filter highly varying genes by dispersion and mean')
+    logg.m('... filter highly varying genes by dispersion and mean', r=True, end=' ')
     X = data  # proceed with data matrix
-    from sklearn.preprocessing import StandardScaler
-    scaler = StandardScaler(with_mean=False).partial_fit(X)
-    mean = scaler.mean_
-    var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))  # use R convention (unbiased estimator)
-    dispersion = var / (mean + 1e-12)
+    mean, var = _get_mean_var(X)
+    # now actually compute the dispersion
+    dispersion = var / mean
     if log:  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan
         dispersion = np.log(dispersion)
@@ -185,18 +186,21 @@ def filter_genes_dispersion(data, log=True,
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
-                                 - disp_mean_bin[df['mean_bin'].cat.codes].values) \
-                                 / disp_std_bin[df['mean_bin'].cat.codes].values  # appending .cat.codes only necessary for old pandas versions
+                                 - disp_mean_bin[df['mean_bin']].values) \
+                                 / disp_std_bin[df['mean_bin']].values
     elif flavor == 'cell_ranger':
         from statsmodels import robust
         df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
             np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf])
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_median_bin = disp_grouped.median()
-        disp_mad_bin = disp_grouped.apply(robust.mad)
+        # the next line raises the warning: "Mean of empty slice"
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            disp_mad_bin = disp_grouped.apply(robust.mad)
         df['dispersion_norm'] = np.abs((df['dispersion'].values
-                                 - disp_median_bin[df['mean_bin'].cat.codes].values)) \
-                                / disp_mad_bin[df['mean_bin'].cat.codes].values  # appending .cat.codes only necessary for old pandas versions
+                                 - disp_median_bin[df['mean_bin']].values)) \
+                                / disp_mad_bin[df['mean_bin']].values
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
@@ -204,12 +208,15 @@ def filter_genes_dispersion(data, log=True,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        sett.m(0, '... the', n_top_genes,
+        logg.m(t=True)
+        logg.m('    the', n_top_genes,
                'top genes correspond to a normalized dispersion cutoff of',
                disp_cut_off)
     else:
-        sett.m(0, '    using `min_disp`, `max_disp`, `min_mean` and `max_mean`')
-        sett.m(0, '--> set `n_top_genes` to simply select top-scoring genes instead')
+        logg.m(t=True)
+        logg.m('    using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
+               .format(min_disp, max_disp, min_mean, max_mean))
+        logg.m('set `n_top_genes` to simply select top-scoring genes instead', v='hint')
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
@@ -327,11 +334,11 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
             and adata.smp['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
-            sett.m(0, '... not recomputing, using X_pca contained '
+            logg.m('... not recomputing PCA, using X_pca contained '
                    'in adata (set `recompute` to avoid this)')
             return adata
         else:
-            sett.mt(0, 'compute PCA with n_comps =', n_comps, start=True)
+            logg.m('compute PCA with n_comps =', n_comps, r=True)
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
@@ -340,10 +347,11 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
-            sett.mt(0, 'finished, added\n'
-                    '    the data representation "X_pca" (adata.smp)\n'
-                    '    the loadings "PC1", "PC2", ... (adata.var)\n'
-                    '    and "pca_variance_ratio" (adata.add)')
+            logg.m('... finished,', t=True, end=' ')
+            logg.m('adding\n'
+                   '    the data representation "X_pca" (adata.smp)\n'
+                   '    the loadings "PC1", "PC2", ... (adata.var)\n'
+                   '    the "pca_variance_ratio" (adata.add)')
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
@@ -356,13 +364,13 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
     verbosity_level = np.inf if mute else 0
     if zero_center:
         if issparse(X):
-            sett.m(0, 'pca: as `zero_center=True`, '
+            logg.m('... as `zero_center=True`, '
                    'sparse input is densified and may '
                    'lead to huge memory consumption')
             X = X.toarray()
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver)
     else:
-        sett.m(verbosity_level, '... without zero-centering: \n'
+        logg.m('... without zero-centering: \n'
                '    the explained variance does not correspond to the exact statistical defintion\n'
                '    the first component, e.g., might be heavily influenced by different means\n'
                '    the following components often resemble the exact PCA very closely')
@@ -375,7 +383,7 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
         return X_pca
 
 
-def normalize_per_cell(data, scale_factor=None, copy=False):
+def normalize_per_cell(data, counts_per_cell_after=None, copy=False, counts_per_cell=None):
     """Normalize each cell.
 
     Normalize each cell by UMI count, so that every cell has the same total
@@ -387,34 +395,42 @@ def normalize_per_cell(data, scale_factor=None, copy=False):
 
     Parameters
     ----------
-    data : np.ndarray or AnnData
+    data : array_like, sparse or AnnData
         Data matrix. Rows correspond to cells and columns to genes.
-    scale_factor : float or None (default: None)
-        If None, multiply by median.
+    counts_per_cell_after : float or None (default: None)
+        If None, after normalization, each cell has a total count equal
+        to the median of the counts_per_cell before normalization.
+    counts_per_cell : array (default: None)
+        Precomputed counts per cell.
     copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+        Determines whether function operates inplace (default) or a copy is
+        returned.
 
     Returns
     -------
-    X_norm : np.ndarray
-        Normalized version of the original expression matrix.
+    None if inplace. Otherwise normalized version of the original data.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = normalize_per_cell(adata.X, scale_factor)
+        cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
+        adata.inplace_subset_smp(cell_subset)
+        normalize_per_cell(adata.X, counts_per_cell_after, copy,
+                           counts_per_cell=counts_per_cell[cell_subset])
         return adata if copy else None
-    X = data  # proceed with the data matrix
-    counts_per_cell = np.sum(X, axis=1)
-    if issparse(X):
-        counts_per_cell = counts_per_cell.A1
-    if scale_factor is None:
-        scale_factor = np.median(counts_per_cell)
-    if not issparse(X):
-        X = X / (counts_per_cell[:, np.newaxis] + 1e-6) * scale_factor
-    else:
-        Norm = sp.sparse.diags(scale_factor / (counts_per_cell + 1e-6))
-        X = Norm.dot(X.tobsr()).tocsr()
-    return X
+    # proceed with data matrix
+    logg.m('... normalizing by total count per cell', r=True, end=' ')
+    X = data.copy() if copy else data
+    if counts_per_cell is None:
+        cell_subset, counts_per_cell = filter_cells(X, min_counts=1)
+        X = X[cell_subset]
+        counts_per_cell = counts_per_cell[cell_subset]
+    if counts_per_cell_after is None:
+        counts_per_cell_after = np.median(counts_per_cell)
+    counts_per_cell /= counts_per_cell_after
+    if not issparse(X): X /= counts_per_cell[:, np.newaxis]
+    else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
+    logg.m(t=True)
+    return X if copy else None
 
 
 def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
@@ -520,35 +536,33 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     max_value : None or float, optional (default: None)
         Clip to this value after scaling. If None, do not clip.
     copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+        Perfrom operation inplace if False.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
+        # need to add the following here to make inplace logic work
+        if zero_center and issparse(adata.X):
+            logg.m('... scale_data: as `zero_center=True`, sparse input is '
+                   'densified and may lead to large memory consumption')
+            adata.X = adata.X.toarray()
+        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if zero_center and max_value is not None:
-        sett.m(0, 'scale_data: be very careful to use `max_value` without `zero_center`')
+        logg.m('... scale_data: be very careful to use `max_value` without `zero_center`')
     if not zero_center:
-        sett.m(0, 'omitting to zero_center the data')
+        logg.m('... omitting to zero_center the data')
     if max_value is not None:
-        sett.m(0, 'clipping at max_value', max_value)
+        logg.m('... clipping at max_value', max_value)
     if zero_center and issparse(X):
-        sett.m(0, 'scale_data: as `zero_center=True`, '
-               'sparse input is densified and may '
-               'lead to large memory consumption')
+        logg.m('... scale_data: as `zero_center=True`, sparse input is '
+               'densified and may lead to large memory consumption, returning copy')
         X = X.toarray()
-    from sklearn.preprocessing import StandardScaler
-    # the following doesn't use the unbiased estimator for variance
-    # hence the result differs slightly from R's result
-    scaler = StandardScaler(with_mean=zero_center).partial_fit(X)
-    # user R convention (unbiased estimator)
-    scaler.scale_ = scaler.scale_ * np.sqrt(X.shape[0]/(X.shape[0]-1))
-    X_scaled = scaler.transform(X)
-    if max_value is not None:
-        X_scaled[X_scaled > max_value] = max_value  # np.clip not implementd for sparse matrices
-    return X_scaled
+        copy = True
+    _scale(X, zero_center)
+    if max_value is not None: X[X > max_value] = max_value
+    return X if copy else None
 
 
 def subsample(data, subsample, seed=0, copy=False):
@@ -615,7 +629,8 @@ def _regress_out(col_index, responses, regressors):
                         regressors, family=sm.families.Gaussian()).fit()
         new_column = result.resid_response
     except PerfectSeparationError:  # this emulates R's behavior
-        sett.m(0, 'warning: encountered PerfectSeparationError, setting to zero')
+        logg.m('warning: encountered PerfectSeparationError, setting to zero',
+               v='warning')
         new_column = np.zeros(responses.shape[0])
     return new_column
 
@@ -647,3 +662,48 @@ def _pca_fallback(data, n_comps=2):
     evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
+
+
+def _get_mean_var(X):
+    # - using sklearn.StandardScaler throws an error related to
+    #   int to long trafo for very large matrices
+    # - using X.multiply is slower
+    if True:
+        mean = X.mean(axis=0)
+        if issparse(X):
+            mean_sq = X.multiply(X).mean(axis=0)
+            mean = mean.A1
+            mean_sq = mean_sq.A1
+        else:
+            mean_sq = np.multiply(X, X).mean(axis=0)
+        # enforece R convention (unbiased estimator) for variance
+        var = (mean_sq - mean**2) * (X.shape[0]/(X.shape[0]-1))
+    else:
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler(with_mean=False).partial_fit(X)
+        mean = scaler.mean_
+        # enforce R convention (unbiased estimator)
+        var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))
+    return mean, var
+
+
+def _scale(X, zero_center=True):
+    # - using sklearn.StandardScaler throws an error related to
+    #   int to long trafo for very large matrices
+    # - using X.multiply is slower
+    #   the result differs very slightly, why?
+    if True:
+        mean, var = _get_mean_var(X)
+        scale = np.sqrt(var)
+        if issparse(X):
+            if zero_center: raise ValueError('Cannot zero-center sparse matrix.')
+            sparsefuncs.inplace_column_scale(X, 1/scale)
+        else:
+            X -= mean
+            X /= scale
+    else:
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler(with_mean=zero_center, copy=False).partial_fit(X)
+        # user R convention (unbiased estimator)
+        scaler.scale_ *= np.sqrt(X.shape[0]/(X.shape[0]-1))
+        scaler.transform(X)

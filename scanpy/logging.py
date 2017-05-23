@@ -16,21 +16,23 @@ verbosity_levels_from_strings = {
 }
 
 
-def m(*msg, v='info', t=False, m=False, r=False):
+def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
     """Write message to log output.
 
     Log output defaults to standard output but can be set to a file
     by setting `sc.sett.log_file = 'mylogfile.txt'`.
 
     v/verbosity : {'error', 'warn', 'info', 'hint'} or int, (default: 'info')
-         0/'error', 1/'warn', 2/'info', 3/'hint' or integer 4.
+        0/'error', 1/'warn', 2/'info', 3/'hint' or integer 4.
     t/timing : bool, optional (default: False)
-         Prepend timing information.
+        Print timing information.
     m/memory : bool, optional (default: Faulse)
-         Append memory information.
+        Print memory information.
     r/reset : bool, optional (default: False)
         Reset timing and memory measurement. Is automatically reset
-        when passing one of t, m or p.
+        when passing one of t or m.
+    end : str (default: '\n')
+        As in python builtin print function.
     """
     if isinstance(v, str):
         v = verbosity_levels_from_strings[v]
@@ -41,16 +43,17 @@ def m(*msg, v='info', t=False, m=False, r=False):
     if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
     if v <= global_v:
-        if not t and not m and not r:
-            sett.mi(*msg)
+        if not t and not m and len(msg) > 0:
+            sett.mi(*msg, end=end)
         if r:
             sett._previous_memory_usage, _ = get_memory_usage()
             sett._previous_time = time.time()
-        if t or r:
+        if t:
             elapsed = get_passed_time()
-            sett.mi(sett._sec_to_str(elapsed), '-', *msg)
+            msg = msg + ('({})'.format(sett._sec_to_str(elapsed)),)
+            sett.mi(*msg, end=end)
         if m:
-            sett.mi(format_memory_usage(get_memory_usage()), msg='' if t else msg)
+            sett.mi(format_memory_usage(get_memory_usage()), msg='' if t else msg, end=end)
 
 
 def get_passed_time():
@@ -84,7 +87,7 @@ def format_memory_usage(mem_usage, msg='', newline=False):
 
 def print_memory_usage(msg='', newline=False):
     string = format_memory_usage(get_memory_usage(), msg, newline)
-    print(string)
+    sett.mi(string)
 
 
 def get_date():

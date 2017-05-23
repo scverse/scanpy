@@ -11,6 +11,7 @@ from matplotlib import rcParams
 from matplotlib.figure import SubplotParams as sppars
 from matplotlib.colors import is_color_like
 from .. import settings as sett
+from .. import logging as logg
 from .. import utils as sc_utils
 from .. import readwrite
 from . import utils
@@ -23,24 +24,23 @@ from .utils import scatter_base, scatter_group
 
 
 def savefig(writekey):
-    """Save figure to `sett.figdir + writekey + '.' + sett.file_format_figs`
-    """
-    filename = sett.figdir + writekey + '.' + sett.file_format_figs
-    sett.m(0, 'saving figure to file', filename)
-    pl.savefig(filename)
+    """Save current figure to file.
 
+    The filename is generated as follows:
+    ```
+    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
+    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
+    ```
+    """
+    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
+    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
+    logg.m('... saving figure to file', filename)
+    pl.savefig(filename)
+    pl.close()  # clear figure
 
 def savefig_or_show(writekey, show=None):
-    """Save figure to `sett.figdir + writekey + '.' + sett.file_format_figs`
-    if `sett.savefigs == True` else show the figure if `show == True`.
-
-    If `show` is not passed, show figures based on `sett.autoshow`.
-    """
     show = sett.autoshow if show is None else show
-    if sett.savefigs:
-        filename = sett.figdir + writekey + '.' + sett.file_format_figs
-        sett.m(0, 'saving figure to file', filename)
-        pl.savefig(filename)
+    if sett.savefigs: savefig(writekey)
     elif show: pl.show()
 
 
@@ -76,7 +76,7 @@ def violin(adata, smp, jitter=True, size=1, color='black', show=None):
     show = sett.autoshow if show else show
     if show: pl.show()
     utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
-    sett.set_dpi() # reset resolution
+    sett.set_dpi()  # reset resolution
     return g
 
 
@@ -93,7 +93,7 @@ def scatter(adata,
             cmap=None,
             pal=None,
             right_margin=None,
-            size=3,
+            size=None,
             titles=None,
             show=True):
     """Scatter plots.
@@ -132,8 +132,8 @@ def scatter(adata,
          Colors cycle to use for categorical groups.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
-         Point size.
+    size : float (default: None)
+         Point size. Sample-number dependent by default.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
 
@@ -145,10 +145,10 @@ def scatter(adata,
     params = locals()
     del params['adata']
     if os.path.exists('.scanpy/config_plotting.txt'):
-        params = sc_utils.update_params(readwrite.read_params('.scanpy/config_plotting.txt', verbosity=1), params)
+        params = sc_utils.update_params(readwrite.read_params('.scanpy/config_plotting.txt', verbosity=2), params)
         if right_margin != params['right_margin']:
             right_margin = params['right_margin']
-            sett.m(1, '... setting right_margin to saved value', right_margin)
+            sett.m(2, '... setting right_margin to saved value', right_margin)
     readwrite.write_params('.scanpy/config_plotting.txt', params)
     del params
     # compute components
@@ -171,6 +171,11 @@ def scatter(adata,
         y_arr = adata.get_smp_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
 
+    if size is None:
+        n = Y.shape[0]
+        size = 120000 / n
+        # logg.m('... setting point size to {:.2}'.format(size))
+
     pal = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
@@ -182,10 +187,10 @@ def scatter(adata,
     show_ticks = True if component_name is None else False
 
     # the actual color ids, e.g. 'grey' or '#109482'
-    color_ids = [None if not is_color_like(color_key) else color_key for color_key in color_keys]
+    color_ids = [None if not is_color_like(color_key)
+                 else color_key for color_key in color_keys]
     categoricals = []
     colorbars = []
-    sizes = []
     for icolor_key, color_key in enumerate(color_keys):
         if color_ids[icolor_key] is not None:
             c = color_ids[icolor_key]
@@ -193,7 +198,7 @@ def scatter(adata,
             categorical = False
             colorbars.append(False)
         else:
-            c = 'grey' if layout == '2d' else 'white'
+            c = 'white' if layout == '2d' else 'white'
             categorical = False
             continuous = False
             # test whether we have categorial or continuous annotation
@@ -220,11 +225,9 @@ def scatter(adata,
                 categorical = not cont
                 continuous = cont
             colorbars.append(True if continuous else False)
-        sizes.append(size if continuous else 0.66*size)
-        if categorical:
-            categoricals.append(icolor_key)
+        if categorical: categoricals.append(icolor_key)
         color_ids[icolor_key] = c
-        
+
     if right_margin is None and legendloc == 'right margin':
         right_margin = 0.3
     if titles is None and color_keys[0] is not None:
@@ -240,7 +243,7 @@ def scatter(adata,
                        highlights=highlights,
                        colorbars=colorbars,
                        right_margin=right_margin,
-                       sizes=sizes,
+                       sizes=[size for c in color_keys],
                        cmap='viridis' if cmap is None else cmap,
                        show_ticks=show_ticks)
 
@@ -256,16 +259,40 @@ def scatter(adata,
         elif not color_key + '_colors' in adata.add:
             adata.add[color_key + '_colors'] = pal[:len(adata.add[color_key + '_names'])].by_key()['color']
         if len(adata.add[color_key + '_names']) > len(adata.add[color_key + '_colors']):
-            sett.m(0, 'number of categories/names in', color_key, 'so large that color map "jet" is used')
+            logg.m('... number of categories/names in',
+                   color_key, 'so large that color map "jet" is used')
             adata.add[color_key + '_colors'] = pl.cm.get_cmap(cmap)(
                 pl.Normalize()(np.arange(len(adata.add[color_key + '_names']), dtype=int)))
-        for iname, name in enumerate(adata.add[color_key + '_names']):
-            if names is None or (names is not None and name in names):
-                scatter_group(axs[icolor_key], color_key, iname, adata, Y, layout, size=size)
+        # actually plot the groups
+        mask_remaining = np.ones(Y.shape[0], dtype=bool)
+        if names is None:
+            for iname, name in enumerate(adata.add[color_key + '_names']):
+                if name not in sett._ignore_categories:
+                    mask = scatter_group(axs[icolor_key], color_key, iname,
+                                         adata, Y, layout, size=size)
+                    mask_remaining[mask] = False
+        else:
+            for name in names:
+                if name not in set(adata.add[color_key + '_names']):
+                    raise ValueError('"' + name + '" is invalid!'
+                                     + ' specify valid name, one of '
+                                     + str(adata.add[color_key + '_names']))
+                else:
+                    iname = np.flatnonzero(adata.add[color_key + '_names'] == name)[0]
+                    mask = scatter_group(axs[icolor_key], color_key, iname,
+                                         adata, Y, layout, size=size)
+                    mask_remaining[mask] = False
+        if mask_remaining.sum() > 0:
+            data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
+            if layout == '3d': data.append(Y[mask_remaining, 2])
+            axs[icolor_key].scatter(*data, marker='.', c='grey', s=size,
+                                    edgecolors='none', zorder=-1)
         if legendloc == 'right margin':
-            legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5), markerscale=2)
+            legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
         elif legendloc != 'none':
-            axs[icolor_key].legend(frameon=False, loc=legendloc)
+            legend = axs[icolor_key].legend(frameon=False, loc=legendloc)
+        if legend is not None:
+            for handle in legend.legendHandles: handle.set_sizes([300.0])
     if show: pl.show()
     return axs
 

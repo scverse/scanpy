@@ -48,9 +48,11 @@ def init_plotting_params():
                '#bcbd22', '#17becf',
                '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
                '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7', remove grey
-               '#dbdb8d', '#9edae5'])
+               '#dbdb8d', '#9edae5',
+               '#ad494a', '8c6d31'])             # these are some manual additions
     # same as seaborn default
     rcParams['axes.grid'] = True
+
 
 def default_pal(pal=None):
     if pal is None:
@@ -60,8 +62,7 @@ def default_pal(pal=None):
 
 
 def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
-    """
-    Plot group using representation of data Y.
+    """Scatter of group using representation of data Y.
     """
     if name + '_masks' in adata.add:
         mask = adata.add[name + '_masks'][imask]
@@ -75,13 +76,15 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
         from matplotlib.colors import rgb2hex
         color = rgb2hex(adata.add[name + '_colors'][imask])
     data = [Y[mask, 0], Y[mask, 1]]
-    if layout == '3d':
-        data.append(Y[mask, 2])
+    if layout == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,
+               marker='.',
+               # alpha=0.3,
                c=color,
-               edgecolors='face',
+               edgecolors='none',  # 'face',
                s=size,
                label=adata.add[name + '_names'][imask])
+    return mask
 
 
 def scatter_base(Y,
@@ -163,6 +166,7 @@ def scatter_base(Y,
     axs = []
     for icolor, color in enumerate(colors):
         # set up panel
+        if '3d' in layout: from mpl_toolkits.mplot3d import Axes3D
         if layout == 'unfolded 3d' and count != 3:
             ax = fig.add_subplot(2, 2, count)
             bool3d = False
@@ -179,10 +183,12 @@ def scatter_base(Y,
         else:
             data = Y[:, 0], Y[:, 1], Y[:, 2]
         # do the plotting
-        if type(color) != str or color != 'white':
+        if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(*data,
+                             marker='.',
+                             # alpha=0.5,
                              c=color,
-                             edgecolors='face',
+                             edgecolors='none',  # 'face',
                              s=sizes[icolor],
                              cmap=cmap)
         if colorbars[icolor]:

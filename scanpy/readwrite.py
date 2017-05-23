@@ -6,8 +6,10 @@ import os
 import sys
 import h5py
 import numpy as np
+import psutil
+import time
 
-from . import sett
+from . import settings as sett
 from . import logging as logg
 from .data_structs import AnnData
 
@@ -149,7 +151,7 @@ def read_10x_h5(filename, genome):
             variables/genes by gene name. The data is stored in adata.X, cell
             names in adata.smp_names and gene names in adata.var_names.
     """
-    logg.m('reading file', filename, r=True)
+    logg.m('... reading file', filename, r=True, end=' ')
     import tables
     with tables.open_file(filename, 'r') as f:
         try:
@@ -172,12 +174,12 @@ def read_10x_h5(filename, genome):
                            {'smp_names': dsets['barcodes']},
                            {'var_names': dsets['gene_names'],
                             'gene_ids': dsets['genes']})
-            logg.m('finished', t=True)
+            logg.m(t=True)
             return adata
         except tables.NoSuchNodeError:
-            raise Exception("Genome %s does not exist in this file." % genome)
+            raise Exception('Genome %s does not exist in this file.' % genome)
         except KeyError:
-            raise Exception("File is missing one or more required datasets.")
+            raise Exception('File is missing one or more required datasets.')
 
 
 # --------------------------------------------------------------------------------
@@ -209,7 +211,7 @@ def read_params(filename, asheader=False, verbosity=0):
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if not asheader:
-        sett.m(verbosity, 'reading params file', filename)
+        sett.m(verbosity, '... reading params file', filename)
     from collections import OrderedDict
     params = OrderedDict([])
     for line in open(filename):
@@ -250,11 +252,16 @@ def get_params_from_list(params_list):
     """
     params = {}
     for i in range(0, len(params_list)):
-        key_val = params_list[i].split('=')
-        if len(key_val) != 2:
-            raise ValueError('Need to provide parameters as list of the form `par1=value1 par2=value2 ...`.')
-        key, val = key_val
-        params[key] = convert_string(val)
+        if '=' not in params_list[i]:
+            try:
+                if not isinstance(params[key], list): params[key] = [params[key]]
+                params[key] += [params_list[i]]
+            except KeyError:
+                raise ValueError('Pass parameters like `key1=a key2=b c d key3=...`.')
+        else:
+            key_val = params_list[i].split('=')
+            key, val = key_val
+            params[key] = convert_string(val)
     return params
 
 
@@ -320,7 +327,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         if sheet == '':
             return read_file_to_dict(filename, ext=sett.file_format_data)
         else:
-            sett.m(0, 'reading sheet', sheet, 'from file', filename)
+            sett.m(0, '... reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
     # read other file formats
     filename_stripped = filename.lstrip('./')
@@ -331,8 +338,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                      + filename_stripped.replace('.' + ext, '.' + fast_ext))
     reread = sett.recompute == 'read' if reread is None else reread
     if not os.path.exists(filename_fast) or reread:
-        logg.m('reading file', filename,
-               '\n... writing an', sett.file_format_data,
+        logg.m('... reading file', filename,
+               '\n    writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
                filename_fast)
         if not os.path.exists(os.path.dirname(filename_fast)):
@@ -367,6 +374,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         ddata = read_file_to_dict(filename_fast, sett.file_format_data)
     return ddata
 
+
 def _read_mtx(filename, return_dict=True, dtype='float32'):
     """Read mtx file.
     """
@@ -380,6 +388,7 @@ def _read_mtx(filename, return_dict=True, dtype='float32'):
         return {'X': X}
     else:
         return AnnData(X)
+
 
 def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
     """Return data dictionary or AnnData object.
@@ -610,6 +619,7 @@ def _read_hdf5_single(filename, key=''):
                 break
     return ddata
 
+
 def _read_excel(filename, sheet=''):
     """
     Read excel file and return data dictionary.
@@ -730,8 +740,7 @@ def _read_softgz(filename):
 
 
 def read_file_to_dict(filename, ext='h5'):
-    """
-    Read file and return dict with keys.
+    """Read file and return dict with keys.
 
     The recommended format for this is hdf5.
 
@@ -749,7 +758,7 @@ def read_file_to_dict(filename, ext='h5'):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    logg.m('reading file', filename)
+    logg.m('... reading file', filename)
     d = {}
     if ext in {'h5', 'txt', 'csv'}:
         with h5py.File(filename, 'r') as f:
@@ -765,7 +774,9 @@ def read_file_to_dict(filename, ext='h5'):
             key, value = postprocess_reading(key, value)
             d[key] = value
     if 'X_csr_data' in d:
-        d = load_sparse_csr(d)
+        d = load_sparse_csr(d, key='X')
+    if 'distance_csr_data' in d:
+        d = load_sparse_csr(d, key='distance')
     return d
 
 
@@ -781,8 +792,9 @@ def preprocess_writing(key, value):
             return preprocess_writing(k, v)
     value = np.array(value)
     # some output about the data to write
-    sett.m(1, key, type(value),
-           value.dtype, value.dtype.kind, value.shape)
+    logg.m(key, type(value),
+           value.dtype, value.dtype.kind, value.shape,
+           v=6)
     # make sure string format is chosen correctly
     if value.dtype.kind == 'U':
         value = value.astype(np.string_)
@@ -790,8 +802,7 @@ def preprocess_writing(key, value):
 
 
 def write_dict_to_file(filename, d, ext='h5'):
-    """
-    Write dictionary to file.
+    """Write dictionary to file.
 
     Values need to be np.arrays or transformable to numpy arrays.
 
@@ -810,16 +821,18 @@ def write_dict_to_file(filename, d, ext='h5'):
     if not os.path.exists(directory):
         sett.m(0, 'creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
-    if ext in {'h5', 'npz'}: logg.m('writing', filename)
+    if ext in {'h5', 'npz'}: logg.m('... writing', filename)
     d_write = {}
     from scipy.sparse import issparse
     for key, value in d.items():
-        if key == 'X' and issparse(value):
-            for k, v in save_sparse_csr(value).items():
+        if issparse(value):
+            for k, v in save_sparse_csr(value, key=key).items():
                 d_write[k] = v
         else:
             key, value = preprocess_writing(key, value)
             d_write[key] = value
+    # now open the file
+    wait_until_file_unused(filename)  # thread-safe writing
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d_write.items():
@@ -834,7 +847,7 @@ def write_dict_to_file(filename, d, ext='h5'):
         # here this is actually a directory that corresponds to the
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
-        sett.m(0, 'writing', ext, 'files to', dirname)
+        sett.m(0, '... writing', ext, 'files to', dirname)
         if not os.path.exists(dirname): os.makedirs(dirname)
         from pandas import DataFrame
         for key, value in d_write.items():
@@ -867,25 +880,27 @@ def write_dict_to_file(filename, d, ext='h5'):
 # --------------------------------------------------------------------------------
 
 
-def save_sparse_csr(X):
+def save_sparse_csr(X, key='X'):
     from scipy.sparse.csr import csr_matrix
     X = csr_matrix(X)
-    return {'X_csr_data': X.data,
-            'X_csr_indices': X.indices,
-            'X_csr_indptr': X.indptr,
-            'X_csr_shape': np.array(X.shape)}
+    key_csr = key + '_csr'
+    return {key_csr + '_data': X.data,
+            key_csr + '_indices': X.indices,
+            key_csr + '_indptr': X.indptr,
+            key_csr + '_shape': np.array(X.shape)}
 
 
-def load_sparse_csr(d):
+def load_sparse_csr(d, key='X'):
     from scipy.sparse.csr import csr_matrix
-    d['X'] = csr_matrix((d['X_csr_data'],
-                         d['X_csr_indices'],
-                         d['X_csr_indptr']),
-                        shape=d['X_csr_shape'])
-    del d['X_csr_data']
-    del d['X_csr_indices']
-    del d['X_csr_indptr']
-    del d['X_csr_shape']
+    key_csr = key + '_csr'
+    d[key] = csr_matrix((d[key_csr + '_data'],
+                         d[key_csr + '_indices'],
+                         d[key_csr + '_indptr']),
+                        shape=d[key_csr + '_shape'])
+    del d[key_csr + '_data']
+    del d[key_csr + '_indices']
+    del d[key_csr + '_indptr']
+    del d[key_csr + '_shape']
     return d
 
 
@@ -945,7 +960,29 @@ def convert_string(string):
 
 # --------------------------------------------------------------------------------
 # Helper functions for reading and writing
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
+
+def get_used_files():
+    """Get files used by processes with name scanpy."""
+    loop_over_scanpy_processes = (proc for proc in psutil.process_iter()
+                                  if proc.name() == 'scanpy')
+    filenames = []
+    for proc in loop_over_scanpy_processes:
+        try:
+            flist = proc.open_files()
+            for nt in flist:
+                filenames.append(nt.path)
+        # This catches a race condition where a process ends
+        # before we can examine its files
+        except psutil.NoSuchProcess as err:
+            pass
+    return set(filenames)
+
+
+def wait_until_file_unused(filename):
+    while (filename in get_used_files()):
+        time.sleep(1)
 
 
 def get_filename_from_key(key, ext=None):
