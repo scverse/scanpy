@@ -19,7 +19,7 @@ into its root directory. With Python 3.5 or 3.6 (preferably [Miniconda](http://c
 ```
 pip install -e .
 ```
-Aside from enabling `import scanpya.pi as sc` anywhere on your system, you can also work
+Aside from enabling `import scanpy.api as sc` anywhere on your system, you can also work
 with the top-level command `scanpy` on the command-line (more info on installation [here](#install)).
 
 Then go through the use cases compiled in
