@@ -445,7 +445,7 @@ def dpt(adata,
                            with_labels=True, node_color=colors)
         if sett.savefigs: savefig('dpt_tree')
     # plot segments and pseudotime
-    if False:
+    if True:
         dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
         # time series plot
         # only if number of genes is not too high
