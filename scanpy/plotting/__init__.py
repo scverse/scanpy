@@ -73,7 +73,7 @@ def pca_scatter(adata,
                 cmap=None,
                 pal=None,
                 right_margin=None,
-                size=3,
+                size=None,
                 titles=None,
                 show=None):
     """See parameters of pl.pca().
