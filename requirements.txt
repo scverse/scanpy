@@ -12,6 +12,8 @@ xlrd
 scikit-learn
 # standard statistical models
 statsmodels
+# complex systems and graphs
+networkx
 # natural human-readable sorting
 natsort
 # simple parallel computing

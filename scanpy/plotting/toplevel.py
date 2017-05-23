@@ -38,6 +38,7 @@ def savefig(writekey):
     pl.savefig(filename)
     pl.close()  # clear figure
 
+
 def savefig_or_show(writekey, show=None):
     show = sett.autoshow if show is None else show
     if sett.savefigs: savefig(writekey)

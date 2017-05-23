@@ -432,17 +432,18 @@ def dpt(adata,
         writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
     # plot the tree
-    import networkx as nx
-    pl.figure()
-    colors = adata.add['dpt_groups_colors']
-    for iname, name in enumerate(adata.add['dpt_groups_names']):
-        if name in sett._ignore_categories:
-            colors[iname] = 'grey'
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']),
-                       with_labels=True, node_color=colors)
-    if sett.savefigs: savefig('dpt_tree')
+    if 'dpt_groups' in colors:
+        import networkx as nx
+        pl.figure()
+        colors = adata.add['dpt_groups_colors']
+        for iname, name in enumerate(adata.add['dpt_groups_names']):
+            if name in sett._ignore_categories:
+                colors[iname] = 'grey'
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']),
+                           with_labels=True, node_color=colors)
+        if sett.savefigs: savefig('dpt_tree')
     # plot segments and pseudotime
     if False:
         dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
