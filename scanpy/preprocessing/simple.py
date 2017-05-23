@@ -347,8 +347,8 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
-            logg.m('... finished,', t=True, end=' ')
-            logg.m('adding\n'
+            logg.m('finished', t=True, end=' ')
+            logg.m('and added\n'
                    '    the data representation "X_pca" (adata.smp)\n'
                    '    the loadings "PC1", "PC2", ... (adata.var)\n'
                    '    the "pca_variance_ratio" (adata.add)')

@@ -1,33 +1,30 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Diffusion Map Embedding
-
-Diffusion Maps for analysis of single-cell data.
-
-Reference
----------
-- Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-
-See also
---------
-- Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-  31, 2989 (2015).
-- Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-  arXiv:0711.0189 (2007).
+"""Diffusion Maps
 """
 
 from ..tools import dpt
-
+from .. import logging as logg
 
 def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
-    """Diffusion Map Embedding
+    """Diffusion Maps
 
-    Also implements the modifications to diffusion map introduced by Haghverdi
-    et al. (2016).
+    Visualize data using Diffusion Maps.
 
-    Return dictionary that stores the new data representation 'Y', which
-    consists of the first few eigenvectors of a kernel matrix of the data, and
-    the eigenvalues 'evals'.
+    Implements the modifications to diffusion map introduced by Haghverdi et
+    al. (2016).
+
+    References
+    ----------
+    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
+    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
+      31, 2989 (2015).
+    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
+
+    See also
+    --------
+    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
+      arXiv:0711.0189 (2007).
 
     Parameters
     ----------
@@ -47,21 +44,21 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
     sigma : float, optional (default: 0)
         If greater 0, ignore parameter 'k', but directly set a global width
         of the Kernel Gaussian (method 'global').
-    n_cpus : int or None
+    n_jobs : int or None
         Number of CPUs to use (default: sett.n_cpus).
     copy : bool (default: False)
         Return a copy instead of writing to adata.
 
     Notes
-    -------
+    -----
     The following is added to adata.smp
-    X_diffmap : np.ndarray
-        Array of shape n_samples x n_comps. DiffMap representation of data,
-        which is the right eigen basis of transition matrix with eigenvectors as
-        columns.
+        X_diffmap : np.ndarray
+            Array of shape n_samples x n_comps. DiffMap representation of data,
+            which is the right eigen basis of transition matrix with eigenvectors as
+            columns.
     The following is added to adata.add
-    diffmap_evals : np.ndarray
-        Eigenvalues of the transition matrix.
+        diffmap_evals : np.ndarray
+            Eigenvalues of the transition matrix.
     """
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
@@ -71,4 +68,8 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
     if knn: adata.add['distance'] = dmap.Dsq
+    logg.m('finished', t=True, end=' ')
+    logg.m('and added\n'
+           '    the data representation "X_diffmap" (adata.smp),\n'
+           '    the eigen values of the transition matrix "diffmap_evals" (adata.add)')
     return adata if copy else None

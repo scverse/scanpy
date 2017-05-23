@@ -384,7 +384,7 @@ class DataGraph(object):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
                 self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
-        logg.m('computed Ktilde (normalized anistropic kernel)')
+        logg.m('... computed Ktilde (normalized anistropic kernel)')
 
     def compute_L_matrix(self):
         """Graph Laplacian for K.

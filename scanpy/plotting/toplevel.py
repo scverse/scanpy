@@ -258,6 +258,7 @@ def scatter(adata,
             # in adata.add['groups_names']
             adata.add[color_key + '_colors'] = pal[:len(adata.add['groups_names'])].by_key()['color']
         elif not color_key + '_colors' in adata.add:
+            pal = utils.adjust_pal(pal, length=len(adata.add[color_key + '_names']))
             adata.add[color_key + '_colors'] = pal[:len(adata.add[color_key + '_names'])].by_key()['color']
         if len(adata.add[color_key + '_names']) > len(adata.add[color_key + '_colors']):
             logg.m('... number of categories/names in',

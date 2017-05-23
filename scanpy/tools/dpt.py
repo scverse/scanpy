@@ -1,21 +1,5 @@
-# coding: utf-8
 # Author: F. Alex Wolf (http://falexwolf.de)
 """Diffusion Pseudotime Analysis
-
-Perform Diffusion Pseudotime analysis of an expression matrix, given the
-expression vector of an "initial state", the "root cell".
-
-Reference
----------
-Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-
-See also
---------
-- Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-- Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-  31, 2989 (2015).
-- Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-  arXiv:0711.0189 (2007).
 """
 
 import sys
@@ -29,13 +13,21 @@ from ..data_structs import data_graph
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False,
         flavor='haghverdi16', copy=False):
-    u"""Diffusion Pseudotime Analysis
+    """Diffusion Pseudotime
 
     Infer progression of cells, identify branching subgroups.
 
     Reference
     ---------
-    Haghverdi et al., Nature Methods 13, 3971 (2016).
+    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
+
+    See also
+    --------
+    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
+    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
+      31, 2989 (2015).
+    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
+      arXiv:0711.0189 (2007).
 
     Parameters
     ----------
@@ -149,11 +141,11 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
     # the tree/graph adjacency matrix
     adata.add['dpt_groups_adjacency'] = dpt.segs_adjacency
     logg.m('finished', t=True, end=' ')
-    logg.m('added\n'
-           '    "dpt_pseudotime" stores pseudotime (adata.smp),\n'
-           '    "dpt_groups" the segments of the tree-like trajectory (adata.smp),\n'
-           '    "dpt_order" is an index array for sorting the cells (adata.smp),\n'
-           '    "dpt_grouptips" stores the indices of tip cells (adata.add)')
+    logg.m('and added\n'
+           '    "dpt_pseudotime", stores pseudotime (adata.smp),\n'
+           '    "dpt_groups", the segments of the tree-like trajectory (adata.smp),\n'
+           '    "dpt_order", is an index array for sorting the cells (adata.smp),\n'
+           '    "dpt_grouptips", stores the indices of tip cells (adata.add)')
     return adata if copy else None
 
 
