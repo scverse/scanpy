@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Utility functions and classes
+"""Utility functions and classes
 """
 
 from __future__ import absolute_import
@@ -8,11 +7,48 @@ import os
 import numpy as np
 from natsort import natsorted
 from . import settings as sett
-
+from . import logging as logg
 
 # --------------------------------------------------------------------------------
 # Deal with stuff
 # --------------------------------------------------------------------------------
+
+
+def identify_categories(adata, predicted, reference):
+    """Identify predicted categories with reference.
+
+    Parameters
+    ----------
+    adata : AnnData
+    predicted : str
+        smp_key of adata
+    reference : str
+        smp_key of adata
+
+    Returns
+    -------
+    d : dict with keys the predicted labels
+    contained_matrix : matrix where rows correspond to the predicted labels and
+        columns to the reference labels
+    """
+    d = {}
+    contained_matrix = []
+    for pred_group in adata.add[predicted + '_names']:
+        if pred_group != '?':
+            mask_pred = adata.smp[predicted] == pred_group
+            contained_matrix += [[]]
+            ratio_contained_max = 0
+            for ref_group in adata.add[reference + '_names']:
+                if ref_group != '?':
+                    mask_ref = adata.smp[reference] == ref_group
+                    mask_ref[mask_pred] = True  # if the pred group is contained in mask_ref, this will not affect mask_ref
+                    # compute the contained ratio, that is, which fraction of the PRED group is contained in the ref group
+                    ratio_contained = (np.sum(mask_pred) - np.sum(mask_ref - (adata.smp[reference] == ref_group))) / np.sum(mask_pred)
+                    contained_matrix[-1] += [ratio_contained]
+                    if ratio_contained > ratio_contained_max:
+                        d[pred_group] = ref_group
+                        ratio_contained_max = ratio_contained
+    return d, np.array(contained_matrix)
 
 
 def unique_categories(categories):
@@ -24,8 +60,7 @@ def unique_categories(categories):
 
 
 def fill_in_datakeys(example_parameters, dexdata):
-    """
-    Update the 'examples dictionary' _examples.example_parameters.
+    """Update the 'examples dictionary' _examples.example_parameters.
 
     If a datakey (key in 'datafile dictionary') is not present in the 'examples
     dictionary' it is used to initialize an entry with that key.
@@ -49,8 +84,7 @@ def fill_in_datakeys(example_parameters, dexdata):
 
 
 def update_params(old_params, new_params, check=False):
-    """
-    Update old_params with new_params.
+    """Update old_params with new_params.
 
     If check==False, this merely adds and overwrites the content of old_params.
 
@@ -86,8 +120,7 @@ def update_params(old_params, new_params, check=False):
 
 
 def read_args_tool(toolkey, example_parameters, tool_add_args=None):
-    """
-    Read args for single tool.
+    """Read args for single tool.
     """
     import scanpy as sc
     p = default_tool_argparser(sc.help(toolkey, string=True), example_parameters)
@@ -101,8 +134,7 @@ def read_args_tool(toolkey, example_parameters, tool_add_args=None):
 
 
 def default_tool_argparser(description, example_parameters):
-    """
-    Create default parser for single tools.
+    """Create default parser for single tools.
     """
     import argparse
     epilog = '\n'
@@ -122,8 +154,7 @@ def default_tool_argparser(description, example_parameters):
 
 
 def select_groups(adata, groups_names_subset='all', smp='groups'):
-    """
-    Get subset of groups in adata.smp[smp].
+    """Get subset of groups in adata.smp[smp].
     """
     groups_names = adata.add[smp + '_names']
     if smp + '_masks' in adata.add:
@@ -149,7 +180,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
             groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_names'])).astype(str),
                                           np.array(groups_names_subset)))[0]
         if len(groups_ids) == 0:
-            sett.m(0, np.array(groups_names_subset),
+            logg.m(np.array(groups_names_subset),
                    'invalid! specify valid groups_names (or indices) one of',
                    adata.add[smp + '_names'])
             from sys import exit
@@ -162,8 +193,7 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
 
 
 def pretty_dict_string(d, indent=0):
-    """
-    Pretty output of nested dictionaries.
+    """Pretty output of nested dictionaries.
     """
     s = ''
     for key, value in sorted(d.items()):
@@ -176,8 +206,7 @@ def pretty_dict_string(d, indent=0):
 
 
 def markdown_dict_string(d):
-    """
-    Markdown output that can be pasted in the examples/README.md.
+    """Markdown output that can be pasted in the examples/README.md.
     """
     # sort experimental data from simulated data
     from collections import OrderedDict
@@ -210,8 +239,7 @@ def markdown_dict_string(d):
 
 
 def merge_dicts(*ds):
-    """
-    Given any number of dicts, shallow copy and merge into a new dict,
+    """Given any number of dicts, shallow copy and merge into a new dict,
     precedence goes to key value pairs in latter dicts.
 
     Note
@@ -224,9 +252,8 @@ def merge_dicts(*ds):
     return result
 
 
-def masks(list_of_index_lists,n):
-    """
-    Make an array in which rows store 1d mask arrays from list of index lists.
+def masks(list_of_index_lists, n):
+    """Make an array in which rows store 1d mask arrays from list of index lists.
 
     Parameters
     ----------
@@ -245,8 +272,7 @@ def masks(list_of_index_lists,n):
 
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
-    """
-    Get full tracebacks when warning is raised by setting
+    """Get full tracebacks when warning is raised by setting
 
     warnings.showwarning = warn_with_traceback
 
@@ -262,8 +288,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 
 
 def subsample(X, subsample=1, seed=0):
-    """
-    Subsample a fraction of 1/subsample samples from the rows of X.
+    """Subsample a fraction of 1/subsample samples from the rows of X.
 
     Parameters
     ----------
@@ -293,13 +318,12 @@ def subsample(X, subsample=1, seed=0):
         n = int(X.shape[0]/subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
-    sett.m(0, 'subsampled to', n, 'of', X.shape[0], 'data points')
+    logg.m('... subsampled to', n, 'of', X.shape[0], 'data points')
     return Xsampled, rows
 
 
 def subsample_n(X, n=0, seed=0):
-    """
-    Subsample n samples from rows of array.
+    """Subsample n samples from rows of array.
 
     Parameters
     ----------
@@ -324,11 +348,8 @@ def subsample_n(X, n=0, seed=0):
     return Xsampled, rows
 
 
-# from profilehooks import timecall
-# @timecall
 def comp_distance(X, metric='euclidean'):
-    """
-    Compute distance matrix for data array X
+    """Compute distance matrix for data array X
 
     Parameters
     ----------
@@ -346,10 +367,8 @@ def comp_distance(X, metric='euclidean'):
     return distance.squareform(distance.pdist(X, metric=metric))
 
 
-# @timecall
 def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
-    """
-    Compute distance matrix for data array X
+    """Compute distance matrix for data array X
 
     Use matrix multiplication as in sklearn.
 
@@ -381,8 +400,7 @@ def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
 
 
 def hierarch_cluster(M):
-    """
-    Cluster matrix using hierarchical clustering.
+    """Cluster matrix using hierarchical clustering.
 
     Parameters
     ----------
@@ -408,9 +426,9 @@ def hierarch_cluster(M):
         pl.colorbar()
     return Mclus, indices
 
+
 def check_datafile_deprecated(filename, ext=None):
-    """
-    Check whether the file is present and is not just a placeholder.
+    """Check whether the file is present and is not just a placeholder.
 
     If the file is not present at all, look for a file with the same name but
     ending on '_url.txt', and try to download the datafile from there.

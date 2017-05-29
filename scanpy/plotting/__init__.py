@@ -157,14 +157,7 @@ def diffmap(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     if comps == 'all':
-        comps_list = ['1,2', '1,3', '1,4', '1,5', '1,6',
-                      '2,3', '2,4', '2,5', '2,6', '2,7',
-                      '3,4', '3,5', '3,6', '3,7',
-                      '4,5', '4,6', '4,7',
-                      '5,6', '5,7',
-                      '6,7']
-        comps_list = ['{},{}'.format(i, j)
-                      for i in range(1, 10) for j in range(1, 10) if i != j]
+        comps_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i))) for i in range(1, 15)]
     else:
         if comps is None:
             comps = '1,2' if '2d' in layout else '1,2,3'
@@ -313,42 +306,22 @@ def spring(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     Y = adata.smp['X_spring']
-    if True:
-        axs = scatter(adata,
-                      basis='spring',
-                      color=color,
-                      names=names,
-                      comps=comps,
-                      cont=cont,
-                      layout=layout,
-                      legendloc=legendloc,
-                      cmap=cmap,
-                      pal=pal,
-                      right_margin=right_margin,
-                      size=size,
-                      # defined in plotting
-                      titles=titles,
-                      show=False)
-        savefig_or_show('spring')
-    else:
-        Adj = dspring['Adj']
-        istep = dspring['istep']
-        # TODO: don't save the adjacency matrix!!!
-        import scanpy as sc
-        sc.write(dspring['writekey']+'_step{:02}'.format(istep), dspring)
-        # compute the next steps
-        istep_init = istep + 1
-        add_steps = params['add_steps']
-        del params['add_steps']
-        for istep in istep_init + np.arange(add_steps, dtype=int):
-            sett.mt(0, 'compute Fruchterman-Reingold layout: step', istep)
-            Y = fruchterman_reingold_layout(Adj, Yinit=Y, iterations=step_size)
-            sett.mt(0, 'finished computation')
-            _plot({'Y': Y}, adata, istep, **params)
-        # save state of Y to outfile
-        dspring['Y'] = Y
-        dspring['istep'] = istep
-        sc.write(dspring['writekey'], dspring)
+    axs = scatter(adata,
+                  basis='spring',
+                  color=color,
+                  names=names,
+                  comps=comps,
+                  cont=cont,
+                  layout=layout,
+                  legendloc=legendloc,
+                  cmap=cmap,
+                  pal=pal,
+                  right_margin=right_margin,
+                  size=size,
+                  # defined in plotting
+                  titles=titles,
+                  show=False)
+    savefig_or_show('spring', show=show)
 
 
 def dpt(adata,
@@ -363,6 +336,7 @@ def dpt(adata,
         pal=None,
         right_margin=None,
         size=None,
+        titles=None,
         show=None):
     """Plot results of DPT analysis.
 
@@ -392,19 +366,50 @@ def dpt(adata,
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     """
+    dpt_scatter(adata,
+                basis=basis,
+                color=color,
+                names=names,
+                comps=comps,
+                cont=cont,
+                layout=layout,
+                legendloc=legendloc,
+                cmap=cmap,
+                pal=pal,
+                right_margin=right_margin,
+                size=size,
+                titles=titles,
+                show=False)
+    colors = ['dpt_pseudotime']
+    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if color is not None:
+        if not isinstance(color, list): colors = color.split(',')
+        else: colors = color
+    if 'dpt_groups' in colors:
+        dpt_graph(adata, colors)
+    dpt_timeseries(adata, cmap=cmap, show=show)
+
+
+def dpt_scatter(adata,
+                basis='diffmap',
+                color=None,
+                names=None,
+                comps=None,
+                cont=None,
+                layout='2d',
+                legendloc='right margin',
+                cmap=None,
+                pal=None,
+                right_margin=None,
+                size=None,
+                titles=None,
+                show=None):
+    """See parameters of sc.pl.dpt().
+    """
     from ..examples import check_adata
     adata = check_adata(adata)
-    # scatter plot
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1:
-        colors += ['dpt_groups']
-    adata.add['highlights'] = (list([adata.add['iroot']]))   # also plot the tip cell indices
-                               # + [adata.add['dpt_grouptips'][i][1]
-                               #    for i in range(len(adata.add['dpt_grouptips']))
-                               #    if adata.add['dpt_grouptips'][i][1] != -1])
-                               # + [adata.add['dpt_grouptips'][i][0]
-                               #    for i in range(len(adata.add['dpt_grouptips']))
-                               # if adata.add['dpt_grouptips'][i][1] != -1])
+    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
@@ -415,6 +420,13 @@ def dpt(adata,
             comps = '1,2' if '2d' in layout else '1,2,3'
         if not isinstance(comps, list): comps_list = [comps]
         else: comps_list = comps
+    adata.add['highlights'] = (list([adata.add['iroot']]))   # also plot the tip cell indices
+                               # + [adata.add['dpt_grouptips'][i][1]
+                               #    for i in range(len(adata.add['dpt_grouptips']))
+                               #    if adata.add['dpt_grouptips'][i][1] != -1])
+                               # + [adata.add['dpt_grouptips'][i][0]
+                               #    for i in range(len(adata.add['dpt_grouptips']))
+                               # if adata.add['dpt_grouptips'][i][1] != -1])
     for comps in comps_list:
         axs = scatter(adata,
                       basis=basis,
@@ -428,22 +440,28 @@ def dpt(adata,
                       pal=pal,
                       right_margin=right_margin,
                       size=size,
+                      titles=titles,
                       show=False)
         writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
+
+
+def dpt_graph(adata, colors=None, names=None):
     # plot the tree
-    if 'dpt_groups' in colors:
-        import networkx as nx
-        pl.figure()
-        colors = adata.add['dpt_groups_colors']
-        for iname, name in enumerate(adata.add['dpt_groups_names']):
-            if name in sett._ignore_categories:
-                colors[iname] = 'grey'
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']),
-                           with_labels=True, node_color=colors)
-        if sett.savefigs: savefig('dpt_tree')
+    import networkx as nx
+    pl.figure()
+    if colors is None: colors = adata.add['dpt_groups_colors']
+    else: colors = colors
+    for iname, name in enumerate(adata.add['dpt_groups_names']):
+        if name in sett._ignore_categories: colors[iname] = 'grey'
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']), labels=names,
+                       with_labels=True, node_color=colors)
+    if sett.savefigs: savefig('dpt_tree')
+
+
+def dpt_timeseries(adata, cmap=None, show=None):
     # plot segments and pseudotime
     if True:
         dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)

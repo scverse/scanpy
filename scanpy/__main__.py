@@ -12,7 +12,7 @@ from sys import argv, exit
 
 # preprocessing
 dpp = odict([
-    ('pp', 'run a preprocessing key'),
+    ('pp', 'run a preprocessing function'),
 ])
 
 # description of simple inquiries
@@ -85,10 +85,10 @@ def add_args(p, dadd_args=None):
     if dadd_args is None or '--pfile' not in dadd_args:
         aa('--pfile',
            type=str, default='', metavar='f',
-           help='Path to file with optional parameters (default: "").')
+           help='Path to file with parameters (default: "").')
 
     aa = p.add_argument_group('Provide plotting parameters').add_argument
-    aa('-q', '--pparams',
+    aa('-q', '--plot_params',
        nargs='*', default=None, metavar='k v',
        help='Plotting parameters as list, e.g., `comps=1,3 legendloc="upper left"`. '
             'Display possible paramaters via "-p help" (default: "").')
@@ -165,17 +165,16 @@ def run_command_line_args(toolkey, args):
     from . import logging as logg
     
     # help on plot parameters
-    if args['pparams']:
+    if args['plot_params']:
         from . import plotting
-        if args['pparams'][0] == 'help':
+        if args['plot_params'][0] == 'help':
             sys.exit(getattr(plotting, toolkey).__doc__)
 
     adata = None
     if toolkey != 'sim':
-        from .examples import get_example
-        adata, exmodule = get_example(
+        from .examples import init_run
+        adata, exmodule = init_run(
             args['run_name'],
-            subsample=args['subsample'],
             suffix=sett._run_suffix,
             return_module=True,
             recompute=sett.recompute == 'pp' or toolkey == 'pp',
@@ -247,8 +246,8 @@ def run_command_line_args(toolkey, args):
         readwrite.write_params(pfile, params)
 
     # plotting and postprocessing
-    pparams = (readwrite.get_params_from_list(args['pparams'])
-               if args['pparams'] else {})
+    plot_params = (readwrite.get_params_from_list(args['plot_params'])
+               if args['plot_params'] else {})
     # post-processing specific to example and tool
     # - only if we are not subsampling
     if toolkey != 'sim':
@@ -257,7 +256,7 @@ def run_command_line_args(toolkey, args):
             getattr(exmodule, postprocess)(adata)
             readwrite.write(sett.run_name, adata)
     from . import plotting
-    getattr(plotting, toolkey)(adata, **pparams)
+    getattr(plotting, toolkey)(adata, **plot_params)
 
 
 def read_command_line_args_run_single_tool(toolkey):

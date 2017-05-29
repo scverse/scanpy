@@ -93,10 +93,10 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
 
-   In your preprocessing function, set
+   Either
        adata.add['xroot'] = adata.X[root_cell_index, :]
    where "root_cell_index" is the integer index of the root cell, or
-       adata.add['xroot'] = adata[root_cell_name, :].X.flatten()
+       adata.add['xroot'] = adata[root_cell_name, :].X
    where "root_cell_name" is the name (a string) of the root cell.'''
         sys.exit(msg)
     if n_branchings == 0:

@@ -200,14 +200,14 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
 
-    def diffmap(self):
+    def diffmap(self, n_comps=15):
         """Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
         if self.evals is None:
             logg.m('start computing Diffusion Map', r=True)
             self.compute_transition_matrix()
-            self.embed()
+            self.embed(n_evals=n_comps)
         # write results to dictionary
         ddmap = {}
         # skip the first eigenvalue/eigenvector
@@ -219,15 +219,15 @@ class DataGraph(object):
                     '    "diffmap_evals store the eigenvalues of the transition matrix (adata.add)"')
         return ddmap
 
-    def compute_Ddiff_all(self, num_evals=10):
+    def compute_Ddiff_all(self, n_evals=10):
         raise ValueError('deprecated functions')
-        self.embed(number=num_evals)
+        self.embed(n_evals=n_evals)
         self.compute_M_matrix()
         self.compute_Ddiff_matrix()
 
-    def compute_C_all(self, num_evals=10):
+    def compute_C_all(self, n_evals=10):
         self.compute_L_matrix()
-        self.embed(self.L, number=num_evals, sort='increase')
+        self.embed(self.L, n_evals=n_evals, sort='increase')
         evalsL = self.evals
         self.compute_Lp_matrix()
         self.compute_C_matrix()
@@ -392,15 +392,15 @@ class DataGraph(object):
         self.L = np.diag(self.z) - self.K
         sett.mt(0, 'compute graph Laplacian')
 
-    def embed(self, matrix=None, number=10, sym=None, sort='decrease'):
+    def embed(self, matrix=None, n_evals=15, sym=None, sort='decrease'):
         """Compute eigen decomposition of matrix.
 
         Parameters
         ----------
         matrix : np.ndarray
             Matrix to diagonalize.
-        number : int
-            Number of eigenvalues/vectors to be computed, set number = 0 if
+        n_evals : int
+            Number of eigenvalues/vectors to be computed, set n_evals = 0 if
             you need all eigenvectors.
         sym : bool
             Instead of computing the eigendecomposition of the assymetric
@@ -426,14 +426,14 @@ class DataGraph(object):
         if matrix is None:
             matrix = self.Ktilde
         # compute the spectrum
-        if number == 0:
+        if n_evals == 0:
             evals, evecs = sp.linalg.eigh(matrix)
         else:
-            number = min(matrix.shape[0]-1, number)
-            # ncv = max(2 * number + 1, int(np.sqrt(matrix.shape[0])))
+            n_evals = min(matrix.shape[0]-1, n_evals)
+            # ncv = max(2 * n_evals + 1, int(np.sqrt(matrix.shape[0])))
             ncv = None
             which = 'LM' if sort == 'decrease' else 'SM'
-            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=number, which=which,
+            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=n_evals, which=which,
                                                   ncv=ncv)
         if sort == 'decrease':
             evals = evals[::-1]

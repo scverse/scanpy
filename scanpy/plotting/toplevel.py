@@ -177,6 +177,8 @@ def scatter(adata,
         size = 120000 / n
         # logg.m('... setting point size to {:.2}'.format(size))
 
+    pal_was_none = False
+    if pal is None: pal_was_none = True
     pal = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
@@ -257,7 +259,7 @@ def scatter(adata,
             # in adata, that is, if color_key has corresponding categories with those
             # in adata.add['groups_names']
             adata.add[color_key + '_colors'] = pal[:len(adata.add['groups_names'])].by_key()['color']
-        elif not color_key + '_colors' in adata.add:
+        elif not color_key + '_colors' in adata.add or not pal_was_none:
             pal = utils.adjust_pal(pal, length=len(adata.add[color_key + '_names']))
             adata.add[color_key + '_colors'] = pal[:len(adata.add[color_key + '_names'])].by_key()['color']
         if len(adata.add[color_key + '_names']) > len(adata.add[color_key + '_colors']):
@@ -348,6 +350,7 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
         pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
                 (1.05 if score_max > 0 else 0.95) * score_max)
     return gs
+
 
 def ranking_deprecated(adata, toolkey, n_genes=20):
     """Plot ranking of genes

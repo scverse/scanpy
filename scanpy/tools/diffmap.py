@@ -5,7 +5,7 @@
 from ..tools import dpt
 from .. import logging as logg
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
+def diffmap(adata, n_comps=15, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
     """Diffusion Maps
 
@@ -63,7 +63,7 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs,
                    n_jobs=n_jobs, recompute_diffmap=True, flavor=flavor)
-    ddmap = dmap.diffmap()
+    ddmap = dmap.diffmap(n_comps=n_comps)
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']

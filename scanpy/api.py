@@ -23,7 +23,9 @@ pp = preprocessing  # abbreviation
 """Preprocessing functions"""
 from .readwrite import read, read_10x_h5, write, read_params, write_params
 """Reading and writing."""
-from .examples import show_exdata, show_exparams, get_example
-"""Builtin examples."""
+from .examples import init_run, read_run, write_run
+"""Manage runs and builtin examples."""
 from .data_structs import AnnData
 """Main class for storing an annotated data matrix."""
+from . import utils
+"""Utils."""

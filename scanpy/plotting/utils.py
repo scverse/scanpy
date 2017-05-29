@@ -1,12 +1,23 @@
-# Authors: F. Alex Wolf <http://falexwolf.de>
+# Authors: F. Alex Wolf (http://falexwolf.de)
 #          P. Angerer
 
 import numpy as np
 from ..compat.matplotlib import pyplot as pl
 from .. import logging as logg
 from matplotlib import rcParams, ticker
+from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
+
+# color palette (is default in matplotlib 2.0 anyway)
+# see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
+pal_20 = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+          '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
+          '#bcbd22', '#17becf',
+          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
+          '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
+          '#dbdb8d', '#9edae5',
+          '#ad494a', '8c6d31']  # manual additions
 
 
 def init_plotting_params():
@@ -41,16 +52,13 @@ def init_plotting_params():
     rcParams['legend.handletextpad'] = 0.4
     # resolution of png output
     rcParams['savefig.dpi'] = 400
-    # color palette (is default in matplotlib 2.0 anyway)
-    # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-    rcParams['axes.prop_cycle'] = cycler(
-        color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-               '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f', remove grey
-               '#bcbd22', '#17becf',
-               '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-               '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7', remove grey
-               '#dbdb8d', '#9edae5',
-               '#ad494a', '8c6d31'])             # these are some manual additions
+    rcParams['axes.prop_cycle'] = cycler(color=pal_20)
+    # restore a few matplotlib defaults that Seaborn changes
+    rcParams['axes.linewidth'] = 0.8
+    rcParams['axes.edgecolor'] = 'black'
+    rcParams['axes.facecolor'] = 'white'
+    rcParams['xtick.color'] = 'k'
+    rcParams['ytick.color'] = 'k'
     # same as seaborn default
     rcParams['axes.grid'] = True
 
@@ -60,6 +68,9 @@ def default_pal(pal=None):
         return rcParams['axes.prop_cycle']
     elif not isinstance(pal, Cycler):
         return cycler(color=pal)
+    else:
+        return pal
+
 
 def adjust_pal(pal, length):
     if len(pal.by_key()['color']) < length:
@@ -79,8 +90,11 @@ def adjust_pal(pal, length):
                  "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
         logg.m('... updating the color palette to 64 maximally distinct colors')
         return cycler(color=color)
+    elif not isinstance(pal, Cycler):
+        return cycler(color=pal)
     else:
         return pal
+
 
 def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     """Scatter of group using representation of data Y.
@@ -96,6 +110,8 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
         color = rgb2hex(adata.add[name + '_colors'][imask])
+    if not is_color_like(color):
+        raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
     data = [Y[mask, 0], Y[mask, 1]]
     if layout == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,

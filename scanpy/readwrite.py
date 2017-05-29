@@ -18,61 +18,26 @@ avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'da
 
 
 # --------------------------------------------------------------------------------
-# Reading and Writing data files and result dictionaries
+# Reading and Writing data files and AnnData objects
+# - for reading and writing runs, see examples/__init__.py
 # --------------------------------------------------------------------------------
-
-
-def write(filename_or_key, data, ext=None):
-    """Write AnnData objects and dictionaries to file.
-
-    If a key is passed, the filename is generated as
-        filename = sett.writedir + key + sett.file_format_data
-    This defaults to
-        filename = 'write/' + key + '.h5'
-    and can be changed by reseting sett.writedir and sett.file_format_data.
-
-    Parameters
-    ----------
-    filename_or_key : str
-        Filename of data file or key to generate filename.
-    data : dict, AnnData
-        Annotated data object or dict storing arrays as values.
-    """
-    filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
-    if isinstance(data, AnnData):
-        d = data.to_dict()
-    else:
-        d = data
-
-    if is_filename(filename_or_key):
-        filename = filename_or_key
-        ext_ = is_filename(filename, return_ext=True)
-        if ext is None:
-            ext = ext_
-        elif ext != ext_:
-            raise ValueError('It suffices to provide the file type by '
-                             'providing a proper extension to the filename.'
-                             'One of "txt", "csv", "h5" or "npz".')
-    else:
-        key = filename_or_key
-        ext = sett.file_format_data if ext is None else ext
-        filename = get_filename_from_key(key, ext)
-    write_dict_to_file(filename, d, ext=ext)
 
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
          as_strings=False, backup_url='', return_dict=False, reread=None):
-    """Read file or dictionary and return data dictionary.
+    """Read file and return AnnData object.
 
     To speed up reading and save storage space, this creates an hdf5 file if
     it's not present yet.
 
     Parameters
     ----------
-    filename_or_key : str, Path
-        Filename of data file or key used in function write(key,dict).
+    filename_or_key : str, None
+        Filename or filekey of data file. A filekey leads to a filename defined as
+            `sett.writedir + filekey + sett.file_format_data`
+        This is the same behavior as in `write(filekey, dict)`.
     sheet : str, optional
-        Name of sheet in Excel file.
+        Name of sheet/table in hdf5 or Excel file.
     ext : str, optional (default: automatically inferred from filename)
         Extension that indicates the file type.
     delim : str, optional
@@ -95,7 +60,8 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     Returns
     -------
     data : sc.AnnData object or dict if return_dict == True
-        If dict, it contains
+
+    If a dict the dict contains
         X : np.ndarray, optional
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
@@ -103,22 +69,17 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
             Array storing the names of rows (experimental labels of samples).
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
-        Maybe more items, if they are found in the file.
     """
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names,
                       as_strings, backup_url, reread)
         if isinstance(d, dict):
-            if return_dict:
-                return d
-            else:
-                return AnnData(d)
+            if return_dict: return d
+            else: return AnnData(d)
         elif isinstance(d, AnnData):
-            if return_dict:
-                return d.to_dict()
-            else:
-                return d
+            if return_dict: return d.to_dict()
+            else: return d
         else:
             raise ValueError('Do not know how to process read data.')
 
@@ -134,10 +95,8 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
                          str(avail_exts) +
                          '\nor provide the parameter "ext" to sc.read.')
     d = read_file_to_dict(filename, ext=sett.file_format_data)
-    if return_dict:
-        return d
-    else:
-        return AnnData(d)
+    if return_dict: return d
+    else: return AnnData(d)
 
 
 def read_10x_h5(filename, genome):
@@ -182,14 +141,51 @@ def read_10x_h5(filename, genome):
             raise Exception('File is missing one or more required datasets.')
 
 
-# --------------------------------------------------------------------------------
+def write(filename_or_key, data, ext=None):
+    """Write AnnData objects and dictionaries to file.
+
+    If a key is passed, the filename is generated as
+        filename = sett.writedir + key + sett.file_format_data
+    This defaults to
+        filename = 'write/' + key + '.h5'
+    and can be changed by reseting sett.writedir and sett.file_format_data.
+
+    Parameters
+    ----------
+    filename_or_key : str
+        Filename of data file or key to generate filename.
+    data : dict, AnnData
+        Annotated data object or dict storing arrays as values.
+    ext : str or None (default: None)
+        File extension from wich to infer file format.
+    """
+    filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
+    if isinstance(data, AnnData): d = data.to_dict()
+    else: d = data
+
+    if is_filename(filename_or_key):
+        filename = filename_or_key
+        ext_ = is_filename(filename, return_ext=True)
+        if ext is None:
+            ext = ext_
+        elif ext != ext_:
+            raise ValueError('It suffices to provide the file type by '
+                             'providing a proper extension to the filename.'
+                             'One of "txt", "csv", "h5" or "npz".')
+    else:
+        key = filename_or_key
+        ext = sett.file_format_data if ext is None else ext
+        filename = get_filename_from_key(key, ext)
+    write_dict_to_file(filename, d, ext=ext)
+
+
+# -------------------------------------------------------------------------------
 # Reading and writing parameter files
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def read_params(filename, asheader=False, verbosity=0):
-    """
-    Read parameter dictionary from text file.
+    """Read parameter dictionary from text file.
 
     Assumes that parameters are specified in the format:
         par1 = value1
@@ -226,8 +222,7 @@ def read_params(filename, asheader=False, verbosity=0):
 
 
 def write_params(filename, *args, **dicts):
-    """
-    Write parameters to file, so that it's readable by read_params.
+    """Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
     """
@@ -247,8 +242,7 @@ def write_params(filename, *args, **dicts):
 
 
 def get_params_from_list(params_list):
-    """
-    Transform params list to dictionary.
+    """Transform params list to dictionary.
     """
     params = {}
     for i in range(0, len(params_list)):
@@ -265,15 +259,14 @@ def get_params_from_list(params_list):
     return params
 
 
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Reading and Writing data files
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
               as_strings=False, backup_url='', reread=None):
-    """
-    Read file and return data dictionary.
+    """Read file and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
     it's not present yet.
@@ -327,7 +320,7 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         if sheet == '':
             return read_file_to_dict(filename, ext=sett.file_format_data)
         else:
-            sett.m(0, '... reading sheet', sheet, 'from file', filename)
+            logg.m('... reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
     # read other file formats
     filename_stripped = filename.lstrip('./')
@@ -358,8 +351,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                              as_strings=as_strings)
         elif ext in ['txt', 'tab', 'data']:
             if ext == 'data':
-                sett.m(0, '... assuming ".data" means tab or white-space separated text file')
-                sett.m(0, '--> change this by passing `ext` to sc.read')
+                logg.m('... assuming ".data" means tab or white-space separated text file')
+                logg.m('--> change this by passing `ext` to sc.read')
             ddata = read_txt(filename, delim, first_column_names,
                              as_strings=as_strings)
         elif ext == 'soft.gz':
@@ -383,7 +376,7 @@ def _read_mtx(filename, return_dict=True, dtype='float32'):
     X = mmread(filename).astype(dtype)
     from scipy.sparse import csr_matrix
     X = csr_matrix(X)
-    sett.m(0, '... did not find row_names or col_names')
+    logg.m('... did not find row_names or col_names')
     if return_dict:
         return {'X': X}
     else:
@@ -424,8 +417,7 @@ def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
 
 
 def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='float32', return_dict=True):
-    """
-    Return data as list of lists of strings and the header as string.
+    """Return data as list of lists of strings and the header as string.
 
     Parameters
     ----------
@@ -458,7 +450,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
             line_list = line.split(delim)
             if not is_float(line_list[0]):
                 col_names = line_list
-                sett.m(0, '... assuming first line in file stores column names')
+                logg.m('... assuming first line in file stores column names')
             else:
                 if not is_float(line_list[0]) or first_column_names:
                     first_column_names = True
@@ -470,11 +462,11 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
     if not col_names:
         # try reading col_names from the last comment line
         if len(header) > 0:
-            sett.m(0, '... assuming last comment line stores variable names')
+            logg.m('... assuming last comment line stores variable names')
             col_names = np.array(header.split('\n')[-2].strip('#').split())
         # just numbers as col_names
         else:
-            sett.m(0, '... did not find column names in file')
+            logg.m('... did not find column names in file')
             col_names = np.arange(len(data[0])).astype(str)
     col_names = np.array(col_names, dtype=str)
     # check if first column contains row names or not
@@ -483,7 +475,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
     for line in f:
         line_list = line.split(delim)
         if not is_float(line_list[0]) or first_column_names:
-            sett.m(0, '... assuming first column in file stores row names')
+            logg.m('... assuming first column in file stores row names')
             first_column_names = True
             row_names.append(line_list[0])
             data.append(line_list[1:])
@@ -498,18 +490,18 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
             data.append(line_list[1:])
         else:
             data.append(line_list)
-    sett.mt(0, 'read data into list of lists')
+    logg.m('... read data into list of lists', t=True)
     # transfrom to array, this takes a long time and a lot of memory
     # but it's actually the same thing as np.genfromtext does
     # - we don't use the latter as it would involve another slicing step
     #   in the end, to separate row_names from float data, slicing takes
     #   a lot of memory and cpu time
     data = np.array(data, dtype=dtype)
-    sett.mt(0, 'constructed array from list of list')
+    logg.m('... constructed array from list of list', t=True)
     # transform row_names
     if not row_names:
         row_names = np.arange(len(data)).astype(str)
-        sett.m(0, '... did not find row names in file')
+        logg.m('... did not find row names in file')
     else:
         row_names = np.array(row_names)
         for iname, name in enumerate(row_names):
@@ -526,8 +518,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
 
 
 def read_txt_as_strings(filename, delim):
-    """
-    Interpret list of lists as strings
+    """Interpret list of lists as strings
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     # just a plain loop is enough
@@ -544,7 +535,7 @@ def read_txt_as_strings(filename, delim):
         X = np.array(data).astype(str)
         col_names = None
         row_names = None
-        sett.m(0, '... the whole content of the file is in X')
+        logg.m('... the whole content of the file is in X')
     else:
         # strip quotation marks
         if data[0][0].startswith('"'):
@@ -557,16 +548,15 @@ def read_txt_as_strings(filename, delim):
         data = np.array(data[1:]).astype(str)
         row_names = data[:, 0]
         X = data[:, 1:]
-        sett.m(0, '... first row is stored in "col_names"')
-        sett.m(0, '... first column is stored in "row_names"')
-        sett.m(0, '... data is stored in X')
+        logg.m('... first row is stored in "col_names"')
+        logg.m('... first column is stored in "row_names"')
+        logg.m('... data is stored in X')
     ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
     return ddata
 
 
 def _read_hdf5_single(filename, key=''):
-    """
-    Read a single dataset from an hdf5 file.
+    """Read a single dataset from an hdf5 file.
 
     See also function read_file_to_dict(), which reads all keys of the hdf5 file.
 
@@ -613,7 +603,7 @@ def _read_hdf5_single(filename, key=''):
             else:
                 ddata[name] = np.arange(X.shape[0 if name == 'row_names' else 1])
                 if key == 'X':
-                    sett.m(0, 'did not find', name, 'in', filename)
+                    logg.m('did not find', name, 'in', filename)
             ddata[name] = ddata[name].astype(str)
             if X.ndim == 1:
                 break
@@ -621,8 +611,7 @@ def _read_hdf5_single(filename, key=''):
 
 
 def _read_excel(filename, sheet=''):
-    """
-    Read excel file and return data dictionary.
+    """Read excel file and return data dictionary.
 
     Parameters
     ----------
@@ -656,8 +645,7 @@ def _read_excel(filename, sheet=''):
 
 
 def _read_softgz(filename):
-    """
-    Read a SOFT format data file.
+    """Read a SOFT format data file.
 
     The SOFT format is documented here
     http://www.ncbi.nlm.nih.gov/geo/info/soft2.html.
@@ -734,9 +722,9 @@ def _read_softgz(filename):
     return ddata
 
 
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Reading and writing for dictionaries
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def read_file_to_dict(filename, ext='h5'):
@@ -819,7 +807,7 @@ def write_dict_to_file(filename, d, ext='h5'):
     filename = str(filename)  # allow passing pathlib.Path objects
     directory = os.path.dirname(filename)
     if not os.path.exists(directory):
-        sett.m(0, 'creating directory', directory + '/', 'for saving output files')
+        logg.m('creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
     if ext in {'h5', 'npz'}: logg.m('... writing', filename)
     d_write = {}
@@ -839,7 +827,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
-                    sett.m(0, 'Error creating dataset for key =', key)
+                    logg.m('Error creating dataset for key =', key)
                     raise e
     elif ext == 'npz':
         np.savez(filename, **d_write)
@@ -847,16 +835,20 @@ def write_dict_to_file(filename, d, ext='h5'):
         # here this is actually a directory that corresponds to the
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
-        sett.m(0, '... writing', ext, 'files to', dirname)
+        logg.m('... writing', ext, 'files to', dirname)
         if not os.path.exists(dirname): os.makedirs(dirname)
+        if not os.path.exists(dirname + 'add'): os.makedirs(dirname + 'add')
         from pandas import DataFrame
         for key, value in d_write.items():
-            filename = dirname + '/' + key + '.' + ext
+            filename = dirname
+            if key not in {'X', 'var', 'smp'}: filename += 'add/'
+            filename += key + '.' + ext
             if value.dtype.names is None:
-                if value.dtype.char == 'S':
-                    df = DataFrame(value.astype('U'))
-                else:
+                if value.dtype.char == 'S': value = value.astype('U')
+                try:
                     df = DataFrame(value)
+                except ValueError:
+                    continue
                 df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
                           header=False, index=False)
             else:
@@ -875,9 +867,9 @@ def write_dict_to_file(filename, d, ext='h5'):
                               index=False)
 
 
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Type conversion
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
 def save_sparse_csr(X, key='X'):
@@ -905,8 +897,7 @@ def load_sparse_csr(d, key='X'):
 
 
 def is_float(string):
-    """
-    Check whether string is float.
+    """Check whether string is float.
 
     See also
     --------
@@ -920,8 +911,7 @@ def is_float(string):
 
 
 def is_int(string):
-    """
-    Check whether string is integer.
+    """Check whether string is integer.
     """
     try:
         int(string)
@@ -931,8 +921,7 @@ def is_int(string):
 
 
 def convert_bool(string):
-    """
-    Check whether string is boolean.
+    """Check whether string is boolean.
     """
     if string == 'True':
         return True, True
@@ -943,8 +932,7 @@ def convert_bool(string):
 
 
 def convert_string(string):
-    """
-    Convert string to int, float or bool.
+    """Convert string to int, float or bool.
     """
     if is_int(string):
         return int(string)
@@ -958,7 +946,7 @@ def convert_string(string):
         return string
 
 
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Helper functions for reading and writing
 # -------------------------------------------------------------------------------
 
@@ -992,8 +980,7 @@ def get_filename_from_key(key, ext=None):
 
 
 def ddata_from_df(df):
-    """
-    Write pandas.dataframe to ddata dictionary.
+    """Write pandas.dataframe to ddata dictionary.
     """
     ddata = {
         'X': df.values[:, 1:].astype(float),
@@ -1009,8 +996,7 @@ def download_progress(count, blockSize, totalSize):
 
 
 def check_datafile_present(filename, backup_url=''):
-    """
-    Check whether the file is present, otherwise download.
+    """Check whether the file is present, otherwise download.
     """
     if filename.startswith('sim/'):
         if not os.path.exists(filename):
@@ -1018,7 +1004,6 @@ def check_datafile_present(filename, backup_url=''):
             print('file ' + filename + ' does not exist')
             print('you can produce the datafile by')
             sys.exit('running subcommand "sim ' + exkey + '"')
-
     if not os.path.exists(filename):
         if os.path.exists('../' + filename):
             # we are in a subdirectory of the scanpy repo
@@ -1027,16 +1012,15 @@ def check_datafile_present(filename, backup_url=''):
             # download the file
             if backup_url == '':
                 sys.exit('file ' + filename + ' does not exist')
-            sett.m(0, 'try downloading from url\n' + backup_url + '\n' +
+            logg.m('try downloading from url\n' + backup_url + '\n' +
                    '... this may take a while but only happens once')
             d = os.path.dirname(filename)
             if not os.path.exists(d):
-                sett.m(0, 'creating directory', d+'/', 'for saving data')
+                logg.m('creating directory', d+'/', 'for saving data')
                 os.makedirs(d)
             from .compat.urllib_request import urlretrieve
             urlretrieve(backup_url, filename, reporthook=download_progress)
-            sett.m(0, '')
-
+            logg.m('')
     return filename
 
 
@@ -1045,11 +1029,9 @@ def is_filename(filename_or_key, return_ext=False):
     for ext in avail_exts:
         l = len('.' + ext)
         # check whether it ends on the extension
-        if '.'+ext in filename_or_key[-l:]:
-            if return_ext:
-                return ext
-            else:
-                return True
+        if '.' + ext in filename_or_key[-l:]:
+            if return_ext: return ext
+            else: return True
     if return_ext:
         raise ValueError('"' + filename_or_key + '"'
                          + ' does not contain a valid extension\n'
