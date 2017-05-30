@@ -89,14 +89,14 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
-    if 'xroot' not in adata.add:
+    if 'xroot' not in adata.add and 'xroot' not in adata.var:
         msg = \
    '''DPT requires specifying the expression "xroot" of a root cell.
 
    Either
-       adata.add['xroot'] = adata.X[root_cell_index, :]
+       adata.var['xroot'] = adata.X[root_cell_index, :]
    where "root_cell_index" is the integer index of the root cell, or
-       adata.add['xroot'] = adata[root_cell_name, :].X
+       adata.var['xroot'] = adata[root_cell_name, :].X
    where "root_cell_name" is the name (a string) of the root cell.'''
         sys.exit(msg)
     if n_branchings == 0:

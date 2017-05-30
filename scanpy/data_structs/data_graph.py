@@ -59,7 +59,7 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
             result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
                 delayed(get_neighbors)(X[chunk], X, k) for chunk in chunks)
         else:
-            sett.m(0, '--> can be sped up by setting `n_jobs` > 1')
+            logg.m('--> can be sped up by setting `n_jobs` > 1')
         for i_chunk, chunk in enumerate(chunks):
             if n_jobs > 1:
                 indices_chunk, distances_chunk = result_lst[i_chunk]
@@ -151,40 +151,42 @@ class DataGraph(object):
             X = adata_or_X.X
         else:
             X = adata_or_X
+        # retrieve xroot
+        xroot = None
+        if 'xroot' in adata.add: xroot = adata.add['xroot']
+        elif 'xroot' in adata.var: xroot = adata.var['xroot']
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
             or X.shape[1] < self.n_pcs):
             self.X = X
-            sett.m(0, '... using X for building graph')
-            if isadata and 'xroot' in adata.add:
-                self.set_root(adata.add['xroot'])
+            logg.m('... using X for building graph')
+            if xroot is not None: self.set_root(xroot)
         # use the precomupted X_pca
         elif (isadata
               and 'X_pca' in adata.smp
               and adata.smp['X_pca'].shape[1] >= self.n_pcs):
-            sett.m(0, '... using X_pca for building graph')
-            if 'xroot' in adata.add and adata.add['xroot'].size == adata.X.shape[1]:
+            logg.m('... using X_pca for building graph')
+            if xroot is not None and xroot.size == adata.X.shape[1]:
                 self.X = adata.X
-                self.set_root(adata.add['xroot'])
+                self.set_root(xroot)
             self.X = adata.smp['X_pca'][:, :n_pcs]
-            if 'xroot' in adata.add and adata.add['xroot'].size == adata.smp['X_pca'].shape[1]:
-                self.set_root(adata.add['xroot'][:n_pcs])
+            if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
+                self.set_root(xroot[:n_pcs])
         # compute X_pca
         else:
             self.X = X
             if (isadata
-                and 'xroot' in adata.add
-                and adata.add['xroot'].size == adata.X.shape[1]):
-                self.set_root(adata.add['xroot'])
+                and xroot is not None
+                and xroot.size == adata.X.shape[1]):
+                self.set_root(xroot)
             from ..preprocessing import pca
             self.X = pca(X, n_comps=self.n_pcs)
             adata.smp['X_pca'] = self.X
-            if (isadata
-                and 'xroot' in adata.add and adata.add['xroot'].size == adata.smp['X_pca'].shape[1]):
-                self.set_root(adata.add['xroot'])
+            if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
+                self.set_root(xroot)
         self.Dchosen = None
         # use diffmap from previous calculation
         if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
-            sett.m(0, '... using `X_diffmap` for distance computations')
+            logg.m('... using `X_diffmap` for distance computations')
             self.X_diffmap = adata.smp['X_diffmap']
             self.evals = np.r_[1, adata.add['diffmap_evals']]
             self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
@@ -518,7 +520,7 @@ class DataGraph(object):
                 # self.M = filename
                 sett.mt(0, 'finished computation of M')
             else:
-                sett.m(0, 'not enough memory to compute M, using "on-the-fly" computation')
+                logg.m('not enough memory to compute M, using "on-the-fly" computation')
 
     def compute_Ddiff_matrix(self):
         """Returns the distance matrix in the Diffusion Pseudotime metric.
@@ -674,7 +676,7 @@ class DataGraph(object):
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2, 'root found at machine prec')
                     break
-        sett.m(0, '... set iroot', self.iroot)
+        logg.m('... set iroot', self.iroot)
         return self.iroot
 
     def _test_embed(self):

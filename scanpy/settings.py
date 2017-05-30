@@ -121,7 +121,7 @@ time since importing this module is output after leaving the session.
 If your progress bars are ugly, try changing the value.
 """
 
-_dpi = 200
+_dpi = 300
 """Resolution of png figures.
 
 We also need a global variable as, for example, Seaborn resets the rcParams.
@@ -148,8 +148,7 @@ def set_dpi(dots_per_inch=None):
     """
     from matplotlib import rcParams
     global _dpi
-    if dots_per_inch is not None:
-        _dpi = dots_per_inch
+    if dots_per_inch is not None: _dpi = dots_per_inch
     rcParams['savefig.dpi'] = _dpi
 
 

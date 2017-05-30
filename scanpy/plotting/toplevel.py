@@ -32,10 +32,16 @@ def savefig(writekey):
     filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
     ```
     """
+    if rcParams['savefig.dpi'] < 300:
+        dpi = 300
+        logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
+    else:
+        dpi = rcParams['savefig.dpi']
+    if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
     if sett.run_name != '': writekey = sett.run_name + '_' + writekey
     filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
     logg.m('... saving figure to file', filename)
-    pl.savefig(filename)
+    pl.savefig(filename, dpi=dpi)
     pl.close()  # clear figure
 
 
