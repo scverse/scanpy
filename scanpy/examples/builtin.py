@@ -138,10 +138,22 @@ def moignard15():
     adata.add['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
+
 moignard15_dbscan_params = {'eps': 3, 'min_samples': 30}
 moignard15_dpt_params = {'k': 5, 'knn': False}
 moignard15_diffmap_params = {'k': 5, 'knn': False}
 moignard15_paths_params = {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])}
+
+
+def moignard15_dpt(adata):
+    """Add some labeling information to DPT result.
+    """
+    sc.logg.m('... adding annotation for DPT groups')
+    if len(adata.add['dpt_groups_names']) > 1:
+        groups_names = ['undecided', 'endothelial',
+                        'erythrocytes', 'trunk']
+        adata.add['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
+    return adata
 
 
 def paul15():
@@ -204,14 +216,6 @@ toggleswitch_diffrank_params = {'log': False}
 #   steps, all of which require the same raw data, annotation, and
 #   postprocessing steps
 # --------------------------------------------------------------------------------
-
-
-def moignard15_dpt(adata):
-    if len(adata.add['dpt_groups_names']) > 1:
-        groups_names = ['trunk', 'undecided',
-                        'endothelial', 'erythrocytes']
-        adata.add['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
-    return adata
 
 
 def paul15_raw():

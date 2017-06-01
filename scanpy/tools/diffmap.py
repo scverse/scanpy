@@ -11,8 +11,8 @@ def diffmap(adata, n_comps=15, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
 
     Visualize data using Diffusion Maps.
 
-    Implements the modifications to diffusion map introduced by Haghverdi et
-    al. (2016).
+    Implements the crucial modifications to diffusion map introduced by
+    Haghverdi et al., Nature Methods (2016).
 
     References
     ----------

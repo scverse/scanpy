@@ -191,7 +191,7 @@ class DataGraph(object):
             self.evals = np.r_[1, adata.add['diffmap_evals']]
             self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
             self.lbasis = self.rbasis
-            self.Dsq = adata.add['distance']
+            if knn: self.Dsq = adata.add['distance']
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
         else:
@@ -202,7 +202,7 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
 
-    def diffmap(self, n_comps=15):
+    def diffmap(self, n_comps=10):
         """Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """

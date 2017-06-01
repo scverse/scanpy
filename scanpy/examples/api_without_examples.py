@@ -5,6 +5,9 @@
 from .. import settings
 sett = settings  # abbreviation
 """Settings"""
+from .. import logging
+logg = logging   # abbreviation
+"""Logging"""
 from .. import tools
 tl = tools       # abbreviation
 """Tools"""

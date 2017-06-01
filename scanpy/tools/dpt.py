@@ -10,7 +10,7 @@ from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
+def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
         allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False,
         flavor='haghverdi16', copy=False):
     """Diffusion Pseudotime
@@ -106,7 +106,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30,
               n_branchings=n_branchings, allow_branching_at_root=allow_branching_at_root,
               flavor=flavor)
     # diffusion map
-    ddmap = dpt.diffmap()
+    ddmap = dpt.diffmap(n_comps=n_dcs)
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
     # also store the 0th comp, which is skipped for plotting
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
