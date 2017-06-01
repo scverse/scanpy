@@ -25,6 +25,8 @@ with the top-level command `scanpy` on the command-line (more info on installati
 Then go through the use cases compiled in
 [scanpy_usage](https://github.com/theislab/scanpy_usage), in particular, the recent additions
 
+* 17-05-22 | [link](https://github.com/theislab/scanpy_usage/tree/master/170522_visualizing_one_million_cells) | Visualizing the [publicly available](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1M_neurons) 10X 1.3 mio brain cell data set using the command line.
+
 * 17-05-05 | [link](https://github.com/theislab/scanpy_usage/tree/master/170505_seurat) | We reproduce parts of the recent [Guided Clustering tutorial](http://satijalab.org/seurat/pbmc-tutorial.html) of [*Seurat*](http://satijalab.org/seurat/) [(Macosko *et al.*, Cell 2015)](https://doi.org/10.1016/j.cell.2015.05.002).
 
 * 17-05-03 | [link](https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17) | Analyzing 68 000 cells from [(Zheng *et al.*, Nat. Comms. 2017)](https://doi.org/10.1038/ncomms14049), we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the [*Cell Ranger*](https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis) R kit for secondary analysis. For large-scale data, this becomes crucial for an interactive analysis.
