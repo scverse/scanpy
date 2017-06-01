@@ -36,7 +36,7 @@ Then go through the use cases compiled in
 
 ## Features <a id="features"></a>
 
-We first give an [overview](#overview) of the toplevel user functions of `scanpy.api`, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1). For usage of the command-line interface, which is very similar to usage of the API, see this introductory [example](https://github.com/theislab/scanpy_usage/blob/master/EXAMPLES.md#moignard15).
+We first give an [overview](#overview) of the toplevel user functions of `scanpy.api`, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1). For usage of the command-line interface, which is parallels usage of the API, see this introductory [example](https://github.com/theislab/scanpy_usage/blob/master/170501_moignard15).
 
 ### Overview
 
