@@ -48,41 +48,37 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
     sett._run_basename = run_name
     sett._run_suffix = suffix
     sett.run_name = sett._run_basename + sett._run_suffix
-    if recompute:
-        # find and load the preprocessing function
-        loop_over_filenames = [filename for filename in os.listdir('.')
-                               if (filename.startswith('runs')
-                                   or filename.startswith('preprocessing')
-                                   or filename.startswith('scanpy'))
-                               and filename.endswith('.py')]
-        if len(loop_over_filenames) == 0:
-            logg.m('did not find user examples, to provide some,\n'
-                   '    generate a file preprocessing_whatevername.py in your working directory,\n'
-                   '    see https://github.com/theislab/scanpy#work-on-your-own-examples',
-                   v='hint')
-        not_found = True
-        sys.path.insert(0, '.')
-        for filename in loop_over_filenames:
-            exmodule = __import__(filename.replace('.py', ''))
-            try:
-                exfunc = getattr(exmodule, run_name)
-                not_found = False
-            except AttributeError:
-                pass
-        if not_found:
-            try:
-                exfunc = getattr(builtin, run_name)
-                exmodule = builtin
-            except AttributeError:
-                sys.exit('Do not know how to run example "{}".\nEither define a function {}() '
-                         'that returns an AnnData object in "./runfile_whatevername.py".\n'
-                         'Or, use one of the builtin examples:{}'
-                         .format(run_name, run_name, _run_names_str()))
     adata_file = readwrite.get_filename_from_key(sett.run_name)
     adata_file_exists = os.path.exists(adata_file)
-    if not adata_file_exists and not recompute:
-        sys.exit('Data file {} does not exist, set option `recompute` to `False`'
-                 .format(adata_file))
+    # find the runfile with preprocessing functions etc.
+    loop_over_filenames = [filename for filename in os.listdir('.')
+                           if (filename.startswith('runs')
+                               or filename.startswith('preprocessing')
+                               or filename.startswith('scanpy'))
+                           and filename.endswith('.py')]
+    if len(loop_over_filenames) == 0:
+        logg.m('did not find user examples, to provide some,\n'
+               '    generate a file preprocessing_whatevername.py in your working directory,\n'
+               '    see https://github.com/theislab/scanpy#work-on-your-own-examples',
+               v='hint')
+    not_found = True
+    sys.path.insert(0, '.')
+    for filename in loop_over_filenames:
+        exmodule = __import__(filename.replace('.py', ''))
+        try:
+            exfunc = getattr(exmodule, run_name)
+            not_found = False
+        except AttributeError:
+            pass
+    if not_found:
+        try:
+            exfunc = getattr(builtin, run_name)
+            exmodule = builtin
+        except AttributeError:
+            sys.exit('Do not know how to run example "{}".\nEither define a function {}() '
+                     'that returns an AnnData object in "./runfile_whatevername.py".\n'
+                     'Or, use one of the builtin examples:{}'
+                     .format(run_name, run_name, _run_names_str()))
     if not adata_file_exists or recompute or reread:
         logg.m('reading and preprocessing data')
         # run the function

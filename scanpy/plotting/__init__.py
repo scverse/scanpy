@@ -17,7 +17,6 @@ from .preprocessing import filter_genes_dispersion
 from . import utils
 from .. import settings as sett
 
-
 utils.init_plotting_params()
 
 
@@ -94,7 +93,7 @@ def pca_scatter(adata,
                   size=size,
                   titles=titles,
                   show=False)
-    savefig_or_show('pca_scatter')
+    savefig_or_show('pca_scatter', show=show)
     return axs
 
 
