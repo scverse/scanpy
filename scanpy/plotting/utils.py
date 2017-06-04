@@ -64,12 +64,9 @@ def init_plotting_params():
 
 
 def default_pal(pal=None):
-    if pal is None:
-        return rcParams['axes.prop_cycle']
-    elif not isinstance(pal, Cycler):
-        return cycler(color=pal)
-    else:
-        return pal
+    if pal is None: return rcParams['axes.prop_cycle']
+    elif not isinstance(pal, Cycler): return cycler(color=pal)
+    else: return pal
 
 
 def adjust_pal(pal, length):
@@ -94,6 +91,21 @@ def adjust_pal(pal, length):
         return cycler(color=pal)
     else:
         return pal
+
+
+def add_colors_for_categorical_sample_annotation(adata, key, pal=None):
+    if (key + '_colors' in adata.add
+        and len(adata.add[key + '_names']) > len(adata.add[key + '_colors'])):
+        logg.m('... number of defined colors does not match number of categories,'
+               ' using palette')
+    else:
+        logg.m('... generating colors for {} using palette'.format(key), v=4)
+    pal = default_pal(pal)
+    pal_adjusted = adjust_pal(pal, length=len(adata.add[key + '_names']))
+    adata.add[key + '_colors'] = pal_adjusted[:len(adata.add[key + '_names'])].by_key()['color']
+    if len(adata.add[key + '_names']) > len(adata.add[key + '_colors']):
+        raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
+                         .format(len(adata.add[key + '_colors']), key))
 
 
 def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
@@ -127,7 +139,6 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
 def scatter_base(Y,
                  colors='blue',
                  highlights=[],
-                 highlights_labels=[],
                  title='',
                  right_margin=None,
                  layout='2d',
@@ -156,6 +167,10 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
+    if isinstance(highlights, dict):
+        highlights_indices = sorted(highlights)
+        highlights_labels = [highlights[i] for i in highlights_indices]
+        higlights = highlights_indices
     from matplotlib import gridspec
     # if we have a single array, transform it into a list with a single array
     avail_layouts = {'2d', '3d'}
@@ -383,7 +398,63 @@ def scale_to_zero_one(x):
     return xscaled
 
 
-def zoom(ax,xy='x',factor=1):
+def hierarchy_pos(G, root, levels=None, width=1., height=1.):
+    """Tree layout for networkx graph.
+
+       See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
+       answer by burubum.
+
+       If there is a cycle that is reachable from root, then this will see
+       infinite recursion.
+
+       Parameters
+       ----------
+       G: the graph
+       root: the root node
+       levels: a dictionary
+               key: level number (starting from 0)
+               value: number of nodes in this level
+       width: horizontal space allocated for drawing
+       height: vertical space allocated for drawing
+    """
+    TOTAL = "total"
+    CURRENT = "current"
+    
+    def make_levels(levels, node=root, currentLevel=0, parent=None):
+        """Compute the number of nodes for each level
+        """
+        if currentLevel not in levels:
+            levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
+        levels[currentLevel][TOTAL] += 1
+        neighbors = G.neighbors(node)
+        if parent is not None:
+            neighbors.remove(parent)
+        for neighbor in neighbors:
+            levels = make_levels(levels, neighbor, currentLevel + 1, node)
+        return levels
+
+    def make_pos(pos, node=root, currentLevel=0, parent=None, vert_loc=0):
+        dx = 1/levels[currentLevel][TOTAL]
+        left = dx/2
+        pos[node] = ((left + dx*levels[currentLevel][CURRENT])*width,
+                     vert_loc)
+        levels[currentLevel][CURRENT] += 1
+        neighbors = G.neighbors(node)
+        if parent is not None:
+            neighbors.remove(parent)
+        for neighbor in neighbors:
+            pos = make_pos(pos, neighbor, currentLevel + 1, node, vert_loc-vert_gap)
+        return pos
+    
+    if levels is None:
+        levels = make_levels({})
+    else:
+        levels = {l: {TOTAL: levels[l], CURRENT: 0} for l in levels}
+    vert_gap = height / (max([l for l in levels])+1)
+    return make_pos({})
+
+
+def zoom(ax, xy='x', factor=1):
     """Zoom into axis.
 
     Parameters
@@ -398,7 +469,7 @@ def zoom(ax,xy='x',factor=1):
         ax.set_ylim(new_limits)
 
 
-def get_ax_size(ax,fig):
+def get_ax_size(ax, fig):
     """Get axis size
 
     Parameters
@@ -414,7 +485,7 @@ def get_ax_size(ax,fig):
     height *= fig.dpi
 
 
-def axis_to_data(ax,width):
+def axis_to_data(ax, width):
     """For a width in axis coordinates, return the corresponding in data
     coordinates.
 
@@ -432,7 +503,7 @@ def axis_to_data(ax,width):
     return 0.5*(widthx + widthy)
 
 
-def axis_to_data_points(ax,points_axis):
+def axis_to_data_points(ax, points_axis):
     """Map points in axis coordinates to data coordinates.
 
     Uses matplotlib.transform.

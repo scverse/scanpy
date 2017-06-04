@@ -7,8 +7,10 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 import warnings
 import numpy as np
 from ..compat.matplotlib import pyplot as pl
+from matplotlib.colors import is_color_like
 # general functions
 from .toplevel import scatter, violin
+from .toplevel import matrix
 from .toplevel import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .toplevel import ranking, ranking_deprecated
 from .toplevel import savefig, savefig_or_show
@@ -156,14 +158,12 @@ def diffmap(adata,
     from ..examples import check_adata
     adata = check_adata(adata)
     if comps == 'all':
-        comps_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i))) for i in range(1, 15)]
+        comps_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
+                      for i in range(1, adata.smp['X_diffmap'].shape[1])]
     else:
-        if comps is None:
-            comps = '1,2' if '2d' in layout else '1,2,3'
-        if not isinstance(comps, list):
-            comps_list = [comps]
-        else:
-            comps_list = comps
+        if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
+        if not isinstance(comps, list): comps_list = [comps]
+        else: comps_list = comps
     for comps in comps_list:
         axs = scatter(adata,
                       basis='diffmap',
@@ -384,7 +384,7 @@ def dpt(adata,
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    if 'dpt_groups' in colors: dpt_graph(adata)
+    if 'dpt_groups' in colors: dpt_tree(adata, show=False)
     dpt_timeseries(adata, cmap=cmap, show=show)
 
 
@@ -418,13 +418,15 @@ def dpt_scatter(adata,
             comps = '1,2' if '2d' in layout else '1,2,3'
         if not isinstance(comps, list): comps_list = [comps]
         else: comps_list = comps
-    adata.add['highlights'] = (list([adata.add['iroot']]))   # also plot the tip cell indices
-                               # + [adata.add['dpt_grouptips'][i][1]
-                               #    for i in range(len(adata.add['dpt_grouptips']))
-                               #    if adata.add['dpt_grouptips'][i][1] != -1])
-                               # + [adata.add['dpt_grouptips'][i][0]
-                               #    for i in range(len(adata.add['dpt_grouptips']))
-                               # if adata.add['dpt_grouptips'][i][1] != -1])
+    # adata.add['highlights'] = (
+    #    # list([adata.add['iroot']])
+    #    [i for g in adata.add['dpt_groupconnects'] for i in g])
+    #  + [adata.add['dpt_grouptips'][i][1]
+    #     for i in range(len(adata.add['dpt_grouptips']))
+    #     if adata.add['dpt_grouptips'][i][1] != -1])
+    #  + [adata.add['dpt_grouptips'][i][0]
+    #     for i in range(len(adata.add['dpt_grouptips']))
+    #  if adata.add['dpt_grouptips'][i][1] != -1])
     for comps in comps_list:
         axs = scatter(adata,
                       basis=basis,
@@ -442,22 +444,51 @@ def dpt_scatter(adata,
                       show=False)
         writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
+    show = sett.autoshow if show is None else show
+    if not sett.savefigs and show: pl.show()
 
 
-def dpt_graph(adata, colors=None, names=None):
+def dpt_tree(adata, root=None, colors=None, names=None, show=None, fontsize=None):
     # plot the tree
     import networkx as nx
-    pl.figure()
-    if colors is None: colors = adata.add['dpt_groups_colors']
+    if colors is None:
+        if ('dpt_groups_colors' not in adata.add
+            or len(adata.add['dpt_groups_names']) != len(adata.add['dpt_groups_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, 'dpt_groups')
+        colors = adata.add['dpt_groups_colors']
     else: colors = colors
+    if names is None:
+        names = {i: n for i, n in enumerate(adata.add['dpt_groups_names'])}
     for iname, name in enumerate(adata.add['dpt_groups_names']):
         if name in sett._ignore_categories: colors[iname] = 'grey'
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        nx.draw_spring(nx.Graph(adata.add['dpt_groups_adjacency']), labels=names,
-                       with_labels=True, node_color=colors)
-    if sett.savefigs: savefig('dpt_tree')
-
+    G = nx.Graph(adata.add['dpt_groups_adjacency'])
+    pos = utils.hierarchy_pos(G, root)
+    fig = pl.figure(figsize=(5, 5))
+    ax = pl.axes([0, 0, 1, 1], frameon=False)
+    nx.draw_networkx_edges(G, pos, ax=ax)
+    trans = ax.transData.transform
+    trans2 = fig.transFigure.inverted().transform
+    pl.xticks([])
+    pl.yticks([])
+    piesize = 1/G.number_of_nodes()
+    p2 = piesize/2.0
+    for n_cnt, n in enumerate(G):
+        xx, yy = trans(pos[n])     # figure coordinates
+        xa, ya = trans2((xx, yy))  # normalized coordinates
+        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
+        if is_color_like(colors[n_cnt]):
+            fracs = [100]
+            color = [colors[n_cnt]]
+        else:
+            color = colors[n_cnt].keys()
+            fracs = [colors[n_cnt][c] for c in color]
+        a.pie(fracs, colors=color)
+        a.text(0.5, 0.5, names[n_cnt],
+               verticalalignment='center',
+               horizontalalignment='center',
+               transform=a.transAxes, size=fontsize)
+    savefig_or_show('dpt_tree', show)
+    return ax
 
 def dpt_timeseries(adata, cmap=None, show=None):
     # plot segments and pseudotime

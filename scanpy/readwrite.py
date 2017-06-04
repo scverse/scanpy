@@ -761,10 +761,14 @@ def read_file_to_dict(filename, ext='h5'):
         for key, value in d_read.items():
             key, value = postprocess_reading(key, value)
             d[key] = value
-    if 'X_csr_data' in d:
-        d = load_sparse_csr(d, key='X')
-    if 'distance_csr_data' in d:
-        d = load_sparse_csr(d, key='distance')
+    csr_keys = [key.replace('_csr_data', '')
+                 for key in d if '_csr_data' in key]
+    for key in csr_keys:
+        d = load_sparse_csr(d, key=key)
+    # if 'X_csr_data' in d:
+    #     d = load_sparse_csr(d, key='X')
+    # if 'distance_csr_data' in d:
+    #     d = load_sparse_csr(d, key='distance')
     return d
 
 

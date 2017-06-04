@@ -280,7 +280,7 @@ def log1p(data, copy=False):
 
 
 def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
-        random_state=None, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
+        random_state=0, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
     """Embed data using PCA.
 
     Parameters
@@ -368,13 +368,13 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
                    'sparse input is densified and may '
                    'lead to huge memory consumption')
             X = X.toarray()
-        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver)
+        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
         logg.m('... without zero-centering: \n'
                '    the explained variance does not correspond to the exact statistical defintion\n'
                '    the first component, e.g., might be heavily influenced by different means\n'
                '    the following components often resemble the exact PCA very closely')
-        pca_ = TruncatedSVD(n_components=n_comps)
+        pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
     X_pca = pca_.fit_transform(X)
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
     if False if return_info is None else return_info:

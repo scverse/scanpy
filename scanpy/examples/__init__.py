@@ -3,7 +3,9 @@
 """
 
 import os, sys
+import numpy as np
 from . import builtin
+from ..utils import check_adata
 from .. import utils
 from .. import readwrite
 from .. import settings as sett
@@ -133,42 +135,6 @@ _howto_specify_subgroups = '''sample annotation in adata only consists of sample
 --> you can provide additional annotation by setting, for example,
     adata.smp['groups'] = ['A', 'B', 'A', ... ]
     adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
-
-
-def check_adata(adata, verbosity=0):
-    """Do sanity checks on adata object.
-
-    Checks whether adata contains annotation.
-    """
-    import numpy as np
-    if 'tools' not in adata.add:
-        adata.add['tools'] = np.array([], dtype=str)
-    if len(adata.smp_keys()) == 0:
-        sett.m(1-verbosity, _howto_specify_subgroups)
-    else:
-        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
-            info = 'sample annotation: '
-        for ismp, smp in enumerate(adata.smp_keys()):
-            # ordered unique categories for categorical annotation
-            if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                adata.add[smp + '_names'] = utils.unique_categories(adata.smp[smp])
-            if sett.verbosity > 1-verbosity:
-                info += '"' + smp + '" = '
-                if adata.smp[smp].dtype.char in {'U', 'S'}:
-                    ann_info = str(adata.add[smp + '_names'])
-                    if len(adata.add[smp + '_names']) > 7:
-                        ann_info = (str(adata.add[smp + '_names'][0:3]).replace(']', '')
-                                    + ' ...'
-                                    + str(adata.add[smp + '_names'][-2:]).replace('[', ''))
-                    info += ann_info
-                else:
-                    info += 'continuous'
-                if ismp < len(adata.smp_keys())-1:
-                    info += ', '
-        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
-            sett.m(1-verbosity, info)
-    return adata
-
 
 def _run_names_str():
     str = ''

@@ -137,7 +137,10 @@ class DataGraph(object):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=None, n_pcs=30, n_pcs_post=30,
-                 recompute_diffmap=None, flavor='haghverdi16'):
+                 recompute_pca=None,
+                 recompute_diffmap=None,
+                 flavor='haghverdi16'):
+        logg.m('initializing data graph')
         self.k = k
         self.knn = knn
         self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -162,6 +165,7 @@ class DataGraph(object):
             if xroot is not None: self.set_root(xroot)
         # use the precomupted X_pca
         elif (isadata
+              and not recompute_pca
               and 'X_pca' in adata.smp
               and adata.smp['X_pca'].shape[1] >= self.n_pcs):
             logg.m('... using X_pca for building graph')
@@ -178,9 +182,10 @@ class DataGraph(object):
                 and xroot is not None
                 and xroot.size == adata.X.shape[1]):
                 self.set_root(xroot)
+            logg.m('... compute X_pca for building graph')
             from ..preprocessing import pca
-            self.X = pca(X, n_comps=self.n_pcs)
-            adata.smp['X_pca'] = self.X
+            pca(adata, n_comps=self.n_pcs)
+            self.X = adata.smp['X_pca']
             if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
                 self.set_root(xroot)
         self.Dchosen = None

@@ -42,6 +42,8 @@ def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
         global_v = sett.verbosity
     if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
+    if v >= 4:
+        msg = ('   ',) + msg
     if v <= global_v:
         if not t and not m and len(msg) > 0:
             sett.mi(*msg, end=end)
@@ -88,6 +90,11 @@ def format_memory_usage(mem_usage, msg='', newline=False):
 def print_memory_usage(msg='', newline=False):
     string = format_memory_usage(get_memory_usage(), msg, newline)
     sett.mi(string)
+
+
+def print_version_and_date():
+    from . import __version__
+    sett.mi('Running Scanpy version', __version__, 'on {}.'.format(get_date()))
 
 
 def get_date():

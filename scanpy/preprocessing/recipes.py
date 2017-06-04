@@ -8,9 +8,10 @@ from . import simple as pp
 
 
 def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
-              n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
-    """
-    Normalization and filtering as of Weinreb et al. (2016).
+                     n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
+    """Normalization and filtering as of Weinreb et al. (2016).
+
+    This is deprecated and only remains here for backwards compatibility.
 
     Parameters
     ----------
@@ -55,7 +56,9 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
 weinreb16 = recipe_weinreb16
 
 
-def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, copy=False):
+def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=True, copy=False):
+    """Normalization and filtering as of Zheng et al. (2017).
+    """
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
     pp.normalize_per_cell(adata)          # normalize with total UMI count per cell
@@ -63,8 +66,9 @@ def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, copy=False):
                                                flavor='cell_ranger',
                                                n_top_genes=n_top_genes,
                                                log=False)
-    from .. import plotting as pl  # cannot import at the top
-    pl.filter_genes_dispersion(filter_result, log=True)
+    if plot:
+        from .. import plotting as pl  # should not import at the top of the file
+        pl.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter.gene_subset]
     adata.inplace_subset_var(filter_result.gene_subset)  # filter genes

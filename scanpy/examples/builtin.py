@@ -120,8 +120,8 @@ def moignard15():
     Nature Biotechnology 33, 269 (2015)
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
-    url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
-    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=url)
+    backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
+    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset]  # retain non-removed genes
@@ -169,7 +169,7 @@ def paul15():
     Cell 163, 1663 (2015)
     """
     adata = paul15_raw()
-    adata.X = sc.pp.log1p(adata.X)
+    sc.pp.log1p(adata)
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
@@ -184,7 +184,7 @@ def paul15pca():
     """Same as paul15.
     """
     adata = paul15_raw()
-    adata.X = sc.pp.log1p(adata.X)
+    sc.pp.log1p(adata)
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
@@ -194,36 +194,11 @@ paul15pca_diffrank_params = {'log': False, 'names': 'GMP,MEP'}
 paul15pca_tgdyn_params = {'names': 'GMP,MEP'}
 
 
-def toggleswitch():
-    """Simple toggleswitch from simulated data.
-
-    Simulate the data by running "scanpy toggleswitch sim" on the command line.
-    """
-    filename = 'write/toggleswitch_sim/sim_000000.txt'
-    adata = sc.read(filename, first_column_names=True)
-    adata.add['xroot'] = adata.X[0]
-    return adata
-
-toggleswitch_dpt_params = {'k': 5, 'knn': False}
-toggleswitch_diffmap_params = toggleswitch_dpt_params
-toggleswitch_paths_params = {'fates': odict([('0', 95), ('1', 189)])}
-toggleswitch_diffrank_params = {'log': False}
-
-
-# --------------------------------------------------------------------------------
-# Optional functions for reading Raw Data and Postprocessing, respectively
-# - this is useful, if one wants to experiment with different preprocessing
-#   steps, all of which require the same raw data, annotation, and
-#   postprocessing steps
-# --------------------------------------------------------------------------------
-
-
 def paul15_raw():
     filename = 'data/paul15/paul15.h5'
-    url = 'http://falexwolf.de/data/paul15.h5'
-    adata = sc.read(filename, 'data.debatched', backup_url=url)
-    # the data has to be transposed (in the hdf5 and R files, each row
-    # corresponds to one gene, we use the opposite convention)
+    backup_url = 'http://falexwolf.de/data/paul15.h5'
+    adata = sc.read(filename, 'data.debatched', backup_url=backup_url)
+    # each row has to correspond to a sample, therefore transpose
     adata = adata.transpose()
     # cluster assocations identified by Paul et al.
     # groups = sc.read(filename, 'cluster.id', return_dict=True)['X']
@@ -246,3 +221,19 @@ def paul15_dpt(adata):
 
 def paul15pca_dpt(adata):
     adata.add['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
+
+
+def toggleswitch():
+    """Simple toggleswitch from simulated data.
+
+    Simulate the data by running "scanpy toggleswitch sim" on the command line.
+    """
+    filename = 'write/toggleswitch_sim/sim_000000.txt'
+    adata = sc.read(filename, first_column_names=True)
+    adata.add['xroot'] = adata.X[0]
+    return adata
+
+toggleswitch_dpt_params = {'k': 5, 'knn': False}
+toggleswitch_diffmap_params = toggleswitch_dpt_params
+toggleswitch_paths_params = {'fates': odict([('0', 95), ('1', 189)])}
+toggleswitch_diffrank_params = {'log': False}

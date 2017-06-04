@@ -14,7 +14,8 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 
 
-def identify_categories(adata, predicted, reference):
+def identify_categories(adata, predicted, reference, normalization='reference',
+                        threshold=0.01, max_number=None):
     """Identify predicted categories with reference.
 
     Parameters
@@ -27,28 +28,46 @@ def identify_categories(adata, predicted, reference):
 
     Returns
     -------
-    d : dict with keys the predicted labels
-    contained_matrix : matrix where rows correspond to the predicted labels and
-        columns to the reference labels
+    asso_matrix : matrix where rows correspond to the predicted labels and
+        columns to the reference labels, entries are proportional to degree of
+        association
     """
-    d = {}
-    contained_matrix = []
-    for pred_group in adata.add[predicted + '_names']:
-        if pred_group != '?':
-            mask_pred = adata.smp[predicted] == pred_group
-            contained_matrix += [[]]
-            ratio_contained_max = 0
-            for ref_group in adata.add[reference + '_names']:
-                if ref_group != '?':
-                    mask_ref = adata.smp[reference] == ref_group
-                    mask_ref[mask_pred] = True  # if the pred group is contained in mask_ref, this will not affect mask_ref
-                    # compute the contained ratio, that is, which fraction of the PRED group is contained in the ref group
-                    ratio_contained = (np.sum(mask_pred) - np.sum(mask_ref - (adata.smp[reference] == ref_group))) / np.sum(mask_pred)
-                    contained_matrix[-1] += [ratio_contained]
-                    if ratio_contained > ratio_contained_max:
-                        d[pred_group] = ref_group
-                        ratio_contained_max = ratio_contained
-    return d, np.array(contained_matrix)
+    check_adata(adata)
+    asso_names = []
+    asso_matrix = []
+    for ipred_group, pred_group in enumerate(adata.add[predicted + '_names']):
+        if '?' in pred_group: pred_group = str(ipred_group)
+        mask_pred = adata.smp[predicted] == pred_group
+        asso_matrix += [[]]
+        for ref_group in adata.add[reference + '_names']:
+            mask_ref = adata.smp[reference] == ref_group
+            mask_ref_or_pred = mask_ref.copy()
+            mask_ref_or_pred[mask_pred] = True
+            # e.g. if the pred group is contained in mask_ref, mask_ref and
+            # mask_ref_or_pred are the same
+            if normalization == 'predicted':
+                # compute which fraction of the predicted group is contained in
+                # the ref group
+                ratio_contained = (np.sum(mask_pred) -
+                    np.sum(mask_ref_or_pred - mask_ref)) / np.sum(mask_pred)
+            else:
+                # compute which fraction of the reference group is contained in
+                # the predicted group
+                ratio_contained = (np.sum(mask_ref) -
+                    np.sum(mask_ref_or_pred - mask_pred)) / np.sum(mask_ref)
+            asso_matrix[-1] += [ratio_contained]
+        asso_names += [','.join([adata.add[reference + '_names'][i]
+                                 for i in np.argsort(asso_matrix[-1])[::-1]
+                                 if asso_matrix[-1][i] > threshold][:max_number])]
+    return asso_names, np.array(asso_matrix)
+
+
+def plot_category_association(adata, predicted, reference, asso_matrix):
+    pl.figure(figsize=(5, 5))
+    pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
+    pl.xticks(range(len(adata.add[reference + '_names'])), adata.add[reference + '_names'], rotation='vertical')
+    pl.yticks(range(len(adata.add[predicted + '_names'])), adata.add[predicted + '_names'])
+    pl.colorbar()
 
 
 def unique_categories(categories):
@@ -76,6 +95,38 @@ def fill_in_datakeys(example_parameters, dexdata):
             else:
                 example_parameters[exkey]['datakey'] = 'unspecified in dexdata'
     return example_parameters
+
+
+def check_adata(adata, verbosity=-3):
+    """Do sanity checks on adata object.
+
+    Checks whether adata contains annotation.
+    """
+    if len(adata.smp_keys()) == 0:
+        sett.m(1-verbosity, _howto_specify_subgroups)
+    else:
+        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
+            info = 'sample annotation: '
+        for ismp, smp in enumerate(adata.smp_keys()):
+            # ordered unique categories for categorical annotation
+            if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
+                adata.add[smp + '_names'] = unique_categories(adata.smp[smp])
+            if sett.verbosity > 1-verbosity:
+                info += '"' + smp + '" = '
+                if adata.smp[smp].dtype.char in {'U', 'S'}:
+                    ann_info = str(adata.add[smp + '_names'])
+                    if len(adata.add[smp + '_names']) > 7:
+                        ann_info = (str(adata.add[smp + '_names'][0:3]).replace(']', '')
+                                    + ' ...'
+                                    + str(adata.add[smp + '_names'][-2:]).replace('[', ''))
+                    info += ann_info
+                else:
+                    info += 'continuous'
+                if ismp < len(adata.smp_keys())-1:
+                    info += ', '
+        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
+            sett.m(1-verbosity, info)
+    return adata
 
 
 # --------------------------------------------------------------------------------
@@ -425,80 +476,3 @@ def hierarch_cluster(M):
         pl.matshow(Mclus)
         pl.colorbar()
     return Mclus, indices
-
-
-def check_datafile_deprecated(filename, ext=None):
-    """Check whether the file is present and is not just a placeholder.
-
-    If the file is not present at all, look for a file with the same name but
-    ending on '_url.txt', and try to download the datafile from there.
-
-    If the file size is below 500 Bytes, assume the file is just a placeholder
-    for a link to github. Download from github in this case.
-    """
-    if filename.startswith('sim/'):
-        if not os.path.exists(filename):
-            exkey = filename.split('/')[1]
-            print('file ' + filename + ' does not exist')
-            print('you can produce the datafile by')
-            exit('running subcommand "sim ' + exkey + '"')
-    if ext is None:
-        _, ext = os.path.splitext()
-    if ext.startswith('.'):
-        ext = ext[1:]
-    if not os.path.exists(filename) and not os.path.exists('../'+filename):
-        basename = filename.replace('.'+ext,'')
-        urlfilename = basename + '_url.txt'
-        if not os.path.exists(urlfilename):
-            urlfilename = '../' + urlfilename
-        if not os.path.exists(urlfilename):
-            raise ValueError('Neither ' + filename +
-                             ' nor ../' + filename +
-                             ' nor files with a url to download from exist \n' +
-                             '--> move your data file to one of these places \n' +
-                             '    or cd/browse into scanpy root directory.')
-        with open(urlfilename) as f:
-            url = f.readline().strip()
-        sett.m(0,'data file is not present \n' +
-              'try downloading data file from url \n' + url + '\n' +
-              '... this may take a while but only happens once')
-        # download the file
-        urlretrieve(url,filename,reporthook=download_progress)
-        sett.m(0,'')
-
-    rel_filename = filename
-    if not os.path.exists(filename):
-        rel_filename = '../' + filename
-
-    # if file is smaller than 500 Bytes = 0.5 KB
-    threshold = 500
-    if os.path.getsize(rel_filename) < threshold:
-        # download the file
-        # note that this has 'raw' in the address
-        github_baseurl = r'https://github.com/theislab/scanpy/raw/master/'
-        fileurl = github_baseurl + filename
-        sett.m(0,'size of file',rel_filename,'is below',threshold/1000.,' kilobytes')
-        sett.m(0,'--> presumably is a placeholder for a git-lfs file')
-        sett.m(0,'... if you installed git-lfs, you can use \'git lfs checkout\'')
-        sett.m(0,'... to update all files with their actual content')
-        sett.m(0,'--> downloading data file from github using url')
-        sett.m(0,fileurl)
-        sett.m(0,'... this may take a while but only happens once')
-        # make a backup of the small file
-        from shutil import move
-        basename = rel_filename.replace('.'+ext,'')
-        move(rel_filename,basename+'_placeholder.txt')
-        # download the file
-        try:
-            urlretrieve(fileurl,rel_filename,reporthook=download_progress)
-            sett.m(0,'')
-        except Exception as e:
-            sett.m(0,e)
-            sett.m(0,'when calling urlretrieve() in module scanpy.utils.utils')
-            sett.m(0,'--> is the github repo/url private?')
-            sett.m(0,'--> if you have access, manually download the file')
-            sett.m(0,fileurl)
-            sett.m(0,'replace the small file',rel_filename,'with the downloaded file')
-            quit()
-
-    return rel_filename

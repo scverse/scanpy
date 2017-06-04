@@ -56,6 +56,18 @@ def savefig_or_show(writekey, show=None):
 # -------------------------------------------------------------------------------
 
 
+def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
+           cmap='Greys'):
+    fig = pl.figure(figsize=(5, 5))
+    pl.imshow(matrix, cmap=cmap)
+    if xlabels is not None:
+        pl.xticks(range(len(xlabels)), xlabels, rotation='vertical')
+    if ylabels is not None:
+        pl.yticks(range(len(ylabels)), ylabels)
+    pl.colorbar(shrink=cshrink)
+    pl.show()
+
+
 def violin(adata, smp, jitter=True, size=1, color='black', show=None):
     """Violin plot.
 
@@ -258,21 +270,9 @@ def scatter(adata,
 
     for icolor_key in categoricals:
         color_key = color_keys[icolor_key]
-        if (color_key != 'groups' and 'groups_names' in adata.add
-            and len(np.setdiff1d(adata.add['groups_names'], adata.add[color_key + '_names']))
-                < len(adata.add['groups_names'])):
-            # if there is a correspondence between color_key and the 'groups' defined
-            # in adata, that is, if color_key has corresponding categories with those
-            # in adata.add['groups_names']
-            adata.add[color_key + '_colors'] = pal[:len(adata.add['groups_names'])].by_key()['color']
-        elif not color_key + '_colors' in adata.add or not pal_was_none:
-            pal = utils.adjust_pal(pal, length=len(adata.add[color_key + '_names']))
-            adata.add[color_key + '_colors'] = pal[:len(adata.add[color_key + '_names'])].by_key()['color']
-        if len(adata.add[color_key + '_names']) > len(adata.add[color_key + '_colors']):
-            logg.m('... number of categories/names in',
-                   color_key, 'so large that color map "jet" is used')
-            adata.add[color_key + '_colors'] = pl.cm.get_cmap(cmap)(
-                pl.Normalize()(np.arange(len(adata.add[color_key + '_names']), dtype=int)))
+        if (not color_key + '_colors' in adata.add or not pal_was_none
+            or len(adata.add[color_key + '_names']) != len(adata.add[color_key + '_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, color_key, pal)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         if names is None:
@@ -298,14 +298,15 @@ def scatter(adata,
             axs[icolor_key].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
         if legendloc == 'right margin':
-            legend = axs[icolor_key].legend(frameon=False, loc='center left', bbox_to_anchor=(1, 0.5))
+            legend = axs[icolor_key].legend(frameon=False, loc='center left',
+                                            bbox_to_anchor=(1, 0.5),
+                                            ncol=2 if len(adata.add[color_key + '_names']) > 14 else 1)
         elif legendloc != 'none':
             legend = axs[icolor_key].legend(frameon=False, loc=legendloc)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     if show: pl.show()
     return axs
-
 
 def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
     """Plot rankings.
