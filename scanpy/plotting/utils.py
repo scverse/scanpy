@@ -11,14 +11,32 @@ from cycler import Cycler, cycler
 
 # color palette (is default in matplotlib 2.0 anyway)
 # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-pal_20 = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-          '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
-          '#bcbd22', '#17becf',
-          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-          '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
-          '#dbdb8d', '#9edae5',
-          '#ad494a', '8c6d31']  # manual additions
+pal_20_vega = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+    '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
+    '#bcbd22', '#17becf',
+    '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
+    '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
+    '#dbdb8d', '#9edae5',
+    '#ad494a', '8c6d31']  # manual additions
+pal_20 = pal_20_vega
 
+# from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
+pal_64_godsnot = [
+    "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+    "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
+    "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
+    "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
+    "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
+    "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
+    "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
+    "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
+    "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
+    "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
+    "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
+    "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
+    "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
+pal_64 = pal_64_godsnot
 
 def init_plotting_params():
     """Init default plotting parameters.
@@ -71,20 +89,7 @@ def default_pal(pal=None):
 
 def adjust_pal(pal, length):
     if len(pal.by_key()['color']) < length:
-        # from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
-        color = ["#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
-                 "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
-                 "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
-                 "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
-                 "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
-                 "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
-                 "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
-                 "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
-                 "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
-                 "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
-                 "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
-                 "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
-                 "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
+        pal = pal_64
         logg.m('... updating the color palette to 64 maximally distinct colors')
         return cycler(color=color)
     elif not isinstance(pal, Cycler):
@@ -171,6 +176,8 @@ def scatter_base(Y,
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
         higlights = highlights_indices
+    else:
+        highlights_labels = []
     from matplotlib import gridspec
     # if we have a single array, transform it into a list with a single array
     avail_layouts = {'2d', '3d'}
@@ -419,7 +426,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
     """
     TOTAL = "total"
     CURRENT = "current"
-    
+
     def make_levels(levels, node=root, currentLevel=0, parent=None):
         """Compute the number of nodes for each level
         """
@@ -445,7 +452,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
         for neighbor in neighbors:
             pos = make_pos(pos, neighbor, currentLevel + 1, node, vert_loc-vert_gap)
         return pos
-    
+
     if levels is None:
         levels = make_levels({})
     else:
