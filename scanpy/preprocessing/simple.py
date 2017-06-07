@@ -484,34 +484,56 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
 
     Parameters
     ----------
+    adata : AnnData
+        The annotated data matrix.
+    smp_keys : str or list of strings
+        Sample annotation on which to regress on.
+    n_jobs : int
+        Number of jobs for parallel computation.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
-    sett.mt(0, 'regress out', smp_keys, start=True)
+    logg.m('regress out', smp_keys, r=True)
     if issparse(adata.X):
-        sett.m(0, '... sparse input is densified and may '
+        logg.m('... sparse input is densified and may '
                'lead to huge memory consumption')
     if not copy:
-        sett.m(0, '... note that this is an inplace computation '
+        logg.m('... note that this is an inplace computation '
                'and will return None, set copy true if you want a copy')
     adata = adata.copy() if copy else adata
+    if isinstance(smp_keys, str): smp_keys = [smp_keys]
+    if issparse(adata.X):
+        adata.X = adata.X.toarray()
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-    # the code here can still be much optimized
-    regressors = np.array([adata.smp[key] for key in smp_keys]).T
+    # regress on categorical variable
+    if adata.smp[smp_keys[0]].dtype.char == np.dtype('U').char:
+        if len(smp_keys) > 1:
+            raise ValueError(
+                'If providing categorical variable, '
+                'only a single one is allowed. For this one '
+                'the mean is computed for each variable/gene.')
+        logg.m('... regressing on per-gene means within categories')
+        unique_categories = np.unique(adata.smp[smp_keys[0]])
+        regressors = np.zeros(adata.X.shape, dtype='float32')
+        for category in unique_categories:
+            mask = category == adata.smp[smp_keys[0]]
+            for ix, x in enumerate(adata.X.T):
+                regressors[mask, ix] = x[mask].mean()
+    # regress on one or several ordinal variables
+    else:
+        regressors = np.array([adata.smp[key] for key in smp_keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
     chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
               for start in range(0, n_chunks * len_chunk, len_chunk)]
-    if issparse(adata.X):
-        adata.X = adata.X.toarray()
-    if sett.is_interactive:
+    if sett.is_run_from_ipython:
         from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
         # tqdm = lambda x: x
         # from tqdm import tqdm
         # sett.m(1, 'TODO: get nice waitbars also in interactive mode')
-        # sett.m(0, '... nicer progress bars as on command line come soon')
+        # logg.m('... nicer progress bars as on command line come soon')
     else:
         from tqdm import tqdm
     for chunk in tqdm(chunks):
@@ -520,7 +542,7 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
                 col_index, adata.X, regressors) for col_index in chunk)
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    sett.mt(0, 'finished')
+    logg.m('finished', t=True)
     return adata if copy else None
 
 
@@ -625,8 +647,12 @@ def zscore_deprecated(X):
 
 def _regress_out(col_index, responses, regressors):
     try:
+        if regressors.shape[1] - 1 == responses.shape[1]:
+            regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
+        else:
+            regressors_view = regressors
         result = sm.GLM(responses[:, col_index],
-                        regressors, family=sm.families.Gaussian()).fit()
+                        regressors_view, family=sm.families.Gaussian()).fit()
         new_column = result.resid_response
     except PerfectSeparationError:  # this emulates R's behavior
         logg.m('warning: encountered PerfectSeparationError, setting to zero',

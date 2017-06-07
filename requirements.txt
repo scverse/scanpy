@@ -20,3 +20,5 @@ natsort
 joblib
 # profiling
 profilehooks
+# progress bars
+tqdm

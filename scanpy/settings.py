@@ -110,16 +110,26 @@ n_jobs = 2
 logfile = ''
 """Name of logfile. By default is set to '' and writes to standard output."""
 
-# not sure what's the better method to choose
 import __main__ as main
-is_interactive = not hasattr(main, '__file__')
-"""Determines whether run interactively.
+is_run_from_file = not hasattr(main, '__file__')
+"""Determines whether run from file.
 
-Currently only affects the style of progress bars and whether total computation
+Currently only affects whether total computation
 time since importing this module is output after leaving the session.
-
-If your progress bars are ugly, try changing the value.
 """
+
+def _is_run_from_ipython():
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False
+"""Determines whether run from Ipython.
+
+Only affects progress bars
+"""
+is_run_from_ipython = _is_run_from_ipython()
+
 
 _dpi = 300
 """Resolution of png figures.
@@ -418,5 +428,5 @@ def _terminate():
 
 
 # report total runtime upon shutdown
-if not is_interactive:
+if not is_run_from_file:
     atexit.register(_terminate)
