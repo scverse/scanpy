@@ -22,3 +22,5 @@ joblib
 profilehooks
 # progress bars
 tqdm
+# extensions (also needed if installing cython compiled .c files)
+cython
