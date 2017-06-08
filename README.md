@@ -258,13 +258,13 @@ http://dx.doi.org/10.1038/nbt.2594).
 Angerer *et al.* (2015),
 *destiny - diffusion maps for large-scale single-cell data in R*,
 [Bioinformatics 32, 1241](
-http://dx.doi.org/10.1038/nmeth.3971).
+ https://doi.org/10.1093/bioinformatics/btv715).
 
 <a id="ref_coifman05"></a>
 Coifman *et al.* (2005),
 *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
 [PNAS 102, 7426](
-http://dx.doi.org/10.1038/nmeth.3971).
+http://www.pnas.org/content/102/21/7432.full).
 
 <a id="ref_ester96"></a>
 Ester *et al.* (1996),
