@@ -87,13 +87,12 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     key = filename_or_key
     filename = sett.writedir + key + '.' + sett.file_format_data
     if not os.path.exists(filename):
-        raise ValueError('Reading with key ' + key + ' failed! ' +
-                         'Provide valid key or valid filename directly: ' +
-                         'inferred filename ' + filename + ' does not exist.\n' +
-                         'If you intended to provide a filename, either ' +
-                         'use a filename on one of the available extensions\n' +
-                         str(avail_exts) +
-                         '\nor provide the parameter "ext" to sc.read.')
+        raise ValueError('Reading with key "{}" failed, the '
+                         'inferred filename "{}" does not exist. '
+                         'If you intended to provide a filename, either '
+                         'use a filename ending on one of the available extensions {} '
+                         'or pass the parameter `ext`.'
+                         .format(key, filename, avail_exts))
     d = read_file_to_dict(filename, ext=sett.file_format_data)
     if return_dict: return d
     else: return AnnData(d)

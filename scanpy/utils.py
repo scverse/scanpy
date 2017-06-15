@@ -97,6 +97,12 @@ def fill_in_datakeys(example_parameters, dexdata):
     return example_parameters
 
 
+_howto_specify_subgroups = '''sample annotation in adata only consists of sample names
+--> you can provide additional annotation by setting, for example,
+    adata.smp['groups'] = ['A', 'B', 'A', ... ]
+    adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
+
+
 def check_adata(adata, verbosity=-3):
     """Do sanity checks on adata object.
 

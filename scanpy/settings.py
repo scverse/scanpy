@@ -141,6 +141,10 @@ _ignore_categories = ['N/A', 'dontknow', 'no_gate', '?']
 """Categories that are omitted in plotting etc.
 """
 
+_low_resolution_warning = True
+"""Print warning when saving a figure with low resolution."""
+
+
 # --------------------------------------------------------------------------------
 # Global Setting Functions
 # --------------------------------------------------------------------------------

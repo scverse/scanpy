@@ -448,7 +448,7 @@ def dpt_scatter(adata,
     if not sett.savefigs and show: pl.show()
 
 
-def dpt_tree(adata, root=None, colors=None, names=None, show=None, fontsize=None):
+def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     # plot the tree
     import networkx as nx
     if colors is None:
@@ -463,14 +463,15 @@ def dpt_tree(adata, root=None, colors=None, names=None, show=None, fontsize=None
         if name in sett._ignore_categories: colors[iname] = 'grey'
     G = nx.Graph(adata.add['dpt_groups_adjacency'])
     pos = utils.hierarchy_pos(G, root)
-    fig = pl.figure(figsize=(5, 5))
-    ax = pl.axes([0, 0, 1, 1], frameon=False)
+    if len(pos) == 1: pos[0] = 0.5, 0.5
+    fig = pl.figure()
+    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
     nx.draw_networkx_edges(G, pos, ax=ax)
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
     pl.yticks([])
-    piesize = 1/G.number_of_nodes()
+    piesize = 1/(G.number_of_nodes() + 1)
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
         xx, yy = trans(pos[n])     # figure coordinates
@@ -501,7 +502,7 @@ def dpt_timeseries(adata, cmap=None, show=None):
             timeseries(adata.X[adata.smp['dpt_order']],
                              varnames=adata.var_names,
                              highlightsX=adata.add['dpt_changepoints'],
-                             xlim=[0, 1.3*X.shape[0]])
+                             xlim=[0, 1.3*adata.X.shape[0]])
             pl.xlabel('dpt order')
             if sett.savefigs: savefig('dpt_vsorder')
         elif adata.X.shape[1] < 50:

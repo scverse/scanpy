@@ -11,11 +11,15 @@ from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
+        min_group_size=50,
         allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='haghverdi16', copy=False):
-    """Hierarchical Diffusion Pseudotime
+    """Hierarchical Diffusion Pseudotime.
 
-    Infer progression of cells, identify branching subgroups.
+    Infer progression of cells, identify tree of branching subgroups.
+
+    This is an extension of Haghverdi et al., (2016) that is able to resolve
+    multi-branching events.
 
     Reference
     ---------
@@ -91,19 +95,24 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
+    root_cell_was_passed = True
     if 'xroot' not in adata.add and 'xroot' not in adata.var:
+        root_cell_was_passed = False
+        logg.m('... no root cell found, no computation of pseudotime')
         msg = \
-   '''DPT requires specifying the expression "xroot" of a root cell.
-
-   Either
-       adata.var['xroot'] = adata.X[root_cell_index, :]
-   where "root_cell_index" is the integer index of the root cell, or
-       adata.var['xroot'] = adata[root_cell_name, :].X
-   where "root_cell_name" is the name (a string) of the root cell.'''
-        sys.exit(msg)
+    '''To enable computation of pseudotime, pass the expression "xroot" of a root cell.
+    Either add
+        adata.var['xroot'] = adata.X[root_cell_index, :]
+    where "root_cell_index" is the integer index of the root cell, or
+        adata.var['xroot'] = adata[root_cell_name, :].X
+    where "root_cell_name" is the name (a string) of the root cell.'''
+        logg.m(msg, v='hint')
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
+    if n_branchings > 1:
+        logg.m('... running a hierarchical version of DPT')
     dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_pcs_post=n_pcs_post,
+              min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
               n_branchings=n_branchings, allow_branching_at_root=allow_branching_at_root,
@@ -123,9 +132,10 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if False:  # we do not compute the full Ddiff matrix, only the elements we need
         dpt.compute_Ddiff_matrix()
-    dpt.set_pseudotime()  # pseudotimes are distances from root point
-    adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
-    adata.smp['dpt_pseudotime'] = dpt.pseudotime
+    if root_cell_was_passed:
+        dpt.set_pseudotime()  # pseudotimes are distances from root point
+        adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
@@ -141,15 +151,13 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
     adata.add['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
     adata.add['dpt_grouptips'] = dpt.segs_tips
-    # the connecting points
-    # adata.add['dpt_groupconnects'] = dpt.segs_connects
     # the tree/graph adjacency matrix
     adata.add['dpt_groups_adjacency'] = dpt.segs_adjacency
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
-           '    "dpt_pseudotime", stores pseudotime (adata.smp),\n'
-           '    "dpt_groups", the segments of trajectories a long a tree (adata.smp),\n'
-           '    "dpt_groups_adjacency", the adjacency matrix between segments that defines the tree (adata.add),\n'
+           + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
+           + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp),\n'
+           '    "dpt_groups_adjacency", the adjacency matrix defining the tree (adata.add),\n'
            '    "dpt_order", is an index array for sorting the cells (adata.smp),\n'
            '    "dpt_grouptips", stores the indices of tip cells (adata.add)')
     return adata if copy else None
@@ -161,6 +169,7 @@ class DPT(data_graph.DataGraph):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=1, n_pcs=50, n_pcs_post=30,
+                 min_group_size=50,
                  recompute_pca=None,
                  recompute_diffmap=None, n_branchings=0,
                  allow_branching_at_root=False, flavor='haghverdi16'):
@@ -170,8 +179,9 @@ class DPT(data_graph.DataGraph):
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
         self.n_branchings = n_branchings
-        self.min_group_size = 50
+        self.min_group_size = min_group_size
         self.allow_branching_at_root = allow_branching_at_root
+        self.passed_adata = adata_or_X  # just for debugging purposes
 
     def branchings_segments(self):
         """Detect branchings and partition the data into corresponding segments.
@@ -241,7 +251,10 @@ class DPT(data_graph.DataGraph):
         if False:  # this is safe, but not compatible with on-the-fly computation
             tips_all = np.array(np.unravel_index(np.argmax(self.Dchosen), self.Dchosen.shape))
         else:
-            tip_0 = np.argmax(self.Dchosen[self.iroot])
+            if self.iroot is not None:
+                tip_0 = np.argmax(self.Dchosen[self.iroot])
+            else:
+                tip_0 = np.argmax(self.Dchosen[0])
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
         # we keep a list of the tips of each segment
         segs_tips = [tips_all]
@@ -280,13 +293,13 @@ class DPT(data_graph.DataGraph):
         # store as class members
         self.segs = segs
         self.segs_tips = segs_tips
-        self.segs_connects = segs_connects
+        # self.segs_connects = segs_connects
         self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
-        # self.segs_adjacency = segs_adjacency
-        self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=np.int8)
+        self.segs_adjacency = segs_adjacency
+        self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=int)
         for i, seg_adjacency in enumerate(segs_adjacency):
-            self.segs_adjacency[i, seg_adjacency] = 1
+            self.segs_adjacency[i, seg_adjacency] = segs_connects[i]
         self.segs_adjacency = self.segs_adjacency.tocsr()
 
     def select_segment(self, segs, segs_tips, segs_undecided):
@@ -356,7 +369,7 @@ class DPT(data_graph.DataGraph):
                    '(too small)' if len(seg) < self.min_group_size else '', v=4)
             if len(seg) < self.min_group_size: score = 0
             # write result
-            scores_tips[iseg, 0] = score
+            scores_tips[iseg, 0] = len(seg)  # n_points
             scores_tips[iseg, 1:] = tips3
         iseg = np.argmax(scores_tips[:, 0])
         tips3 = scores_tips[iseg, 1:].astype(int)
@@ -384,7 +397,7 @@ class DPT(data_graph.DataGraph):
         # check whether the root cell is one of the tip cells of the
         # segment, if not we need to introduce a new branching, directly
         # at the root cell
-        if self.iroot not in self.segs_tips[isegroot]:
+        if self.iroot is not None and self.iroot not in self.segs_tips[isegroot]:
             # if it's not exactly a tip, but very close to it,
             # just keep it as it is
             dist_to_root = self.Dchosen[self.iroot, self.segs_tips[iseg]]
@@ -443,25 +456,27 @@ class DPT(data_graph.DataGraph):
             of indices.
         """
         # within segs_tips, order tips according to pseudotime
-        for itips, tips in enumerate(self.segs_tips):
-            if tips[0] != -1:
-                indices = np.argsort(self.pseudotime[tips])
-                self.segs_tips[itips] = self.segs_tips[itips][indices]
-            else:
-                logg.m('... group', itips, 'is very small', v=4)
+        if self.iroot is not None:
+            for itips, tips in enumerate(self.segs_tips):
+                if tips[0] != -1:
+                    indices = np.argsort(self.pseudotime[tips])
+                    self.segs_tips[itips] = self.segs_tips[itips][indices]
+                else:
+                    logg.m('... group', itips, 'is very small', v=4)
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
         # find changepoints of segments
         changepoints = np.arange(indices.size-1)[np.diff(segs_names) == 1] + 1
-        pseudotime = self.pseudotime[indices]
-        for iseg, seg in enumerate(self.segs):
-            # only consider one segment, it's already ordered by segment
-            seg_sorted = seg[indices]
-            # consider the pseudotime on this segment and sort them
-            seg_indices = np.argsort(pseudotime[seg_sorted])
-            # within the segment, order indices according to increasing pseudotime
-            indices[seg_sorted] = indices[seg_sorted][seg_indices]
+        if self.iroot is not None:
+            pseudotime = self.pseudotime[indices]
+            for iseg, seg in enumerate(self.segs):
+                # only consider one segment, it's already ordered by segment
+                seg_sorted = seg[indices]
+                # consider the pseudotime on this segment and sort them
+                seg_indices = np.argsort(pseudotime[seg_sorted])
+                # within the segment, order indices according to increasing pseudotime
+                indices[seg_sorted] = indices[seg_sorted][seg_indices]
         # define class members
         self.indices = indices
         self.changepoints = changepoints
@@ -495,7 +510,8 @@ class DPT(data_graph.DataGraph):
         # given the three tip points and the distance matrix detect the
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
-        ssegs, ssegs_tips, ssegs_connects = self._detect_branching(Dseg, tips3)
+        result = self._detect_branching(Dseg, tips3, seg)
+        ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk = result
         # map back to global indices
         for iseg_new, seg_new in enumerate(ssegs):
             ssegs[iseg_new] = seg[seg_new]
@@ -504,42 +520,75 @@ class DPT(data_graph.DataGraph):
         # remove previous segment
         segs.pop(iseg)
         segs_tips.pop(iseg)
-        segs_undecided.pop(iseg)
-        # insert undecided cells at same position
-        segs.insert(iseg, ssegs[-1])
-        segs_tips.insert(iseg, ssegs_tips[-1])
-        segs_undecided.insert(iseg, True)
-        # append new segments
-        segs += ssegs[:-1]
-        segs_tips += ssegs_tips[:-1]
-        segs_connects += ssegs_connects[:-1]
-        segs_undecided += [False, False, False]
-        # establish edges
-        # step 0: extend dimensions and add connections of new branches to undecided cells
-        segs_adjacency += [[iseg], [iseg], [iseg]]
-        # step 1: adjust edges that were previously present
-        # consider all previous connections with the segment
-        prev_connecting_segments = segs_adjacency[iseg]
-        prev_connecting_points = segs_connects[iseg]
-        for jseg_cnt, jseg in enumerate(prev_connecting_segments):
-            # find out to which of the new segments they connect
-            # if it connects to the undecided cells, everything stays the same
-            for iseg_new, seg_new in enumerate(ssegs[:-1]):
-                pos = segs_adjacency[jseg].index(iseg)
-                connection_to_iseg = segs_connects[jseg][pos]
-                if connection_to_iseg in seg_new:
-                    segs_adjacency[jseg][pos] = len(segs) - 3 + iseg_new
-                    pos_2 = segs_adjacency[iseg].index(jseg)
-                    segs_adjacency[iseg].pop(pos_2)
-                    idx = segs_connects[iseg].pop(pos_2)
-                    segs_adjacency[len(segs) - 3 + iseg_new].append(jseg)
-                    segs_connects[len(segs) - 3 + iseg_new].append(idx)
-                    break
-        # step 2: each of the new segments connects with the undecided cells
-        segs_adjacency[iseg] += list(range(len(segs_adjacency) - 3, len(segs_adjacency)))
-        segs_connects[iseg] += ssegs_connects[-1]
+        # insert trunk/undecided_cells at same position
+        segs.insert(iseg, ssegs[trunk])
+        segs_tips.insert(iseg, ssegs_tips[trunk])
+        # append other segments
+        segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
+        segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
+        segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
+        if len(ssegs) == 4:
+            # insert undecided cells at same position
+            segs_undecided.pop(iseg)
+            segs_undecided.insert(iseg, True)
+            # append new segments
+            # segs += ssegs[:-1]
+            # segs_tips += ssegs_tips[:-1]
+            # segs_connects += ssegs_connects[:-1]
+            segs_undecided += [False, False, False]
+            # establish edges
+            # step 0: extend dimensions and add connections of new branches to undecided cells
+            segs_adjacency += [[iseg], [iseg], [iseg]]
+            # step 1: adjust edges that were previously present
+            # consider all previous connections with the segment
+            prev_connecting_segments = segs_adjacency[iseg].copy()
+            prev_connecting_points = segs_connects[iseg]
+            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
+                # find out to which of the new segments they connect
+                # if it connects to the undecided cells, everything stays the same
+                for iseg_new, seg_new in enumerate(ssegs[:-1]):
+                    pos = segs_adjacency[jseg].index(iseg)
+                    connection_to_iseg = segs_connects[jseg][pos]
+                    if connection_to_iseg in seg_new:
+                        kseg = len(segs) - 3 + iseg_new
+                        segs_adjacency[jseg][pos] = kseg
+                        pos_2 = segs_adjacency[iseg].index(jseg)
+                        segs_adjacency[iseg].pop(pos_2)
+                        idx = segs_connects[iseg].pop(pos_2)
+                        segs_adjacency[kseg].append(jseg)
+                        segs_connects[kseg].append(idx)
+                        break
+            # step 2: each of the new segments connects with the undecided cells
+            segs_adjacency[iseg] += list(range(len(segs_adjacency) - 3, len(segs_adjacency)))
+            segs_connects[iseg] += ssegs_connects[-1]
+        else:
+            segs_adjacency += [[iseg], [iseg]]
+            prev_connecting_segments = segs_adjacency[iseg].copy()
+            prev_connecting_points = segs_connects[iseg]
+            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
+                # print('prev connect', jseg, 'trunk', trunk, prev_connecting_segments)
+                # find out to which of the new segments they connect to
+                # if it connects to the trunk cells, everything stays the same
+                iseg_cnt = 0
+                for iseg_new, seg_new in enumerate(ssegs):
+                    if iseg_new != trunk:
+                        pos = segs_adjacency[jseg].index(iseg)
+                        connection_to_iseg = segs_connects[jseg][pos]
+                        if connection_to_iseg in seg_new:
+                            kseg = len(segs) - 2 + iseg_cnt
+                            segs_adjacency[jseg][pos] = kseg
+                            pos_2 = segs_adjacency[iseg].index(jseg)
+                            segs_adjacency[iseg].pop(pos_2)
+                            idx = segs_connects[iseg].pop(pos_2)
+                            segs_adjacency[kseg].append(jseg)
+                            segs_connects[kseg].append(idx)
+                            break
+                        iseg_cnt += 1
+            segs_adjacency[iseg] += list(range(len(segs_adjacency) - 2, len(segs_adjacency)))
+            segs_connects[iseg] += ssegs_connects[trunk]
+            segs_undecided += [False, False]
 
-    def _detect_branching(self, Dseg, tips):
+    def _detect_branching(self, Dseg, tips, seg_reference=None):
         """Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
@@ -562,16 +611,15 @@ class DPT(data_graph.DataGraph):
         ssegs_tips : list of np.ndarray
             List of tips of segments in ssegs.
         """
-        if True:
-            ssegs = self._detect_branching_single(Dseg, tips)
-        else:  # not needed, just for conserving the idea
-            ssegs = self._detect_branching_versions(Dseg, tips)
+        if self.flavor == 'haghverdi16':
+            ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
+        else:
+            ssegs = self._detect_branching_single_wolf17(Dseg, tips)
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((3, Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
-        #
         ssegs = []
         for iseg, mask in enumerate(masks):
             mask[nonunique] = False
@@ -581,28 +629,83 @@ class DPT(data_graph.DataGraph):
         for inewseg, newseg in enumerate(ssegs):
             secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
-        # add the points not associated with a clear seg to ssegs
-        mask = np.zeros(Dseg.shape[0], dtype=bool)
-        # all points assigned to segments (flatten ssegs)
-        mask[[i for l in ssegs for i in l]] = True
-        # append all the points that have not been assigned, in Haghverdi et
-        # al. (2016), we call them 'undecided cells'
-        undecided_cells = np.arange(Dseg.shape[0], dtype=int)[mask == False]
-        ssegs.append(undecided_cells)
-        # establish the connecting points with the other segments
-        ssegs_connects = [[], [], [], []]
-        for inewseg, newseg_tips in enumerate(ssegs_tips):
-            secondtip = newseg_tips[1]
-            closest_cell = undecided_cells[np.argmin(Dseg[secondtip][undecided_cells])]
-            ssegs_connects[inewseg].append(closest_cell)
-            ssegs_connects[-1].append(secondtip)
-        # also compute tips for the undecided cells
-        tip_0 = undecided_cells[np.argmax(Dseg[undecided_cells[0]][undecided_cells])]
-        tip_1 = undecided_cells[np.argmax(Dseg[tip_0][undecided_cells])]
-        ssegs_tips.append([tip_0, tip_1])
-        return ssegs, ssegs_tips, ssegs_connects
+        undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
+        if len(undecided_cells) > 0:
+            ssegs.append(undecided_cells)
+            # establish the connecting points with the other segments
+            ssegs_connects = [[], [], [], []]
+            for inewseg, newseg_tips in enumerate(ssegs_tips):
+                reference_point = newseg_tips[0]
+                # closest cell to the new segment within undecided cells
+                closest_cell = undecided_cells[np.argmin(Dseg[reference_point][undecided_cells])]
+                ssegs_connects[inewseg].append(closest_cell)
+                # closest cell to the undecided cells within new segment
+                closest_cell = ssegs[inewseg][np.argmin(Dseg[closest_cell][ssegs[inewseg]])]
+                ssegs_connects[-1].append(closest_cell)
+            # also compute tips for the undecided cells
+            tip_0 = undecided_cells[np.argmax(Dseg[undecided_cells[0]][undecided_cells])]
+            tip_1 = undecided_cells[np.argmax(Dseg[tip_0][undecided_cells])]
+            ssegs_tips.append([tip_0, tip_1])
+            ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
+            trunk = 3
+            # import matplotlib.pyplot as pl
+            # for iseg_new, seg_new in enumerate(ssegs):
+            #     pl.figure()
+            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
+            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
+            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
+            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
+            #     for i in range(len(ssegs_connects[iseg_new])):
+            #         pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 1], marker='o', c='black')
+            #     pl.xticks([])
+            #     pl.yticks([])
+            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
+            # pl.show()
+        else:
+            reference_point = np.zeros(3, dtype=int)
+            reference_point[0] = ssegs_tips[0][0]
+            reference_point[1] = ssegs_tips[1][0]
+            reference_point[2] = ssegs_tips[2][0]
+            closest_points = np.zeros((3, 3), dtype=int)
+            # this is a bit another strategy than for the the undecided_cells
+            # here it's possible to use the more symmetric procedure
+            # shouldn't make much of a difference
+            closest_points[0, 1] = ssegs[1][np.argmin(Dseg[reference_point[0]][ssegs[1]])]
+            closest_points[1, 0] = ssegs[0][np.argmin(Dseg[reference_point[1]][ssegs[0]])]
+            closest_points[0, 2] = ssegs[2][np.argmin(Dseg[reference_point[0]][ssegs[2]])]
+            closest_points[2, 0] = ssegs[0][np.argmin(Dseg[reference_point[2]][ssegs[0]])]
+            closest_points[1, 2] = ssegs[2][np.argmin(Dseg[reference_point[1]][ssegs[2]])]
+            closest_points[2, 1] = ssegs[1][np.argmin(Dseg[reference_point[2]][ssegs[1]])]
+            added_dist = np.zeros(3)
+            added_dist[0] = Dseg[closest_points[1, 0], closest_points[0, 1]] + Dseg[closest_points[2, 0], closest_points[0, 2]]
+            added_dist[1] = Dseg[closest_points[0, 1], closest_points[1, 0]] + Dseg[closest_points[2, 1], closest_points[1, 2]]
+            added_dist[2] = Dseg[closest_points[1, 2], closest_points[2, 1]] + Dseg[closest_points[0, 2], closest_points[2, 0]]
+            trunk = np.argmin(added_dist)
+            ssegs_adjacency = [[trunk] if i != trunk else
+                               [j for j in range(3) if j != trunk]
+                               for i in range(3)]
+            ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
+                               [closest_points[trunk, j] for j in range(3) if j != trunk]
+                               for i in range(3)]
+            # import matplotlib.pyplot as pl
+            # for iseg_new, seg_new in enumerate(ssegs):
+            #     pl.figure()
+            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
+            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
+            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
+            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
+            #     for i in range(3):
+            #         if i != iseg_new:
+            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 1], marker='o', c='black')
+            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 1], marker='x', c='black')
+            #     pl.xticks([])
+            #     pl.yticks([])
+            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
+            # pl.show()
+            # print('trunk', trunk)
+        return ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk
 
-    def _detect_branching_single(self, Dseg, tips):
+    def _detect_branching_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment.
         """
         # compute branchings using different starting points the first index of
@@ -613,45 +716,35 @@ class DPT(data_graph.DataGraph):
         ps = [[0, 1, 2],  # start by computing distances from the first tip
               [1, 2, 0],  #             -"-                       second tip
               [2, 0, 1]]  #             -"-                       third tip
+        # import matplotlib.pyplot as pl
         for i, p in enumerate(ps):
-            ssegs.append(self.__detect_branching(Dseg, tips[p]))
+            ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
 
-    def _detect_branching_versions(self, Dseg, tips):
-        """Detect branching on given segment using three different versions.
-
-        Did not prove useful, currently.
-        """
-        # compute branchings using different starting points the first index of
-        # tips is the starting point for the other two, the order does not
-        # matter
-        ssegs_versions = []
-        # permutations of tip cells
-        ps = [[0, 1, 2],  # start by computing distances from the first tip
-              [1, 2, 0],  #             -"-                       second tip
-              [2, 0, 1]]  #             -"-                       third tip
-        # invert permutations
-        inv_ps = [[0, 1, 2],
-                  [2, 0, 1],
-                  [1, 2, 0]]
-        for i, p in enumerate(ps):
-            ssegs = self.__detect_branching(Dseg,
-                                            tips[p])
-            ssegs_versions.append(np.array(ssegs)[inv_ps[i]])
-        ssegs = []
-        # run through all three assignments of segments, and keep
-        # only those assignments that were found in all three runs
-        for inewseg, newseg_versions in enumerate(np.array(ssegs_versions).T):
-            if len(newseg_versions) == 3:
-                newseg = np.intersect1d(np.intersect1d(newseg_versions[0],
-                                                       newseg_versions[1]),
-                                        newseg_versions[2])
-            else:
-                newseg = newseg_versions[0]
-            ssegs.append(newseg)
+    def _detect_branching_single_wolf17(self, Dseg, tips):
+        # all pairwise distances
+        dist_from_0 = Dseg[tips[0]]
+        dist_from_1 = Dseg[tips[1]]
+        dist_from_2 = Dseg[tips[2]]
+        closer_to_0_than_to_1 = dist_from_0 < dist_from_1
+        closer_to_0_than_to_2 = dist_from_0 < dist_from_2
+        closer_to_1_than_to_2 = dist_from_1 < dist_from_2
+        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks[0] = closer_to_0_than_to_1
+        masks[1] = closer_to_0_than_to_2
+        segment_0 = np.sum(masks, axis=0) == 2
+        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks[0] = ~closer_to_0_than_to_1
+        masks[1] = closer_to_1_than_to_2
+        segment_1 = np.sum(masks, axis=0) == 2
+        masks = np.zeros((2, Dseg.shape[0]), dtype=bool)
+        masks[0] = ~closer_to_0_than_to_2
+        masks[1] = ~closer_to_1_than_to_2
+        segment_2 = np.sum(masks, axis=0) == 2
+        ssegs = [segment_0, segment_1, segment_2]
         return ssegs
 
-    def __detect_branching(self, Dseg, tips):
+    def __detect_branching_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of

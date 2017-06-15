@@ -148,6 +148,7 @@ class DataGraph(object):
         self.n_pcs_post = 30
         self.flavor = flavor  # this is to experiment around
         self.sym = True  # we do not allow asymetric cases
+        self.iroot = None
         isadata = isinstance(adata_or_X, AnnData)
         if isadata:
             adata = adata_or_X
@@ -673,7 +674,7 @@ class DataGraph(object):
         dsqroot = 1e10
         self.iroot = 0
         for i in range(self.X.shape[0]):
-            diff = self.X[i, :]-xroot
+            diff = self.X[i, :] - xroot
             dsq = diff.dot(diff)
             if dsq < dsqroot:
                 dsqroot = dsq
@@ -696,5 +697,5 @@ class DataGraph(object):
             sett.mi('spectrum of K (kernel)')
         if sett.verbosity > 3:
             # direct computation of spectrum of T
-            w, vl, vr = sp.linalg.eig(self.T,left=True)
+            w, vl, vr = sp.linalg.eig(self.T, left=True)
             sett.mi('spectrum of transition matrix (should be same as of Ktilde)')

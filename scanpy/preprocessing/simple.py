@@ -17,9 +17,11 @@ from .. import settings as sett
 from .. import logging as logg
 
 
-def filter_cells(data, min_counts=None, min_genes=None, copy=False):
+def filter_cells(data, min_counts=None, min_genes=None, max_counts=None, max_genes=None, copy=False):
     """Keep cells with at least `min_counts` UMI counts or `min_genes` genes
     expressed.
+
+    Only provide one of the optional arguments per call.
 
     This is to filter measurement outliers, i.e., "unreliable" samples.
 
@@ -30,6 +32,12 @@ def filter_cells(data, min_counts=None, min_genes=None, copy=False):
         and columns to genes.
     min_counts : int
         Minimum number of counts required for a cell to pass filtering.
+    min_genes : int
+        Minimum number of genes expressed required for a cell to pass filtering.
+    min_counts : int
+        Maximum number of counts required for a cell to pass filtering.
+    max_genes : int
+        Maximum number of genes expressed required for a cell to pass filtering.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
@@ -47,26 +55,37 @@ def filter_cells(data, min_counts=None, min_genes=None, copy=False):
     """
     if min_genes is not None and min_counts is not None:
         raise ValueError('Either provide min_counts or min_genes, but not both.')
-    if min_genes is None and min_counts is None:
-        raise ValueError('Provide one of min_counts or min_genes.')
+    if min_genes is not None and max_genes is not None:
+        raise ValueError('Either provide min_genes or max_genes, but not both.')
+    if min_counts is not None and max_counts is not None:
+        raise ValueError('Either provide min_counts or max_counts, but not both.')
+    if min_genes is None and min_counts is None and max_genes is None and max_counts is None:
+        raise ValueError('Provide one of min_counts, min_genes, max_counts or max_genes.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        cell_subset, number = filter_cells(adata.X, min_counts, min_genes)
-        if min_genes is None: adata.smp['n_counts'] = number
+        cell_subset, number = filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
+        if min_genes is None and max_genes is None: adata.smp['n_counts'] = number
         else: adata.smp['n_genes'] = number
         adata.inplace_subset_smp(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
-    number_per_cell = np.sum(X if min_genes is None else X > 0, axis=1)
+    max_number = max_counts if max_genes is None else max_genes
+    number_per_cell = np.sum(X if min_genes is None and max_genes is None
+                             else X > 0, axis=1)
     if issparse(X): number_per_cell = number_per_cell.A1
-    cell_subset = number_per_cell >= min_number
+    if min_number is not None:
+        cell_subset = number_per_cell >= min_number
+    if max_number is not None:
+        cell_subset = number_per_cell <= max_number
     s = np.sum(~cell_subset)
-    if s > 0:
-        logg.m('... filtered out', s,
-               'cells that have less than',
-               str(min_genes) + ' genes expressed' if min_counts is None
-               else str(min_counts) + ' counts')
+    logg.m('... filtered out {} cells that have'.format(s), end=' ')
+    if min_genes is not None or min_counts is not None:
+        logg.m('less than ' + str(min_genes) + ' genes expressed'
+               if min_counts is None else str(min_counts) + ' counts')
+    if max_genes is not None or max_counts is not None:
+        logg.m('more than ' + str(max_genes) + ' genes expressed'
+               if max_counts is None else str(max_counts) + ' counts')
     return cell_subset, number_per_cell
 
 
@@ -498,8 +517,8 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
         logg.m('... sparse input is densified and may '
                'lead to huge memory consumption')
     if not copy:
-        logg.m('... note that this is an inplace computation '
-               'and will return None, set copy true if you want a copy')
+        logg.m('note that this is an inplace computation '
+               'and will return None: set `copy=True` if you want a copy', v='hint')
     adata = adata.copy() if copy else adata
     if isinstance(smp_keys, str): smp_keys = [smp_keys]
     if issparse(adata.X):

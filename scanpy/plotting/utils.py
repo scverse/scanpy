@@ -21,6 +21,18 @@ pal_20_vega = [
     '#ad494a', '8c6d31']  # manual additions
 pal_20 = pal_20_vega
 
+# https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
+# update 1
+# orig reference http://epub.wu.ac.at/1692/1/document.pdf
+pal_26_zeileis = [
+    "#023fa5", "#7d87b9", "#bec1d4", "#d6bcc0", "#bb7784", "#8e063b", "#4a6fe3",
+    "#8595e1", "#b5bbe3", "#e6afb9", "#e07b91", "#d33f6a", "#11c638", "#8dd593",
+    "#c6dec7", "#ead3c6", "#f0b98d", "#ef9708", "#0fcfc0", "#9cded6", "#d5eae7",
+    "#f3e1eb", "#f6c4e1", "#f79cd4",
+    '#7f7f7f', "#c7c7c7", "#1CE6FF",  # these last ones were added,
+]
+pal_26 = pal_26_zeileis
+
 # from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
 pal_64_godsnot = [
     "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
@@ -89,9 +101,12 @@ def default_pal(pal=None):
 
 def adjust_pal(pal, length):
     if len(pal.by_key()['color']) < length:
-        pal = pal_64
-        logg.m('... updating the color palette to 64 maximally distinct colors')
-        return cycler(color=color)
+        if length <= 27:
+            pal = pal_26
+        else:
+            pal = pal_64
+        logg.m('... updating the color palette to provide enough colors')
+        return cycler(color=pal)
     elif not isinstance(pal, Cycler):
         return cycler(color=pal)
     else:

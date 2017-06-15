@@ -131,11 +131,6 @@ def write_run(data, ext=None):
 # ------------------------------------------------------------------------------
 
 
-_howto_specify_subgroups = '''sample annotation in adata only consists of sample names
---> you can provide additional annotation by setting, for example,
-    adata.smp['groups'] = ['A', 'B', 'A', ... ]
-    adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
-
 def _run_names_str():
     str = ''
     for k in sorted(_example_parameters().keys()):

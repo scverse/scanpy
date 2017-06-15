@@ -34,7 +34,9 @@ def savefig(writekey):
     """
     if rcParams['savefig.dpi'] < 300:
         dpi = 300
-        logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
+        if sett._low_resolution_warning:
+            logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
+            sett._low_resolution_warning = False
     else:
         dpi = rcParams['savefig.dpi']
     if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
@@ -57,7 +59,7 @@ def savefig_or_show(writekey, show=None):
 
 
 def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
-           cmap='Greys'):
+           cmap='Greys', show=True):
     fig = pl.figure(figsize=(5, 5))
     pl.imshow(matrix, cmap=cmap)
     if xlabels is not None:
@@ -65,7 +67,7 @@ def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
     if ylabels is not None:
         pl.yticks(range(len(ylabels)), ylabels)
     pl.colorbar(shrink=cshrink)
-    pl.show()
+    if show: pl.show()
 
 
 def violin(adata, smp, jitter=True, size=1, color='black', show=None):
@@ -197,7 +199,15 @@ def scatter(adata,
 
     pal_was_none = False
     if pal is None: pal_was_none = True
-    pal = utils.default_pal(pal)
+    if isinstance(pal, list):
+        if not is_color_like(pal[0]):
+            pals = pal
+        else:
+            pals = [pal]
+    else:
+        pals = [pal for i in range(len(color_keys))]
+    for i, pal in enumerate(pals):
+        pals[i] = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
                       else 'Spring' if basis == 'spring'
@@ -268,7 +278,8 @@ def scatter(adata,
                        cmap='viridis' if cmap is None else cmap,
                        show_ticks=show_ticks)
 
-    for icolor_key in categoricals:
+    for i, icolor_key in enumerate(categoricals):
+        pal = pals[i]
         color_key = color_keys[icolor_key]
         if (not color_key + '_colors' in adata.add or not pal_was_none
             or len(adata.add[color_key + '_names']) != len(adata.add[color_key + '_colors'])):

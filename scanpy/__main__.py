@@ -163,7 +163,7 @@ def run_command_line_args(toolkey, args):
     """
     from . import settings as sett
     from . import logging as logg
-    
+
     # help on plot parameters
     if args['plot_params']:
         from . import plotting
@@ -171,6 +171,7 @@ def run_command_line_args(toolkey, args):
             sys.exit(getattr(plotting, toolkey).__doc__)
 
     adata = None
+    exmodule = None
     if toolkey != 'sim':
         from .examples import init_run
         adata, exmodule = init_run(
@@ -219,38 +220,38 @@ def run_command_line_args(toolkey, args):
 
     if toolkey == 'pp': exit()
 
-    # read/write files
-    writekey = sett.run_name + '_' + toolkey
-    pfile = sett.writedir + sett.run_name + '_params/' + toolkey + '.txt'
+    if (adata is not None and sett.recompute == 'none'):
+        try:
+            run_plotting_and_postprocessing(args, adata, toolkey, exmodule)
+            return
+        except KeyError:
+            pass
 
     # actual call of tool
     from . import tools
-    if (adata is None
-        or toolkey not in adata.add['tools']
-        or sett.recompute != 'none'):
-        tool = getattr(tools, toolkey)
-        if toolkey == 'sim':
-            adata = tool(**params)
-        elif toolkey == 'pca':
-            tool(adata, recompute=False, **params)
-        else:
-            tool(adata, **params)
-        # append toolkey to tools in adata
-        if toolkey not in adata.add['tools']:
-            import numpy as np
-            adata.add['tools'] = np.append(adata.add['tools'], toolkey)
-        readwrite.write(sett.run_name, adata)
-        if sett.file_format_data not in {'h5', 'npz'}:
-            readwrite.write(sett.run_name, adata, ext='h5')
-        # save a copy of the changed parameters
-        readwrite.write_params(pfile, params)
+    tool = getattr(tools, toolkey)
+    if toolkey == 'sim':
+        adata = tool(**params)
+    elif toolkey == 'pca':
+        tool(adata, recompute=False, **params)
+    else:
+        tool(adata, **params)
+    readwrite.write(sett.run_name, adata)
+    if sett.file_format_data not in {'h5', 'npz'}:
+        readwrite.write(sett.run_name, adata, ext='h5')
+    # save a copy of the changed parameters
+    pfile = sett.writedir + sett.run_name + '_params/' + toolkey + '.txt'
+    readwrite.write_params(pfile, params)
+    run_plotting_and_postprocessing(args, adata, toolkey, exmodule)
 
-    # plotting and postprocessing
+
+def run_plotting_and_postprocessing(args, adata, toolkey, exmodule):
+    from . import readwrite
     plot_params = (readwrite.get_params_from_list(args['plot_params'])
                if args['plot_params'] else {})
     # post-processing specific to example and tool
     # - only if we are not subsampling
-    if toolkey != 'sim':
+    if exmodule is not None:
         postprocess = args['run_name'] + '_' + toolkey
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             getattr(exmodule, postprocess)(adata)
