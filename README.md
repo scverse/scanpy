@@ -36,7 +36,7 @@ Then go through the use cases compiled in
 
 ## Features <a id="features"></a>
 
-We first give an [overview](#overview) of the toplevel user functions of `scanpy.api`, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1). For usage of the command-line interface, which is parallels usage of the API, see this introductory [example](https://github.com/theislab/scanpy_usage/blob/master/170501_moignard15).
+We first give an [overview](#overview) of the toplevel user functions of `scanpy.api`, followed by a few words on Scanpy's [basic features](#basic-features) and more [details](#visualization-1). For usage of the command-line interface, which parallels usage of the API, see this introductory [example](https://github.com/theislab/scanpy_usage/blob/master/170501_moignard15).
 
 ### Overview
 
@@ -173,7 +173,7 @@ implemented for Scanpy by [Wolf *et al.* (2017)](#ref_wolf17).
 
 The functionality of diffmap and dpt compare to the R package
 [destiny](http://bioconductor.org/packages/release/bioc/html/destiny.html) of
-[Angerer *et al.* (2015)](#ref_angerer16).
+[Angerer *et al.* (2015)](#ref_angerer16), but run faster and scale to much higher cell numbers.
 
 *Examples:* See one of the early examples [[notebook](https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb)/[command line](https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15)] dealing with data of [Moignard *et al.*, Nat. Biotechn. (2015)](http://doi.org/10.1038/nbt.3154).
 
