@@ -32,13 +32,13 @@ def pca(adata, **params):
     ----------
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in smp)
-        Allows to restrict groups in sample annotation (smp) to a few.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -51,9 +51,9 @@ def pca(adata, **params):
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
          Point size.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
@@ -129,13 +129,13 @@ def diffmap(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in color)
-        Allows to restrict groups in sample annotation (color) to a few.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str or list, optional (default: '1,2')
          String of the form '1,2' or 'all' or list. First component is 1 or '1'.
     cont : bool, None (default: None)
@@ -148,8 +148,8 @@ def diffmap(adata,
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     titles : str, optional (default: None)
@@ -207,13 +207,13 @@ def tsne(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in color)
-        Allows to restrict groups in sample annotation (color) to a few.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -226,8 +226,8 @@ def tsne(adata,
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     titles : str, optional (default: None)
@@ -276,13 +276,13 @@ def spring(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in color)
-        Allows to restrict groups in sample annotation (color) to a few.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -295,8 +295,8 @@ def spring(adata,
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: 0.2)
-         Adjust how far the plotting panel extends to the right.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     titles : str, optional (default: None)
@@ -304,7 +304,10 @@ def spring(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    Y = adata.smp['X_spring']
+    if 'X_spring' in adata.smp:
+        Y = adata.smp['X_spring']
+    else:
+        raise ValueError('Need to run tool `spring` before plotting.')
     axs = scatter(adata,
                   basis='spring',
                   color=color,
@@ -345,11 +348,13 @@ def dpt(adata,
         Annotated data matrix.
     basis : {'diffmap', 'pca', 'tsne', 'spring'}
         Choose the basis in which to plot.
-    color : str, optional (default: first annotation)
+    color : string or list of strings, optional (default: first annotation)
         Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String of the form '1,2' or 'all'.
     cont : bool, None (default: None)
@@ -362,8 +367,12 @@ def dpt(adata,
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    titles : str, optional (default: None)
+         Provide titles for panels as "my title1,another title,...".
     """
     dpt_scatter(adata,
                 basis=basis,
@@ -471,7 +480,7 @@ def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
     pl.yticks([])
-    piesize = 1/(G.number_of_nodes() + 1)
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 5)
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
         xx, yy = trans(pos[n])     # figure coordinates
@@ -549,7 +558,7 @@ def dbscan(adata,
            cmap=None,
            pal=None,
            right_margin=None,
-           size=3,
+           size=None,
            titles=None,
            show=None):
     """Plot results of DBSCAN clustering.
@@ -560,11 +569,13 @@ def dbscan(adata,
         Annotated data matrix.
     basis : {'diffmap', 'pca', 'tsne', 'spring'}
         Choose the basis in which to plot.
-    color : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -577,8 +588,8 @@ def dbscan(adata,
          String denoting matplotlib color map.
     pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
          Colors cycle to use for categorical groups.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     titles : str, optional (default: None)
          Provide titles for panels as "my title1,another title,...".
     """
@@ -615,7 +626,7 @@ def paths(adata,
           legendloc='right margin',
           cmap=None,
           right_margin=None,
-          size=3,
+          size=None,
           titles=None,
           show=None):
     """Plot paths.
@@ -628,13 +639,13 @@ def paths(adata,
         Distance threshold to decide what still belongs in the path.
     single_panel : bool (default: True)
         If False, show separate panel for each group.
-    color : str, optional (default: first annotation)
-        Sample/Cell annotation for coloring in the form "ann1,ann2,...". String
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation. Option 'cont'
         allows to switch between these default choices.
-    names : str, optional (default: all names in color)
-        Allows to restrict groups in sample annotation (color) to a few.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
@@ -645,9 +656,9 @@ def paths(adata,
          Options for keyword argument 'loc'.
     cmap : str (default: continuous: inferno/ categorical: finite palette)
          String denoting matplotlib color map.
-    right_margin : float (default: None)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: 3)
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
          Point size.
     """
     from ..examples import check_adata

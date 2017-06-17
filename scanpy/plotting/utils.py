@@ -29,7 +29,7 @@ pal_26_zeileis = [
     "#8595e1", "#b5bbe3", "#e6afb9", "#e07b91", "#d33f6a", "#11c638", "#8dd593",
     "#c6dec7", "#ead3c6", "#f0b98d", "#ef9708", "#0fcfc0", "#9cded6", "#d5eae7",
     "#f3e1eb", "#f6c4e1", "#f79cd4",
-    '#7f7f7f', "#c7c7c7", "#1CE6FF",  # these last ones were added,
+    '#7f7f7f', "#c7c7c7", "#1CE6FF", "#336600"  # these last ones were added,
 ]
 pal_26 = pal_26_zeileis
 
@@ -101,7 +101,7 @@ def default_pal(pal=None):
 
 def adjust_pal(pal, length):
     if len(pal.by_key()['color']) < length:
-        if length <= 27:
+        if length <= 28:
             pal = pal_26
         else:
             pal = pal_64
@@ -176,10 +176,7 @@ def scatter_base(Y,
     ----------
     Y : np.ndarray
         Data array.
-    layout : str
-        Either '2d' or '3d'.
-    comps : iterable
-        Iterable that stores the component indices.
+    layout : {'2d', '3d'}
 
     Returns
     -------
@@ -187,13 +184,13 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
+    if '3d' in layout: from mpl_toolkits.mplot3d import Axes3D
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
         higlights = highlights_indices
     else:
         highlights_labels = []
-    from matplotlib import gridspec
     # if we have a single array, transform it into a list with a single array
     avail_layouts = {'2d', '3d'}
     if layout not in avail_layouts:
@@ -205,7 +202,12 @@ def scatter_base(Y,
     # grid of axes for plotting and legends/colorbars
     if np.any(colorbars) and right_margin is None: right_margin = 0.25
     elif right_margin is None: right_margin = 0.01
-    # make a figure with panels len(colors) x 1
+    # make a list of right margins for each panel
+    if not isinstance(right_margin, list):
+        right_margin_list = [right_margin for i in range(len(colors))]
+    else:
+        right_margin_list = right_margin
+    # make a figure with len(colors) panels in a row side by side
     top_offset = 1 - rcParams['figure.subplot.top']
     bottom_offset = 0.15 if show_ticks else 0.08
     left_offset = 1 if show_ticks else 0.3  # in units of base_height
@@ -215,65 +217,48 @@ def scatter_base(Y,
     if show_ticks: base_width *= 1.1
     draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
 
-    right_margin_factor = (1 + right_margin/(1-right_margin))
-    width_without_offsets = right_margin_factor * len(colors) * draw_region_width  # this is the total width that keeps draw_region_width
+    right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
+    width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
 
     right_offset = (len(colors) - 1) * left_offset
-    width = width_without_offsets + left_offset + right_offset
-    left_offset_frac = left_offset / width
+    figure_width = width_without_offsets + left_offset + right_offset
+    draw_region_width_frac = draw_region_width / figure_width
+    left_offset_frac = left_offset / figure_width
     right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
 
-    figsize = (width, height)
-    fig = pl.figure(figsize=figsize,
+    fig = pl.figure(figsize=(figure_width, height),
                     subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
-    gs = gridspec.GridSpec(nrows=1,
-                           ncols=2*len(colors),
-                           width_ratios=[r for i in range(len(colors))
-                                         for r in [1-right_margin, right_margin]],
-                           left=left_offset_frac,
-                           right=right_offset_frac,
-                           wspace=0)
-    pos = gs.get_grid_positions(fig)
     fig.suptitle(title)
-    count = 1
-    bool3d = True if layout == '3d' else False
+    left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
+    for i in range(1, len(colors)):
+        right_margin = right_margin_list[i-1]
+        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
+        left_positions.append(left_positions[-1] + draw_region_width_frac)
+    panel_pos = [[bottom_offset], [1-top_offset], left_positions]
     axs = []
     for icolor, color in enumerate(colors):
-        # set up panel
-        if '3d' in layout: from mpl_toolkits.mplot3d import Axes3D
-        if layout == 'unfolded 3d' and count != 3:
-            ax = fig.add_subplot(2, 2, count)
-            bool3d = False
-        elif layout == 'unfolded 3d' and count == 3:
-            ax = fig.add_subplot(2, 2, count,
-                                 projection='3d')
-            bool3d = True
-        elif layout == '2d':
-            ax = pl.subplot(gs[2*(count-1)])
-        elif layout == '3d':
-            ax = pl.subplot(gs[2*(count-1)], projection='3d')
-        if not bool3d:
+        left = panel_pos[2][2*icolor]
+        bottom = panel_pos[0][0]
+        width = draw_region_width / figure_width
+        height = panel_pos[1][0] - bottom
+        if layout == '2d':
+            ax = pl.axes([left, bottom, width, height])
             data = Y[:, 0], Y[:, 1]
-        else:
+        elif layout == '3d':
+            ax = pl.axes([left, bottom, width, height], projection='3d')
             data = Y[:, 0], Y[:, 1], Y[:, 2]
-        # do the plotting
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(*data,
                              marker='.',
-                             # alpha=0.5,
                              c=color,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
                              cmap=cmap)
         if colorbars[icolor]:
-            pos = gs.get_grid_positions(fig)
-            left = pos[2][2*(count-1)+1]
-            bottom = pos[0][0]
+            left = panel_pos[2][2*icolor+1]
             width = 0.006 * draw_region_width
-            # print(0.2*(pos[3][2*(count-1)+1] - left))
-            height = pos[1][0] - bottom
             # again shift to left
-            left = pos[3][2*(count-1)] + (1 if layout == '3d' else 0.2) * width
+            left = panel_pos[3][2*icolor] + (1 if layout == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
@@ -284,7 +269,7 @@ def scatter_base(Y,
         # output highlighted data points
         for iihighlight, ihighlight in enumerate(highlights):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
-            if bool3d:
+            if '3d' in layout:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
             ax.scatter(*data, c='black',
                        facecolors='black', edgecolors='black',
@@ -297,40 +282,23 @@ def scatter_base(Y,
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
-            if bool3d: ax.set_zticks([])
+            if '3d' in layout: ax.set_zticks([])
         # scale limits to match data
         ax.autoscale_view()
         axs.append(ax)
-        count += 1
     # set default axis_labels
     if axis_labels is None:
-        if layout == '2d':
-            axis_labels = [[component_name + str(i) for i in idcs]
-                         for idcs in
-                         [component_indexnames for iax in range(len(axs))]]
-        elif layout == '3d':
-            axis_labels = [[component_name + str(i) for i in idcs]
-                         for idcs in
-                         [component_indexnames for iax in range(len(axs))]]
-        elif layout == 'unfolded 3d':
-            axis_labels = [[component_name
-                         + str(component_indexnames[i-1]) for i in idcs]
-                         for idcs in [[2, 3], [1, 2], [1, 2, 3], [1, 3]]]
+        axis_labels = [[component_name + str(i) for i in idcs]
+                       for idcs in
+                       [component_indexnames for iax in range(len(axs))]]
     else:
         axis_labels = [[axis_labels[0], axis_labels[1]] for i in range(len(axs))]
-    # set axis_labels
-    bool3d = True if layout == '3d' else False
     for iax, ax in enumerate(axs):
-        if layout == 'unfolded 3d' and iax != 2:
-            bool3d = False
-        elif layout == 'unfolded 3d' and iax == 2:
-            bool3d = True
-        if axis_labels is not None:
-            ax.set_xlabel(axis_labels[iax][0])
-            ax.set_ylabel(axis_labels[iax][1])
-            if bool3d:
-                # shift the label closer to the axis
-                ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
+        ax.set_xlabel(axis_labels[iax][0])
+        ax.set_ylabel(axis_labels[iax][1])
+        if '3d' in layout:
+            # shift the label closer to the axis
+            ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
     return axs
 
 
