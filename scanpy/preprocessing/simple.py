@@ -81,10 +81,12 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None, max_gen
     s = np.sum(~cell_subset)
     logg.m('... filtered out {} cells that have'.format(s), end=' ')
     if min_genes is not None or min_counts is not None:
-        logg.m('less than ' + str(min_genes) + ' genes expressed'
+        logg.m('less than',
+               str(min_genes) + ' genes expressed'
                if min_counts is None else str(min_counts) + ' counts')
     if max_genes is not None or max_counts is not None:
-        logg.m('more than ' + str(max_genes) + ' genes expressed'
+        logg.m('more than ',
+               str(max_genes) + ' genes expressed'
                if max_counts is None else str(max_counts) + ' counts')
     return cell_subset, number_per_cell
 
@@ -562,6 +564,7 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
     logg.m('finished', t=True)
+    logg.m('consider rescaling the data now', v='hint')
     return adata if copy else None
 
 
@@ -590,10 +593,8 @@ def scale(data, zero_center=True, max_value=None, copy=False):
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
-    if zero_center and max_value is not None:
+    if not zero_center and max_value is not None:
         logg.m('... scale_data: be very careful to use `max_value` without `zero_center`')
-    if not zero_center:
-        logg.m('... omitting to zero_center the data')
     if max_value is not None:
         logg.m('... clipping at max_value', max_value)
     if zero_center and issparse(X):

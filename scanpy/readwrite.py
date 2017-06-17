@@ -312,8 +312,9 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                          + avail_exts)
     else:
         ext = is_filename(filename, return_ext=True)
-    # check whether data file is present, otherwise download
-    filename = check_datafile_present(filename, backup_url=backup_url)
+    is_present = check_datafile_present_and_download(filename,
+                                                     backup_url=backup_url)
+    if not is_present: logg.m('... did not find original file', filename)
     # read hdf5 files
     if ext == 'h5':
         if sheet == '':
@@ -321,7 +322,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         else:
             logg.m('... reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
-    # read other file formats
+    # read other file types
+    # filename fast
     filename_stripped = filename.lstrip('./')
     if filename_stripped.startswith('data/'):
         filename_stripped = filename_stripped[5:]
@@ -330,6 +332,9 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
                      + filename_stripped.replace('.' + ext, '.' + fast_ext))
     reread = sett.recompute == 'read' if reread is None else reread
     if not os.path.exists(filename_fast) or reread:
+        if not is_present:
+            raise FileNotFoundError('Cannot reread original data file {}, is not present.'
+                                    .format(filename))
         logg.m('... reading file', filename,
                '\n    writing an', sett.file_format_data,
                'version to speedup reading next time\n   ',
@@ -998,34 +1003,21 @@ def download_progress(count, blockSize, totalSize):
     sys.stdout.flush()
 
 
-def check_datafile_present(filename, backup_url=''):
+def check_datafile_present_and_download(filename, backup_url=''):
     """Check whether the file is present, otherwise download.
     """
-    if filename.startswith('sim/'):
-        if not os.path.exists(filename):
-            exkey = filename.split('/')[1]
-            print('file ' + filename + ' does not exist')
-            print('you can produce the datafile by')
-            sys.exit('running subcommand "sim ' + exkey + '"')
-    if not os.path.exists(filename):
-        if os.path.exists('../' + filename):
-            # we are in a subdirectory of the scanpy repo
-            return '../' + filename
-        else:
-            # download the file
-            if backup_url == '':
-                sys.exit('file ' + filename + ' does not exist')
-            logg.m('try downloading from url\n' + backup_url + '\n' +
-                   '... this may take a while but only happens once')
-            d = os.path.dirname(filename)
-            if not os.path.exists(d):
-                logg.m('creating directory', d+'/', 'for saving data')
-                os.makedirs(d)
-            from .compat.urllib_request import urlretrieve
-            urlretrieve(backup_url, filename, reporthook=download_progress)
-            logg.m('')
-    return filename
-
+    if os.path.exists(filename): return True
+    if backup_url == '': return False
+    logg.m('try downloading from url\n' + backup_url + '\n' +
+           '... this may take a while but only happens once')
+    d = os.path.dirname(filename)
+    if not os.path.exists(d):
+        logg.m('creating directory', d + '/', 'for saving data')
+        os.makedirs(d)
+    from .compat.urllib_request import urlretrieve
+    urlretrieve(backup_url, filename, reporthook=download_progress)
+    logg.m('')
+    return True
 
 def is_filename(filename_or_key, return_ext=False):
     """ Check whether it is a filename. """

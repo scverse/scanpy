@@ -255,10 +255,8 @@ def scatter_base(Y,
                              s=sizes[icolor],
                              cmap=cmap)
         if colorbars[icolor]:
-            left = panel_pos[2][2*icolor+1]
             width = 0.006 * draw_region_width
-            # again shift to left
-            left = panel_pos[3][2*icolor] + (1 if layout == '3d' else 0.2) * width
+            left = panel_pos[2][2*icolor+1] + (1 if layout == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),

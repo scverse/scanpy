@@ -32,6 +32,8 @@ def identify_categories(adata, predicted, reference, normalization='reference',
         columns to the reference labels, entries are proportional to degree of
         association
     """
+    if normalization not in {'prediction', 'reference'}:
+        raise ValueError('`normalization` needs to be either "prediction" or "reference".')
     check_adata(adata)
     asso_names = []
     asso_matrix = []
@@ -45,7 +47,7 @@ def identify_categories(adata, predicted, reference, normalization='reference',
             mask_ref_or_pred[mask_pred] = True
             # e.g. if the pred group is contained in mask_ref, mask_ref and
             # mask_ref_or_pred are the same
-            if normalization == 'predicted':
+            if normalization == 'prediction':
                 # compute which fraction of the predicted group is contained in
                 # the ref group
                 ratio_contained = (np.sum(mask_pred) -

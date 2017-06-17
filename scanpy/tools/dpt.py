@@ -158,8 +158,8 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
            + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
            + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp),\n'
            '    "dpt_groups_adjacency", the adjacency matrix defining the tree (adata.add),\n'
-           '    "dpt_order", is an index array for sorting the cells (adata.smp),\n'
-           '    "dpt_grouptips", stores the indices of tip cells (adata.add)')
+           '    "dpt_order", an index array for sorting the cells (adata.smp),\n'
+           '    "dpt_grouptips", the indices of tip cells (adata.add)')
     return adata if copy else None
 
 
@@ -358,13 +358,13 @@ class DPT(data_graph.DataGraph):
                     dseg -= Dseg[tips[1]]
                 else:
                     dseg -= Dseg[third_tip]
-            tips3 = np.insert(tips, 0, third_tip)
+            tips3 = np.append(tips, third_tip)
             # compute the score as ratio of the added distance to the third tip,
             # to what it would be if it were on the straight line between the
             # two first tips, given by Dseg[tips[:2]]
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
-            score = dseg[tips3[0]] / Dseg[tips3[1], tips3[2]]
+            score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
                    '(too small)' if len(seg) < self.min_group_size else '', v=4)
             if len(seg) < self.min_group_size: score = 0
