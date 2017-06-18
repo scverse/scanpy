@@ -5,6 +5,7 @@
 import sys
 import numpy as np
 import scipy as sp
+import networkx as nx
 import scipy.sparse
 from .. import logging as logg
 from ..data_structs import data_graph
@@ -12,7 +13,7 @@ from ..data_structs import data_graph
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
         min_group_size=50,
-        allow_branching_at_root=False, n_jobs=None, recompute_diffmap=False,
+        n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
 
@@ -64,8 +65,6 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
         Use n_pcs_post PCs to compute the DPT distance matrix. This speeds up
         the computation at almost no loss of accuracy. Set to 0 if you don't
         want postprocessing with PCA.
-    allow_branching_at_root : bool, optional (default: False)
-        Allow to have branching directly at root point.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
     recompute_diffmap : bool, (default: False)
@@ -115,7 +114,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
               min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
-              n_branchings=n_branchings, allow_branching_at_root=allow_branching_at_root,
+              n_branchings=n_branchings,
               flavor=flavor)
     # diffusion map
     ddmap = dpt.diffmap(n_comps=n_dcs)
@@ -153,6 +152,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
     adata.add['dpt_grouptips'] = dpt.segs_tips
     # the tree/graph adjacency matrix
     adata.add['dpt_groups_adjacency'] = dpt.segs_adjacency
+    adata.add['dpt_groups_connects'] = dpt.segs_connects
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
            + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
@@ -172,7 +172,7 @@ class DPT(data_graph.DataGraph):
                  min_group_size=50,
                  recompute_pca=None,
                  recompute_diffmap=None, n_branchings=0,
-                 allow_branching_at_root=False, flavor='haghverdi16'):
+                 flavor='haghverdi16'):
         super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
                                   n_pcs_post=n_pcs_post, n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
@@ -180,7 +180,6 @@ class DPT(data_graph.DataGraph):
                                   flavor=flavor)
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size
-        self.allow_branching_at_root = allow_branching_at_root
         self.passed_adata = adata_or_X  # just for debugging purposes
 
     def branchings_segments(self):
@@ -200,12 +199,8 @@ class DPT(data_graph.DataGraph):
             Array of dimension (number of data points). Stores an integer label
             for each segment.
         """
-        # logg.m('weights', self.evals[1:]/(1-self.evals[1:]))
-        # logg.m('evals', self.evals[1:])
         self.detect_branchings()
-        self.check_segments()
         self.postprocess_segments()
-        # self.order_segments()
         self.set_segs_names()
         self.order_pseudotime()
 
@@ -293,14 +288,91 @@ class DPT(data_graph.DataGraph):
         # store as class members
         self.segs = segs
         self.segs_tips = segs_tips
-        # self.segs_connects = segs_connects
         self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
-        self.segs_adjacency = segs_adjacency
-        self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=int)
+        self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+        self.segs_connects = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=int)
         for i, seg_adjacency in enumerate(segs_adjacency):
-            self.segs_adjacency[i, seg_adjacency] = segs_connects[i]
+            self.segs_connects[i, seg_adjacency] = segs_connects[i]
+        for i in range(len(segs)):
+            for j in range(len(segs)):
+                self.segs_adjacency[i, j] = self.Dchosen[self.segs_connects[i, j],
+                                                         self.segs_connects[j, i]]
         self.segs_adjacency = self.segs_adjacency.tocsr()
+        self.segs_connects = self.segs_connects.tocsr()
+        print(self.segs_adjacency)
+        self.contract_segments()
+        print(self.segs_adjacency)
+        # self.check_adjacency()
+        # print('new')
+        # print(self.segs_adjacency)
+
+    def contract_segments(self):
+        i, n, m = self.segments_to_contract()
+        if i != 0 or n != 0:
+            # # copy everything but skip i and instead add all of n to i
+            # segs_adjacency = sp.sparse.lil_matrix((len(self.segs)-1, len(self.segs)-1), dtype=float)
+            # new_j = 0
+            # for j in range(len(self.segs)):
+            #     if j != i and j != m and j != n:
+            #         segs_adjacency[new_j, self.segs_adjacency[j].nonzero()[1]] = self.segs_adjacency[self.segs_adjacency[j].nonzero()]
+            #     if j == m or j == n:
+            #         neighbors_except_i = [k for k in self.segs_adjacency[j].nonzero()[1] if k != i]
+            #         segs_adjacency[j, neighbors_except_i] = self.segs_adjacency[j, neighbors_except_i]
+            #     if j == n:
+            #         segs_adjacency[n, m] = self.segs_adjacency[i, m]
+            #         segs_adjacency[m, n] = segs_adjacency[n, m]
+            #         segs_adjacency[j, i] = 0
+            #         segs_adjacency[m, i] = 0
+            #         self.segs[j].append(self.segs[i])
+            #         self.segs.pop[i]
+            #     if j != i:
+            #         new_j += 1
+            # self.segs_adjacency = self.segs_adjacency.tocsr()
+            # segs_adjacency.eliminate_zeros()
+            # self.segs_adjacency = segs_adjacency
+            G = nx.Graph(self.segs_adjacency)
+            G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
+            self.segs_adjacency = nx.to_scipy_sparse_matrix(G_contracted)
+            np.append(self.segs[n], self.segs[i])
+            self.segs.pop(i)
+
+    def segments_to_contract(self):
+        n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
+        for i in range(len(self.segs)):
+            if n_edges_per_seg[i] == 2:
+                neighbors = self.segs_adjacency[i].nonzero()[1]
+                for n_cnt, n in enumerate(neighbors):
+                    if n_edges_per_seg[n] == 1 or n_edges_per_seg[n] == 2:
+                        logg.m('merging segment', i, 'into', n)
+                        m = neighbors[1] if n_cnt == 0 else neighbors[0]
+                        return i, n, m
+        return 0, 0, 0
+
+    def check_adjacency(self):
+        n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
+        for n_edges in range(1, np.max(n_edges_per_seg) + 1):
+            for iseg in range(self.segs_adjacency.shape[0]):
+                if n_edges_per_seg[iseg] == n_edges:
+                    neighbor_segs = self.segs_adjacency[iseg].todense().A1
+                    closest_points_other_segs = [seg[np.argmin(self.Dchosen[self.segs_tips[iseg][0], seg])]
+                                                 for seg in self.segs]
+                    seg = self.segs[iseg]
+                    closest_points_in_segs = [seg[np.argmin(self.Dchosen[tips[0], seg])]
+                                              for tips in self.segs_tips]
+                    distance_segs = [self.Dchosen[closest_points_other_segs[ipoint], point]
+                                     for ipoint, point in enumerate(closest_points_in_segs)]
+                    # exclude the first point, the segment itself
+                    closest_segs = np.argsort(distance_segs)[1:n_edges+1]
+                    # update adjacency matrix within the loop!
+                    # self.segs_adjacency[iseg, neighbor_segs > 0] = 0
+                    # self.segs_adjacency[iseg, closest_segs] = np.array(distance_segs)[closest_segs]
+                    # self.segs_adjacency[neighbor_segs > 0, iseg] = 0
+                    # self.segs_adjacency[closest_segs, iseg] = np.array(distance_segs)[closest_segs].reshape(len(closest_segs), 1)
+                    # n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
+                    print(iseg, distance_segs, closest_segs)
+                    # print(self.segs_adjacency)
+        # self.segs_adjacency.eliminate_zeros()
 
     def select_segment(self, segs, segs_tips, segs_undecided):
         """Out of a list of line segments, choose segment that has the most
@@ -364,12 +436,16 @@ class DPT(data_graph.DataGraph):
             # two first tips, given by Dseg[tips[:2]]
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
-            score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
-            logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
-                   '(too small)' if len(seg) < self.min_group_size else '', v=4)
+            if self.flavor != 'wolf17_bi':
+                score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
+            else:
+                score = Dseg[tips3[0], tips3[1]]
+            score = len(seg)  # simply the number of points
+            # logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
+            #        '(too small)' if len(seg) < self.min_group_size else '')
             if len(seg) < self.min_group_size: score = 0
             # write result
-            scores_tips[iseg, 0] = len(seg)  # n_points
+            scores_tips[iseg, 0] = score
             scores_tips[iseg, 1:] = tips3
         iseg = np.argmax(scores_tips[:, 0])
         tips3 = scores_tips[iseg, 1:].astype(int)
@@ -386,52 +462,6 @@ class DPT(data_graph.DataGraph):
         # convert to arrays
         self.segs = np.array(self.segs)
         self.segs_tips = np.array(self.segs_tips)
-
-    def check_segments(self):
-        """Perform checks on segments."""
-        # find the segment that contains the root cell
-        for iseg, seg in enumerate(self.segs):
-            if self.iroot in seg:
-                isegroot = iseg
-                break
-        # check whether the root cell is one of the tip cells of the
-        # segment, if not we need to introduce a new branching, directly
-        # at the root cell
-        if self.iroot is not None and self.iroot not in self.segs_tips[isegroot]:
-            # if it's not exactly a tip, but very close to it,
-            # just keep it as it is
-            dist_to_root = self.Dchosen[self.iroot, self.segs_tips[iseg]]
-            # otherwise, allow branching at root
-            if (False and np.min(dist_to_root) > 0.01*self.Dchosen[tuple(self.segs_tips[iseg])]
-                and self.allow_branching_at_root):
-                logg.m('... adding branching directly at root')
-                allindices = np.arange(self.X.shape[0], dtype=int)
-                tips3_global = np.insert(self.segs_tips[iseg], 0, self.iroot)
-                # map the global position to the position within the segment
-                tips3 = np.array([np.where(allindices[self.segs[iseg]] == tip)[0][0]
-                                  for tip in tips3_global])
-                # detect branching and update self.segs and self.segs_tips
-                self.segs, self.segs_tips = self.detect_branching(self.segs,
-                                                                  self.segs_tips,
-                                                                  iseg, tips3)
-
-    def order_segments(self):
-        """Order segments according to average pseudotime."""
-        # there are different options for computing the score
-        if False:
-            # minimum of pseudotime in the segment
-            score = np.min
-        if True:
-            # average pseudotime
-            score = np.average
-        # score segments by minimal pseudotime
-        seg_scores = []
-        for seg in self.segs:
-            seg_scores.append(score(self.pseudotime[seg]))
-        indices = np.argsort(seg_scores)
-        # order segments by minimal pseudotime
-        self.segs = self.segs[indices]
-        self.segs_tips = self.segs_tips[indices]
 
     def set_segs_names(self):
         """Return a single array that stores integer segment labels."""
@@ -526,56 +556,25 @@ class DPT(data_graph.DataGraph):
         # append other segments
         segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
         segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
-        segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
         if len(ssegs) == 4:
             # insert undecided cells at same position
             segs_undecided.pop(iseg)
             segs_undecided.insert(iseg, True)
-            # append new segments
-            # segs += ssegs[:-1]
-            # segs_tips += ssegs_tips[:-1]
-            # segs_connects += ssegs_connects[:-1]
-            segs_undecided += [False, False, False]
-            # establish edges
-            # step 0: extend dimensions and add connections of new branches to undecided cells
-            segs_adjacency += [[iseg], [iseg], [iseg]]
-            # step 1: adjust edges that were previously present
-            # consider all previous connections with the segment
-            prev_connecting_segments = segs_adjacency[iseg].copy()
+        # correct edges in adjacency matrix
+        n_add = len(ssegs) - 1
+        prev_connecting_segments = segs_adjacency[iseg].copy()
+        if False:
+            segs_adjacency += [[iseg] for i in range(n_add)]
+            segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
             prev_connecting_points = segs_connects[iseg]
             for jseg_cnt, jseg in enumerate(prev_connecting_segments):
-                # find out to which of the new segments they connect
-                # if it connects to the undecided cells, everything stays the same
-                for iseg_new, seg_new in enumerate(ssegs[:-1]):
-                    pos = segs_adjacency[jseg].index(iseg)
-                    connection_to_iseg = segs_connects[jseg][pos]
-                    if connection_to_iseg in seg_new:
-                        kseg = len(segs) - 3 + iseg_new
-                        segs_adjacency[jseg][pos] = kseg
-                        pos_2 = segs_adjacency[iseg].index(jseg)
-                        segs_adjacency[iseg].pop(pos_2)
-                        idx = segs_connects[iseg].pop(pos_2)
-                        segs_adjacency[kseg].append(jseg)
-                        segs_connects[kseg].append(idx)
-                        break
-            # step 2: each of the new segments connects with the undecided cells
-            segs_adjacency[iseg] += list(range(len(segs_adjacency) - 3, len(segs_adjacency)))
-            segs_connects[iseg] += ssegs_connects[-1]
-        else:
-            segs_adjacency += [[iseg], [iseg]]
-            prev_connecting_segments = segs_adjacency[iseg].copy()
-            prev_connecting_points = segs_connects[iseg]
-            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
-                # print('prev connect', jseg, 'trunk', trunk, prev_connecting_segments)
-                # find out to which of the new segments they connect to
-                # if it connects to the trunk cells, everything stays the same
                 iseg_cnt = 0
                 for iseg_new, seg_new in enumerate(ssegs):
                     if iseg_new != trunk:
                         pos = segs_adjacency[jseg].index(iseg)
                         connection_to_iseg = segs_connects[jseg][pos]
                         if connection_to_iseg in seg_new:
-                            kseg = len(segs) - 2 + iseg_cnt
+                            kseg = len(segs) - n_add + iseg_cnt
                             segs_adjacency[jseg][pos] = kseg
                             pos_2 = segs_adjacency[iseg].index(jseg)
                             segs_adjacency[iseg].pop(pos_2)
@@ -584,9 +583,85 @@ class DPT(data_graph.DataGraph):
                             segs_connects[kseg].append(idx)
                             break
                         iseg_cnt += 1
-            segs_adjacency[iseg] += list(range(len(segs_adjacency) - 2, len(segs_adjacency)))
+            segs_adjacency[iseg] += list(range(len(segs_adjacency) - n_add, len(segs_adjacency)))
             segs_connects[iseg] += ssegs_connects[trunk]
-            segs_undecided += [False, False]
+        else:
+            segs_adjacency += [[] for i in range(n_add)]
+            segs_connects += [[] for i in range(n_add)]
+            kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+            for jseg in prev_connecting_segments:
+                pos = segs_adjacency[jseg].index(iseg)
+                distances = []
+                closest_points_in_jseg = []
+                closest_points_in_kseg = []
+                for kseg in kseg_list:
+                    reference_point_in_k = segs_tips[kseg][0]
+                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
+                    # do not use the tip in the large segment j, instead, use the closest point
+                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
+                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
+                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                    # print(jseg, '(', segs_tips[jseg][0], closest_points_in_jseg[-1], ')',
+                    #       kseg, '(', segs_tips[kseg][0], closest_points_in_kseg[-1], ') :', distances[-1])
+                idx = np.argmin(distances)
+                kseg_min = kseg_list[idx]
+                segs_adjacency[jseg][pos] = kseg_min
+                segs_connects[jseg][pos] = closest_points_in_kseg[idx]
+                pos_2 = segs_adjacency[iseg].index(jseg)
+                segs_adjacency[iseg].pop(pos_2)
+                segs_connects[iseg].pop(pos_2)
+                segs_adjacency[kseg_min].append(jseg)
+                segs_connects[kseg_min].append(closest_points_in_jseg[idx])
+            # if we split two clusters, we need to check whether the new segments connect to any of the other
+            # old segments
+            # if not, we add a link between the new segments, if yes, we add two links to connect them at the
+            # correct old segments
+            do_not_attach_kseg = False
+            for kseg in kseg_list:
+                distances = []
+                closest_points_in_jseg = []
+                closest_points_in_kseg = []
+                jseg_list = [jseg for jseg in range(len(segs))
+                             if jseg != kseg and jseg not in prev_connecting_segments]
+                for jseg in jseg_list:
+                    reference_point_in_k = segs_tips[kseg][0]
+                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
+                    # do not use the tip in the large segment j, instead, use the closest point
+                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
+                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
+                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                idx = np.argmin(distances)
+                jseg_min = jseg_list[idx]
+                if jseg_min not in kseg_list:
+                    segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+                    for i, seg_adjacency in enumerate(segs_adjacency):
+                        segs_adjacency_sparse[i, seg_adjacency] = 1
+                    G = nx.Graph(segs_adjacency_sparse)
+                    paths_all = nx.single_source_dijkstra_path(G, source=kseg)
+                    if jseg_min not in paths_all:
+                        segs_adjacency[jseg_min].append(kseg)
+                        segs_connects[jseg_min].append(closest_points_in_kseg[idx])
+                        segs_adjacency[kseg].append(jseg_min)
+                        segs_connects[kseg].append(closest_points_in_jseg[idx])
+                        logg.m('    attaching new segment', kseg, 'at', jseg_min)
+                        # if we split the cluster, we should not attach kseg
+                        do_not_attach_kseg = True
+                    else:
+                        logg.m('    cannot attach new segment', kseg, 'at', jseg_min,
+                               '(would produce cycle)')
+                        if kseg != kseg_list[-1]:
+                            logg.m('        continue')
+                            continue
+                        else:
+                            logg.m('        do not add another link')
+                            break
+                if jseg_min in kseg_list and not do_not_attach_kseg:
+                    segs_adjacency[jseg_min].append(kseg)
+                    segs_connects[jseg_min].append(closest_points_in_kseg[idx])
+                    segs_adjacency[kseg].append(jseg_min)
+                    segs_connects[kseg].append(closest_points_in_jseg[idx])
+                    break
+        segs_undecided += [False for i in range(n_add)]
 
     def _detect_branching(self, Dseg, tips, seg_reference=None):
         """Detect branching on given segment.
@@ -613,10 +688,14 @@ class DPT(data_graph.DataGraph):
         """
         if self.flavor == 'haghverdi16':
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
+        elif self.flavor == 'wolf17_tri':
+            ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
+        elif self.flavor == 'wolf17_bi':
+            ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
-            ssegs = self._detect_branching_single_wolf17(Dseg, tips)
+            raise ValueError('`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.')
         # make sure that each data point has a unique association with a segment
-        masks = np.zeros((3, Dseg.shape[0]), dtype=bool)
+        masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):
             masks[iseg][seg] = True
         nonunique = np.sum(masks, axis=0) > 1
@@ -661,13 +740,13 @@ class DPT(data_graph.DataGraph):
             #     pl.yticks([])
             #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
             # pl.show()
-        else:
+        elif len(ssegs) == 3:
             reference_point = np.zeros(3, dtype=int)
             reference_point[0] = ssegs_tips[0][0]
             reference_point[1] = ssegs_tips[1][0]
             reference_point[2] = ssegs_tips[2][0]
             closest_points = np.zeros((3, 3), dtype=int)
-            # this is a bit another strategy than for the the undecided_cells
+            # this is another strategy than for the undecided_cells
             # here it's possible to use the more symmetric procedure
             # shouldn't make much of a difference
             closest_points[0, 1] = ssegs[1][np.argmin(Dseg[reference_point[0]][ssegs[1]])]
@@ -685,8 +764,10 @@ class DPT(data_graph.DataGraph):
                                [j for j in range(3) if j != trunk]
                                for i in range(3)]
             ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
-                               [closest_points[trunk, j] for j in range(3) if j != trunk]
-                               for i in range(3)]
+                              [closest_points[trunk, j] for j in range(3) if j != trunk]
+                              for i in range(3)]
+            # print(ssegs_connects)
+            # print(ssegs_adjacency)
             # import matplotlib.pyplot as pl
             # for iseg_new, seg_new in enumerate(ssegs):
             #     pl.figure()
@@ -696,13 +777,23 @@ class DPT(data_graph.DataGraph):
             #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
             #     for i in range(3):
             #         if i != iseg_new:
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 1], marker='o', c='black')
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 1], marker='x', c='black')
+            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 0],
+            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 1], marker='o', c='black')
+            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 0],
+            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 1], marker='x', c='black')
             #     pl.xticks([])
             #     pl.yticks([])
             #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
             # pl.show()
             # print('trunk', trunk)
+        else:
+            trunk = 0
+            ssegs_adjacency = [[1], [0]]
+            reference_point_in_0 = ssegs_tips[0][0]
+            closest_point_in_1 = ssegs[1][np.argmin(Dseg[reference_point_in_0][ssegs[1]])]
+            reference_point_in_1 = closest_point_in_1  # ssegs_tips[1][0]
+            closest_point_in_0 = ssegs[0][np.argmin(Dseg[reference_point_in_1][ssegs[0]])]
+            ssegs_connects = [[closest_point_in_1], [closest_point_in_0]]
         return ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk
 
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
@@ -721,7 +812,7 @@ class DPT(data_graph.DataGraph):
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
 
-    def _detect_branching_single_wolf17(self, Dseg, tips):
+    def _detect_branching_single_wolf17_tri(self, Dseg, tips):
         # all pairwise distances
         dist_from_0 = Dseg[tips[0]]
         dist_from_1 = Dseg[tips[1]]
@@ -742,6 +833,13 @@ class DPT(data_graph.DataGraph):
         masks[1] = ~closer_to_1_than_to_2
         segment_2 = np.sum(masks, axis=0) == 2
         ssegs = [segment_0, segment_1, segment_2]
+        return ssegs
+
+    def _detect_branching_single_wolf17_bi(self, Dseg, tips):
+        dist_from_0 = Dseg[tips[0]]
+        dist_from_1 = Dseg[tips[1]]
+        closer_to_0_than_to_1 = dist_from_0 < dist_from_1
+        ssegs = [closer_to_0_than_to_1, ~closer_to_0_than_to_1]
         return ssegs
 
     def __detect_branching_haghverdi16(self, Dseg, tips):
