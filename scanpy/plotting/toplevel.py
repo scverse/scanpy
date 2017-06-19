@@ -162,17 +162,6 @@ def scatter(adata,
     -------
     A list of matplotlib.Axis objects.
     """
-    # write params to a config file
-    params = locals()
-    del params['adata']
-    if os.path.exists('.scanpy/config_plotting.txt'):
-        params = sc_utils.update_params(readwrite.read_params('.scanpy/config_plotting.txt', verbosity=2), params)
-        if right_margin != params['right_margin']:
-            right_margin = params['right_margin']
-            sett.m(2, '... setting right_margin to saved value', right_margin)
-    readwrite.write_params('.scanpy/config_plotting.txt', params)
-    del params
-    # compute components
     if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
     if isinstance(comps, str): comps = comps.split(',')
     comps = np.array(comps).astype(int) - 1
@@ -311,7 +300,8 @@ def scatter(adata,
         if legendloc == 'right margin':
             legend = axs[icolor_key].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
-                                            ncol=2 if len(adata.add[color_key + '_names']) > 14 else 1)
+                                            ncol=(1 if len(adata.add[color_key + '_names']) <= 14
+                                                  else 2 if len(adata.add[color_key + '_names']) <= 28 else 3))
         elif legendloc != 'none':
             legend = axs[icolor_key].legend(frameon=False, loc=legendloc)
         if legend is not None:

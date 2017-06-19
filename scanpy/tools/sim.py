@@ -89,15 +89,16 @@ def sample_dynamic_data(params):
     """
     Helper function.
     """
+    modelkey = os.path.basename(params['model']).replace('.txt', '')
+    if sett.run_name == '': sett.run_name = modelkey
     if params['writedir'] == '':
-        params['writedir'] = (sett.run_name + '_sim')
-    sett.m(0,'writing to directory', params['writedir'])
+        params['writedir'] = (sett.writedir + sett.run_name + '_sim')
+    sett.m(0, 'writing to directory', params['writedir'])
     if not os.path.exists(params['writedir']):
         os.makedirs(params['writedir'])
     readwrite.write_params(params['writedir'] + '/params.txt', params)
     # init variables
     dir = params['writedir']
-    modelkey = os.path.basename(params['model']).replace('.txt','')
     tmax = params['tmax']
     branching = params['branching']
     noiseObs = params['noiseObs']
@@ -109,7 +110,7 @@ def sample_dynamic_data(params):
     maxRestarts = 1000
     maxNrSamples = 1
 
-    # simple vector auto regressive process or 
+    # simple vector auto regressive process or
     # hill kinetics process simulation
     if 'krumsiek11' not in modelkey:
         # create instance, set seed
@@ -142,7 +143,7 @@ def sample_dynamic_data(params):
             for restart in range(nrRealizations+maxRestarts):
                 # slightly break symmetry in initial conditions
                 if 'toggleswitch' in modelkey:
-                    X0 = (np.array([0.8 for i in range(grnsim.dim)]) 
+                    X0 = (np.array([0.8 for i in range(grnsim.dim)])
                           + 0.01*np.random.randn(grnsim.dim))
                 X = grnsim.sim_model(tmax=tmax,X0=X0,
                                      noiseDyn=noiseDyn)
@@ -233,13 +234,13 @@ def sample_dynamic_data(params):
     from ..data_structs import AnnData
     adata = AnnData(ddata)
     return adata
-    
+
 def write_data(X, dir='sim/test', append=False, header='',
                varNames={}, Adj=np.array([]), Coupl=np.array([]),
                boolRules={}, model='', modelType='', invTimeStep=1):
     """ Write simulated data.
 
-        Accounts for saving at the same time an ID 
+        Accounts for saving at the same time an ID
         and a model file.
     """
     # check if output directory exists
@@ -268,7 +269,7 @@ def write_data(X, dir='sim/test', append=False, header='',
                 Adj = np.copy(Adj)
                 if 'hill' in model:
                     for i in range(Adj.shape[0]):
-                        Adj[i,i] = 1                
+                        Adj[i,i] = 1
                 np.savetxt(dir+'/adj_'+id+'.txt',Adj,
                            header=header,
                            fmt='%d')
@@ -313,7 +314,7 @@ def write_data(X, dir='sim/test', append=False, header='',
     f.close()
 
 class GRNsim:
-    """ 
+    """
     Simlulation of stochastic dynamic systems.
 
     Main application: simulation of gene expression dynamics.
@@ -327,20 +328,20 @@ class GRNsim:
               'equations from Table 1 on page 3, doi:10.1371/journal.pone.0022649 \n')),
         ('var','vector autoregressive process \n'),
         ('hill','process with hill kinetics \n')])
-    
+
     writeOutputOnce = True
 
     def __init__(self,dim=3,model='ex0',modelType='var',
                  initType='random',show=False,verbosity=0,
                  Coupl=None,params={}):
-        """ 
+        """
             model : either string for predefined model, or directory with
                     a model file and a coupl matrix file
         """
-        self.dim = dim if Coupl is None else Coupl.shape[0] # number of nodes / dimension of system 
+        self.dim = dim if Coupl is None else Coupl.shape[0] # number of nodes / dimension of system
         self.maxnpar = 1 # maximal number of parents
         self.p_indep = 0.4 # fraction of independent genes
-        self.model = model 
+        self.model = model
         self.modelType = modelType
         self.initType = initType # string characterizing a specific initial
         self.show = show
@@ -368,7 +369,7 @@ class GRNsim:
         self.header  = 'model = ' + self.model+ ' \n'
         # params
         self.params = params
-        
+
     def sim_model(self,tmax,X0,noiseDyn=0,restart=0):
         """ Simulate the model.
         """
@@ -393,7 +394,7 @@ class GRNsim:
             that is, using self.boolCoeff. The employed functions
             are Hill type activation and deactivation functions.
 
-            See Wittmann et al., BMC Syst. Biol. 3, 98 (2009), 
+            See Wittmann et al., BMC Syst. Biol. 3, 98 (2009),
             doi:10.1186/1752-0509-3-98 for more details.
         """
         verbosity = self.verbosity>0 and self.writeOutputOnce
@@ -402,14 +403,14 @@ class GRNsim:
         for ichild,child in enumerate(self.pas.keys()):
             # check whether list of parents is non-empty,
             # otherwise continue
-            if self.pas[child]: 
+            if self.pas[child]:
                 Xdiff_syn = 0 # synthesize term
-                if verbosity > 0: 
+                if verbosity > 0:
                     Xdiff_syn_str = ''
             else:
                 continue
             # loop over all tuples for which the boolean update
-            # rule returns true, these are stored in self.boolCoeff        
+            # rule returns true, these are stored in self.boolCoeff
             for ituple,tuple in enumerate(self.boolCoeff[child]):
                 Xdiff_syn_tuple = 1
                 Xdiff_syn_tuple_str = ''
@@ -436,7 +437,7 @@ class GRNsim:
          """
          """
          # subtract the current state
-         Xdiff = -Xt 
+         Xdiff = -Xt
          # add the information from the past
          Xdiff += np.dot(self.Coupl,Xt)
          return Xdiff
@@ -448,7 +449,7 @@ class GRNsim:
         return x_pow / (x_pow + threshold_pow)
 
     def hill_i(self,x,threshold=0.1,power=2):
-        """ Inhibiting hill function. 
+        """ Inhibiting hill function.
 
             Is equivalent to 1-hill_a(self,x,power,threshold).
         """
@@ -495,7 +496,7 @@ class GRNsim:
                 break
         self.dim = len(boolRules)
         self.boolRules = collections.OrderedDict(boolRules)
-        self.varNames = collections.OrderedDict([(s,i) 
+        self.varNames = collections.OrderedDict([(s,i)
                           for i,s in enumerate(self.boolRules.keys())])
         names = self.varNames
         # read couplings via names
@@ -512,7 +513,7 @@ class GRNsim:
         # adjancecy matrices
         self.Adj_signed = np.sign(self.Coupl)
         self.Adj = np.abs(np.array(self.Adj_signed))
-        # build bool coefficients (necessary for odefy type 
+        # build bool coefficients (necessary for odefy type
         # version of the discrete model)
         self.build_boolCoeff()
 
@@ -521,7 +522,7 @@ class GRNsim:
             or via sampling.
         """
         self.varNames = collections.OrderedDict([(str(i),i) for i in range(self.dim)])
-        if (self.model not in self.availModels.keys() 
+        if (self.model not in self.availModels.keys()
             and Coupl is None):
             self.read_model()
         elif 'var' in self.model:
@@ -559,7 +560,7 @@ class GRNsim:
                 parent_idx = np.random.choice(np.arange(0,len(leafnodes)),
                                                     size=1,replace=False)
                 parent = leafnodes[parent_idx]
-                # children 
+                # children
                 children_ids = np.random.choice(np.arange(0,len(availnodes)),
                                                        size=2,replace=False)
                 children = availnodes[children_ids]
@@ -594,7 +595,7 @@ class GRNsim:
                 else:
                     self.Adj[i,i] = 1
         #
-        self.Adj = np.abs(np.array(self.Adj_signed))        
+        self.Adj = np.abs(np.array(self.Adj_signed))
         #sett.m(0,self.Adj)
 
     def set_coupl_old(self):
@@ -631,7 +632,7 @@ class GRNsim:
            sett.m(0,self.Coupl)
 
     def coupl_model1(self):
-        """ In model 1, we want enforce the following signs 
+        """ In model 1, we want enforce the following signs
             on the couplings. Model 2 has the same couplings
             but arbitrary signs.
         """
@@ -669,9 +670,9 @@ class GRNsim:
         self.Coupl = self.Adj_signed
 
     def sim_model_back_help(self,Xt,Xt1):
-        """ Yields zero when solved for X_t 
+        """ Yields zero when solved for X_t
             given X_{t+1}.
-        """        
+        """
         return - Xt1 + Xt + self.Xdiff(Xt)
 
     def sim_model_backwards(self,tmax,X0):
@@ -687,10 +688,10 @@ class GRNsim:
         return X
 
     def branch_init_model1(self,tmax=100):
-        # check whether we can define trajectories 
+        # check whether we can define trajectories
         Xfix = np.array([self.Coupl[0,1]/self.Coupl[0,0],1])
         if Xfix[0] > 0.97 or Xfix[0] < 0.03:
-            sett.m(0,'... either no fixed point in [0,1]^2! \n' + 
+            sett.m(0,'... either no fixed point in [0,1]^2! \n' +
                   '    or fixed point is too close to bounds' )
             return None
         #
@@ -716,7 +717,7 @@ class GRNsim:
 
     def parents_from_boolRule(self,rule):
         """ Determine parents based on boolean updaterule.
-            
+
             Returns list of parents.
         """
         rule_pa = rule.replace('(','').replace(')','').replace('or','').replace('and','').replace('not','')
@@ -801,7 +802,7 @@ class GRNsim:
                   Adj=self.Adj,Coupl=self.Coupl,
                   model=self.model,modelType=self.modelType,
                   boolRules=self.boolRules,invTimeStep=self.invTimeStep)
-        
+
 def _check_branching(X,Xsamples,restart,threshold=0.25):
     """ Check whether time series branches.
 
@@ -822,7 +823,7 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
         for Xcompare in Xsamples:
             Xtmax_diff = np.absolute(X[-1,:] - Xcompare[-1,:])
             # If the second largest element is smaller than threshold
-            # set check to False, i.e. at least two elements 
+            # set check to False, i.e. at least two elements
             # need to change in order to have a branching.
             # If we observe all parameters of the system,
             # a new attractor state must involve changes in two
@@ -841,10 +842,10 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
 
 def check_nocycles(Adj,verbosity=2):
     """ Checks that there are no cycles in graph described by adjacancy matrix.
-        
+
         Args:
             Adj (np.array): adjancancy matrix of dimension (dim, dim)
-            
+
         Returns:
             True if there is no cycle, False otherwise.
     """
@@ -869,31 +870,31 @@ def sample_coupling_matrix(dim=3,connectivity=0.5):
 
         Checks that returned graphs contain no self-cycles.
 
-        Args:  
-            dim (int): dimension of coupling matrix.  
+        Args:
+            dim (int): dimension of coupling matrix.
             connectivity (float): fraction of connectivity, fully connected means 1.,
-                not-connected means 0, in the case of fully connected, one has 
-                dim*(dim-1)/2 edges in the graph.  
+                not-connected means 0, in the case of fully connected, one has
+                dim*(dim-1)/2 edges in the graph.
 
-        Returns:    
+        Returns:
             Tuple (Coupl,Adj,Adj_signed) of coupling matrix, adjancancy and
-            signed adjacancy matrix.  
+            signed adjacancy matrix.
     """
     max_trial = 10
     check = False
     for trial in range(max_trial):
-        # random topology for a given connectivity / edge density 
+        # random topology for a given connectivity / edge density
         Coupl = np.zeros((dim,dim))
         n_edges = 0
         for gp in range(dim):
             for g in range(dim):
                 if gp != g:
-                    # need to have the factor 0.5, otherwise 
+                    # need to have the factor 0.5, otherwise
                     # connectivity=1 would lead to dim*(dim-1) edges
                     if np.random.rand() < 0.5*connectivity:
                         Coupl[gp,g] = 0.7
                         n_edges += 1
-        # obtain adjacancy matrix 
+        # obtain adjacancy matrix
         Adj_signed = np.zeros((dim,dim),dtype='int_')
         Adj_signed = np.sign(Coupl)
         Adj = np.abs(Adj_signed)
@@ -903,14 +904,14 @@ def sample_coupling_matrix(dim=3,connectivity=0.5):
             break
     if not check:
         raise ValueError('did not find graph without cycles after',
-                         max_trial,'trials')    
+                         max_trial,'trials')
     return Coupl, Adj, Adj_signed, n_edges
 
 class StaticCauseEffect:
-    """ 
+    """
     Simulates static data to investigate structure learning.
     """
-    
+
     availModels = odict([
         ('line', 'y = alpha x \n'),
         ('noise', 'y = noise \n'),
@@ -940,13 +941,13 @@ class StaticCauseEffect:
         needs to be acyclic.
 
         Args:
-           Adj (np.array): adjacancy matrix of shape (dim,dim).  
+           Adj (np.array): adjacancy matrix of shape (dim,dim).
 
         Returns:
-           Data array of shape (n_samples,dim).  
+           Data array of shape (n_samples,dim).
         """
         # nice examples
-        examples = [{'func' : 'sawtooth', 'gdist' : 'uniform', 
+        examples = [{'func' : 'sawtooth', 'gdist' : 'uniform',
                      'sigma_glob' : 1.8, 'sigma_noise' : 0.1}]
 
         # nr of samples
@@ -977,7 +978,7 @@ class StaticCauseEffect:
                     X[:,gp] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
                 parents.append(gp)
                 children.remove(gp)
-                    
+
         # all of the following guarantees for 3 dim, that we generate the data
         # in the correct sequence
         # then compute all nodes that have 1 parent, then those with 2 parents
@@ -990,8 +991,8 @@ class StaticCauseEffect:
                 if Adj[gp,:].sum() == nrpar:
                     children_sorted.append(gp)
                     nrchildren_par[nrpar] += 1
-        # if there is more than a child with a single parent 
-        # order these children (there are two in three dim) 
+        # if there is more than a child with a single parent
+        # order these children (there are two in three dim)
         # by distance to the source/parent
         if nrchildren_par[1] > 1:
             if Adj[children_sorted[0],parents[0]] == 0:
@@ -1011,7 +1012,7 @@ class StaticCauseEffect:
 #         fig.add_subplot(312)
 #         pl.plot(X[:,1],X[:,2],'.',mec='white')
 #         fig.add_subplot(313)
-#         pl.plot(X[:,2],X[:,0],'.',mec='white')                
+#         pl.plot(X[:,2],X[:,0],'.',mec='white')
 #         pl.show()
 
         return X
@@ -1028,14 +1029,14 @@ class StaticCauseEffect:
         sigma_glob = 1.8
 
         X = np.zeros((n_samples,3))
-        
+
         X[:,0] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
         X[:,1] = np.random.uniform(-sigma_glob,sigma_glob,n_samples)
 
         func = self.funcs['tanh']
 
         # XOR type
-#         X[:,2] = (func(X[:,0])*sp.stats.norm.pdf(X[:,1],0,0.2) 
+#         X[:,2] = (func(X[:,0])*sp.stats.norm.pdf(X[:,1],0,0.2)
 #                   + func(X[:,1])*sp.stats.norm.pdf(X[:,0],0,0.2))
         # AND type / diagonal
 #         X[:,2] = (func(X[:,0]+X[:,1])*sp.stats.norm.pdf(X[:,1]-X[:,0],0,0.2))
@@ -1051,7 +1052,7 @@ class StaticCauseEffect:
         return X
 
 def sample_static_data(model,dir,verbosity=0):
-    # fraction of connectivity as compared to fully connected 
+    # fraction of connectivity as compared to fully connected
     # in one direction, which amounts to dim*(dim-1)/2 edges
     connectivity = 0.8
     dim = 3
@@ -1126,7 +1127,7 @@ if __name__ == '__main__':
         model = dir.split('/')[1].split('_')[0]
         sett.m(0,'...model is: "'+model+'"')
     if os.path.exists(dir) and 'test' not in dir:
-        message = ('directory ' + dir + 
+        message = ('directory ' + dir +
                    ' already exists, remove it and continue? [y/n, press enter]')
         if str(input(message)) != 'y':
             sett.m(0,'    ...quit program execution')
@@ -1143,4 +1144,3 @@ if __name__ == '__main__':
         sample_static_data(model=model,dir=dir,verbosity=args.verbosity)
     else:
         sample_dynamic_data(model=model,dir=dir)
-    

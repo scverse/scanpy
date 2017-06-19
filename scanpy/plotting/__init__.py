@@ -436,6 +436,13 @@ def dpt_scatter(adata,
     #  + [adata.add['dpt_grouptips'][i][0]
     #     for i in range(len(adata.add['dpt_grouptips']))
     #  if adata.add['dpt_grouptips'][i][1] != -1])
+
+    #    adata.add['highlights'] = adata.add['dpt_groups_connects'][adata.add['dpt_groups_connects'].nonzero()].A1
+    #    adata.add['highlights'] = {i: '{}, {}->{}'.format(
+    #        i,
+    #        adata.add['dpt_groups_connects'].nonzero()[0][ii],
+    #        adata.add['dpt_groups_connects'].nonzero()[1][ii])
+    #        for ii, i in enumerate(adata.add['highlights'])}
     for comps in comps_list:
         axs = scatter(adata,
                       basis=basis,
@@ -472,10 +479,12 @@ def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
         if name in sett._ignore_categories: colors[iname] = 'grey'
     G = nx.Graph(adata.add['dpt_groups_adjacency'])
     pos = utils.hierarchy_pos(G, root)
+    # pos = nx.spring_layout(G)
     if len(pos) == 1: pos[0] = 0.5, 0.5
     fig = pl.figure()
     ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
-    nx.draw_networkx_edges(G, pos, ax=ax)
+    labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])

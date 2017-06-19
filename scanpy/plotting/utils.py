@@ -188,8 +188,8 @@ def scatter_base(Y,
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
-        higlights = highlights_indices
     else:
+        highlights_indices = highlights
         highlights_labels = []
     # if we have a single array, transform it into a list with a single array
     avail_layouts = {'2d', '3d'}
@@ -265,18 +265,18 @@ def scatter_base(Y,
         if titles is not None:
             ax.set_title(titles[icolor])
         # output highlighted data points
-        for iihighlight, ihighlight in enumerate(highlights):
+        for iihighlight, ihighlight in enumerate(highlights_indices):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
             if '3d' in layout:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
             ax.scatter(*data, c='black',
                        facecolors='black', edgecolors='black',
                        marker='x', s=40, zorder=20)
-            highlight = (highlights_labels[iihighlight] if
-                         len(highlights_labels) > 0
-                         else str(ihighlight))
+            highlight_text = (highlights_labels[iihighlight] if
+                              len(highlights_labels) > 0
+                              else str(ihighlight))
             # the following is a Python 2 compatibility hack
-            ax.text(*([d[0] for d in data] + [highlight]), zorder=20)
+            ax.text(*([d[0] for d in data] + [highlight_text]), zorder=20, color='red')
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])

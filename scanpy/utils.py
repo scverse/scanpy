@@ -58,7 +58,7 @@ def identify_categories(adata, predicted, reference, normalization='reference',
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        asso_names += [','.join([adata.add[reference + '_names'][i]
+        asso_names += ['\n'.join([adata.add[reference + '_names'][i]
                                  for i in np.argsort(asso_matrix[-1])[::-1]
                                  if asso_matrix[-1][i] > threshold][:max_number])]
     return asso_names, np.array(asso_matrix)

@@ -12,7 +12,7 @@ from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
-        min_group_size=50,
+        min_group_size=20,
         n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
@@ -169,7 +169,7 @@ class DPT(data_graph.DataGraph):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=1, n_pcs=50, n_pcs_post=30,
-                 min_group_size=50,
+                 min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None, n_branchings=0,
                  flavor='haghverdi16'):
@@ -181,6 +181,7 @@ class DPT(data_graph.DataGraph):
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size
         self.passed_adata = adata_or_X  # just for debugging purposes
+        self.choose_largest_segment = True
 
     def branchings_segments(self):
         """Detect branchings and partition the data into corresponding segments.
@@ -275,8 +276,7 @@ class DPT(data_graph.DataGraph):
             # of maximally distant points
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
             logg.m('... branching {}:'.format(ibranch + 1),
-                   'split group', iseg,
-                   'with tip cells =', tips3, t=True)  # [third start end]
+                   'split group', iseg)  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(segs, segs_tips,
                                   segs_connects,
@@ -300,54 +300,49 @@ class DPT(data_graph.DataGraph):
                                                          self.segs_connects[j, i]]
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_connects = self.segs_connects.tocsr()
-        print(self.segs_adjacency)
+        # print(self.segs_adjacency)
+        # print([len(s) for s in self.segs])
         self.contract_segments()
-        print(self.segs_adjacency)
+        # print(self.segs_adjacency)
+        # print([len(s) for s in self.segs])
+
         # self.check_adjacency()
         # print('new')
         # print(self.segs_adjacency)
 
     def contract_segments(self):
-        i, n, m = self.segments_to_contract()
-        if i != 0 or n != 0:
-            # # copy everything but skip i and instead add all of n to i
-            # segs_adjacency = sp.sparse.lil_matrix((len(self.segs)-1, len(self.segs)-1), dtype=float)
-            # new_j = 0
-            # for j in range(len(self.segs)):
-            #     if j != i and j != m and j != n:
-            #         segs_adjacency[new_j, self.segs_adjacency[j].nonzero()[1]] = self.segs_adjacency[self.segs_adjacency[j].nonzero()]
-            #     if j == m or j == n:
-            #         neighbors_except_i = [k for k in self.segs_adjacency[j].nonzero()[1] if k != i]
-            #         segs_adjacency[j, neighbors_except_i] = self.segs_adjacency[j, neighbors_except_i]
-            #     if j == n:
-            #         segs_adjacency[n, m] = self.segs_adjacency[i, m]
-            #         segs_adjacency[m, n] = segs_adjacency[n, m]
-            #         segs_adjacency[j, i] = 0
-            #         segs_adjacency[m, i] = 0
-            #         self.segs[j].append(self.segs[i])
-            #         self.segs.pop[i]
-            #     if j != i:
-            #         new_j += 1
-            # self.segs_adjacency = self.segs_adjacency.tocsr()
-            # segs_adjacency.eliminate_zeros()
-            # self.segs_adjacency = segs_adjacency
-            G = nx.Graph(self.segs_adjacency)
-            G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
-            self.segs_adjacency = nx.to_scipy_sparse_matrix(G_contracted)
-            np.append(self.segs[n], self.segs[i])
-            self.segs.pop(i)
+        for i in range(1000):
+            i, n = self.propose_segments_to_contract()
+            if i != 0 or n != 0:
+                G = nx.Graph(self.segs_adjacency)
+                G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
+                self.segs_adjacency = nx.to_scipy_sparse_matrix(G_contracted)
+                self.segs[n] = np.append(self.segs[n], self.segs[i])
+                self.segs.pop(i)
+            else:
+                break
 
-    def segments_to_contract(self):
+    def propose_segments_to_contract(self):
+        # nodes with two edges
         n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
         for i in range(len(self.segs)):
             if n_edges_per_seg[i] == 2:
                 neighbors = self.segs_adjacency[i].nonzero()[1]
-                for n_cnt, n in enumerate(neighbors):
-                    if n_edges_per_seg[n] == 1 or n_edges_per_seg[n] == 2:
-                        logg.m('merging segment', i, 'into', n)
-                        m = neighbors[1] if n_cnt == 0 else neighbors[0]
-                        return i, n, m
-        return 0, 0, 0
+                for neighbors_edges in range(1, 20):
+                    for n_cnt, n in enumerate(neighbors):
+                        if n_edges_per_seg[n] == neighbors_edges:
+                            logg.m('merging segment', i, 'into', n, '(two edges)')
+                            return i, n
+        # nodes with a very small cell number into
+        for i in range(len(self.segs)):
+            if len(self.segs[i]) < self.min_group_size:
+                neighbors = self.segs_adjacency[i].nonzero()[1]
+                neighbor_sizes = [len(self.segs[n]) for n in neighbors]
+                n = neighbors[np.argmax(neighbor_sizes)]
+                logg.m('merging segment', i, 'into', n,
+                       '(smaller than `min_group_size` = {})'.format(self.min_group_size))
+                return i, n
+        return 0, 0
 
     def check_adjacency(self):
         n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
@@ -440,9 +435,10 @@ class DPT(data_graph.DataGraph):
                 score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             else:
                 score = Dseg[tips3[0], tips3[1]]
-            score = len(seg)  # simply the number of points
-            # logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
-            #        '(too small)' if len(seg) < self.min_group_size else '')
+            score = len(seg) if self.choose_largest_segment else score  # simply the number of points
+            # self.choose_largest_segment = False
+            logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
+                   '(too small)' if len(seg) < self.min_group_size else '')
             if len(seg) < self.min_group_size: score = 0
             # write result
             scores_tips[iseg, 0] = score
