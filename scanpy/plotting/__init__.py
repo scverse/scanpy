@@ -6,6 +6,7 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 
 import warnings
 import numpy as np
+import networkx as nx
 from ..compat.matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
 # general functions
@@ -466,18 +467,21 @@ def dpt_scatter(adata,
 
 def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     # plot the tree
-    import networkx as nx
-    if colors is None:
-        if ('dpt_groups_colors' not in adata.add
-            or len(adata.add['dpt_groups_names']) != len(adata.add['dpt_groups_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, 'dpt_groups')
-        colors = adata.add['dpt_groups_colors']
-    else: colors = colors
-    if names is None:
-        names = {i: n for i, n in enumerate(adata.add['dpt_groups_names'])}
-    for iname, name in enumerate(adata.add['dpt_groups_names']):
-        if name in sett._ignore_categories: colors[iname] = 'grey'
-    G = nx.Graph(adata.add['dpt_groups_adjacency'])
+    if isinstance(adata, nx.Graph):
+        G = adata
+        colors = ['grey' for n in enumerate(G)]
+    else:
+        if colors is None:
+            if ('dpt_groups_colors' not in adata.add
+                or len(adata.add['dpt_groups_names']) != len(adata.add['dpt_groups_colors'])):
+                utils.add_colors_for_categorical_sample_annotation(adata, 'dpt_groups')
+            colors = adata.add['dpt_groups_colors']
+        else: colors = colors
+        if names is None:
+            names = {i: n for i, n in enumerate(adata.add['dpt_groups_names'])}
+        for iname, name in enumerate(adata.add['dpt_groups_names']):
+            if name in sett._ignore_categories: colors[iname] = 'grey'
+        G = nx.Graph(adata.add['dpt_groups_adjacency'])
     pos = utils.hierarchy_pos(G, root)
     # pos = nx.spring_layout(G)
     if len(pos) == 1: pos[0] = 0.5, 0.5
@@ -501,13 +505,88 @@ def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
         else:
             color = colors[n_cnt].keys()
             fracs = [colors[n_cnt][c] for c in color]
+            if sum(fracs) < 1:
+                color = list(color)
+                color.append('grey')
+                fracs.append(1-sum(fracs))
+                names[n_cnt] += '\n?'
         a.pie(fracs, colors=color)
-        a.text(0.5, 0.5, names[n_cnt],
-               verticalalignment='center',
-               horizontalalignment='center',
-               transform=a.transAxes, size=fontsize)
+        if names is not None:
+            a.text(0.5, 0.5, names[n_cnt],
+                   verticalalignment='center',
+                   horizontalalignment='center',
+                   transform=a.transAxes, size=fontsize)
     savefig_or_show('dpt_tree', show)
     return ax
+
+
+def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
+    # plot the tree
+    if isinstance(adata, nx.Graph):
+        G = adata
+        colors = ['grey' for n in enumerate(G)]
+    else:
+        if colors is None:
+            if ('ega_groups_colors' not in adata.add
+                or len(adata.add['ega_groups_names']) != len(adata.add['ega_groups_colors'])):
+                utils.add_colors_for_categorical_sample_annotation(adata, 'ega_groups')
+            colors = adata.add['ega_groups_colors']
+        else: colors = colors
+        if names is None:
+            names = {i: n for i, n in enumerate(adata.add['ega_groups_names'])}
+        for iname, name in enumerate(adata.add['ega_groups_names']):
+            if name in sett._ignore_categories: colors[iname] = 'grey'
+        G = nx.Graph(adata.add['ega_groups_adjacency'])
+    pos = utils.hierarchy_pos(G, root)
+    # pos = nx.spring_layout(G)
+    if len(pos) == 1: pos[0] = 0.5, 0.5
+    fig = pl.figure()
+    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+    labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
+    trans = ax.transData.transform
+    trans2 = fig.transFigure.inverted().transform
+    pl.xticks([])
+    pl.yticks([])
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 5)
+    p2 = piesize/2.0
+    for n_cnt, n in enumerate(G):
+        xx, yy = trans(pos[n])     # figure coordinates
+        xa, ya = trans2((xx, yy))  # normalized coordinates
+        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
+        if is_color_like(colors[n_cnt]):
+            fracs = [100]
+            color = [colors[n_cnt]]
+        else:
+            color = colors[n_cnt].keys()
+            fracs = [colors[n_cnt][c] for c in color]
+            if sum(fracs) < 1:
+                color = list(color)
+                color.append('grey')
+                fracs.append(1-sum(fracs))
+                names[n_cnt] += '\n?'
+        a.pie(fracs, colors=color)
+        if names is not None:
+            a.text(0.5, 0.5, names[n_cnt],
+                   verticalalignment='center',
+                   horizontalalignment='center',
+                   transform=a.transAxes, size=fontsize)
+    savefig_or_show('ega_tree', show)
+    return ax
+
+
+def ega_sc_tree(adata, root, show=None):
+    G = nx.Graph(adata.add['ega_groups_adjacency'])
+    node_sets = []
+    sorted_ega_groups = adata.smp['ega_groups'][adata.smp['ega_order']]
+    for n in adata.add['ega_groups_names']:
+        node_sets.append(np.flatnonzero(n == sorted_ega_groups))
+    # print(node_sets)
+    sc_G = utils.hierarchy_sc(G, root, node_sets)
+    ax = ega_tree(sc_G, root)
+    savefig_or_show('ega_sc_tree', show)
+    return ax
+
 
 def dpt_timeseries(adata, cmap=None, show=None):
     # plot segments and pseudotime

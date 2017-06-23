@@ -16,6 +16,14 @@ verbosity_levels_from_strings = {
 }
 
 
+def info(*msg, **kwargs):
+    return m(*msg, v='info', **kwargs)
+
+
+def hint(*msg, **kwargs):
+    return m(*msg, v='hint', **kwargs)
+
+
 def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
     """Write message to log output.
 

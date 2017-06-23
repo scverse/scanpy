@@ -41,6 +41,7 @@ def savefig(writekey):
         dpi = rcParams['savefig.dpi']
     if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
     if sett.run_name != '': writekey = sett.run_name + '_' + writekey
+    if sett.figdir[-1] != '/': sett.figdir += '/'
     filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
     logg.m('... saving figure to file', filename)
     pl.savefig(filename, dpi=dpi)
@@ -308,6 +309,7 @@ def scatter(adata,
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     if show: pl.show()
     return axs
+
 
 def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
     """Plot rankings.

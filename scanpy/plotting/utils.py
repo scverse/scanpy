@@ -2,6 +2,7 @@
 #          P. Angerer
 
 import numpy as np
+import networkx as nx
 from ..compat.matplotlib import pyplot as pl
 from .. import logging as logg
 from matplotlib import rcParams, ticker
@@ -441,6 +442,23 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
     vert_gap = height / (max([l for l in levels])+1)
     return make_pos({})
 
+def hierarchy_sc(G, root, node_sets):
+    def make_sc_tree(sc_G, node=root, parent=None):
+        sc_G.add_node(node)
+        neighbors = G.neighbors(node)
+        if parent is not None:
+            sc_G.add_edge(parent, node)
+            neighbors.remove(parent)
+        old_node = node
+        for n in node_sets[int(node)]:
+            new_node = str(node) + '_' + str(n)
+            sc_G.add_node(new_node)
+            sc_G.add_edge(old_node, new_node)
+            old_node = new_node
+        for neighbor in neighbors:
+            sc_G = make_sc_tree(sc_G, neighbor, node)
+        return sc_G
+    return make_sc_tree(nx.Graph())
 
 def zoom(ax, xy='x', factor=1):
     """Zoom into axis.
