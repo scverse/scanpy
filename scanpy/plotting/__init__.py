@@ -56,8 +56,8 @@ def pca(adata, **params):
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
@@ -76,7 +76,7 @@ def pca_scatter(adata,
                 pal=None,
                 right_margin=None,
                 size=None,
-                titles=None,
+                title=None,
                 show=None):
     """See parameters of pl.pca().
     """
@@ -94,7 +94,7 @@ def pca_scatter(adata,
                   pal=pal,
                   right_margin=right_margin,
                   size=size,
-                  titles=titles,
+                  title=title,
                   show=False)
     savefig_or_show('pca_scatter', show=show)
     return axs
@@ -122,7 +122,7 @@ def diffmap(adata,
             pal=None,
             right_margin=None,
             size=None,
-            titles=None,
+            title=None,
             show=None):
     """Scatter plot in Diffusion Map basis.
 
@@ -153,8 +153,8 @@ def diffmap(adata,
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
     """
     from ..examples import check_adata
     adata = check_adata(adata)
@@ -178,7 +178,7 @@ def diffmap(adata,
                       pal=pal,
                       right_margin=right_margin,
                       size=size,
-                      titles=titles,
+                      title=title,
                       show=False)
         writekey = 'diffmap'
         if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
@@ -200,7 +200,7 @@ def tsne(adata,
          pal=None,
          right_margin=None,
          size=None,
-         titles=None,
+         title=None,
          show=None):
     """Scatter in tSNE basis.
 
@@ -231,8 +231,8 @@ def tsne(adata,
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
 
     Returns
     -------
@@ -252,7 +252,7 @@ def tsne(adata,
                   pal=pal,
                   right_margin=right_margin,
                   size=size,
-                  titles=titles,
+                  title=title,
                   show=False)
     savefig_or_show('tsne')
     return axs
@@ -269,7 +269,7 @@ def spring(adata,
            pal=None,
            right_margin=None,
            size=None,
-           titles=None,
+           title=None,
            show=None):
     """Plot spring scatter plot.
 
@@ -300,8 +300,8 @@ def spring(adata,
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
     """
     from ..examples import check_adata
     adata = check_adata(adata)
@@ -322,7 +322,7 @@ def spring(adata,
                   right_margin=right_margin,
                   size=size,
                   # defined in plotting
-                  titles=titles,
+                  title=title,
                   show=False)
     savefig_or_show('spring', show=show)
 
@@ -339,7 +339,7 @@ def dpt(adata,
         pal=None,
         right_margin=None,
         size=None,
-        titles=None,
+        title=None,
         show=None):
     """Plot results of DPT analysis.
 
@@ -372,8 +372,8 @@ def dpt(adata,
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
     """
     dpt_scatter(adata,
                 basis=basis,
@@ -387,7 +387,7 @@ def dpt(adata,
                 pal=pal,
                 right_margin=right_margin,
                 size=size,
-                titles=titles,
+                title=title,
                 show=False)
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
@@ -410,7 +410,7 @@ def dpt_scatter(adata,
                 pal=None,
                 right_margin=None,
                 size=None,
-                titles=None,
+                title=None,
                 show=None):
     """See parameters of sc.pl.dpt().
     """
@@ -457,7 +457,7 @@ def dpt_scatter(adata,
                       pal=pal,
                       right_margin=right_margin,
                       size=size,
-                      titles=titles,
+                      title=title,
                       show=False)
         writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
@@ -493,7 +493,7 @@ def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
     pl.yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 5)
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
         xx, yy = trans(pos[n])     # figure coordinates
@@ -548,7 +548,7 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
     pl.yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 5)
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
         xx, yy = trans(pos[n])     # figure coordinates
@@ -647,7 +647,7 @@ def dbscan(adata,
            pal=None,
            right_margin=None,
            size=None,
-           titles=None,
+           title=None,
            show=None):
     """Plot results of DBSCAN clustering.
 
@@ -678,8 +678,8 @@ def dbscan(adata,
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
     """
     from ..examples import check_adata
     adata = check_adata(adata)
@@ -697,7 +697,7 @@ def dbscan(adata,
                    pal=pal,
                    right_margin=right_margin,
                    size=size,
-                   titles=titles,
+                   title=title,
                    show=False)
     savefig_or_show('dbscan_' + basis)
 
@@ -715,7 +715,7 @@ def paths(adata,
           cmap=None,
           right_margin=None,
           size=None,
-          titles=None,
+          title=None,
           show=None):
     """Plot paths.
 
@@ -783,7 +783,7 @@ def paths(adata,
                        cmap=cmap,
                        right_margin=right_margin,
                        size=size,
-                       titles=titles,
+                       title=title,
                        show=False)
         writekey = 'paths_' + basis + '_' + adata.add['paths_type']
         if sett.savefigs: savefig(writekey)
@@ -806,7 +806,7 @@ def paths(adata,
                            cmap=cmap,
                            right_margin=right_margin,
                            size=size,
-                           titles=titles,
+                           title=title,
                            show=False)
             del color_base[-1]
             writekey = 'paths_' + basis + '_' + adata.add['paths_type'] + '_' + name

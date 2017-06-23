@@ -11,7 +11,7 @@ from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def ega(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
+def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='bi_uncontracted', copy=False):
     """Extremal Graph Abstraction
@@ -43,8 +43,8 @@ def ega(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
             `diffmap`).  Will be used if option `recompute_diffmap` is False.
-    n_branchings : int, optional (default: 1)
-        Number of branchings to detect.
+    n_splits : int, optional (default: 1)
+        Number of splits to detect.
     k : int, optional (default: 30)
         Number of nearest neighbors on the knn graph. If knn == False, set the
         Gaussian kernel width to the distance of the kth neighbor.
@@ -85,15 +85,15 @@ def ega(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         adata.var['xroot'] = adata[root_cell_name, :].X
     where `root_cell_name` is the name (a string) of the root cell.'''
         logg.hint(msg)
-    if n_branchings == 0:
-        logg.hint('set parameter `n_branchings` > 0 to detect branchings')
-    if n_branchings > 1:
+    if n_splits == 0:
+        logg.hint('set parameter `n_splits` > 0 to detect splits')
+    if n_splits > 1:
         logg.info('... running a hierarchical version of EGA')
     ega = EGA(adata, k=k, n_pcs=n_pcs,
               min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
-              n_branchings=n_branchings,
+              n_splits=n_splits,
               flavor=flavor)
     ddmap = ega.diffmap(n_comps=n_dcs)
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
@@ -113,8 +113,8 @@ def ega(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         ega.set_pseudotime()  # pseudotimes are distances from root point
         adata.add['iroot'] = ega.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['ega_pseudotime'] = ega.pseudotime
-    # detect branchings and partition the data into segments
-    ega.branchings_segments()
+    # detect splits and partition the data into segments
+    ega.splits_segments()
     # vector of length n_groups
     adata.add['ega_groups_names'] = [str(n) for n in ega.segs_names_unique]
     # for itips, tips in enumerate(ega.segs_tips):
@@ -149,22 +149,22 @@ class EGA(data_graph.DataGraph):
                  n_jobs=1, n_pcs=50,
                  min_group_size=20,
                  recompute_pca=None,
-                 recompute_diffmap=None, n_branchings=0,
+                 recompute_diffmap=None, n_splits=0,
                  flavor='haghverdi16'):
         super(EGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
-        self.n_branchings = n_branchings
+        self.n_splits = n_splits
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
 
-    def branchings_segments(self):
-        """Detect branchings and partition the data into corresponding segments.
+    def splits_segments(self):
+        """Detect splits and partition the data into corresponding segments.
 
-        Detect all branchings up to `n_branchings`.
+        Detect all splits up to `n_splits`.
 
         Writes
         ------
@@ -178,13 +178,13 @@ class EGA(data_graph.DataGraph):
             Array of dimension (number of data points). Stores an integer label
             for each segment.
         """
-        self.detect_branchings()
+        self.detect_splits()
         self.postprocess_segments()
         self.set_segs_names()
         self.order_pseudotime()
 
-    def detect_branchings(self):
-        """Detect all branchings up to `n_branchings`.
+    def detect_splits(self):
+        """Detect all splits up to `n_splits`.
 
         Writes Attributes
         -----------------
@@ -193,8 +193,8 @@ class EGA(data_graph.DataGraph):
         segs_tips : np.ndarray
             List of indices of the tips of segments.
         """
-        logg.info('... detect', self.n_branchings,
-                  'branching' + ('' if self.n_branchings == 1 else 's'))
+        logg.info('... detect', self.n_splits,
+                  'branching' + ('' if self.n_splits == 1 else 's'))
         indices_all = np.arange(self.X.shape[0], dtype=int)
         segs = [indices_all]
         if False:  # this is safe, but not compatible with on-the-fly computation
@@ -212,7 +212,7 @@ class EGA(data_graph.DataGraph):
         segs_adjacency = [[]]
         logg.info('... do not consider groups with less than {} points for splitting'
                .format(self.min_group_size))
-        for ibranch in range(self.n_branchings):
+        for ibranch in range(self.n_splits):
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
             if iseg == -1:
                 logg.info('... partitioning converged')
@@ -731,7 +731,7 @@ class EGA(data_graph.DataGraph):
     def _detect_branching_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment.
         """
-        # compute branchings using different starting points the first index of
+        # compute splits using different starting points the first index of
         # tips is the starting point for the other two, the order does not
         # matter
         ssegs = []

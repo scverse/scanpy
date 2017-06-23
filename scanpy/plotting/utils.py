@@ -160,10 +160,9 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
 def scatter_base(Y,
                  colors='blue',
                  highlights=[],
-                 title='',
                  right_margin=None,
                  layout='2d',
-                 titles=None,
+                 title=None,
                  component_name='DC',
                  component_indexnames=[1, 2, 3],
                  axis_labels=None,
@@ -229,7 +228,6 @@ def scatter_base(Y,
 
     fig = pl.figure(figsize=(figure_width, height),
                     subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
-    fig.suptitle(title)
     left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
     for i in range(1, len(colors)):
         right_margin = right_margin_list[i-1]
@@ -262,9 +260,9 @@ def scatter_base(Y,
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
                              cax=ax_cb)
-        # set the titles
-        if titles is not None:
-            ax.set_title(titles[icolor])
+        # set the title
+        if title is not None:
+            ax.set_title(title[icolor])
         # output highlighted data points
         for iihighlight, ihighlight in enumerate(highlights_indices):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]

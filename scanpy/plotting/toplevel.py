@@ -116,7 +116,7 @@ def scatter(adata,
             pal=None,
             right_margin=None,
             size=None,
-            titles=None,
+            title=None,
             show=True):
     """Scatter plots.
 
@@ -156,8 +156,8 @@ def scatter(adata,
          Adjust how far the plotting panel extends to the right.
     size : float (default: None)
          Point size. Sample-number dependent by default.
-    titles : str, optional (default: None)
-         Provide titles for panels as "my title1,another title,...".
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
 
     Returns
     -------
@@ -166,7 +166,7 @@ def scatter(adata,
     if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
     if isinstance(comps, str): comps = comps.split(',')
     comps = np.array(comps).astype(int) - 1
-    titles = None if titles is None else titles.split(',') if isinstance(titles, str) else titles
+    title = None if title is None else title.split(',') if isinstance(title, str) else title
     color_keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     names = None if names is None else names.split(',') if isinstance(names, str) else names
     # highlights
@@ -250,12 +250,12 @@ def scatter(adata,
         color_ids[icolor_key] = c
 
     if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.3
-    if titles is None and color_keys[0] is not None:
-        titles = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
+        right_margin = 0.5
+    if title is None and color_keys[0] is not None:
+        title = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
 
     axs = scatter_base(Y,
-                       titles=titles,
+                       title=title,
                        component_name=component_name,
                        axis_labels=axis_labels,
                        component_indexnames=comps + 1,
