@@ -4,29 +4,29 @@
 This is the API.
 """
 
-from . import __version__
+from .. import __version__
 
-from . import settings
+from .. import settings
 sett = settings  # abbreviation
 """Settings"""
-from . import logging
+from .. import logging
 logg = logging   # abbreviation
 """Logging"""
 from . import tools
 tl = tools       # abbreviation
 """Tools"""
-from . import plotting
+from .. import plotting
 pl = plotting    # abbreviation
 """Plotting functions"""
-from . import preprocessing
+from .. import preprocessing
 pp = preprocessing  # abbreviation
 """Preprocessing functions"""
-from .readwrite import read, read_10x_h5, write, read_params, write_params
+from ..readwrite import read, read_10x_h5, write, read_params, write_params
 """Reading and writing."""
-from . import examples
-from .examples import init_run, read_run, write_run
+from .. import examples
+from ..examples import init_run, read_run, write_run
 """Manage runs and builtin examples."""
-from .data_structs import AnnData
+from ..data_structs import AnnData
 """Main class for storing an annotated data matrix."""
-from . import utils
+from .. import utils
 """Utils."""
