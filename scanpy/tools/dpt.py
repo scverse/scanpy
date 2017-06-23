@@ -12,7 +12,7 @@ from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
-        min_group_size=20,
+        min_group_size=0.01,
         n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
@@ -179,7 +179,7 @@ class DPT(data_graph.DataGraph):
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
         self.n_branchings = n_branchings
-        self.min_group_size = min_group_size
+        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
 
@@ -260,21 +260,10 @@ class DPT(data_graph.DataGraph):
         logg.m('... do not consider groups with less than {} points for splitting'
                .format(self.min_group_size))
         for ibranch in range(self.n_branchings):
-            # this is dangerous!
-            # make sure that in each iteration the correct Dchosen
-            # is used, also, Dchosen saves elements...,
-            # calling OnFlySymMatrix destroys that, can we save something?
-            # if ibranch > 0:
-            #     DC_start = ibranch + 1
-            #     logg.m('... constraining to DC >=', DC_start)
-            #     self.Dchosen = data_graph.OnFlySymMatrix(self.get_Ddiff_row,
-            #                                              shape=self.Dchosen.shape,
-            #                                              DC_start=DC_start)
-            # out of the list of segments, determine the segment
-            # that most strongly deviates from a straight line
-            # and provide the three tip points that span the triangle
-            # of maximally distant points
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
+            if iseg == -1:
+                logg.m('... partitioning converged')
+                break
             logg.m('... branching {}:'.format(ibranch + 1),
                    'split group', iseg)  # [third start end]
             # detect branching and update segs and segs_tips
@@ -282,9 +271,6 @@ class DPT(data_graph.DataGraph):
                                   segs_connects,
                                   segs_undecided,
                                   segs_adjacency, iseg, tips3)
-        # get back to what we had in the beginning
-        # self.Dchosen = data_graph.OnFlySymMatrix(self.get_Ddiff_row,
-        #                                          shape=self.Dchosen.shape)
         # store as class members
         self.segs = segs
         self.segs_tips = segs_tips
@@ -300,49 +286,6 @@ class DPT(data_graph.DataGraph):
                                                          self.segs_connects[j, i]]
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_connects = self.segs_connects.tocsr()
-        # print(self.segs_adjacency)
-        # print([len(s) for s in self.segs])
-        self.contract_segments()
-        # print(self.segs_adjacency)
-        # print([len(s) for s in self.segs])
-
-        # self.check_adjacency()
-        # print('new')
-        # print(self.segs_adjacency)
-
-    def contract_segments(self):
-        for i in range(1000):
-            i, n = self.propose_segments_to_contract()
-            if i != 0 or n != 0:
-                G = nx.Graph(self.segs_adjacency)
-                G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
-                self.segs_adjacency = nx.to_scipy_sparse_matrix(G_contracted)
-                self.segs[n] = np.append(self.segs[n], self.segs[i])
-                self.segs.pop(i)
-            else:
-                break
-
-    def propose_segments_to_contract(self):
-        # nodes with two edges
-        n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
-        for i in range(len(self.segs)):
-            if n_edges_per_seg[i] == 2:
-                neighbors = self.segs_adjacency[i].nonzero()[1]
-                for neighbors_edges in range(1, 20):
-                    for n_cnt, n in enumerate(neighbors):
-                        if n_edges_per_seg[n] == neighbors_edges:
-                            logg.m('merging segment', i, 'into', n, '(two edges)')
-                            return i, n
-        # nodes with a very small cell number into
-        for i in range(len(self.segs)):
-            if len(self.segs[i]) < self.min_group_size:
-                neighbors = self.segs_adjacency[i].nonzero()[1]
-                neighbor_sizes = [len(self.segs[n]) for n in neighbors]
-                n = neighbors[np.argmax(neighbor_sizes)]
-                logg.m('merging segment', i, 'into', n,
-                       '(smaller than `min_group_size` = {})'.format(self.min_group_size))
-                return i, n
-        return 0, 0
 
     def check_adjacency(self):
         n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
@@ -431,19 +374,16 @@ class DPT(data_graph.DataGraph):
             # two first tips, given by Dseg[tips[:2]]
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
-            if self.flavor != 'wolf17_bi':
-                score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
-            else:
-                score = Dseg[tips3[0], tips3[1]]
+            score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
-            # self.choose_largest_segment = False
             logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
-                   '(too small)' if len(seg) < self.min_group_size else '')
-            if len(seg) < self.min_group_size: score = 0
+                   '(too small)' if len(seg) < self.min_group_size else '', v=4)
+            if len(seg) <= self.min_group_size: score = 0
             # write result
             scores_tips[iseg, 0] = score
             scores_tips[iseg, 1:] = tips3
         iseg = np.argmax(scores_tips[:, 0])
+        if scores_tips[iseg, 0] == 0: return -1, None
         tips3 = scores_tips[iseg, 1:].astype(int)
         return iseg, tips3
 
@@ -686,7 +626,7 @@ class DPT(data_graph.DataGraph):
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
         elif self.flavor == 'wolf17_tri':
             ssegs = self._detect_branching_single_wolf17_tri(Dseg, tips)
-        elif self.flavor == 'wolf17_bi':
+        elif self.flavor == 'wolf17_bi' or self.flavor == 'wolf17_bi_un':
             ssegs = self._detect_branching_single_wolf17_bi(Dseg, tips)
         else:
             raise ValueError('`flavor` needs to be in {"haghverdi16", "wolf17_tri", "wolf17_bi"}.')
