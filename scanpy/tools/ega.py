@@ -160,7 +160,7 @@ class EGA(data_graph.DataGraph):
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
-        self.full_pairwise = True
+        self.full_pairwise = False
 
     def splits_segments(self):
         """Detect splits and partition the data into corresponding segments.
