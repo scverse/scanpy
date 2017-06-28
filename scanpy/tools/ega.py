@@ -46,8 +46,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     n_splits : int, optional (default: 1)
         Number of splits to detect.
     k : int, optional (default: 30)
-        Number of nearest neighbors on the knn graph. If knn == False, set the
-        Gaussian kernel width to the distance of the kth neighbor.
+        Number of nearest neighbors on the knn graph.
     n_pcs: int, optional (default: 50)
         Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
@@ -130,7 +129,6 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     adata.add['ega_grouptips'] = ega.segs_tips
     # the tree/graph adjacency matrix
     adata.add['ega_groups_adjacency'] = ega.segs_adjacency
-    # adata.add['ega_groups_connects'] = ega.segs_connects
     logg.info('finished', t=True, end=' ')
     logg.info('and added\n'
            + ('    "ega_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
@@ -160,7 +158,7 @@ class EGA(data_graph.DataGraph):
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
-        self.full_pairwise = True
+        self.attachedness_measure = 'd_full_pairwise'
 
     def splits_segments(self):
         """Detect splits and partition the data into corresponding segments.
@@ -209,7 +207,6 @@ class EGA(data_graph.DataGraph):
         # we keep a list of the tips of each segment
         segs_tips = [tips_all]
         # print('init tips', segs_tips)
-        segs_connects = [[]]
         segs_undecided = [True]
         segs_adjacency = [[]]
         segs_distances = np.zeros((1, 1))
@@ -224,7 +221,6 @@ class EGA(data_graph.DataGraph):
                 logg.info('... branching {}:'.format(ibranch + 1),
                           'split group', iseg)
                 segs_distances = self.do_split(segs, segs_tips,
-                                               segs_connects,
                                                segs_undecided,
                                                segs_adjacency,
                                                segs_distances,
@@ -233,7 +229,6 @@ class EGA(data_graph.DataGraph):
                 logg.info('... split', ibranch + 1)
                 stop, segs_distances = self.do_split_constrained(segs, segs_tips,
                                                                  segs_adjacency,
-                                                                 segs_connects,
                                                                  segs_distances)
                 if stop: break
         # store as class members
@@ -242,15 +237,9 @@ class EGA(data_graph.DataGraph):
         self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
         self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
-        self.segs_connects = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=int)
         for i, neighbors in enumerate(segs_adjacency):
-            self.segs_connects[i, neighbors] = segs_connects[i]
-        for i in range(len(segs)):
-            for j in range(len(segs)):
-                self.segs_adjacency[i, j] = self.Dchosen[self.segs_connects[i, j],
-                                                         self.segs_connects[j, i]]
+            self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
-        self.segs_connects = self.segs_connects.tocsr()
         # print(segs_distances)
         from .. import plotting as pl
         pl.matrix(np.log1p(segs_distances), show=False)
@@ -338,7 +327,7 @@ class EGA(data_graph.DataGraph):
         # self.segs_adjacency.eliminate_zeros()
 
     def do_split_constrained(self, segs, segs_tips, segs_adjacency,
-                                segs_connects, segs_distances):
+                             segs_distances):
         isegs = np.argsort([len(seg) for seg in segs])[::-1]
         if len(segs[isegs[0]]) < self.min_group_size:
             return True, segs_distances
@@ -402,7 +391,6 @@ class EGA(data_graph.DataGraph):
                                                segs,
                                                segs_tips,
                                                segs_adjacency,
-                                               segs_connects,
                                                segs_distances)
         return False, segs_distances
 
@@ -512,8 +500,8 @@ class EGA(data_graph.DataGraph):
         self.indices = indices
         self.changepoints = changepoints
 
-    def do_split(self, segs, segs_tips, segs_connects, segs_undecided,
-                         segs_adjacency, segs_distances, iseg, new_tips):
+    def do_split(self, segs, segs_tips, segs_undecided, segs_adjacency,
+                 segs_distances, iseg, new_tips):
         """Detect branching on given segment.
 
         Updates all list parameters inplace.
@@ -542,12 +530,11 @@ class EGA(data_graph.DataGraph):
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
         result = self._do_split(Dseg, new_tips, seg, segs_tips)
-        ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk = result
+        ssegs, ssegs_tips, ssegs_adjacency, trunk = result
         # map back to global indices
         for iseg_new, seg_new in enumerate(ssegs):
             ssegs[iseg_new] = seg[seg_new]
             ssegs_tips[iseg_new] = seg[ssegs_tips[iseg_new]]
-            ssegs_connects[iseg_new] = list(seg[ssegs_connects[iseg_new]])
         # remove previous segment
         segs.pop(iseg)
         segs_tips.pop(iseg)
@@ -569,36 +556,11 @@ class EGA(data_graph.DataGraph):
         segs_distances = np.zeros((new_shape))
         segs_distances[np.ix_(range(segs_distances_help.shape[0]),
                               range(segs_distances_help.shape[1]))] = segs_distances_help
-        if False:
-            prev_connecting_segments = segs_adjacency[iseg].copy()
-            segs_adjacency += [[iseg] for i in range(n_add)]
-            segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
-            prev_connecting_points = segs_connects[iseg]
-            for jseg_cnt, jseg in enumerate(prev_connecting_segments):
-                iseg_cnt = 0
-                for iseg_new, seg_new in enumerate(ssegs):
-                    if iseg_new != trunk:
-                        pos = segs_adjacency[jseg].index(iseg)
-                        connection_to_iseg = segs_connects[jseg][pos]
-                        if connection_to_iseg in seg_new:
-                            kseg = len(segs) - n_add + iseg_cnt
-                            segs_adjacency[jseg][pos] = kseg
-                            pos_2 = segs_adjacency[iseg].index(jseg)
-                            segs_adjacency[iseg].pop(pos_2)
-                            idx = segs_connects[iseg].pop(pos_2)
-                            segs_adjacency[kseg].append(jseg)
-                            segs_connects[kseg].append(idx)
-                            break
-                        iseg_cnt += 1
-            segs_adjacency[iseg] += list(range(len(segs_adjacency) - n_add, len(segs_adjacency)))
-            segs_connects[iseg] += ssegs_connects[trunk]
-        else:
-            segs_distances = self.adjust_adjacency(iseg, n_add,
-                                                   segs,
-                                                   segs_tips,
-                                                   segs_adjacency,
-                                                   segs_connects,
-                                                   segs_distances)
+        segs_distances = self.adjust_adjacency(iseg, n_add,
+                                               segs,
+                                               segs_tips,
+                                               segs_adjacency,
+                                               segs_distances)
         segs_undecided += [False for i in range(n_add)]
         # need to return segs_distances as inplace formulation doesn't work
         return segs_distances
@@ -607,14 +569,19 @@ class EGA(data_graph.DataGraph):
         distances = []
         closest_points_in_jseg = []
         closest_points_in_kseg = []
-        for kseg in kseg_list:
-            if not self.full_pairwise:
+        if self.attachedness_measure == 'd_single_pairwise':
+            for kseg in kseg_list:
                 reference_point_in_kseg = segs_tips[kseg][0]
                 closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])])
                 reference_point_in_jseg = closest_points_in_jseg[-1]
                 closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_jseg, segs[kseg]])])
                 distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
-            else:
+                print('   ',
+                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                      '->', distances[-1])
+        elif self.attachedness_measure == 'd_full_pairwise':
+            for kseg in kseg_list:
                 closest_distance = 1e12
                 closest_point_in_jseg = 0
                 closest_point_in_kseg = 0
@@ -627,17 +594,30 @@ class EGA(data_graph.DataGraph):
                 closest_points_in_kseg.append(closest_point_in_kseg)
                 closest_points_in_jseg.append(closest_point_in_jseg)
                 distances.append(closest_distance)
-            print('   ',
-                  jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
-                  kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
-                  '->', distances[-1])
+                print('   ',
+                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                      '->', distances[-1])
+        elif self.attachedness_measure == 'n_connecting_edges':
+            # this is a very slow implementation!!
+            for kseg in kseg_list:
+                connectedness = 0
+                for reference_point_in_kseg in segs[kseg]:
+                    for j in self.Ktilde[reference_point_in_kseg]:
+                        if j in segs[jseg]:
+                            connectedness += 1
+                            break
+                distances.append(1/(connectedness+1))
+                print('   ',
+                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0]),
+                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0]),
+                      '->', distances[-1])
         return distances, closest_points_in_jseg, closest_points_in_kseg
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
-                         segs_connects, segs_distances):
+                         segs_distances):
         prev_connecting_segments = segs_adjacency[iseg].copy()
         segs_adjacency += [[] for i in range(n_add)]
-        segs_connects += [[] for i in range(n_add)]
         kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
         for jseg in prev_connecting_segments:
             result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips)
@@ -648,12 +628,9 @@ class EGA(data_graph.DataGraph):
             kseg_min = kseg_list[idx]
             pos = segs_adjacency[jseg].index(iseg)
             segs_adjacency[jseg][pos] = kseg_min
-            segs_connects[jseg][pos] = closest_points_in_kseg[idx]
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
-            segs_connects[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
-            segs_connects[kseg_min].append(closest_points_in_jseg[idx])
         # if the segement we split corresponds to two "clusters", we need to
         # check whether the new segments connect to any of the other old
         # segments
@@ -679,9 +656,7 @@ class EGA(data_graph.DataGraph):
                 paths_all = nx.single_source_dijkstra_path(G, source=kseg)
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
-                    segs_connects[jseg_min].append(closest_points_in_kseg[idx])
                     segs_adjacency[kseg].append(jseg_min)
-                    segs_connects[kseg].append(closest_points_in_jseg[idx])
                     logg.info('    attaching new segment', kseg, 'at', jseg_min)
                     # if we split the cluster, we should not attach kseg
                     do_not_attach_kseg = True
@@ -696,9 +671,7 @@ class EGA(data_graph.DataGraph):
                         conintue_after_distance_compute = True
             if jseg_min in kseg_list and not do_not_attach_kseg:
                 segs_adjacency[jseg_min].append(kseg)
-                segs_connects[jseg_min].append(closest_points_in_kseg[idx])
                 segs_adjacency[kseg].append(jseg_min)
-                segs_connects[kseg].append(closest_points_in_jseg[idx])
                 continue_after_distance_compute = True
                 logg.info('    attaching new segment', kseg, 'with new segment', jseg_min)
         return segs_distances
@@ -748,15 +721,12 @@ class EGA(data_graph.DataGraph):
         if len(undecided_cells) > 0:
             ssegs.append(undecided_cells)
             # establish the connecting points with the other segments
-            ssegs_connects = [[], [], [], []]
             for inewseg, newseg_tips in enumerate(ssegs_tips):
                 reference_point = newseg_tips[0]
                 # closest cell to the new segment within undecided cells
                 closest_cell = undecided_cells[np.argmin(Dseg[reference_point][undecided_cells])]
-                ssegs_connects[inewseg].append(closest_cell)
                 # closest cell to the undecided cells within new segment
                 closest_cell = ssegs[inewseg][np.argmin(Dseg[closest_cell][ssegs[inewseg]])]
-                ssegs_connects[-1].append(closest_cell)
             # also compute tips for the undecided cells
             tip_0 = undecided_cells[np.argmax(Dseg[undecided_cells[0]][undecided_cells])]
             tip_1 = undecided_cells[np.argmax(Dseg[tip_0][undecided_cells])]
@@ -770,8 +740,6 @@ class EGA(data_graph.DataGraph):
             #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
             #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
             #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(len(ssegs_connects[iseg_new])):
-            #         pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 1], marker='o', c='black')
             #     pl.xticks([])
             #     pl.yticks([])
             #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
@@ -799,10 +767,6 @@ class EGA(data_graph.DataGraph):
             ssegs_adjacency = [[trunk] if i != trunk else
                                [j for j in range(3) if j != trunk]
                                for i in range(3)]
-            ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
-                              [closest_points[trunk, j] for j in range(3) if j != trunk]
-                              for i in range(3)]
-            # print(ssegs_connects)
             # print(ssegs_adjacency)
             # import matplotlib.pyplot as pl
             # for iseg_new, seg_new in enumerate(ssegs):
@@ -829,8 +793,7 @@ class EGA(data_graph.DataGraph):
             closest_point_in_1 = ssegs[1][np.argmin(Dseg[reference_point_in_0][ssegs[1]])]
             reference_point_in_1 = closest_point_in_1  # ssegs_tips[1][0]
             closest_point_in_0 = ssegs[0][np.argmin(Dseg[reference_point_in_1][ssegs[0]])]
-            ssegs_connects = [[closest_point_in_1], [closest_point_in_0]]
-        return ssegs, ssegs_tips, ssegs_adjacency, ssegs_connects, trunk
+        return ssegs, ssegs_tips, ssegs_adjacency, trunk
 
     def _do_split_single_haghverdi16(self, Dseg, tips):
         """Detect branching on given segment.

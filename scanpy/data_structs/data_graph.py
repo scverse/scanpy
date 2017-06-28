@@ -431,8 +431,7 @@ class DataGraph(object):
         np.set_printoptions(precision=3)
         if sym is None: sym = self.sym
         self.rbasisBool = True
-        if matrix is None:
-            matrix = self.Ktilde
+        if matrix is None: matrix = self.Ktilde
         # compute the spectrum
         if n_evals == 0:
             evals, evecs = sp.linalg.eigh(matrix)
