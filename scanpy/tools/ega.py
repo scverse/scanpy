@@ -160,7 +160,7 @@ class EGA(data_graph.DataGraph):
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
-        self.full_pairwise = False
+        self.full_pairwise = True
 
     def splits_segments(self):
         """Detect splits and partition the data into corresponding segments.
@@ -270,8 +270,8 @@ class EGA(data_graph.DataGraph):
         pl.show()
         # print(self.segs_adjacency)
         # print([len(s) for s in self.segs])
-        if 'uncontract' not in self.flavor:
-            self.contract_segments()
+        # if 'uncontract' not in self.flavor:
+        #     self.contract_segments()
         # print(self.segs_adjacency)
         # print([len(s) for s in self.segs])
         # self.check_adjacency()
@@ -494,14 +494,6 @@ class EGA(data_graph.DataGraph):
             points where the segment index changes, with respect to the ordering
             of indices.
         """
-        # within segs_tips, order tips according to pseudotime
-        if self.iroot is not None:
-            for itips, tips in enumerate(self.segs_tips):
-                if tips[0] != -1:
-                    indices = np.argsort(self.pseudotime[tips])
-                    self.segs_tips[itips] = self.segs_tips[itips][indices]
-                else:
-                    logg.m('... group', itips, 'is very small', v=4)
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
@@ -611,6 +603,36 @@ class EGA(data_graph.DataGraph):
         # need to return segs_distances as inplace formulation doesn't work
         return segs_distances
 
+    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips):
+        distances = []
+        closest_points_in_jseg = []
+        closest_points_in_kseg = []
+        for kseg in kseg_list:
+            if not self.full_pairwise:
+                reference_point_in_kseg = segs_tips[kseg][0]
+                closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])])
+                reference_point_in_jseg = closest_points_in_jseg[-1]
+                closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_jseg, segs[kseg]])])
+                distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+            else:
+                closest_distance = 1e12
+                closest_point_in_jseg = 0
+                closest_point_in_kseg = 0
+                for reference_point_in_kseg in segs[kseg]:
+                    closest_point_in_jseg_test = segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])]
+                    if self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test] < closest_distance:
+                        closest_point_in_jseg = closest_point_in_jseg_test
+                        closest_point_in_kseg = reference_point_in_kseg
+                        closest_distance = self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test]
+                closest_points_in_kseg.append(closest_point_in_kseg)
+                closest_points_in_jseg.append(closest_point_in_jseg)
+                distances.append(closest_distance)
+            print('   ',
+                  jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                  kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                  '->', distances[-1])
+        return distances, closest_points_in_jseg, closest_points_in_kseg
+
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
                          segs_connects, segs_distances):
         prev_connecting_segments = segs_adjacency[iseg].copy()
@@ -618,32 +640,8 @@ class EGA(data_graph.DataGraph):
         segs_connects += [[] for i in range(n_add)]
         kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
         for jseg in prev_connecting_segments:
-            distances = []
-            closest_points_in_jseg = []
-            closest_points_in_kseg = []
-            for kseg in kseg_list:
-                if not self.full_pairwise:
-                    reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
-                    # do not use the tip in the large segment j, instead, use the closest point
-                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
-                else:
-                    closest_distance = 1e12
-                    closest_point_in_jseg = 0
-                    closest_point_in_kseg = 0
-                    for reference_point_in_kseg in segs[kseg]:
-                        closest_point_in_jseg_test = segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])]
-                        if self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test] < closest_distance:
-                            closest_point_in_jseg = closest_point_in_jseg_test
-                            closest_point_in_kseg = reference_point_in_kseg
-                            closest_distance = self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test]
-                    closest_points_in_kseg.append(closest_point_in_kseg)
-                    closest_points_in_jseg.append(closest_point_in_jseg)
-                    distances.append(closest_distance)
-                # print(jseg, '(', segs_tips[jseg][0], closest_points_in_jseg[-1], ')',
-                #       kseg, '(', segs_tips[kseg][0], closest_points_in_kseg[-1], ') :', distances[-1])
+            result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips)
+            distances, closest_points_in_jseg, closest_points_in_kseg = result
             segs_distances[jseg, kseg_list] = distances
             segs_distances[kseg_list, jseg] = distances
             idx = np.argmin(distances)
@@ -664,32 +662,10 @@ class EGA(data_graph.DataGraph):
         do_not_attach_kseg = False
         continue_after_distance_compute = False
         for kseg in kseg_list:
-            distances = []
-            closest_points_in_jseg = []
-            closest_points_in_kseg = []
             jseg_list = [jseg for jseg in range(len(segs))
                          if jseg != kseg and jseg not in prev_connecting_segments]
-            for jseg in jseg_list:
-                if not self.full_pairwise:
-                    reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
-                    # do not use the tip in the large segment j, instead, use the closest point
-                    reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
-                else:
-                    closest_distance = 1e12
-                    closest_point_in_jseg = 0
-                    closest_point_in_kseg = 0
-                    for reference_point_in_kseg in segs[kseg]:
-                        closest_point_in_jseg_test = segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])]
-                        if self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test] < closest_distance:
-                            closest_point_in_jseg = closest_point_in_jseg_test
-                            closest_point_in_kseg = reference_point_in_kseg
-                            closest_distance = self.Dchosen[reference_point_in_kseg, closest_point_in_jseg_test]
-                    closest_points_in_kseg.append(closest_point_in_kseg)
-                    closest_points_in_jseg.append(closest_point_in_jseg)
-                    distances.append(closest_distance)
+            result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips)
+            distances, closest_points_in_kseg, closest_points_in_jseg = result
             segs_distances[kseg, jseg_list] = distances
             segs_distances[jseg_list, kseg] = distances
             if continue_after_distance_compute: continue
@@ -724,6 +700,7 @@ class EGA(data_graph.DataGraph):
                 segs_adjacency[kseg].append(jseg_min)
                 segs_connects[kseg].append(closest_points_in_jseg[idx])
                 continue_after_distance_compute = True
+                logg.info('    attaching new segment', kseg, 'with new segment', jseg_min)
         return segs_distances
 
     def _do_split(self, Dseg, tips, seg_reference, old_tips):

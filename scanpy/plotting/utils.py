@@ -36,7 +36,8 @@ pal_26 = pal_26_zeileis
 
 # from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
 pal_64_godsnot = [
-    "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+    # "#000000",  # remove the black, as often, we have black colored annotation
+    "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
     "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
     "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
     "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
@@ -275,7 +276,9 @@ def scatter_base(Y,
                               len(highlights_labels) > 0
                               else str(ihighlight))
             # the following is a Python 2 compatibility hack
-            ax.text(*([d[0] for d in data] + [highlight_text]), zorder=20, color='red')
+            ax.text(*([d[0] for d in data] + [highlight_text]),
+                    zorder=20,
+                    color='black')
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
