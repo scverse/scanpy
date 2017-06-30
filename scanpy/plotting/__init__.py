@@ -544,6 +544,10 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
     labels = nx.get_edge_attributes(G, 'weight')
     nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
+    edge_labels = {}
+    for n1, n2, label in G.edges(data=True):
+        edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])

@@ -13,7 +13,9 @@ from ..data_structs import data_graph
 
 def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
-        recompute_pca=False, flavor='bi_uncontracted', copy=False):
+        recompute_pca=False, flavor='bi_uncontracted',
+        attachedness_measure='n_connecting_edges',
+        copy=False):
     """Extremal Graph Abstraction
 
     Infer an abstraction of the relations of subgroups in the data through
@@ -57,6 +59,8 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         Recompute diffusion maps.
     recompute_pca : bool, (default: False)
         Recompute PCA.
+    attachedness_measure : {'n_connecting_edges', 'd_full_pairwise'} (default: 'n_connecting_edges')
+        How to measure attachedness. Parameter only for developing.
     copy : bool, optional (default: False)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -87,12 +91,14 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     if n_splits == 0:
         logg.hint('set parameter `n_splits` > 0 to detect splits')
     if n_splits > 1:
-        logg.info('... running a hierarchical version of EGA')
+        logg.info('... running extremal graph abstraction (EGA)')
     ega = EGA(adata, k=k, n_pcs=n_pcs,
               min_group_size=min_group_size,
-              n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
+              n_jobs=n_jobs,
+              recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
               n_splits=n_splits,
+              attachedness_measure=attachedness_measure,
               flavor=flavor)
     ddmap = ega.diffmap(n_comps=n_dcs)
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
@@ -148,6 +154,7 @@ class EGA(data_graph.DataGraph):
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None, n_splits=0,
+                 attachedness_measure='n_connecting_edges',
                  flavor='haghverdi16'):
         super(EGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
                                   n_jobs=n_jobs,
@@ -158,7 +165,7 @@ class EGA(data_graph.DataGraph):
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = True
-        self.attachedness_measure = 'd_full_pairwise'
+        self.attachedness_measure = attachedness_measure
 
     def splits_segments(self):
         """Detect splits and partition the data into corresponding segments.
@@ -240,23 +247,25 @@ class EGA(data_graph.DataGraph):
         for i, neighbors in enumerate(segs_adjacency):
             self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
-        # print(segs_distances)
-        from .. import plotting as pl
-        pl.matrix(np.log1p(segs_distances), show=False)
-        import matplotlib.pyplot as pl
-        for i, neighbors in enumerate(segs_adjacency):
-            pl.scatter([i for j in neighbors], neighbors, color='green')
-        pl.show()
-        pl.figure()
-        for i, ds in enumerate(segs_distances):
-            ds = np.log1p(ds)
-            x = [i for j, d in enumerate(ds) if i != j]
-            y = [d for j, d in enumerate(ds) if i != j]
-            pl.scatter(x, y, color='gray')
-            neighbors = segs_adjacency[i]
-            pl.scatter([i for j in neighbors],
-                       ds[neighbors], color='green')
-        pl.show()
+        
+        # print(self.segs_adjacency)
+        # # print(segs_distances)
+        # from .. import plotting as pl
+        # pl.matrix(np.log1p(segs_distances), show=False)
+        # import matplotlib.pyplot as pl
+        # for i, neighbors in enumerate(segs_adjacency):
+        #     pl.scatter([i for j in neighbors], neighbors, color='green')
+        # pl.show()
+        # pl.figure()
+        # for i, ds in enumerate(segs_distances):
+        #     ds = np.log1p(ds)
+        #     x = [i for j, d in enumerate(ds) if i != j]
+        #     y = [d for j, d in enumerate(ds) if i != j]
+        #     pl.scatter(x, y, color='gray')
+        #     neighbors = segs_adjacency[i]
+        #     pl.scatter([i for j in neighbors],
+        #                ds[neighbors], color='green')
+        # pl.show()
         # print(self.segs_adjacency)
         # print([len(s) for s in self.segs])
         # if 'uncontract' not in self.flavor:
@@ -339,21 +348,20 @@ class EGA(data_graph.DataGraph):
             for jseg in jsegs:
                 if len(segs_tips[jseg]) > 0:
                     jtip = segs_tips[jseg][0]
-                    # print('    condition', jseg, ':', jtip)
                     dtip += self.Dchosen[jtip, seg]
             if len(jsegs) > 0: dtip /= len(jsegs)
-            if len(segs_tips[iseg]) > 0:
-                itip = segs_tips[iseg][0]
-                # print('    within seg tip', itip)
-                dtip += self.Dchosen[itip, seg]
+            itip = segs_tips[iseg][0]
+            dtip += self.Dchosen[itip, seg]
             new_itip = np.argmax(dtip)
-            new_seg = np.ones(len(seg), dtype=bool)
-            for jseg in range(len(segs)):
-                if len(segs_tips[jseg]) > 0:
-                    jtip = segs_tips[jseg][0]
-                    # print('    condition', jseg, ':', jtip)
-                    closer_to_jtip_than_to_new_itip = self.Dchosen[jtip, seg] < self.Dchosen[seg[new_itip], seg]
-                    new_seg[closer_to_jtip_than_to_new_itip] = False
+            if False:
+                new_seg = np.ones(len(seg), dtype=bool)
+                for jseg in range(len(segs)):
+                    if len(segs_tips[jseg]) > 0:
+                        jtip = segs_tips[jseg][0]
+                        closer_to_jtip_than_to_new_itip = self.Dchosen[jtip, seg] < self.Dchosen[seg[new_itip], seg]
+                        new_seg[closer_to_jtip_than_to_new_itip] = False
+            else:
+                new_seg = self.Dchosen[seg[new_itip], seg] < self.Dchosen[itip, seg]
             ssegs = [new_seg, ~new_seg]
             ssegs_tips = [[new_itip], []]
             l = len(np.flatnonzero(ssegs[0]))
@@ -598,20 +606,42 @@ class EGA(data_graph.DataGraph):
                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
                       '->', distances[-1])
+        elif self.attachedness_measure == 'ed_full_pairwise':
+            for kseg in kseg_list:
+                closest_similarity = 1e12
+                closest_point_in_jseg = 0
+                closest_point_in_kseg = 0
+                for reference_point_in_kseg in segs[kseg]:
+                    closest_point_in_jseg_test = segs[jseg][np.argmax(self.Ktilde[reference_point_in_kseg, segs[jseg]])]
+                    if self.Ktilde[reference_point_in_kseg, closest_point_in_jseg_test] > closest_similarity:
+                        closest_point_in_jseg = closest_point_in_jseg_test
+                        closest_point_in_kseg = reference_point_in_kseg
+                        closest_similarity = self.Ktilde[reference_point_in_kseg, closest_point_in_jseg_test]
+                closest_points_in_kseg.append(closest_point_in_kseg)
+                closest_points_in_jseg.append(closest_point_in_jseg)
+                closest_distance = 1/closest_similarity
+                distances.append(closest_distance)
+                print('   ',
+                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                      '->', distances[-1])
         elif self.attachedness_measure == 'n_connecting_edges':
             # this is a very slow implementation!!
+            segs_jseg = set(segs[jseg])
             for kseg in kseg_list:
                 connectedness = 0
                 for reference_point_in_kseg in segs[kseg]:
-                    for j in self.Ktilde[reference_point_in_kseg]:
-                        if j in segs[jseg]:
+                    for j in self.Ktilde[reference_point_in_kseg].nonzero()[1]:
+                        if j in segs_jseg:
+                            # print('    connect', reference_point_in_kseg, '-', j)
                             connectedness += 1
-                            break
-                distances.append(1/(connectedness+1))
+                distances.append(1./(connectedness+1))
                 print('   ',
-                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0]),
-                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0]),
+                      jseg, '(tip: {})'.format(segs_tips[jseg][0]),
+                      kseg, '(tip: {})'.format(segs_tips[kseg][0]),
                       '->', distances[-1])
+        else:
+            raise ValueError('unknown attachedness measure')
         return distances, closest_points_in_jseg, closest_points_in_kseg
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
