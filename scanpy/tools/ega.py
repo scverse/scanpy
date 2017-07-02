@@ -217,6 +217,7 @@ class EGA(data_graph.DataGraph):
         segs_undecided = [True]
         segs_adjacency = [[]]
         segs_distances = np.zeros((1, 1))
+        segs_adjacency_nodes = [{}]
         logg.info('... do not consider groups with less than {} points for splitting'
                   .format(self.min_group_size))
         for ibranch in range(self.n_splits):
@@ -236,6 +237,7 @@ class EGA(data_graph.DataGraph):
                 logg.info('... split', ibranch + 1)
                 stop, segs_distances = self.do_split_constrained(segs, segs_tips,
                                                                  segs_adjacency,
+                                                                 segs_adjacency_nodes,
                                                                  segs_distances)
                 if stop: break
         # store as class members
@@ -247,7 +249,7 @@ class EGA(data_graph.DataGraph):
         for i, neighbors in enumerate(segs_adjacency):
             self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
-        
+
         # print(self.segs_adjacency)
         # # print(segs_distances)
         # from .. import plotting as pl
@@ -335,7 +337,7 @@ class EGA(data_graph.DataGraph):
                     # print(self.segs_adjacency)
         # self.segs_adjacency.eliminate_zeros()
 
-    def do_split_constrained(self, segs, segs_tips, segs_adjacency,
+    def do_split_constrained(self, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,
                              segs_distances):
         isegs = np.argsort([len(seg) for seg in segs])[::-1]
         if len(segs[isegs[0]]) < self.min_group_size:
@@ -399,7 +401,8 @@ class EGA(data_graph.DataGraph):
                                                segs,
                                                segs_tips,
                                                segs_adjacency,
-                                               segs_distances)
+                                               segs_adjacency_nodes,
+                                               segs_distances, iseg)
         return False, segs_distances
 
     def select_segment(self, segs, segs_tips, segs_undecided):
@@ -573,7 +576,7 @@ class EGA(data_graph.DataGraph):
         # need to return segs_distances as inplace formulation doesn't work
         return segs_distances
 
-    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips):
+    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes):
         distances = []
         closest_points_in_jseg = []
         closest_points_in_kseg = []
@@ -625,7 +628,7 @@ class EGA(data_graph.DataGraph):
                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
                       '->', distances[-1])
-        elif self.attachedness_measure == 'n_connecting_edges':
+        elif self.attachedness_measure == 'n_connecting_edges_brute_force':
             # this is a very slow implementation!!
             segs_jseg = set(segs[jseg])
             for kseg in kseg_list:
@@ -633,50 +636,123 @@ class EGA(data_graph.DataGraph):
                 for reference_point_in_kseg in segs[kseg]:
                     for j in self.Ktilde[reference_point_in_kseg].nonzero()[1]:
                         if j in segs_jseg:
-                            # print('    connect', reference_point_in_kseg, '-', j)
+                            # print(reference_point_in_kseg, j, end=' | ')
                             connectedness += 1
                 distances.append(1./(connectedness+1))
-                print('   ',
-                      jseg, '(tip: {})'.format(segs_tips[jseg][0]),
-                      kseg, '(tip: {})'.format(segs_tips[kseg][0]),
-                      '->', distances[-1])
+            print(' ', jseg, '-', kseg_list, '->', distances)
         else:
             raise ValueError('unknown attachedness measure')
         return distances, closest_points_in_jseg, closest_points_in_kseg
 
-    def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
-                         segs_distances):
+    def trace_existing_connections(self, jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk):
+        j_connects = segs_adjacency_nodes[jseg].copy()
+        connectedness = [0, 0]
+        not_trunk = 1 if trunk == 0 else 1
+        kseg_trunk = set(segs[kseg_list[trunk]])
+        kseg_not_trunk = set(segs[kseg_list[not_trunk]])
+        for j_connect, connects in j_connects.items():
+            for point_connect, seg_connect in connects:
+                if seg_connect == kseg_list[trunk]:
+                    if point_connect in kseg_trunk:
+                        connectedness[0] += 1
+                    elif point_connect in kseg_not_trunk:
+                        if j_connect not in segs_adjacency_nodes[jseg]:
+                            segs_adjacency_nodes[jseg][j_connect] = []
+                        idx = segs_adjacency_nodes[jseg][j_connect].index((point_connect, kseg_list[trunk]))
+                        segs_adjacency_nodes[jseg][j_connect][idx] = (point_connect, kseg_list[not_trunk])
+                        if point_connect not in segs_adjacency_nodes[kseg_list[not_trunk]]:
+                            segs_adjacency_nodes[kseg_list[not_trunk]][point_connect] = []
+                        segs_adjacency_nodes[kseg_list[not_trunk]][point_connect].append((j_connect, jseg))
+                        # clean up the dictionary for trunk
+                        idx = segs_adjacency_nodes[kseg_list[trunk]][point_connect].index((j_connect, jseg))
+                        segs_adjacency_nodes[kseg_list[trunk]][point_connect].pop(idx)
+                        if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
+                            del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
+                        connectedness[1] += 1
+                    else:
+                        print('should not occur!')
+                        print('iseg is', kseg_list[trunk], 'and jseg is', jseg)
+                        print('jseg connect is', j_connects[j_connect], 'from', j_connect)
+                        print('point_connect is', point_connect, 'should be in', kseg_list[trunk])
+                        for i, seg in enumerate(segs):
+                            if point_connect in seg:
+                                print('but found point_connect in', i)
+                        raise ValueError('invalid state of algorithm')
+        distances = [1/(1+c) for c in connectedness]
+        print(' ', jseg, '-', kseg_list, '->', distances)
+        return distances
+
+    def establish_new_connections(self, kseg_list, segs, segs_adjacency_nodes):
+        kseg_loop_idx = 0 if len(segs[kseg_list[0]]) < len(segs[kseg_list[1]]) else 1
+        kseg_loop = kseg_list[kseg_loop_idx]
+        kseg_test = kseg_list[0 if kseg_loop_idx == 1 else 1]
+        seg_loop = segs[kseg_loop]
+        seg_test = set(segs[kseg_test])
+        connections = 0
+        for p in seg_loop:
+            p_neighbors = set(self.Ktilde[p].nonzero()[1])
+            for q in p_neighbors:
+                if q in seg_test:
+                    if p not in segs_adjacency_nodes[kseg_loop]:
+                        segs_adjacency_nodes[kseg_loop][p] = []
+                    segs_adjacency_nodes[kseg_loop][p].append((q, kseg_test))
+                    if q not in segs_adjacency_nodes[kseg_test]:
+                        segs_adjacency_nodes[kseg_test][q] = []
+                    segs_adjacency_nodes[kseg_test][q].append((p, kseg_loop))
+                    connections += 1
+                    if p in {22, 135} and q in {22, 135}:
+                        print('!!!!', kseg_loop, kseg_test)
+        distance = 1/(1+connections)
+        print(' ', kseg_loop, '-', kseg_test, '->', distance)
+        return distance
+
+    def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,
+                         segs_distances, trunk):
         prev_connecting_segments = segs_adjacency[iseg].copy()
         segs_adjacency += [[] for i in range(n_add)]
+        segs_adjacency_nodes += [{} for i in range(n_add)]
         kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+        if self.attachedness_measure == 'n_connecting_edges':
+            jseg_list = [jseg for jseg in range(len(segs)) if jseg not in kseg_list]
+            for jseg in jseg_list:
+                distances = self.trace_existing_connections(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, 0)
+                segs_distances[jseg, kseg_list] = distances
+                segs_distances[kseg_list, jseg] = distances
+            distance = self.establish_new_connections(kseg_list, segs, segs_adjacency_nodes)
+            segs_distances[kseg_list[0], kseg_list[1]] = distance
+            segs_distances[kseg_list[1], kseg_list[0]] = distance
+        logg.info('... treat existing connections')
         for jseg in prev_connecting_segments:
-            result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips)
-            distances, closest_points_in_jseg, closest_points_in_kseg = result
-            segs_distances[jseg, kseg_list] = distances
-            segs_distances[kseg_list, jseg] = distances
-            idx = np.argmin(distances)
+            if self.attachedness_measure != 'n_connecting_edges':
+                result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes)
+                distances, closest_points_in_jseg, closest_points_in_kseg = result
+                segs_distances[jseg, kseg_list] = distances
+                segs_distances[kseg_list, jseg] = distances
+            idx = np.argmin(segs_distances[jseg, kseg_list])
             kseg_min = kseg_list[idx]
             pos = segs_adjacency[jseg].index(iseg)
             segs_adjacency[jseg][pos] = kseg_min
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
-        # if the segement we split corresponds to two "clusters", we need to
-        # check whether the new segments connect to any of the other old
+        # in case the segment we split should correspond to two "clusters", we
+        # need to check whether the new segments connect to any of the other old
         # segments
         # if not, we add a link between the new segments, if yes, we add two
         # links to connect them at the correct old segments
+        logg.info('... treat new connections')
         do_not_attach_kseg = False
         continue_after_distance_compute = False
         for kseg in kseg_list:
             jseg_list = [jseg for jseg in range(len(segs))
                          if jseg != kseg and jseg not in prev_connecting_segments]
-            result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips)
-            distances, closest_points_in_kseg, closest_points_in_jseg = result
-            segs_distances[kseg, jseg_list] = distances
-            segs_distances[jseg_list, kseg] = distances
+            if self.attachedness_measure != 'n_connecting_edges':
+                result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips, segs_adjacency_nodes)
+                distances, closest_points_in_kseg, closest_points_in_jseg = result
+                segs_distances[kseg, jseg_list] = distances
+                segs_distances[jseg_list, kseg] = distances
             if continue_after_distance_compute: continue
-            idx = np.argmin(distances)
+            idx = np.argmin(segs_distances[kseg, jseg_list])
             jseg_min = jseg_list[idx]
             if jseg_min not in kseg_list:
                 segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
