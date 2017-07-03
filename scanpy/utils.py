@@ -39,24 +39,26 @@ def identify_categories(adata, predicted, reference, normalization='reference',
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.add[predicted + '_names']):
         if '?' in pred_group: pred_group = str(ipred_group)
+        # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.smp[predicted] == pred_group
+        mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
         for ref_group in adata.add[reference + '_names']:
-            mask_ref = adata.smp[reference] == ref_group
+            mask_ref = (adata.smp[reference] == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
-            mask_ref_or_pred[mask_pred] = True
+            mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
             # mask_ref_or_pred are the same
             if normalization == 'prediction':
                 # compute which fraction of the predicted group is contained in
                 # the ref group
-                ratio_contained = (np.sum(mask_pred) -
-                    np.sum(mask_ref_or_pred - mask_ref)) / np.sum(mask_pred)
+                ratio_contained = (np.sum(mask_pred_int) -
+                    np.sum(mask_ref_or_pred - mask_ref)) / np.sum(mask_pred_int)
             else:
                 # compute which fraction of the reference group is contained in
                 # the predicted group
                 ratio_contained = (np.sum(mask_ref) -
-                    np.sum(mask_ref_or_pred - mask_pred)) / np.sum(mask_ref)
+                    np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
         asso_names += ['\n'.join([adata.add[reference + '_names'][i]
                                  for i in np.argsort(asso_matrix[-1])[::-1]
