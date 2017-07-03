@@ -302,7 +302,7 @@ def scatter(adata,
             legend = axs[icolor_key].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
                                             ncol=(1 if len(adata.add[color_key + '_names']) <= 14
-                                                  else 2 if len(adata.add[color_key + '_names']) <= 28 else 3))
+                                                  else 2 if len(adata.add[color_key + '_names']) <= 30 else 3))
         elif legendloc != 'none':
             legend = axs[icolor_key].legend(frameon=False, loc=legendloc)
         if legend is not None:
