@@ -13,7 +13,7 @@ from ..data_structs import data_graph
 
 def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
-        recompute_pca=False, flavor='bi_uncontracted',
+        recompute_pca=False, flavor='bi_constrained',
         attachedness_measure='n_connecting_edges',
         copy=False):
     """Extremal Graph Abstraction
