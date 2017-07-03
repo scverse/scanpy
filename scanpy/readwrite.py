@@ -451,6 +451,8 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
         if line.startswith('#'):
             header += line
         else:
+            if delim is not None and delim not in line:
+                logg.warn('did not find delimiter "{}" in first line'.format(delim))
             line_list = line.split(delim)
             if not is_float(line_list[0]):
                 col_names = line_list

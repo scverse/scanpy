@@ -20,6 +20,11 @@ def info(*msg, **kwargs):
     return m(*msg, v='info', **kwargs)
 
 
+def warn(*msg, **kwargs):
+    msg = ('WARNING:',) + msg
+    return m(*msg, v='warn', **kwargs)
+
+
 def hint(*msg, **kwargs):
     return m(*msg, v='hint', **kwargs)
 
