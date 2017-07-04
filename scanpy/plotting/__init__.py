@@ -394,7 +394,7 @@ def dpt(adata,
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    if 'dpt_groups' in colors: dpt_tree(adata, show=False)
+    # if 'dpt_groups' in colors: dpt_tree(adata, show=False)
     dpt_timeseries(adata, cmap=cmap, show=show)
 
 

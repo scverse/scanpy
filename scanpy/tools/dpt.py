@@ -11,9 +11,8 @@ from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10,
-        min_group_size=0.01,
-        n_jobs=None, recompute_diffmap=False,
+def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
+        min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
 
@@ -58,13 +57,11 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
     n_pcs: int, optional (default: 50)
-        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
+        Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
-    n_pcs_post: int, optional (default: 30)
-        Use n_pcs_post PCs to compute the DPT distance matrix. This speeds up
-        the computation at almost no loss of accuracy. Set to 0 if you don't
-        want postprocessing with PCA.
+    n_dcs: int, optional (default: 10)
+        Use `n_dcs` to compute the dpt distance.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
     recompute_diffmap : bool, (default: False)
@@ -110,11 +107,9 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_pcs_post=30, n_dcs=10
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     if n_branchings > 1:
         logg.m('... running a hierarchical version of DPT')
-    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_pcs_post=n_pcs_post,
-              min_group_size=min_group_size,
+    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
-              recompute_pca=recompute_pca,
-              n_branchings=n_branchings,
+              recompute_pca=recompute_pca, n_branchings=n_branchings,
               flavor=flavor)
     # diffusion map
     ddmap = dpt.diffmap(n_comps=n_dcs)
@@ -168,20 +163,20 @@ class DPT(data_graph.DataGraph):
     """
 
     def __init__(self, adata_or_X, k=30, knn=True,
-                 n_jobs=1, n_pcs=50, n_pcs_post=30,
+                 n_jobs=1, n_pcs=50,
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None, n_branchings=0,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
-                                  n_pcs_post=n_pcs_post, n_jobs=n_jobs,
+                                  n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
-        self.choose_largest_segment = True
+        self.choose_largest_segment = False
 
     def branchings_segments(self):
         """Detect branchings and partition the data into corresponding segments.
@@ -499,7 +494,7 @@ class DPT(data_graph.DataGraph):
         # correct edges in adjacency matrix
         n_add = len(ssegs) - 1
         prev_connecting_segments = segs_adjacency[iseg].copy()
-        if False:
+        if self.flavor == 'haghverdi16':
             segs_adjacency += [[iseg] for i in range(n_add)]
             segs_connects += [seg_connects for iseg, seg_connects in enumerate(ssegs_connects) if iseg != trunk]
             prev_connecting_points = segs_connects[iseg]
