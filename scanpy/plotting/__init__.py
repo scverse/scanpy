@@ -23,6 +23,11 @@ from .. import settings as sett
 utils.init_plotting_params()
 
 
+# ------------------------------------------------------------------------------
+# Visualization tools
+# ------------------------------------------------------------------------------
+
+
 def pca(adata, **params):
     """Plot PCA results.
 
@@ -44,7 +49,7 @@ def pca(adata, **params):
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
@@ -141,7 +146,7 @@ def diffmap(adata,
          String of the form '1,2' or 'all' or list. First component is 1 or '1'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
@@ -219,7 +224,7 @@ def tsne(adata,
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
@@ -288,7 +293,7 @@ def spring(adata,
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
@@ -327,6 +332,84 @@ def spring(adata,
     savefig_or_show('spring', show=show)
 
 
+# ------------------------------------------------------------------------------
+# Subgroup identification and ordering - clustering, pseudotime, branching
+# and tree inference tools
+# ------------------------------------------------------------------------------
+
+
+def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
+    # plot the tree
+    if isinstance(adata, nx.Graph):
+        G = adata
+        colors = ['grey' for n in enumerate(G)]
+    else:
+        if colors is None:
+            if ('ega_groups_colors' not in adata.add
+                or len(adata.add['ega_groups_names']) != len(adata.add['ega_groups_colors'])):
+                utils.add_colors_for_categorical_sample_annotation(adata, 'ega_groups')
+            colors = adata.add['ega_groups_colors']
+        else: colors = colors
+        if names is None:
+            names = {i: n for i, n in enumerate(adata.add['ega_groups_names'])}
+        for iname, name in enumerate(adata.add['ega_groups_names']):
+            if name in sett._ignore_categories: colors[iname] = 'grey'
+        G = nx.Graph(adata.add['ega_groups_adjacency'])
+    pos = utils.hierarchy_pos(G, root)
+    # pos = nx.spring_layout(G)
+    if len(pos) == 1: pos[0] = 0.5, 0.5
+    fig = pl.figure()
+    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+    labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
+    edge_labels = {}
+    for n1, n2, label in G.edges(data=True):
+        edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
+    trans = ax.transData.transform
+    trans2 = fig.transFigure.inverted().transform
+    pl.xticks([])
+    pl.yticks([])
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
+    p2 = piesize/2.0
+    for n_cnt, n in enumerate(G):
+        xx, yy = trans(pos[n])     # figure coordinates
+        xa, ya = trans2((xx, yy))  # normalized coordinates
+        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
+        if is_color_like(colors[n_cnt]):
+            fracs = [100]
+            color = [colors[n_cnt]]
+        else:
+            color = colors[n_cnt].keys()
+            fracs = [colors[n_cnt][c] for c in color]
+            if sum(fracs) < 1:
+                color = list(color)
+                color.append('grey')
+                fracs.append(1-sum(fracs))
+                names[n_cnt] += '\n?'
+        a.pie(fracs, colors=color)
+        if names is not None:
+            a.text(0.5, 0.5, names[n_cnt],
+                   verticalalignment='center',
+                   horizontalalignment='center',
+                   transform=a.transAxes, size=fontsize)
+    savefig_or_show('ega_tree', show)
+    return ax
+
+
+def ega_sc_tree(adata, root, show=None):
+    G = nx.Graph(adata.add['ega_groups_adjacency'])
+    node_sets = []
+    sorted_ega_groups = adata.smp['ega_groups'][adata.smp['ega_order']]
+    for n in adata.add['ega_groups_names']:
+        node_sets.append(np.flatnonzero(n == sorted_ega_groups))
+    # print(node_sets)
+    sc_G = utils.hierarchy_sc(G, root, node_sets)
+    ax = ega_tree(sc_G, root)
+    savefig_or_show('ega_sc_tree', show)
+    return ax
+
+
 def dpt(adata,
         basis='diffmap',
         color=None,
@@ -340,6 +423,7 @@ def dpt(adata,
         right_margin=None,
         size=None,
         title=None,
+        show_tree=False,
         show=None):
     """Plot results of DPT analysis.
 
@@ -360,7 +444,7 @@ def dpt(adata,
          String of the form '1,2' or 'all'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
@@ -374,6 +458,10 @@ def dpt(adata,
          Point size.
     title : str, optional (default: None)
          Provide title for panels as "my title1,another title,...".
+    show_tree : bool, optional (default: False)
+         This shows the inferred tree. For more than a single branching, the
+         result is pretty unreliable. Use tool `ega` (Extremal Graph
+         Abstraction) instead.
     """
     dpt_scatter(adata,
                 basis=basis,
@@ -394,7 +482,7 @@ def dpt(adata,
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    # if 'dpt_groups' in colors: dpt_tree(adata, show=False)
+    if 'dpt_groups' in colors and show_tree: dpt_tree(adata, show=False)
     dpt_timeseries(adata, cmap=cmap, show=show)
 
 
@@ -520,78 +608,6 @@ def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     return ax
 
 
-def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
-    # plot the tree
-    if isinstance(adata, nx.Graph):
-        G = adata
-        colors = ['grey' for n in enumerate(G)]
-    else:
-        if colors is None:
-            if ('ega_groups_colors' not in adata.add
-                or len(adata.add['ega_groups_names']) != len(adata.add['ega_groups_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, 'ega_groups')
-            colors = adata.add['ega_groups_colors']
-        else: colors = colors
-        if names is None:
-            names = {i: n for i, n in enumerate(adata.add['ega_groups_names'])}
-        for iname, name in enumerate(adata.add['ega_groups_names']):
-            if name in sett._ignore_categories: colors[iname] = 'grey'
-        G = nx.Graph(adata.add['ega_groups_adjacency'])
-    pos = utils.hierarchy_pos(G, root)
-    # pos = nx.spring_layout(G)
-    if len(pos) == 1: pos[0] = 0.5, 0.5
-    fig = pl.figure()
-    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
-    labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
-    edge_labels = {}
-    for n1, n2, label in G.edges(data=True):
-        edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
-    trans = ax.transData.transform
-    trans2 = fig.transFigure.inverted().transform
-    pl.xticks([])
-    pl.yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
-    p2 = piesize/2.0
-    for n_cnt, n in enumerate(G):
-        xx, yy = trans(pos[n])     # figure coordinates
-        xa, ya = trans2((xx, yy))  # normalized coordinates
-        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
-        if is_color_like(colors[n_cnt]):
-            fracs = [100]
-            color = [colors[n_cnt]]
-        else:
-            color = colors[n_cnt].keys()
-            fracs = [colors[n_cnt][c] for c in color]
-            if sum(fracs) < 1:
-                color = list(color)
-                color.append('grey')
-                fracs.append(1-sum(fracs))
-                names[n_cnt] += '\n?'
-        a.pie(fracs, colors=color)
-        if names is not None:
-            a.text(0.5, 0.5, names[n_cnt],
-                   verticalalignment='center',
-                   horizontalalignment='center',
-                   transform=a.transAxes, size=fontsize)
-    savefig_or_show('ega_tree', show)
-    return ax
-
-
-def ega_sc_tree(adata, root, show=None):
-    G = nx.Graph(adata.add['ega_groups_adjacency'])
-    node_sets = []
-    sorted_ega_groups = adata.smp['ega_groups'][adata.smp['ega_order']]
-    for n in adata.add['ega_groups_names']:
-        node_sets.append(np.flatnonzero(n == sorted_ega_groups))
-    # print(node_sets)
-    sc_G = utils.hierarchy_sc(G, root, node_sets)
-    ax = ega_tree(sc_G, root)
-    savefig_or_show('ega_sc_tree', show)
-    return ax
-
-
 def dpt_timeseries(adata, cmap=None, show=None):
     # plot segments and pseudotime
     if True:
@@ -672,7 +688,7 @@ def dbscan(adata,
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
          Options for keyword argument 'loc'.
@@ -742,7 +758,7 @@ def paths(adata,
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d', 'unfolded 3d'}, optional (default: '2d')
+    layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legendloc : see matplotlib.legend, optional (default: 'lower right')
          Options for keyword argument 'loc'.
