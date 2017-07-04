@@ -587,10 +587,10 @@ class EGA(data_graph.DataGraph):
                 reference_point_in_jseg = closest_points_in_jseg[-1]
                 closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_jseg, segs[kseg]])])
                 distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
-                print('   ',
-                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
-                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
-                      '->', distances[-1])
+                logg.m('   ',
+                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                       '->', distances[-1], v=4)
         elif self.attachedness_measure == 'd_full_pairwise':
             for kseg in kseg_list:
                 closest_distance = 1e12
@@ -605,10 +605,10 @@ class EGA(data_graph.DataGraph):
                 closest_points_in_kseg.append(closest_point_in_kseg)
                 closest_points_in_jseg.append(closest_point_in_jseg)
                 distances.append(closest_distance)
-                print('   ',
-                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
-                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
-                      '->', distances[-1])
+                logg.m('   ',
+                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                       '->', distances[-1], v=4)
         elif self.attachedness_measure == 'ed_full_pairwise':
             for kseg in kseg_list:
                 closest_similarity = 1e12
@@ -624,10 +624,10 @@ class EGA(data_graph.DataGraph):
                 closest_points_in_jseg.append(closest_point_in_jseg)
                 closest_distance = 1/closest_similarity
                 distances.append(closest_distance)
-                print('   ',
-                      jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
-                      kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
-                      '->', distances[-1])
+                logg.m('   ',
+                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], closest_points_in_jseg[-1]),
+                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], closest_points_in_kseg[-1]),
+                       '->', distances[-1], v=4)
         elif self.attachedness_measure == 'n_connecting_edges_brute_force':
             # this is a very slow implementation!!
             segs_jseg = set(segs[jseg])
@@ -639,7 +639,7 @@ class EGA(data_graph.DataGraph):
                             # print(reference_point_in_kseg, j, end=' | ')
                             connectedness += 1
                 distances.append(1./(connectedness+1))
-            print(' ', jseg, '-', kseg_list, '->', distances)
+            logg.m(' ', jseg, '-', kseg_list, '->', distances, v=4)
         else:
             raise ValueError('unknown attachedness measure')
         return distances, closest_points_in_jseg, closest_points_in_kseg

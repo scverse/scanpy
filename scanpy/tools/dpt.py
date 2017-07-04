@@ -637,6 +637,8 @@ class DPT(data_graph.DataGraph):
         # compute new tips within new segments
         ssegs_tips = []
         for inewseg, newseg in enumerate(ssegs):
+            if len(np.flatnonzero(newseg)) <= 1:
+                logg.warn('detected group with only {} cells'.format(np.flatnonzero(newseg)))
             secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
         undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
@@ -738,7 +740,6 @@ class DPT(data_graph.DataGraph):
         ps = [[0, 1, 2],  # start by computing distances from the first tip
               [1, 2, 0],  #             -"-                       second tip
               [2, 0, 1]]  #             -"-                       third tip
-        # import matplotlib.pyplot as pl
         for i, p in enumerate(ps):
             ssegs.append(self.__detect_branching_haghverdi16(Dseg, tips[p]))
         return ssegs
@@ -818,18 +819,16 @@ class DPT(data_graph.DataGraph):
         # increasing the following slightly from imax is a more conservative choice
         # as the criterion based on normalized distances, which follows below,
         # is less stable
-        ibranch = imax + 2  # this used to be imax + 1!
-        # ibranch = int(0.95 * imax)
+        if imax > 0.95 * len(idcs):
+            # if "everything" is correlated (very large value of imax), a more
+            # conservative choice amounts to reducing this
+            logg.m('... in __detect_branching_haghverdi16, '
+                   'shift point of maximal kendall-tau correlation', v=4)
+            ibranch = int(0.95 * imax)
+        else:
+            # otherwise, a more conservative choice is the following
+            ibranch = imax + 1
         return idcs[:ibranch]
-        # ssegs.append(idcs[:ibranch])
-        # TODO get rid of the following heuristics
-        # define nomalized distances to tip points for the rest of the data
-        # dist1 = Dseg[tips[1], idcs[ibranch:]] / Dseg[tips[1], idcs[ibranch-1]]
-        # dist2 = Dseg[tips[2], idcs[ibranch:]] / Dseg[tips[2], idcs[ibranch-1]]
-        # assign points according to whether being closer to tip cell 1 or 2
-        # ssegs.append(idcs[ibranch:][dist1 <= dist2])
-        # ssegs.append(idcs[ibranch:][dist1 > dist2])
-        # return ssegs
 
     def kendall_tau_split(self, a, b):
         """Return splitting index that maximizes correlation in the sequences.
