@@ -77,10 +77,13 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
             exfunc = getattr(builtin, run_name)
             exmodule = builtin
         except AttributeError:
+            import types
             sys.exit('Do not know how to run example "{}".\nEither define a function {}() '
                      'that returns an AnnData object in "./runfile_whatevername.py".\n'
-                     'Or, use one of the builtin examples:{}'
-                     .format(run_name, run_name, _run_names_str()))
+                     'Or, use one of the builtin examples: {}'
+                     .format(run_name, run_name,
+                             [a for a in dir(builtin)
+                              if isinstance(getattr(builtin, a), types.FunctionType)]))
     if not adata_file_exists or recompute or reread:
         logg.m('reading and preprocessing data')
         # run the function
@@ -124,15 +127,3 @@ def write_run(data, ext=None):
         File extension from wich to infer file format.
     """
     readwrite.write(sett.run_name, data, ext=ext)
-
-
-# ------------------------------------------------------------------------------
-# Checks of AnnData object
-# ------------------------------------------------------------------------------
-
-
-def _run_names_str():
-    str = ''
-    for k in sorted(_example_parameters().keys()):
-        str += '\n    ' + k
-    return str

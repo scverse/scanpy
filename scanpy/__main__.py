@@ -111,7 +111,7 @@ def init_main_parser():
     sub_parsers = main_parser.add_subparsers(metavar='',
                                              description=main_descr())
 
-    from . import tools
+    from .api import tools
     for key in dtools:
         # use the doc string of the tool for outputting the description
         descr = 78*'-' + '\n' + getattr(tools, key).__doc__
@@ -228,7 +228,7 @@ def run_command_line_args(toolkey, args):
             pass
 
     # actual call of tool
-    from . import tools
+    from .api import tools
     tool = getattr(tools, toolkey)
     if toolkey == 'sim':
         adata = tool(**params)
