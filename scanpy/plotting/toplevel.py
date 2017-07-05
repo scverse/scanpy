@@ -111,7 +111,8 @@ def scatter(adata,
             comps=None,
             cont=None,
             layout='2d',
-            legendloc='right margin',
+            legend_loc='right margin',
+            legend_fontsize=None,
             cmap=None,
             pal=None,
             right_margin=None,
@@ -139,25 +140,28 @@ def scatter(adata,
     basis : {'pca', 'tsne', 'diffmap'}
         String that denotes a plotting tool.
     names : str, optional (default: all names in color)
-        Allows to restrict groups in sample annotation (color) to a few.
+        Allows to restrict categories in sample annotation to a subset.
     comps : str, optional (default: '1,2')
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: 6)
+         Legend font size.
     cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
-         Colors cycle to use for categorical groups.
+         String denoting matplotlib color map for continuous coloring.
+    pal : list of str (default: None)
+         Color palette to use for categorical coloring.
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: None)
          Point size. Sample-number dependent by default.
-    title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+    title : str or list of str, optional (default: None)
+         Provide titles for panels.
 
     Returns
     -------
@@ -169,7 +173,6 @@ def scatter(adata,
     title = None if title is None else title.split(',') if isinstance(title, str) else title
     color_keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     names = None if names is None else names.split(',') if isinstance(names, str) else names
-    # highlights
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
         try:
@@ -185,7 +188,11 @@ def scatter(adata,
     if size is None:
         n = Y.shape[0]
         size = 120000 / n
-        # logg.m('... setting point size to {:.2}'.format(size))
+
+    if legend_loc == 'on data' and legend_fontsize is None:
+        legend_fontsize = 6
+    elif legend_fontsize is None:
+        legend_fontsize = rcParams['legend.fontsize']
 
     pal_was_none = False
     if pal is None: pal_was_none = True
@@ -249,8 +256,11 @@ def scatter(adata,
         if categorical: categoricals.append(icolor_key)
         color_ids[icolor_key] = c
 
-    if right_margin is None and legendloc == 'right margin':
-        right_margin = 0.5
+    if right_margin is None:
+        if legend_loc == 'right margin':
+            right_margin = 0.5
+        # else:
+        #     right_margin = 0.1
     if title is None and color_keys[0] is not None:
         title = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
 
@@ -268,6 +278,12 @@ def scatter(adata,
                        cmap='viridis' if cmap is None else cmap,
                        show_ticks=show_ticks)
 
+    def add_centroid(centroids, name, Y, mask):
+        masked_values = Y[mask]
+        median = np.median(masked_values, axis=0)
+        i = np.argmin(np.sum(np.abs(masked_values - median), axis=1))
+        centroids[name] = masked_values[i]
+
     for i, icolor_key in enumerate(categoricals):
         pal = pals[i]
         color_key = color_keys[icolor_key]
@@ -276,12 +292,14 @@ def scatter(adata,
             utils.add_colors_for_categorical_sample_annotation(adata, color_key, pal)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
+        centroids = {}
         if names is None:
             for iname, name in enumerate(adata.add[color_key + '_names']):
                 if name not in sett._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, layout, size=size)
                     mask_remaining[mask] = False
+                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
             for name in names:
                 if name not in set(adata.add[color_key + '_names']):
@@ -292,19 +310,29 @@ def scatter(adata,
                     iname = np.flatnonzero(adata.add[color_key + '_names'] == name)[0]
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, layout, size=size)
+                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
             if layout == '3d': data.append(Y[mask_remaining, 2])
             axs[icolor_key].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
-        if legendloc == 'right margin':
+        legend = None
+        if legend_loc == 'on data':
+            for name, pos in centroids.items():
+                pl.text(pos[0], pos[1], name,
+                        verticalalignment='center',
+                        horizontalalignment='center',
+                        fontsize=legend_fontsize)
+        elif legend_loc == 'right margin':
             legend = axs[icolor_key].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
                                             ncol=(1 if len(adata.add[color_key + '_names']) <= 14
-                                                  else 2 if len(adata.add[color_key + '_names']) <= 30 else 3))
-        elif legendloc != 'none':
-            legend = axs[icolor_key].legend(frameon=False, loc=legendloc)
+                                                  else 2 if len(adata.add[color_key + '_names']) <= 30 else 3),
+                                            fontsize=legend_fontsize)
+        elif legend_loc != 'none':
+            legend = axs[icolor_key].legend(frameon=False, loc=legend_loc,
+                                            fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     if show: pl.show()
