@@ -52,6 +52,7 @@ pal_64_godsnot = [
     "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
 pal_64 = pal_64_godsnot
 
+
 def init_plotting_params():
     """Init default plotting parameters.
 

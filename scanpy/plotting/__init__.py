@@ -51,11 +51,11 @@ def pca(adata, **params):
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
+    legend_loc : str, optional (default: 'right margin')
          Options for keyword argument 'loc'.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -70,37 +70,41 @@ def pca(adata, **params):
     pca_ranking(adata, show)
 
 
-def pca_scatter(adata,
-                color=None,
-                names=None,
-                comps=None,
-                cont=None,
-                layout='2d',
-                legendloc='right margin',
-                cmap=None,
-                pal=None,
-                right_margin=None,
-                size=None,
-                title=None,
-                show=None):
+def pca_scatter(
+        adata,
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """See parameters of pl.pca().
     """
     from ..examples import check_adata
     adata = check_adata(adata, verbosity=-1)
-    axs = scatter(adata,
-                  basis='pca',
-                  color=color,
-                  names=names,
-                  comps=comps,
-                  cont=cont,
-                  layout=layout,
-                  legendloc=legendloc,
-                  cmap=cmap,
-                  pal=pal,
-                  right_margin=right_margin,
-                  size=size,
-                  title=title,
-                  show=False)
+    axs = scatter(
+        adata,
+        basis='pca',
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
     savefig_or_show('pca_scatter', show=show)
     return axs
 
@@ -116,19 +120,21 @@ def pca_ranking(adata, comps=None, show=None):
     savefig_or_show('pca_ranking_variance')
 
 
-def diffmap(adata,
-            color=None,
-            names=None,
-            comps=None,
-            cont=None,
-            layout='2d',
-            legendloc='right margin',
-            cmap=None,
-            pal=None,
-            right_margin=None,
-            size=None,
-            title=None,
-            show=None):
+def diffmap(
+        adata,
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """Scatter plot in Diffusion Map basis.
 
     Parameters
@@ -148,11 +154,12 @@ def diffmap(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -171,20 +178,22 @@ def diffmap(adata,
         if not isinstance(comps, list): comps_list = [comps]
         else: comps_list = comps
     for comps in comps_list:
-        axs = scatter(adata,
-                      basis='diffmap',
-                      color=color,
-                      names=names,
-                      comps=comps,
-                      cont=cont,
-                      layout=layout,
-                      legendloc=legendloc,
-                      cmap=cmap,
-                      pal=pal,
-                      right_margin=right_margin,
-                      size=size,
-                      title=title,
-                      show=False)
+        axs = scatter(
+            adata,
+            basis='diffmap',
+            color=color,
+            names=names,
+            comps=comps,
+            cont=cont,
+            layout=layout,
+            legend_loc=legend_loc,
+            legend_fontsize=legend_fontsize,
+            cmap=cmap,
+            pal=pal,
+            right_margin=right_margin,
+            size=size,
+            title=title,
+            show=False)
         writekey = 'diffmap'
         if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
         writekey += '_comps' + comps.replace(',', '')
@@ -194,19 +203,21 @@ def diffmap(adata,
     return axs
 
 
-def tsne(adata,
-         color=None,
-         names=None,
-         comps=None,
-         cont=None,
-         layout='2d',
-         legendloc='right margin',
-         cmap=None,
-         pal=None,
-         right_margin=None,
-         size=None,
-         title=None,
-         show=None):
+def tsne(
+        adata,
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """Scatter in tSNE basis.
 
     Parameters
@@ -226,11 +237,12 @@ def tsne(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -245,37 +257,41 @@ def tsne(adata,
     """
     from ..examples import check_adata
     adata = check_adata(adata)
-    axs = scatter(adata,
-                  basis='tsne',
-                  color=color,
-                  names=names,
-                  comps=comps,
-                  cont=cont,
-                  layout=layout,
-                  legendloc=legendloc,
-                  cmap=cmap,
-                  pal=pal,
-                  right_margin=right_margin,
-                  size=size,
-                  title=title,
-                  show=False)
+    axs = scatter(
+        adata,
+        basis='tsne',
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
     savefig_or_show('tsne')
     return axs
 
 
-def spring(adata,
-           color=None,
-           names=None,
-           comps='1,2',
-           cont=None,
-           layout='2d',
-           legendloc='right margin',
-           cmap=None,
-           pal=None,
-           right_margin=None,
-           size=None,
-           title=None,
-           show=None):
+def spring(
+        adata,
+        color=None,
+        names=None,
+        comps='1,2',
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """Plot spring scatter plot.
 
     Parameters
@@ -295,11 +311,12 @@ def spring(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -314,21 +331,23 @@ def spring(adata,
         Y = adata.smp['X_spring']
     else:
         raise ValueError('Need to run tool `spring` before plotting.')
-    axs = scatter(adata,
-                  basis='spring',
-                  color=color,
-                  names=names,
-                  comps=comps,
-                  cont=cont,
-                  layout=layout,
-                  legendloc=legendloc,
-                  cmap=cmap,
-                  pal=pal,
-                  right_margin=right_margin,
-                  size=size,
-                  # defined in plotting
+    axs = scatter(
+        adata,
+        basis='spring',
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        # defined in plotting
                   title=title,
-                  show=False)
+        show=False)
     savefig_or_show('spring', show=show)
 
 
@@ -361,11 +380,11 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     fig = pl.figure()
     ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
     labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
+    nx.draw_networkx_edges(G, pos, ax=ax)
     edge_labels = {}
     for n1, n2, label in G.edges(data=True):
         edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
+    # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
@@ -386,7 +405,7 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
                 color = list(color)
                 color.append('grey')
                 fracs.append(1-sum(fracs))
-                names[n_cnt] += '\n?'
+                # names[n_cnt] += '\n?'
         a.pie(fracs, colors=color)
         if names is not None:
             a.text(0.5, 0.5, names[n_cnt],
@@ -410,14 +429,16 @@ def ega_sc_tree(adata, root, show=None):
     return ax
 
 
-def dpt(adata,
+def dpt(
+        adata,
         basis='diffmap',
         color=None,
         names=None,
         comps=None,
         cont=None,
         layout='2d',
-        legendloc='right margin',
+        legend_loc='right margin',
+        legend_fontsize=None,
         cmap=None,
         pal=None,
         right_margin=None,
@@ -446,11 +467,12 @@ def dpt(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -463,20 +485,22 @@ def dpt(adata,
          result is pretty unreliable. Use tool `ega` (Extremal Graph
          Abstraction) instead.
     """
-    dpt_scatter(adata,
-                basis=basis,
-                color=color,
-                names=names,
-                comps=comps,
-                cont=cont,
-                layout=layout,
-                legendloc=legendloc,
-                cmap=cmap,
-                pal=pal,
-                right_margin=right_margin,
-                size=size,
-                title=title,
-                show=False)
+    dpt_scatter(
+        adata,
+        basis=basis,
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
     if color is not None:
@@ -486,20 +510,22 @@ def dpt(adata,
     dpt_timeseries(adata, cmap=cmap, show=show)
 
 
-def dpt_scatter(adata,
-                basis='diffmap',
-                color=None,
-                names=None,
-                comps=None,
-                cont=None,
-                layout='2d',
-                legendloc='right margin',
-                cmap=None,
-                pal=None,
-                right_margin=None,
-                size=None,
-                title=None,
-                show=None):
+def dpt_scatter(
+        adata,
+        basis='diffmap',
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """See parameters of sc.pl.dpt().
     """
     from ..examples import check_adata
@@ -540,7 +566,8 @@ def dpt_scatter(adata,
                       comps=comps,
                       cont=cont,
                       layout=layout,
-                      legendloc=legendloc,
+                                legend_loc=legend_loc,
+       legend_fontsize=legend_fontsize,
                       cmap=cmap,
                       pal=pal,
                       right_margin=right_margin,
@@ -655,20 +682,22 @@ def dpt_segments_pseudotime(adata, cmap=None, pal=None):
     if sett.savefigs: savefig('dpt_segpt')
 
 
-def dbscan(adata,
-           basis='tsne',
-           color=None,
-           names=None,
-           comps=None,
-           cont=None,
-           layout='2d',
-           legendloc='right margin',
-           cmap=None,
-           pal=None,
-           right_margin=None,
-           size=None,
-           title=None,
-           show=None):
+def dbscan(
+        adata,
+        basis='tsne',
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """Plot results of DBSCAN clustering.
 
     Parameters
@@ -690,11 +719,12 @@ def dbscan(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : {'right margin', see matplotlib.legend}, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: matplotlib.rcParams['axes.prop_cycle'].by_key()['color'])
+    pal : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
@@ -705,38 +735,42 @@ def dbscan(adata,
     adata = check_adata(adata)
     colors = ['dbscan_groups']
     if color is not None: colors += color.split(',')
-    axs = scatter(adata,
-                   basis=basis,
-                   color=colors,
-                   names=names,
-                   comps=comps,
-                   cont=cont,
-                   layout=layout,
-                   legendloc=legendloc,
-                   cmap=cmap,
-                   pal=pal,
-                   right_margin=right_margin,
-                   size=size,
-                   title=title,
-                   show=False)
+    axs = scatter(
+        adata,
+        basis=basis,
+        color=colors,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
     savefig_or_show('dbscan_' + basis)
 
 
-def paths(adata,
-          basis='diffmap',
-          dist_threshold=None,
-          single_panel=True,
-          color=None,
-          names=None,
-          comps=None,
-          cont=None,
-          layout='2d',
-          legendloc='right margin',
-          cmap=None,
-          right_margin=None,
-          size=None,
-          title=None,
-          show=None):
+def paths(
+        adata,
+        basis='diffmap',
+        dist_threshold=None,
+        single_panel=True,
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
     """Plot paths.
 
     Parameters
@@ -760,8 +794,9 @@ def paths(adata,
         Switch on continuous layout, switch off categorical layout.
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
-    legendloc : see matplotlib.legend, optional (default: 'lower right')
-         Options for keyword argument 'loc'.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
     cmap : str (default: continuous: inferno/ categorical: finite palette)
          String denoting matplotlib color map.
     right_margin : float or list of floats (default: None)
@@ -792,19 +827,21 @@ def paths(adata,
                 # color_base.append(title)
                 adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
 
-        axs = scatter(adata,
-                       basis=basis,
-                       color=color_base,
-                       names=names,
-                       comps=comps,
-                       cont=cont,
-                       layout=layout,
-                       legendloc=legendloc,
-                       cmap=cmap,
-                       right_margin=right_margin,
-                       size=size,
-                       title=title,
-                       show=False)
+        axs = scatter(
+            adata,
+            basis=basis,
+            color=color_base,
+            names=names,
+            comps=comps,
+            cont=cont,
+            layout=layout,
+            legend_loc=legend_loc,
+            legend_fontsize=legend_fontsize,
+            cmap=cmap,
+            right_margin=right_margin,
+            size=size,
+            title=title,
+            show=False)
         writekey = 'paths_' + basis + '_' + adata.add['paths_type']
         if sett.savefigs: savefig(writekey)
     else:
@@ -815,19 +852,21 @@ def paths(adata,
                 # color_base.append(title)
                 adata.add['highlights'] = ([adata.add['iroot']]
                                        + [adata.add['paths_groups_fateidx'][iname]])
-            axs = scatter(adata,
-                           basis=basis,
-                           color=color_base,
-                           names=[name],
-                           comps=comps,
-                           cont=cont,
-                           layout=layout,
-                           legendloc=legendloc,
-                           cmap=cmap,
-                           right_margin=right_margin,
-                           size=size,
-                           title=title,
-                           show=False)
+            axs = scatter(
+                adata,
+                basis=basis,
+                color=color_base,
+                names=[name],
+                comps=comps,
+                cont=cont,
+                layout=layout,
+                legend_loc=legend_loc,
+                legend_fontsize=legend_fontsize,
+                cmap=cmap,
+                right_margin=right_margin,
+                size=size,
+                title=title,
+                show=False)
             del color_base[-1]
             writekey = 'paths_' + basis + '_' + adata.add['paths_type'] + '_' + name
             if sett.savefigs: savefig(writekey)
