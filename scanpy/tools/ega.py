@@ -8,6 +8,7 @@ import scipy as sp
 import networkx as nx
 import scipy.sparse
 from .. import logging as logg
+from ..data_structs import ann_data
 from ..data_structs import data_graph
 
 
@@ -157,6 +158,8 @@ class EGA(data_graph.DataGraph):
                  recompute_diffmap=None, n_splits=0,
                  attachedness_measure='n_connecting_edges',
                  flavor='haghverdi16'):
+        if not isinstance(adata_or_X, ann_data.AnnData) or 'Ktilde' not in adata_or_X.add:
+            recompute_diffmap = True
         super(EGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
