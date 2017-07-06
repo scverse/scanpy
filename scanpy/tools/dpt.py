@@ -107,12 +107,13 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     if n_branchings > 1:
         logg.m('... running a hierarchical version of DPT')
-    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, min_group_size=min_group_size,
+    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
+              min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca, n_branchings=n_branchings,
               flavor=flavor)
     # diffusion map
-    ddmap = dpt.diffmap(n_comps=n_dcs)
+    ddmap = dpt.diffmap()
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
     # also store the 0th comp, which is skipped for plotting
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
@@ -165,11 +166,13 @@ class DPT(data_graph.DataGraph):
 
     def __init__(self, adata_or_X, k=30, knn=True,
                  n_jobs=1, n_pcs=50,
+                 n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None, n_branchings=0,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
+                                  n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,

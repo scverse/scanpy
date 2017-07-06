@@ -136,7 +136,7 @@ class DataGraph(object):
     """
 
     def __init__(self, adata_or_X, k=30, knn=True,
-                 n_jobs=None, n_pcs=30, n_pcs_post=30,
+                 n_jobs=None, n_pcs=30, n_dcs=10,
                  recompute_pca=None,
                  recompute_diffmap=None,
                  flavor='haghverdi16'):
@@ -145,7 +145,7 @@ class DataGraph(object):
         self.knn = knn
         self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
         self.n_pcs = n_pcs
-        self.n_pcs_post = 30
+        self.n_dcs = n_dcs
         self.flavor = flavor  # this is to experiment around
         self.sym = True  # we do not allow asymetric cases
         self.iroot = None
@@ -183,7 +183,7 @@ class DataGraph(object):
                 and xroot is not None
                 and xroot.size == adata.X.shape[1]):
                 self.set_root(xroot)
-            logg.m('... compute X_pca for building graph')
+            logg.m('... compute `X_pca` for building graph')
             from ..preprocessing import pca
             pca(adata, n_comps=self.n_pcs)
             self.X = adata.smp['X_pca']
@@ -192,15 +192,22 @@ class DataGraph(object):
         self.Dchosen = None
         # use diffmap from previous calculation
         if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
-            logg.m('... using `X_diffmap` for distance computations')
-            self.X_diffmap = adata.smp['X_diffmap']
-            self.evals = np.r_[1, adata.add['diffmap_evals']]
-            self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
-            self.lbasis = self.rbasis
-            if knn: self.Dsq = adata.add['distance']
-            if knn: self.Ktilde = adata.add['Ktilde']
-            self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                          shape=(self.X.shape[0], self.X.shape[0]))
+            if adata.smp['X_diffmap'].shape[1] >= n_dcs-1:
+                logg.m('... using "X_diffmap" for distance computations')
+                self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
+                self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
+                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap'][:, :n_dcs-1]]
+                self.lbasis = self.rbasis
+                if knn: self.Dsq = adata.add['distance']
+                if knn: self.Ktilde = adata.add['Ktilde']
+                self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
+                                              shape=(self.X.shape[0], self.X.shape[0]))
+            else:
+                recompute_diffmap = True
+                self.evals = None
+                self.rbasis = None
+                self.lbasis = None
+                self.Dsq = None
         else:
             self.evals = None
             self.rbasis = None
@@ -209,14 +216,17 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
 
-    def diffmap(self, n_comps=10):
+    def diffmap(self, n_comps=None):
         """Diffusion Map as of Coifman et al. (2005) incorparting
         suggestions of Haghverdi et al. (2016).
         """
+        if n_comps is not None:
+            self.n_dcs = n_comps
+            logg.info('... updating number of DCs to', self.n_dcs)
         if self.evals is None:
-            logg.m('compute Diffusion Map', r=True)
+            logg.m('compute Diffusion Map with', self.n_dcs, 'components', r=True)
             self.compute_transition_matrix()
-            self.embed(n_evals=n_comps)
+            self.embed(n_evals=self.n_dcs)
         # write results to dictionary
         ddmap = {}
         # skip the first eigenvalue/eigenvector
@@ -538,12 +548,11 @@ class DataGraph(object):
         - Is based on M matrix.
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
-        if self.M.shape[0] > 1000 and self.n_pcs_post == 0:
+        if self.M.shape[0] > 1000:
             logg.m('--> high number of dimensions for computing DPT distance matrix\n'
-                   '    by setting n_pcs_post > 0 you can speed up the computation')
-        if self.n_pcs_post > 0 and self.M.shape[0] > self.n_pcs_post:
+                   '    computing PCA with 50 components')
             from ..preprocessing import pca
-            self.M = pca(self.M, n_comps=self.n_pcs_post, mute=True)
+            self.M = pca(self.M, n_comps=50, mute=True)
         self.Ddiff = sp.spatial.distance.squareform(sp.spatial.distance.pdist(self.M))
         logg.m('computed Ddiff distance matrix', t=True)
         self.Dchosen = self.Ddiff

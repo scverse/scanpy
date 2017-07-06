@@ -50,10 +50,12 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         Number of splits to detect.
     k : int, optional (default: 30)
         Number of nearest neighbors on the knn graph.
-    n_pcs: int, optional (default: 50)
+    n_pcs : int, optional (default: 50)
         Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
+    n_dcs : int, optional (default: 10)
+        Number of diffusion components to use for distance computations.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
     recompute_diffmap : bool, (default: False)
@@ -93,7 +95,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         logg.hint('set parameter `n_splits` > 0 to detect splits')
     if n_splits > 1:
         logg.info('... running extremal graph abstraction (EGA)')
-    ega = EGA(adata, k=k, n_pcs=n_pcs,
+    ega = EGA(adata, k=k, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size,
               n_jobs=n_jobs,
               recompute_diffmap=recompute_diffmap,
@@ -101,7 +103,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
               n_splits=n_splits,
               attachedness_measure=attachedness_measure,
               flavor=flavor)
-    ddmap = ega.diffmap(n_comps=n_dcs)
+    ddmap = ega.diffmap()
     adata.smp['X_diffmap'] = ddmap['X_diffmap']
     # also store the 0th comp, which is skipped for plotting
     adata.smp['X_diffmap0'] = ega.rbasis[:, 0]
@@ -153,6 +155,7 @@ class EGA(data_graph.DataGraph):
 
     def __init__(self, adata_or_X, k=30,
                  n_jobs=1, n_pcs=50,
+                 n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None, n_splits=0,
@@ -161,6 +164,7 @@ class EGA(data_graph.DataGraph):
         if not isinstance(adata_or_X, ann_data.AnnData) or 'Ktilde' not in adata_or_X.add:
             recompute_diffmap = True
         super(EGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
+                                  n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,
@@ -370,7 +374,9 @@ class EGA(data_graph.DataGraph):
                       .format(sizes[0], sizes[1]))
             return iseg, seg, ssegs, ssegs_tips, sizes
 
-        def new_split():
+        def new_split(segs_tips):
+            # upon initialization, start with no tips
+            if len(segs) == 1: segs_tips = [[]]
             scores = []
             new_tips = []
             second_tips = []
@@ -442,7 +448,7 @@ class EGA(data_graph.DataGraph):
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
-        # iseg, seg, ssegs, ssegs_tips, sizes = new_split()
+        # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
         trunk = 1
         if len(segs_tips[iseg]) > 0: ssegs_tips[trunk] = [segs_tips[iseg][0]]
         segs.pop(iseg)
