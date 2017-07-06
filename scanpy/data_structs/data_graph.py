@@ -198,6 +198,7 @@ class DataGraph(object):
             self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap']]
             self.lbasis = self.rbasis
             if knn: self.Dsq = adata.add['distance']
+            if knn: self.Ktilde = adata.add['Ktilde']
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
         else:
@@ -213,7 +214,7 @@ class DataGraph(object):
         suggestions of Haghverdi et al. (2016).
         """
         if self.evals is None:
-            logg.m('start computing Diffusion Map', r=True)
+            logg.m('compute Diffusion Map', r=True)
             self.compute_transition_matrix()
             self.embed(n_evals=n_comps)
         # write results to dictionary

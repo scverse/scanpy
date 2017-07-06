@@ -118,6 +118,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
     if knn: adata.add['distance'] = dpt.Dsq
+    if knn: adata.add['Ktilde'] = dpt.Ktilde
     logg.m('perform Diffusion Pseudotime analysis', r=True)
     if False:
         # compute M matrix of cumulative transition probabilities,

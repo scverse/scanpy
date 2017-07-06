@@ -106,6 +106,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     adata.smp['X_diffmap0'] = ega.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
     adata.add['distance'] = ega.Dsq
+    adata.add['Ktilde'] = ega.Ktilde
     logg.info('perform Diffusion Pseudotime analysis', r=True)
     if False:
         # compute M matrix of cumulative transition probabilities,
@@ -812,7 +813,6 @@ class EGA(data_graph.DataGraph):
             if continue_after_distance_compute: continue
             idx = np.argmin(segs_distances[kseg, jseg_list])
             jseg_min = jseg_list[idx]
-            print(kseg, segs_distances[kseg, jseg_list])
             if jseg_min not in kseg_list:
                 segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
                 for i, neighbors in enumerate(segs_adjacency):

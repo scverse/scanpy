@@ -68,6 +68,7 @@ def diffmap(adata, n_comps=15, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = ddmap['evals']
     if knn: adata.add['distance'] = dmap.Dsq
+    if knn: adata.add['Ktilde'] = dmap.Ktilde
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
            '    the data representation "X_diffmap" (adata.smp),\n'
