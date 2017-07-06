@@ -212,7 +212,8 @@ class EGA(data_graph.DataGraph):
                 tip_0 = np.argmax(self.Dchosen[0])  # just a random index, here fixed to "0"
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
         # we keep a list of the tips of each segment
-        segs_tips = [[]]  # [tips_all]
+        # segs_tips = [[]]
+        segs_tips = [tips_all]
         # print('init tips', segs_tips)
         segs_undecided = [True]
         segs_adjacency = [[]]
