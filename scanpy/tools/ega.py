@@ -224,7 +224,7 @@ class EGA(data_graph.DataGraph):
         # print('init tips', segs_tips)
         segs_undecided = [True]
         segs_adjacency = [[]]
-        segs_distances = np.zeros((1, 1))
+        segs_distances = np.ones((1, 1))
         segs_adjacency_nodes = [{}]
         logg.info('... do not consider groups with less than {} points for splitting'
                   .format(self.min_group_size))
@@ -484,9 +484,9 @@ class EGA(data_graph.DataGraph):
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
-        iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
+        # iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
         # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
-        # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
+        iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
         trunk = 1
         segs.pop(iseg)
         segs_tips.pop(iseg)
@@ -501,7 +501,7 @@ class EGA(data_graph.DataGraph):
         new_shape = (segs_distances.shape[0] + n_add, segs_distances.shape[1] + n_add)
         # segs_distances.resize() throws an error!
         segs_distances_help = segs_distances.copy()
-        segs_distances = np.zeros((new_shape))
+        segs_distances = np.ones((new_shape))
         segs_distances[np.ix_(range(segs_distances_help.shape[0]),
                               range(segs_distances_help.shape[1]))] = segs_distances_help
         segs_distances = self.adjust_adjacency(iseg, n_add,
@@ -755,7 +755,7 @@ class EGA(data_graph.DataGraph):
     def trace_existing_connections(self, jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk):
         j_connects = segs_adjacency_nodes[jseg].copy()
         connectedness = [0, 0]
-        not_trunk = 1 if trunk == 0 else 1
+        not_trunk = 1 if trunk == 0 else 0
         kseg_trunk = set(segs[kseg_list[trunk]])
         kseg_not_trunk = set(segs[kseg_list[not_trunk]])
         for j_connect, connects in j_connects.items():
@@ -767,9 +767,9 @@ class EGA(data_graph.DataGraph):
                     in_kseg_trunk = True if point_connect in kseg_trunk else False
                     if self.Dsq[j_connect, point_connect] > 0:
                         score += 1. / (1 + self.Dsq[j_connect, point_connect]) / len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
-                    score = 1
+                    # score = 1
                     if in_kseg_trunk:
-                        connectedness[0] += score
+                        connectedness[trunk] += score
                     else:
                         # elif point_connect in kseg_not_trunk:
                         if j_connect not in segs_adjacency_nodes[jseg]:
@@ -784,7 +784,7 @@ class EGA(data_graph.DataGraph):
                         segs_adjacency_nodes[kseg_list[trunk]][point_connect].pop(idx)
                         if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
                             del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
-                        connectedness[1] += score
+                        connectedness[not_trunk] += score
                     # else:
                     #     print('should not occur!')
                     #     print('iseg is', kseg_list[trunk], 'and jseg is', jseg)
@@ -818,7 +818,7 @@ class EGA(data_graph.DataGraph):
                     score = 0
                     if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q]) / len(seg_test)
                     if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p]) / len(seg_loop)
-                    score = 1
+                    # score = 1
                     connections += score
         distance = 1/(1+connections)
         logg.m('    ', kseg_loop, '-', kseg_test, '->', distance, v=5)
@@ -829,16 +829,18 @@ class EGA(data_graph.DataGraph):
         prev_connecting_segments = segs_adjacency[iseg].copy()
         segs_adjacency += [[] for i in range(n_add)]
         segs_adjacency_nodes += [{} for i in range(n_add)]
-        kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))
+        kseg_list = list(range(len(segs) - n_add, len(segs))) + [iseg]
+        trunk = len(kseg_list) - 1
         if self.attachedness_measure == 'n_connecting_edges':
             jseg_list = [jseg for jseg in range(len(segs)) if jseg not in kseg_list]
             for jseg in jseg_list:
-                distances = self.trace_existing_connections(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, 0)
+                distances = self.trace_existing_connections(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk=trunk)
                 segs_distances[jseg, kseg_list] = distances
                 segs_distances[kseg_list, jseg] = distances
             distance = self.establish_new_connections(kseg_list, segs, segs_adjacency_nodes)
             segs_distances[kseg_list[0], kseg_list[1]] = distance
             segs_distances[kseg_list[1], kseg_list[0]] = distance
+        # treat existing connections
         # logg.info('... treat existing connections')
         for jseg in prev_connecting_segments:
             if self.attachedness_measure != 'n_connecting_edges':
@@ -853,17 +855,18 @@ class EGA(data_graph.DataGraph):
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
+            logg.m('    segment {} is now attached to {}'.format(jseg, kseg_min), v=4)
         # in case the segment we split should correspond to two "clusters", we
         # need to check whether the new segments connect to any of the other old
         # segments
         # if not, we add a link between the new segments, if yes, we add two
         # links to connect them at the correct old segments
         # logg.info('... treat new connections')
-        do_not_attach_kseg = False
+        do_not_attach_ksegs_with_each_other = False
         continue_after_distance_compute = False
         for kseg in kseg_list:
             jseg_list = [jseg for jseg in range(len(segs))
-                         if jseg != kseg and jseg not in prev_connecting_segments]  # if it's a cluster split, this is allowed?
+                         if jseg != kseg and jseg not in segs_adjacency[kseg]]  # prev_connecting_segments]  # if it's a cluster split, this is allowed?
             if self.attachedness_measure != 'n_connecting_edges':
                 result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, closest_points_in_kseg, closest_points_in_jseg = result
@@ -872,6 +875,7 @@ class EGA(data_graph.DataGraph):
             if continue_after_distance_compute: continue
             idx = np.argmin(segs_distances[kseg, jseg_list])
             jseg_min = jseg_list[idx]
+            logg.m('    consider connecting', kseg, 'to', jseg_min)
             if jseg_min not in kseg_list:
                 segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
                 for i, neighbors in enumerate(segs_adjacency):
@@ -881,23 +885,23 @@ class EGA(data_graph.DataGraph):
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
                     segs_adjacency[kseg].append(jseg_min)
-                    logg.info('    attaching new segment', kseg, 'at', jseg_min)
+                    logg.info('        attaching new segment', kseg, 'at', jseg_min)
                     # if we split the cluster, we should not attach kseg
-                    do_not_attach_kseg = True
+                    do_not_attach_ksegs_with_each_other = True
                 else:
-                    logg.info('    cannot attach new segment', kseg, 'at', jseg_min,
+                    logg.info('        cannot attach new segment', kseg, 'at', jseg_min,
                               '(would produce cycle)')
                     if kseg != kseg_list[-1]:
-                        logg.info('        continue')
+                        logg.info('            continue')
                         continue
                     else:
-                        logg.info('        do not add another link')
+                        logg.info('            do not add another link')
                         continue_after_distance_compute = True
-            if jseg_min in kseg_list and not do_not_attach_kseg:
+            if jseg_min in kseg_list and not do_not_attach_ksegs_with_each_other:
                 segs_adjacency[jseg_min].append(kseg)
                 segs_adjacency[kseg].append(jseg_min)
                 continue_after_distance_compute = True
-                logg.info('    attaching new segment', kseg, 'with new segment', jseg_min)
+                logg.info('        attaching new segment', kseg, 'with new segment', jseg_min)
         return segs_distances
 
     def _do_split(self, Dseg, tips, seg_reference, old_tips):
