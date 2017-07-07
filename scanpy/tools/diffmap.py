@@ -41,9 +41,10 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    sigma : float, optional (default: 0)
-        If greater 0, ignore parameter 'k', but directly set a global width
-        of the Kernel Gaussian (method 'global').
+    n_pcs : int, optional (default: 50)
+        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
+        basis for generating the graph. Set to 0 if you don't want preprocessing
+        with PCA.
     n_jobs : int or None
         Number of CPUs to use (default: sett.n_cpus).
     copy : bool (default: False)
@@ -63,10 +64,10 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_dcs=n_comps,
                    n_jobs=n_jobs, recompute_diffmap=True, flavor=flavor)
-    ddmap = dmap.diffmap()
-    adata.smp['X_diffmap'] = ddmap['X_diffmap']
+    dmap.update_diffmap()
+    adata.smp['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
-    adata.add['diffmap_evals'] = ddmap['evals']
+    adata.add['diffmap_evals'] = dmap.evals[1:]
     if knn: adata.add['distance'] = dmap.Dsq
     if knn: adata.add['Ktilde'] = dmap.Ktilde
     logg.m('finished', t=True, end=' ')

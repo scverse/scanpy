@@ -357,7 +357,8 @@ def spring(
 # ------------------------------------------------------------------------------
 
 
-def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
+def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
+             node_size=1, ext='pdf'):
     # plot the tree
     if isinstance(adata, nx.Graph):
         G = adata
@@ -389,7 +390,7 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
     trans2 = fig.transFigure.inverted().transform
     pl.xticks([])
     pl.yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
+    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
         xx, yy = trans(pos[n])     # figure coordinates
@@ -412,7 +413,7 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
-    savefig_or_show('ega_tree', show)
+    savefig_or_show('ega_tree', show, ext=ext)
     return ax
 
 

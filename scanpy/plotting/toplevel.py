@@ -23,7 +23,7 @@ from .utils import scatter_base, scatter_group
 # -------------------------------------------------------------------------------
 
 
-def savefig(writekey):
+def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
     The filename is generated as follows:
@@ -32,25 +32,27 @@ def savefig(writekey):
     filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
     ```
     """
-    if rcParams['savefig.dpi'] < 300:
-        dpi = 300
-        if sett._low_resolution_warning:
-            logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
-            sett._low_resolution_warning = False
-    else:
-        dpi = rcParams['savefig.dpi']
+    if dpi is None:
+        if rcParams['savefig.dpi'] < 300:
+            dpi = 300
+            if sett._low_resolution_warning:
+                logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
+                sett._low_resolution_warning = False
+        else:
+            dpi = rcParams['savefig.dpi']
     if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
     if sett.run_name != '': writekey = sett.run_name + '_' + writekey
     if sett.figdir[-1] != '/': sett.figdir += '/'
-    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
+    if ext is None: ext = sett.file_format_figs
+    filename = sett.figdir + writekey + sett.plotsuffix + '.' + ext
     logg.m('... saving figure to file', filename)
     pl.savefig(filename, dpi=dpi)
     pl.close()  # clear figure
 
 
-def savefig_or_show(writekey, show=None):
+def savefig_or_show(writekey, show=None, dpi=None, ext=None):
     show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey)
+    if sett.savefigs: savefig(writekey, dpi=dpi, ext=ext)
     elif show: pl.show()
 
 

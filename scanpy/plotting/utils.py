@@ -272,13 +272,14 @@ def scatter_base(Y,
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
             ax.scatter(*data, c='black',
                        facecolors='black', edgecolors='black',
-                       marker='x', s=40, zorder=20)
+                       marker='x', s=10, zorder=20)
             highlight_text = (highlights_labels[iihighlight] if
                               len(highlights_labels) > 0
                               else str(ihighlight))
             # the following is a Python 2 compatibility hack
             ax.text(*([d[0] for d in data] + [highlight_text]),
                     zorder=20,
+                    fontsize=6,
                     color='black')
         if not show_ticks:
             ax.set_xticks([])

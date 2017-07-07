@@ -56,7 +56,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    n_pcs: int, optional (default: 50)
+    n_pcs : int, optional (default: 50)
         Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
@@ -112,12 +112,10 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca, n_branchings=n_branchings,
               flavor=flavor)
-    # diffusion map
-    ddmap = dpt.diffmap()
-    adata.smp['X_diffmap'] = ddmap['X_diffmap']
-    # also store the 0th comp, which is skipped for plotting
+    dpt.update_diffmap()
+    adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
-    adata.add['diffmap_evals'] = ddmap['evals']
+    adata.add['diffmap_evals'] = dpt.evals[1:]
     if knn: adata.add['distance'] = dpt.Dsq
     if knn: adata.add['Ktilde'] = dpt.Ktilde
     logg.m('perform Diffusion Pseudotime analysis', r=True)

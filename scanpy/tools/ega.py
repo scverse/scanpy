@@ -103,11 +103,10 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
               n_splits=n_splits,
               attachedness_measure=attachedness_measure,
               flavor=flavor)
-    ddmap = ega.diffmap()
-    adata.smp['X_diffmap'] = ddmap['X_diffmap']
-    # also store the 0th comp, which is skipped for plotting
+    ega.update_diffmap()
+    adata.smp['X_diffmap'] = ega.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = ega.rbasis[:, 0]
-    adata.add['diffmap_evals'] = ddmap['evals']
+    adata.add['diffmap_evals'] = ega.evals[1:]
     adata.add['distance'] = ega.Dsq
     adata.add['Ktilde'] = ega.Ktilde
     logg.info('perform Diffusion Pseudotime analysis', r=True)
@@ -356,27 +355,28 @@ class EGA(data_graph.DataGraph):
                         jtip = segs_tips[jseg][0]
                         dtip += self.Dchosen[jtip, seg]
                 if len(jsegs) > 0: dtip /= len(jsegs)
-                if len(segs_tips[iseg]) == 0:
-                    # just take a random point and the extremum with respect to that
-                    # point, the point is fixed to be the first in the segment
-                    # just for init
-                    itip = seg[np.argmax(self.Dchosen[seg[0], seg])]
-                else:
-                    itip = segs_tips[iseg][0]
+                itip = segs_tips[iseg][0]
                 dtip += self.Dchosen[itip, seg]
-                new_itip = seg[np.argmax(dtip)]
+                imax = np.argmax(dtip)
+                dist_new_itip = dtip[imax]
+                new_itip = seg[imax]
                 new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
                 ssegs = [seg[new_seg], seg[~new_seg]]
                 ssegs_tips = [[new_itip], []]
                 sizes = [len(ssegs[0]), len(ssegs[1])]
                 if sizes[0] != 0 and sizes[1] != 0: break
-            logg.info('        obtained two groups with sizes {} and {}'
-                      .format(sizes[0], sizes[1]))
+            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+                   .format(new_itip, dist_new_itip, itip), v=4)
+            logg.m('    new sizes {} and {}'
+                   .format(sizes[0], sizes[1]), v=4)
+            if len(segs_tips[iseg]) > 0: ssegs_tips[trunk] = [segs_tips[iseg][0]]
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         def new_split(segs_tips):
             # upon initialization, start with no tips
-            if len(segs) == 1: segs_tips = [[]]
+            if len(segs) == 1:
+                segs_tips.pop(0)
+                segs_tips.append([])
             scores = []
             new_tips = []
             second_tips = []
@@ -413,7 +413,8 @@ class EGA(data_graph.DataGraph):
                     itip = seg[np.argmax(self.Dchosen[new_itip, seg])]
                 dtip = self.Dchosen[itip, seg] + self.Dchosen[new_itip, seg]
                 itip_third = np.argmax(dtip)
-                score = dtip[itip_third] / self.Dchosen[itip, new_itip]
+                # score = dtip[itip_third] / self.Dchosen[itip, new_itip]
+                score = len(seg)
                 scores.append(score)
                 new_tips.append(new_itip)
                 second_tips.append(itip)
@@ -423,34 +424,70 @@ class EGA(data_graph.DataGraph):
             itip = second_tips[iseg]
             third_itip = third_tips[iseg]
             seg = segs[iseg]
+            logg.info('... splitting group {} with size {}'.format(iseg, len(seg)))
             # this should not be done when bipartitioning
             # new_seg = np.logical_and(self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg],
             #                          self.Dchosen[new_itip, seg] < self.Dchosen[third_itip, seg])
             # we have to do the following
             new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
             size_0 = np.sum(new_seg)
-            if size_0 > len(seg) - size_0 and len(segs) == 1:
-                new_itip = itip
-                new_seg = ~new_seg
-                size_0 = len(seg) - size_0
-            idcs = np.argsort(self.Dchosen[new_itip, seg])
-            sorted_dists_from_new_tip = self.Dchosen[new_itip, seg][idcs]
-            offset = int(0.05 * size_0)
-            i = offset + np.argmax(np.diff(sorted_dists_from_new_tip[offset:size_0+1]))
-            if i <= size_0: new_seg[idcs[i+1:]] = False  # idx starts at zero and this works
+            # if size_0 > len(seg) - size_0 and len(segs) == 1:
+            #     new_itip = itip
+            #     new_seg = ~new_seg
+            #     size_0 = len(seg) - size_0
+            # idcs = np.argsort(self.Dchosen[new_itip, seg])
+            # sorted_dists_from_new_tip = self.Dchosen[new_itip, seg][idcs]
+            # i = np.argmax(np.diff(sorted_dists_from_new_tip))
+            # if i <= size_0: new_seg[idcs[i+1:]] = False  # idx starts at zero and this works
             ssegs = [seg[new_seg], seg[~new_seg]]
             ssegs_tips = [[new_itip], []]
             sizes = [len(ssegs[0]), len(ssegs[1])]
-            logg.info('    split group', iseg, 'with size', len(seg), 'to new sizes',
-                      sizes[0], '/', sizes[1], 'using tip',
-                      new_itip, 'with constraints', itip, 'and', third_itip)
-            logg.info('    the scores where', scores)
+            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+                   .format(new_itip, 0.0, itip), v=4)
+            logg.m('    new sizes {} and {}'
+                   .format(sizes[0], sizes[1]), v=4)
+            logg.m('    the scores where', scores, v=4)
+            return iseg, seg, ssegs, ssegs_tips, sizes
+
+        def star_split(segs_tips):
+            if len(segs) == 1:
+                segs_tips.pop(0)
+                segs_tips.append([])
+            isegs = np.argsort([len(seg) for seg in segs])[::-1]
+            iseg = isegs[0]
+            seg = segs[iseg]
+            new_tips = [seg[np.argmax(self.Dchosen[seg[0], seg])]]
+            dtip_others = self.Dchosen[new_tips[0], seg]
+            dists = [np.max(dtip_others)]
+            for j in range(10):
+                new_tip = seg[np.argmax(dtip_others)]
+                if new_tip in new_tips: break
+                new_tips.append(new_tip)
+                dtip_j = self.Dchosen[new_tips[-1], seg]
+                dists.append(np.max(dtip_j))
+                dtip_others += dtip_j
+            tip_idx_max = np.argmax(dists)
+            new_tip = new_tips.pop(tip_idx_max)
+            dist_max = dists.pop(tip_idx_max)
+            new_seg = np.ones(len(seg), dtype=bool)
+            for constraint_tip in new_tips:
+                new_seg[self.Dchosen[new_tip, seg] > self.Dchosen[constraint_tip, seg]] = False
+            ssegs = [seg[new_seg], seg[~new_seg]]
+            ssegs_tips = [[new_tip], new_tips]
+            sizes = [len(ssegs[0]), len(ssegs[1])]
+            np.set_printoptions(precision=4)
+            logg.m('    new tip', new_tip, 'with distance', dist_max,
+                   'using constraints {} with distances'
+                   .format(new_tips), v=4)
+            logg.m('   ', dists, v=4)
+            logg.m('    new sizes {} and {}'
+                   .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
         # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
+        # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
         trunk = 1
-        if len(segs_tips[iseg]) > 0: ssegs_tips[trunk] = [segs_tips[iseg][0]]
         segs.pop(iseg)
         segs_tips.pop(iseg)
         # insert trunk at same position
@@ -646,7 +683,8 @@ class EGA(data_graph.DataGraph):
         # need to return segs_distances as inplace formulation doesn't work
         return segs_distances
 
-    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes):
+    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips,
+                             segs_adjacency_nodes):
         distances = []
         closest_points_in_jseg = []
         closest_points_in_kseg = []
@@ -723,9 +761,17 @@ class EGA(data_graph.DataGraph):
         for j_connect, connects in j_connects.items():
             for point_connect, seg_connect in connects:
                 if seg_connect == kseg_list[trunk]:
-                    if point_connect in kseg_trunk:
-                        connectedness[0] += 1
-                    elif point_connect in kseg_not_trunk:
+                    score = 0
+                    if self.Dsq[point_connect, j_connect] > 0:
+                        score += 1. / (1 + self.Dsq[point_connect, j_connect]) / len(segs[jseg])
+                    in_kseg_trunk = True if point_connect in kseg_trunk else False
+                    if self.Dsq[j_connect, point_connect] > 0:
+                        score += 1. / (1 + self.Dsq[j_connect, point_connect]) / len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
+                    score = 1
+                    if in_kseg_trunk:
+                        connectedness[0] += score
+                    else:
+                        # elif point_connect in kseg_not_trunk:
                         if j_connect not in segs_adjacency_nodes[jseg]:
                             segs_adjacency_nodes[jseg][j_connect] = []
                         idx = segs_adjacency_nodes[jseg][j_connect].index((point_connect, kseg_list[trunk]))
@@ -738,18 +784,18 @@ class EGA(data_graph.DataGraph):
                         segs_adjacency_nodes[kseg_list[trunk]][point_connect].pop(idx)
                         if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
                             del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
-                        connectedness[1] += 1
-                    else:
-                        print('should not occur!')
-                        print('iseg is', kseg_list[trunk], 'and jseg is', jseg)
-                        print('jseg connect is', j_connects[j_connect], 'from', j_connect)
-                        print('point_connect is', point_connect, 'should be in', kseg_list[trunk])
-                        for i, seg in enumerate(segs):
-                            if point_connect in seg:
-                                print('but found point_connect in', i)
-                        raise ValueError('invalid state of algorithm')
+                        connectedness[1] += score
+                    # else:
+                    #     print('should not occur!')
+                    #     print('iseg is', kseg_list[trunk], 'and jseg is', jseg)
+                    #     print('jseg connect is', j_connects[j_connect], 'from', j_connect)
+                    #     print('point_connect is', point_connect, 'should be in', kseg_list[trunk])
+                    #     for i, seg in enumerate(segs):
+                    #         if point_connect in seg:
+                    #             print('but found point_connect in', i)
+                    #     raise ValueError('invalid state of algorithm')
         distances = [1/(1+c) for c in connectedness]
-        logg.m('    ', jseg, '-', kseg_list, '->', distances, v=4)
+        logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
 
     def establish_new_connections(self, kseg_list, segs, segs_adjacency_nodes):
@@ -769,9 +815,13 @@ class EGA(data_graph.DataGraph):
                     if q not in segs_adjacency_nodes[kseg_test]:
                         segs_adjacency_nodes[kseg_test][q] = []
                     segs_adjacency_nodes[kseg_test][q].append((p, kseg_loop))
-                    connections += 1
+                    score = 0
+                    if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q]) / len(seg_test)
+                    if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p]) / len(seg_loop)
+                    score = 1
+                    connections += score
         distance = 1/(1+connections)
-        logg.m('    ', kseg_loop, '-', kseg_test, '->', distance, v=4)
+        logg.m('    ', kseg_loop, '-', kseg_test, '->', distance, v=5)
         return distance
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,

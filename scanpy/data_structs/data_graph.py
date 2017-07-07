@@ -191,23 +191,20 @@ class DataGraph(object):
                 self.set_root(xroot)
         self.Dchosen = None
         # use diffmap from previous calculation
-        if isadata and 'X_diffmap' in adata.smp and not recompute_diffmap:
-            if adata.smp['X_diffmap'].shape[1] >= n_dcs-1:
-                logg.m('... using "X_diffmap" for distance computations')
+        if (isadata and 'X_diffmap' in adata.smp and not recompute_diffmap
+            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
                 self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
                 self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
-                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None], adata.smp['X_diffmap'][:, :n_dcs-1]]
+                np.set_printoptions(precision=3)
+                logg.info('... using stored "X_diffmap" with spectrum\n{}'
+                          .format(self.evals))
+                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
+                                    adata.smp['X_diffmap'][:, :n_dcs-1]]
                 self.lbasis = self.rbasis
                 if knn: self.Dsq = adata.add['distance']
                 if knn: self.Ktilde = adata.add['Ktilde']
                 self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                               shape=(self.X.shape[0], self.X.shape[0]))
-            else:
-                recompute_diffmap = True
-                self.evals = None
-                self.rbasis = None
-                self.lbasis = None
-                self.Dsq = None
         else:
             self.evals = None
             self.rbasis = None
@@ -216,30 +213,19 @@ class DataGraph(object):
         # further attributes that might be written during the computation
         self.M = None
 
-    def diffmap(self, n_comps=None):
-        """Diffusion Map as of Coifman et al. (2005) incorparting
-        suggestions of Haghverdi et al. (2016).
+    def update_diffmap(self, n_comps=None):
+        """Diffusion Map as of Coifman et al. (2005) and Haghverdi et al. (2016).
         """
         if n_comps is not None:
             self.n_dcs = n_comps
             logg.info('... updating number of DCs to', self.n_dcs)
-        if self.evals is None:
-            logg.m('compute Diffusion Map with', self.n_dcs, 'components', r=True)
+        if self.evals is None or self.evals.size < self.n_dcs:
+            logg.info('compute Diffusion Map with', self.n_dcs, 'components', r=True)
             self.compute_transition_matrix()
             self.embed(n_evals=self.n_dcs)
-        # write results to dictionary
-        ddmap = {}
-        # skip the first eigenvalue/eigenvector
-        ddmap['X_diffmap'] = self.rbasis[:, 1:]
-        ddmap['evals'] = self.evals[1:]
-        if self.evals is None:
-            sett.mt(0, 'finished, added\n'
-                    '    "X_diffmap" stores the diffmap representation of data (adata.smp)\n'
-                    '    "diffmap_evals store the eigenvalues of the transition matrix (adata.add)"')
-        return ddmap
 
     def compute_Ddiff_all(self, n_evals=10):
-        raise ValueError('deprecated functions')
+        raise RuntimeError('deprecated function')
         self.embed(n_evals=n_evals)
         self.compute_M_matrix()
         self.compute_Ddiff_matrix()
@@ -451,8 +437,11 @@ class DataGraph(object):
             # ncv = max(2 * n_evals + 1, int(np.sqrt(matrix.shape[0])))
             ncv = None
             which = 'LM' if sort == 'decrease' else 'SM'
-            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=n_evals, which=which,
-                                                  ncv=ncv)
+            # it pays off to increase the stability with a bit more precision
+            matrix = matrix.astype(np.float64)
+            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=n_evals,
+                                                  which=which, ncv=ncv)
+            evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
