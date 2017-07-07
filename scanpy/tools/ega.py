@@ -763,10 +763,10 @@ class EGA(data_graph.DataGraph):
                 if seg_connect == kseg_list[trunk]:
                     score = 0
                     if self.Dsq[point_connect, j_connect] > 0:
-                        score += 1. / (1 + self.Dsq[point_connect, j_connect]) / len(segs[jseg])
+                        score += 1. / (1 + self.Dsq[point_connect, j_connect]) / (1 + len(segs_adjacency_nodes[jseg]))  # len(segs[jseg])
                     in_kseg_trunk = True if point_connect in kseg_trunk else False
                     if self.Dsq[j_connect, point_connect] > 0:
-                        score += 1. / (1 + self.Dsq[j_connect, point_connect]) / len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
+                        score += 1. / (1 + self.Dsq[j_connect, point_connect]) / (1 + len(segs_adjacency_nodes[kseg_list[trunk if in_kseg_trunk else not_trunk]]))  # len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
                     # score = 1
                     if in_kseg_trunk:
                         connectedness[trunk] += score
@@ -815,11 +815,15 @@ class EGA(data_graph.DataGraph):
                     if q not in segs_adjacency_nodes[kseg_test]:
                         segs_adjacency_nodes[kseg_test][q] = []
                     segs_adjacency_nodes[kseg_test][q].append((p, kseg_loop))
-                    score = 0
-                    if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q]) / len(seg_test)
-                    if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p]) / len(seg_loop)
-                    # score = 1
-                    connections += score
+        # treat this in a different loop so we can normalize with surface of segment
+        for p, q_list in segs_adjacency_nodes[kseg_loop].items():
+            q_list = [q for q, jseg in q_list if jseg == kseg_test]
+            for q in q_list:
+                score = 0
+                if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q]) / (1 + len(segs_adjacency_nodes[kseg_test]))  # len(seg_test)
+                if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p]) / (1 + len(segs_adjacency_nodes[kseg_loop]))  # len(seg_loop)
+                # score = 1
+                connections += score
         distance = 1/(1+connections)
         logg.m('    ', kseg_loop, '-', kseg_test, '->', distance, v=5)
         return distance
@@ -885,7 +889,7 @@ class EGA(data_graph.DataGraph):
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
                     segs_adjacency[kseg].append(jseg_min)
-                    logg.info('        attaching new segment', kseg, 'at', jseg_min)
+                    logg.info('            attaching new segment', kseg, 'at', jseg_min)
                     # if we split the cluster, we should not attach kseg
                     do_not_attach_ksegs_with_each_other = True
                 else:
