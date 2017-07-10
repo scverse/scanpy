@@ -468,11 +468,11 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
     if not col_names:
         # try reading col_names from the last comment line
         if len(header) > 0:
-            logg.m('... assuming last comment line stores variable names')
+            logg.info('    assuming last comment line stores variable names')
             col_names = np.array(header.split('\n')[-2].strip('#').split())
         # just numbers as col_names
         else:
-            logg.m('... did not find column names in file')
+            logg.info('    did not find column names in file')
             col_names = np.arange(len(data[0])).astype(str)
     col_names = np.array(col_names, dtype=str)
     # check if first column contains row names or not
@@ -481,33 +481,37 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
     for line in f:
         line_list = line.split(delim)
         if not is_float(line_list[0]) or first_column_names:
-            logg.m('... assuming first column in file stores row names')
+            logg.info('    assuming first column in file stores row names')
             first_column_names = True
             row_names.append(line_list[0])
-            data.append(line_list[1:])
+            data.append(np.array(line_list[1:], dtype=dtype))
         else:
-            data.append(line_list)
+            data.append(np.array(line_list, dtype=dtype))
         break
     # parse the file
     for line in f:
         line_list = line.split(delim)
         if first_column_names:
             row_names.append(line_list[0])
-            data.append(line_list[1:])
+            data.append(np.array(line_list[1:], dtype=dtype))
         else:
-            data.append(line_list)
-    logg.m('... read data into list of lists', t=True)
+            data.append(np.array(line_list, dtype=dtype))
+            print(data[-1].size, end=' ')
+    logg.m('    read data into list of lists', t=True)
     # transfrom to array, this takes a long time and a lot of memory
     # but it's actually the same thing as np.genfromtext does
     # - we don't use the latter as it would involve another slicing step
     #   in the end, to separate row_names from float data, slicing takes
     #   a lot of memory and cpu time
+    if data[0].size != data[-1].size:
+        raise ValueError('length of first line {} is different from length of last line {}'
+                         .format(data[0].size, data[-1].size))
     data = np.array(data, dtype=dtype)
-    logg.m('... constructed array from list of list', t=True)
+    logg.m('    constructed array from list of list', t=True)
     # transform row_names
     if not row_names:
         row_names = np.arange(len(data)).astype(str)
-        logg.m('... did not find row names in file')
+        logg.m('    did not find row names in file')
     else:
         row_names = np.array(row_names)
         for iname, name in enumerate(row_names):
