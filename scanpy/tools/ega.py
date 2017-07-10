@@ -137,7 +137,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     # the changepoints - marking different segments - in the ordering above
     adata.add['ega_changepoints'] = ega.changepoints
     # the tip points of segments
-    adata.add['ega_grouptips'] = ega.segs_tips
+    # adata.add['ega_grouptips'] = ega.segs_tips
     # the tree/graph adjacency matrix
     adata.add['ega_groups_adjacency'] = ega.segs_adjacency
     logg.info('finished', t=True, end=' ')
@@ -145,8 +145,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
            + ('    "ega_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
            + '    "ega_groups", the segments of trajectories a long a tree (adata.smp),\n'
            '    "ega_groups_adjacency", the adjacency matrix defining the tree (adata.add),\n'
-           '    "ega_order", an index array for sorting the cells (adata.smp),\n'
-           '    "ega_grouptips", the indices of tip cells (adata.add)')
+           '    "ega_order", an index array for sorting the cells (adata.smp)')
     return adata if copy else None
 
 

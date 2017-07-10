@@ -151,10 +151,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
            + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
-           + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp),\n'
-           '    "dpt_groups_adjacency", the adjacency matrix defining the tree (adata.add),\n'
-           '    "dpt_order", an index array for sorting the cells (adata.smp),\n'
-           '    "dpt_grouptips", the indices of tip cells (adata.add)')
+           + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp)')
     return adata if copy else None
 
 
