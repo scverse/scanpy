@@ -974,7 +974,8 @@ class EGA(data_graph.DataGraph):
                 segs_distances[jseg, kseg_list] = distances
                 segs_distances[kseg_list, jseg] = distances
             distances = segs_distances[jseg, kseg_list]
-            if (max(distances) / min(distances) < 2.5
+            # in case we do not really have evidence for a connection based on closeness
+            if (max(distances) / min(distances) < 2.5 and max(distances) < 0.1
                 and min(median_distances) / max(median_distances) < 0.95):
                 idx = np.argmin(median_distances)
             else:
