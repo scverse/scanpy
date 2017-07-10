@@ -973,10 +973,12 @@ class EGA(data_graph.DataGraph):
                 distances, median_distances, measure_points_in_jseg, measure_points_in_kseg = result
                 segs_distances[jseg, kseg_list] = distances
                 segs_distances[kseg_list, jseg] = distances
-            if True:  #max(segs_distances[jseg, kseg_list]) / min(segs_distances[jseg, kseg_list]) > 2.5:
-                idx = np.argmin(segs_distances[jseg, kseg_list])
-            else:
+            distances = segs_distances[jseg, kseg_list]
+            if (max(distances) / min(distances) < 2.5
+                and min(median_distances) / max(median_distances) < 0.95):
                 idx = np.argmin(median_distances)
+            else:
+                idx = np.argmin(distances)
             kseg_min = kseg_list[idx]
             pos = segs_adjacency[jseg].index(iseg)
             segs_adjacency[jseg][pos] = kseg_min
