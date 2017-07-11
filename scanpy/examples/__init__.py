@@ -2,14 +2,9 @@
 """Init runs, manage examples.
 """
 
-import os, sys
-import numpy as np
-from . import builtin
+
+from .builtin import *
 from ..utils import check_adata
-from .. import utils
-from .. import readwrite
-from .. import settings as sett
-from .. import logging as logg
 
 
 def init_run(run_name, suffix='', recompute=True, reread=False,
@@ -47,6 +42,10 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
     exmodule : dict, optional
         Example module.
     """
+    import os, sys
+    from .. import readwrite
+    from .. import settings as sett
+    from .. import logging as logg
     sett._run_basename = run_name
     sett._run_suffix = suffix
     sett.run_name = sett._run_basename + sett._run_suffix
@@ -112,6 +111,7 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
 def read_run(run_name=None, suffix=''):
     """Read run and init sett.run_name if provided.
     """
+    from .. import settings as sett
     if run_name is None: run_name = sett.run_name
     if suffix == '': suffix = sett._run_suffix
     sett._run_basename = run_name
@@ -126,4 +126,6 @@ def write_run(data, ext=None):
     ext : str or None (default: None)
         File extension from wich to infer file format.
     """
+    from .. import readwrite
+    from .. import settings as sett
     readwrite.write(sett.run_name, data, ext=ext)

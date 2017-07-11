@@ -85,9 +85,11 @@ def burczynski06():
 def krumsiek11():
     """Simulated myeloid progenitor data.
 
-    Uses a literature-curated boolean network from the reference below.
+    A literature-curated boolean network from the reference below was
+    used to simulate this data with four cell fates.
 
-    Simulate the data by running "scanpy krumsiek11 sim" on the command line.
+    Simulate the data by running "scanpy krumsiek11 sim" on the command line
+    or running `sc.tl.sim('krumsiek11')`.
 
     Reference
     ---------
@@ -95,10 +97,18 @@ def krumsiek11():
     Encoded in the Transcription Factor Network"
     PLoS ONE 6, e22649 (2011).
     """
+    import os
+    from .. import logging as logg
     filename = 'write/krumsiek11_sim/sim_000000.txt'
+    if not os.path.exists(filename):
+        filename = os.path.dirname(__file__) + '/krumsiek11.txt'
+        logg.hint('you can reproduce the data file {} '
+                  'by running `sc.tl.sim("krumsiek11")`'
+                  .format(filename))
     adata = sc.read(filename, first_column_names=True)
     adata.add['xroot'] = adata.X[0]
     return adata
+
 
 krumsiek11_diffmap_params = {'k': 5, 'knn': False}
 krumsiek11_dpt_params = {'k': 5, 'knn': False, 'n_branchings': 2,
@@ -226,9 +236,17 @@ def paul15pca_dpt(adata):
 def toggleswitch():
     """Simple toggleswitch from simulated data.
 
-    Simulate the data by running "scanpy toggleswitch sim" on the command line.
+    Simulate the data by running "scanpy sim toggleswitch" on the command line
+    or `sc.tl.sim("toggleswitch")`.
     """
+    import os
+    from .. import logging as logg
     filename = 'write/toggleswitch_sim/sim_000000.txt'
+    if not os.path.exists(filename):
+        filename = os.path.dirname(__file__) + '/toggleswitch.txt'
+        logg.hint('you can reproduce the data file {} '
+                  'by running `sc.tl.sim("toggleswitch")`'
+                  .format(filename))
     adata = sc.read(filename, first_column_names=True)
     adata.add['xroot'] = adata.X[0]
     return adata
