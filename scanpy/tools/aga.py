@@ -172,13 +172,14 @@ def aga(adata,
     return adata if copy else None
 
 
-def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000):
+def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
     """Contract the abstracted graph.
     """
+    adata = adata.copy() if copy else adata
     if 'aga_adjacency' not in adata.add: raise ValueError('run tool aga first!')
     min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
-    
+
     def propose_nodes_to_contract(adjacency, node_groups):
         # nodes with two edges
         n_edges_per_seg = np.sum(adjacency > 0, axis=1).A1
@@ -225,6 +226,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000):
     logg.info('    contracted graph from {} to {} nodes'
               .format(size_before, adata.add['aga_adjacency'].shape[0]))
     logg.m('removed adata.add["aga_attachedness"]', v=4)
+    return adata if copy else None
 
 
 class AGA(data_graph.DataGraph):

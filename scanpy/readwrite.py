@@ -448,14 +448,14 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
             line_list = line.split(delim)
             if not is_float(line_list[0]):
                 col_names = line_list
-                logg.m('... assuming first line in file stores column names')
+                logg.m('    assuming first line in file stores column names')
             else:
                 if not is_float(line_list[0]) or first_column_names:
                     first_column_names = True
                     row_names.append(line_list[0])
-                    data.append(line_list[1:])
+                    data.append(np.array(line_list[1:], dtype=dtype))
                 else:
-                    data.append(line_list)
+                    data.append(np.array(line_list, dtype=dtype))
             break
     if not col_names:
         # try reading col_names from the last comment line
@@ -488,7 +488,6 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
             data.append(np.array(line_list[1:], dtype=dtype))
         else:
             data.append(np.array(line_list, dtype=dtype))
-            print(data[-1].size, end=' ')
     logg.m('    read data into list of lists', t=True)
     # transfrom to array, this takes a long time and a lot of memory
     # but it's actually the same thing as np.genfromtext does
