@@ -7,8 +7,17 @@ Uses the pip packages "louvain" and igraph.
 import numpy as np
 from .. import settings as sett
 from .. import logging as logg
+from .. import data_structs
 
-def louvain(adata, resolution=None, flavor='vtraag', directed=True, copy=False):
+def louvain(adata,
+            n_neighbors=30,
+            n_pcs=50,
+            resolution=None,
+            flavor='vtraag',
+            directed=True,
+            recompute_graph=False,
+            n_jobs=None,
+            copy=False):
     """Cluster cells using Louvain Community detection.
 
     This has been suggested for single-cell transcriptomics by
@@ -16,14 +25,10 @@ def louvain(adata, resolution=None, flavor='vtraag', directed=True, copy=False):
 
     Parameters
     ----------
-    eps : float or None, optional
-        The maximum distance between samples for being considered as in the same
-        neighborhood. Clusters are "grown" from samples that have more than
-        min_samples points in their neighborhood. Increasing eps therefore
-        allows clusters to spread over wider regions.
-    min_samples : int or None, optional
-        The number of samples (or total weight) in a neighborhood for a point
-        to be considered as a core point. This includes the point itself.
+    n_neighbors : int, optional (default: 30)
+        Number of neighbors to use for construction of knn graph.
+    resolution : float or None, optional
+        For the default flavor, you provide a resolution, which defaults to 1.0.
     copy : bool (default: False)
 
     References
@@ -31,10 +36,17 @@ def louvain(adata, resolution=None, flavor='vtraag', directed=True, copy=False):
     Algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
     Package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
     """
-    logg.m('starting Louvain clustering', r=True)
+    logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
     import igraph as ig
     import louvain
+    if 'distance' not in adata.add or recompute_graph:
+        graph = data_structs.DataGraph(adata,
+                                       k=n_neighbors,
+                                       n_pcs=n_pcs,
+                                       n_jobs=n_jobs)
+        graph.compute_distance_matrix()
+        adata.add['distance'] = graph.Dsq
     data = adata.add['distance']
     sources, targets = data.nonzero()
     weights = data[sources, targets]

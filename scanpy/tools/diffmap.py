@@ -5,7 +5,7 @@
 from ..tools import dpt
 from .. import logging as logg
 
-def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
+def diffmap(adata, n_comps=10, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
     """Diffusion Maps
 
@@ -32,7 +32,7 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
         Annotated data matrix.
     n_comps : int, optional (default: 10)
         The number of dimensions of the representation.
-    k : int, optional (default: 30)
+    n_neighbors : int, optional (default: 30)
         Specify the number of nearest neighbors in the knn graph. If knn ==
         False, set the Gaussian kernel width to the distance of the kth
         neighbor (method 'local').
@@ -62,7 +62,7 @@ def diffmap(adata, n_comps=10, k=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             Eigenvalues of the transition matrix.
     """
     adata = adata.copy() if copy else adata
-    dmap = dpt.DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_dcs=n_comps,
+    dmap = dpt.DPT(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_comps,
                    n_jobs=n_jobs, recompute_diffmap=True, flavor=flavor)
     dmap.update_diffmap()
     adata.smp['X_diffmap'] = dmap.rbasis[:, 1:]

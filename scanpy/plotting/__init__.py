@@ -346,7 +346,7 @@ def spring(
         right_margin=right_margin,
         size=size,
         # defined in plotting
-                  title=title,
+        title=title,
         show=False)
     savefig_or_show('spring', show=show)
 
@@ -357,8 +357,99 @@ def spring(
 # ------------------------------------------------------------------------------
 
 
-def aga_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
-             node_size=1, ext='pdf'):
+def aga_scatter(
+        adata,
+        basis='tsne',
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
+    """See parameters of sc.pl.aga().
+    """
+    from ..examples import check_adata
+    adata = check_adata(adata)
+    if color is not None:
+        if not isinstance(color, list): color = color.split(',')
+    else:
+        if 'aga_pseudotime' in adata.smp_keys(): color = ['aga_pseudotime']
+        else: color = []
+        color += ['aga_groups']
+    if 'aga_groups_original' in adata.add:
+        if 'aga_groups' in color:
+            color[color.index('aga_groups')] = adata.add['aga_groups_original']
+        else:
+            color += [adata.add['aga_groups_original']]
+    if comps == 'all':
+        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4',
+                      '3,5', '4,5']
+    else:
+        if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
+        if not isinstance(comps, list): comps_list = [comps]
+        else: comps_list = comps
+    for comps in comps_list:
+        axs = scatter(adata,
+                      basis=basis,
+                      color=color,
+                      names=names,
+                      comps=comps,
+                      cont=cont,
+                      layout=layout,
+                      legend_loc=legend_loc,
+                      legend_fontsize=legend_fontsize,
+                      cmap=cmap,
+                      pal=pal,
+                      right_margin=right_margin,
+                      size=size,
+                      title=title,
+                      show=False)
+        writekey = 'aga_' + basis + '_comps' + comps.replace(',', '')
+        if sett.savefigs: savefig(writekey)
+    show = sett.autoshow if show is None else show
+    if not sett.savefigs and show: pl.show()
+
+
+def aga_attachedness(adata):
+    segs_distances = adata.add['aga_attachedness']
+    segs_adjacency = adata.add['aga_adjacency']
+    matrix(np.log1p(segs_distances), show=False)
+    for i in range(segs_adjacency.shape[0]):
+        neighbors = segs_adjacency[i].nonzero()[1]
+        pl.scatter([i for j in neighbors], neighbors, color='green')
+    pl.show()
+    # pl.figure()
+    # for i, ds in enumerate(segs_distances):
+    #     ds = np.log1p(ds)
+    #     x = [i for j, d in enumerate(ds) if i != j]
+    #     y = [d for j, d in enumerate(ds) if i != j]
+    #     pl.scatter(x, y, color='gray')
+    #     neighbors = segs_adjacency[i]
+    #     pl.scatter([i for j in neighbors],
+    #                ds[neighbors], color='green')
+    # pl.show()
+
+
+def aga_tree(
+        adata,
+        root=0,
+        colors=None,
+        names=None,
+        fontsize=None,
+        node_size=1,
+        ext='pdf',
+        show=None):
+    if colors is None and 'aga_groups_colors_original' in adata.add:
+        colors = adata.add['aga_groups_colors_original']
+    if names is None and 'aga_groups_names_original' in adata.add:
+        names = adata.add['aga_groups_names_original']
     # plot the tree
     if isinstance(adata, nx.Graph):
         G = adata
@@ -374,7 +465,7 @@ def aga_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
             names = {i: n for i, n in enumerate(adata.add['aga_groups_names'])}
         for iname, name in enumerate(adata.add['aga_groups_names']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
-        G = nx.Graph(adata.add['aga_groups_adjacency'])
+        G = nx.Graph(adata.add['aga_adjacency'])
     pos = utils.hierarchy_pos(G, root)
     # pos = nx.spring_layout(G)
     if len(pos) == 1: pos[0] = 0.5, 0.5
@@ -418,7 +509,7 @@ def aga_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
 
 
 def aga_sc_tree(adata, root, show=None):
-    G = nx.Graph(adata.add['aga_groups_adjacency'])
+    G = nx.Graph(adata.add['aga_adjacency'])
     node_sets = []
     sorted_aga_groups = adata.smp['aga_groups'][adata.smp['aga_order']]
     for n in adata.add['aga_groups_names']:

@@ -10,29 +10,31 @@ import scipy.sparse
 from .. import logging as logg
 from ..data_structs import ann_data
 from ..data_structs import data_graph
+from .louvain import louvain
+from ..plotting import utils as pl_utils
 
-
-def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
-        min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
+def aga(adata,
+        n_nodes=0,
+        node_groups='louvain_groups',
+        n_neighbors=30,
+        n_pcs=50,
+        n_dcs=10,
+        resolution=1,
+        recompute_diffmap=False,
         recompute_pca=False, flavor='bi_constrained',
         attachedness_measure='n_connecting_edges',
-        precomputed_clusters=None,
+        n_jobs=None,
         copy=False):
-    """
+    """Approximate Graph Abstraction
 
-    Infer an abstraction of the relations of subgroups in the data through
-    approximate graph abstraction. The result is a hierarchy of cell subgroups
-    reprsented as a tree on which each node corresponds to a cell subgroup. The
-    tree induces an ordering between nodes and the cells are ordered within each
-    node.
+    Infer the relations of subgroups in the data through approximate graph
+    abstraction. The result is a much simpler graph where each node corresponds
+    to a cell subgroup. The tree induces an ordering between nodes and the cells
+    are ordered within each node.
 
     Reference
     ---------
     Wolf et al., bioRxiv (2017)
-
-    See also
-    --------
-    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
 
     Parameters
     ----------
@@ -40,44 +42,56 @@ def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         Annotated data matrix, optionally with metadata:
         adata.add['xroot'] : np.ndarray
             Root of stochastic process on data points (root cell), specified
-            as expression vector of shape X.shape[1].
+            as expression vector of shape adata.n_smps.
         adata.smp['X_pca']: np.ndarray
             PCA representation of the data matrix (result of preprocessing with
-            PCA). If it exists in adata, dpt will use this instead of adata.X.
+            PCA). Will be used if option `recompute_pca` is False.
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
-            `diffmap`).  Will be used if option `recompute_diffmap` is False.
-    n_splits : int, optional (default: 1)
-        Number of splits to detect.
-    k : int, optional (default: 30)
+            `diffmap`). Will be used if option `recompute_diffmap` is False.
+    node_groups : any categorical sample annotation or {'louvain_groups', 'hierarch_clustering'}, optional (default: 'louvain_groups')
+        Criterion to determine the resoluting partitions of the
+        graph/data. 'louvain_groups' uses the louvain algorithm and optimizes
+        modularity of the graph, 'hierarch_clustering' uses a bipartioning
+        criterium that is loosely inspired by hierarchical clustering. You can
+        also pass your predefined categories by choosing any sample annotation.
+    n_nodes : int or None, optional (default: None)
+        Number of nodes in the abstracted graph. Except when choosing
+        'hierarch_clustering' for `node_groups` this parameter is fixed by the
+        `node_groups` used.
+    n_neighbors : int, optional (default: 30)
         Number of nearest neighbors on the knn graph.
     n_pcs : int, optional (default: 50)
         Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
     n_dcs : int, optional (default: 10)
-        Number of diffusion components to use for distance computations.
+        Number of diffusion components (very similar to eigen vectors of
+        adjacency matrix) to use for distance computations.
+    recompute_diffmap : bool, optional (default: False)
+        Recompute diffusion maps.
+    recompute_pca : bool, optional (default: False)
+        Recompute PCA.
+    attachedness_measure : {'n_connecting_edges', 'd_full_pairwise'}, optional (default: 'n_connecting_edges')
+        How to measure attachedness.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
-    recompute_diffmap : bool, (default: False)
-        Recompute diffusion maps.
-    recompute_pca : bool, (default: False)
-        Recompute PCA.
-    attachedness_measure : {'n_connecting_edges', 'd_full_pairwise'} (default: 'n_connecting_edges')
-        How to measure attachedness. Parameter only for developing.
     copy : bool, optional (default: False)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
 
     Notes
     -----
-    Writes the following arrays as sample annotation to adata.smp.
+    Writes the following.
         aga_adjacency : sparse csr matrix
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
         aga_groups : np.ndarray of dtype string
             Array of dim (number of samples) that stores the subgroup id ('0',
             '1', ...) for each cell.
+        aga_pseudotime : np.ndarray of dtype float
+            Array of dim (number of samples) that stores a pseudotime from a
+            root node, if the latter was passed.
     """
     adata = adata.copy() if copy else adata
     root_cell_was_passed = True
@@ -92,18 +106,25 @@ def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         adata.var['xroot'] = adata[root_cell_name, :].X
     where `root_cell_name` is the name (a string) of the root cell.'''
         logg.hint(msg)
-    if n_splits == 0:
-        logg.hint('set parameter `n_splits` > 0 to detect splits')
-    if n_splits > 1:
-        logg.info('... running approximate graph abstraction (AGA)')
-    aga = AGA(adata, k=k, n_pcs=n_pcs, n_dcs=n_dcs,
-              min_group_size=min_group_size,
+    if node_groups == 'louvain_groups':
+        fresh_compute_louvain = False
+        if 'louvain_groups' not in adata.smp_keys():
+            louvain(adata,
+                    resolution=resolution,
+                    n_neighbors=n_neighbors,
+                    n_pcs=n_pcs)
+            fresh_compute_louvain = True
+    aga = AGA(adata,
+              precomputed_clusters=node_groups,
+              k=n_neighbors,
+              n_pcs=n_pcs,
+              n_dcs=n_dcs,
+              min_group_size=20/resolution,
               n_jobs=n_jobs,
               recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
-              n_splits=n_splits,
+              n_nodes=n_nodes,
               attachedness_measure=attachedness_measure,
-              precomputed_clusters=precomputed_clusters,
               flavor=flavor)
     aga.update_diffmap()
     adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
@@ -111,22 +132,15 @@ def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     adata.add['diffmap_evals'] = aga.evals[1:]
     adata.add['distance'] = aga.Dsq
     adata.add['Ktilde'] = aga.Ktilde
-    logg.info('do graph abstraction', r=True)
-    if False:
-        # compute M matrix of cumulative transition probabilities,
-        # see Haghverdi et al. (2016)
-        aga.compute_M_matrix()
-    # compute AGA distance matrix, which we refer to as 'Ddiff'
-    if False:  # we do not compute the full Ddiff matrix, only the elements we need
-        aga.compute_Ddiff_matrix()
+    logg.info('run Approximate Graph Abstraction (AGA)', r=True)
     if root_cell_was_passed:
-        aga.set_pseudotime()  # pseudotimes are distances from root point
+        aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
     # vector of length n_groups
-    adata.add['aga_groups_names'] = [str(n) for n in aga.segs_names_unique]
+    adata.add['aga_groups_names'] = np.array([str(n) for n in aga.segs_names_unique])
     # for itips, tips in enumerate(aga.segs_tips):
     #     # if tips[0] == -1: adata.add['aga_groups_names'][itips] = '?'
     #     if aga.segs_undecided[itips]: adata.add['aga_groups_names'][itips] += '?'
@@ -139,12 +153,27 @@ def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     # the tip points of segments
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
-    adata.add['aga_groups_adjacency'] = aga.segs_adjacency
+    adata.add['aga_adjacency'] = aga.segs_adjacency
+    if node_groups != 'hierarch_clustering' and not fresh_compute_louvain:
+        adata.add['aga_groups_original'] = node_groups
+        adata.add['aga_groups_names_original'] = np.array(aga.segs_names_original)
+        if node_groups + '_colors' not in adata.add:
+            pl_utils.add_colors_for_categorical_sample_annotation(adata, node_groups)
+        colors_original = []
+        name_list = list(adata.add[node_groups + '_names'])
+        for name in aga.segs_names_original:
+            idx = name_list.index(name)
+            colors_original.append(adata.add[node_groups + '_colors'][idx])
+        adata.add['aga_groups_colors_original'] = np.array(colors_original)
+    if fresh_compute_louvain:
+        adata.smp['louvain_groups'] = adata.smp['aga_groups']
+        adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
+    adata.add['aga_attachedness'] = aga.segs_distances
     logg.info('finished', t=True, end=' ')
     logg.info('and added\n'
            + ('    "aga_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
            + '    "aga_groups", the segments of trajectories a long a tree (adata.smp),\n'
-           '    "aga_groups_adjacency", the adjacency matrix defining the tree (adata.add)')
+           '    "aga_adjacency", the adjacency matrix defining the tree (adata.add)')
     return adata if copy else None
 
 
@@ -152,40 +181,54 @@ class AGA(data_graph.DataGraph):
     """Approximate Graph Abstraction
     """
 
-    def __init__(self, adata_or_X, k=30,
-                 n_jobs=1, n_pcs=50,
+    def __init__(self,
+                 adata,
+                 k=30,
+                 n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
-                 recompute_diffmap=None, n_splits=0,
+                 recompute_diffmap=None,
+                 n_nodes=None,
                  attachedness_measure='n_connecting_edges',
                  precomputed_clusters=None,
-                 flavor='haghverdi16'):
-        if not isinstance(adata_or_X, ann_data.AnnData) or 'Ktilde' not in adata_or_X.add:
-            recompute_diffmap = True
-        super(AGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
+                 flavor='haghverdi16',
+                 n_jobs=1):
+        if 'Ktilde' not in adata.add: recompute_diffmap = True
+        super(AGA, self).__init__(adata, k=k, n_pcs=n_pcs,
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
-        self.n_splits = n_splits
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
-        self.passed_adata = adata_or_X  # just for debugging purposes
+        self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
         self.attachedness_measure = attachedness_measure
-        if len(precomputed_clusters) == self.X.shape[0]:
-            precomputed_clusters = np.array(precomputed_clusters)
+        self.precomputed_clusters_names = []
+        if precomputed_clusters != 'hierarch_clustering':
+            if precomputed_clusters not in adata.smp_keys():
+                raise ValueError('Did not find {} in adata.smp_keys()!'.format(precomputed_clusters))
+            precomputed_clusters = adata.smp[precomputed_clusters]
+            # transform to a list of index arrays
             self.precomputed_clusters = []
-            for clus_id in np.sort(np.unique(precomputed_clusters)):
-                self.precomputed_clusters.append(np.where(clus_id == precomputed_clusters)[0])
+            self.precomputed_clusters_names = []
+            from natsort import natsorted
+            for cluster_name in natsorted(np.unique(precomputed_clusters)):
+                self.precomputed_clusters.append(np.where(cluster_name == precomputed_clusters)[0])
+                self.precomputed_clusters_names.append(cluster_name)
+            n_nodes = len(self.precomputed_clusters)
         else:
-            self.precomputed_clusters = precomputed_clusters
+            if n_nodes is None:
+                raise ValueError(
+                    'You need to provide the parameter `n_nodes`'
+                    'if you choose `node_groups` as "hierarch_clustering".')
+        self.n_splits = n_nodes - 1
 
     def splits_segments(self):
         """Detect splits and partition the data into corresponding segments.
 
-        Detect all splits up to `n_splits`.
+        Detect all splits up to `n_nodes`.
 
         Writes
         ------
@@ -205,7 +248,7 @@ class AGA(data_graph.DataGraph):
         self.order_pseudotime()
 
     def detect_splits(self):
-        """Detect all splits up to `n_splits`.
+        """Detect all splits up to `n_nodes`.
 
         Writes Attributes
         -----------------
@@ -214,8 +257,7 @@ class AGA(data_graph.DataGraph):
         segs_tips : np.ndarray
             List of indices of the tips of segments.
         """
-        logg.info('... detect', self.n_splits,
-                  'branching' + ('' if self.n_splits == 1 else 's'))
+        logg.info('    abstracted graph will have {} nodes'.format(self.n_splits-1))
         indices_all = np.arange(self.X.shape[0], dtype=int)
         segs = [indices_all]
         if False:  # this is safe, but not compatible with on-the-fly computation
@@ -227,9 +269,11 @@ class AGA(data_graph.DataGraph):
                 tip_0 = np.argmax(self.Dchosen[0])  # just a random index, here fixed to "0"
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
         # we keep a list of the tips of each segment
-        # segs_tips = [[]]
         segs_tips = [tips_all]
-        # print('init tips', segs_tips)
+        if self.precomputed_clusters_names:
+            self.segs_names_original = [', '.join(self.precomputed_clusters_names)]
+        else:
+            self.segs_names_original = []
         segs_undecided = [True]
         segs_adjacency = [[]]
         segs_distances = np.ones((1, 1))
@@ -266,23 +310,7 @@ class AGA(data_graph.DataGraph):
         for i, neighbors in enumerate(segs_adjacency):
             self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
-
-        from .. import plotting as pl
-        pl.matrix(np.log1p(segs_distances), show=False)
-        import matplotlib.pyplot as pl
-        for i, neighbors in enumerate(segs_adjacency):
-            pl.scatter([i for j in neighbors], neighbors, color='green')
-        pl.show()
-        # pl.figure()
-        # for i, ds in enumerate(segs_distances):
-        #     ds = np.log1p(ds)
-        #     x = [i for j, d in enumerate(ds) if i != j]
-        #     y = [d for j, d in enumerate(ds) if i != j]
-        #     pl.scatter(x, y, color='gray')
-        #     neighbors = segs_adjacency[i]
-        #     pl.scatter([i for j in neighbors],
-        #                ds[neighbors], color='green')
-        # pl.show()
+        self.segs_distances = segs_distances
 
         # if 'uncontract' not in self.flavor:
         #     self.contract_segments()
@@ -493,7 +521,7 @@ class AGA(data_graph.DataGraph):
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
-        def select_louvain(segs_tips):
+        def select_precomputed(segs_tips):
             if len(segs) == 1:
                 segs_tips.pop(0)
                 segs_tips.append([])
@@ -512,9 +540,10 @@ class AGA(data_graph.DataGraph):
             tip_idx_max = np.argmax(dists)
             new_tip = new_tips.pop(tip_idx_max)
             dist_max = dists.pop(tip_idx_max)
-            for clus in self.precomputed_clusters:
+            for iclus, clus in enumerate(self.precomputed_clusters):
                 if new_tip in set(clus):
                     new_seg = clus
+                    clus_name = self.precomputed_clusters_names[iclus]
                     break
             pos_new_seg = np.in1d(seg, new_seg, assume_unique=True)
             ssegs = [new_seg, seg[~pos_new_seg]]
@@ -527,21 +556,28 @@ class AGA(data_graph.DataGraph):
             logg.m('   ', dists, v=4)
             logg.m('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
-            return iseg, seg, ssegs, ssegs_tips, sizes
+            return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
+        clus_name = str(len(segs))
         # iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
         # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
         # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
-        iseg, seg, ssegs, ssegs_tips, sizes = select_louvain(segs_tips)
+        iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
         trunk = 1
         segs.pop(iseg)
         segs_tips.pop(iseg)
         # insert trunk at same position
         segs.insert(iseg, ssegs[trunk])
         segs_tips.insert(iseg, ssegs_tips[trunk])
+        if self.segs_names_original:
+            iseg_name = ' '.join(np.setdiff1d(self.precomputed_clusters_names,
+                                              [n for n in self.segs_names_original]
+                                              + [clus_name]))
+            self.segs_names_original[iseg] = iseg_name
         # append other segments
         segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
         segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
+        if self.segs_names_original: self.segs_names_original += [clus_name]
         # correct edges in adjacency matrix
         n_add = len(ssegs) - 1
         new_shape = (segs_distances.shape[0] + n_add, segs_distances.shape[1] + n_add)
@@ -550,7 +586,8 @@ class AGA(data_graph.DataGraph):
         segs_distances = np.ones((new_shape))
         segs_distances[np.ix_(range(segs_distances_help.shape[0]),
                               range(segs_distances_help.shape[1]))] = segs_distances_help
-        segs_distances = self.adjust_adjacency(iseg, n_add,
+        segs_distances = self.adjust_adjacency(iseg,
+                                               n_add,
                                                segs,
                                                segs_tips,
                                                segs_adjacency,
@@ -966,6 +1003,7 @@ class AGA(data_graph.DataGraph):
         # treat existing connections
         # logg.info('... treat existing connections')
         for jseg in prev_connecting_segments:
+            median_distances = []
             if self.attachedness_measure != 'n_connecting_edges':
                 result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, median_distances, measure_points_in_jseg, measure_points_in_kseg = result
@@ -973,7 +1011,8 @@ class AGA(data_graph.DataGraph):
                 segs_distances[kseg_list, jseg] = distances
             distances = segs_distances[jseg, kseg_list]
             # in case we do not really have evidence for a connection based on closeness
-            if (max(distances) / min(distances) < 2.5 and max(distances) < 0.1
+            if (median_distances
+                and max(distances) / min(distances) < 2.5 and max(distances) < 0.1
                 and min(median_distances) / max(median_distances) < 0.95):
                 idx = np.argmin(median_distances)
             else:

@@ -83,6 +83,16 @@ def get_sparse_distance_matrix(indices, distances, n_samples, k):
     return Dsq
 
 
+def get_indices_distances_from_sparse_matrix(Dsq):
+    indices = np.zeros((Dsq.shape[0], self.k), dtype=int)
+    distances = np.zeros((Dsq.shape[0], self.k), dtype=Dsq.dtype)
+    for i in range(indices.shape[0]):
+        neighbors = Dsq[i].nonzero()
+        indices[i] = neighbors[1]
+        distances[i] = Dsq[neighbors]
+    return indices, distances
+
+
 class OnFlySymMatrix():
     """Emulate a matrix where elements are calculated on the fly.
     """
@@ -135,12 +145,16 @@ class DataGraph(object):
     """Represent data matrix as graph of closeby data points.
     """
 
-    def __init__(self, adata_or_X, k=30, knn=True,
-                 n_jobs=None, n_pcs=30, n_dcs=10,
+    def __init__(self, adata_or_X,
+                 k=30,
+                 knn=True,
+                 n_jobs=None,
+                 n_pcs=30,
+                 n_dcs=10,
                  recompute_pca=None,
                  recompute_diffmap=None,
                  flavor='haghverdi16'):
-        logg.m('initializing data graph')
+        logg.info('... initializing data graph')
         self.k = k
         self.knn = knn
         self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -162,14 +176,14 @@ class DataGraph(object):
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
             or X.shape[1] < self.n_pcs):
             self.X = X
-            logg.m('... using X for building graph')
+            logg.m('    using X for building graph')
             if xroot is not None: self.set_root(xroot)
         # use the precomupted X_pca
         elif (isadata
               and not recompute_pca
               and 'X_pca' in adata.smp
               and adata.smp['X_pca'].shape[1] >= self.n_pcs):
-            logg.m('... using X_pca for building graph')
+            logg.m('    using X_pca for building graph')
             if xroot is not None and xroot.size == adata.X.shape[1]:
                 self.X = adata.X
                 self.set_root(xroot)
@@ -183,25 +197,25 @@ class DataGraph(object):
                 and xroot is not None
                 and xroot.size == adata.X.shape[1]):
                 self.set_root(xroot)
-            logg.m('... compute `X_pca` for building graph')
+            logg.m('    compute `X_pca` for building graph')
             from ..preprocessing import pca
             pca(adata, n_comps=self.n_pcs)
             self.X = adata.smp['X_pca']
             if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
                 self.set_root(xroot)
         self.Dchosen = None
+        self.Dsq = adata.add['distance'] if knn and 'distance' in adata.add else None
         # use diffmap from previous calculation
         if (isadata and 'X_diffmap' in adata.smp and not recompute_diffmap
             and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
                 self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
                 self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
                 np.set_printoptions(precision=3)
-                logg.info('... using stored "X_diffmap" with spectrum\n{}'
+                logg.info('    using stored "X_diffmap" with spectrum\n{}'
                           .format(self.evals))
                 self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
                                     adata.smp['X_diffmap'][:, :n_dcs-1]]
                 self.lbasis = self.rbasis
-                if knn: self.Dsq = adata.add['distance']
                 if knn: self.Ktilde = adata.add['Ktilde']
                 self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                               shape=(self.X.shape[0], self.X.shape[0]))
@@ -248,8 +262,17 @@ class DataGraph(object):
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
+    def compute_distance_matrix(self):
+        Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
+            X=self.X,
+            k=self.k,
+            sparse=self.knn,
+            n_jobs=self.n_jobs)
+        self.Dsq = Dsq
+        return Dsq, indices, distances_sq
+
     def compute_transition_matrix(self, alpha=1):
-        """Compute similarity and transition matrix.
+        """Compute transition matrix.
 
         Parameters
         ----------
@@ -265,12 +288,11 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
-        result = get_distance_matrix_and_neighbors(X=self.X,
-                                                   k=self.k,
-                                                   sparse=self.knn,
-                                                   n_jobs=self.n_jobs)
-        Dsq, indices, distances_sq = result
-        self.Dsq = Dsq
+        if self.Dsq is None:
+            Dsq, indices, distances_sq = self.compute_distance_matrix()
+        else:
+            Dsq = self.Dsq
+            indices, distances_sq = get_indices_distances_from_sparse_matrix(Dsq)
         # choose sigma, the heuristic here often makes not much
         # of a difference, but is used to reproduce the figures
         # of Haghverdi et al. (2016)
@@ -680,7 +702,7 @@ class DataGraph(object):
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2, 'root found at machine prec')
                     break
-        logg.m('... set iroot', self.iroot)
+        logg.m('    set root index to', self.iroot)
         return self.iroot
 
     def _test_embed(self):

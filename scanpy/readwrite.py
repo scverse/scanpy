@@ -710,7 +710,9 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if cache_warning: logg.warn('reading from cached file {}'.format(filename))
+    if cache_warning: logg.warn('reading from cached file {} '
+                                '(pass `reread=True` to read from the original file)'
+                                .format(filename))
     else: logg.info('... reading file {}'.format(filename))
     d = {}
     if ext == 'h5':
