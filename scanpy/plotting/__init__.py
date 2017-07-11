@@ -357,7 +357,7 @@ def spring(
 # ------------------------------------------------------------------------------
 
 
-def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
+def aga_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
              node_size=1, ext='pdf'):
     # plot the tree
     if isinstance(adata, nx.Graph):
@@ -365,16 +365,16 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
         colors = ['grey' for n in enumerate(G)]
     else:
         if colors is None:
-            if ('ega_groups_colors' not in adata.add
-                or len(adata.add['ega_groups_names']) != len(adata.add['ega_groups_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, 'ega_groups')
-            colors = adata.add['ega_groups_colors']
+            if ('aga_groups_colors' not in adata.add
+                or len(adata.add['aga_groups_names']) != len(adata.add['aga_groups_colors'])):
+                utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
+            colors = adata.add['aga_groups_colors']
         else: colors = colors
         if names is None:
-            names = {i: n for i, n in enumerate(adata.add['ega_groups_names'])}
-        for iname, name in enumerate(adata.add['ega_groups_names']):
+            names = {i: n for i, n in enumerate(adata.add['aga_groups_names'])}
+        for iname, name in enumerate(adata.add['aga_groups_names']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
-        G = nx.Graph(adata.add['ega_groups_adjacency'])
+        G = nx.Graph(adata.add['aga_groups_adjacency'])
     pos = utils.hierarchy_pos(G, root)
     # pos = nx.spring_layout(G)
     if len(pos) == 1: pos[0] = 0.5, 0.5
@@ -413,20 +413,20 @@ def ega_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None,
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
-    savefig_or_show('ega_tree', show, ext=ext)
+    savefig_or_show('aga_tree', show, ext=ext)
     return ax
 
 
-def ega_sc_tree(adata, root, show=None):
-    G = nx.Graph(adata.add['ega_groups_adjacency'])
+def aga_sc_tree(adata, root, show=None):
+    G = nx.Graph(adata.add['aga_groups_adjacency'])
     node_sets = []
-    sorted_ega_groups = adata.smp['ega_groups'][adata.smp['ega_order']]
-    for n in adata.add['ega_groups_names']:
-        node_sets.append(np.flatnonzero(n == sorted_ega_groups))
+    sorted_aga_groups = adata.smp['aga_groups'][adata.smp['aga_order']]
+    for n in adata.add['aga_groups_names']:
+        node_sets.append(np.flatnonzero(n == sorted_aga_groups))
     # print(node_sets)
     sc_G = utils.hierarchy_sc(G, root, node_sets)
-    ax = ega_tree(sc_G, root)
-    savefig_or_show('ega_sc_tree', show)
+    ax = aga_tree(sc_G, root)
+    savefig_or_show('aga_sc_tree', show)
     return ax
 
 
@@ -483,7 +483,7 @@ def dpt(
          Provide title for panels as "my title1,another title,...".
     show_tree : bool, optional (default: False)
          This shows the inferred tree. For more than a single branching, the
-         result is pretty unreliable. Use tool `ega` (Extremal Graph
+         result is pretty unreliable. Use tool `aga` (Approximate Graph
          Abstraction) instead.
     """
     dpt_scatter(

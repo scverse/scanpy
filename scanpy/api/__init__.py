@@ -7,7 +7,6 @@ This is the API.
 from .. import __version__
 
 from .. import settings
-sett = settings  # abbreviation
 """Settings"""
 from .. import logging
 logg = logging   # abbreviation

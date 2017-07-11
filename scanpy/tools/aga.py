@@ -12,7 +12,7 @@ from ..data_structs import ann_data
 from ..data_structs import data_graph
 
 
-def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
+def aga(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
         recompute_pca=False, flavor='bi_constrained',
         attachedness_measure='n_connecting_edges',
@@ -21,7 +21,7 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     """
 
     Infer an abstraction of the relations of subgroups in the data through
-    extremal graph abstraction. The result is a hierarchy of cell subgroups
+    approximate graph abstraction. The result is a hierarchy of cell subgroups
     reprsented as a tree on which each node corresponds to a cell subgroup. The
     tree induces an ordering between nodes and the cells are ordered within each
     node.
@@ -72,10 +72,10 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     Notes
     -----
     Writes the following arrays as sample annotation to adata.smp.
-        ega_adjacency : sparse csr matrix
+        aga_adjacency : sparse csr matrix
             Array of dim (number of samples) that stores the pseudotime of each
             cell, that is, the DPT distance with respect to the root cell.
-        ega_groups : np.ndarray of dtype string
+        aga_groups : np.ndarray of dtype string
             Array of dim (number of samples) that stores the subgroup id ('0',
             '1', ...) for each cell.
     """
@@ -95,8 +95,8 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     if n_splits == 0:
         logg.hint('set parameter `n_splits` > 0 to detect splits')
     if n_splits > 1:
-        logg.info('... running extremal graph abstraction (EGA)')
-    ega = EGA(adata, k=k, n_pcs=n_pcs, n_dcs=n_dcs,
+        logg.info('... running approximate graph abstraction (AGA)')
+    aga = AGA(adata, k=k, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size,
               n_jobs=n_jobs,
               recompute_diffmap=recompute_diffmap,
@@ -105,52 +105,51 @@ def ega(adata, n_splits=0, k=30, knn=True, n_pcs=50, n_dcs=10,
               attachedness_measure=attachedness_measure,
               precomputed_clusters=precomputed_clusters,
               flavor=flavor)
-    ega.update_diffmap()
-    adata.smp['X_diffmap'] = ega.rbasis[:, 1:]
-    adata.smp['X_diffmap0'] = ega.rbasis[:, 0]
-    adata.add['diffmap_evals'] = ega.evals[1:]
-    adata.add['distance'] = ega.Dsq
-    adata.add['Ktilde'] = ega.Ktilde
+    aga.update_diffmap()
+    adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
+    adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
+    adata.add['diffmap_evals'] = aga.evals[1:]
+    adata.add['distance'] = aga.Dsq
+    adata.add['Ktilde'] = aga.Ktilde
     logg.info('do graph abstraction', r=True)
     if False:
         # compute M matrix of cumulative transition probabilities,
         # see Haghverdi et al. (2016)
-        ega.compute_M_matrix()
-    # compute EGA distance matrix, which we refer to as 'Ddiff'
+        aga.compute_M_matrix()
+    # compute AGA distance matrix, which we refer to as 'Ddiff'
     if False:  # we do not compute the full Ddiff matrix, only the elements we need
-        ega.compute_Ddiff_matrix()
+        aga.compute_Ddiff_matrix()
     if root_cell_was_passed:
-        ega.set_pseudotime()  # pseudotimes are distances from root point
-        adata.add['iroot'] = ega.iroot  # update iroot, might have changed when subsampling, for example
-        adata.smp['ega_pseudotime'] = ega.pseudotime
+        aga.set_pseudotime()  # pseudotimes are distances from root point
+        adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
+        adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
-    ega.splits_segments()
+    aga.splits_segments()
     # vector of length n_groups
-    adata.add['ega_groups_names'] = [str(n) for n in ega.segs_names_unique]
-    # for itips, tips in enumerate(ega.segs_tips):
-    #     # if tips[0] == -1: adata.add['ega_groups_names'][itips] = '?'
-    #     if ega.segs_undecided[itips]: adata.add['ega_groups_names'][itips] += '?'
+    adata.add['aga_groups_names'] = [str(n) for n in aga.segs_names_unique]
+    # for itips, tips in enumerate(aga.segs_tips):
+    #     # if tips[0] == -1: adata.add['aga_groups_names'][itips] = '?'
+    #     if aga.segs_undecided[itips]: adata.add['aga_groups_names'][itips] += '?'
     # vector of length n_samples of groupnames
-    adata.smp['ega_groups'] = ega.segs_names.astype('U')
+    adata.smp['aga_groups'] = aga.segs_names.astype('U')
     # the ordering according to segments and pseudotime
-    adata.smp['ega_order'] = ega.indices
+    adata.smp['aga_order'] = aga.indices
     # the changepoints - marking different segments - in the ordering above
-    adata.add['ega_changepoints'] = ega.changepoints
+    adata.add['aga_changepoints'] = aga.changepoints
     # the tip points of segments
-    # adata.add['ega_grouptips'] = ega.segs_tips
+    # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
-    adata.add['ega_groups_adjacency'] = ega.segs_adjacency
+    adata.add['aga_groups_adjacency'] = aga.segs_adjacency
     logg.info('finished', t=True, end=' ')
     logg.info('and added\n'
-           + ('    "ega_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
-           + '    "ega_groups", the segments of trajectories a long a tree (adata.smp),\n'
-           '    "ega_groups_adjacency", the adjacency matrix defining the tree (adata.add),\n'
-           '    "ega_order", an index array for sorting the cells (adata.smp)')
+           + ('    "aga_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
+           + '    "aga_groups", the segments of trajectories a long a tree (adata.smp),\n'
+           '    "aga_groups_adjacency", the adjacency matrix defining the tree (adata.add)')
     return adata if copy else None
 
 
-class EGA(data_graph.DataGraph):
-    """Extremal Graph Abstraction
+class AGA(data_graph.DataGraph):
+    """Approximate Graph Abstraction
     """
 
     def __init__(self, adata_or_X, k=30,
@@ -164,7 +163,7 @@ class EGA(data_graph.DataGraph):
                  flavor='haghverdi16'):
         if not isinstance(adata_or_X, ann_data.AnnData) or 'Ktilde' not in adata_or_X.add:
             recompute_diffmap = True
-        super(EGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
+        super(AGA, self).__init__(adata_or_X, k=k, n_pcs=n_pcs,
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,

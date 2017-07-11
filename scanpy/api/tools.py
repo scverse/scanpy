@@ -15,6 +15,6 @@ from ..tools.tsne import tsne
 
 try:
     # development tools
-    from ..tools.ega import ega
+    from ..tools.aga import aga
 except ImportError:
     pass
