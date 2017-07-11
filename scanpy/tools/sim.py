@@ -16,27 +16,27 @@ from collections import OrderedDict as odict
 import numpy as np
 import scipy as sp
 import scipy.stats
-import scipy.optimize
 from .. import utils
 from .. import readwrite
 from .. import settings as sett
+from .. import logging as logg
 
-
-def sim(model='sim/toggleswitch.txt',
-        tmax=100,
+def sim(model,
+        tmax=0,
         branching=True,
         nrRealizations=2,
         noiseObs=0.01,
         noiseDyn=0.001,
         step=1,
         seed=0,
-        writedir=''):
+        writedir='',
+        read_params_from_file=True):
     """Simulate dynamic single-cell data
 
     Parameters
     ----------
     model : str
-        Model file in models directory.
+        Model file in "sim_models" directory.
     tmax : int, optional
         Number of time steps per realization of time series.
     branching : bool, optional
@@ -59,7 +59,14 @@ def sim(model='sim/toggleswitch.txt',
     adata : AnnData
         An annotated data object.
     """
-    params = locals()
+    if read_params_from_file:
+        model_key = os.path.basename(model).replace('.txt', '')
+        from .. import sim_models
+        pfile_sim = os.path.dirname(sim_models.__file__) + '/' + model_key + '_params.txt'
+        add_params = readwrite.read_params(pfile_sim)
+        params = utils.update_params(locals(), add_params)
+    else:
+        params = locals()
     adata = sample_dynamic_data(params)
     if 'tools' not in adata.add:
         adata.add['tools'] = np.array([], dtype=str)
@@ -89,13 +96,13 @@ def sample_dynamic_data(params):
     """
     Helper function.
     """
-    modelkey = os.path.basename(params['model']).replace('.txt', '')
-    if sett.run_name == '': sett.run_name = modelkey
+    model_key = os.path.basename(params['model']).replace('.txt', '')
+    sett.run_name = model_key
+    logg.info('setting `settings.run_name = {}`'.format(model_key))
     if params['writedir'] == '':
         params['writedir'] = (sett.writedir + sett.run_name + '_sim')
     sett.m(0, 'writing to directory', params['writedir'])
-    if not os.path.exists(params['writedir']):
-        os.makedirs(params['writedir'])
+    if not os.path.exists(params['writedir']): os.makedirs(params['writedir'])
     readwrite.write_params(params['writedir'] + '/params.txt', params)
     # init variables
     dir = params['writedir']
@@ -104,21 +111,21 @@ def sample_dynamic_data(params):
     noiseObs = params['noiseObs']
     noiseDyn = params['noiseDyn']
     nrRealizations = params['nrRealizations']
-    step = params['step'] # step size for saving the figure
+    step = params['step']  # step size for saving the figure
 
-    nrSamples = 1 # how many files?
+    nrSamples = 1  # how many files?
     maxRestarts = 1000
     maxNrSamples = 1
 
     # simple vector auto regressive process or
     # hill kinetics process simulation
-    if 'krumsiek11' not in modelkey:
+    if 'krumsiek11' not in model_key:
         # create instance, set seed
-        grnsim = GRNsim(model=modelkey,params=params)
+        grnsim = GRNsim(model=model_key, params=params)
         nrOffEdges_list = np.zeros(nrSamples)
         for sample in range(nrSamples):
             # random topology / for a given edge density
-            if 'hill' not in modelkey:
+            if 'hill' not in model_key:
                 Coupl = np.array(grnsim.Coupl)
                 for sampleCoupl in range(10):
                     nrOffEdges = 0
@@ -126,10 +133,10 @@ def sample_dynamic_data(params):
                         for g in range(grnsim.dim):
                             # only consider off-diagonal edges
                             if g != gp:
-                                Coupl[gp,g] = 0.7 if np.random.rand() < 0.4 else 0
-                                nrOffEdges += 1 if Coupl[gp,g] > 0 else 0
+                                Coupl[gp, g] = 0.7 if np.random.rand() < 0.4 else 0
+                                nrOffEdges += 1 if Coupl[gp, g] > 0 else 0
                             else:
-                                Coupl[gp,g] = 0.7
+                                Coupl[gp, g] = 0.7
                     # check that the coupling matrix does not have eigenvalues
                     # greater than 1, which would lead to an exploding var process
                     if max(sp.linalg.eig(Coupl)[0]) < 1:
@@ -142,34 +149,34 @@ def sample_dynamic_data(params):
             Xsamples = []
             for restart in range(nrRealizations+maxRestarts):
                 # slightly break symmetry in initial conditions
-                if 'toggleswitch' in modelkey:
+                if 'toggleswitch' in model_key:
                     X0 = (np.array([0.8 for i in range(grnsim.dim)])
                           + 0.01*np.random.randn(grnsim.dim))
-                X = grnsim.sim_model(tmax=tmax,X0=X0,
+                X = grnsim.sim_model(tmax=tmax, X0=X0,
                                      noiseDyn=noiseDyn)
                 # check branching
                 check = True
                 if branching:
-                    check, Xsamples = _check_branching(X,Xsamples,restart)
+                    check, Xsamples = _check_branching(X, Xsamples, restart)
                 if check:
                     real += 1
-                    grnsim.write_data(X[::step],dir=dir,
-                                     noiseObs=noiseObs,
-                                     append=(False if restart==0 else True),
-                                     branching=branching,
-                                     nrRealizations=nrRealizations)
+                    grnsim.write_data(X[::step], dir=dir,
+                                      noiseObs=noiseObs,
+                                      append=(False if restart==0 else True),
+                                      branching=branching,
+                                      nrRealizations=nrRealizations)
                 # append some zeros
                 if 'zeros' in dir and real == 2:
-                    grnsim.write_data(noiseDyn*np.random.randn(500,3),dir=dir,
-                                     noiseObs=noiseObs,
-                                     append=(False if restart==0 else True),
-                                     branching=branching,
-                                     nrRealizations=nrRealizations)
+                    grnsim.write_data(noiseDyn*np.random.randn(500,3), dir=dir,
+                                      noiseObs=noiseObs,
+                                      append=(False if restart==0 else True),
+                                      branching=branching,
+                                      nrRealizations=nrRealizations)
                 if real >= nrRealizations:
                     break
         if False:
-            sett.m(0,'mean nr of offdiagonal edges',nrOffEdges_list.mean(),
-                  'compared to total nr',grnsim.dim*(grnsim.dim-1)/2.)
+            logg.info('mean nr of offdiagonal edges',nrOffEdges_list.mean(),
+                      'compared to total nr',grnsim.dim*(grnsim.dim-1)/2.)
 
     # more complex models
     else:
@@ -178,7 +185,7 @@ def sample_dynamic_data(params):
         dim = 11
         step = 5
 
-        grnsim = GRNsim(dim=dim,initType=initType,model=modelkey,params=params)
+        grnsim = GRNsim(dim=dim,initType=initType,model=model_key,params=params)
         curr_nrSamples = 0
         Xsamples = []
         for sample in range(maxNrSamples):
@@ -196,12 +203,12 @@ def sample_dynamic_data(params):
                 else:
                     # generate random initial conditions within [0.3,0.7]
                     X0 = 0.4*np.random.rand(dim)+0.3
-                if modelkey in [5,6]:
+                if model_key in [5,6]:
                     X0 = np.array([0.3,0.3,0,0,0,0])
-                if modelkey in [7,8,9,10]:
+                if model_key in [7,8,9,10]:
                     X0 = 0.6*np.random.rand(dim)+0.2
                     X0[2:] = np.zeros(4)
-                if 'krumsiek11' in modelkey:
+                if 'krumsiek11' in model_key:
                     X0 = np.zeros(dim)
                     X0[grnsim.varNames['Gata2']] = 0.8
                     X0[grnsim.varNames['Pu.1']] = 0.8
