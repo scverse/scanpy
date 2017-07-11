@@ -119,10 +119,10 @@ def adjust_pal(pal, length):
 def add_colors_for_categorical_sample_annotation(adata, key, pal=None):
     if (key + '_colors' in adata.add
         and len(adata.add[key + '_names']) > len(adata.add[key + '_colors'])):
-        logg.m('... number of defined colors does not match number of categories,'
-               ' using palette')
+        logg.info('    number of defined colors does not match number of categories,'
+                  ' using palette')
     else:
-        logg.m('... generating colors for {} using palette'.format(key), v=4)
+        logg.m('generating colors for {} using palette'.format(key), v=4)
     pal = default_pal(pal)
     pal_adjusted = adjust_pal(pal, length=len(adata.add[key + '_names']))
     adata.add[key + '_colors'] = pal_adjusted[:len(adata.add[key + '_names'])].by_key()['color']

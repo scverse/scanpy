@@ -14,8 +14,8 @@ from .louvain import louvain
 from ..plotting import utils as pl_utils
 
 def aga(adata,
-        n_nodes=0,
         node_groups='louvain_groups',
+        n_nodes=None,
         n_neighbors=30,
         n_pcs=50,
         n_dcs=10,
@@ -57,8 +57,9 @@ def aga(adata,
         also pass your predefined categories by choosing any sample annotation.
     n_nodes : int or None, optional (default: None)
         Number of nodes in the abstracted graph. Except when choosing
-        'hierarch_clustering' for `node_groups` this parameter is fixed by the
-        `node_groups` used.
+        'hierarch_clustering' for `node_groups`, for which `n_nodes` defaults to
+        `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
+        choice of `node_groups`.
     n_neighbors : int, optional (default: 30)
         Number of nearest neighbors on the knn graph.
     n_pcs : int, optional (default: 50)
@@ -106,17 +107,14 @@ def aga(adata,
         adata.var['xroot'] = adata[root_cell_name, :].X
     where `root_cell_name` is the name (a string) of the root cell.'''
         logg.hint(msg)
-    if node_groups == 'louvain_groups':
-        fresh_compute_louvain = False
-        if 'louvain_groups' not in adata.smp_keys():
-            louvain(adata,
-                    resolution=resolution,
-                    n_neighbors=n_neighbors,
-                    n_pcs=n_pcs)
-            fresh_compute_louvain = True
+    fresh_compute_louvain = False
+    if node_groups == 'louvain_groups' and 'louvain_groups' not in adata.smp_keys():
+        louvain(adata, resolution=resolution, n_neighbors=n_neighbors,
+                n_pcs=n_pcs)
+        fresh_compute_louvain = True
     aga = AGA(adata,
               precomputed_clusters=node_groups,
-              k=n_neighbors,
+              n_neighbors=n_neighbors,
               n_pcs=n_pcs,
               n_dcs=n_dcs,
               min_group_size=20/resolution,
@@ -141,13 +139,10 @@ def aga(adata,
     aga.splits_segments()
     # vector of length n_groups
     adata.add['aga_groups_names'] = np.array([str(n) for n in aga.segs_names_unique])
-    # for itips, tips in enumerate(aga.segs_tips):
-    #     # if tips[0] == -1: adata.add['aga_groups_names'][itips] = '?'
-    #     if aga.segs_undecided[itips]: adata.add['aga_groups_names'][itips] += '?'
-    # vector of length n_samples of groupnames
+    # vector of length n_samples of group names
     adata.smp['aga_groups'] = aga.segs_names.astype('U')
-    # the ordering according to segments and pseudotime
-    adata.smp['aga_order'] = aga.indices
+    # the ordering according to groups and pseudotime
+    adata.smp['aga_indices'] = aga.indices
     # the changepoints - marking different segments - in the ordering above
     adata.add['aga_changepoints'] = aga.changepoints
     # the tip points of segments
@@ -171,10 +166,65 @@ def aga(adata,
     adata.add['aga_attachedness'] = aga.segs_distances
     logg.info('finished', t=True, end=' ')
     logg.info('and added\n'
-           + ('    "aga_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
-           + '    "aga_groups", the segments of trajectories a long a tree (adata.smp),\n'
-           '    "aga_adjacency", the adjacency matrix defining the tree (adata.add)')
+              '    "aga_adjacency", adjacency matrix defining the abstracted graph (scipy.sparse.csr_matrix in adata.add)'
+              '    "aga_groups", group identifier that associates groups with nodes of abstracted graph (adata.smp),\n'
+              + (',\n    "aga_pseudotime", stores pseudotime with respect to root cell (adata.smp),\n' if root_cell_was_passed else ''))
     return adata if copy else None
+
+
+def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000):
+    """Contract the abstracted graph.
+    """
+    if 'aga_adjacency' not in adata.add: raise ValueError('run tool aga first!')
+    min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
+    logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
+    
+    def propose_nodes_to_contract(adjacency, node_groups):
+        # nodes with two edges
+        n_edges_per_seg = np.sum(adjacency > 0, axis=1).A1
+        for i in range(adjacency.shape[0]):
+            if n_edges_per_seg[i] == 2:
+                neighbors = adjacency[i].nonzero()[1]
+                for neighbors_edges in range(1, 20):
+                    for n_cnt, n in enumerate(neighbors):
+                        if n_edges_per_seg[n] == neighbors_edges:
+                            logg.m('merging node {} into {} (two edges)'
+                                   .format(i, n), v=4)
+                            return i, n
+        # node groups with a very small cell number
+        for i in range(adjacency.shape[0]):
+            if node_groups[str(i) == node_groups].size < min_group_size:
+                neighbors = adjacency[i].nonzero()[1]
+                neighbor_sizes = [node_groups[str(n) == node_groups].size for n in neighbors]
+                n = neighbors[np.argmax(neighbor_sizes)]
+                logg.m('merging node {} into {} '
+                       '(smaller than `min_group_size` = {})'
+                       .format(i, n, min_group_size), v=4)
+                return i, n
+        return 0, 0
+
+    def contract_nodes(adjacency, node_groups):
+        for count in range(max_n_contractions):
+            i, n = propose_nodes_to_contract(adjacency, node_groups)
+            if i != 0 or n != 0:
+                G = nx.Graph(adjacency)
+                G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
+                adjacency = nx.to_scipy_sparse_matrix(G_contracted)
+                node_groups[str(i) == node_groups] = str(n)
+                for j in range(i+1, G.size()+1):
+                    node_groups[str(j) == node_groups] = str(j-1)
+            else:
+                break
+        return adjacency, node_groups
+
+    size_before = adata.add['aga_adjacency'].shape[0]
+    adata.add['aga_adjacency'], adata.smp['aga_groups'] = contract_nodes(
+        adata.add['aga_adjacency'], adata.smp['aga_groups'])
+    adata.add['aga_groups_names'] = np.unique(adata.smp['aga_groups'])
+    if 'aga_attachedness' in adata.add: del adata.add['aga_attachedness']  # TODO
+    logg.info('    contracted graph from {} to {} nodes'
+              .format(size_before, adata.add['aga_adjacency'].shape[0]))
+    logg.m('removed adata.add["aga_attachedness"]', v=4)
 
 
 class AGA(data_graph.DataGraph):
@@ -183,19 +233,21 @@ class AGA(data_graph.DataGraph):
 
     def __init__(self,
                  adata,
-                 k=30,
+                 n_nodes=None,
+                 n_neighbors=30,
                  n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None,
-                 n_nodes=None,
                  attachedness_measure='n_connecting_edges',
                  precomputed_clusters=None,
                  flavor='haghverdi16',
                  n_jobs=1):
         if 'Ktilde' not in adata.add: recompute_diffmap = True
-        super(AGA, self).__init__(adata, k=k, n_pcs=n_pcs,
+        super(AGA, self).__init__(adata,
+                                  k=n_neighbors,
+                                  n_pcs=n_pcs,
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
@@ -205,7 +257,8 @@ class AGA(data_graph.DataGraph):
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
         self.attachedness_measure = attachedness_measure
-        self.precomputed_clusters_names = []
+        self.precomputed_clusters = None
+        self.precomputed_clusters_names = None
         if precomputed_clusters != 'hierarch_clustering':
             if precomputed_clusters not in adata.smp_keys():
                 raise ValueError('Did not find {} in adata.smp_keys()!'.format(precomputed_clusters))
@@ -220,9 +273,10 @@ class AGA(data_graph.DataGraph):
             n_nodes = len(self.precomputed_clusters)
         else:
             if n_nodes is None:
-                raise ValueError(
-                    'You need to provide the parameter `n_nodes`'
-                    'if you choose `node_groups` as "hierarch_clustering".')
+                n_nodes = 1
+                logg.hint(
+                    'by passing the parameter `n_nodes`, '
+                    'choose the number of subgroups to detect')
         self.n_splits = n_nodes - 1
 
     def splits_segments(self):
@@ -257,7 +311,7 @@ class AGA(data_graph.DataGraph):
         segs_tips : np.ndarray
             List of indices of the tips of segments.
         """
-        logg.info('    abstracted graph will have {} nodes'.format(self.n_splits-1))
+        logg.info('    abstracted graph will have {} nodes'.format(self.n_splits+1))
         indices_all = np.arange(self.X.shape[0], dtype=int)
         segs = [indices_all]
         if False:  # this is safe, but not compatible with on-the-fly computation
@@ -272,13 +326,11 @@ class AGA(data_graph.DataGraph):
         segs_tips = [tips_all]
         if self.precomputed_clusters_names:
             self.segs_names_original = [', '.join(self.precomputed_clusters_names)]
-        else:
-            self.segs_names_original = []
         segs_undecided = [True]
         segs_adjacency = [[]]
         segs_distances = np.ones((1, 1))
         segs_adjacency_nodes = [{}]
-        logg.info('... do not consider groups with less than {} points for splitting'
+        logg.info('    do not consider groups with less than {} points for splitting'
                   .format(self.min_group_size))
         for ibranch in range(self.n_splits):
             if 'unconstrained' in self.flavor:
@@ -311,43 +363,6 @@ class AGA(data_graph.DataGraph):
             self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_distances = segs_distances
-
-        # if 'uncontract' not in self.flavor:
-        #     self.contract_segments()
-
-    def contract_segments(self):
-        for i in range(1000):
-            i, n = self.propose_segments_to_contract()
-            if i != 0 or n != 0:
-                G = nx.Graph(self.segs_adjacency)
-                G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
-                self.segs_adjacency = nx.to_scipy_sparse_matrix(G_contracted)
-                self.segs[n] = np.append(self.segs[n], self.segs[i])
-                self.segs.pop(i)
-            else:
-                break
-
-    def propose_segments_to_contract(self):
-        # nodes with two edges
-        n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
-        for i in range(len(self.segs)):
-            if n_edges_per_seg[i] == 2:
-                neighbors = self.segs_adjacency[i].nonzero()[1]
-                for neighbors_edges in range(1, 20):
-                    for n_cnt, n in enumerate(neighbors):
-                        if n_edges_per_seg[n] == neighbors_edges:
-                            logg.info('merging segment', i, 'into', n, '(two edges)')
-                            return i, n
-        # nodes with a very small cell number into
-        for i in range(len(self.segs)):
-            if len(self.segs[i]) < self.min_group_size/2:
-                neighbors = self.segs_adjacency[i].nonzero()[1]
-                neighbor_sizes = [len(self.segs[n]) for n in neighbors]
-                n = neighbors[np.argmax(neighbor_sizes)]
-                logg.info('merging segment', i, 'into', n,
-                          '(smaller than `min_group_size/2` = {})'.format(self.min_group_size/2))
-                return i, n
-        return 0, 0
 
     def check_adjacency(self):
         n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
@@ -384,7 +399,7 @@ class AGA(data_graph.DataGraph):
             isegs = np.argsort([len(seg) for seg in segs])[::-1]
             for iseg in isegs:
                 seg = segs[iseg]
-                logg.info('... splitting group {} with size {}'.format(iseg, len(seg)))
+                logg.info('    splitting group {} with size {}'.format(iseg, len(seg)))
                 jsegs = [jseg for jseg in range(len(segs)) if jseg != iseg]
                 dtip = np.zeros(len(seg))
                 for jseg in jsegs:
@@ -406,7 +421,7 @@ class AGA(data_graph.DataGraph):
                    .format(new_itip, dist_new_itip, itip), v=4)
             logg.m('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
-            if len(segs_tips[iseg]) > 0: ssegs_tips[trunk] = [segs_tips[iseg][0]]
+            if len(segs_tips[iseg]) > 0: ssegs_tips[1] = [segs_tips[iseg][0]]
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         def new_split(segs_tips):
@@ -558,18 +573,19 @@ class AGA(data_graph.DataGraph):
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
-        clus_name = str(len(segs))
-        # iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
         # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
         # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
-        iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
+        if self.precomputed_clusters is None:
+            iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
+        else:
+            iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
         trunk = 1
         segs.pop(iseg)
         segs_tips.pop(iseg)
         # insert trunk at same position
         segs.insert(iseg, ssegs[trunk])
         segs_tips.insert(iseg, ssegs_tips[trunk])
-        if self.segs_names_original:
+        if self.precomputed_clusters_names:
             iseg_name = ' '.join(np.setdiff1d(self.precomputed_clusters_names,
                                               [n for n in self.segs_names_original]
                                               + [clus_name]))
@@ -577,7 +593,7 @@ class AGA(data_graph.DataGraph):
         # append other segments
         segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
         segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
-        if self.segs_names_original: self.segs_names_original += [clus_name]
+        if self.precomputed_clusters_names: self.segs_names_original += [clus_name]
         # correct edges in adjacency matrix
         n_add = len(ssegs) - 1
         new_shape = (segs_distances.shape[0] + n_add, segs_distances.shape[1] + n_add)

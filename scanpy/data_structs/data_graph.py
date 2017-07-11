@@ -306,7 +306,7 @@ class DataGraph(object):
             # zero - in its sorted position
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
-        logg.m('... determined k =', self.k, 'nearest neighbors of each point', t=True)
+        logg.m('    determined k =', self.k, 'nearest neighbors of each point', t=True)
 
         if self.flavor == 'unweighted':
             if not self.knn:
@@ -350,9 +350,9 @@ class DataGraph(object):
                         W[j, i] = W[i, j]
             if False:
                 W.setdiag(1)  # set diagonal to one
-                logg.m('... note that now, we set the diagonal of the weight matrix to one!')
+                logg.m('    note that now, we set the diagonal of the weight matrix to one!')
             W = W.tocsr()
-        logg.m('... computed W (weight matrix) with "knn" =', self.knn, t=True)
+        logg.m('    computed W (weight matrix) with "knn" =', self.knn, t=True)
 
         # if sp.sparse.issparse(W): W = W.toarray()
         # print(W)
@@ -386,7 +386,7 @@ class DataGraph(object):
                     row = W.indices[W.indptr[i]: W.indptr[i+1]]
                     num = q[i] * q[row]
                     W.data[W.indptr[i]: W.indptr[i+1]] = W.data[W.indptr[i]: W.indptr[i+1]] / num
-        logg.m('... computed K (anisotropic kernel)', t=True)
+        logg.m('    computed K (anisotropic kernel)', t=True)
 
         if not sp.sparse.issparse(self.K):
             # now compute the row normalization to build the transition matrix T
@@ -411,7 +411,7 @@ class DataGraph(object):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
                 self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
-        logg.m('... computed Ktilde (normalized anistropic kernel)')
+        logg.m('    computed Ktilde (normalized anistropic kernel)')
 
     def compute_L_matrix(self):
         """Graph Laplacian for K.
@@ -467,7 +467,7 @@ class DataGraph(object):
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.m('... computed eigenvalues', t=True)
+        logg.m('    computed eigenvalues', t=True)
         logg.m(evals)
         # assign attributes
         self.evals = evals
@@ -508,7 +508,7 @@ class DataGraph(object):
         """
         if self.n_jobs >= 4:  # if we have enough cores, skip this step
             return            # TODO: make sure that this is really the best strategy
-        logg.m('... try computing "M" matrix using up to 90% of `sett.max_memory`')
+        logg.m('    try computing "M" matrix using up to 90% of `sett.max_memory`')
         if True:  # Python version
             self.M = sum([self.evals[l]/(1-self.evals[l])
                           * np.outer(self.rbasis[:, l], self.lbasis[:, l])
@@ -517,7 +517,7 @@ class DataGraph(object):
         else:  # Cython version
             used_memory, _ = logg.get_memory_usage()
             memory_for_M = self.X.shape[0]**2 * 23 / 8 / 1e9  # in GB
-            logg.m('... max memory =', sett.max_memory,
+            logg.m('    max memory =', sett.max_memory,
                    ' / used memory = {:.1f}'.format(used_memory),
                    ' / memory_for_M = {:.1f}'.format(memory_for_M))
             if used_memory + memory_for_M < 0.9 * sett.max_memory:
