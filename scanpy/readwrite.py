@@ -24,7 +24,7 @@ avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'da
 
 
 def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
-         as_strings=False, backup_url='', return_dict=False, reread=None):
+         backup_url='', return_dict=False, reread=None):
     """Read file and return AnnData object.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -48,8 +48,6 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         Assume the first column stores samplenames. Is unnecessary if the sample
         names are not floats or integers: if they are strings, this will be
         detected automatically.
-    as_strings : bool, optional
-        Read names instead of numbers.
     backup_url : str, optional
         Retrieve the file from a URL if not present on disk.
     return_dict : bool, optional (default: False)
@@ -73,7 +71,7 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
     filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
     if is_filename(filename_or_key):
         d = read_file(filename_or_key, sheet, ext, delim, first_column_names,
-                      as_strings, backup_url, reread)
+                      backup_url, reread)
         if isinstance(d, dict):
             if return_dict: return d
             else: return AnnData(d)
@@ -264,7 +262,7 @@ def get_params_from_list(params_list):
 
 
 def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
-              as_strings=False, backup_url='', reread=None):
+              backup_url='', reread=None):
     """Read file and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -285,8 +283,6 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     first_column_names : bool, optional
         Assume the first column stores samplenames. Is unnecessary if the sample
         names are not floats or integers, but strings.
-    as_strings : bool, optional
-        Read names instead of numbers.
     backup_url : str
         URL for download of file in case it's not present.
     reread : bool or None (default: None)
@@ -351,14 +347,12 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
             ddata = _read_mtx(filename)
         elif ext == 'csv':
             ddata = read_txt(filename, delim=',',
-                             first_column_names=first_column_names,
-                             as_strings=as_strings)
+                             first_column_names=first_column_names)
         elif ext in ['txt', 'tab', 'data']:
             if ext == 'data':
                 logg.m('... assuming ".data" means tab or white-space separated text file')
                 logg.m('--> change this by passing `ext` to sc.read')
-            ddata = read_txt(filename, delim, first_column_names,
-                             as_strings=as_strings)
+            ddata = read_txt(filename, delim, first_column_names)
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
         elif ext == 'txt.gz':
@@ -368,7 +362,8 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         # write for faster reading when calling the next time
         write_dict_to_file(filename_fast, ddata, sett.file_format_data)
     else:
-        ddata = read_file_to_dict(filename_fast, sett.file_format_data)
+        ddata = read_file_to_dict(filename_fast, sett.file_format_data,
+                                  cache_warning=True)
     return ddata
 
 
@@ -387,7 +382,7 @@ def _read_mtx(filename, return_dict=True, dtype='float32'):
         return AnnData(X)
 
 
-def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
+def read_txt(filename, delim=None, first_column_names=None):
     """Return data dictionary or AnnData object.
 
     Parameters
@@ -413,14 +408,12 @@ def read_txt(filename, delim=None, first_column_names=None, as_strings=False):
             Array storing the names of columns (gene names).
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if as_strings:
-        ddata = read_txt_as_strings(filename, delim)
-    else:
-        ddata = read_txt_as_floats(filename, delim, first_column_names)
-    return ddata
+    data = read_txt_as_floats(filename, delim, first_column_names)
+    return data
 
 
-def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='float32', return_dict=True):
+def read_txt_as_floats(filename, delim=None, first_column_names=None,
+                       dtype='float32', return_dict=True):
     """Return data as list of lists of strings and the header as string.
 
     Parameters
@@ -431,13 +424,12 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
+    first_column_names : bool, optional
+        Assume the first column stores samplenames.
 
     Returns
     -------
-    data : list
-         List of lists of strings.
-    header : str
-         String storing the comment lines (those that start with '#').
+    data : An AnnData or a dict storing the data.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     header = ''
@@ -525,44 +517,6 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None, dtype='flo
         return {'X': data, 'col_names': col_names, 'row_names': row_names}
     else:
         return AnnData(data, smp={'smp_names': row_names}, var={'var_names': col_names})
-
-
-def read_txt_as_strings(filename, delim):
-    """Interpret list of lists as strings
-    """
-    filename = str(filename)  # allow passing pathlib.Path objects
-    # just a plain loop is enough
-    header = ''
-    data = []
-    for line in open(filename):
-        if line.startswith('#'):
-            header += line
-        else:
-            line_list = line.split(delim)
-            data.append(line_list)
-    # now see whether we can simply transform it to an array
-    if len(data[0]) == len(data[1]):
-        X = np.array(data).astype(str)
-        col_names = None
-        row_names = None
-        logg.m('... the whole content of the file is in X')
-    else:
-        # strip quotation marks
-        if data[0][0].startswith('"'):
-            # using iterators over numpy arrays doesn't work efficiently here
-            # speed no problem here, only done once
-            for ir, r in enumerate(data):
-                for ic, elem in enumerate(r):
-                    data[ir][ic] = elem.strip('"')
-        col_names = np.array(data[0]).astype(str)
-        data = np.array(data[1:]).astype(str)
-        row_names = data[:, 0]
-        X = data[:, 1:]
-        logg.m('... first row is stored in "col_names"')
-        logg.m('... first column is stored in "row_names"')
-        logg.m('... data is stored in X')
-    ddata = {'X': data, 'row_names': row_names, 'col_names': col_names}
-    return ddata
 
 
 def _read_hdf5_single(filename, key=''):
@@ -737,7 +691,7 @@ def _read_softgz(filename):
 # -------------------------------------------------------------------------------
 
 
-def read_file_to_dict(filename, ext='h5'):
+def read_file_to_dict(filename, ext='h5', cache_warning=False):
     """Read file and return dict with keys.
 
     The recommended format for this is hdf5.
@@ -756,9 +710,10 @@ def read_file_to_dict(filename, ext='h5'):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    logg.m('... reading file', filename)
+    if cache_warning: logg.warn('reading from cached file {}'.format(filename))
+    else: logg.info('... reading file {}'.format(filename))
     d = {}
-    if ext in {'h5', 'txt', 'csv'}:
+    if ext == 'h5':
         with h5py.File(filename, 'r') as f:
             for key in f.keys():
                 # the '()' means 'read everything' (by contrast, ':' only works
@@ -771,14 +726,11 @@ def read_file_to_dict(filename, ext='h5'):
         for key, value in d_read.items():
             key, value = postprocess_reading(key, value)
             d[key] = value
+    else:
+        raise ValueError('`ext` need to be "h5" or "npz"')
     csr_keys = [key.replace('_csr_data', '')
                  for key in d if '_csr_data' in key]
-    for key in csr_keys:
-        d = load_sparse_csr(d, key=key)
-    # if 'X_csr_data' in d:
-    #     d = load_sparse_csr(d, key='X')
-    # if 'distance_csr_data' in d:
-    #     d = load_sparse_csr(d, key='distance')
+    for key in csr_keys: d = load_sparse_csr(d, key=key)
     return d
 
 
