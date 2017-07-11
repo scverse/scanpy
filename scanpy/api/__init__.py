@@ -9,7 +9,6 @@ from .. import __version__
 from .. import settings
 """Settings"""
 from .. import logging
-logg = logging   # abbreviation
 """Logging"""
 from . import tools
 tl = tools       # abbreviation

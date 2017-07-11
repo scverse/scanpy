@@ -755,6 +755,80 @@ def dbscan(
     savefig_or_show('dbscan_' + basis)
 
 
+def louvain(
+        adata,
+        basis='tsne',
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
+    """Plot results of Louvain clustering.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    basis : {'diffmap', 'pca', 'tsne', 'spring'}
+        Choose the basis in which to plot.
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
+    layout : {'2d', '3d'}, optional (default: '2d')
+         Layout of plot.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    cmap : str (default: 'viridis')
+         String denoting matplotlib color map.
+    pal : list of str (default: None)
+         Colors cycle to use for categorical groups.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
+    """
+    from ..examples import check_adata
+    adata = check_adata(adata)
+    add_color = []
+    if color is not None:
+        add_color = color if isinstance(color, list) else color.split(',')
+    color = ['louvain_groups'] + add_color
+    axs = scatter(
+        adata,
+        basis=basis,
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
+    savefig_or_show('louvain_' + basis)
+
+
 def paths(
         adata,
         basis='diffmap',

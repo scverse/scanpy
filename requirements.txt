@@ -14,6 +14,8 @@ scikit-learn
 statsmodels
 # complex systems and graphs
 networkx
+igraph
+louvain
 # natural human-readable sorting
 natsort
 # simple parallel computing

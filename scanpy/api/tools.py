@@ -16,5 +16,6 @@ from ..tools.tsne import tsne
 try:
     # development tools
     from ..tools.aga import aga
+    from ..tools.louvain import louvain
 except ImportError:
     pass
