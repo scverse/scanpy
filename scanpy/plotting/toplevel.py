@@ -120,6 +120,7 @@ def scatter(adata,
             right_margin=None,
             size=None,
             title=None,
+            ax=None,
             show=True):
     """Scatter plots.
 
@@ -278,7 +279,8 @@ def scatter(adata,
                        right_margin=right_margin,
                        sizes=[size for c in color_keys],
                        cmap='viridis' if cmap is None else cmap,
-                       show_ticks=show_ticks)
+                       show_ticks=show_ticks,
+                       ax=ax)
 
     def add_centroid(centroids, name, Y, mask):
         masked_values = Y[mask]
@@ -322,10 +324,10 @@ def scatter(adata,
         legend = None
         if legend_loc == 'on data':
             for name, pos in centroids.items():
-                pl.text(pos[0], pos[1], name,
-                        verticalalignment='center',
-                        horizontalalignment='center',
-                        fontsize=legend_fontsize)
+                axs[icolor_key].text(pos[0], pos[1], name,
+                                     verticalalignment='center',
+                                     horizontalalignment='center',
+                                     fontsize=legend_fontsize)
         elif legend_loc == 'right margin':
             legend = axs[icolor_key].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),

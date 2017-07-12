@@ -14,7 +14,7 @@ from .louvain import louvain
 from ..plotting import utils as pl_utils
 
 def aga(adata,
-        node_groups='louvain_groups',
+        node_groups='louvain',
         n_nodes=None,
         n_neighbors=30,
         n_pcs=50,
@@ -49,15 +49,15 @@ def aga(adata,
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
             `diffmap`). Will be used if option `recompute_diffmap` is False.
-    node_groups : any categorical sample annotation or {'louvain_groups', 'hierarch_clustering'}, optional (default: 'louvain_groups')
+    node_groups : any categorical sample annotation or {'louvain', 'hierarch'}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
-        graph/data. 'louvain_groups' uses the louvain algorithm and optimizes
-        modularity of the graph, 'hierarch_clustering' uses a bipartioning
+        graph/data. 'louvain' uses the louvain algorithm and optimizes
+        modularity of the graph, 'hierarch' uses a bipartioning
         criterium that is loosely inspired by hierarchical clustering. You can
-        also pass your predefined categories by choosing any sample annotation.
+        also pass your predefined groups by choosing any sample annotation.
     n_nodes : int or None, optional (default: None)
         Number of nodes in the abstracted graph. Except when choosing
-        'hierarch_clustering' for `node_groups`, for which `n_nodes` defaults to
+        'hierarch' for `node_groups`, for which `n_nodes` defaults to
         `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
         choice of `node_groups`.
     n_neighbors : int, optional (default: 30)
@@ -108,12 +108,14 @@ def aga(adata,
     where `root_cell_name` is the name (a string) of the root cell.'''
         logg.hint(msg)
     fresh_compute_louvain = False
-    if node_groups == 'louvain_groups' and 'louvain_groups' not in adata.smp_keys():
+    if node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys():
         louvain(adata, resolution=resolution, n_neighbors=n_neighbors,
                 n_pcs=n_pcs)
         fresh_compute_louvain = True
+    precomputed_clusters = node_groups
+    if node_groups == 'louvain': precomputed_clusters = 'louvain_groups'
     aga = AGA(adata,
-              precomputed_clusters=node_groups,
+              precomputed_clusters=precomputed_clusters,
               n_neighbors=n_neighbors,
               n_pcs=n_pcs,
               n_dcs=n_dcs,
@@ -149,16 +151,16 @@ def aga(adata,
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
     adata.add['aga_adjacency'] = aga.segs_adjacency
-    if node_groups != 'hierarch_clustering' and not fresh_compute_louvain:
-        adata.add['aga_groups_original'] = node_groups
+    if precomputed_clusters != 'hierarch' and not fresh_compute_louvain:
+        adata.add['aga_groups_original'] = precomputed_clusters
         adata.add['aga_groups_names_original'] = np.array(aga.segs_names_original)
-        if node_groups + '_colors' not in adata.add:
-            pl_utils.add_colors_for_categorical_sample_annotation(adata, node_groups)
+        if precomputed_clusters + '_colors' not in adata.add:
+            pl_utils.add_colors_for_categorical_sample_annotation(adata, precomputed_clusters)
         colors_original = []
-        name_list = list(adata.add[node_groups + '_names'])
+        name_list = list(adata.add[precomputed_clusters + '_names'])
         for name in aga.segs_names_original:
             idx = name_list.index(name)
-            colors_original.append(adata.add[node_groups + '_colors'][idx])
+            colors_original.append(adata.add[precomputed_clusters + '_colors'][idx])
         adata.add['aga_groups_colors_original'] = np.array(colors_original)
     if fresh_compute_louvain:
         adata.smp['louvain_groups'] = adata.smp['aga_groups']
@@ -261,7 +263,7 @@ class AGA(data_graph.DataGraph):
         self.attachedness_measure = attachedness_measure
         self.precomputed_clusters = None
         self.precomputed_clusters_names = None
-        if precomputed_clusters != 'hierarch_clustering':
+        if precomputed_clusters != 'hierarch':
             if precomputed_clusters not in adata.smp_keys():
                 raise ValueError('Did not find {} in adata.smp_keys()!'.format(precomputed_clusters))
             precomputed_clusters = adata.smp[precomputed_clusters]

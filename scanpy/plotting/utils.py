@@ -171,7 +171,8 @@ def scatter_base(Y,
                  colorbars=[False],
                  sizes=[1],
                  cmap='viridis',
-                 show_ticks=True):
+                 show_ticks=True,
+                 ax=None):
     """Plot scatter plot of data.
 
     Parameters
@@ -228,14 +229,17 @@ def scatter_base(Y,
     left_offset_frac = left_offset / figure_width
     right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
 
-    fig = pl.figure(figsize=(figure_width, height),
-                    subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
+    if ax is None:
+        fig = pl.figure(figsize=(figure_width, height),
+                        subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
     left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
     for i in range(1, len(colors)):
         right_margin = right_margin_list[i-1]
         left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
         left_positions.append(left_positions[-1] + draw_region_width_frac)
     panel_pos = [[bottom_offset], [1-top_offset], left_positions]
+    axs_passed = []
+    if ax is not None and not isinstance(ax, list): axs_passed = [ax]
     axs = []
     for icolor, color in enumerate(colors):
         left = panel_pos[2][2*icolor]
@@ -243,7 +247,8 @@ def scatter_base(Y,
         width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
         if layout == '2d':
-            ax = pl.axes([left, bottom, width, height])
+            if axs_passed: ax = axs_passed[icolor]
+            else: ax = pl.axes([left, bottom, width, height])
             data = Y[:, 0], Y[:, 1]
         elif layout == '3d':
             ax = pl.axes([left, bottom, width, height], projection='3d')
@@ -263,8 +268,7 @@ def scatter_base(Y,
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
                              cax=ax_cb)
         # set the title
-        if title is not None:
-            ax.set_title(title[icolor])
+        if title is not None: ax.set_title(title[icolor])
         # output highlighted data points
         for iihighlight, ihighlight in enumerate(highlights_indices):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
@@ -279,7 +283,7 @@ def scatter_base(Y,
             # the following is a Python 2 compatibility hack
             ax.text(*([d[0] for d in data] + [highlight_text]),
                     zorder=20,
-                    fontsize=6,
+                    fontsize=10,
                     color='black')
         if not show_ticks:
             ax.set_xticks([])

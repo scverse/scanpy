@@ -356,6 +356,41 @@ def spring(
 # and tree inference tools
 # ------------------------------------------------------------------------------
 
+def aga(
+        adata,
+        root=0,       # aga_tree
+        fontsize=8,   # aga_tree
+        basis='tsne',
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='on data',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
+    """Summary figure for approximate graph abstraction.
+
+    See aga_scatter and aga_tree for most of the arguments.
+    """
+    _, axs = pl.subplots(figsize=(8, 4), ncols=2)
+    aga_scatter(adata,
+                color='aga_groups',
+                basis=basis,
+                legend_loc=legend_loc,
+                legend_fontsize=legend_fontsize,
+                ax=axs[0],
+                show=False)
+    axs[1].set_frame_on(False)
+    aga_tree(adata, root=root, fontsize=fontsize, ax=axs[1], show=False)
+    show = sett.autoshow if show is None else show
+    savefig_or_show('aga', show=show)
+
 
 def aga_scatter(
         adata,
@@ -372,6 +407,7 @@ def aga_scatter(
         right_margin=None,
         size=None,
         title=None,
+        ax=None,
         show=None):
     """See parameters of sc.pl.aga().
     """
@@ -395,27 +431,30 @@ def aga_scatter(
         if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
         if not isinstance(comps, list): comps_list = [comps]
         else: comps_list = comps
+    ax_was_none = ax is None
     for comps in comps_list:
-        axs = scatter(adata,
-                      basis=basis,
-                      color=color,
-                      names=names,
-                      comps=comps,
-                      cont=cont,
-                      layout=layout,
-                      legend_loc=legend_loc,
-                      legend_fontsize=legend_fontsize,
-                      cmap=cmap,
-                      pal=pal,
-                      right_margin=right_margin,
-                      size=size,
-                      title=title,
-                      show=False)
+        ax = scatter(adata,
+                     basis=basis,
+                     color=color,
+                     names=names,
+                     comps=comps,
+                     cont=cont,
+                     layout=layout,
+                     legend_loc=legend_loc,
+                     legend_fontsize=legend_fontsize,
+                     cmap=cmap,
+                     pal=pal,
+                     right_margin=right_margin,
+                     size=size,
+                     title=title,
+                     ax=ax,
+                     show=False)
         writekey = 'aga_' + basis + '_comps' + comps.replace(',', '')
         if sett.savefigs: savefig(writekey)
-    show = sett.autoshow if show is None else show
+    if show is None and not ax_was_none: show = False
+    else: show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
-
+    return ax
 
 def aga_attachedness(adata):
     segs_distances = adata.add['aga_attachedness']
@@ -445,6 +484,7 @@ def aga_tree(
         fontsize=None,
         node_size=1,
         ext='pdf',
+        ax=None,
         show=None):
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
@@ -466,11 +506,17 @@ def aga_tree(
         for iname, name in enumerate(adata.add['aga_groups_names']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
         G = nx.Graph(adata.add['aga_adjacency'])
-    pos = utils.hierarchy_pos(G, root)
-    # pos = nx.spring_layout(G)
+    try:
+        pos = utils.hierarchy_pos(G, root)
+    except Exception:
+        pos = nx.spring_layout(G)
+        logg.warn('could not draw tree, using spring layout')
     if len(pos) == 1: pos[0] = 0.5, 0.5
-    fig = pl.figure()
-    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+    ax_was_none = False
+    if ax is None:
+        fig = pl.figure()
+        ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+        ax_was_none = True
     labels = nx.get_edge_attributes(G, 'weight')
     nx.draw_networkx_edges(G, pos, ax=ax)
     edge_labels = {}
@@ -478,15 +524,25 @@ def aga_tree(
         edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
     # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
-    trans2 = fig.transFigure.inverted().transform
+    bbox = ax.get_position().get_points()
+    ax_x_min = bbox[0, 0]
+    ax_x_max = bbox[1, 0]
+    ax_y_min = bbox[0, 1]
+    ax_y_max = bbox[1, 1]
+    ax_len_x = ax_x_max - ax_x_min
+    ax_len_y = ax_y_max - ax_y_min
+    # trans2 = fig.transFigure.inverted().transform
+    trans2 = ax.transAxes.inverted().transform
     pl.xticks([])
     pl.yticks([])
     piesize = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):
-        xx, yy = trans(pos[n])     # figure coordinates
-        xa, ya = trans2((xx, yy))  # normalized coordinates
-        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
+        xx, yy = trans(pos[n])     # data coordinates
+        xa, ya = trans2((xx, yy))  # axis coordinates
+        xa = ax_x_min + (xa - p2) * ax_len_x
+        ya = ax_y_min + (ya - p2) * ax_len_y
+        a = pl.axes([xa, ya, piesize * ax_len_x, piesize * ax_len_y])
         if is_color_like(colors[n_cnt]):
             fracs = [100]
             color = [colors[n_cnt]]
@@ -504,8 +560,10 @@ def aga_tree(
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
+    if show is None and not ax_was_none: show = False
+    else: show = sett.autoshow if show is None else show
     savefig_or_show('aga_tree', show, ext=ext)
-    return ax
+    return ax if ax_was_none else None
 
 
 def aga_sc_tree(adata, root, show=None):
@@ -514,7 +572,6 @@ def aga_sc_tree(adata, root, show=None):
     sorted_aga_groups = adata.smp['aga_groups'][adata.smp['aga_order']]
     for n in adata.add['aga_groups_names']:
         node_sets.append(np.flatnonzero(n == sorted_aga_groups))
-    # print(node_sets)
     sc_G = utils.hierarchy_sc(G, root, node_sets)
     ax = aga_tree(sc_G, root)
     savefig_or_show('aga_sc_tree', show)
