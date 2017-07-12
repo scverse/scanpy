@@ -70,8 +70,8 @@ def diffmap(adata, n_comps=10, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
     adata.add['diffmap_evals'] = dmap.evals[1:]
     if knn: adata.add['distance'] = dmap.Dsq
     if knn: adata.add['Ktilde'] = dmap.Ktilde
-    logg.m('finished', t=True, end=' ')
+    logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
-           '    the data representation "X_diffmap" (adata.smp),\n'
-           '    the eigen values of the transition matrix "diffmap_evals" (adata.add)')
+           '    "X_diffmap", the diffmap coordinates (adata.smp),\n'
+           '    "diffmap_evals", the eigenvalues of the transition matrix (adata.add)')
     return adata if copy else None

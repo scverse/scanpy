@@ -75,7 +75,8 @@ def aga(adata,
         For Louvain algorithm. Note that you should set `recompute_louvain` to
         True if changing this repeatedly.
     recompute_diffmap : bool, optional (default: False)
-        Recompute diffusion maps.
+        Recompute diffusion maps. Only then `n_neighbors` has an effect if there
+        is already a cached `X_diffmap` in adata.
     recompute_pca : bool, optional (default: False)
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
@@ -134,13 +135,16 @@ def aga(adata,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure,
               flavor=flavor)
-    aga.update_diffmap()
+    updated_diffmap = aga.update_diffmap()
+    if not updated_diffmap and n_neighbors is not None and not recompute_diffmap:
+        logg.warn('`n_neighbors={}` has no effect (set `recompute_diffmap=True` to enable)'
+                  .format(n_neighbors))
     adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
     adata.add['diffmap_evals'] = aga.evals[1:]
     adata.add['distance'] = aga.Dsq
     adata.add['Ktilde'] = aga.Ktilde
-    logg.info('run Approximate Graph Abstraction (AGA)', r=True)
+    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
     if root_cell_was_passed:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
@@ -174,11 +178,11 @@ def aga(adata,
         adata.smp['louvain_groups'] = adata.smp['aga_groups']
         adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
     adata.add['aga_attachedness'] = aga.segs_distances
-    logg.info('finished', t=True, end=' ')
+    logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
-              '    "aga_adjacency", adjacency matrix defining the abstracted graph (scipy.sparse.csr_matrix in adata.add)'
-              '    "aga_groups", group identifier that associates groups with nodes of abstracted graph (adata.smp),\n'
-              + (',\n    "aga_pseudotime", stores pseudotime with respect to root cell (adata.smp),\n' if root_cell_was_passed else ''))
+              '    "aga_adjacency", adjacency matrix defining the abstracted graph (adata.add),\n'
+              '    "aga_groups", groups corresponding to nodes of abstracted graph (adata.smp)'
+              + (',\n    "aga_pseudotime", pseudotime with respect to root cell (adata.smp)' if root_cell_was_passed else ''))
     return adata if copy else None
 
 
@@ -344,8 +348,8 @@ class AGA(data_graph.DataGraph):
         segs_adjacency = [[]]
         segs_distances = np.ones((1, 1))
         segs_adjacency_nodes = [{}]
-        logg.info('    do not consider groups with less than {} points for splitting'
-                  .format(self.min_group_size))
+        # logg.info('    do not consider groups with less than {} points for splitting'
+        #           .format(self.min_group_size))
         for ibranch in range(self.n_splits):
             if 'unconstrained' in self.flavor:
                 iseg, new_tips = self.select_segment(segs, segs_tips, segs_undecided)
@@ -360,7 +364,7 @@ class AGA(data_graph.DataGraph):
                                                segs_distances,
                                                iseg, new_tips)
             else:
-                logg.info('... split', ibranch + 1)
+                logg.m('    split', ibranch + 1, v=4)
                 stop, segs_distances = self.do_split_constrained(segs, segs_tips,
                                                                  segs_adjacency,
                                                                  segs_adjacency_nodes,
@@ -997,7 +1001,7 @@ class AGA(data_graph.DataGraph):
                 idcs = np.argsort(segs_distances[kseg, jseg_list])[::-1]
                 for idx in idcs:
                     jseg_min = jseg_list[idx]
-                    logg.m('    consider connecting', kseg, 'to', jseg_min)
+                    logg.m('    consider connecting', kseg, 'to', jseg_min, v=4)
                     if jseg_min not in kseg_list:
                         segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
                         for i, neighbors in enumerate(segs_adjacency):
@@ -1007,11 +1011,11 @@ class AGA(data_graph.DataGraph):
                         if jseg_min not in paths_all:
                             segs_adjacency[jseg_min].append(kseg)
                             segs_adjacency[kseg].append(jseg_min)
-                            logg.info('            attaching new segment', kseg, 'at', jseg_min)
+                            logg.m('            attaching new segment', kseg, 'at', jseg_min, v=4)
                             break
                         else:
-                            logg.info('        cannot attach new segment', kseg, 'at', jseg_min,
-                                      '(would produce cycle)')
+                            logg.m('        cannot attach new segment', kseg, 'at', jseg_min,
+                                      '(would produce cycle)', v=4)
         return segs, segs_tips, segs_distances, segs_adjacency
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,
@@ -1073,7 +1077,7 @@ class AGA(data_graph.DataGraph):
             if continue_after_distance_compute: continue
             idx = np.argmin(segs_distances[kseg, jseg_list])
             jseg_min = jseg_list[idx]
-            logg.m('    consider connecting', kseg, 'to', jseg_min)
+            logg.m('    consider connecting', kseg, 'to', jseg_min, v=4)
             if jseg_min not in kseg_list:
                 segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
                 for i, neighbors in enumerate(segs_adjacency):
@@ -1083,23 +1087,23 @@ class AGA(data_graph.DataGraph):
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
                     segs_adjacency[kseg].append(jseg_min)
-                    logg.info('            attaching new segment', kseg, 'at', jseg_min)
+                    logg.m('        attaching new segment', kseg, 'at', jseg_min, v=4)
                     # if we split the cluster, we should not attach kseg
                     do_not_attach_ksegs_with_each_other = True
                 else:
-                    logg.info('        cannot attach new segment', kseg, 'at', jseg_min,
-                              '(would produce cycle)')
+                    logg.m('        cannot attach new segment', kseg, 'at', jseg_min,
+                           '(would produce cycle)', v=4)
                     if kseg != kseg_list[-1]:
-                        logg.info('            continue')
+                        logg.m('            continue', v=4)
                         continue
                     else:
-                        logg.info('            do not add another link')
+                        logg.m('            do not add another link', v=4)
                         continue_after_distance_compute = True
             if jseg_min in kseg_list and not do_not_attach_ksegs_with_each_other:
                 segs_adjacency[jseg_min].append(kseg)
                 segs_adjacency[kseg].append(jseg_min)
                 continue_after_distance_compute = True
-                logg.info('        attaching new segment', kseg, 'with new segment', jseg_min)
+                logg.m('        attaching new segment', kseg, 'with new segment', jseg_min, v=4)
         return segs_distances
 
     def _do_split(self, Dseg, tips, seg_reference, old_tips):

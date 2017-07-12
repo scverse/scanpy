@@ -154,7 +154,7 @@ class DataGraph(object):
                  recompute_pca=None,
                  recompute_diffmap=None,
                  flavor='haghverdi16'):
-        logg.info('... initializing data graph')
+        logg.info('initializing data graph')
         self.k = k
         self.knn = knn
         self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
@@ -174,9 +174,9 @@ class DataGraph(object):
         if 'xroot' in adata.add: xroot = adata.add['xroot']
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
-            or X.shape[1] < self.n_pcs):
+            or X.shape[1] <= self.n_pcs):
             self.X = X
-            logg.m('    using X for building graph')
+            logg.m('    using data matrix X directly for building graph (no PCA)')
             if xroot is not None: self.set_root(xroot)
         # use the precomupted X_pca
         elif (isadata
@@ -232,11 +232,13 @@ class DataGraph(object):
         """
         if n_comps is not None:
             self.n_dcs = n_comps
-            logg.info('... updating number of DCs to', self.n_dcs)
+            logg.info('    updating number of DCs to', self.n_dcs)
         if self.evals is None or self.evals.size < self.n_dcs:
-            logg.info('compute Diffusion Map with', self.n_dcs, 'components', r=True)
+            logg.info('computing Diffusion Map with', self.n_dcs, 'components', r=True)
             self.compute_transition_matrix()
             self.embed(n_evals=self.n_dcs)
+            return True
+        return False
 
     def compute_Ddiff_all(self, n_evals=10):
         raise RuntimeError('deprecated function')
@@ -306,7 +308,7 @@ class DataGraph(object):
             # zero - in its sorted position
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
-        logg.m('    determined k =', self.k, 'nearest neighbors of each point', t=True)
+        logg.m('determined k =', self.k, 'nearest neighbors of each point', t=True, v=4)
 
         if self.flavor == 'unweighted':
             if not self.knn:
@@ -352,7 +354,7 @@ class DataGraph(object):
                 W.setdiag(1)  # set diagonal to one
                 logg.m('    note that now, we set the diagonal of the weight matrix to one!')
             W = W.tocsr()
-        logg.m('    computed W (weight matrix) with "knn" =', self.knn, t=True)
+        logg.m('computed W (weight matrix) with "knn" =', self.knn, t=True, v=4)
 
         # if sp.sparse.issparse(W): W = W.toarray()
         # print(W)
@@ -386,7 +388,7 @@ class DataGraph(object):
                     row = W.indices[W.indptr[i]: W.indptr[i+1]]
                     num = q[i] * q[row]
                     W.data[W.indptr[i]: W.indptr[i+1]] = W.data[W.indptr[i]: W.indptr[i+1]] / num
-        logg.m('    computed K (anisotropic kernel)', t=True)
+        logg.m('computed K (anisotropic kernel)', t=True, v=4)
 
         if not sp.sparse.issparse(self.K):
             # now compute the row normalization to build the transition matrix T
@@ -411,7 +413,7 @@ class DataGraph(object):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
                 self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
-        logg.m('    computed Ktilde (normalized anistropic kernel)')
+        logg.m('    computed Ktilde (normalized anistropic kernel)', v=4)
 
     def compute_L_matrix(self):
         """Graph Laplacian for K.
@@ -467,8 +469,11 @@ class DataGraph(object):
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.m('    computed eigenvalues', t=True)
-        logg.m(evals)
+        if logg.verbosity_greater_or_equal_than(4):
+            logg.m('    computed eigenvalues', t=True, v=4)
+        else:
+            logg.info('    eigenvalues of transition matrix')
+        logg.info('   ', str(evals).replace('\n', '\n    '))
         # assign attributes
         self.evals = evals
         if sym:
@@ -702,7 +707,7 @@ class DataGraph(object):
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2, 'root found at machine prec')
                     break
-        logg.m('    set root index to', self.iroot)
+        logg.m('    setting root index to', self.iroot)
         return self.iroot
 
     def _test_embed(self):

@@ -29,6 +29,16 @@ def hint(*msg, **kwargs):
     return m(*msg, v='hint', **kwargs)
 
 
+def verbosity_greater_or_equal_than(v):
+    if isinstance(v, str):
+        v = verbosity_levels_from_strings[v]
+    if isinstance(sett.verbosity, str):
+        global_v = verbosity_levels_from_strings[sett.verbosity]
+    else:
+        global_v = sett.verbosity
+    return global_v >= v
+
+
 def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
     """Write message to log output.
 
@@ -57,7 +67,7 @@ def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
         msg = ('-->',) + msg
     if v >= 4:
         msg = ('   ',) + msg
-    if v <= global_v:
+    if global_v >= v:
         if not t and not m and len(msg) > 0:
             sett.mi(*msg, end=end)
         if r:

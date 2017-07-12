@@ -368,30 +368,30 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
-            logg.m('finished', t=True, end=' ')
+            logg.m('    finished', t=True, end=' ')
             logg.m('and added\n'
-                   '    the data representation "X_pca" (adata.smp)\n'
-                   '    the loadings "PC1", "PC2", ... (adata.var)\n'
-                   '    the "pca_variance_ratio" (adata.add)')
+                   '    "X_pca", the PCA coordinates (adata.smp)\n'
+                   '    "PC1", "PC2", ..., the loadings (adata.var)\n'
+                   '    "pca_variance_ratio", the variance ratio (adata.add)')
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
     if X.shape[1] < n_comps:
         n_comps = X.shape[1] - 1
-        sett.m(0, 'reducing number of computed PCs to',
+        logg.m('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', X.shape[1])
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     from sklearn.decomposition import PCA, TruncatedSVD
     verbosity_level = np.inf if mute else 0
     if zero_center:
         if issparse(X):
-            logg.m('... as `zero_center=True`, '
+            logg.m('    as `zero_center=True`, '
                    'sparse input is densified and may '
                    'lead to huge memory consumption')
             X = X.toarray()
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
-        logg.m('... without zero-centering: \n'
+        logg.m('    without zero-centering: \n'
                '    the explained variance does not correspond to the exact statistical defintion\n'
                '    the first component, e.g., might be heavily influenced by different means\n'
                '    the following components often resemble the exact PCA very closely')

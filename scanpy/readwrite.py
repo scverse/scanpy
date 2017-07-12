@@ -710,9 +710,9 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if cache_warning: logg.warn('reading from cached file {} '
-                                '(pass `reread=True` to read from the original file)'
+                                '(pass `reread=True` to read from original file)'
                                 .format(filename))
-    else: logg.info('... reading file {}'.format(filename))
+    else: logg.info('reading file {}'.format(filename))
     d = {}
     if ext == 'h5':
         with h5py.File(filename, 'r') as f:
@@ -774,9 +774,9 @@ def write_dict_to_file(filename, d, ext='h5'):
     filename = str(filename)  # allow passing pathlib.Path objects
     directory = os.path.dirname(filename)
     if not os.path.exists(directory):
-        logg.m('creating directory', directory + '/', 'for saving output files')
+        logg.info('creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
-    if ext in {'h5', 'npz'}: logg.m('... writing', filename)
+    if ext in {'h5', 'npz'}: logg.info('writing', filename)
     d_write = {}
     from scipy.sparse import issparse
     for key, value in d.items():
@@ -802,7 +802,7 @@ def write_dict_to_file(filename, d, ext='h5'):
         # here this is actually a directory that corresponds to the
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
-        logg.m('... writing', ext, 'files to', dirname)
+        logg.info('writing', ext, 'files to', dirname)
         if not os.path.exists(dirname): os.makedirs(dirname)
         if not os.path.exists(dirname + 'add'): os.makedirs(dirname + 'add')
         from pandas import DataFrame

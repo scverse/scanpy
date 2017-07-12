@@ -59,18 +59,18 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     # preprocessing by PCA
     if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
         X = adata.smp['X_pca'][:, :n_pcs]
-        logg.m('... using X_pca for tSNE')
-        logg.m('... using', n_pcs, 'principal components')
+        logg.m('    using X_pca for tSNE')
+        logg.m('    using', n_pcs, 'principal components')
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            logg.m('... preprocess using PCA with', n_pcs, 'PCs')
+            logg.m('    preprocess using PCA with', n_pcs, 'PCs')
             logg.m('avoid this by setting n_pcs = 0', v='hint')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.smp['X_pca'] = X
-            logg.m('... using', n_pcs, 'principal components')
+            logg.m('    using', n_pcs, 'principal components')
         else:
             X = adata.X
-            logg.m('... computing tSNE directly from X')
+            logg.m('    using data matrix X directly (no PCA)')
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': None if random_state == -1 else random_state,
@@ -86,24 +86,24 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.m('... using MulticoreTSNE')
+            logg.m('    using package MulticoreTSNE')
             X_tsne = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             multicore_failed = True
-            logg.m('did not find package MulticoreTSNE: to speed up the computation install it from\n'
+            logg.m('did not find package MulticoreTSNE: to speed up the computation, install it from\n'
                    '    https://github.com/DmitryUlyanov/Multicore-TSNE', v='hint')
     if n_jobs == 1 or multicore_failed:
         from sklearn.manifold import TSNE
         tsne = TSNE(**params_sklearn)
         logg.m('consider installing the package MulticoreTSNE from\n'
                '        https://github.com/DmitryUlyanov/Multicore-TSNE\n'
-               '    Even for `n_jobs=1` this speeds up the computation considerably.',
+               '    even for `n_jobs=1` this speeds up the computation considerably.',
                v='hint')
-        logg.m('... using sklearn.manifold.TSNE')
+        logg.m('    using sklearn.manifold.TSNE')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = X_tsne
-    logg.m('finished', t=True, end=' ')
+    logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "X_tsne", the tSNE coordinates for X (adata.smp)')
     return adata if copy else None
