@@ -486,6 +486,40 @@ def aga_tree(
         ext='pdf',
         ax=None,
         show=None):
+    if colors is None or isinstance(colors, str): colors = [colors]
+    if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
+    if names is None or isinstance(names, str) or isinstance(names, dict): names = [names]
+    if len(colors) != len(names):
+        raise ValueError('`colors` and `names` lists need to have the same length.')
+    from matplotlib import rcParams
+    figure_width = 1.3 * rcParams['figure.figsize'][0] * len(colors)
+    fig, axs = pl.subplots(ncols=len(colors),
+                           figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]))
+    if len(colors) == 1: axs = [axs]
+    for icolor, color in enumerate(colors):
+        show_color = False if icolor != len(colors)-1 else show
+        _aga_tree_single_color(
+            adata,
+            root=root,
+            colors=color,
+            names=names[icolor],
+            fontsize=fontsize,
+            node_size=1,
+            ext=ext,
+            ax=axs[icolor],
+            show=show_color)
+
+
+def _aga_tree_single_color(
+        adata,
+        root=0,
+        colors=None,
+        names=None,
+        fontsize=None,
+        node_size=1,
+        ext='pdf',
+        ax=None,
+        show=None):
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
     if names is None and 'aga_groups_names_original' in adata.add:
@@ -535,8 +569,9 @@ def aga_tree(
     ax_len_y = ax_y_max - ax_y_min
     # trans2 = fig.transFigure.inverted().transform
     trans2 = ax.transAxes.inverted().transform
-    pl.xticks([])
-    pl.yticks([])
+    ax.set_frame_on(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
     piesize = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
     p2 = piesize/2.0
     for n_cnt, n in enumerate(G):

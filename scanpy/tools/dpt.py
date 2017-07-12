@@ -11,9 +11,9 @@ from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
+def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
-        recompute_pca=False, flavor='haghverdi16', copy=False):
+        recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
 
     Infer progression of cells, identify tree of branching subgroups.
@@ -48,7 +48,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
             `diffmap`).  Will be used if option `recompute_diffmap` is False.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
-    k : int, optional (default: 30)
+    n_neighbors : int, optional (default: 30)
         Number of nearest neighbors on the knn graph. If knn == False, set the
         Gaussian kernel width to the distance of the kth neighbor.
     knn : bool, optional (default: True)
@@ -94,7 +94,7 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     root_cell_was_passed = True
     if 'xroot' not in adata.add and 'xroot' not in adata.var:
         root_cell_was_passed = False
-        logg.m('... no root cell found, no computation of pseudotime')
+        logg.m('    no root cell found, no computation of pseudotime')
         msg = \
     '''To enable computation of pseudotime, pass the expression "xroot" of a root cell.
     Either add
@@ -106,11 +106,12 @@ def dpt(adata, n_branchings=0, k=30, knn=True, n_pcs=50, n_dcs=10,
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     if n_branchings > 1:
-        logg.m('... running a hierarchical version of DPT')
-    dpt = DPT(adata, k=k, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
+        logg.m('    running a hierarchical version of DPT')
+    dpt = DPT(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca, n_branchings=n_branchings,
+              allow_kendall_tau_shift=allow_kendall_tau_shift,
               flavor=flavor)
     dpt.update_diffmap()
     adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
@@ -164,7 +165,9 @@ class DPT(data_graph.DataGraph):
                  n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
-                 recompute_diffmap=None, n_branchings=0,
+                 recompute_diffmap=None,
+                 n_branchings=0,
+                 allow_kendall_tau_shift=False,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
                                   n_dcs=n_dcs,
@@ -176,6 +179,7 @@ class DPT(data_graph.DataGraph):
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata_or_X  # just for debugging purposes
         self.choose_largest_segment = False
+        self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
         """Detect branchings and partition the data into corresponding segments.
@@ -209,7 +213,7 @@ class DPT(data_graph.DataGraph):
         segs_tips : np.ndarray
             List of indices of the tips of segments.
         """
-        logg.m('... detect', self.n_branchings,
+        logg.m('    detect', self.n_branchings,
                'branching' + ('' if self.n_branchings == 1 else 's'))
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
@@ -251,14 +255,14 @@ class DPT(data_graph.DataGraph):
         segs_connects = [[]]
         segs_undecided = [True]
         segs_adjacency = [[]]
-        logg.m('... do not consider groups with less than {} points for splitting'
+        logg.m('    do not consider groups with less than {} points for splitting'
                .format(self.min_group_size))
         for ibranch in range(self.n_branchings):
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
             if iseg == -1:
-                logg.m('... partitioning converged')
+                logg.m('    partitioning converged')
                 break
-            logg.m('... branching {}:'.format(ibranch + 1),
+            logg.m('    branching {}:'.format(ibranch + 1),
                    'split group', iseg)  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(segs, segs_tips,
@@ -340,7 +344,7 @@ class DPT(data_graph.DataGraph):
                         for itip in range(2):
                             if (self.Dchosen[segs_tips[jseg][1], segs_tips[iseg][itip]]
                                 < 0.5 * self.Dchosen[segs_tips[iseg][~itip], segs_tips[iseg][itip]]):
-                                # logg.m('... group', iseg, 'with tip', segs_tips[iseg][itip],
+                                # logg.m('    group', iseg, 'with tip', segs_tips[iseg][itip],
                                 #        'connects with', jseg, 'with tip', segs_tips[jseg][1], v=4)
                                 # logg.m('    do not use the tip for "triangulation"', v=4)
                                 third_maximizer = itip
@@ -370,7 +374,7 @@ class DPT(data_graph.DataGraph):
             # assigning the highest score to the longest segment
             score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
-            logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
+            logg.m('    group', iseg, 'score', score, 'n_points', len(seg),
                    '(too small)' if len(seg) < self.min_group_size else '', v=4)
             if len(seg) <= self.min_group_size: score = 0
             # write result
@@ -422,7 +426,7 @@ class DPT(data_graph.DataGraph):
                     indices = np.argsort(self.pseudotime[tips])
                     self.segs_tips[itips] = self.segs_tips[itips][indices]
                 else:
-                    logg.m('... group', itips, 'is very small', v=4)
+                    logg.m('    group', itips, 'is very small', v=4)
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
@@ -818,11 +822,10 @@ class DPT(data_graph.DataGraph):
         # increasing the following slightly from imax is a more conservative choice
         # as the criterion based on normalized distances, which follows below,
         # is less stable
-        if imax > 0.95 * len(idcs):
+        if imax > 0.95 * len(idcs) and self.allow_kendall_tau_shift:
             # if "everything" is correlated (very large value of imax), a more
             # conservative choice amounts to reducing this
-            logg.m('... in __detect_branching_haghverdi16, '
-                   'shift point of maximal kendall-tau correlation', v=4)
+            logg.warn('shifting branching point away from maximal kendall-tau correlation (suppress this with `allow_kendall_tau_shift=False`)')
             ibranch = int(0.95 * imax)
         else:
             # otherwise, a more conservative choice is the following
@@ -890,7 +893,7 @@ class DPT(data_graph.DataGraph):
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            logg.m('... is root itself, never obtain significant correlation', v=4)
+            logg.m('    is root itself, never obtain significant correlation', v=4)
         return imax
 
     def _kendall_tau_add(self, len_old, diff_pos, tau_old):

@@ -65,6 +65,12 @@ def identify_categories(adata, predicted, reference, normalization='reference',
                                  if asso_matrix[-1][i] > threshold][:max_number])]
     return asso_names, np.array(asso_matrix)
 
+def get_associated_colors(reference_colors, asso_matrix):
+    asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
+                    for i_ref in range(asso_matrix.shape[1])}
+                   for i_pred in range(asso_matrix.shape[0])]
+    return asso_colors
+
 
 def plot_category_association(adata, predicted, reference, asso_matrix):
     pl.figure(figsize=(5, 5))

@@ -204,7 +204,7 @@ def scatter_base(Y,
             sizes = [sizes[0] for i in range(len(colors))]
     # grid of axes for plotting and legends/colorbars
     if np.any(colorbars) and right_margin is None: right_margin = 0.25
-    elif right_margin is None: right_margin = 0.01
+    elif right_margin is None: right_margin = 0.10
     # make a list of right margins for each panel
     if not isinstance(right_margin, list):
         right_margin_list = [right_margin for i in range(len(colors))]
