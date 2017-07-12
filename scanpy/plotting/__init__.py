@@ -566,6 +566,63 @@ def aga_tree(
     return ax if ax_was_none else None
 
 
+def aga_timeseries(
+        adata,
+        nodes=[0],
+        keys=[0],
+        xlim=[None, None],
+        n_avg=1,
+        left_margin=0.4,
+        show_left_y_ticks=None,
+        show_nodes=True,
+        legend_fontsize=None,
+        ax=None,
+        show=None):
+    ax_was_none = ax is None
+    if show_left_y_ticks is None:
+        show_left_y_ticks = False if show_nodes else True
+
+    def moving_average(a, n=n_avg):
+        ret = np.cumsum(a, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:] / n
+
+    # from matplotlib import rcParams
+    # pl.axes([left_margin, rcParams['figure.subplot.bottom'], 1, 1])
+    for key in keys:
+        x = []
+        for group in nodes:
+            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
+            idcs_group = np.argsort(adata.smp['aga_pseudotime'][adata.smp['aga_groups'] == str(group)])
+            idcs = idcs[idcs_group]
+            if key in adata.smp_keys(): x += list(adata.smp[key][idcs])
+            else: x += list(adata[:, key].X[idcs])
+        if n_avg > 1: x = moving_average(x)
+        pl.plot(x[xlim[0]:xlim[1]], label=key)
+    pl.xlabel('order along trajectory')
+    pl.legend(frameon=False, loc='center left',
+              bbox_to_anchor=(-left_margin, 0.5),
+              fontsize=legend_fontsize)
+    if show_left_y_ticks:
+        utils.pimp_axis(pl.gca().get_yaxis())
+        pl.ylabel('as indicated on legend')
+    else:
+        pl.yticks([])
+        pl.ylabel('as indicated on legend (a.u.)')
+    if show_nodes:
+        pl.twinx()
+        x = []
+        for g in nodes:
+            x += list(adata.smp['aga_groups'][adata.smp['aga_groups'] == str(g)].astype(int))
+        if n_avg > 1: x = moving_average(x)
+        pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
+        pl.ylabel('aga groups')
+    if show is None and not ax_was_none: show = False
+    else: show = sett.autoshow if show is None else show
+    savefig_or_show('aga_timeseries', show)
+    return ax if ax_was_none else None
+
+
 def aga_sc_tree(adata, root, show=None):
     G = nx.Graph(adata.add['aga_adjacency'])
     node_sets = []

@@ -21,8 +21,10 @@ def aga(adata,
         n_dcs=10,
         resolution=1,
         recompute_diffmap=False,
-        recompute_pca=False, flavor='bi_constrained',
-        attachedness_measure='n_connecting_edges',
+        recompute_pca=False,
+        recompute_louvain=False,
+        flavor='bi_constrained',
+        attachedness_measure='d_full_pairwise',
         n_jobs=None,
         copy=False):
     """Approximate Graph Abstraction
@@ -69,10 +71,15 @@ def aga(adata,
     n_dcs : int, optional (default: 10)
         Number of diffusion components (very similar to eigen vectors of
         adjacency matrix) to use for distance computations.
+    resolution : float, optional (default: 1.0)
+        For Louvain algorithm. Note that you should set `recompute_louvain` to
+        True if changing this repeatedly.
     recompute_diffmap : bool, optional (default: False)
         Recompute diffusion maps.
     recompute_pca : bool, optional (default: False)
         Recompute PCA.
+    recompute_louvain : bool, optional (default: False)
+        When changing the `resolution` parameter, you should set this to True.
     attachedness_measure : {'n_connecting_edges', 'd_full_pairwise'}, optional (default: 'n_connecting_edges')
         How to measure attachedness.
     n_jobs : int or None (default: None)
@@ -108,7 +115,8 @@ def aga(adata,
     where `root_cell_name` is the name (a string) of the root cell.'''
         logg.hint(msg)
     fresh_compute_louvain = False
-    if node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys():
+    if ((node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys())
+        or recompute_louvain):
         louvain(adata, resolution=resolution, n_neighbors=n_neighbors,
                 n_pcs=n_pcs)
         fresh_compute_louvain = True
@@ -224,7 +232,9 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
     adata.add['aga_adjacency'], adata.smp['aga_groups'] = contract_nodes(
         adata.add['aga_adjacency'], adata.smp['aga_groups'])
     adata.add['aga_groups_names'] = np.unique(adata.smp['aga_groups'])
-    if 'aga_attachedness' in adata.add: del adata.add['aga_attachedness']  # TODO
+    for key in ['aga_attachedness', 'aga_groups_original',
+                'aga_groups_names_original', 'aga_groups_colors_original']:
+        if key in adata.add: del adata.add[key]
     logg.info('    contracted graph from {} to {} nodes'
               .format(size_before, adata.add['aga_adjacency'].shape[0]))
     logg.m('removed adata.add["aga_attachedness"]', v=4)

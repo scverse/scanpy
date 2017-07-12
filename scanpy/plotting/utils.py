@@ -19,7 +19,7 @@ pal_20_vega = [
     '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
     '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
     '#dbdb8d', '#9edae5',
-    '#ad494a', '8c6d31']  # manual additions
+    '#ad494a', '#8c6d31']  # manual additions
 pal_20 = pal_20_vega
 
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
@@ -239,7 +239,7 @@ def scatter_base(Y,
         left_positions.append(left_positions[-1] + draw_region_width_frac)
     panel_pos = [[bottom_offset], [1-top_offset], left_positions]
     axs_passed = []
-    if ax is not None and not isinstance(ax, list): axs_passed = [ax]
+    if ax is not None: axs_passed = ax if isinstance(ax, list) else [ax]
     axs = []
     for icolor, color in enumerate(colors):
         left = panel_pos[2][2*icolor]
@@ -380,10 +380,10 @@ def ticks_formatter(x, pos):
         return ('%.3f'%(x)).rstrip('0').rstrip('.')
 
 
-def pimp_axis(ax):
+def pimp_axis(x_or_y_ax):
     """Remove trailing zeros.
     """
-    ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
+    x_or_y_ax.set_major_formatter(ticker.FuncFormatter(ticks_formatter))
 
 
 def scale_to_zero_one(x):
