@@ -49,7 +49,7 @@ def draw_graph(adata,
     from .. import logging as logg
     from .. import data_structs
     adata = adata.copy() if copy else adata
-    logg.info('drawing single-cell graph using layout {}'.format(layout))
+    logg.info('drawing single-cell graph using layout "{}"'.format(layout))
     if 'Ktilde' not in adata.add or recompute_graph:
         graph = data_structs.DataGraph(adata,
                                        k=n_neighbors,
@@ -63,7 +63,7 @@ def draw_graph(adata,
     weights = np.array(weights)[0]  # need to convert sparse matrix into a form appropriate for igraph
     g = ig.Graph(list(zip(sources, targets)),  #, edge_attrs={'weight': weights}
                  directed=True)
-    if layout in {'fr', 'drl', 'kk'}:
+    if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
         ig_layout = g.layout(layout,  # weights='weight',
@@ -74,6 +74,6 @@ def draw_graph(adata,
     adata.add['draw_graph_layout'] = layout
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
-           '    "X_draw_graph", graph_drawing coordinates (adata.smp)'
+           '    "X_draw_graph", graph_drawing coordinates (adata.smp)\n'
            '    "draw_graph_layout", the chosen layout (adata.add)')
     return adata if copy else None
