@@ -203,6 +203,80 @@ def diffmap(
     return axs
 
 
+def draw_graph(
+        adata,
+        color=None,
+        names=None,
+        comps=None,
+        cont=None,
+        layout='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        cmap=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None):
+    """Scatter in tSNE basis.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    color : string or list of strings, optional (default: first annotation)
+        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
+        annotation is plotted assuming categorical annotation, float and integer
+        annotation is plotted assuming continuous annoation. Option 'cont'
+        allows to switch between these default choices.
+    names : str, optional (default: all names)
+        Restrict to a few categories in categorical sample annotation.
+    comps : str, optional (default: '1,2')
+         String in the form '1,2,3'.
+    cont : bool, None (default: None)
+        Switch on continuous layout, switch off categorical layout.
+    layout : {'2d', '3d'}, optional (default: '2d')
+         Layout of plot.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    cmap : str (default: 'viridis')
+         String denoting matplotlib color map.
+    pal : list of str (default: None)
+         Colors cycle to use for categorical groups.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels as "my title1,another title,...".
+
+    Returns
+    -------
+    matplotlib.Axes object
+    """
+    from ..examples import check_adata
+    adata = check_adata(adata)
+    axs = scatter(
+        adata,
+        basis='draw_graph',
+        color=color,
+        names=names,
+        comps=comps,
+        cont=cont,
+        layout=layout,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        cmap=cmap,
+        pal=pal,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False)
+    savefig_or_show('draw_graph', show=show)
+    return axs
+
+
 def tsne(
         adata,
         color=None,
@@ -273,7 +347,7 @@ def tsne(
         size=size,
         title=title,
         show=False)
-    savefig_or_show('tsne')
+    savefig_or_show('tsne', show=show)
     return axs
 
 
@@ -520,6 +594,7 @@ def _aga_tree_single_color(
         ext='pdf',
         ax=None,
         show=None):
+    from matplotlib import rcParams
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
     if names is None and 'aga_groups_names_original' in adata.add:
@@ -553,11 +628,13 @@ def _aga_tree_single_color(
         fig = pl.figure()
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
         ax_was_none = True
-    labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edges(G, pos, ax=ax)
+    # edge widths
+    widths = 1. / (1 + 10*np.array([x[-1]['weight'] for x in G.edges(data=True)]))
+    widths *= 2*rcParams['lines.linewidth'] / np.max(widths)
+    nx.draw_networkx_edges(G, pos, ax=ax, width=widths)
     edge_labels = {}
     for n1, n2, label in G.edges(data=True):
-        edge_labels[(n1, n2)] = '{:.3f}'.format(label['weight'])
+        edge_labels[(n1, n2)] = '{:.3f}'.format(1. / (1 + 10*label['weight']))
     # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
     bbox = ax.get_position().get_points()

@@ -181,8 +181,8 @@ def scatter(adata,
         try:
             Y = adata.smp['X_' + basis][:, comps]
         except KeyError:
-            sett.mi('--> compute the basis using plotting tool', basis, 'first')
-            raise
+            raise KeyError('compute coordinates using visualization tool {} first'
+                           .format(basis))
     else:
         x_arr = adata.get_smp_array(x)
         y_arr = adata.get_smp_array(y)
@@ -210,9 +210,10 @@ def scatter(adata,
         pals[i] = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
-                      else 'Spring' if basis == 'spring'
+                      else adata.add['draw_graph_layout'].upper() if basis == 'draw_graph'
                       else 'tSNE' if basis == 'tsne'
                       else 'PC' if basis == 'pca'
+                      else 'Spring' if basis == 'spring'
                       else None)
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
