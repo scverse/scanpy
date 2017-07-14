@@ -16,15 +16,14 @@ from ..plotting import utils as pl_utils
 def aga(adata,
         node_groups='louvain',
         n_nodes=None,
-        n_neighbors=30,
+        n_neighbors=None,
         n_pcs=50,
         n_dcs=10,
         resolution=1,
         recompute_diffmap=False,
         recompute_pca=False,
         recompute_louvain=False,
-        flavor='bi_constrained',
-        attachedness_measure='d_full_pairwise',
+        attachedness_measure='random_walk_based',
         n_jobs=None,
         copy=False):
     """Approximate Graph Abstraction
@@ -62,8 +61,9 @@ def aga(adata,
         'hierarch' for `node_groups`, for which `n_nodes` defaults to
         `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
         choice of `node_groups`.
-    n_neighbors : int, optional (default: 30)
-        Number of nearest neighbors on the knn graph.
+    n_neighbors : int or None, optional (default: None)
+        Number of nearest neighbors on the knn graph. See the default
+        of data_graph (usually 30).
     n_pcs : int, optional (default: 50)
         Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
@@ -73,7 +73,7 @@ def aga(adata,
         adjacency matrix) to use for distance computations.
     resolution : float, optional (default: 1.0)
         For Louvain algorithm. Note that you should set `recompute_louvain` to
-        True if changing this repeatedly.
+        True if changing this to recompute.
     recompute_diffmap : bool, optional (default: False)
         Recompute diffusion maps. Only then `n_neighbors` has an effect if there
         is already a cached `X_diffmap` in adata.
@@ -81,7 +81,7 @@ def aga(adata,
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
         When changing the `resolution` parameter, you should set this to True.
-    attachedness_measure : {'n_connecting_edges', 'd_full_pairwise'}, optional (default: 'n_connecting_edges')
+    attachedness_measure : {'connectedness', 'random_walk_based'}, optional (default: 'random_walk_based')
         How to measure attachedness.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
@@ -121,10 +121,10 @@ def aga(adata,
         louvain(adata, resolution=resolution, n_neighbors=n_neighbors,
                 n_pcs=n_pcs)
         fresh_compute_louvain = True
-    precomputed_clusters = node_groups
-    if node_groups == 'louvain': precomputed_clusters = 'louvain_groups'
+    clusters = node_groups
+    if node_groups == 'louvain': clusters = 'louvain_groups'
     aga = AGA(adata,
-              precomputed_clusters=precomputed_clusters,
+              clusters=clusters,
               n_neighbors=n_neighbors,
               n_pcs=n_pcs,
               n_dcs=n_dcs,
@@ -133,8 +133,7 @@ def aga(adata,
               recompute_diffmap=recompute_diffmap,
               recompute_pca=recompute_pca,
               n_nodes=n_nodes,
-              attachedness_measure=attachedness_measure,
-              flavor=flavor)
+              attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
     if not updated_diffmap and n_neighbors is not None and not recompute_diffmap:
         logg.warn('`n_neighbors={}` has no effect (set `recompute_diffmap=True` to enable)'
@@ -163,16 +162,17 @@ def aga(adata,
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
     adata.add['aga_adjacency'] = aga.segs_adjacency
-    if precomputed_clusters != 'hierarch' and not fresh_compute_louvain:
-        adata.add['aga_groups_original'] = precomputed_clusters
+    if (clusters not in {'hierarch', 'unconstrained_hierarch'}
+        and not fresh_compute_louvain):
+        adata.add['aga_groups_original'] = clusters
         adata.add['aga_groups_names_original'] = np.array(aga.segs_names_original)
-        if precomputed_clusters + '_colors' not in adata.add:
-            pl_utils.add_colors_for_categorical_sample_annotation(adata, precomputed_clusters)
+        if clusters + '_colors' not in adata.add:
+            pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
-        name_list = list(adata.add[precomputed_clusters + '_names'])
+        name_list = list(adata.add[clusters + '_names'])
         for name in aga.segs_names_original:
             idx = name_list.index(name)
-            colors_original.append(adata.add[precomputed_clusters + '_colors'][idx])
+            colors_original.append(adata.add[clusters + '_colors'][idx])
         adata.add['aga_groups_colors_original'] = np.array(colors_original)
     if fresh_compute_louvain:
         adata.smp['louvain_groups'] = adata.smp['aga_groups']
@@ -258,9 +258,8 @@ class AGA(data_graph.DataGraph):
                  min_group_size=20,
                  recompute_pca=None,
                  recompute_diffmap=None,
-                 attachedness_measure='n_connecting_edges',
-                 precomputed_clusters=None,
-                 flavor='haghverdi16',
+                 attachedness_measure='connectedness',
+                 clusters=None,
                  n_jobs=1):
         if 'Ktilde' not in adata.add: recompute_diffmap = True
         super(AGA, self).__init__(adata,
@@ -269,26 +268,29 @@ class AGA(data_graph.DataGraph):
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
-                                  recompute_diffmap=recompute_diffmap,
-                                  flavor=flavor)
+                                  recompute_diffmap=recompute_diffmap)
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
         self.attachedness_measure = attachedness_measure
-        self.precomputed_clusters = None
-        self.precomputed_clusters_names = None
-        if precomputed_clusters != 'hierarch':
-            if precomputed_clusters not in adata.smp_keys():
-                raise ValueError('Did not find {} in adata.smp_keys()!'.format(precomputed_clusters))
-            precomputed_clusters = adata.smp[precomputed_clusters]
+        self.clusters = clusters
+        self.clusters_precomputed = None
+        self.clusters_precomputed_names = None
+        self.flavor_develop = 'bi'  # bipartitioning
+        if clusters not in {'hierarch', 'unconstrained_hierarch'}:
+            if clusters not in adata.smp_keys():
+                raise ValueError('Did not find {} in adata.smp_keys()! '
+                                 'If you do not have any precomputed clusters, pass "hierarch" for "node_groups" instead'
+                                 .format(clusters))
+            clusters = adata.smp[clusters]
             # transform to a list of index arrays
-            self.precomputed_clusters = []
-            self.precomputed_clusters_names = []
+            self.clusters_precomputed = []
+            self.clusters_precomputed_names = []
             from natsort import natsorted
-            for cluster_name in natsorted(np.unique(precomputed_clusters)):
-                self.precomputed_clusters.append(np.where(cluster_name == precomputed_clusters)[0])
-                self.precomputed_clusters_names.append(cluster_name)
-            n_nodes = len(self.precomputed_clusters)
+            for cluster_name in natsorted(np.unique(clusters)):
+                self.clusters_precomputed.append(np.where(cluster_name == clusters)[0])
+                self.clusters_precomputed_names.append(cluster_name)
+            n_nodes = len(self.clusters_precomputed)
         else:
             if n_nodes is None:
                 n_nodes = 1
@@ -342,8 +344,8 @@ class AGA(data_graph.DataGraph):
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
         # we keep a list of the tips of each segment
         segs_tips = [tips_all]
-        if self.precomputed_clusters_names:
-            self.segs_names_original = [', '.join(self.precomputed_clusters_names)]
+        if self.clusters_precomputed_names:
+            self.segs_names_original = [', '.join(self.clusters_precomputed_names)]
         segs_undecided = [True]
         segs_adjacency = [[]]
         segs_distances = np.ones((1, 1))
@@ -351,7 +353,7 @@ class AGA(data_graph.DataGraph):
         # logg.info('    do not consider groups with less than {} points for splitting'
         #           .format(self.min_group_size))
         for ibranch in range(self.n_splits):
-            if 'unconstrained' in self.flavor:
+            if self.clusters == 'unconstrained_hierarch':
                 iseg, new_tips = self.select_segment(segs, segs_tips, segs_undecided)
                 if iseg == -1:
                     logg.info('... partitioning converged')
@@ -382,32 +384,9 @@ class AGA(data_graph.DataGraph):
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_distances = segs_distances
 
-    def check_adjacency(self):
-        n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
-        for n_edges in range(1, np.max(n_edges_per_seg) + 1):
-            for iseg in range(self.segs_adjacency.shape[0]):
-                if n_edges_per_seg[iseg] == n_edges:
-                    neighbor_segs = self.segs_adjacency[iseg].todense().A1
-                    measure_points_other_segs = [seg[np.argmin(self.Dchosen[self.segs_tips[iseg][0], seg])]
-                                                 for seg in self.segs]
-                    seg = self.segs[iseg]
-                    measure_points_in_segs = [seg[np.argmin(self.Dchosen[tips[0], seg])]
-                                              for tips in self.segs_tips]
-                    distance_segs = [self.Dchosen[measure_points_other_segs[ipoint], point]
-                                     for ipoint, point in enumerate(measure_points_in_segs)]
-                    # exclude the first point, the segment itself
-                    closest_segs = np.argsort(distance_segs)[1:n_edges+1]
-                    # update adjacency matrix within the loop!
-                    # self.segs_adjacency[iseg, neighbor_segs > 0] = 0
-                    # self.segs_adjacency[iseg, closest_segs] = np.array(distance_segs)[closest_segs]
-                    # self.segs_adjacency[neighbor_segs > 0, iseg] = 0
-                    # self.segs_adjacency[closest_segs, iseg] = np.array(distance_segs)[closest_segs].reshape(len(closest_segs), 1)
-                    # n_edges_per_seg = np.sum(self.segs_adjacency > 0, axis=1).A1
-                    # print(iseg, distance_segs, closest_segs)
-                    # print(self.segs_adjacency)
-        # self.segs_adjacency.eliminate_zeros()
-
-    def do_split_constrained(self, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,
+    def do_split_constrained(self, segs, segs_tips,
+                             segs_adjacency,
+                             segs_adjacency_nodes,
                              segs_distances):
 
         if max([len(seg) for seg in segs]) < self.min_group_size:
@@ -494,21 +473,22 @@ class AGA(data_graph.DataGraph):
             itip = second_tips[iseg]
             third_itip = third_tips[iseg]
             seg = segs[iseg]
-            logg.info('... splitting group {} with size {}'.format(iseg, len(seg)))
+            logg.m('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             # this should not be done when bipartitioning
             # new_seg = np.logical_and(self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg],
             #                          self.Dchosen[new_itip, seg] < self.Dchosen[third_itip, seg])
-            # we have to do the following
+            # instead, we have to do the following
             new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
             size_0 = np.sum(new_seg)
-            # if size_0 > len(seg) - size_0 and len(segs) == 1:
-            #     new_itip = itip
-            #     new_seg = ~new_seg
-            #     size_0 = len(seg) - size_0
-            # idcs = np.argsort(self.Dchosen[new_itip, seg])
-            # sorted_dists_from_new_tip = self.Dchosen[new_itip, seg][idcs]
-            # i = np.argmax(np.diff(sorted_dists_from_new_tip))
-            # if i <= size_0: new_seg[idcs[i+1:]] = False  # idx starts at zero and this works
+            if False:
+                if size_0 > len(seg) - size_0 and len(segs) == 1:
+                    new_itip = itip
+                    new_seg = ~new_seg
+                    size_0 = len(seg) - size_0
+                idcs = np.argsort(self.Dchosen[new_itip, seg])
+                sorted_dists_from_new_tip = self.Dchosen[new_itip, seg][idcs]
+                i = np.argmax(np.diff(sorted_dists_from_new_tip))
+                if i <= size_0: new_seg[idcs[i+1:]] = False  # idx starts at zero and this works
             ssegs = [seg[new_seg], seg[~new_seg]]
             ssegs_tips = [[new_itip], []]
             sizes = [len(ssegs[0]), len(ssegs[1])]
@@ -573,10 +553,10 @@ class AGA(data_graph.DataGraph):
             tip_idx_max = np.argmax(dists)
             new_tip = new_tips.pop(tip_idx_max)
             dist_max = dists.pop(tip_idx_max)
-            for iclus, clus in enumerate(self.precomputed_clusters):
+            for iclus, clus in enumerate(self.clusters_precomputed):
                 if new_tip in set(clus):
                     new_seg = clus
-                    clus_name = self.precomputed_clusters_names[iclus]
+                    clus_name = self.clusters_precomputed_names[iclus]
                     break
             pos_new_seg = np.in1d(seg, new_seg, assume_unique=True)
             ssegs = [new_seg, seg[~pos_new_seg]]
@@ -591,10 +571,10 @@ class AGA(data_graph.DataGraph):
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
-        # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
-        # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
-        if self.precomputed_clusters is None:
+        if self.clusters_precomputed is None:
             iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
+            # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
+            # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
         else:
             iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
         trunk = 1
@@ -603,15 +583,15 @@ class AGA(data_graph.DataGraph):
         # insert trunk at same position
         segs.insert(iseg, ssegs[trunk])
         segs_tips.insert(iseg, ssegs_tips[trunk])
-        if self.precomputed_clusters_names:
-            iseg_name = ' '.join(np.setdiff1d(self.precomputed_clusters_names,
+        if self.clusters_precomputed_names:
+            iseg_name = ' '.join(np.setdiff1d(self.clusters_precomputed_names,
                                               [n for n in self.segs_names_original]
                                               + [clus_name]))
             self.segs_names_original[iseg] = iseg_name
         # append other segments
         segs += [seg for iseg, seg in enumerate(ssegs) if iseg != trunk]
         segs_tips += [seg_tips for iseg, seg_tips in enumerate(ssegs_tips) if iseg != trunk]
-        if self.precomputed_clusters_names: self.segs_names_original += [clus_name]
+        if self.clusters_precomputed_names: self.segs_names_original += [clus_name]
         # correct edges in adjacency matrix
         n_add = len(ssegs) - 1
         new_shape = (segs_distances.shape[0] + n_add, segs_distances.shape[1] + n_add)
@@ -666,10 +646,12 @@ class AGA(data_graph.DataGraph):
             # two first tips, given by Dseg[tips[:2]]
             # if we did not normalize, there would be a danger of simply
             # assigning the highest score to the longest segment
-            if 'bi' in self.flavor:
+            if 'bi' == self.flavor_develop:
                 score = Dseg[new_tips[0], new_tips[1]]
-            else:
+            elif 'tri' == self.flavor_develop:
                 score = dseg[new_tips[2]] / Dseg[new_tips[0], new_tips[1]] * len(seg)
+            else:
+                raise ValueError('unknown `self.flavor_develop`')
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
             # self.choose_largest_segment = False
             logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
@@ -806,7 +788,7 @@ class AGA(data_graph.DataGraph):
         median_distances = []
         measure_points_in_jseg = []
         measure_points_in_kseg = []
-        if self.attachedness_measure == 'd_single_pairwise':
+        if self.attachedness_measure == 'random_walk_based_approx':
             for kseg in kseg_list:
                 reference_point_in_kseg = segs_tips[kseg][0]
                 measure_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])])
@@ -817,7 +799,7 @@ class AGA(data_graph.DataGraph):
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
-        elif self.attachedness_measure == 'd_full_pairwise':
+        elif self.attachedness_measure == 'random_walk_based':
             for kseg in kseg_list:
                 closest_distance = 1e12
                 measure_point_in_jseg = 0
@@ -840,8 +822,8 @@ class AGA(data_graph.DataGraph):
                 median_distance = np.median(self.Dchosen[measure_point_in_kseg, segs[jseg]])
                 median_distances.append(median_distance)
                 logg.m('   ',
-                       jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
-                       kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
+                       jseg, '({})'.format(measure_points_in_jseg[-1]),
+                       kseg, '({})'.format(measure_points_in_kseg[-1]),
                        '->', distances[-1], median_distance, v=4)
         elif self.attachedness_measure == 'euclidian_distance_full_pairwise':
             for kseg in kseg_list:
@@ -862,7 +844,7 @@ class AGA(data_graph.DataGraph):
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
-        elif self.attachedness_measure == 'n_connecting_edges_brute_force':
+        elif self.attachedness_measure == 'connectedness_brute_force':
             # this is a very slow implementation!!
             segs_jseg = set(segs[jseg])
             for kseg in kseg_list:
@@ -911,15 +893,6 @@ class AGA(data_graph.DataGraph):
                         if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
                             del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
                         connectedness[not_trunk] += score
-                    # else:
-                    #     print('should not occur!')
-                    #     print('iseg is', kseg_list[trunk], 'and jseg is', jseg)
-                    #     print('jseg connect is', j_connects[j_connect], 'from', j_connect)
-                    #     print('point_connect is', point_connect, 'should be in', kseg_list[trunk])
-                    #     for i, seg in enumerate(segs):
-                    #         if point_connect in seg:
-                    #             print('but found point_connect in', i)
-                    #     raise ValueError('invalid state of algorithm')
         distances = [1/(1+c) for c in connectedness]
         logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
@@ -955,7 +928,7 @@ class AGA(data_graph.DataGraph):
         return distance
 
     def compute_tree_from_clusters(self):
-        segs = self.precomputed_clusters
+        segs = self.clusters_precomputed
         segs_tips = [[] for i in range(len(segs))]
         segs_adjacency = [[] for i in range(len(segs))]
         segs_distances = np.ones((len(segs), len(segs)))
@@ -1018,14 +991,14 @@ class AGA(data_graph.DataGraph):
                                       '(would produce cycle)', v=4)
         return segs, segs_tips, segs_distances, segs_adjacency
 
-    def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency, segs_adjacency_nodes,
-                         segs_distances, trunk):
+    def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
+                         segs_adjacency_nodes, segs_distances, trunk):
         prev_connecting_segments = segs_adjacency[iseg].copy()
         segs_adjacency += [[] for i in range(n_add)]
         segs_adjacency_nodes += [{} for i in range(n_add)]
         kseg_list = list(range(len(segs) - n_add, len(segs))) + [iseg]
         trunk = len(kseg_list) - 1
-        if self.attachedness_measure == 'n_connecting_edges':
+        if self.attachedness_measure == 'connectedness':
             jseg_list = [jseg for jseg in range(len(segs)) if jseg not in kseg_list]
             for jseg in jseg_list:
                 distances = self.trace_existing_connections(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk=trunk)
@@ -1038,7 +1011,7 @@ class AGA(data_graph.DataGraph):
         # logg.info('... treat existing connections')
         for jseg in prev_connecting_segments:
             median_distances = []
-            if self.attachedness_measure != 'n_connecting_edges':
+            if self.attachedness_measure != 'connectedness':
                 result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, median_distances, measure_points_in_jseg, measure_points_in_kseg = result
                 segs_distances[jseg, kseg_list] = distances
@@ -1069,7 +1042,7 @@ class AGA(data_graph.DataGraph):
         for kseg in kseg_list:
             jseg_list = [jseg for jseg in range(len(segs))
                          if jseg != kseg and jseg not in segs_adjacency[kseg]]  # prev_connecting_segments]  # if it's a cluster split, this is allowed?
-            if self.attachedness_measure != 'n_connecting_edges':
+            if self.attachedness_measure != 'connectedness':
                 result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, median_distances, measure_points_in_kseg, measure_points_in_jseg = result
                 segs_distances[kseg, jseg_list] = distances
@@ -1129,10 +1102,12 @@ class AGA(data_graph.DataGraph):
         ssegs_tips : list of np.ndarray
             List of tips of segments in ssegs.
         """
-        if 'tri' in self.flavor:
+        if 'tri' == self.flavor_develop:
             ssegs = self._do_split_single_wolf17_tri(Dseg, tips)
-        elif 'bi' in self.flavor:
+        elif 'bi' == self.flavor_develop:
             ssegs = self._do_split_single_wolf17_bi(Dseg, tips)
+        else:
+            raise ValueError('unknown `self.flavor_develop`')
         # make sure that each data point has a unique association with a segment
         masks = np.zeros((len(ssegs), Dseg.shape[0]), dtype=bool)
         for iseg, seg in enumerate(ssegs):

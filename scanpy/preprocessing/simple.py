@@ -17,9 +17,12 @@ from .. import settings as sett
 from .. import logging as logg
 
 
-def filter_cells(data, min_counts=None, min_genes=None, max_counts=None, max_genes=None, copy=False):
-    """Keep cells with at least `min_counts` UMI counts or `min_genes` genes
-    expressed.
+def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
+                 max_genes=None, copy=False):
+    """Filter outliers based on counts and number of genes expressed.
+
+    For instance, only keep cells with at least `min_counts` UMI counts or
+    `min_genes` genes expressed.
 
     Only provide one of the optional arguments per call.
 
@@ -41,8 +44,8 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None, max_gen
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
-    Notes
-    -----
+    Returns
+    -------
     If data is a data matrix X, the following to arrays are returned
         cell_subset : np.ndarray
             Boolean index mask that does filtering. True means that the cell is
@@ -129,11 +132,12 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
     return gene_subset, number_per_gene
 
 
-def filter_genes_dispersion(data, log=True,
+def filter_genes_dispersion(data,
+                            flavor='seurat',
                             min_disp=0.5, max_disp=None,
                             min_mean=0.0125, max_mean=3,
                             n_top_genes=None,
-                            flavor='seurat',
+                            log=True,
                             copy=False):
     """Extract highly variable genes.
 
@@ -146,33 +150,27 @@ def filter_genes_dispersion(data, log=True,
     ----------
     X : AnnData or array-like
         Data matrix storing unlogarithmized data.
-    log : bool
-        Use the logarithm of mean and variance.
+    flavor : {'seurat', 'cell_ranger'}
+        Choose method for computing normalized dispersion. Note that Seurat
+        passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=None : float
         Cutoffs for the gene expression, used if n_top_genes is None.
     n_top_genes : int or None (default: None)
         Number of highly-variable genes to keep.
-    flavor : {'seurat', 'cell_ranger'}
-        Choose method for computing normalized dispersion. Note that Seurat
-        passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
+    log : bool
+        Use the logarithm of mean and variance.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
-    Notes
-    -----
-    If an AnnData is passed and `copy` is True, the following is returned,
-    otherwise, the AnnData is updated:
-        adata : AnnData
-            Filtered AnnData object.
-        with the following fields to adata.var:
-            means : np.ndarray of shape n_genes
-                Means per gene.
-            dispersions : np.ndarray of shape n_genes
-                Dispersions per gene.
-            dispersions_norm : np.ndarray of shape n_genes
-                Dispersions per gene.
-    If a data matrix is passed, the information is returned as np.recarray with
-    the columns:
+    Returns
+    -------
+    If an AnnData `adata` is passed, returns or updates `adata` depending on
+    `copy`. It filters the adata object and adds the annotations
+        "means",  means per gene (adata.var)
+        "dispersions", dispersions per gene (adata.var)
+        "dispersions_norm", dispersions per gene (adata.var)
+    If a data matrix `X` is passed, the annotation is returned as np.recarray
+    with the columns:
         gene_subset, means, dispersions, dispersion_norm
     """
     if isinstance(data, AnnData):
@@ -280,7 +278,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 
 
 def log1p(data, copy=False):
-    """Apply logarithm to count data "plus 1".
+    """Apply logarithm to count data "+1", i.e., `adata.X+1`.
 
     Parameters
     ----------
@@ -355,8 +353,8 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
             and adata.smp['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
-            logg.m('... not recomputing PCA, using X_pca contained '
-                   'in adata (set `recompute` to avoid this)')
+            logg.info('    not recomputing PCA, using "X_pca" contained '
+                      'in `adata.smp` (set `recompute=True` to avoid this)')
             return adata
         else:
             logg.m('compute PCA with n_comps =', n_comps, r=True)
@@ -404,7 +402,8 @@ def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
         return X_pca
 
 
-def normalize_per_cell(data, counts_per_cell_after=None, copy=False, counts_per_cell=None):
+def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
+                       counts_per_cell=None):
     """Normalize each cell.
 
     Normalize each cell by UMI count, so that every cell has the same total
@@ -429,7 +428,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False, counts_per_
 
     Returns
     -------
-    None if inplace. Otherwise normalized version of the original data.
+    Returns or updates adata with normalized version of the original adata.X,
+    depending on `copy`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -454,10 +454,11 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False, counts_per_
     return X if copy else None
 
 
-def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
+def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
+                                            mult_with_mean=False):
     """Normalize each cell.
 
-    This is a legacy version. See `normalize_per_cell` instead.
+    This is a deprecated version. See `normalize_per_cell` instead.
 
     Normalize each cell by UMI count, so that every cell has the same total
     count.
@@ -498,7 +499,7 @@ def normalize_per_cell_weinreb16(X, max_fraction=1, mult_with_mean=False):
     return X_norm
 
 
-def regress_out(adata, smp_keys, n_jobs=None, copy=False):
+def regress_out(adata, keys, n_jobs=None, copy=False):
     """Regress out unwanted sources of variation.
 
     Yields a dense matrix.
@@ -507,14 +508,14 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
     ----------
     adata : AnnData
         The annotated data matrix.
-    smp_keys : str or list of strings
-        Sample annotation on which to regress on.
+    keys : str or list of strings
+        Keys for sample annotation on which to regress on.
     n_jobs : int
         Number of jobs for parallel computation.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
-    logg.m('regress out', smp_keys, r=True)
+    logg.m('regress out', keys, r=True)
     if issparse(adata.X):
         logg.m('... sparse input is densified and may '
                'lead to huge memory consumption')
@@ -522,27 +523,27 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
         logg.m('note that this is an inplace computation '
                'and will return None: set `copy=True` if you want a copy', v='hint')
     adata = adata.copy() if copy else adata
-    if isinstance(smp_keys, str): smp_keys = [smp_keys]
+    if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
         adata.X = adata.X.toarray()
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on categorical variable
-    if adata.smp[smp_keys[0]].dtype.char == np.dtype('U').char:
-        if len(smp_keys) > 1:
+    if adata.smp[keys[0]].dtype.char == np.dtype('U').char:
+        if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
         logg.m('... regressing on per-gene means within categories')
-        unique_categories = np.unique(adata.smp[smp_keys[0]])
+        unique_categories = np.unique(adata.smp[keys[0]])
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
-            mask = category == adata.smp[smp_keys[0]]
+            mask = category == adata.smp[keys[0]]
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
     else:
-        regressors = np.array([adata.smp[key] for key in smp_keys]).T
+        regressors = np.array([adata.smp[key] for key in keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
@@ -564,7 +565,8 @@ def regress_out(adata, smp_keys, n_jobs=None, copy=False):
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
     logg.m('finished', t=True)
-    logg.m('consider rescaling the data now', v='hint')
+    logg.m('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`',
+           v='hint')
     return adata if copy else None
 
 

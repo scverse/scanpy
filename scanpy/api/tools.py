@@ -16,6 +16,7 @@ from ..tools.tsne import tsne
 
 try:
     # development tools
+    from ..tools.draw_graph import draw_graph
     from ..tools.aga import aga
     from ..tools.aga import aga_contract_graph
 except ImportError:

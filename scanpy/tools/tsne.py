@@ -1,4 +1,3 @@
-# coding: utf-8
 # Author: F. Alex Wolf (http://falexwolf.de)
 """tSNE
 
@@ -18,13 +17,7 @@ from .. import logging as logg
 
 
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False):
-    u"""tSNE
-
-    Reference
-    ---------
-    L.J.P. van der Maaten and G.E. Hinton.
-    Visualizing High-Dimensional Data Using t-SNE.
-    Journal of Machine Learning Research 9(Nov):2579-2605, 2008.
+    """tSNE
 
     Parameters
     ----------
@@ -47,12 +40,16 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         Use the multicore implementation, if it is installed. Defaults to
         sett.n_jobs.
 
-    Notes
-    -----
-    X_tsne : np.ndarray of shape n_samples x 2
-        Array that stores the tSNE representation of the data. Analogous
-        to X_pca, X_diffmap and X_spring.
-    is added to adata.smp.
+    Returns
+    -------
+    Returns or updates adata depending on `copy` with
+        "X_tsne", tSNE coordinates of data (adata.smp)
+
+    Reference
+    ---------
+    L.J.P. van der Maaten and G.E. Hinton.
+    Visualizing High-Dimensional Data Using t-SNE.
+    Journal of Machine Learning Research 9(Nov):2579-2605, 2008.
     """
     logg.m('compute tSNE', r=True)
     adata = adata.copy() if copy else adata
@@ -105,5 +102,5 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     adata.smp['X_tsne'] = X_tsne
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
-           '    "X_tsne", the tSNE coordinates for X (adata.smp)')
+           '    "X_tsne", tSNE coordinates (adata.smp)')
     return adata if copy else None

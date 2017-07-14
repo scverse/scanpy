@@ -193,7 +193,7 @@ def scatter(adata,
         size = 120000 / n
 
     if legend_loc == 'on data' and legend_fontsize is None:
-        legend_fontsize = 6
+        legend_fontsize = rcParams['legend.fontsize']
     elif legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
 

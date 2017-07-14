@@ -1,6 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-Preprocessing recipes from the literature
+"""Preprocessing recipes from the literature
 """
 
 from .. import settings as sett
@@ -30,12 +29,11 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     ---------
     Weinreb et al., bioRxiv doi:10.1101/090332 (2016).
     """
-    sett.m(0, 'preprocess: weinreb16, X has shape n_samples x n_variables =',
-           adata.X.shape[0], 'x', adata.X.shape[1])
+    logg.warn('This is a deprecated preprocessing recipe only for backwards compatibility.')
     if copy: adata = adata.copy()
-    adata.X = pp.normalize_per_cell_weinreb16(adata.X,
-                                           max_fraction=0.05,
-                                           mult_with_mean=True)
+    adata.X = pp.normalize_per_cell_weinreb16_deprecated(adata.X,
+                                                         max_fraction=0.05,
+                                                         mult_with_mean=True)
     # filter out genes with mean expression < 0.1 and coefficient of variance <
     # cv_threshold
     gene_subset = pp.filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
@@ -52,12 +50,32 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
            X_pca.shape[0], 'x', X_pca.shape[1])
     return adata if copy else None
 
-# name for backwards compat
-weinreb16 = recipe_weinreb16
-
 
 def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=True, copy=False):
     """Normalization and filtering as of Zheng et al. (2017).
+
+    This reproduces the preprocessing of the reference below, at the time, the
+    Cell Ranger R Kit preprocessing of 10X Genomics.
+
+    Parameters
+    ----------
+    n_top_genes : int, optional (default: 1000)
+        Number of genes to keep.
+    zero_center : bool, optional (default: True)
+        Zero center the data matrix. Only switch this to False if you have
+        serious memory problems.
+    plot : bool, optional (default: True)
+        Show a plot of the gene dispersion vs. mean relation.
+
+    Returns
+    -------
+    Returns or updates adata depending on `copy` with
+         adata.X, storing the preprocessed data matrix
+
+    Reference
+    ---------
+    Zheng et al., Nature Communications 8, 14049 (2017)
+        https://doi.org/10.1038/ncomms14049.
     """
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count

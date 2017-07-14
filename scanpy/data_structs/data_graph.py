@@ -183,7 +183,7 @@ class DataGraph(object):
               and not recompute_pca
               and 'X_pca' in adata.smp
               and adata.smp['X_pca'].shape[1] >= self.n_pcs):
-            logg.m('    using X_pca for building graph')
+            logg.info('    using X_pca for building graph')
             if xroot is not None and xroot.size == adata.X.shape[1]:
                 self.X = adata.X
                 self.set_root(xroot)
@@ -211,8 +211,8 @@ class DataGraph(object):
                 self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
                 self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
                 np.set_printoptions(precision=3)
-                logg.info('    using stored "X_diffmap" with spectrum\n{}'
-                          .format(self.evals))
+                logg.info('    using stored "X_diffmap" with spectrum\n    {}'
+                          .format(str(self.evals).replace('\n', '\n    ')))
                 self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
                                     adata.smp['X_diffmap'][:, :n_dcs-1]]
                 self.lbasis = self.rbasis
@@ -707,7 +707,7 @@ class DataGraph(object):
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2, 'root found at machine prec')
                     break
-        logg.m('    setting root index to', self.iroot)
+        logg.m('    setting root index to', self.iroot, v=4)
         return self.iroot
 
     def _test_embed(self):

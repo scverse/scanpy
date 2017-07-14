@@ -13,7 +13,7 @@ def louvain(adata,
             n_neighbors=30,
             n_pcs=50,
             resolution=None,
-            flavor='vtraag',
+            flavor='igraph',
             directed=True,
             recompute_graph=False,
             n_jobs=None,
@@ -40,36 +40,55 @@ def louvain(adata,
     adata = adata.copy() if copy else adata
     import igraph as ig
     import louvain
-    if 'distance' not in adata.add or recompute_graph:
+    # if 'distance' not in adata.add or recompute_graph:
+    #     graph = data_structs.DataGraph(adata,
+    #                                    k=n_neighbors,
+    #                                    n_pcs=n_pcs,
+    #                                    n_jobs=n_jobs)
+    #     graph.compute_distance_matrix()
+    #     adata.add['distance'] = graph.Dsq
+    if 'Ktilde' not in adata.add or recompute_graph:
         graph = data_structs.DataGraph(adata,
                                        k=n_neighbors,
                                        n_pcs=n_pcs,
                                        n_jobs=n_jobs)
-        graph.compute_distance_matrix()
-        adata.add['distance'] = graph.Dsq
-    data = adata.add['distance']
-    sources, targets = data.nonzero()
-    weights = data[sources, targets]
-    weights = np.array(weights)[0]  # need to convert sparse matrix into a form appropriate for igraph
-    if flavor == 'igraph' and resolution is not None:
-        logg.warn('`resolution` parameter has no effect for flavor "igraph"')
-    if directed and flavor == 'igraph':
-        directed = False
-    if not directed: logg.info('    using the undirected graph')
-    g = ig.Graph(list(zip(sources, targets)), directed=directed, edge_attrs={'weight': weights})
-    if flavor == 'vtraag':
-        if resolution is None: resolution = 1
-        part = louvain.find_partition(g, method='RBConfiguration', resolution_parameter=resolution)
-    elif flavor == 'igraph':
-        part = g.community_multilevel()
+        graph.compute_transition_matrix()
+        adata.add['Ktilde'] = graph.Ktilde
+    adjacency = adata.add['Ktilde']
+    if flavor in {'vtraag', 'igraph'}:
+        sources, targets = adjacency.nonzero()
+        weights = adjacency[sources, targets]
+        weights = np.array(weights)[0]  # need to convert sparse matrix into a form appropriate for igraph
+        if flavor == 'igraph' and resolution is not None:
+            logg.warn('`resolution` parameter has no effect for flavor "igraph"')
+        if directed and flavor == 'igraph':
+            directed = False
+        if not directed: logg.info('    using the undirected graph')
+        g = ig.Graph(list(zip(sources, targets)), directed=directed, edge_attrs={'weight': weights})
+        if flavor == 'vtraag':
+            if resolution is None: resolution = 1
+            # part = louvain.find_partition(g, method='RBConfiguration',
+            #                               resolution_parameter=resolution)
+            part = louvain.find_partition(g, louvain.ModularityVertexPartition)
+                                          # resolution_parameter=resolution)
+        elif flavor == 'igraph':
+            part = g.community_multilevel()
+        groups = np.array(part.membership, dtype='U')
+    elif flavor == 'taynaud':
+        import networkx as nx
+        import community
+        g = nx.Graph(adata.add['distance'])
+        partition = community.best_partition(g)
+        groups = np.zeros(len(partition), dtype=int)
+        for k, v in partition.items(): groups[k] = v
+        groups = groups.astype('U')
     else:
-        raise ValueError('flavor needs to be "vrtraag" or "igraph"')
-    groups = np.array(part.membership, dtype='U')
+        raise ValueError('flavor needs to be "vtraag" or "igraph"')
     adata.smp['louvain_groups'] = groups
     from natsort import natsorted
     adata.add['louvain_groups_names'] = np.array(natsorted(np.unique(groups)))
     logg.m('    finished', t=True, end=' ')
-    logg.m('and found', len(part), 'clusters, added\n'
+    logg.m('and found', len(adata.add['louvain_groups_names']), 'clusters, added\n'
            '    "louvain_groups", the cluster labels (adata.smp)\n'
            '    "louvain_groups_names", the unique cluster labels (adata.add)')
     return adata if copy else None

@@ -14,14 +14,14 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 
 
-def identify_categories(adata, predicted, reference, normalization='reference',
-                        threshold=0.01, max_number=None):
+def identify_categories(adata, prediction, reference, normalization='reference',
+                        threshold=0.01, max_n_names=None):
     """Identify predicted categories with reference.
 
     Parameters
     ----------
     adata : AnnData
-    predicted : str
+    prediction : str
         smp_key of adata
     reference : str
         smp_key of adata
@@ -37,10 +37,10 @@ def identify_categories(adata, predicted, reference, normalization='reference',
     check_adata(adata)
     asso_names = []
     asso_matrix = []
-    for ipred_group, pred_group in enumerate(adata.add[predicted + '_names']):
+    for ipred_group, pred_group in enumerate(adata.add[prediction + '_names']):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
-        mask_pred = adata.smp[predicted] == pred_group
+        mask_pred = adata.smp[prediction] == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
         for ref_group in adata.add[reference + '_names']:
@@ -60,10 +60,12 @@ def identify_categories(adata, predicted, reference, normalization='reference',
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        asso_names += ['\n'.join([adata.add[reference + '_names'][i]
-                                 for i in np.argsort(asso_matrix[-1])[::-1]
-                                 if asso_matrix[-1][i] > threshold][:max_number])]
+        name_list_pred = [adata.add[reference + '_names'][i]
+                          for i in np.argsort(asso_matrix[-1])[::-1]
+                          if asso_matrix[-1][i] > threshold]
+        asso_names += ['\n'.join(name_list_pred[:max_n_names])]
     return asso_names, np.array(asso_matrix)
+
 
 def get_associated_colors(reference_colors, asso_matrix):
     asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
@@ -72,11 +74,11 @@ def get_associated_colors(reference_colors, asso_matrix):
     return asso_colors
 
 
-def plot_category_association(adata, predicted, reference, asso_matrix):
+def plot_category_association(adata, prediction, reference, asso_matrix):
     pl.figure(figsize=(5, 5))
     pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
     pl.xticks(range(len(adata.add[reference + '_names'])), adata.add[reference + '_names'], rotation='vertical')
-    pl.yticks(range(len(adata.add[predicted + '_names'])), adata.add[predicted + '_names'])
+    pl.yticks(range(len(adata.add[prediction + '_names'])), adata.add[prediction + '_names'])
     pl.colorbar()
 
 

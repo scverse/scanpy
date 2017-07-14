@@ -49,7 +49,7 @@ def draw_graph(adata,
     from .. import logging as logg
     from .. import data_structs
     adata = adata.copy() if copy else adata
-    logg.info('drawing single-cell graph')
+    logg.info('drawing single-cell graph using layout {}'.format(layout))
     if 'Ktilde' not in adata.add or recompute_graph:
         graph = data_structs.DataGraph(adata,
                                        k=n_neighbors,
