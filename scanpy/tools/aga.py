@@ -150,10 +150,11 @@ def aga(adata,
         adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
-    # vector of length n_groups
-    adata.add['aga_groups_names'] = np.array([str(n) for n in aga.segs_names_unique])
     # vector of length n_samples of group names
     adata.smp['aga_groups'] = aga.segs_names.astype('U')
+    # vectors of length n_groups
+    adata.add['aga_groups_names'] = np.array([str(n) for n in aga.segs_names_unique])
+    adata.add['aga_groups_sizes'] = aga.segs_sizes
     # the ordering according to groups and pseudotime
     adata.smp['aga_indices'] = aga.indices
     # the changepoints - marking different segments - in the ordering above
@@ -177,7 +178,8 @@ def aga(adata,
     if fresh_compute_louvain:
         adata.smp['louvain_groups'] = adata.smp['aga_groups']
         adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
-    adata.add['aga_attachedness'] = aga.segs_distances
+    adata.add['aga_distances'] = aga.segs_distances
+    adata.add['aga_attachedness'] = aga.segs_attachedness
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
               '    "aga_adjacency", adjacency matrix defining the abstracted graph (adata.add),\n'
@@ -378,11 +380,26 @@ class AGA(data_graph.DataGraph):
         self.segs_tips = segs_tips
         # self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
+        realized_distances = []
+        for i, neighbors in enumerate(segs_adjacency):
+            realized_distances += segs_distances[i][neighbors].tolist()
+
+        median_realized_distances = np.median(realized_distances)
+        self.segs_attachedness = np.zeros_like(segs_distances)
+        self.segs_attachedness[segs_distances <= median_realized_distances] = 1
+        self.segs_attachedness[segs_distances > median_realized_distances] = (
+            np.exp(-(segs_distances-median_realized_distances)/median_realized_distances)
+            [segs_distances > median_realized_distances])
+        self.segs_distances = segs_distances
+
+        minimal_realized_attachedness = 0.2
         self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         for i, neighbors in enumerate(segs_adjacency):
-            self.segs_adjacency[i, neighbors] = segs_distances[i][neighbors]
+            clipped_attachedness = self.segs_attachedness[i][neighbors]
+            clipped_attachedness[clipped_attachedness < minimal_realized_attachedness] = minimal_realized_attachedness
+            self.segs_adjacency[i, neighbors] = clipped_attachedness
+            self.segs_attachedness[i, neighbors] = clipped_attachedness
         self.segs_adjacency = self.segs_adjacency.tocsr()
-        self.segs_distances = segs_distances
 
     def do_split_constrained(self, segs, segs_tips,
                              segs_adjacency,
@@ -669,7 +686,9 @@ class AGA(data_graph.DataGraph):
         """Convert the format of the segment class members."""
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
+        self.segs_sizes = []
         for iseg, seg in enumerate(self.segs):
+            self.segs_sizes.append(len(seg))
             mask = np.zeros(self.X.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask

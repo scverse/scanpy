@@ -531,20 +531,20 @@ def aga_scatter(
     return ax
 
 def aga_attachedness(adata):
-    segs_distances = adata.add['aga_attachedness']
-    segs_adjacency = adata.add['aga_adjacency']
-    matrix(np.log1p(segs_distances), show=False)
-    for i in range(segs_adjacency.shape[0]):
-        neighbors = segs_adjacency[i].nonzero()[1]
+    attachedness = adata.add['aga_attachedness']
+    adjacency = adata.add['aga_adjacency']
+    matrix(attachedness, show=False)
+    for i in range(adjacency.shape[0]):
+        neighbors = adjacency[i].nonzero()[1]
         pl.scatter([i for j in neighbors], neighbors, color='green')
     pl.show()
     # pl.figure()
-    # for i, ds in enumerate(segs_distances):
+    # for i, ds in enumerate(attachedness):
     #     ds = np.log1p(ds)
     #     x = [i for j, d in enumerate(ds) if i != j]
     #     y = [d for j, d in enumerate(ds) if i != j]
     #     pl.scatter(x, y, color='gray')
-    #     neighbors = segs_adjacency[i]
+    #     neighbors = adjacency[i]
     #     pl.scatter([i for j in neighbors],
     #                ds[neighbors], color='green')
     # pl.show()
@@ -593,7 +593,9 @@ def _aga_tree_single_color(
         node_size=1,
         ext='pdf',
         ax=None,
+        draw_edge_labels=False,
         show=None):
+    from .. import logging as logg
     from matplotlib import rcParams
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
@@ -601,6 +603,8 @@ def _aga_tree_single_color(
         names = adata.add['aga_groups_names_original']
     elif names in adata.smp_keys():
         names = adata.add[names + '_names']
+    elif names is None:
+        names = adata.add['aga_groups_names']
     # plot the tree
     if isinstance(adata, nx.Graph):
         G = adata
@@ -611,17 +615,22 @@ def _aga_tree_single_color(
                 or len(adata.add['aga_groups_names']) != len(adata.add['aga_groups_colors'])):
                 utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
             colors = adata.add['aga_groups_colors']
-        else: colors = colors
-        if names is None:
-            names = {i: n for i, n in enumerate(adata.add['aga_groups_names'])}
         for iname, name in enumerate(adata.add['aga_groups_names']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
         G = nx.Graph(adata.add['aga_adjacency'])
     try:
         pos = utils.hierarchy_pos(G, root)
+        pos_array = np.array([pos[n] for count, n in enumerate(G)])
+        pos_y_scale = np.max(pos_array[:, 1]) - np.min(pos_array[:, 1])
+        np.random.seed(0)
+        pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
+               for n in pos.keys()}
+    # print(pos)
+    # print(0.01*np.random.random((adata.add['aga_adjacency'].shape[0], 2)))
+    # pos += 0.01*np.random.random((adata.add['aga_adjacency'].shape[0], 2))
     except Exception:
         pos = nx.spring_layout(G)
-        logg.warn('could not draw tree, using spring layout')
+        logg.warn('could not draw tree layout, now using fruchterman-reingold layout')
     if len(pos) == 1: pos[0] = 0.5, 0.5
     ax_was_none = False
     if ax is None:
@@ -629,13 +638,19 @@ def _aga_tree_single_color(
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
         ax_was_none = True
     # edge widths
-    widths = 1. / (1 + 10*np.array([x[-1]['weight'] for x in G.edges(data=True)]))
-    widths *= 2*rcParams['lines.linewidth'] / np.max(widths)
-    nx.draw_networkx_edges(G, pos, ax=ax, width=widths)
-    edge_labels = {}
-    for n1, n2, label in G.edges(data=True):
-        edge_labels[(n1, n2)] = '{:.3f}'.format(1. / (1 + 10*label['weight']))
-    # nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
+    G = nx.Graph(adata.add['aga_attachedness'])
+    widths = [1.5*rcParams['lines.linewidth']*x[-1]['weight'] for x in G.edges(data=True)]
+    nx.draw_networkx_edges(G, pos, ax=ax, width=widths, edge_color='grey',
+                           style='dashed', alpha=0.7)
+    G = nx.Graph(adata.add['aga_adjacency'])
+    widths = [1.5*rcParams['lines.linewidth']*x[-1]['weight'] for x in G.edges(data=True)]
+    nx.draw_networkx_edges(G, pos, ax=ax, width=widths, edge_color='black')
+    # labels
+    if draw_edge_labels:
+        edge_labels = {}
+        for n1, n2, label in G.edges(data=True):
+            edge_labels[(n1, n2)] = '{:.3f}'.format(1. / (1 + 10*label['weight']))
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
     bbox = ax.get_position().get_points()
     ax_x_min = bbox[0, 0]
@@ -644,33 +659,34 @@ def _aga_tree_single_color(
     ax_y_max = bbox[1, 1]
     ax_len_x = ax_x_max - ax_x_min
     ax_len_y = ax_y_max - ax_y_min
-    # trans2 = fig.transFigure.inverted().transform
     trans2 = ax.transAxes.inverted().transform
     ax.set_frame_on(False)
     ax.set_xticks([])
     ax.set_yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
-    p2 = piesize/2.0
-    for n_cnt, n in enumerate(G):
+    base_pie_size = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
+    median_group_size = np.median(adata.add['aga_groups_sizes'])
+    for count, n in enumerate(G):
+        pie_size = base_pie_size
+        pie_size *= np.sqrt(adata.add['aga_groups_sizes'][count] / median_group_size)
         xx, yy = trans(pos[n])     # data coordinates
         xa, ya = trans2((xx, yy))  # axis coordinates
-        xa = ax_x_min + (xa - p2) * ax_len_x
-        ya = ax_y_min + (ya - p2) * ax_len_y
-        a = pl.axes([xa, ya, piesize * ax_len_x, piesize * ax_len_y])
-        if is_color_like(colors[n_cnt]):
+        xa = ax_x_min + (xa - pie_size/2) * ax_len_x
+        ya = ax_y_min + (ya - pie_size/2) * ax_len_y
+        a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
+        if is_color_like(colors[count]):
             fracs = [100]
-            color = [colors[n_cnt]]
+            color = [colors[count]]
         else:
-            color = colors[n_cnt].keys()
-            fracs = [colors[n_cnt][c] for c in color]
+            color = colors[count].keys()
+            fracs = [colors[count][c] for c in color]
             if sum(fracs) < 1:
                 color = list(color)
                 color.append('grey')
                 fracs.append(1-sum(fracs))
-                # names[n_cnt] += '\n?'
+                # names[count] += '\n?'
         a.pie(fracs, colors=color)
         if names is not None:
-            a.text(0.5, 0.5, names[n_cnt],
+            a.text(0.5, 0.5, names[count],
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
@@ -780,7 +796,6 @@ def dpt(
         right_margin=None,
         size=None,
         title=None,
-        show_tree=False,
         show=None):
     """Plot results of DPT analysis.
 
@@ -842,7 +857,6 @@ def dpt(
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    if 'dpt_groups' in colors and show_tree: dpt_tree(adata, show=False)
     dpt_timeseries(adata, cmap=cmap, show=show)
 
 
@@ -902,7 +916,7 @@ def dpt_scatter(
                       comps=comps,
                       cont=cont,
                       layout=layout,
-                                legend_loc=legend_loc,
+                      legend_loc=legend_loc,
        legend_fontsize=legend_fontsize,
                       cmap=cmap,
                       pal=pal,
@@ -914,61 +928,6 @@ def dpt_scatter(
         if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
-
-
-def dpt_tree(adata, root=0, colors=None, names=None, show=None, fontsize=None):
-    # plot the tree
-    if isinstance(adata, nx.Graph):
-        G = adata
-        colors = ['grey' for n in enumerate(G)]
-    else:
-        if colors is None:
-            if ('dpt_groups_colors' not in adata.add
-                or len(adata.add['dpt_groups_names']) != len(adata.add['dpt_groups_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, 'dpt_groups')
-            colors = adata.add['dpt_groups_colors']
-        else: colors = colors
-        if names is None:
-            names = {i: n for i, n in enumerate(adata.add['dpt_groups_names'])}
-        for iname, name in enumerate(adata.add['dpt_groups_names']):
-            if name in sett._ignore_categories: colors[iname] = 'grey'
-        G = nx.Graph(adata.add['dpt_groups_adjacency'])
-    pos = utils.hierarchy_pos(G, root)
-    # pos = nx.spring_layout(G)
-    if len(pos) == 1: pos[0] = 0.5, 0.5
-    fig = pl.figure()
-    ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
-    labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edges(G, pos, ax=ax)  #, edge_labels=labels)
-    trans = ax.transData.transform
-    trans2 = fig.transFigure.inverted().transform
-    pl.xticks([])
-    pl.yticks([])
-    piesize = 1/(np.sqrt(G.number_of_nodes()) + 10)
-    p2 = piesize/2.0
-    for n_cnt, n in enumerate(G):
-        xx, yy = trans(pos[n])     # figure coordinates
-        xa, ya = trans2((xx, yy))  # normalized coordinates
-        a = pl.axes([xa-p2, ya-p2, piesize, piesize])
-        if is_color_like(colors[n_cnt]):
-            fracs = [100]
-            color = [colors[n_cnt]]
-        else:
-            color = colors[n_cnt].keys()
-            fracs = [colors[n_cnt][c] for c in color]
-            if sum(fracs) < 1:
-                color = list(color)
-                color.append('grey')
-                fracs.append(1-sum(fracs))
-                names[n_cnt] += '\n?'
-        a.pie(fracs, colors=color)
-        if names is not None:
-            a.text(0.5, 0.5, names[n_cnt],
-                   verticalalignment='center',
-                   horizontalalignment='center',
-                   transform=a.transAxes, size=fontsize)
-    savefig_or_show('dpt_tree', show)
-    return ax
 
 
 def dpt_timeseries(adata, cmap=None, show=None):

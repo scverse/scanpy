@@ -14,7 +14,8 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 
 
-def identify_categories(adata, prediction, reference, normalization='reference',
+def identify_categories(adata, prediction, reference,
+                        normalization='prediction',
                         threshold=0.01, max_n_names=None):
     """Identify predicted categories with reference.
 
