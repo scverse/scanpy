@@ -13,7 +13,7 @@ def louvain(adata,
             n_neighbors=30,
             n_pcs=50,
             resolution=None,
-            flavor='igraph',
+            flavor='vtraag',
             directed=True,
             recompute_graph=False,
             n_jobs=None,
@@ -39,7 +39,6 @@ def louvain(adata,
     logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
     import igraph as ig
-    import louvain
     # if 'distance' not in adata.add or recompute_graph:
     #     graph = data_structs.DataGraph(adata,
     #                                    k=n_neighbors,
@@ -64,17 +63,31 @@ def louvain(adata,
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.info('    using the undirected graph')
-        g = ig.Graph(list(zip(sources, targets)), directed=directed, edge_attrs={'weight': weights})
+        g = ig.Graph(list(zip(sources, targets)),
+                     directed=directed,
+                     edge_attrs={'weight': weights})
         if flavor == 'vtraag':
+            import louvain
             if resolution is None: resolution = 1
-            # part = louvain.find_partition(g, method='RBConfiguration',
-            #                               resolution_parameter=resolution)
-            part = louvain.find_partition(g, louvain.ModularityVertexPartition)
-                                          # resolution_parameter=resolution)
+            try:
+                louvain.set_rng_seed(0)
+                part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
+                                              resolution_parameter=resolution)
+            except AttributeError:
+                logg.warn('Did not find louvain package >= 0.6.0 on your system, '
+                          'the result will therefore not be 100% reproducible, but '
+                          'is influenced by randomness in the community detection '
+                          'algorithm. If not yet available via "pip install louvain", '
+                          'either get the, presumably development version, from '
+                          'https://github.com/vtraag/louvain-igraph or use the option'
+                          '`flavor=igraph`, which does not a `resolution` parameter, though.')
+                part = louvain.find_partition(g, method='RBConfiguration',
+                                              resolution_parameter=resolution)
         elif flavor == 'igraph':
             part = g.community_multilevel()
         groups = np.array(part.membership, dtype='U')
     elif flavor == 'taynaud':
+        # this is deprecated
         import networkx as nx
         import community
         g = nx.Graph(adata.add['distance'])

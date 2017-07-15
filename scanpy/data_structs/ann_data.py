@@ -569,10 +569,11 @@ class AnnData(IndexMixin):
         def name_idx(i):
             if isinstance(i, str):
                 # `where` returns an 1-tuple (1D array) of found indices
-                i = np.where(names == i)[0][0]
-                if i is None:
-                    raise IndexError('Index {} not in smp_names/var_names'
+                i = np.where(names == i)[0]
+                if len(i) == 0:  # returns array of length 0 if nothing is found
+                    raise IndexError('Name "{}" is not valid variable or sample index.'
                                      .format(index))
+                i = i[0]
             return i
 
         if isinstance(index, slice):

@@ -48,6 +48,9 @@ def draw_graph(adata,
     import igraph as ig
     from .. import logging as logg
     from .. import data_structs
+    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'tree'}
+    if layout not in avail_layouts:
+        raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
     logg.info('drawing single-cell graph using layout "{}"'.format(layout))
     if 'Ktilde' not in adata.add or recompute_graph:
@@ -70,8 +73,11 @@ def draw_graph(adata,
                              seed=init_coords)
     else:
         ig_layout = g.layout(layout)
-    adata.smp['X_draw_graph'] = np.array(ig_layout.coords)
-    adata.add['draw_graph_layout'] = layout
+    if 'draw_graph_layout' in adata.add:
+        adata.add['draw_graph_layout'] = list(adata.add['draw_graph_layout']) + [layout]
+    else:
+        adata.add['draw_graph_layout'] = [layout]
+    adata.smp['X_draw_graph_' + layout] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "X_draw_graph", graph_drawing coordinates (adata.smp)\n'

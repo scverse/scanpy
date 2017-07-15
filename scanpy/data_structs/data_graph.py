@@ -145,7 +145,8 @@ class DataGraph(object):
     """Represent data matrix as graph of closeby data points.
     """
 
-    def __init__(self, adata_or_X,
+    def __init__(self,
+                 adata_or_X,
                  k=30,
                  knn=True,
                  n_jobs=None,
@@ -154,8 +155,9 @@ class DataGraph(object):
                  recompute_pca=None,
                  recompute_diffmap=None,
                  flavor='haghverdi16'):
-        logg.info('initializing data graph')
-        self.k = k
+        logg.info('initializing data graph with `n_neighbors={}`'
+                  .format(k))
+        self.k = k if k is not None else 30
         self.knn = knn
         self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
         self.n_pcs = n_pcs

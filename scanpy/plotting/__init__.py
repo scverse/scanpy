@@ -19,6 +19,7 @@ from .toplevel import savefig, savefig_or_show
 from .preprocessing import filter_genes_dispersion
 from . import utils
 from .. import settings as sett
+from .. import logging as logg
 
 utils.init_plotting_params()
 
@@ -205,11 +206,11 @@ def diffmap(
 
 def draw_graph(
         adata,
+        layout=None,
         color=None,
         names=None,
         comps=None,
         cont=None,
-        layout='2d',
         legend_loc='right margin',
         legend_fontsize=None,
         cmap=None,
@@ -224,6 +225,9 @@ def draw_graph(
     ----------
     adata : AnnData
         Annotated data matrix.
+    layout : {'fr', 'drl', ...}, optional (default: last computed)
+        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
+        the last computed layout is taken.
     color : string or list of strings, optional (default: first annotation)
         Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
@@ -235,8 +239,6 @@ def draw_graph(
          String in the form '1,2,3'.
     cont : bool, None (default: None)
         Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -257,14 +259,18 @@ def draw_graph(
     """
     from ..examples import check_adata
     adata = check_adata(adata)
+    if layout is None: layout = adata.add['draw_graph_layout'][-1]
+    if 'X_draw_graph_' + layout not in adata.smp_keys():
+        raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
+                         .format('draw_graph_' + layout, layout))
     axs = scatter(
         adata,
-        basis='draw_graph',
+        basis='draw_graph_' + layout,
         color=color,
         names=names,
         comps=comps,
         cont=cont,
-        layout=layout,
+        layout='2d',
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         cmap=cmap,
@@ -730,20 +736,26 @@ def aga_timeseries(
         ax.transData, ax.transAxes)
     for ikey, key in enumerate(keys):
         x = []
+        x_tick_locs = []
         for igroup, group in enumerate(nodes):
-            if ikey == 0:
-                if len(orig_node_names) > 0 and group not in orig_node_names:
-                    label = orig_node_names[int(group)]
-                else:
-                    label = group
-                pl.text(len(x), -0.05*(igroup+1), label, transform=trans)
+            if ikey == 0: x_tick_locs.append(len(x))
             idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
             idcs_group = np.argsort(adata.smp['aga_pseudotime'][adata.smp['aga_groups'] == str(group)])
             idcs = idcs[idcs_group]
             if key in adata.smp_keys(): x += list(adata.smp[key][idcs])
             else: x += list(adata[:, key].X[idcs])
-        if n_avg > 1: x = moving_average(x)
+        if n_avg > 1:
+            old_len_x = len(x)
+            x = moving_average(x)
+            x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
         pl.plot(x[xlim[0]:xlim[1]], label=key)
+        if ikey == 0:
+            for igroup, group in enumerate(nodes):
+                if len(orig_node_names) > 0 and group not in orig_node_names:
+                    label = orig_node_names[int(group)]
+                else:
+                    label = group
+                pl.text(x_tick_locs[igroup], -0.05*(igroup+1), label, transform=trans)
     pl.legend(frameon=False, loc='center left',
               bbox_to_anchor=(-left_margin, 0.5),
               fontsize=legend_fontsize)
@@ -763,6 +775,7 @@ def aga_timeseries(
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
         pl.ylabel(label)
+        utils.pimp_axis(pl.gca().get_yaxis())
     if show is None and not ax_was_none: show = False
     else: show = sett.autoshow if show is None else show
     savefig_or_show('aga_timeseries', show)

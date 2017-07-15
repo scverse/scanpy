@@ -50,15 +50,15 @@ def aga(adata,
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
             `diffmap`). Will be used if option `recompute_diffmap` is False.
-    node_groups : any categorical sample annotation or {'louvain', 'hierarch'}, optional (default: 'louvain')
+    node_groups : any categorical sample annotation or {'louvain', 'segments'}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
         graph/data. 'louvain' uses the louvain algorithm and optimizes
-        modularity of the graph, 'hierarch' uses a bipartioning
+        modularity of the graph, 'segments' uses a bipartioning
         criterium that is loosely inspired by hierarchical clustering. You can
         also pass your predefined groups by choosing any sample annotation.
     n_nodes : int or None, optional (default: None)
         Number of nodes in the abstracted graph. Except when choosing
-        'hierarch' for `node_groups`, for which `n_nodes` defaults to
+        'segments' for `node_groups`, for which `n_nodes` defaults to
         `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
         choice of `node_groups`.
     n_neighbors : int or None, optional (default: None)
@@ -163,7 +163,7 @@ def aga(adata,
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
     adata.add['aga_adjacency'] = aga.segs_adjacency
-    if (clusters not in {'hierarch', 'unconstrained_hierarch'}
+    if (clusters not in {'segments', 'unconstrained_segments'}
         and not fresh_compute_louvain):
         adata.add['aga_groups_original'] = clusters
         adata.add['aga_groups_names_original'] = np.array(aga.segs_names_original)
@@ -279,10 +279,10 @@ class AGA(data_graph.DataGraph):
         self.clusters_precomputed = None
         self.clusters_precomputed_names = None
         self.flavor_develop = 'bi'  # bipartitioning
-        if clusters not in {'hierarch', 'unconstrained_hierarch'}:
+        if clusters not in {'segments', 'unconstrained_segments'}:
             if clusters not in adata.smp_keys():
                 raise ValueError('Did not find {} in adata.smp_keys()! '
-                                 'If you do not have any precomputed clusters, pass "hierarch" for "node_groups" instead'
+                                 'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
                                  .format(clusters))
             clusters = adata.smp[clusters]
             # transform to a list of index arrays
@@ -355,7 +355,7 @@ class AGA(data_graph.DataGraph):
         # logg.info('    do not consider groups with less than {} points for splitting'
         #           .format(self.min_group_size))
         for ibranch in range(self.n_splits):
-            if self.clusters == 'unconstrained_hierarch':
+            if self.clusters == 'unconstrained_segments':
                 iseg, new_tips = self.select_segment(segs, segs_tips, segs_undecided)
                 if iseg == -1:
                     logg.info('... partitioning converged')

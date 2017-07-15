@@ -210,7 +210,7 @@ def scatter(adata,
         pals[i] = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
-                      else adata.add['draw_graph_layout'].upper() if basis == 'draw_graph'
+                      else basis.split('_')[-1].upper() if 'draw_graph' in basis
                       else 'tSNE' if basis == 'tsne'
                       else 'PC' if basis == 'pca'
                       else 'Spring' if basis == 'spring'
