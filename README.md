@@ -45,7 +45,7 @@ Scanpy user functions are grouped into the following modules
 * [`sc.tools`](scanpy/tools) - Machine Learning and statistics tools. Abbreviation `sc.tl`.
 * [`sc.preprocessing`](scanpy/preprocessing) - Preprocessing. Abbreviation `sc.pp`.
 * [`sc.plotting`](scanpy/plotting) - Plotting. Abbreviation `sc.pl`.
-* [`sc.settings`](scanpy/settings.py) - Settings. Abbreviation `sc.sett`.
+* [`sc.settings`](scanpy/settings.py) - Settings.
 
 #### Preprocessing
 
@@ -94,21 +94,27 @@ where `adata` is an `AnnData` object and  `params` is a dictionary that stores o
 adata_copy = sc.tl.tool(adata, copy=True, **params)
 ```
 
-#### AnnData objects
-
-Instantiate `AnnData` via
-```
-adata = sc.AnnData(X[, smp][, var][, add])
-```
-The instance `adata` stores *X* as `adata.X` and sample annotation as `adata.smp`, variable annotation as `adata.var` and additional unstructured annotation as `adata.add`. While `adata.X` is array-like and `adata.add` is a conventional dictionary, `adata.smp` and  `adata.var` are instances of a low-level Pandas dataframe-like class.  Values can be retrieved and appended via `adata.smp['foo_key']` and `adata.var['bar_key']`. Sample and variable names can be accessed via `adata.smp_names` and `adata.var_names`, respectively. AnnData objects can be sliced like Pandas dataframes, for example, `adata = adata[:, list_of_gene_names]`. The AnnData class is similar to R's ExpressionSet ([Huber *et al.*, 2015](https://doi.org/10.1038/nmeth.3252)); the latter though is not implemented for sparse data.
-
 #### Reading and writing data files and AnnData objects
 
-Instead of invoking the explicit constructor, one usually calls
+One usually calls
 ```
 adata = sc.read(filename)
 ```
-to initialize an AnnData object, and `sc.write(filename, adata)` to write it back to a file. Reading foresees filenames with extensions *h5*,  *xlsx*,  *mtx*,  *txt*, *csv* and others. Writing foresees writing *h5*,  *csv* and *txt*. Scanpy is smart about file storage and extensions. Instead of providing a full filename, you can provide *filekeys*. By default, Scanpy writes to `./write/filekey.h5`, an *hdf5* file, which is configurable by setting `sc.sett.writedir` and `sc.sett.file_format_data`.
+to initialize an AnnData object, possibly adds further annotation, e.g. by,
+```
+annotation = np.genfromtxt(filename_annotation)
+adata.smp['cell_groups'] = annotation[:, 2]  # categorical annotation of type str
+adata.smp['time'] = annotation[:, 3]         # numerical annotation of type float
+```
+and uses
+```
+sc.write(filename, adata)
+```
+to save the `adata` to a file. Reading foresees filenames with extensions *h5*,  *xlsx*,  *mtx*,  *txt*, *csv* and others. Writing foresees writing *h5*,  *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension. By default, Scanpy writes to `./write/filekey.h5`, an *hdf5* file, which is configurable by setting `sc.settings.writedir` and `sc.settings.file_format_data`.
+
+#### AnnData objects
+
+An `AnnData` instance stores an array-like data matrix as `adata.X`, dict-like sample annotation as `adata.smp`, dict-like variable annotation as `adata.var` and additional unstructured dict-like annotation as `adata.add`. While `adata.add` is a conventional dictionary, `adata.smp` and  `adata.var` are instances of a low-level Pandas dataframe-like class.  Values can be retrieved and appended via `adata.smp[key]` and `adata.var[key]`. Sample and variable names can be accessed via `adata.smp_names` and `adata.var_names`, respectively. AnnData objects can be sliced like Pandas dataframes, for example, `adata = adata[:, list_of_gene_names]`. The AnnData class is similar to R's ExpressionSet ([Huber *et al.*, 2015](https://doi.org/10.1038/nmeth.3252)); the latter though is not implemented for sparse data.
 
 #### Plotting
 
@@ -116,8 +122,8 @@ For each tool, there is an associated plotting function
 ```
 sc.pl.tool(adata)
 ```
-that retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To not display figures interactively but save all plots to default locations, you can set `sc.sett.savefigs = True`.
-By default, figures are saved as *png* to `./figs/`. Reset `sc.sett.file_format_figs` and `sc.sett.figdir` if you want to change this. Scanpy's plotting module can be seen similar to [Seaborn](http://seaborn.pydata.org/): an extension of [matplotlib](http://matplotlib.org/) that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via  matplotlib functions, which is easy as Scanpy's plotting functions usually return a `Matplotlib.Axes` object.
+that retrieves and plots the elements of `adata` that were previously written by `sc.tl.tool(adata)`. To not display figures interactively but save all plots to default locations, you can set `sc.settings.savefigs = True`.
+By default, figures are saved `./figs/`. Reset `sc.settings.file_format_figs` and `sc.settings.figdir` if you want to change this. Scanpy's plotting module follows a similar as [Seaborn](http://seaborn.pydata.org/): extending [matplotlib](http://matplotlib.org/) to enable certain complicated visualizations with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions take and return `Matplotlib.Axes` objects.
 
 ### Visualization
 
