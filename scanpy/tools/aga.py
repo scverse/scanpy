@@ -491,10 +491,6 @@ class AGA(data_graph.DataGraph):
             third_itip = third_tips[iseg]
             seg = segs[iseg]
             logg.m('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
-            # this should not be done when bipartitioning
-            # new_seg = np.logical_and(self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg],
-            #                          self.Dchosen[new_itip, seg] < self.Dchosen[third_itip, seg])
-            # instead, we have to do the following
             new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
             size_0 = np.sum(new_seg)
             if False:
@@ -864,14 +860,12 @@ class AGA(data_graph.DataGraph):
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
         elif self.attachedness_measure == 'connectedness_brute_force':
-            # this is a very slow implementation!!
             segs_jseg = set(segs[jseg])
             for kseg in kseg_list:
                 connectedness = 0
                 for reference_point_in_kseg in segs[kseg]:
                     for j in self.Ktilde[reference_point_in_kseg].nonzero()[1]:
                         if j in segs_jseg:
-                            # print(reference_point_in_kseg, j, end=' | ')
                             connectedness += 1
                 distances.append(1./(connectedness+1))
             logg.m(' ', jseg, '-', kseg_list, '->', distances, v=4)

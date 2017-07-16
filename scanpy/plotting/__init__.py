@@ -453,6 +453,7 @@ def aga(
         right_margin=None,
         size=None,
         title=None,
+        plot_full_attachedness=False,
         show=None):
     """Summary figure for approximate graph abstraction.
 
@@ -467,7 +468,9 @@ def aga(
                 ax=axs[0],
                 show=False)
     axs[1].set_frame_on(False)
-    aga_tree(adata, root=root, fontsize=fontsize, ax=axs[1], show=False)
+    aga_tree(adata, root=root, fontsize=fontsize, ax=axs[1],
+             plot_full_attachedness=plot_full_attachedness,
+             show=False)
     show = sett.autoshow if show is None else show
     savefig_or_show('aga', show=show)
 
@@ -559,7 +562,7 @@ def aga_attachedness(adata):
 def aga_tree(
         adata,
         root=0,
-        layout='simple',
+        layout=None,
         colors=None,
         names=None,
         fontsize=None,
@@ -568,6 +571,7 @@ def aga_tree(
         edge_width=1,
         ext='png',
         add_noise_to_node_positions=None,
+        plot_full_attachedness=False,
         ax=None,
         show=None):
     """Plot the abstracted tree.
@@ -603,6 +607,7 @@ def aga_tree(
             node_size=node_size,
             node_size_power=node_size_power,
             edge_width=edge_width,
+            plot_full_attachedness=plot_full_attachedness,
             ext=ext,
             ax=axs[icolor],
             add_noise_to_node_positions=add_noise_to_node_positions)
@@ -623,8 +628,9 @@ def _aga_tree_single(
         edge_width=1,
         ext='pdf',
         ax=None,
-        layout='rt',
+        layout=None,
         add_noise_to_node_positions=None,
+        plot_full_attachedness=False,
         draw_edge_labels=False):
     from .. import logging as logg
     from matplotlib import rcParams
@@ -653,8 +659,8 @@ def _aga_tree_single(
             if name in sett._ignore_categories: colors[iname] = 'grey'
         nx_g = nx.Graph(adata.add['aga_adjacency'])
     # node positions
-#     try:
-    if True:
+    if not plot_full_attachedness:
+        if layout is None: layout = 'simple'
         if layout == 'simple':
             pos = utils.hierarchy_pos(nx_g, root)
         else:
@@ -668,9 +674,15 @@ def _aga_tree_single(
             np.random.seed(0)
             pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
                    for n in pos.keys()}
-    # except Exception:
-    #     pos = nx.spring_layout(nx_g)
-    #     logg.warn('could not draw tree layout, now using fruchterman-reingold layout')
+    else:
+        from .. import utils as sc_utils
+        if layout is None: layout = 'fr'
+        g = sc_utils.get_igraph_from_adjacency(adata.add['aga_attachedness'])
+        if 'rt' in layout:
+            pos_list = g.layout(layout, root=[root]).coords
+        else:
+            pos_list = g.layout(layout).coords
+        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
     if len(pos) == 1: pos[0] = 0.5, 0.5
     if ax is None:
         fig = pl.figure()
@@ -680,11 +692,14 @@ def _aga_tree_single(
     if 'aga_attachedness' in adata.add:
         nx_g = nx.Graph(adata.add['aga_attachedness'])
         widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
-        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='grey',
-                               style='dashed', alpha=0.5)
-        nx_g = nx.Graph(adata.add['aga_adjacency'])
-        widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
-        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
+        if not plot_full_attachedness:
+            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='grey',
+                                   style='dashed', alpha=0.5)
+            nx_g = nx.Graph(adata.add['aga_adjacency'])
+            widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
+            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
+        else:
+            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
     else:
         widths = [base_edge_width for x in nx_g.edges()]
         nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')

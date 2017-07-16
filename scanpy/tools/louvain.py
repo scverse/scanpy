@@ -20,8 +20,11 @@ def louvain(adata,
             copy=False):
     """Cluster cells using Louvain Community detection.
 
-    This has been suggested for single-cell transcriptomics by
+    The basic method has been suggested for single-cell transcriptomics by
     Levine et al., Cell 162, 184-197 (2015).
+
+    Wolf et al. (2017) suggested to compute, in addition, an "attachedness"
+    matrix.
 
     Parameters
     ----------
@@ -33,9 +36,11 @@ def louvain(adata,
 
     References
     ----------
-    - implementation: Traag, doi:10.5281/zenodo.35117 (2017)
-    - algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
+    - implementation of Louvain algorithm: Traag, doi:10.5281/zenodo.35117 (2017)
+    - Louvain algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
     - base graph package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
+    - basic suggestion for single-cell: Levine et al., Cell 162, 184-197 (2015)
+    - combination with "attachedness" matrix: Wolf et al., bioRxiv (2017)
     """
     logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
