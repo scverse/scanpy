@@ -48,16 +48,16 @@ def draw_graph(adata,
     - Suggestion to use the "spring" graph-drawing algorithm of the package D3js
       for single-cell data: Weinreb et al., bioRxiv doi:10.1101/090332 (2016)
     """
-    import numpy as np
-    import igraph as ig
     from .. import logging as logg
+    logg.info('drawing single-cell graph using layout "{}"'.format(layout),
+              r=True)
+    import numpy as np
     from .. import data_structs
     from .. import utils
     avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
-    logg.info('drawing single-cell graph using layout "{}"'.format(layout))
     if 'Ktilde' not in adata.add or recompute_graph:
         graph = data_structs.DataGraph(adata,
                                        k=n_neighbors,
@@ -65,6 +65,9 @@ def draw_graph(adata,
                                        n_jobs=n_jobs)
         graph.compute_transition_matrix()
         adata.add['Ktilde'] = graph.Ktilde
+    elif n_neighbors is not None and not recompute_graph:
+        logg.warn('`n_neighbors={}` has no effect (set `recompute_graph=True` to enable it)'
+                  .format(n_neighbors))
     adjacency = adata.add['Ktilde']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:

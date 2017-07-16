@@ -653,7 +653,8 @@ def _aga_tree_single(
             if name in sett._ignore_categories: colors[iname] = 'grey'
         nx_g = nx.Graph(adata.add['aga_adjacency'])
     # node positions
-    try:
+#     try:
+    if True:
         if layout == 'simple':
             pos = utils.hierarchy_pos(nx_g, root)
         else:
@@ -667,9 +668,9 @@ def _aga_tree_single(
             np.random.seed(0)
             pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
                    for n in pos.keys()}
-    except Exception:
-        pos = nx.spring_layout(nx_g)
-        logg.warn('could not draw tree layout, now using fruchterman-reingold layout')
+    # except Exception:
+    #     pos = nx.spring_layout(nx_g)
+    #     logg.warn('could not draw tree layout, now using fruchterman-reingold layout')
     if len(pos) == 1: pos[0] = 0.5, 0.5
     if ax is None:
         fig = pl.figure()

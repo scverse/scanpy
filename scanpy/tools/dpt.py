@@ -105,8 +105,6 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         logg.m(msg, v='hint')
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
-    if n_branchings > 1:
-        logg.m('    running a hierarchical version of DPT')
     dpt = DPT(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size,
               n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
@@ -120,6 +118,8 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     if knn: adata.add['distance'] = dpt.Dsq
     if knn: adata.add['Ktilde'] = dpt.Ktilde
     logg.m('perform Diffusion Pseudotime analysis', r=True)
+    if n_branchings > 1:
+        logg.m('    this uses a hierarchical implementation')
     if False:
         # compute M matrix of cumulative transition probabilities,
         # see Haghverdi et al. (2016)

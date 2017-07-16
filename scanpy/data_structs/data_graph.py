@@ -83,9 +83,9 @@ def get_sparse_distance_matrix(indices, distances, n_samples, k):
     return Dsq
 
 
-def get_indices_distances_from_sparse_matrix(Dsq):
-    indices = np.zeros((Dsq.shape[0], self.k), dtype=int)
-    distances = np.zeros((Dsq.shape[0], self.k), dtype=Dsq.dtype)
+def get_indices_distances_from_sparse_matrix(Dsq, k):
+    indices = np.zeros((Dsq.shape[0], k), dtype=int)
+    distances = np.zeros((Dsq.shape[0], k), dtype=Dsq.dtype)
     for i in range(indices.shape[0]):
         neighbors = Dsq[i].nonzero()
         indices[i] = neighbors[1]
@@ -296,7 +296,7 @@ class DataGraph(object):
             Dsq, indices, distances_sq = self.compute_distance_matrix()
         else:
             Dsq = self.Dsq
-            indices, distances_sq = get_indices_distances_from_sparse_matrix(Dsq)
+            indices, distances_sq = get_indices_distances_from_sparse_matrix(Dsq, self.k)
         # choose sigma, the heuristic here often makes not much
         # of a difference, but is used to reproduce the figures
         # of Haghverdi et al. (2016)

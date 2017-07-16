@@ -298,7 +298,7 @@ def log1p(data, copy=False):
         return X.log1p()
 
 
-def pca(data, n_comps=10, zero_center=True, svd_solver='auto',
+def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
         random_state=0, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
     """Embed data using PCA.
 

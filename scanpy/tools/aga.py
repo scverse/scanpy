@@ -413,7 +413,7 @@ class AGA(data_graph.DataGraph):
             isegs = np.argsort([len(seg) for seg in segs])[::-1]
             for iseg in isegs:
                 seg = segs[iseg]
-                logg.info('    splitting group {} with size {}'.format(iseg, len(seg)))
+                logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
                 jsegs = [jseg for jseg in range(len(segs)) if jseg != iseg]
                 dtip = np.zeros(len(seg))
                 for jseg in jsegs:
