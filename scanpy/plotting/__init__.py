@@ -559,48 +559,73 @@ def aga_attachedness(adata):
 def aga_tree(
         adata,
         root=0,
+        layout='simple',
         colors=None,
         names=None,
         fontsize=None,
         node_size=1,
-        ext='pdf',
+        node_size_power=0.5,
+        edge_width=1,
+        ext='png',
+        add_noise_to_node_positions=None,
         ax=None,
         show=None):
+    """Plot the abstracted tree.
+
+    Parameters
+    ----------
+    layout : {'simple', 'rt', 'rt_circular'}
+        Tree plotting layout. 'rt' stands for Reingold Tilford and uses
+        the igraph layout function.
+    """
     if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
     if names is None or isinstance(names, str) or isinstance(names, dict): names = [names]
     if len(colors) != len(names):
         raise ValueError('`colors` and `names` lists need to have the same length.')
-    from matplotlib import rcParams
-    figure_width = 1.3 * rcParams['figure.figsize'][0] * len(colors)
-    fig, axs = pl.subplots(ncols=len(colors),
-                           figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]))
+    if ax is None:
+        from matplotlib import rcParams
+        figure_width = 1.3 * rcParams['figure.figsize'][0] * len(colors)
+        fig, axs = pl.subplots(ncols=len(colors),
+                               figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]))
+    else:
+        axs = ax
     if len(colors) == 1: axs = [axs]
     for icolor, color in enumerate(colors):
         show_color = False if icolor != len(colors)-1 else show
-        _aga_tree_single_color(
+        _aga_tree_single(
             adata,
+            layout=layout,
             root=root,
             colors=color,
             names=names[icolor],
             fontsize=fontsize,
-            node_size=1,
+            node_size=node_size,
+            node_size_power=node_size_power,
+            edge_width=edge_width,
             ext=ext,
             ax=axs[icolor],
-            show=show_color)
+            add_noise_to_node_positions=add_noise_to_node_positions)
+    if ext == 'pdf':
+        logg.warn('Be aware that saving as pdf exagerates thin lines.')
+    savefig_or_show('aga_tree', show, ext=ext)
+    return axs if ax is None else None
 
 
-def _aga_tree_single_color(
+def _aga_tree_single(
         adata,
         root=0,
         colors=None,
         names=None,
         fontsize=None,
         node_size=1,
+        node_size_power=0.5,
+        edge_width=1,
         ext='pdf',
         ax=None,
-        draw_edge_labels=False,
-        show=None):
+        layout='rt',
+        add_noise_to_node_positions=None,
+        draw_edge_labels=False):
     from .. import logging as logg
     from matplotlib import rcParams
     if colors is None and 'aga_groups_colors_original' in adata.add:
@@ -611,6 +636,9 @@ def _aga_tree_single_color(
         names = adata.add[names + '_names']
     elif names is None:
         names = adata.add['aga_groups_names']
+    if isinstance(root, str) and root in names:
+        root = list(names).index(root)
+
     # plot the tree
     if isinstance(adata, nx.Graph):
         G = adata
@@ -623,40 +651,48 @@ def _aga_tree_single_color(
             colors = adata.add['aga_groups_colors']
         for iname, name in enumerate(adata.add['aga_groups_names']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
-        G = nx.Graph(adata.add['aga_adjacency'])
+        nx_g = nx.Graph(adata.add['aga_adjacency'])
+    # node positions
     try:
-        pos = utils.hierarchy_pos(G, root)
-        pos_array = np.array([pos[n] for count, n in enumerate(G)])
+        if layout == 'simple':
+            pos = utils.hierarchy_pos(nx_g, root)
+        else:
+            from .. import utils as sc_utils
+            g = sc_utils.get_igraph_from_adjacency(adata.add['aga_adjacency'])
+            pos_list = g.layout(layout, root=[root]).coords
+            pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+        pos_array = np.array([pos[n] for count, n in enumerate(nx_g)])
         pos_y_scale = np.max(pos_array[:, 1]) - np.min(pos_array[:, 1])
-        np.random.seed(0)
-        pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
-               for n in pos.keys()}
-    # print(pos)
-    # print(0.01*np.random.random((adata.add['aga_adjacency'].shape[0], 2)))
-    # pos += 0.01*np.random.random((adata.add['aga_adjacency'].shape[0], 2))
+        if add_noise_to_node_positions:
+            np.random.seed(0)
+            pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
+                   for n in pos.keys()}
     except Exception:
-        pos = nx.spring_layout(G)
+        pos = nx.spring_layout(nx_g)
         logg.warn('could not draw tree layout, now using fruchterman-reingold layout')
     if len(pos) == 1: pos[0] = 0.5, 0.5
-    ax_was_none = False
     if ax is None:
         fig = pl.figure()
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
-        ax_was_none = True
     # edge widths
-    G = nx.Graph(adata.add['aga_attachedness'])
-    widths = [1.5*rcParams['lines.linewidth']*x[-1]['weight'] for x in G.edges(data=True)]
-    nx.draw_networkx_edges(G, pos, ax=ax, width=widths, edge_color='grey',
-                           style='dashed', alpha=0.7)
-    G = nx.Graph(adata.add['aga_adjacency'])
-    widths = [1.5*rcParams['lines.linewidth']*x[-1]['weight'] for x in G.edges(data=True)]
-    nx.draw_networkx_edges(G, pos, ax=ax, width=widths, edge_color='black')
+    base_edge_width = edge_width * 1.5*rcParams['lines.linewidth']
+    if 'aga_attachedness' in adata.add:
+        nx_g = nx.Graph(adata.add['aga_attachedness'])
+        widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
+        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='grey',
+                               style='dashed', alpha=0.5)
+        nx_g = nx.Graph(adata.add['aga_adjacency'])
+        widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
+        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
+    else:
+        widths = [base_edge_width for x in nx_g.edges()]
+        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
     # labels
     if draw_edge_labels:
         edge_labels = {}
-        for n1, n2, label in G.edges(data=True):
+        for n1, n2, label in nx_g.edges(data=True):
             edge_labels[(n1, n2)] = '{:.3f}'.format(1. / (1 + 10*label['weight']))
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, ax=ax, font_size=5)
+        nx.draw_networkx_edge_labels(nx_g, pos, edge_labels=edge_labels, ax=ax, font_size=5)
     trans = ax.transData.transform
     bbox = ax.get_position().get_points()
     ax_x_min = bbox[0, 0]
@@ -669,11 +705,12 @@ def _aga_tree_single_color(
     ax.set_frame_on(False)
     ax.set_xticks([])
     ax.set_yticks([])
-    base_pie_size = 1/(np.sqrt(G.number_of_nodes()) + 10) * node_size
+    base_pie_size = 1/(np.sqrt(nx_g.number_of_nodes()) + 10) * node_size
     median_group_size = np.median(adata.add['aga_groups_sizes'])
-    for count, n in enumerate(G):
+    for count, n in enumerate(nx_g):
         pie_size = base_pie_size
-        pie_size *= np.sqrt(adata.add['aga_groups_sizes'][count] / median_group_size)
+        pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
+                             node_size_power)
         xx, yy = trans(pos[n])     # data coordinates
         xa, ya = trans2((xx, yy))  # axis coordinates
         xa = ax_x_min + (xa - pie_size/2) * ax_len_x
@@ -682,7 +719,7 @@ def _aga_tree_single_color(
         if is_color_like(colors[count]):
             fracs = [100]
             color = [colors[count]]
-        else:
+        elif isinstance(colors[count], dict):
             color = colors[count].keys()
             fracs = [colors[count][c] for c in color]
             if sum(fracs) < 1:
@@ -690,26 +727,49 @@ def _aga_tree_single_color(
                 color.append('grey')
                 fracs.append(1-sum(fracs))
                 # names[count] += '\n?'
+        else:
+            raise ValueError('{} is neither a dict of valid matplotlib colors '
+                             'nor a valid matplotlib color.'.format(colors[count]))
         a.pie(fracs, colors=color)
-        if names is not None:
+        # if names is not None:
+        #     a.text(0.5, 0.5, names[count],
+        #            verticalalignment='center',
+        #            horizontalalignment='center',
+        #            transform=a.transAxes,
+        #            size=fontsize)
+    # TODO: this is a terrible hack, but if we use the solution above, labels
+    # get hidden behind pies
+    if names is not None:
+        for count, n in enumerate(nx_g):
+            # all copy and paste from above
+            pie_size = base_pie_size
+            pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
+                                 node_size_power)
+            xx, yy = trans(pos[n])     # data coordinates
+            xa, ya = trans2((xx, yy))  # axis coordinates
+            xa = ax_x_min + (xa - pie_size/2.0000001) * ax_len_x  # make sure a new axis is created
+            ya = ax_y_min + (ya - pie_size/2.0000001) * ax_len_y
+            a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
+            a.set_frame_on(False)
+            a.set_xticks([])
+            a.set_yticks([])
             a.text(0.5, 0.5, names[count],
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
-    if show is None and not ax_was_none: show = False
-    else: show = sett.autoshow if show is None else show
-    savefig_or_show('aga_tree', show, ext=ext)
-    return ax if ax_was_none else None
+    return ax
 
 
 def aga_timeseries(
         adata,
         nodes=[0],
         keys=[0],
+        as_heatmap=False,
         xlim=[None, None],
         n_avg=1,
         left_margin=0.4,
         show_left_y_ticks=None,
+        ytick_fontsize=None,
         show_nodes_twin=True,
         legend_fontsize=None,
         ax=None,
@@ -734,9 +794,12 @@ def aga_timeseries(
     from matplotlib import transforms
     trans = transforms.blended_transform_factory(
         ax.transData, ax.transAxes)
+    if as_heatmap:
+        X = []
+    x_tick_locs = []
+    x_tick_labels = []
     for ikey, key in enumerate(keys):
         x = []
-        x_tick_locs = []
         for igroup, group in enumerate(nodes):
             if ikey == 0: x_tick_locs.append(len(x))
             idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
@@ -747,26 +810,39 @@ def aga_timeseries(
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
-            x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
-        pl.plot(x[xlim[0]:xlim[1]], label=key)
+            if ikey == 0: x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
+        if not as_heatmap:
+            pl.plot(x[xlim[0]:xlim[1]], label=key)
+        else:
+            X.append(x)
         if ikey == 0:
             for igroup, group in enumerate(nodes):
                 if len(orig_node_names) > 0 and group not in orig_node_names:
                     label = orig_node_names[int(group)]
                 else:
                     label = group
-                pl.text(x_tick_locs[igroup], -0.05*(igroup+1), label, transform=trans)
+                if not isinstance(label, int):
+                    pl.text(x_tick_locs[igroup], -0.05*(igroup+1),
+                            label, transform=trans)
+                else:
+                    x_tick_labels.append(label)
+    if as_heatmap:
+        pl.imshow(np.array(X), aspect='auto', interpolation='nearest')
+        pl.yticks(range(len(X)), keys, fontsize=ytick_fontsize)
+        ax = pl.gca()
+        ax.set_frame_on(False)
+        pl.colorbar()
     pl.legend(frameon=False, loc='center left',
               bbox_to_anchor=(-left_margin, 0.5),
               fontsize=legend_fontsize)
-    pl.xticks([])
+    pl.xticks(x_tick_locs, x_tick_labels)
     if show_left_y_ticks:
         utils.pimp_axis(pl.gca().get_yaxis())
         pl.ylabel('as indicated on legend')
-    else:
+    elif not as_heatmap:
         pl.yticks([])
         pl.ylabel('as indicated on legend (a.u.)')
-    if show_nodes_twin:
+    if show_nodes_twin and not as_heatmap:
         pl.twinx()
         x = []
         for g in nodes:
@@ -783,12 +859,12 @@ def aga_timeseries(
 
 
 def aga_sc_tree(adata, root, show=None):
-    G = nx.Graph(adata.add['aga_adjacency'])
+    nx_g = nx.Graph(adata.add['aga_adjacency'])
     node_sets = []
     sorted_aga_groups = adata.smp['aga_groups'][adata.smp['aga_order']]
     for n in adata.add['aga_groups_names']:
         node_sets.append(np.flatnonzero(n == sorted_aga_groups))
-    sc_G = utils.hierarchy_sc(G, root, node_sets)
+    sc_G = utils.hierarchy_sc(nx_g, root, node_sets)
     ax = aga_tree(sc_G, root)
     savefig_or_show('aga_sc_tree', show)
     return ax

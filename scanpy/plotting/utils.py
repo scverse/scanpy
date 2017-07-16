@@ -53,6 +53,17 @@ pal_64_godsnot = [
 pal_64 = pal_64_godsnot
 
 
+additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
+            '#eee685', 'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c',
+            'tomato2': '#ee5c42', 'grey80': '#cccccc', 'grey90': '#e5e5e5',
+            'wheat4': '#8b7e66', 'grey65': '#a6a6a6', 'grey10': '#1a1a1a',
+            'grey20': '#333333', 'grey50': '#7f7f7f', 'grey30': '#4d4d4d',
+            'grey40': '#666666', 'antiquewhite2': '#eedfcc', 'grey77':
+            '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00', 'yellow4':
+            '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
+            'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
+            '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
+
 def init_plotting_params():
     """Init default plotting parameters.
 

@@ -210,7 +210,7 @@ def scatter(adata,
         pals[i] = utils.default_pal(pal)
 
     component_name = ('DC' if basis == 'diffmap'
-                      else basis.split('_')[-1].upper() if 'draw_graph' in basis
+                      else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
                       else 'tSNE' if basis == 'tsne'
                       else 'PC' if basis == 'pca'
                       else 'Spring' if basis == 'spring'
@@ -580,7 +580,7 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX=None, cmap='viridis'):
 
     fig = pl.figure(figsize=(1.5*4, 2*4))
     im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-              interpolation='nearest', cmap=cmap)
+                   interpolation='nearest', cmap=cmap)
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), varnames)
     for ih, h in enumerate(highlightsX):

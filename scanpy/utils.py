@@ -2,8 +2,6 @@
 """Utility functions and classes
 """
 
-from __future__ import absolute_import
-import os
 import numpy as np
 from natsort import natsorted
 from . import settings as sett
@@ -12,6 +10,17 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 # Deal with stuff
 # --------------------------------------------------------------------------------
+
+
+def get_igraph_from_adjacency(adjacency, directed=None):
+    import igraph as ig
+    sources, targets = adjacency.nonzero()
+    weights = adjacency[sources, targets]
+    weights = np.array(weights)[0]
+    g = ig.Graph(list(zip(sources, targets)),
+                 directed=directed,
+                 edge_attrs={'weight': weights})
+    return g
 
 
 def identify_categories(adata, prediction, reference,
@@ -488,9 +497,9 @@ def hierarch_cluster(M):
     import scipy.cluster
     link = sp.cluster.hierarchy.linkage(M)
     indices = sp.cluster.hierarchy.leaves_list(link)
-    Mclus = np.array(M[:,indices])
-    Mclus = Mclus[indices,:]
-    sett.mt(0,'clustered matrix')
+    Mclus = np.array(M[:, indices])
+    Mclus = Mclus[indices, :]
+    sett.mt(0, 'clustered matrix')
     if False:
         pl.matshow(Mclus)
         pl.colorbar()

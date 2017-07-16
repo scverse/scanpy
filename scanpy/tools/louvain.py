@@ -1,11 +1,11 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
 """Cluster using Louvain community detection algorithm
 
-Uses the pip packages "louvain" and igraph.
+Uses the pip packages "louvain" and "igraph".
 """
 
 import numpy as np
-from .. import settings as sett
+from .. import utils
 from .. import logging as logg
 from .. import data_structs
 
@@ -33,12 +33,12 @@ def louvain(adata,
 
     References
     ----------
-    Algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
-    Package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
+    - implementation: Traag, doi:10.5281/zenodo.35117 (2017)
+    - algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
+    - base graph package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
     """
     logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
-    import igraph as ig
     # if 'distance' not in adata.add or recompute_graph:
     #     graph = data_structs.DataGraph(adata,
     #                                    k=n_neighbors,
@@ -55,17 +55,12 @@ def louvain(adata,
         adata.add['Ktilde'] = graph.Ktilde
     adjacency = adata.add['Ktilde']
     if flavor in {'vtraag', 'igraph'}:
-        sources, targets = adjacency.nonzero()
-        weights = adjacency[sources, targets]
-        weights = np.array(weights)[0]  # need to convert sparse matrix into a form appropriate for igraph
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.info('    using the undirected graph')
-        g = ig.Graph(list(zip(sources, targets)),
-                     directed=directed,
-                     edge_attrs={'weight': weights})
+        g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if flavor == 'vtraag':
             import louvain
             if resolution is None: resolution = 1

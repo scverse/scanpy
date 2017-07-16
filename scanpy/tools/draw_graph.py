@@ -13,9 +13,11 @@ def draw_graph(adata,
                layout='fr',
                n_neighbors=30,
                n_pcs=50,
+               root=None,
                n_jobs=None,
                random_state=0,
                recompute_graph=False,
+               adjacency=None,
                copy=False):
     """Visualize data using standard graph drawing algorithms.
 
@@ -28,9 +30,11 @@ def draw_graph(adata,
         particular interest are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid
         Fruchterman Reingold, faster than 'fr'), 'kk' (Kamadi Kawai', slower
         than 'fr'), 'lgl' (Large Graph, very fast), 'drl' (Distributed Recursive
-        Layout) and 'tree' (Reingold Tilford').
+        Layout) and 'rt' (Reingold Tilford tree layout).
     n_neighbors : int
         Number of nearest neighbors in graph.
+    n_pcs : int
+        Number of PCs used to compute distances.
 
     Returns
     -------
@@ -48,7 +52,8 @@ def draw_graph(adata,
     import igraph as ig
     from .. import logging as logg
     from .. import data_structs
-    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'tree'}
+    from .. import utils
+    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
@@ -61,25 +66,26 @@ def draw_graph(adata,
         graph.compute_transition_matrix()
         adata.add['Ktilde'] = graph.Ktilde
     adjacency = adata.add['Ktilde']
-    sources, targets = adjacency.nonzero()
-    weights = adjacency[sources, targets]
-    weights = np.array(weights)[0]  # need to convert sparse matrix into a form appropriate for igraph
-    g = ig.Graph(list(zip(sources, targets)),  #, edge_attrs={'weight': weights}
-                 directed=True)
+    g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
         ig_layout = g.layout(layout,  # weights='weight',
                              seed=init_coords)
+    elif 'rt' in layout:
+        if root is not None: root = [root]
+        ig_layout = g.layout(layout, root=root)
     else:
         ig_layout = g.layout(layout)
     if 'draw_graph_layout' in adata.add:
         adata.add['draw_graph_layout'] = list(adata.add['draw_graph_layout']) + [layout]
     else:
         adata.add['draw_graph_layout'] = [layout]
-    adata.smp['X_draw_graph_' + layout] = np.array(ig_layout.coords)
+    smp_key = 'X_draw_graph_' + layout
+    adata.smp[smp_key] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
-           '    "X_draw_graph", graph_drawing coordinates (adata.smp)\n'
-           '    "draw_graph_layout", the chosen layout (adata.add)')
+           '    "{}", graph_drawing coordinates (adata.smp)\n'
+           '    "draw_graph_layout", the chosen layout (adata.add)'
+           .format(smp_key))
     return adata if copy else None
