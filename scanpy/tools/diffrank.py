@@ -13,8 +13,9 @@ from .. import settings as sett
 
 
 def diffrank(adata,
-             smp='groups',
+             key,
              names='all',
+             pairings=False,
              sig_level=0.05,
              correction='Bonferroni',
              log=False,
@@ -25,12 +26,14 @@ def diffrank(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    smp : str, optional (default: 'exp_groups')
-        Specify the name of the grouping to consider.
+    key : str
+        The key of the sample grouping to consider.
     names : str, list, np.ndarray, optional (default: 'all')
         Subset of categories - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - to which
         comparison shall be restricted. If not provided all categories will be
         compared to all other categories.
+    pairings : bool, optional (default: False)
+        Test pairings of groups instead of group vs. the rest of the data.
 
     Writes to adata
     ---------------
@@ -48,8 +51,8 @@ def diffrank(adata,
     adata = adata.copy() if copy else adata
     # for clarity, rename variable
     groups_names = names
-    groups_names, groups_masks = utils.select_groups(adata, groups_names, smp)
-    adata.add['diffrank_groups'] = smp
+    groups_names, groups_masks = utils.select_groups(adata, groups_names, key)
+    adata.add['diffrank_groups'] = key
     adata.add['diffrank_groups_names'] = groups_names
     X = adata.X
     if log:
@@ -58,63 +61,110 @@ def diffrank(adata,
         X = np.log(X) / np.log(2)
 
     # loop over all masks and compute means, variances and sample numbers
-    nr_groups = groups_masks.shape[0]
-    nr_genes = X.shape[1]
-    means = np.zeros((nr_groups, nr_genes))
-    vars = np.zeros((nr_groups, nr_genes))
-    ns = np.zeros(nr_groups, dtype=int)
+    n_groups = groups_masks.shape[0]
+    n_genes = X.shape[1]
+    means = np.zeros((n_groups, n_genes))
+    vars = np.zeros((n_groups, n_genes))
+    ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         means[imask] = X[mask].mean(axis=0)
         vars[imask] = X[mask].var(axis=0)
         ns[imask] = np.where(mask)[0].size
-    sett.m(0, 'testing', smp, groups_names, 'with sample numbers', ns)
+    sett.m(0, 'testing', key, groups_names, 'with sample numbers', ns)
     sett.m(2, 'means', means)
     sett.m(2, 'variances', vars)
 
-    igroups_masks = np.arange(len(groups_masks), dtype=int)
-    pairs = list(combinations(igroups_masks, 2))
-    pvalues_all = np.zeros((len(pairs), nr_genes))
-    zscores_all = np.zeros((len(pairs), nr_genes))
-    rankings_geneidcs = np.zeros((len(pairs), nr_genes), dtype=int)
     # each test provides a ranking of genes
     # we store the name of the ranking, i.e. the name of the test,
     # in the following list
     adata.add['diffrank_rankings_names'] = []
 
-    # test all combinations of groups against each other
-    for ipair, (i, j) in enumerate(pairs):
-        # z-scores
-        denom = np.sqrt(vars[i]/ns[i] + vars[j]/ns[j])
-        zeros = np.flatnonzero(denom == 0)
-        denom[zeros] = np.nan
-        zscores = (means[i] - means[j]) / denom
-        # the following is equivalent with
-        # zscores = np.ma.masked_invalid(zscores)
-        zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
+    # test each group against the rest of the data
+    if not pairings:
 
-        zscores_all[ipair] = zscores
-        abs_zscores = np.abs(zscores)
+        zscores_all = np.zeros((n_groups, n_genes))
+        rankings_geneidcs = np.zeros((n_groups, n_genes), dtype=int)
 
-        # p-values
-        if False:
-            pvalues = 2 * norm.sf(abs_zscores)  # two-sided test
-            pvalues = np.ma.masked_invalid(pvalues)
-            sig_genes = np.flatnonzero(pvalues < 0.05/zscores.shape[0])
-            pvalues_all[ipair] = pvalues
+        for igroup in range(n_groups):
+            mask = ~groups_masks[igroup]
+            mean_rest = X[mask].mean(axis=0)
+            var_rest = X[mask].var(axis=0)
+            ns_rest = np.where(mask)[0].size
+            # z-scores
+            denom = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
+            zeros = np.flatnonzero(denom == 0)
+            denom[zeros] = np.nan
+            zscores = (means[igroup] - mean_rest) / denom
+            # the following is equivalent with
+            # zscores = np.ma.masked_invalid(zscores)
+            zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
 
-        # sort genes according to score
-        ranking_geneidcs = np.argsort(abs_zscores)[::-1]
-        # move masked values to the end of the index array
-        masked = abs_zscores[ranking_geneidcs].mask
-        len_not_masked = len(ranking_geneidcs[masked == False])
-        save_masked_idcs = np.copy(ranking_geneidcs[masked])
-        ranking_geneidcs[:len_not_masked] = ranking_geneidcs[masked == False]
-        ranking_geneidcs[len_not_masked:] = save_masked_idcs
-        # write to global rankings_genedics
-        rankings_geneidcs[ipair] = ranking_geneidcs
-        # names
-        ranking_name = groups_names[i] + ' vs ' + groups_names[j]
-        adata.add['diffrank_rankings_names'].append(ranking_name)
+            zscores_all[igroup] = zscores
+            abs_zscores = np.abs(zscores)
+
+            # p-values
+            if False:
+                pvalues = 2 * norm.sf(abs_zscores)  # two-sided test
+                pvalues = np.ma.masked_invalid(pvalues)
+                sig_genes = np.flatnonzero(pvalues < 0.05/zscores.shape[0])
+                pvalues_all[igroup] = pvalues
+
+            # sort genes according to score
+            ranking_geneidcs = np.argsort(abs_zscores)[::-1]
+            # move masked values to the end of the index array
+            masked = abs_zscores[ranking_geneidcs].mask
+            len_not_masked = len(ranking_geneidcs[masked == False])
+            save_masked_idcs = np.copy(ranking_geneidcs[masked])
+            ranking_geneidcs[:len_not_masked] = ranking_geneidcs[masked == False]
+            ranking_geneidcs[len_not_masked:] = save_masked_idcs
+            # write to global rankings_genedics
+            rankings_geneidcs[igroup] = ranking_geneidcs
+            # names
+            ranking_name = groups_names[igroup]
+            adata.add['diffrank_rankings_names'].append(ranking_name)
+
+    # test all group pairings
+    else:
+        igroups_masks = np.arange(len(groups_masks), dtype=int)
+        pairs = list(combinations(igroups_masks, 2))
+        pvalues_all = np.zeros((len(pairs), n_genes))
+        zscores_all = np.zeros((len(pairs), n_genes))
+        rankings_geneidcs = np.zeros((len(pairs), n_genes), dtype=int)
+
+        # test all combinations of groups against each other
+        for ipair, (i, j) in enumerate(pairs):
+            # z-scores
+            denom = np.sqrt(vars[i]/ns[i] + vars[j]/ns[j])
+            zeros = np.flatnonzero(denom == 0)
+            denom[zeros] = np.nan
+            zscores = (means[i] - means[j]) / denom
+            # the following is equivalent with
+            # zscores = np.ma.masked_invalid(zscores)
+            zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
+
+            zscores_all[ipair] = zscores
+            abs_zscores = np.abs(zscores)
+
+            # p-values
+            if False:
+                pvalues = 2 * norm.sf(abs_zscores)  # two-sided test
+                pvalues = np.ma.masked_invalid(pvalues)
+                sig_genes = np.flatnonzero(pvalues < 0.05/zscores.shape[0])
+                pvalues_all[ipair] = pvalues
+
+            # sort genes according to score
+            ranking_geneidcs = np.argsort(abs_zscores)[::-1]
+            # move masked values to the end of the index array
+            masked = abs_zscores[ranking_geneidcs].mask
+            len_not_masked = len(ranking_geneidcs[masked == False])
+            save_masked_idcs = np.copy(ranking_geneidcs[masked])
+            ranking_geneidcs[:len_not_masked] = ranking_geneidcs[masked == False]
+            ranking_geneidcs[len_not_masked:] = save_masked_idcs
+            # write to global rankings_genedics
+            rankings_geneidcs[ipair] = ranking_geneidcs
+            # names
+            ranking_name = groups_names[i] + ' vs ' + groups_names[j]
+            adata.add['diffrank_rankings_names'].append(ranking_name)
 
     if False:
         adata.add['diffrank_pvalues'] = -np.log10(pvalues_all)

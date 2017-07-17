@@ -140,7 +140,7 @@ def scatter(adata,
         var_name or a uniform matplotlib color). String annotation is plotted assuming categorical annotation,
         float and integer annotation is plotted assuming continuous
         annoation.
-    basis : {'pca', 'tsne', 'diffmap'}
+    basis : {'pca', 'tsne', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool.
     names : str, optional (default: all names in color)
         Allows to restrict categories in sample annotation to a subset.
@@ -209,12 +209,15 @@ def scatter(adata,
     for i, pal in enumerate(pals):
         pals[i] = utils.default_pal(pal)
 
-    component_name = ('DC' if basis == 'diffmap'
-                      else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-                      else 'tSNE' if basis == 'tsne'
-                      else 'PC' if basis == 'pca'
-                      else 'Spring' if basis == 'spring'
-                      else None)
+    if basis is not None:
+        component_name = ('DC' if basis == 'diffmap'
+                          else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+                          else 'tSNE' if basis == 'tsne'
+                          else 'PC' if basis == 'pca'
+                          else 'Spring' if basis == 'spring'
+                          else None)
+    else:
+        component_name = None
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
 
@@ -444,7 +447,7 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
                            right=1-(n_panels_x-1)*left-0.01/n_panels_x,
                            bottom=bottom,
                            top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0)
+                           wspace=0.12)
 
     count = 1
     for irank in range(len(adata.add[toolkey + '_rankings_names'])):
@@ -465,8 +468,9 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
             pl.xlabel('ranking')
         if count == 1 or count == n_panels_x+1:
             pl.ylabel(scoreskey)
-        else:
-            pl.yticks([])
+        # else:
+        #     yticks = pl.yticks()[0]
+        #     pl.yticks(yticks, [])
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
         count += 1
