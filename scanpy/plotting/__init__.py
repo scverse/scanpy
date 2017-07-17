@@ -453,6 +453,7 @@ def aga(
         right_margin=None,
         size=None,
         title=None,
+        left_margin=0.05,
         layout_graph=None,
         attachedness_type='relative',
         show=None):
@@ -461,6 +462,7 @@ def aga(
     See aga_scatter and aga_graph for most of the arguments.
     """
     _, axs = pl.subplots(figsize=(8, 4), ncols=2)
+    pl.subplots_adjust(left=left_margin)
     aga_scatter(adata,
                 color='aga_groups',
                 basis=basis,
@@ -580,6 +582,7 @@ def aga_graph(
         edge_width=1,
         ext='png',
         add_noise_to_node_positions=None,
+        left_margin=0.02,
         attachedness_type='relative',
         ax=None,
         show=None):
@@ -598,9 +601,11 @@ def aga_graph(
         raise ValueError('`colors` and `names` lists need to have the same length.')
     if ax is None:
         from matplotlib import rcParams
+        from matplotlib.figure import SubplotParams as sppars
         figure_width = 1.3 * rcParams['figure.figsize'][0] * len(colors)
         fig, axs = pl.subplots(ncols=len(colors),
-                               figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]))
+                               figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]),
+                               subplotpars=sppars(left=left_margin, bottom=0.05))
     else:
         axs = ax
     if len(colors) == 1: axs = [axs]
