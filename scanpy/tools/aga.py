@@ -23,7 +23,7 @@ def aga(adata,
         recompute_diffmap=False,
         recompute_pca=False,
         recompute_louvain=False,
-        attachedness_measure='random_walk_based',
+        attachedness_measure='random_walk',
         n_jobs=None,
         copy=False):
     """Approximate Graph Abstraction
@@ -81,7 +81,7 @@ def aga(adata,
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
         When changing the `resolution` parameter, you should set this to True.
-    attachedness_measure : {'connectedness', 'random_walk_based'}, optional (default: 'random_walk_based')
+    attachedness_measure : {'connectedness', 'random_walk'}, optional (default: 'random_walk')
         How to measure attachedness.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
@@ -163,6 +163,9 @@ def aga(adata,
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
     adata.add['aga_adjacency'] = aga.segs_adjacency
+    if fresh_compute_louvain:
+        adata.smp['louvain_groups'] = adata.smp['aga_groups']
+        adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
     if (clusters not in {'segments', 'unconstrained_segments'}
         and not fresh_compute_louvain):
         adata.add['aga_groups_original'] = clusters
@@ -170,16 +173,18 @@ def aga(adata,
         if clusters + '_colors' not in adata.add:
             pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
+        if clusters + '_names' not in adata.add:
+            from natsort import natsorted
+            adata.add[clusters + '_names'] = natsorted(np.unique(adata.smp[clusters]))
         name_list = list(adata.add[clusters + '_names'])
         for name in aga.segs_names_original:
             idx = name_list.index(name)
             colors_original.append(adata.add[clusters + '_colors'][idx])
         adata.add['aga_groups_colors_original'] = np.array(colors_original)
-    if fresh_compute_louvain:
-        adata.smp['louvain_groups'] = adata.smp['aga_groups']
-        adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
     adata.add['aga_distances'] = aga.segs_distances
     adata.add['aga_attachedness'] = aga.segs_attachedness
+    adata.add['aga_attachedness_absolute'] = aga.segs_attachedness_absolute
+    adata.add['aga_adjacency_absolute'] = aga.segs_adjacency_absolute
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
               '    "aga_adjacency", adjacency matrix defining the abstracted graph (adata.add),\n'
@@ -271,6 +276,7 @@ class AGA(data_graph.DataGraph):
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap)
+        self.n_neighbors = n_neighbors
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
@@ -350,7 +356,7 @@ class AGA(data_graph.DataGraph):
             self.segs_names_original = [', '.join(self.clusters_precomputed_names)]
         segs_undecided = [True]
         segs_adjacency = [[]]
-        segs_distances = np.ones((1, 1))
+        segs_distances = np.zeros((1, 1))
         segs_adjacency_nodes = [{}]
         # logg.info('    do not consider groups with less than {} points for splitting'
         #           .format(self.min_group_size))
@@ -378,6 +384,9 @@ class AGA(data_graph.DataGraph):
         # store as class members
         self.segs = segs
         self.segs_tips = segs_tips
+        self.segs_sizes = []
+        for iseg, seg in enumerate(self.segs):
+            self.segs_sizes.append(len(seg))
         # self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
         realized_distances = []
@@ -391,14 +400,20 @@ class AGA(data_graph.DataGraph):
             np.exp(-(segs_distances-median_realized_distances)/median_realized_distances)
             [segs_distances > median_realized_distances])
         self.segs_distances = segs_distances
+        self.segs_attachedness_absolute = 1/segs_distances
+        if self.attachedness_measure == 'connectedness':
+            norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
+            self.segs_attachedness_absolute /= norm
 
-        minimal_realized_attachedness = 0.2
+        minimal_realized_attachedness = 0.1
         self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+        self.segs_adjacency_absolute = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         for i, neighbors in enumerate(segs_adjacency):
             clipped_attachedness = self.segs_attachedness[i][neighbors]
             clipped_attachedness[clipped_attachedness < minimal_realized_attachedness] = minimal_realized_attachedness
             self.segs_adjacency[i, neighbors] = clipped_attachedness
             self.segs_attachedness[i, neighbors] = clipped_attachedness
+            self.segs_adjacency_absolute[i, neighbors] = self.segs_attachedness_absolute[i, neighbors]
         self.segs_adjacency = self.segs_adjacency.tocsr()
 
     def do_split_constrained(self, segs, segs_tips,
@@ -553,6 +568,7 @@ class AGA(data_graph.DataGraph):
                 segs_tips.append([])
             iseg = 0
             seg = segs[iseg]
+            logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             new_tips = [seg[np.argmax(self.Dchosen[seg[0], seg])]]
             dtip_others = self.Dchosen[new_tips[0], seg]
             dists = [np.max(dtip_others)]
@@ -610,7 +626,7 @@ class AGA(data_graph.DataGraph):
         new_shape = (segs_distances.shape[0] + n_add, segs_distances.shape[1] + n_add)
         # segs_distances.resize() throws an error!
         segs_distances_help = segs_distances.copy()
-        segs_distances = np.ones((new_shape))
+        segs_distances = np.zeros((new_shape))
         segs_distances[np.ix_(range(segs_distances_help.shape[0]),
                               range(segs_distances_help.shape[1]))] = segs_distances_help
         segs_distances = self.adjust_adjacency(iseg,
@@ -682,9 +698,7 @@ class AGA(data_graph.DataGraph):
         """Convert the format of the segment class members."""
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
-        self.segs_sizes = []
         for iseg, seg in enumerate(self.segs):
-            self.segs_sizes.append(len(seg))
             mask = np.zeros(self.X.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
@@ -803,7 +817,7 @@ class AGA(data_graph.DataGraph):
         median_distances = []
         measure_points_in_jseg = []
         measure_points_in_kseg = []
-        if self.attachedness_measure == 'random_walk_based_approx':
+        if self.attachedness_measure == 'random_walk_approx':
             for kseg in kseg_list:
                 reference_point_in_kseg = segs_tips[kseg][0]
                 measure_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])])
@@ -814,7 +828,7 @@ class AGA(data_graph.DataGraph):
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
-        elif self.attachedness_measure == 'random_walk_based':
+        elif self.attachedness_measure == 'random_walk':
             for kseg in kseg_list:
                 closest_distance = 1e12
                 measure_point_in_jseg = 0
@@ -882,13 +896,13 @@ class AGA(data_graph.DataGraph):
         for j_connect, connects in j_connects.items():
             for point_connect, seg_connect in connects:
                 if seg_connect == kseg_list[trunk]:
-                    score = 0
-                    if self.Dsq[point_connect, j_connect] > 0:
-                        score += 1. / (1 + self.Dsq[point_connect, j_connect])  # / (1 + len(segs_adjacency_nodes[jseg]))  # len(segs[jseg])
+                    # score = 0
+                    # if self.Dsq[point_connect, j_connect] > 0:
+                    #     score += 1. / (1 + self.Dsq[point_connect, j_connect])  # / (1 + len(segs_adjacency_nodes[jseg]))  # len(segs[jseg])
+                    # if self.Dsq[j_connect, point_connect] > 0:
+                    #     score += 1. / (1 + self.Dsq[j_connect, point_connect])  # / (1 + len(segs_adjacency_nodes[kseg_list[trunk if in_kseg_trunk else not_trunk]]))  # len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
+                    score = 1
                     in_kseg_trunk = True if point_connect in kseg_trunk else False
-                    if self.Dsq[j_connect, point_connect] > 0:
-                        score += 1. / (1 + self.Dsq[j_connect, point_connect])  # / (1 + len(segs_adjacency_nodes[kseg_list[trunk if in_kseg_trunk else not_trunk]]))  # len(kseg_trunk if in_kseg_trunk else kseg_not_trunk)
-                    # score = 1
                     if in_kseg_trunk:
                         connectedness[trunk] += score
                     else:
@@ -906,6 +920,7 @@ class AGA(data_graph.DataGraph):
                         if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
                             del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
                         connectedness[not_trunk] += score
+        # distances = [1/c if c > 0 else np.inf for c in connectedness]
         distances = [1/(1+c) for c in connectedness]
         logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
@@ -931,11 +946,12 @@ class AGA(data_graph.DataGraph):
         for p, q_list in segs_adjacency_nodes[kseg_loop].items():
             q_list = [q for q, jseg in q_list if jseg == kseg_test]
             for q in q_list:
-                score = 0
-                if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q])  # / (1 + len(segs_adjacency_nodes[kseg_test]))  # len(seg_test)
-                if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p])  # / (1 + len(segs_adjacency_nodes[kseg_loop]))  # len(seg_loop)
-                # score = 1
+                # score = 0
+                # if self.Dsq[p, q] > 0: score += 1. / (1 + self.Dsq[p, q])  # / (1 + len(segs_adjacency_nodes[kseg_test]))  # len(seg_test)
+                # if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p])  # / (1 + len(segs_adjacency_nodes[kseg_loop]))  # len(seg_loop)
+                score = 1
                 connections += score
+        # distance = 1/connections if connections > 0 else np.inf
         distance = 1/(1+connections)
         logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance

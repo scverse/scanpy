@@ -794,8 +794,8 @@ def write_dict_to_file(filename, d, ext='h5'):
                 try:
                     f.create_dataset(key, data=value)
                 except Exception as e:
-                    sys.exit('Error creating dataset in h5 file for key = "{}". '
-                             'No dictionaries are allowed!'.format(key))
+                    logg.warn('Could not save field with key = "{}" to h5 file '
+                              '(currently, no dictionaries are allowed!).'.format(key))
     elif ext == 'npz':
         np.savez(filename, **d_write)
     elif ext == 'csv' or ext == 'txt':

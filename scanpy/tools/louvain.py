@@ -83,6 +83,9 @@ def louvain(adata,
                           '`flavor=igraph`, which does not a `resolution` parameter, though.')
                 part = louvain.find_partition(g, method='RBConfiguration',
                                               resolution_parameter=resolution)
+            adata.add['louvain_quality'] = part.quality()
+            # adata.add['louvain_part'] = part
+            # adata.add['louvain_graph'] = g
         elif flavor == 'igraph':
             part = g.community_multilevel()
         groups = np.array(part.membership, dtype='U')

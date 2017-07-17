@@ -112,9 +112,7 @@ class OnFlySymMatrix():
                 # map the index back to the global index
                 glob_index = self.restrict_array[index]
             if glob_index not in self.rows:
-                self.rows[glob_index] = self.get_row(glob_index,
-                                                     DC_start=self.DC_start,
-                                                     DC_end=self.DC_end)
+                self.rows[glob_index] = self.get_row(glob_index)
             row = self.rows[glob_index]
             if self.restrict_array is None:
                 return row
@@ -127,9 +125,7 @@ class OnFlySymMatrix():
                 glob_index_0 = self.restrict_array[index[0]]
                 glob_index_1 = self.restrict_array[index[1]]
             if glob_index_0 not in self.rows:
-                self.rows[glob_index_0] = self.get_row(glob_index_0,
-                                                       DC_start=self.DC_start,
-                                                       DC_end=self.DC_end)
+                self.rows[glob_index_0] = self.get_row(glob_index_0)
             return self.rows[glob_index_0][glob_index_1]
 
     def restrict(self, index_array):
@@ -478,6 +474,9 @@ class DataGraph(object):
         logg.info('   ', str(evals).replace('\n', '\n    '))
         # assign attributes
         self.evals = evals
+        count_ones = sum([1 for v in self.evals if v == 1])
+        if count_ones > len(self.evals)/2:
+            logg.warn('Transition matrix has many irreducible blocks!')
         if sym:
             self.rbasis = self.lbasis = evecs
         else:
@@ -590,16 +589,15 @@ class DataGraph(object):
                 d_i[j_cnt] = utils_cy.c_dist(m_i, m_j)
         return d_i
 
-    def get_Ddiff_row(self, i, DC_start=0, DC_end=-1):
+    def get_Ddiff_row(self, i):
         if not self.sym:
             raise ValueError('The computation needs to be adjusted if sym=False.')
-        if DC_end == -1:
-            DC_end = self.evals.size
         row = sum([(self.evals[l]/(1-self.evals[l])
                      * (self.rbasis[i, l] - self.lbasis[:, l]))**2
-                    for l in range(max(DC_start, 1), DC_end)])
-        if DC_start == 0:
-            row += (self.rbasis[i, 0] - self.lbasis[:, 0])**2
+                    for l in range(0, self.evals.size) if self.evals[l] < 1])
+        row += sum([(self.rbasis[i, l] - self.lbasis[:, l])**2
+                    for l in range(0, self.evals.size) if self.evals[l] == 1.0])
+        # row += (self.rbasis[i, 0] - self.lbasis[:, 0])**2
         return np.sqrt(row)
 
     def get_Ddiff_row_deprecated(self, i):

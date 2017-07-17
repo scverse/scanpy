@@ -62,6 +62,20 @@ example_data = {
 # --------------------------------------------------------------------------------
 
 
+def blobs(centers=5, cluster_std=1.0):
+    """Make Gaussian Blobs
+
+    Same sample number as in krumsiek11, to compare with the latter.
+    """
+    import sklearn.datasets
+    X, y = sklearn.datasets.make_blobs(n_samples=640,
+                                       n_features=11,
+                                       centers=centers,
+                                       cluster_std=cluster_std,
+                                       random_state=0)
+    return sc.AnnData(X, smp={'clusters': y.astype(str)})
+
+
 def burczynski06():
     """Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 

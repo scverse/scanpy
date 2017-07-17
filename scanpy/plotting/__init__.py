@@ -438,8 +438,8 @@ def spring(
 
 def aga(
         adata,
-        root=0,       # aga_tree
-        fontsize=8,   # aga_tree
+        root=0,       # aga_graph
+        fontsize=8,   # aga_graph
         basis='tsne',
         color=None,
         names=None,
@@ -453,11 +453,12 @@ def aga(
         right_margin=None,
         size=None,
         title=None,
-        plot_full_attachedness=False,
+        layout_graph=None,
+        attachedness_type='relative',
         show=None):
     """Summary figure for approximate graph abstraction.
 
-    See aga_scatter and aga_tree for most of the arguments.
+    See aga_scatter and aga_graph for most of the arguments.
     """
     _, axs = pl.subplots(figsize=(8, 4), ncols=2)
     aga_scatter(adata,
@@ -468,8 +469,9 @@ def aga(
                 ax=axs[0],
                 show=False)
     axs[1].set_frame_on(False)
-    aga_tree(adata, root=root, fontsize=fontsize, ax=axs[1],
-             plot_full_attachedness=plot_full_attachedness,
+    aga_graph(adata, root=root, fontsize=fontsize, ax=axs[1],
+             layout=layout_graph,
+             attachedness_type=attachedness_type,
              show=False)
     show = sett.autoshow if show is None else show
     savefig_or_show('aga', show=show)
@@ -532,15 +534,22 @@ def aga_scatter(
                      title=title,
                      ax=ax,
                      show=False)
-        writekey = 'aga_' + basis + '_comps' + comps.replace(',', '')
+        writekey = 'aga_' + basis
         if sett.savefigs: savefig(writekey)
     if show is None and not ax_was_none: show = False
     else: show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
     return ax
 
-def aga_attachedness(adata):
-    attachedness = adata.add['aga_attachedness']
+def aga_attachedness(adata, type='scaled'):
+    if type == 'scaled':
+        attachedness = adata.add['aga_attachedness']
+    elif type == 'distance':
+        attachedness = adata.add['aga_distances']
+    elif type == 'absolute':
+        attachedness = adata.add['aga_attachedness_absolute']
+    else:
+        raise ValueError('Unkown type {}.'.format(type))
     adjacency = adata.add['aga_adjacency']
     matrix(attachedness, show=False)
     for i in range(adjacency.shape[0]):
@@ -559,7 +568,7 @@ def aga_attachedness(adata):
     # pl.show()
 
 
-def aga_tree(
+def aga_graph(
         adata,
         root=0,
         layout=None,
@@ -571,15 +580,15 @@ def aga_tree(
         edge_width=1,
         ext='png',
         add_noise_to_node_positions=None,
-        plot_full_attachedness=False,
+        attachedness_type='relative',
         ax=None,
         show=None):
     """Plot the abstracted tree.
 
     Parameters
     ----------
-    layout : {'simple', 'rt', 'rt_circular'}
-        Tree plotting layout. 'rt' stands for Reingold Tilford and uses
+    layout : {'simple', 'rt', 'rt_circular', 'circle', ...}
+        Plotting layout. 'rt' stands for Reingold Tilford and uses
         the igraph layout function.
     """
     if colors is None or isinstance(colors, str): colors = [colors]
@@ -597,7 +606,7 @@ def aga_tree(
     if len(colors) == 1: axs = [axs]
     for icolor, color in enumerate(colors):
         show_color = False if icolor != len(colors)-1 else show
-        _aga_tree_single(
+        _aga_graph_single(
             adata,
             layout=layout,
             root=root,
@@ -607,17 +616,17 @@ def aga_tree(
             node_size=node_size,
             node_size_power=node_size_power,
             edge_width=edge_width,
-            plot_full_attachedness=plot_full_attachedness,
+            attachedness_type=attachedness_type,
             ext=ext,
             ax=axs[icolor],
             add_noise_to_node_positions=add_noise_to_node_positions)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
-    savefig_or_show('aga_tree', show, ext=ext)
+    savefig_or_show('aga_graph', show, ext=ext)
     return axs if ax is None else None
 
 
-def _aga_tree_single(
+def _aga_graph_single(
         adata,
         root=0,
         colors=None,
@@ -630,7 +639,7 @@ def _aga_tree_single(
         ax=None,
         layout=None,
         add_noise_to_node_positions=None,
-        plot_full_attachedness=False,
+        attachedness_type=False,
         draw_edge_labels=False):
     from .. import logging as logg
     from matplotlib import rcParams
@@ -659,14 +668,17 @@ def _aga_tree_single(
             if name in sett._ignore_categories: colors[iname] = 'grey'
         nx_g = nx.Graph(adata.add['aga_adjacency'])
     # node positions
-    if not plot_full_attachedness:
+    if attachedness_type in {'relative', 'absolute'}:
         if layout is None: layout = 'simple'
         if layout == 'simple':
             pos = utils.hierarchy_pos(nx_g, root)
         else:
             from .. import utils as sc_utils
             g = sc_utils.get_igraph_from_adjacency(adata.add['aga_adjacency'])
-            pos_list = g.layout(layout, root=[root]).coords
+            if 'rt' in layout:
+                pos_list = g.layout(layout, root=[root]).coords
+            else:
+                pos_list = g.layout(layout).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g)])
         pos_y_scale = np.max(pos_array[:, 1]) - np.min(pos_array[:, 1])
@@ -690,12 +702,18 @@ def _aga_tree_single(
     # edge widths
     base_edge_width = edge_width * 1.5*rcParams['lines.linewidth']
     if 'aga_attachedness' in adata.add:
-        nx_g = nx.Graph(adata.add['aga_attachedness'])
+        if attachedness_type == 'relative':
+            nx_g = nx.Graph(adata.add['aga_attachedness'])
+        else:
+            nx_g = nx.Graph(adata.add['aga_attachedness_absolute'])
         widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
-        if not plot_full_attachedness:
+        if attachedness_type in {'relative', 'absolute'}:
             nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='grey',
                                    style='dashed', alpha=0.5)
-            nx_g = nx.Graph(adata.add['aga_adjacency'])
+            if attachedness_type == 'relative':
+                nx_g = nx.Graph(adata.add['aga_adjacency'])
+            else:
+                nx_g = nx.Graph(adata.add['aga_adjacency_absolute'])
             widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
             nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
         else:
@@ -798,8 +816,8 @@ def aga_timeseries(
     if 'aga_groups_names_original' in adata.add:
         orig_node_names = adata.add['aga_groups_names_original']
     else:
-        logg.warn('did not find field "aga_groups_names_original" in adata.add, '
-                  'using aga_group integer ids instead')
+        logg.m('did not find field "aga_groups_names_original" in adata.add, '
+               'using aga_group integer ids instead', v=4)
 
     def moving_average(a, n=n_avg):
         ret = np.cumsum(a, dtype=float)
@@ -881,7 +899,7 @@ def aga_sc_tree(adata, root, show=None):
     for n in adata.add['aga_groups_names']:
         node_sets.append(np.flatnonzero(n == sorted_aga_groups))
     sc_G = utils.hierarchy_sc(nx_g, root, node_sets)
-    ax = aga_tree(sc_G, root)
+    ax = aga_graph(sc_G, root)
     savefig_or_show('aga_sc_tree', show)
     return ax
 
