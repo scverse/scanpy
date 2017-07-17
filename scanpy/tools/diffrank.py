@@ -9,13 +9,15 @@ import numpy as np
 from itertools import combinations
 from scipy.stats.distributions import norm
 from .. import utils
+from .. import logging as logg
 from .. import settings as sett
-
+from ..preprocessing import simple
 
 def diffrank(adata,
              key,
              names='all',
              pairings=False,
+             only_positive=None,
              sig_level=0.05,
              correction='Bonferroni',
              log=False,
@@ -48,6 +50,7 @@ def diffrank(adata,
         indices that sort them according to decreasing absolute value of the
         zscore.
     """
+    logg.m('find differentially expressed genes', r=True)
     adata = adata.copy() if copy else adata
     # for clarity, rename variable
     groups_names = names
@@ -67,10 +70,12 @@ def diffrank(adata,
     vars = np.zeros((n_groups, n_genes))
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
-        means[imask] = X[mask].mean(axis=0)
-        vars[imask] = X[mask].var(axis=0)
+        means[imask], vars[imask] = simple._get_mean_var(X[mask])
+        # means[imask] = X[mask].mean(axis=0)
+        # vars[imask] = X[mask].var(axis=0)
         ns[imask] = np.where(mask)[0].size
-    sett.m(0, 'testing', key, groups_names, 'with sample numbers', ns)
+    logg.info('consider "{}":'.format(key), groups_names,
+              'with sample numbers', ns)
     sett.m(2, 'means', means)
     sett.m(2, 'variances', vars)
 
@@ -82,13 +87,14 @@ def diffrank(adata,
     # test each group against the rest of the data
     if not pairings:
 
+        only_positive = True if only_positive is None else only_positive
+
         zscores_all = np.zeros((n_groups, n_genes))
         rankings_geneidcs = np.zeros((n_groups, n_genes), dtype=int)
 
         for igroup in range(n_groups):
             mask = ~groups_masks[igroup]
-            mean_rest = X[mask].mean(axis=0)
-            var_rest = X[mask].var(axis=0)
+            mean_rest, var_rest = simple._get_mean_var(X[mask])
             ns_rest = np.where(mask)[0].size
             # z-scores
             denom = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
@@ -100,7 +106,7 @@ def diffrank(adata,
             zscores = np.ma.masked_array(zscores, mask=np.isnan(zscores))
 
             zscores_all[igroup] = zscores
-            abs_zscores = np.abs(zscores)
+            abs_zscores = zscores if only_positive else np.abs(zscores)
 
             # p-values
             if False:
@@ -173,4 +179,7 @@ def diffrank(adata,
     adata.add['diffrank_rankings_geneidcs'] = rankings_geneidcs
     adata.add['diffrank_scoreskey'] = 'zscores'
 
+    logg.m('    finished', t=True, end=' ')
+    logg.m('and added\n'
+           '    "diffrank_zscores", the rankings for each genes (adata.add)')
     return adata if copy else None

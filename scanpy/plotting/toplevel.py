@@ -347,7 +347,7 @@ def scatter(adata,
     return axs
 
 
-def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
+def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=False):
     """Plot rankings.
 
     See, for example, how this is used in pl.pca_ranking.
@@ -368,6 +368,7 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30):
     scores = getattr(adata, attr)[keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
+    if log: scores = np.log10(scores)
     if labels is None:
         labels = adata.var_names if attr == 'var' else np.arange(scores.shape[0]).astype(str)
     if isinstance(labels, str):
