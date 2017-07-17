@@ -290,14 +290,19 @@ class AGA(data_graph.DataGraph):
                 raise ValueError('Did not find {} in adata.smp_keys()! '
                                  'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
                                  .format(clusters))
-            clusters = adata.smp[clusters]
+            clusters_array = adata.smp[clusters]
             # transform to a list of index arrays
             self.clusters_precomputed = []
-            self.clusters_precomputed_names = []
+            # TODO: this is not a good solution
+            if clusters + '_names' in adata.add:
+                self.clusters_precomputed_names = list(adata.add[clusters + '_names'])
+            else:
+                self.clusters_precomputed_names = []
             from natsort import natsorted
-            for cluster_name in natsorted(np.unique(clusters)):
-                self.clusters_precomputed.append(np.where(cluster_name == clusters)[0])
-                self.clusters_precomputed_names.append(cluster_name)
+            for cluster_name in natsorted(np.unique(clusters_array)):
+                self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
+                if clusters + '_names' not in adata.add:
+                    self.clusters_precomputed_names.append(cluster_name)
             n_nodes = len(self.clusters_precomputed)
         else:
             if n_nodes is None:

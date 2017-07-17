@@ -97,8 +97,7 @@ def violin(adata, smp, jitter=True, size=1, color='black', show=None):
     g = g.map(sns.stripplot, 'value', orient='vertical', jitter=jitter, size=size,
                  color=color).set_titles(
                      col_template='{col_name}').set_xlabels('')
-    show = sett.autoshow if show else show
-    if show: pl.show()
+    savefig_or_show('violin', show=show)
     utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
     sett.set_dpi()  # reset resolution
     return g
@@ -121,7 +120,7 @@ def scatter(adata,
             size=None,
             title=None,
             ax=None,
-            show=True):
+            show=None, do_not_save=False):
     """Scatter plots.
 
     Color with sample annotation (`color in adata.smp_keys()`) or gene
@@ -343,7 +342,8 @@ def scatter(adata,
                                             fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
-    if show: pl.show()
+    if not do_not_save:
+        savefig_or_show('scatter' if basis is None else basis, show=show)
     return axs
 
 

@@ -105,7 +105,8 @@ def pca_scatter(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=False)
+        show=False,
+        do_not_save=True)
     savefig_or_show('pca_scatter', show=show)
     return axs
 
@@ -194,7 +195,8 @@ def diffmap(
             right_margin=right_margin,
             size=size,
             title=title,
-            show=False)
+            show=False,
+            do_not_save=True)
         writekey = 'diffmap'
         if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
         writekey += '_comps' + comps.replace(',', '')
@@ -278,8 +280,7 @@ def draw_graph(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=False)
-    savefig_or_show('draw_graph', show=show)
+        show=show)
     return axs
 
 
@@ -352,8 +353,7 @@ def tsne(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=False)
-    savefig_or_show('tsne', show=show)
+        show=show)
     return axs
 
 
@@ -427,9 +427,8 @@ def spring(
         size=size,
         # defined in plotting
         title=title,
-        show=False)
-    savefig_or_show('spring', show=show)
-
+        show=show)
+    return axs
 
 # ------------------------------------------------------------------------------
 # Subgroup identification and ordering - clustering, pseudotime, branching
@@ -475,7 +474,6 @@ def aga(
              layout=layout_graph,
              attachedness_type=attachedness_type,
              show=False)
-    show = sett.autoshow if show is None else show
     savefig_or_show('aga', show=show)
 
 
@@ -511,37 +509,24 @@ def aga_scatter(
             color[color.index('aga_groups')] = adata.add['aga_groups_original']
         else:
             color += [adata.add['aga_groups_original']]
-    if comps == 'all':
-        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4',
-                      '3,5', '4,5']
-    else:
-        if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
-        if not isinstance(comps, list): comps_list = [comps]
-        else: comps_list = comps
-    ax_was_none = ax is None
-    for comps in comps_list:
-        ax = scatter(adata,
-                     basis=basis,
-                     color=color,
-                     names=names,
-                     comps=comps,
-                     cont=cont,
-                     layout=layout,
-                     legend_loc=legend_loc,
-                     legend_fontsize=legend_fontsize,
-                     cmap=cmap,
-                     pal=pal,
-                     right_margin=right_margin,
-                     size=size,
-                     title=title,
-                     ax=ax,
-                     show=False)
-        writekey = 'aga_' + basis
-        if sett.savefigs: savefig(writekey)
-    if show is None and not ax_was_none: show = False
-    else: show = sett.autoshow if show is None else show
-    if not sett.savefigs and show: pl.show()
+    ax = scatter(adata,
+                 basis=basis,
+                 color=color,
+                 names=names,
+                 comps=comps,
+                 cont=cont,
+                 layout=layout,
+                 legend_loc=legend_loc,
+                 legend_fontsize=legend_fontsize,
+                 cmap=cmap,
+                 pal=pal,
+                 right_margin=right_margin,
+                 size=size,
+                 title=title,
+                 ax=ax,
+                 show=show)
     return ax
+
 
 def aga_attachedness(adata, type='scaled'):
     if type == 'scaled':
@@ -596,7 +581,8 @@ def aga_graph(
     """
     if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
-    if names is None or isinstance(names, str) or isinstance(names, dict): names = [names]
+    if names is None or isinstance(names, dict): names = [names]
+    if isinstance(names, list) and isinstance(names[0], str): names = [names]
     if len(colors) != len(names):
         raise ValueError('`colors` and `names` lists need to have the same length.')
     if ax is None:
