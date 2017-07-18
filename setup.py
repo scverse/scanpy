@@ -1,4 +1,3 @@
-import sys
 from setuptools import setup, find_packages
 from distutils.extension import Extension
 import numpy
@@ -24,16 +23,9 @@ else:
         Extension("scanpy.cython.utils_cy",
                   ["scanpy/cython/utils_cy.c"]),
 ]
-    
+
 with open('requirements.txt') as requirements:
     requires = [l.strip() for l in requirements]
-
-more_requires = []
-if sys.version_info[0] == 2:
-    more_requires = [
-        'configparser',  # named ConfigParser in py2
-        'enum34',        # enum module introduced in python 3.4
-    ]
 
 setup(
     name='scanpy',
@@ -48,7 +40,7 @@ setup(
             'scanpy = scanpy.__main__:main',
         ],
     },
-    install_requires=requires + more_requires,
+    install_requires=requires,
     packages=find_packages(exclude=['scripts', 'scripts.*']),
     include_dirs=[numpy.get_include()],
     cmdclass=versioneer.get_cmdclass(cmdclass),
