@@ -45,16 +45,19 @@ def savefig(writekey, dpi=None, ext=None):
     if sett.figdir[-1] != '/': sett.figdir += '/'
     if ext is None: ext = sett.file_format_figs
     filename = sett.figdir + writekey + sett.plotsuffix + '.' + ext
-    logg.m('... saving figure to file', filename)
+    logg.info('... saving figure to file', filename)
     pl.savefig(filename, dpi=dpi)
-    pl.close()  # clear figure
 
 
-def savefig_or_show(writekey, show=None, dpi=None, ext=None):
-    show = sett.autoshow if show is None else show
-    if sett.savefigs: savefig(writekey, dpi=dpi, ext=ext)
-    elif show: pl.show()
-
+def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
+    if isinstance(save, str):
+        writekey += save
+        save = True
+    save = sett.savefigs if save is None else save
+    show = (sett.autoshow and not save) if show is None else show
+    if save: savefig(writekey, dpi=dpi, ext=ext)
+    if show: pl.show()
+    if save: pl.close()  # clear figure
 
 # -------------------------------------------------------------------------------
 # Toplevel Plotting Functions
@@ -120,7 +123,8 @@ def scatter(adata,
             size=None,
             title=None,
             ax=None,
-            show=None, do_not_save=False):
+            show=None,
+            save=None):
     """Scatter plots.
 
     Color with sample annotation (`color in adata.smp_keys()`) or gene
@@ -342,8 +346,7 @@ def scatter(adata,
                                             fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
-    if not do_not_save:
-        savefig_or_show('scatter' if basis is None else basis, show=show)
+    savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     return axs
 
 

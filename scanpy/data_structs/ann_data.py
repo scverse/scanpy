@@ -56,7 +56,8 @@ although the array can only store strings of length {}.'''
 
 class BoundStructArray(np.ndarray):
 
-    def __new__(cls, source, index_key, is_attr_of, n_row=None, keys_multicol=None, new_index_key=None):
+    def __new__(cls, source, index_key, is_attr_of, n_row=None,
+                keys_multicol=None, new_index_key=None):
         """Dimensionally structured dict, lowlevel alternative to pandas dataframe.
 
         Behaves like a dict except that
@@ -103,7 +104,7 @@ class BoundStructArray(np.ndarray):
         # create from None or Dict
         else:
             if source is None:  # empty array
-                cols = [np.arange(n_row).astype(np.string_)]
+                cols = [np.arange(n_row).astype(STRING_TYPE)]
                 dtype = [(new_index_key, cols[0].dtype)]
             else:
                 if not isinstance(source, Mapping):

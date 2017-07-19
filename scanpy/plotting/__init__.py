@@ -106,8 +106,8 @@ def pca_scatter(
         size=size,
         title=title,
         show=False,
-        do_not_save=True)
-    savefig_or_show('pca_scatter', show=show)
+        save=False)
+    savefig_or_show('pca_scatter', show=show, save=save)
     return axs
 
 
@@ -136,7 +136,7 @@ def diffmap(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None, save=None):
     """Scatter plot in Diffusion Map basis.
 
     Parameters
@@ -196,11 +196,11 @@ def diffmap(
             size=size,
             title=title,
             show=False,
-            do_not_save=True)
+            save=False)
         writekey = 'diffmap'
         if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
         writekey += '_comps' + comps.replace(',', '')
-        if sett.savefigs: savefig(writekey)
+        if sett.savefigs or (save is not None): savefig(writekey)  # TODO: cleaner
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
     return axs
@@ -220,7 +220,7 @@ def draw_graph(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None, save=None):
     """Scatter in tSNE basis.
 
     Parameters
@@ -280,7 +280,7 @@ def draw_graph(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show)
+        show=show, save=save)
     return axs
 
 
@@ -298,7 +298,7 @@ def tsne(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None, save=None):
     """Scatter in tSNE basis.
 
     Parameters
@@ -353,7 +353,7 @@ def tsne(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show)
+        show=show, save=save)
     return axs
 
 
@@ -455,13 +455,13 @@ def aga(
         left_margin=0.05,
         layout_graph=None,
         attachedness_type='relative',
-        show=None):
+        show=None, save=None):
     """Summary figure for approximate graph abstraction.
 
     See aga_scatter and aga_graph for most of the arguments.
     """
     _, axs = pl.subplots(figsize=(8, 4), ncols=2)
-    pl.subplots_adjust(left=left_margin)
+    pl.subplots_adjust(left=left_margin, bottom=0.05)
     aga_scatter(adata,
                 color='aga_groups',
                 basis=basis,
@@ -474,7 +474,7 @@ def aga(
              layout=layout_graph,
              attachedness_type=attachedness_type,
              show=False)
-    savefig_or_show('aga', show=show)
+    savefig_or_show('aga', show=show, save=save)
 
 
 def aga_scatter(
@@ -493,7 +493,7 @@ def aga_scatter(
         size=None,
         title=None,
         ax=None,
-        show=None):
+        show=None, save=None):
     """See parameters of sc.pl.aga().
     """
     from ..examples import check_adata
@@ -501,9 +501,8 @@ def aga_scatter(
     if color is not None:
         if not isinstance(color, list): color = color.split(',')
     else:
-        if 'aga_pseudotime' in adata.smp_keys(): color = ['aga_pseudotime']
-        else: color = []
-        color += ['aga_groups']
+        # no need to add pseudotime, is usually not helpful in satter
+        color = ['aga_groups']
     if 'aga_groups_original' in adata.add:
         if 'aga_groups' in color:
             color[color.index('aga_groups')] = adata.add['aga_groups_original']
@@ -524,7 +523,8 @@ def aga_scatter(
                  size=size,
                  title=title,
                  ax=ax,
-                 show=show)
+                 show=False)
+    savefig_or_show('aga_' + basis, show=show, save=save)
     return ax
 
 
@@ -565,12 +565,14 @@ def aga_graph(
         node_size=1,
         node_size_power=0.5,
         edge_width=1,
+        title=None,
         ext='png',
         add_noise_to_node_positions=None,
-        left_margin=0.02,
+        left_margin=0.01,
         attachedness_type='relative',
         ax=None,
-        show=None):
+        show=None,
+        save=None):
     """Plot the abstracted tree.
 
     Parameters
@@ -585,13 +587,16 @@ def aga_graph(
     if isinstance(names, list) and isinstance(names[0], str): names = [names]
     if len(colors) != len(names):
         raise ValueError('`colors` and `names` lists need to have the same length.')
+    if title is None or isinstance(title, str): title = [title for name in names]
     if ax is None:
         from matplotlib import rcParams
         from matplotlib.figure import SubplotParams as sppars
-        figure_width = 1.3 * rcParams['figure.figsize'][0] * len(colors)
+        figure_width = rcParams['figure.figsize'][0] * len(colors)
+        top = 0.93
         fig, axs = pl.subplots(ncols=len(colors),
-                               figsize=(figure_width, 1.3*rcParams['figure.figsize'][1]),
-                               subplotpars=sppars(left=left_margin, bottom=0.05))
+                               figsize=(figure_width, rcParams['figure.figsize'][1]),
+                               subplotpars=sppars(left=left_margin, bottom=0,
+                                                  right=0.99, top=top))
     else:
         axs = ax
     if len(colors) == 1: axs = [axs]
@@ -610,10 +615,11 @@ def aga_graph(
             attachedness_type=attachedness_type,
             ext=ext,
             ax=axs[icolor],
+            title=title[icolor],
             add_noise_to_node_positions=add_noise_to_node_positions)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
-    savefig_or_show('aga_graph', show, ext=ext)
+    savefig_or_show('aga_graph', show=show, ext=ext, save=save)
     return axs if ax is None else None
 
 
@@ -626,6 +632,7 @@ def _aga_graph_single(
         node_size=1,
         node_size_power=0.5,
         edge_width=1,
+        title=None,
         ext='pdf',
         ax=None,
         layout=None,
@@ -782,29 +789,33 @@ def _aga_graph_single(
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
+    if title is not None: ax.set_title(title)
     return ax
 
 
-def aga_timeseries(
+def aga_path(
         adata,
         nodes=[0],
         keys=[0],
         as_heatmap=False,
         xlim=[None, None],
         n_avg=1,
-        left_margin=0.4,
+        title=None,
+        left_margin=None,
         show_left_y_ticks=None,
         ytick_fontsize=None,
         show_nodes_twin=True,
         legend_fontsize=None,
         ax=None,
+        save=None,
         show=None):
     ax_was_none = ax is None
     if show_left_y_ticks is None:
         show_left_y_ticks = False if show_nodes_twin else True
 
     orig_node_names = []
-    if 'aga_groups_names_original' in adata.add:
+    if ('aga_groups_names_original' in adata.add
+        and adata.add['aga_groups_original'] != 'louvain_groups'):
         orig_node_names = adata.add['aga_groups_names_original']
     else:
         logg.m('did not find field "aga_groups_names_original" in adata.add, '
@@ -857,10 +868,17 @@ def aga_timeseries(
         ax = pl.gca()
         ax.set_frame_on(False)
         pl.colorbar()
-    pl.legend(frameon=False, loc='center left',
-              bbox_to_anchor=(-left_margin, 0.5),
-              fontsize=legend_fontsize)
+        left_margin = 0.2 if left_margin is None else left_margin
+        pl.subplots_adjust(left=left_margin)
+    else:
+        left_margin = 0.4 if left_margin is None else left_margin
+        pl.legend(frameon=False, loc='center left',
+                  bbox_to_anchor=(-left_margin, 0.5),
+                  fontsize=legend_fontsize)
     pl.xticks(x_tick_locs, x_tick_labels)
+    pl.xlabel(adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
+              and adata.add['aga_groups_original'] != 'louvain_groups')
+              else 'aga groups')
     if show_left_y_ticks:
         utils.pimp_axis(pl.gca().get_yaxis())
         pl.ylabel('as indicated on legend')
@@ -877,9 +895,10 @@ def aga_timeseries(
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
         pl.ylabel(label)
         utils.pimp_axis(pl.gca().get_yaxis())
+    if title is not None: pl.title(title)
     if show is None and not ax_was_none: show = False
     else: show = sett.autoshow if show is None else show
-    savefig_or_show('aga_timeseries', show)
+    savefig_or_show('aga_path', show=show, save=save)
     return ax if ax_was_none else None
 
 

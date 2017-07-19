@@ -144,7 +144,7 @@ def aga(adata,
     adata.add['distance'] = aga.Dsq
     adata.add['Ktilde'] = aga.Ktilde
     logg.info('running Approximate Graph Abstraction (AGA)', r=True)
-    if root_cell_was_passed:
+    if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['aga_pseudotime'] = aga.pseudotime

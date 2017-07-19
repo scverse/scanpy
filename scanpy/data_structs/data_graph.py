@@ -171,6 +171,11 @@ class DataGraph(object):
         xroot = None
         if 'xroot' in adata.add: xroot = adata.add['xroot']
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
+        # set iroot directly
+        if 'iroot' in adata.add: self.iroot = adata.add['iroot']
+        if 'xroot' in adata.add and 'iroot' in adata.add:
+            raise ValueError('Either provide "iroot" or "xroot" in `adata.add`, but not both.')
+        # use the fulll data matrix X
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
             or X.shape[1] <= self.n_pcs):
             self.X = X

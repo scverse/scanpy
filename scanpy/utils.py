@@ -253,7 +253,9 @@ def select_groups(adata, groups_names_subset='all', smp='groups'):
         # get list from string
         if isinstance(groups_names_subset, str):
             groups_names_subset = groups_names_subset.split(',')
-        groups_ids = np.where(np.in1d(adata.add[smp + '_names'], np.array(groups_names_subset)))[0]
+        groups_ids = []
+        for name in groups_names_subset:
+            groups_ids.append(np.where(adata.add[smp + '_names'] == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_names'])).astype(str),

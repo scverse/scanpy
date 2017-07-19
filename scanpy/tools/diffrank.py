@@ -16,6 +16,7 @@ from ..preprocessing import simple
 def diffrank(adata,
              key,
              names='all',
+             n_genes=30,
              pairings=False,
              only_positive=None,
              sig_level=0.05,
@@ -52,6 +53,8 @@ def diffrank(adata,
     """
     logg.m('find differentially expressed genes', r=True)
     adata = adata.copy() if copy else adata
+    n_genes_user = n_genes
+    utils.check_adata(adata)
     # for clarity, rename variable
     groups_names = names
     groups_names, groups_masks = utils.select_groups(adata, groups_names, key)
@@ -179,7 +182,16 @@ def diffrank(adata,
     adata.add['diffrank_rankings_geneidcs'] = rankings_geneidcs
     adata.add['diffrank_scoreskey'] = 'zscores'
 
+    names_of_top_ranked_genes = []
+    for irank in range(len(adata.add['diffrank_rankings_names'])):
+        names_of_top_ranked_genes.append([])
+        for ig, g in enumerate(rankings_geneidcs[irank, :n_genes_user]):
+            names_of_top_ranked_genes[-1].append(adata.var_names[g])
+
+    adata.add['diffrank_names_of_top_ranked_genes'] = np.array(names_of_top_ranked_genes)
+
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
+           '    "diffrank_names_of_top_ranked_genes", the ordered names of topranked genes (adata.add)\n'
            '    "diffrank_zscores", the rankings for each genes (adata.add)')
     return adata if copy else None
