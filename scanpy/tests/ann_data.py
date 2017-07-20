@@ -214,7 +214,7 @@ def test_n_smps():
     adata1 = adata[:2, ]
     assert adata1.n_smps == 2
 
-@mark.xfail(strict=True)
+
 def test_structdict_index():
     adata = AnnData(np.array([[1, 2], [3, 4], [5, 6]]))
 
