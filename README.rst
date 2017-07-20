@@ -5,15 +5,15 @@
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
 
-Scanpy -- Single-Cell Analysis in Python
-========================================
+Scanpy – Single-Cell Analysis in Python
+=======================================
 
 Efficient tools for analyzing and simulating large-scale single-cell data that aim at an understanding of dynamic biological processes from snapshots of transcriptome or proteome. The draft `Wolf, Angerer & Theis (2017) <http://falexwolf.de/docs/scanpy.pdf>`__ explains conceptual ideas of the package. Any comments are appreciated!
 
 Getting started
 ---------------
 
-Download or clone the repository -- green button on top of the page -- and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
+Download or clone the repository – green button on top of the page – and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
 
     pip install -e .
 
@@ -213,7 +213,7 @@ dbscan
 
 `[source] <scanpy/tools/dbscan.py>`__ Cluster cells using DBSCAN_ ([ester96]_), in the implementation of ``scikit-learn`` ([pedregosa11]_).
 
-This is a very simple clustering method. A better one -- in the same framework as DPT and Diffusion Maps -- will come soon.
+This is a very simple clustering method. A better one – in the same framework as DPT and Diffusion Maps – will come soon.
 
 .. _DBSCAN: https://en.wikipedia.org/wiki/DBSCAN
 
@@ -240,7 +240,7 @@ Installation
 
 If you use Windows or Mac OS X and do not have a current Python distribution (Python 3.5 or 3.6), download and install Miniconda_ (see below). If you use Linux, use your package manager to obtain a current python distribution.
 
-Then, download or clone the repository -- green button on top of the page -- and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
+Then, download or clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
     pip install -e .
 
@@ -283,7 +283,7 @@ References
    `Nature Biotechnology 31, 545 <http://dx.doi.org/10.1038/nbt.2594>`__.
 
 .. [angerer16] Angerer *et al.* (2016),
-   *destiny -- diffusion maps for large-scale single-cell data in R*,
+   *destiny – diffusion maps for large-scale single-cell data in R*,
    `Bioinformatics 32, 1241-1243 <https://doi.org/10.1093/bioinformatics/btv715>`__.
 
 .. [coifman05] Coifman *et al.* (2005),
@@ -316,7 +316,7 @@ References
    `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__
 
 .. [krumsiek10] Krumsiek *et al.* (2010),
-   *Odefy -- From discrete to continuous models*,
+   *Odefy – From discrete to continuous models*,
    `BMC Bioinformatics 11, 233 <http://dx.doi.org/10.1186/1471-2105-11-233>`__.
 
 .. [krumsiek11] Krumsiek *et al.* (2011),
