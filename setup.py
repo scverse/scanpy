@@ -27,10 +27,14 @@ else:
 with open('requirements.txt') as requirements:
     requires = [l.strip() for l in requirements]
 
+with open('README.rst') as readme_f:
+    readme = readme_f.read()
+
 setup(
     name='scanpy',
     version=versioneer.get_version(),
     description='Single-Cell Analysis in Python.',
+    long_description=readme,
     url='http://github.com/theislab/scanpy',
     author='F. Alexander Wolf, P. Angerer',
     author_email='alex.wolf@helmholtz-muenchen.de',
