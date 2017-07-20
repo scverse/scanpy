@@ -44,7 +44,7 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 Features 
 ---------
 
-Let us give an Overview_ of the toplevel user functions, followed by a few words on Scanpy's `Basic Features`_ and more `details <Visualizations_>`__.
+Let us give an Overview_ of the toplevel user functions, followed by a few words on Scanpy's `Basic Features`_ and more `details <Visualization_>`__.
 
 Overview
 ~~~~~~~~
