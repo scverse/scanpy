@@ -460,6 +460,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
     vert_gap = height / (max([l for l in levels])+1)
     return make_pos({})
 
+
 def hierarchy_sc(G, root, node_sets):
     def make_sc_tree(sc_G, node=root, parent=None):
         sc_G.add_node(node)
@@ -477,6 +478,7 @@ def hierarchy_sc(G, root, node_sets):
             sc_G = make_sc_tree(sc_G, neighbor, node)
         return sc_G
     return make_sc_tree(nx.Graph())
+
 
 def zoom(ax, xy='x', factor=1):
     """Zoom into axis.

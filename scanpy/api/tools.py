@@ -6,7 +6,7 @@ The user only sees convenience functions.
 # order alphabetically
 from ..tools.dbscan import dbscan
 from ..tools.diffmap import diffmap
-from ..tools.diffrank import diffrank
+from ..tools.rank_genes_groups import rank_genes_groups
 from ..tools.dpt import dpt
 from ..tools.louvain import louvain
 from ..tools.pca import pca

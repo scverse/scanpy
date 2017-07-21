@@ -1376,19 +1376,50 @@ def paths(
     if not sett.savefigs and show: pl.show()
 
 
-def diffrank(adata, n_genes=20, show=None):
+def rank_genes_groups(adata, n_genes=20, show=None, save=None):
+    ranking_deprecated(adata, toolkey='rank_genes_groups', n_genes=n_genes)
+    writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups']
+    savefig_or_show(writekey, show=show, save=save)
+
+
+def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=None):
     """Plot ranking of genes for all tested comparisons.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
+    genes : list of str
+        List of valid gene names.
+    groups : list of str
+        List of valid group names.
     n_genes : int
         Number of genes to show.
     """
-    ranking_deprecated(adata, toolkey='diffrank', n_genes=n_genes)
-    writekey = 'diffrank_' + adata.add['diffrank_groups']
-    savefig_or_show(writekey)
+    from ..tools import rank_genes_groups
+    groups_key = adata.add['rank_genes_groups']
+    group_names = adata.add['rank_genes_groups_names'] if groups is None else groups
+    group_loop = (group_name for group_name in group_names)
+    check_is_computed = True
+    for group_name in group_loop:
+        keys = []
+        gene_names = []
+        gene_loop = (gene_item for gene_item in enumerate(adata.add['rank_genes_groups_names_of_top_ranked_genes'][group_name][:n_genes]))
+        for gene_counter, gene_name in gene_loop:
+            identifier = rank_genes_groups._build_identifier(
+                groups_key, group_name, gene_counter, gene_name)
+            if check_is_computed and identifier not in set(adata.smp_keys()):
+                raise ValueError('You need to set `compute_distribution=True` in `sc.tl.rank_genes_groups()` if you want to use this visualiztion. '
+                                 'You might consider simply using `sc.pl.rank_genes_groups_means()` and `sc.pl.violin(adata_raw, gene_name, group_by=grouping)` instead.')
+                check_is_computed = False
+            keys.append(identifier)
+            gene_names.append(gene_name)
+        ax = violin(adata, keys, show=False)
+        ax.set_title(group_name)
+        ax.set_ylabel('z-score - bulk reference')
+        ax.set_xticklabels(gene_names, rotation='vertical')
+        writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups'] + '_' + group_name
+        savefig_or_show(writekey, show=show, save=save)
 
 
 def tgdyn_simple(adata, n_genes=10, show=None):

@@ -5,6 +5,7 @@
 
 import os
 import numpy as np
+from scipy.sparse import issparse
 
 from ..compat.matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -76,13 +77,20 @@ def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
     if show: pl.show()
 
 
-def violin(adata, smp, jitter=True, size=1, color='black', show=None):
+def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
+           multi_panel=False, show=None, save=None, ax=None):
     """Violin plot.
 
     Wraps seaborn.violinplot.
 
     Parameters
     ----------
+    keys : str
+        Keys for accessing fields of adata.smp.
+    group_by : str
+        Key for indexing adata.smp.
+    multi_panel : bool
+        Show fields in multiple panels.
     jitter : float or bool (default: True)
         See sns.stripplot.
 
@@ -90,20 +98,54 @@ def violin(adata, smp, jitter=True, size=1, color='black', show=None):
     -------
     A seaborn.FacetGrid that allows to access the matplotlib.Axis objects.
     """
+    if group_by is not None and isinstance(keys, list):
+        raise ValueError('Pass a single key as string if using `group_by`.')
+    if not isinstance(keys, list): keys = [keys]
     import pandas as pd
     import seaborn as sns
-    smp_df = adata.smp.to_df()
-    smp_tidy = pd.melt(smp_df, value_vars=smp)
-    sns.set_style('whitegrid')
-    g = sns.FacetGrid(smp_tidy, col='variable', sharey=False)
-    g = g.map(sns.violinplot, 'value', inner=None, orient='vertical')
-    g = g.map(sns.stripplot, 'value', orient='vertical', jitter=jitter, size=size,
-                 color=color).set_titles(
-                     col_template='{col_name}').set_xlabels('')
-    savefig_or_show('violin', show=show)
     utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
     sett.set_dpi()  # reset resolution
-    return g
+    smp_keys = False
+    for key in keys:
+        if key in adata.smp_keys():
+            smp_keys = True
+        if smp_keys and key not in adata.smp_keys():
+            raise ValueError('Either use sample keys or variable names, but do not mix.')
+    if smp_keys:
+        smp_df = adata.smp.to_df()
+    else:
+        if group_by is None:
+            smp_df = pd.DataFrame()
+        else:
+            smp_df = adata.smp.to_df()
+        for key in keys:
+            X_col = adata[:, key].X
+            if issparse(X_col): X_col = X_col.toarray().flatten()
+            smp_df[key] = X_col
+    if group_by is None:
+        smp_tidy = pd.melt(smp_df, value_vars=keys)
+        x = 'variable'
+        y = 'value'
+    else:
+        smp_tidy = smp_df
+        x = group_by
+        y = keys[0]
+    if multi_panel:
+        sns.set_style('whitegrid')
+        g = sns.FacetGrid(smp_tidy, col=x, sharey=False)
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale)
+        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
+                     color='black').set_titles(
+                         col_template='{col_name}').set_xlabels('')
+        ax = g
+    else:
+        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None,
+                            orient='vertical', scale=scale, ax=ax)
+        ax = sns.stripplot(x=x, y=y, data=smp_tidy,
+                           jitter=jitter, color='black', size=size, ax=ax)
+        ax.set_xlabel('' if group_by is None else group_by)
+    savefig_or_show('violin', show=show, save=save)
+    return ax
 
 
 def scatter(adata,
@@ -424,15 +466,6 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
         scores = np.abs(scores)
         return scores
 
-    # the limits for the y axis
-    ymin = 1e100
-    ymax = -1e100
-    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
-        scores = get_scores(irank)
-        ymin = np.min([ymin, np.min(scores)])
-        ymax = np.max([ymax, np.max(scores)])
-    ymax += 0.3*(ymax-ymin)
-
     # number of panels
     if n_panels <= 5:
         n_panels_y = 1
@@ -458,12 +491,14 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
     for irank in range(len(adata.add[toolkey + '_rankings_names'])):
         pl.subplot(gs[count-1])
         scores = get_scores(irank)
+        ymin = np.min(scores)
+        ymax = np.max(scores)
+        ymax += 0.3*(ymax-ymin)
         for ig, g in enumerate(adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
             marker = (r'\leftarrow' if adata.add[toolkey + '_zscores'][irank, g] < 0
                                     else r'\rightarrow')
             pl.text(ig, scores[ig],
-                    r'$ ' + marker + '$ ' + adata.var_names[g],
-                    color='red' if adata.add[toolkey + '_zscores'][irank, g] < 0 else 'green',
+                    adata.var_names[g],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center',
                     fontsize=8)
@@ -473,9 +508,6 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
             pl.xlabel('ranking')
         if count == 1 or count == n_panels_x+1:
             pl.ylabel(scoreskey)
-        # else:
-        #     yticks = pl.yticks()[0]
-        #     pl.yticks(yticks, [])
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
         count += 1

@@ -480,6 +480,7 @@ class AnnData(IndexMixin):
             if self.n_smps == 1 and self.n_vars == 1:
                 self.X = self.X[0, 0]
             elif self.n_smps == 1 or self.n_vars == 1:
+                if sp.issparse(self.X): self.X = self.X.toarray()
                 self.X = self.X.flatten()
         elif len(self.X.shape) == 1 and single_col:
             self.n_smps = self.X.shape[0]

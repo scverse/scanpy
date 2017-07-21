@@ -289,7 +289,7 @@ def log1p(data, copy=False):
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        data.X = log1p(data.X)
+        adata.X = log1p(data.X)
         return adata if copy else None
     X = data  # proceed with data matrix
     if not issparse(X):
