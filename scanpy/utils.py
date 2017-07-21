@@ -20,6 +20,10 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g = ig.Graph(list(zip(sources, targets)),
                  directed=directed,
                  edge_attrs={'weight': weights})
+    if g.vcount() != adjacency.shape[0]:
+        logg.warn('The constructed graph has only {} nodes. '
+                  'Your adjacency matrix contained redundant nodes.'
+                  .format(g.vcount()))
     return g
 
 
@@ -424,8 +428,8 @@ def subsample_n(X, n=0, seed=0):
         raise ValueError('n must be greater 0')
     np.random.seed(seed)
     n = X.shape[0] if (n == 0 or n > X.shape[0]) else n
-    rows = np.random.choice(X.shape[0],size=n,replace=False)
-    Xsampled = np.array(X[rows])
+    rows = np.random.choice(X.shape[0], size=n, replace=False)
+    Xsampled = X[rows]
     return Xsampled, rows
 
 

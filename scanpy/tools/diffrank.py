@@ -21,7 +21,6 @@ def diffrank(adata,
              only_positive=None,
              sig_level=0.05,
              correction='Bonferroni',
-             log=False,
              copy=False):
     """Compare groups by ranking genes according to differential expression.
 
@@ -61,10 +60,6 @@ def diffrank(adata,
     adata.add['diffrank_groups'] = key
     adata.add['diffrank_groups_names'] = groups_names
     X = adata.X
-    if log:
-        # TODO: treat negativity explicitly
-        X = np.abs(X)
-        X = np.log(X) / np.log(2)
 
     # loop over all masks and compute means, variances and sample numbers
     n_groups = groups_masks.shape[0]

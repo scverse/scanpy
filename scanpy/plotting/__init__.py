@@ -85,7 +85,7 @@ def pca_scatter(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None, save=None):
     """See parameters of pl.pca().
     """
     from ..examples import check_adata

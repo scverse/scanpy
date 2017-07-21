@@ -268,6 +268,8 @@ class DataGraph(object):
         return ddmap
 
     def compute_distance_matrix(self):
+        logg.m('... computing distance matrix with n_neighbors={}'
+               .format(self.k), v=4)
         Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
             X=self.X,
             k=self.k,
@@ -276,7 +278,7 @@ class DataGraph(object):
         self.Dsq = Dsq
         return Dsq, indices, distances_sq
 
-    def compute_transition_matrix(self, alpha=1):
+    def compute_transition_matrix(self, alpha=1, recompute_distance=False):
         """Compute transition matrix.
 
         Parameters
@@ -293,7 +295,7 @@ class DataGraph(object):
         Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
         Coifman et al. (2005).
         """
-        if self.Dsq is None:
+        if self.Dsq is None or recompute_distance:
             Dsq, indices, distances_sq = self.compute_distance_matrix()
         else:
             Dsq = self.Dsq

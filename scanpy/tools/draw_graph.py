@@ -25,12 +25,12 @@ def draw_graph(adata,
     ----------
     adata : AnnData
         Annotated data matrix.
-    layout : str, optional (default: 'fruchterman_reingold')
-        Any valid igraph layout: http://igraph.org/c/doc/igraph-Layout.html.  Of
+    layout : str, optional (default: 'fr')
+        Any valid igraph layout: http://igraph.org/c/doc/igraph-Layout.html. Of
         particular interest are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid
         Fruchterman Reingold, faster than 'fr'), 'kk' (Kamadi Kawai', slower
         than 'fr'), 'lgl' (Large Graph, very fast), 'drl' (Distributed Recursive
-        Layout) and 'rt' (Reingold Tilford tree layout).
+        Layout, pretty fast) and 'rt' (Reingold Tilford tree layout).
     n_neighbors : int
         Number of nearest neighbors in graph.
     n_pcs : int
@@ -39,7 +39,7 @@ def draw_graph(adata,
     Returns
     -------
     Returns or updates adata depending on `copy` with
-         "X_draw_graph", graph-drawing coordinates (adata.smp)
+         `"X_draw_graph_" + layout`, the graph-drawing coordinates (adata.smp)
 
     References
     ----------
@@ -63,7 +63,7 @@ def draw_graph(adata,
                                        k=n_neighbors,
                                        n_pcs=n_pcs,
                                        n_jobs=n_jobs)
-        graph.compute_transition_matrix()
+        graph.compute_transition_matrix(recompute_distance=True)
         adata.add['Ktilde'] = graph.Ktilde
     elif n_neighbors is not None and not recompute_graph:
         logg.warn('`n_neighbors={}` has no effect (set `recompute_graph=True` to enable it)'

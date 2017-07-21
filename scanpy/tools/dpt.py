@@ -91,9 +91,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
-    root_cell_was_passed = True
     if 'xroot' not in adata.add and 'xroot' not in adata.var:
-        root_cell_was_passed = False
         logg.m('    no root cell found, no computation of pseudotime')
         msg = \
     '''To enable computation of pseudotime, pass the expression "xroot" of a root cell.
@@ -127,7 +125,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if False:  # we do not compute the full Ddiff matrix, only the elements we need
         dpt.compute_Ddiff_matrix()
-    if root_cell_was_passed:
+    if dpt.iroot is not None:
         dpt.set_pseudotime()  # pseudotimes are distances from root point
         adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['dpt_pseudotime'] = dpt.pseudotime
@@ -151,7 +149,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     adata.add['dpt_groups_connects'] = dpt.segs_connects
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
-           + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if root_cell_was_passed else '')
+           + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if dpt.iroot is not None else '')
            + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp)')
     return adata if copy else None
 

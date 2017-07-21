@@ -291,6 +291,7 @@ def scatter(adata,
 
     def add_centroid(centroids, name, Y, mask):
         masked_values = Y[mask]
+        if masked_values.shape[0] == 0: return
         median = np.median(masked_values, axis=0)
         i = np.argmin(np.sum(np.abs(masked_values - median), axis=1))
         centroids[name] = masked_values[i]
@@ -451,7 +452,7 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
                            right=1-(n_panels_x-1)*left-0.01/n_panels_x,
                            bottom=bottom,
                            top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0.12)
+                           wspace=0.17)
 
     count = 1
     for irank in range(len(adata.add[toolkey + '_rankings_names'])):

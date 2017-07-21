@@ -609,37 +609,46 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     return X if copy else None
 
 
-def subsample(data, subsample, seed=0, copy=False):
-    """Subsample.
+def subsample(data, fraction, seed=0, copy=False):
+    """Subsample to `fraction` of the data.
 
     Parameters
     ----------
     data : AnnData or array-like
         Annotated data matrix.
-    subsample : int
-        Subsample to a fraction of 1/subsample of the data.
+    fraction : float in [0, 1]
+        Subsample to a fraction the number of samples.
     seed : int
         Random seed to change subsampling.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
+
+    Returns
+    -------
+    Updates or returns the subsampled data object, depending on `copy`.
 
     Notes
     -----
     Returns X, smp_indices if data is array-like, otherwise subsamples the passed
     AnnData (copy == False) or a copy of it (copy == True).
     """
-    from .. import utils
-    if not isinstance(data, AnnData):
+    if fraction > 1 or fraction < 0:
+        raise ValueError('`fraction` needs to be within [0, 1], not {}'
+                         .format(fraction))
+    np.random.seed(seed)
+    if isinstance(data, AnnData):
+        adata = data.copy() if copy else data
+        new_n_smps = int(fraction * adata.n_smps)
+        logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
+        smp_indices = np.random.choice(adata.n_smps, size=new_n_smps, replace=False)
+        adata.inplace_subset_smp(smp_indices)
+        return adata if copy else None
+    else:
         X = data
-        return utils.subsample(X, subsample, seed)
-    adata = data.copy() if copy else data
-    _, smp_indices = utils.subsample(adata.X, subsample, seed)
-    adata.inplace_subset_smp(smp_indices)
-    for k in adata.smp_keys():
-        # TODO: this should also be taken into account when slicing
-        if k + '_masks' in adata.add:
-            adata.add[k + '_masks'] = adata[k + '_masks'][:, smp_indices]
-    return adata if copy else None
+        new_n_smps = int(fraction * X.shape[0])
+        logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
+        smp_indices = np.random.choice(X.shape[0], size=new_n_smps, replace=False)
+        return X[smp_indices]
 
 
 def zscore_deprecated(X):

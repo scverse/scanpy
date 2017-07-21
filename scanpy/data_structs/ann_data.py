@@ -10,6 +10,7 @@ from numpy.lib.recfunctions import append_fields
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
 
+from .. import logging as logg
 from ..utils import merge_dicts
 
 SMP_INDEX = 'smp_names'
@@ -613,7 +614,16 @@ class AnnData(IndexMixin):
         var_ann = self.var[var]
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
-        adata = AnnData(X, smp_ann, var_ann, self.add)
+        add_ann = self.add
+        raised_warning = False
+        for k, v in self.add.items():  # TODO: make sure this really works as expected
+            if isinstance(v, sp.spmatrix) and v.shape == (self.n_smps, self.n_smps):
+                add_ann[k] = v.tocsc()[:, smp].tocsr()[smp, :]
+                if not raised_warning:
+                    logg.warn('Slicing adjacency matrices can be dangerous. '
+                              'Consider recomputing the data graph.')
+                    raised_warning = True
+        adata = AnnData(X, smp_ann, var_ann, add_ann)
         return adata
 
     def inplace_subset_var(self, index):
@@ -633,6 +643,14 @@ class AnnData(IndexMixin):
         """
         self.X = self.X[index, :]
         self.smp = self.smp[index]
+        raised_warning = False
+        for k, v in self.add.items():
+            if isinstance(v, sp.spmatrix) and v.shape == (self.n_smps, self.n_smps):
+                self.add[k] = v.tocsc()[:, index].tocsr()[index, :]
+                if not raised_warning:
+                    logg.warn('Slicing adjacency matrices can be dangerous. '
+                              'Consider recomputing the data graph.')
+                    raised_warning = True
         self.n_smps = self.X.shape[0]
         return None
 
