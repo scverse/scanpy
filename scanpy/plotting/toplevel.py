@@ -1,6 +1,6 @@
 # Authors: F. Alex Wolf <http://falexwolf.de>
 #          P. Angerer
-"""Toplevel plotting functions for AnnData.
+"""Generic plotting functions for AnnData.
 """
 
 import os
@@ -20,7 +20,7 @@ from .utils import scatter_base, scatter_group
 
 
 # -------------------------------------------------------------------------------
-# Toplevel Helper Functions
+# Generic Helper Functions
 # -------------------------------------------------------------------------------
 
 
@@ -60,92 +60,23 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if show: pl.show()
     if save: pl.close()  # clear figure
 
+
 # -------------------------------------------------------------------------------
-# Toplevel Plotting Functions
+# Generic plotting functions
 # -------------------------------------------------------------------------------
 
 
 def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
-           cmap='Greys', show=True):
-    fig = pl.figure(figsize=(5, 5))
-    pl.imshow(matrix, cmap=cmap)
+           cmap='Greys', show=None, save=None, ax=None):
+    """Plot a matrix."""
+    if ax is None: ax = pl.gca()
+    ax.imshow(matrix, cmap=cmap)
     if xlabels is not None:
-        pl.xticks(range(len(xlabels)), xlabels, rotation='vertical')
+        ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
     if ylabels is not None:
-        pl.yticks(range(len(ylabels)), ylabels)
-    pl.colorbar(shrink=cshrink)
-    if show: pl.show()
-
-
-def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
-           multi_panel=False, show=None, save=None, ax=None):
-    """Violin plot.
-
-    Wraps seaborn.violinplot.
-
-    Parameters
-    ----------
-    keys : str
-        Keys for accessing fields of adata.smp.
-    group_by : str
-        Key for indexing adata.smp.
-    multi_panel : bool
-        Show fields in multiple panels.
-    jitter : float or bool (default: True)
-        See sns.stripplot.
-
-    Returns
-    -------
-    A seaborn.FacetGrid that allows to access the matplotlib.Axis objects.
-    """
-    if group_by is not None and isinstance(keys, list):
-        raise ValueError('Pass a single key as string if using `group_by`.')
-    if not isinstance(keys, list): keys = [keys]
-    import pandas as pd
-    import seaborn as sns
-    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
-    sett.set_dpi()  # reset resolution
-    smp_keys = False
-    for key in keys:
-        if key in adata.smp_keys():
-            smp_keys = True
-        if smp_keys and key not in adata.smp_keys():
-            raise ValueError('Either use sample keys or variable names, but do not mix.')
-    if smp_keys:
-        smp_df = adata.smp.to_df()
-    else:
-        if group_by is None:
-            smp_df = pd.DataFrame()
-        else:
-            smp_df = adata.smp.to_df()
-        for key in keys:
-            X_col = adata[:, key].X
-            if issparse(X_col): X_col = X_col.toarray().flatten()
-            smp_df[key] = X_col
-    if group_by is None:
-        smp_tidy = pd.melt(smp_df, value_vars=keys)
-        x = 'variable'
-        y = 'value'
-    else:
-        smp_tidy = smp_df
-        x = group_by
-        y = keys[0]
-    if multi_panel:
-        sns.set_style('whitegrid')
-        g = sns.FacetGrid(smp_tidy, col=x, sharey=False)
-        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale)
-        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
-                     color='black').set_titles(
-                         col_template='{col_name}').set_xlabels('')
-        ax = g
-    else:
-        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None,
-                            orient='vertical', scale=scale, ax=ax)
-        ax = sns.stripplot(x=x, y=y, data=smp_tidy,
-                           jitter=jitter, color='black', size=size, ax=ax)
-        ax.set_xlabel('' if group_by is None else group_by)
-    savefig_or_show('violin', show=show, save=save)
-    return ax
+        ax.set_yticks(range(len(ylabels)), ylabels)
+    ax.colorbar(shrink=cshrink)
+    savefig_or_show('matrix', show=show, save=save)
 
 
 def scatter(adata,
@@ -153,21 +84,20 @@ def scatter(adata,
             y=None,
             color='grey',
             basis=None,
-            names=None,
-            comps=None,
-            cont=None,
-            layout='2d',
+            groups=None,
+            components=None,
+            projection='2d',
             legend_loc='right margin',
             legend_fontsize=None,
-            cmap=None,
+            color_map=None,
             pal=None,
             right_margin=None,
             size=None,
             title=None,
-            ax=None,
             show=None,
-            save=None):
-    """Scatter plots.
+            save=None,
+            ax=None):
+    """Scatter plot.
 
     Color with sample annotation (`color in adata.smp_keys()`) or gene
     expression (`color in adata.var_names`).
@@ -180,51 +110,55 @@ def scatter(adata,
         x coordinate.
     y : str or None
         y coordinate.
-    color : str or list of strings, optional (default: 'grey')
-        Sample/Cell annotation key for coloring (either a key for adata.smp or a
-        var_name or a uniform matplotlib color). String annotation is plotted assuming categorical annotation,
-        float and integer annotation is plotted assuming continuous
-        annoation.
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
     basis : {'pca', 'tsne', 'diffmap', 'draw_graph_fr', etc.}
-        String that denotes a plotting tool.
-    names : str, optional (default: all names in color)
+        String that denotes a plotting tool that computed coordinates.
+    groups : str, optional (default: all groups in color)
         Allows to restrict categories in sample annotation to a subset.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    legend_fontsize : int (default: 6)
+    legend_fontsize : int (default: None)
          Legend font size.
-    cmap : str (default: 'viridis')
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map for continuous coloring.
-    pal : list of str (default: None)
-         Color palette to use for categorical coloring.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float (default: None)
          Adjust how far the plotting panel extends to the right.
     size : float (default: None)
          Point size. Sample-number dependent by default.
-    title : str or list of str, optional (default: None)
-         Provide titles for panels.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
 
     Returns
     -------
     A list of matplotlib.Axis objects.
     """
-    if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
-    if isinstance(comps, str): comps = comps.split(',')
-    comps = np.array(comps).astype(int) - 1
+    if components is None: components = '1,2' if '2d' in projection else '1,2,3'
+    if isinstance(components, str): components = components.split(',')
+    components = np.array(components).astype(int) - 1
     title = None if title is None else title.split(',') if isinstance(title, str) else title
     color_keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
-    names = None if names is None else names.split(',') if isinstance(names, str) else names
+    groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
         try:
-            Y = adata.smp['X_' + basis][:, comps]
+            Y = adata.smp['X_' + basis][:, components]
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
@@ -242,17 +176,17 @@ def scatter(adata,
     elif legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
 
-    pal_was_none = False
-    if pal is None: pal_was_none = True
-    if isinstance(pal, list):
-        if not is_color_like(pal[0]):
-            pals = pal
+    palette_was_none = False
+    if palette is None: palette_was_none = True
+    if isinstance(palette, list):
+        if not is_color_like(palette[0]):
+            palettes = palette
         else:
-            pals = [pal]
+            palettes = [palette]
     else:
-        pals = [pal for i in range(len(color_keys))]
-    for i, pal in enumerate(pals):
-        pals[i] = utils.default_pal(pal)
+        palettes = [palette for i in range(len(color_keys))]
+    for i, palette in enumerate(palettes):
+        palettes[i] = utils.default_palette(palette)
 
     if basis is not None:
         component_name = ('DC' if basis == 'diffmap'
@@ -278,15 +212,13 @@ def scatter(adata,
             categorical = False
             colorbars.append(False)
         else:
-            c = 'white' if layout == '2d' else 'white'
+            c = 'white' if projection == '2d' else 'white'
             categorical = False
             continuous = False
             # test whether we have categorial or continuous annotation
             if color_key in adata.smp_keys():
                 if adata.smp[color_key].dtype.char in ['S', 'U']:
                     categorical = True
-                    if cont is True:
-                        c = adata.smp[color_key]
                 else:
                     continuous = True
                     c = adata.smp[color_key]
@@ -301,9 +233,6 @@ def scatter(adata,
                                  + ' specify valid sample annotation, one of '
                                  + str(adata.smp_keys()) + ' or a gene name '
                                  + str(adata.var_names))
-            if cont is not None:
-                categorical = not cont
-                continuous = cont
             colorbars.append(True if continuous else False)
         if categorical: categoricals.append(icolor_key)
         color_ids[icolor_key] = c
@@ -320,14 +249,14 @@ def scatter(adata,
                        title=title,
                        component_name=component_name,
                        axis_labels=axis_labels,
-                       component_indexnames=comps + 1,
-                       layout=layout,
+                       component_indexnames=components + 1,
+                       projection=projection,
                        colors=color_ids,
                        highlights=highlights,
                        colorbars=colorbars,
                        right_margin=right_margin,
                        sizes=[size for c in color_keys],
-                       cmap='viridis' if cmap is None else cmap,
+                       color_map='viridis' if color_map is None else color_map,
                        show_ticks=show_ticks,
                        ax=ax)
 
@@ -339,19 +268,19 @@ def scatter(adata,
         centroids[name] = masked_values[i]
 
     for i, icolor_key in enumerate(categoricals):
-        pal = pals[i]
+        palette = palettes[i]
         color_key = color_keys[icolor_key]
-        if (not color_key + '_colors' in adata.add or not pal_was_none
+        if (not color_key + '_colors' in adata.add or not palette_was_none
             or len(adata.add[color_key + '_names']) != len(adata.add[color_key + '_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, color_key, pal)
+            utils.add_colors_for_categorical_sample_annotation(adata, color_key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
-        if names is None:
-            for iname, name in enumerate(adata.add[color_key + '_names']):
+        if groups is None:
+            for iname, name in enumerate(adata.add[color_key + '_groups']):
                 if name not in sett._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
-                                         adata, Y, layout, size=size)
+                                         adata, Y, projection, size=size)
                     mask_remaining[mask] = False
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
@@ -363,12 +292,12 @@ def scatter(adata,
                 else:
                     iname = np.flatnonzero(adata.add[color_key + '_names'] == name)[0]
                     mask = scatter_group(axs[icolor_key], color_key, iname,
-                                         adata, Y, layout, size=size)
+                                         adata, Y, projection, size=size)
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
-            if layout == '3d': data.append(Y[mask_remaining, 2])
+            if projection == '3d': data.append(Y[mask_remaining, 2])
             axs[icolor_key].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
         legend = None
@@ -529,8 +458,8 @@ def timeseries_subplot(X,
                        yticks=None,
                        xlim=None,
                        legend=True,
-                       pal=None,
-                       cmap='viridis'):
+                       palette=None,
+                       color_map='viridis'):
     """Plot X.
 
     Call this with:
@@ -540,18 +469,18 @@ def timeseries_subplot(X,
     """
 
     if c is not None:
-        use_cmap = isinstance(c[0], float) or isinstance(c[0], np.float32)
-    pal = utils.default_pal(pal)
+        use_color_map = isinstance(c[0], float) or isinstance(c[0], np.float32)
+    palette = utils.default_palette(palette)
     x_range = np.arange(X.shape[0])
     if X.shape[1] > 1:
-        colors = pal[:X.shape[1]].by_key()['color']
+        colors = palette[:X.shape[1]].by_key()['color']
         subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
-    elif use_cmap:
+    elif use_color_map:
         colors = [c]
         subsets = [(x_range, X[:, 0])]
     else:
         levels, _ = np.unique(c, return_inverse=True)
-        colors = np.array(pal[:len(levels)].by_key()['color'])
+        colors = np.array(palette[:len(levels)].by_key()['color'])
         subsets = [(x_range[c == l], X[c == l, :]) for l in levels]
 
     for i, (x, y) in enumerate(subsets):
@@ -562,7 +491,7 @@ def timeseries_subplot(X,
             s=rcParams['lines.markersize'],
             c=colors[i],
             label=varnames[i] if len(varnames) > 0 else '',
-            cmap=cmap,
+            color_map=color_map,
         )
     ylim = pl.ylim()
     for ih, h in enumerate(highlightsX):
@@ -578,7 +507,7 @@ def timeseries_subplot(X,
         pl.legend(frameon=False)
 
 
-def timeseries_as_heatmap(X, varnames=None, highlightsX=None, cmap='viridis'):
+def timeseries_as_heatmap(X, varnames=None, highlightsX=None, color_map='viridis'):
     """Plot timeseries as heatmap.
 
     Parameters
@@ -621,10 +550,90 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX=None, cmap='viridis'):
 
     fig = pl.figure(figsize=(1.5*4, 2*4))
     im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-                   interpolation='nearest', cmap=cmap)
+                   interpolation='nearest', color_map=color_map)
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), varnames)
     for ih, h in enumerate(highlightsX):
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
+
+
+def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
+           multi_panel=False, show=None, save=None, ax=None):
+    """Violin plot.
+
+    Wraps seaborn.violinplot.
+
+    Parameters
+    ----------
+    keys : str
+        Keys for accessing fields of adata.smp.
+    group_by : str
+        Key that denotes grouping (categorical annotation) to index adata.smp.
+    multi_panel : bool
+        Show fields in multiple panels. Returns a seaborn FacetGrid in that case.
+    jitter : float or bool (default: True)
+        See sns.stripplot.
+    scale : str (default: 'width')
+        See sns.violinplot.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
+
+    Returns
+    -------
+    A matplotlib.Axes object.
+    """
+    if group_by is not None and isinstance(keys, list):
+        raise ValueError('Pass a single key as string if using `group_by`.')
+    if not isinstance(keys, list): keys = [keys]
+    import pandas as pd
+    import seaborn as sns
+    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
+    sett.set_dpi()  # reset resolution
+    smp_keys = False
+    for key in keys:
+        if key in adata.smp_keys():
+            smp_keys = True
+        if smp_keys and key not in adata.smp_keys():
+            raise ValueError('Either use sample keys or variable names, but do not mix.')
+    if smp_keys:
+        smp_df = adata.smp.to_df()
+    else:
+        if group_by is None:
+            smp_df = pd.DataFrame()
+        else:
+            smp_df = adata.smp.to_df()
+        for key in keys:
+            X_col = adata[:, key].X
+            if issparse(X_col): X_col = X_col.toarray().flatten()
+            smp_df[key] = X_col
+    if group_by is None:
+        smp_tidy = pd.melt(smp_df, value_vars=keys)
+        x = 'variable'
+        y = 'value'
+    else:
+        smp_tidy = smp_df
+        x = group_by
+        y = keys[0]
+    if multi_panel:
+        sns.set_style('whitegrid')
+        g = sns.FacetGrid(smp_tidy, col=x, sharey=False)
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale)
+        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
+                     color='black').set_titles(
+                         col_template='{col_name}').set_xlabels('')
+        ax = g
+    else:
+        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None,
+                            orient='vertical', scale=scale, ax=ax)
+        ax = sns.stripplot(x=x, y=y, data=smp_tidy,
+                           jitter=jitter, color='black', size=size, ax=ax)
+        ax.set_xlabel('' if group_by is None else group_by)
+    savefig_or_show('violin', show=show, save=save)
+    return ax

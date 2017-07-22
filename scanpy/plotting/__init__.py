@@ -39,167 +39,205 @@ def pca(adata, **params):
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Options for keyword argument 'loc'.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
     pca_scatter(adata, **params, show=False)
-    pca_ranking(adata, show)
+    pca_loadings(adata, show=False)
+    pca_variance_ratio(adata, show=show)
 
 
 def pca_scatter(
         adata,
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
+        groups=None,
+        components=None,
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        show=None, save=None):
-    """See parameters of pl.pca().
+        show=None,
+        save=None, ax=None):
+    """Scatter plot in PCA coordinates.
+
+    See parameters of sc.pl.pca(). In addition.
+
+    Parameters
+    ----------
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata, verbosity=-1)
     axs = scatter(
         adata,
         basis='pca',
         color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
-        layout=layout,
+        groups=groups,
+        components=components,
+        projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
+        color_map=color_map,
+        palette=palette,
         right_margin=right_margin,
         size=size,
         title=title,
         show=False,
-        save=False)
+        save=False, ax=ax)
     savefig_or_show('pca_scatter', show=show, save=save)
     return axs
 
 
-def pca_ranking(adata, comps=None, show=None):
+def pca_loadings(adata, components=None, show=None, save=None):
     """Rank genes according to contributions to PCs.
+    
+    Parameters
+    ----------
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
     """
-    if isinstance(comps, str): comps = comps.split(',')
-    keys = ['PC1', 'PC2', 'PC3'] if comps is None else ['PC{}'.format(c) for c in comps]
+    if isinstance(components, str): components = components.split(',')
+    keys = ['PC1', 'PC2', 'PC3'] if components is None else ['PC{}'.format(c) for c in components]
     ranking(adata, 'var', keys)
-    if sett.savefigs: savefig('pca_ranking_components')
+    savefig_or_show('pca_loadings', show=show, save=save)
+
+
+def pca_variance_ratio(adata, show=None, save=None):
+    """Plot the variance ratio.
+
+    Parameters
+    ----------
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    """
     ranking(adata, 'add', 'pca_variance_ratio', labels='PC')
-    savefig_or_show('pca_ranking_variance')
+    savefig_or_show('pca_ranking_variance', show=show, save=save)
 
 
 def diffmap(
         adata,
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
+        groups=None,
+        components=None,
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        show=None, save=None):
+        show=None,
+        save=None, ax=None):
     """Scatter plot in Diffusion Map basis.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str or list, optional (default: '1,2')
-         String of the form '1,2' or 'all' or list. First component is 1 or '1'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
+    palette : list of str (default: None)
          Colors cycle to use for categorical groups.
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object. Only works if plotting a single component.
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
-    if comps == 'all':
-        comps_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
+    if components == 'all':
+        components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
                       for i in range(1, adata.smp['X_diffmap'].shape[1])]
     else:
-        if comps is None: comps = '1,2' if '2d' in layout else '1,2,3'
-        if not isinstance(comps, list): comps_list = [comps]
-        else: comps_list = comps
-    for comps in comps_list:
+        if components is None: components = '1,2' if '2d' in projection else '1,2,3'
+        if not isinstance(components, list): components_list = [components]
+        else: components_list = components
+    for components in components_list:
         axs = scatter(
             adata,
             basis='diffmap',
             color=color,
-            names=names,
-            comps=comps,
-            cont=cont,
-            layout=layout,
+            groups=groups,
+            components=components,
+            projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
-            cmap=cmap,
-            pal=pal,
+            color_map=color_map,
+            palette=palette,
             right_margin=right_margin,
             size=size,
             title=title,
             show=False,
-            save=False)
+            save=False,
+            ax=ax)
         writekey = 'diffmap'
-        if isinstance(comps, list): comps = ','.join([str(comp) for comp in comps])
-        writekey += '_comps' + comps.replace(',', '')
+        if isinstance(components, list): components = ','.join([str(comp) for comp in components])
+        writekey += '_components' + components.replace(',', '')
         if sett.savefigs or (save is not None): savefig(writekey)  # TODO: cleaner
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
@@ -210,17 +248,18 @@ def draw_graph(
         adata,
         layout=None,
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
+        groups=None,
+        components=None,
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        show=None, save=None):
+        show=None,
+        save=None,
+        ax=None):
     """Scatter in tSNE basis.
 
     Parameters
@@ -230,36 +269,42 @@ def draw_graph(
     layout : {'fr', 'drl', ...}, optional (default: last computed)
         One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
         the last computed layout is taken.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
 
     Returns
     -------
     matplotlib.Axes object
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
     if layout is None: layout = adata.add['draw_graph_layout'][-1]
     if 'X_draw_graph_' + layout not in adata.smp_keys():
@@ -269,166 +314,93 @@ def draw_graph(
         adata,
         basis='draw_graph_' + layout,
         color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
-        layout='2d',
+        groups=groups,
+        components=components,
+        projection='2d',
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
+        color_map=color_map,
+        palette=palette,
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show, save=save)
+        show=show,
+        save=save,
+        ax=ax)
     return axs
 
 
 def tsne(
         adata,
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
+        groups=None,
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        show=None, save=None):
+        show=None,
+        save=None, ax=None):
     """Scatter in tSNE basis.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
 
     Returns
     -------
     matplotlib.Axes object
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
     axs = scatter(
         adata,
         basis='tsne',
         color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
-        layout=layout,
+        groups=groups,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
+        color_map=color_map,
+        palette=palette,
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show, save=save)
+        show=show,
+        save=save,
+        ax=ax)
     return axs
 
-
-def spring(
-        adata,
-        color=None,
-        names=None,
-        comps='1,2',
-        cont=None,
-        layout='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        cmap=None,
-        pal=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None):
-    """Plot spring scatter plot.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
-        Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
-    """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    if 'X_spring' in adata.smp:
-        Y = adata.smp['X_spring']
-    else:
-        raise ValueError('Need to run tool `spring` before plotting.')
-    axs = scatter(
-        adata,
-        basis='spring',
-        color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
-        layout=layout,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
-        right_margin=right_margin,
-        size=size,
-        # defined in plotting
-        title=title,
-        show=show)
-    return axs
 
 # ------------------------------------------------------------------------------
 # Subgroup identification and ordering - clustering, pseudotime, branching
@@ -441,24 +413,26 @@ def aga(
         fontsize=8,   # aga_graph
         basis='tsne',
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
+        groups=None,
+        components=None,
+        projection='2d',
         legend_loc='on data',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
         left_margin=0.05,
         layout_graph=None,
         attachedness_type='relative',
-        show=None, save=None):
+        show=None,
+        save=None):
     """Summary figure for approximate graph abstraction.
 
-    See aga_scatter and aga_graph for most of the arguments.
+    See `sc.pl.aga_scatter` and `sc.pl.aga_graph` for the parameters.
+
+    Also see `sc.pl.aga_path` for more possibilities.
     """
     _, axs = pl.subplots(figsize=(8, 4), ncols=2)
     pl.subplots_adjust(left=left_margin, bottom=0.05)
@@ -481,22 +455,59 @@ def aga_scatter(
         adata,
         basis='tsne',
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
+        groups=None,
+        components=None,
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        ax=None,
-        show=None, save=None):
-    """See parameters of sc.pl.aga().
+        show=None,
+        save=None,
+        ax=None):
+    """Scatter plot of aga groups.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical sample annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
+
+    Returns
+    -------
+    matplotlib.Axes object
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
     if color is not None:
         if not isinstance(color, list): color = color.split(',')
@@ -511,14 +522,13 @@ def aga_scatter(
     ax = scatter(adata,
                  basis=basis,
                  color=color,
-                 names=names,
-                 comps=comps,
-                 cont=cont,
-                 layout=layout,
+                 groups=groups,
+                 components=components,
+                 projection=projection,
                  legend_loc=legend_loc,
                  legend_fontsize=legend_fontsize,
-                 cmap=cmap,
-                 pal=pal,
+                 color_map=color_map,
+                 palette=palette,
                  right_margin=right_margin,
                  size=size,
                  title=title,
@@ -529,6 +539,8 @@ def aga_scatter(
 
 
 def aga_attachedness(adata, type='scaled'):
+    """Attachedness of aga groups.
+    """
     if type == 'scaled':
         attachedness = adata.add['aga_attachedness']
     elif type == 'distance':
@@ -542,7 +554,8 @@ def aga_attachedness(adata, type='scaled'):
     for i in range(adjacency.shape[0]):
         neighbors = adjacency[i].nonzero()[1]
         pl.scatter([i for j in neighbors], neighbors, color='green')
-    pl.show()
+    savefig_or_show('aga_attachedness', show=show, save=save)
+    # as a stripplot
     # pl.figure()
     # for i, ds in enumerate(attachedness):
     #     ds = np.log1p(ds)
@@ -560,7 +573,7 @@ def aga_graph(
         root=0,
         layout=None,
         colors=None,
-        names=None,
+        groups=None,
         fontsize=None,
         node_size=1,
         node_size_power=0.5,
@@ -570,24 +583,34 @@ def aga_graph(
         add_noise_to_node_positions=None,
         left_margin=0.01,
         attachedness_type='relative',
-        ax=None,
         show=None,
-        save=None):
-    """Plot the abstracted tree.
+        save=None,
+        ax=None):
+    """Plot the abstracted graph.
 
     Parameters
     ----------
     layout : {'simple', 'rt', 'rt_circular', 'circle', ...}
         Plotting layout. 'rt' stands for Reingold Tilford and uses
         the igraph layout function.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
     if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
-    if names is None or isinstance(names, dict): names = [names]
-    if isinstance(names, list) and isinstance(names[0], str): names = [names]
-    if len(colors) != len(names):
-        raise ValueError('`colors` and `names` lists need to have the same length.')
-    if title is None or isinstance(title, str): title = [title for name in names]
+    if groups is None or isinstance(groups, dict): groups = [groups]
+    if isinstance(groups, list) and isinstance(groups[0], str): groups = [groups]
+    if len(colors) != len(groups):
+        raise ValueError('`colors` and `groups` lists need to have the same length.')
+    if title is None or isinstance(title, str): title = [title for name in groups]
     if ax is None:
         from matplotlib import rcParams
         from matplotlib.figure import SubplotParams as sppars
@@ -607,7 +630,7 @@ def aga_graph(
             layout=layout,
             root=root,
             colors=color,
-            names=names[icolor],
+            groups=groups[icolor],
             fontsize=fontsize,
             node_size=node_size,
             node_size_power=node_size_power,
@@ -627,7 +650,7 @@ def _aga_graph_single(
         adata,
         root=0,
         colors=None,
-        names=None,
+        groups=None,
         fontsize=None,
         node_size=1,
         node_size_power=0.5,
@@ -639,18 +662,17 @@ def _aga_graph_single(
         add_noise_to_node_positions=None,
         attachedness_type=False,
         draw_edge_labels=False):
-    from .. import logging as logg
     from matplotlib import rcParams
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
-    if names is None and 'aga_groups_names_original' in adata.add:
-        names = adata.add['aga_groups_names_original']
-    elif names in adata.smp_keys():
-        names = adata.add[names + '_names']
-    elif names is None:
-        names = adata.add['aga_groups_names']
-    if isinstance(root, str) and root in names:
-        root = list(names).index(root)
+    if groups is None and 'aga_groups_names_original' in adata.add:
+        groups = adata.add['aga_groups_names_original']
+    elif groups in adata.smp_keys():
+        groups = adata.add[groups + '_names']
+    elif groups is None:
+        groups = adata.add['aga_groups_names']
+    if isinstance(root, str) and root in groups:
+        root = list(groups).index(root)
 
     # plot the tree
     if isinstance(adata, nx.Graph):
@@ -771,7 +793,7 @@ def _aga_graph_single(
         #            size=fontsize)
     # TODO: this is a terrible hack, but if we use the solution above, labels
     # get hidden behind pies
-    if names is not None:
+    if groups is not None:
         for count, n in enumerate(nx_g):
             # all copy and paste from above
             pie_size = base_pie_size
@@ -785,7 +807,7 @@ def _aga_graph_single(
             a.set_frame_on(False)
             a.set_xticks([])
             a.set_yticks([])
-            a.text(0.5, 0.5, names[count],
+            a.text(0.5, 0.5, groups[count],
                    verticalalignment='center',
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
@@ -806,9 +828,11 @@ def aga_path(
         ytick_fontsize=None,
         show_nodes_twin=True,
         legend_fontsize=None,
-        ax=None,
         save=None,
-        show=None):
+        show=None,
+        ax=None):
+    """Gene expression changes along paths in the abstracted graph.
+    """
     ax_was_none = ax is None
     if show_left_y_ticks is None:
         show_left_y_ticks = False if show_nodes_twin else True
@@ -902,30 +926,17 @@ def aga_path(
     return ax if ax_was_none else None
 
 
-def aga_sc_tree(adata, root, show=None):
-    nx_g = nx.Graph(adata.add['aga_adjacency'])
-    node_sets = []
-    sorted_aga_groups = adata.smp['aga_groups'][adata.smp['aga_order']]
-    for n in adata.add['aga_groups_names']:
-        node_sets.append(np.flatnonzero(n == sorted_aga_groups))
-    sc_G = utils.hierarchy_sc(nx_g, root, node_sets)
-    ax = aga_graph(sc_G, root)
-    savefig_or_show('aga_sc_tree', show)
-    return ax
-
-
 def dpt(
         adata,
         basis='diffmap',
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
+        groups=None,
+        components=None,
         layout='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
@@ -936,34 +947,41 @@ def dpt(
     ----------
     adata : AnnData
         Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'spring'}
+    basis : {'diffmap', 'pca', 'tsne', 'draw_graph_...'}
         Choose the basis in which to plot.
-    color : string or list of strings, optional (default: first annotation)
+    color : string or list of strings, optional (default: None)
         Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+        annotation is plotted assuming continuous annoation.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String of the form '1,2' or 'all'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     show_tree : bool, optional (default: False)
          This shows the inferred tree. For more than a single branching, the
          result is pretty unreliable. Use tool `aga` (Approximate Graph
@@ -973,14 +991,13 @@ def dpt(
         adata,
         basis=basis,
         color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
+        groups=groups,
+        components=components,
         layout=layout,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
+        color_map=color_map,
+        palette=palette,
         right_margin=right_margin,
         size=size,
         title=title,
@@ -990,41 +1007,40 @@ def dpt(
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    dpt_timeseries(adata, cmap=cmap, show=show)
+    dpt_timeseries(adata, color_map=color_map, show=show)
 
 
 def dpt_scatter(
         adata,
         basis='diffmap',
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
+        groups=None,
+        components=None,
         layout='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
         show=None):
     """See parameters of sc.pl.dpt().
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    if comps == 'all':
-        comps_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
+    if components == 'all':
+        components_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
     else:
-        if comps is None:
-            comps = '1,2' if '2d' in layout else '1,2,3'
-        if not isinstance(comps, list): comps_list = [comps]
-        else: comps_list = comps
+        if components is None:
+            components = '1,2' if '2d' in layout else '1,2,3'
+        if not isinstance(components, list): components_list = [components]
+        else: components_list = components
     # adata.add['highlights'] = (
     #    # list([adata.add['iroot']])
     #    [i for g in adata.add['dpt_groupconnects'] for i in g])
@@ -1041,32 +1057,31 @@ def dpt_scatter(
     #        adata.add['dpt_groups_connects'].nonzero()[0][ii],
     #        adata.add['dpt_groups_connects'].nonzero()[1][ii])
     #        for ii, i in enumerate(adata.add['highlights'])}
-    for comps in comps_list:
+    for components in components_list:
         axs = scatter(adata,
                       basis=basis,
                       color=colors,
-                      names=names,
-                      comps=comps,
-                      cont=cont,
+                      groups=groups,
+                      components=components,
                       layout=layout,
                       legend_loc=legend_loc,
        legend_fontsize=legend_fontsize,
-                      cmap=cmap,
-                      pal=pal,
+                      color_map=color_map,
+                      palette=palette,
                       right_margin=right_margin,
                       size=size,
                       title=title,
                       show=False)
-        writekey = 'dpt_' + basis + '_comps' + comps.replace(',', '')
+        writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
         if sett.savefigs: savefig(writekey)
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
 
 
-def dpt_timeseries(adata, cmap=None, show=None):
+def dpt_timeseries(adata, color_map=None, show=None):
     # plot segments and pseudotime
     if True:
-        dpt_segments_pseudotime(adata, 'viridis' if cmap is None else cmap)
+        dpt_segments_pseudotime(adata, 'viridis' if color_map is None else color_map)
         # time series plot
         # only if number of genes is not too high
         if adata.X.shape[1] <= 11:
@@ -1088,7 +1103,7 @@ def dpt_timeseries(adata, cmap=None, show=None):
     if not sett.savefigs and show: pl.show()
 
 
-def dpt_segments_pseudotime(adata, cmap=None, pal=None):
+def dpt_segments_pseudotime(adata, color_map=None, palette=None):
     """Plot segments and pseudotime."""
     pl.figure()
     pl.subplot(211)
@@ -1098,7 +1113,7 @@ def dpt_segments_pseudotime(adata, cmap=None, pal=None):
                              ylabel='dpt groups',
                              yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
                                      if len(adata.add['dpt_groups_names']) < 5 else None),
-                             pal=pal)
+                             palette=palette)
     pl.subplot(212)
     timeseries_subplot(adata.smp['dpt_pseudotime'][adata.smp['dpt_order'], np.newaxis],
                              c=adata.smp['dpt_pseudotime'][adata.smp['dpt_order']],
@@ -1106,132 +1121,66 @@ def dpt_segments_pseudotime(adata, cmap=None, pal=None):
                              highlightsX=adata.add['dpt_changepoints'],
                              ylabel='pseudotime',
                              yticks=[0, 1],
-                             cmap=cmap)
+                             color_map=color_map)
     if sett.savefigs: savefig('dpt_segpt')
-
-
-def dbscan(
-        adata,
-        basis='tsne',
-        color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        cmap=None,
-        pal=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None):
-    """Plot results of DBSCAN clustering.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'spring'}
-        Choose the basis in which to plot.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
-        Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    cmap : str (default: 'viridis')
-         String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
-    """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    colors = ['dbscan_groups']
-    if color is not None: colors += color.split(',')
-    axs = scatter(
-        adata,
-        basis=basis,
-        color=colors,
-        names=names,
-        comps=comps,
-        cont=cont,
-        layout=layout,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
-        right_margin=right_margin,
-        size=size,
-        title=title,
-        show=False)
-    savefig_or_show('dbscan_' + basis)
-
+    
 
 def louvain(
         adata,
         basis='tsne',
         color=None,
-        names=None,
-        comps=None,
-        cont=None,
+        groups=None,
+        components=None,
         layout='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        cmap=None,
-        pal=None,
+        color_map=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None,
+        save=None, ax=None):
     """Plot results of Louvain clustering.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'spring'}
+    basis : {'diffmap', 'pca', 'tsne', 'draw_graph_...'}
         Choose the basis in which to plot.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
     layout : {'2d', '3d'}, optional (default: '2d')
          Layout of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
-    cmap : str (default: 'viridis')
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: 'viridis')
          String denoting matplotlib color map.
-    pal : list of str (default: None)
-         Colors cycle to use for categorical groups.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     title : str, optional (default: None)
-         Provide title for panels as "my title1,another title,...".
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
-    from ..examples import check_adata
+    from ..utils import check_adata
     adata = check_adata(adata)
     add_color = []
     if color is not None:
@@ -1241,142 +1190,152 @@ def louvain(
         adata,
         basis=basis,
         color=color,
-        names=names,
-        comps=comps,
-        cont=cont,
+        groups=groups,
+        components=components,
         layout=layout,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
-        cmap=cmap,
-        pal=pal,
+        color_map=color_map,
+        palette=palette,
         right_margin=right_margin,
         size=size,
         title=title,
         show=False)
-    savefig_or_show('louvain_' + basis)
+    savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def paths(
-        adata,
-        basis='diffmap',
-        dist_threshold=None,
-        single_panel=True,
-        color=None,
-        names=None,
-        comps=None,
-        cont=None,
-        layout='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        cmap=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None):
-    """Plot paths.
+# def paths(
+#         adata,
+#         basis='diffmap',
+#         dist_threshold=None,
+#         single_panel=True,
+#         color=None,
+#         names=None,
+#         components=None,
+#         layout='2d',
+#         legend_loc='right margin',
+#         legend_fontsize=None,
+#         color_map=None,
+#         right_margin=None,
+#         size=None,
+#         title=None,
+#         show=None):
+#     """Plot paths.
+
+#     Parameters
+#     ----------
+#     adata : AnnData
+#         Annotated data matrix.
+#     dist_threshold : float
+#         Distance threshold to decide what still belongs in the path.
+#     single_panel : bool (default: True)
+#         If False, show separate panel for each group.
+#     color : string or list of strings, optional (default: None)
+#         Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
+#         annotation is plotted assuming categorical annotation, float and integer
+#         annotation is plotted assuming continuous annoation.
+#     names : str, optional (default: all names)
+#         Restrict to a few categories in categorical sample annotation.
+#     components : str, optional (default: '1,2')
+#          String in the form '1,2,3'.
+#     layout : {'2d', '3d'}, optional (default: '2d')
+#          Layout of plot.
+#     legend_loc : str, optional (default: 'right margin')
+#          Location of legend, either 'on data', 'right margin' or valid keywords
+#          for matplotlib.legend.
+#     color_map : str (default: continuous: inferno/ categorical: finite palette)
+#          String denoting matplotlib color map.
+#     right_margin : float or list of floats (default: None)
+#          Adjust the width of the space right of each plotting panel.
+#     size : float (default: None)
+#          Point size.
+#     """
+#     from ..utils import check_adata
+#     adata = check_adata(adata)
+#     names = None if names is None else names.split(',') if isinstance(names, str) else names
+#     # from ..tools.paths import process_dists_from_paths
+#     # process_dists_from_paths(adata, dist_threshold)
+
+#     color_base = ['paths_groups']
+#     if color is not None:
+#         if isinstance(color, list):
+#             color_base += color
+#         else:
+#             color_base += [color]
+#     adata.add['highlights'] = [adata.add['iroot']]
+
+#     # add continuous distance coloring
+#     if single_panel:
+#         for iname, name in enumerate(adata.add['paths_groups_names']):
+#             if names is None or (names is not None and name in names):
+#                 title = 'dist_from_path_' + name
+#                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
+#                 # color_base.append(title)
+#                 adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
+
+#         axs = scatter(
+#             adata,
+#             basis=basis,
+#             color=color_base,
+#             names=names,
+#             components=components,
+#             layout=layout,
+#             legend_loc=legend_loc,
+#             legend_fontsize=legend_fontsize,
+#             color_map=color_map,
+#             right_margin=right_margin,
+#             size=size,
+#             title=title,
+#             show=False)
+#         writekey = 'paths_' + basis + '_' + adata.add['paths_type']
+#         if sett.savefigs: savefig(writekey)
+#     else:
+#         for iname, name in enumerate(adata.add['paths_groups_names']):
+#             if names is None or (names is not None and name in names):
+#                 title = 'dist_from_path_' + name
+#                 adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
+#                 # color_base.append(title)
+#                 adata.add['highlights'] = ([adata.add['iroot']]
+#                                        + [adata.add['paths_groups_fateidx'][iname]])
+#             axs = scatter(
+#                 adata,
+#                 basis=basis,
+#                 color=color_base,
+#                 names=[name],
+#                 components=components,
+#                 layout=layout,
+#                 legend_loc=legend_loc,
+#                 legend_fontsize=legend_fontsize,
+#                 color_map=color_map,
+#                 right_margin=right_margin,
+#                 size=size,
+#                 title=title,
+#                 show=False)
+#             del color_base[-1]
+#             writekey = 'paths_' + basis + '_' + adata.add['paths_type'] + '_' + name
+#             if sett.savefigs: savefig(writekey)
+#     show = sett.autoshow if show is None else show
+#     if not sett.savefigs and show: pl.show()
+
+
+def rank_genes_groups(adata, n_genes=20, show=None, save=None):
+    """Plot ranking of genes.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    dist_threshold : float
-        Distance threshold to decide what still belongs in the path.
-    single_panel : bool (default: True)
-        If False, show separate panel for each group.
-    color : string or list of strings, optional (default: first annotation)
-        Keys for sample/cell annotation either as list or string "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation. Option 'cont'
-        allows to switch between these default choices.
-    names : str, optional (default: all names)
-        Restrict to a few categories in categorical sample annotation.
-    comps : str, optional (default: '1,2')
-         String in the form '1,2,3'.
-    cont : bool, None (default: None)
-        Switch on continuous layout, switch off categorical layout.
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    cmap : str (default: continuous: inferno/ categorical: finite palette)
-         String denoting matplotlib color map.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
+    n_genes : int, optional (default: 20)
+        Number of genes to show.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
-    from ..examples import check_adata
-    adata = check_adata(adata)
-    names = None if names is None else names.split(',') if isinstance(names, str) else names
-    # from ..tools.paths import process_dists_from_paths
-    # process_dists_from_paths(adata, dist_threshold)
-
-    color_base = ['paths_groups']
-    if color is not None:
-        if isinstance(color, list):
-            color_base += color
-        else:
-            color_base += [color]
-    adata.add['highlights'] = [adata.add['iroot']]
-
-    # add continuous distance coloring
-    if single_panel:
-        for iname, name in enumerate(adata.add['paths_groups_names']):
-            if names is None or (names is not None and name in names):
-                title = 'dist_from_path_' + name
-                adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                # color_base.append(title)
-                adata.add['highlights'] += [adata.add['paths_groups_fateidx'][iname]]
-
-        axs = scatter(
-            adata,
-            basis=basis,
-            color=color_base,
-            names=names,
-            comps=comps,
-            cont=cont,
-            layout=layout,
-            legend_loc=legend_loc,
-            legend_fontsize=legend_fontsize,
-            cmap=cmap,
-            right_margin=right_margin,
-            size=size,
-            title=title,
-            show=False)
-        writekey = 'paths_' + basis + '_' + adata.add['paths_type']
-        if sett.savefigs: savefig(writekey)
-    else:
-        for iname, name in enumerate(adata.add['paths_groups_names']):
-            if names is None or (names is not None and name in names):
-                title = 'dist_from_path_' + name
-                adata.smp[title] = adata.add['paths_dists_from_paths'][iname]
-                # color_base.append(title)
-                adata.add['highlights'] = ([adata.add['iroot']]
-                                       + [adata.add['paths_groups_fateidx'][iname]])
-            axs = scatter(
-                adata,
-                basis=basis,
-                color=color_base,
-                names=[name],
-                comps=comps,
-                cont=cont,
-                layout=layout,
-                legend_loc=legend_loc,
-                legend_fontsize=legend_fontsize,
-                cmap=cmap,
-                right_margin=right_margin,
-                size=size,
-                title=title,
-                show=False)
-            del color_base[-1]
-            writekey = 'paths_' + basis + '_' + adata.add['paths_type'] + '_' + name
-            if sett.savefigs: savefig(writekey)
-    show = sett.autoshow if show is None else show
-    if not sett.savefigs and show: pl.show()
-
-
-def rank_genes_groups(adata, n_genes=20, show=None, save=None):
+    
     ranking_deprecated(adata, toolkey='rank_genes_groups', n_genes=n_genes)
     writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups']
     savefig_or_show(writekey, show=show, save=save)
@@ -1395,6 +1354,13 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
         List of valid group names.
     n_genes : int
         Number of genes to show.
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
     from ..tools import rank_genes_groups
     groups_key = adata.add['rank_genes_groups']
@@ -1422,88 +1388,98 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
         savefig_or_show(writekey, show=show, save=save)
 
 
-def tgdyn_simple(adata, n_genes=10, show=None):
-    """Plot analysis of single-cell dynamics on the graph.
+# def tgdyn_simple(adata, n_genes=10, show=None):
+#     """Plot analysis of single-cell dynamics on the graph.
 
-    Parameters
-    ----------
-    adata : dict
-        Dictionary returned by get_data.
-    n_genes : int
-    """
-    plot_tgdyn_simple_ranking(adata, n_genes, show)
-
-
-def tgdyn_simple_ranking(adata, n_genes=10, show=None):
-    """Plot ranking.
-
-    TODO
-    ----
-    Replace with call to plotting.plot_ranking.
-
-    Parameters
-    ----------
-    dtgdyn : dict
-        Dictionary returned by tgdyn.
-    adata : dict
-        Dictionary returned by get_data.
-    """
-    n_panels = adata.add['tgdyn_simple_groups_ids_bigenough'].shape[0]
-
-    # find minimum velocity to set y-axis limit
-    ymin = 1
-    for igroup in adata.add['tgdyn_simple_groups_ids_bigenough']:
-        genes = adata.add['tgdyn_simple_genes_sorted'][igroup, :n_genes]
-        ymin = np.min([ymin,
-                       np.min(np.abs(adata.add['tgdyn_simple_vs_norm'][igroup, genes]))])
-
-    # determine n_panels in x and y direction
-    if n_panels <= 5:
-        n_panels_y = 1
-        n_panels_x = n_panels
-    else:
-        n_panels_y = 2
-        n_panels_x = int(n_panels/2+0.5)
-
-    # do the actual plotting
-    fig = pl.figure(figsize=(n_panels_x*4, n_panels_y*4))
-    pl.subplots_adjust(left=0.17/n_panels_x, right=0.99, bottom=0.13)
-    count = 1
-    for igroup in adata.add['tgdyn_simple_groups_ids_bigenough']:
-        # generate the panel
-        fig.add_subplot(n_panels_y, n_panels_x, count)
-        # get the velocity to plot
-        v = adata.add['tgdyn_simple_vs_norm'][igroup]
-        # loop over the top-ranked genes
-        for ig, g in enumerate(adata.add['tgdyn_simple_genes_sorted'][igroup, :n_genes]):
-            marker = r'\leftarrow' if v[g] < 0 else r'\rightarrow'
-            color = 'red' if v[g] < 0 else 'green'
-            pl.text(ig,
-                    np.abs(v[g]),
-                    r'$ ' + marker + '$ ' + adata.var_names[g],
-                    color=color,
-                    rotation='vertical',
-                    verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=8)
-        title = adata.add['tgdyn_simple_groups'] + ' ' + str(adata.add['tgdyn_simple_groups_names'][igroup])
-        pl.title(title)
-        pl.xlim(-0.9, ig+1-0.1)
-        pl.ylim(-0.02+ymin, 1.15)
-        if n_panels <= 5 or count > n_panels_x:
-            pl.xlabel('ranking')
-        if count == 1 or count == n_panels_x + 1:
-            pl.ylabel('|velocity$_{gene}$|/max$_{genes}$|velocity$_{gene}$|')
-        else:
-            pl.yticks([])
-        count += 1
-
-    writekey = 'tgdyn_simple_' + adata.add['tgdyn_simple_groups']
-    savefig_or_show(writekey)
+#     Parameters
+#     ----------
+#     adata : dict
+#         Dictionary returned by get_data.
+#     n_genes : int
+#     """
+#     plot_tgdyn_simple_ranking(adata, n_genes, show)
 
 
-def sim(adata, params=None, show=None):
+# def tgdyn_simple_ranking(adata, n_genes=10, show=None):
+#     """Plot ranking.
+
+#     TODO
+#     ----
+#     Replace with call to plotting.plot_ranking.
+
+#     Parameters
+#     ----------
+#     dtgdyn : dict
+#         Dictionary returned by tgdyn.
+#     adata : dict
+#         Dictionary returned by get_data.
+#     """
+#     n_panels = adata.add['tgdyn_simple_groups_ids_bigenough'].shape[0]
+
+#     # find minimum velocity to set y-axis limit
+#     ymin = 1
+#     for igroup in adata.add['tgdyn_simple_groups_ids_bigenough']:
+#         genes = adata.add['tgdyn_simple_genes_sorted'][igroup, :n_genes]
+#         ymin = np.min([ymin,
+#                        np.min(np.abs(adata.add['tgdyn_simple_vs_norm'][igroup, genes]))])
+
+#     # determine n_panels in x and y direction
+#     if n_panels <= 5:
+#         n_panels_y = 1
+#         n_panels_x = n_panels
+#     else:
+#         n_panels_y = 2
+#         n_panels_x = int(n_panels/2+0.5)
+
+#     # do the actual plotting
+#     fig = pl.figure(figsize=(n_panels_x*4, n_panels_y*4))
+#     pl.subplots_adjust(left=0.17/n_panels_x, right=0.99, bottom=0.13)
+#     count = 1
+#     for igroup in adata.add['tgdyn_simple_groups_ids_bigenough']:
+#         # generate the panel
+#         fig.add_subplot(n_panels_y, n_panels_x, count)
+#         # get the velocity to plot
+#         v = adata.add['tgdyn_simple_vs_norm'][igroup]
+#         # loop over the top-ranked genes
+#         for ig, g in enumerate(adata.add['tgdyn_simple_genes_sorted'][igroup, :n_genes]):
+#             marker = r'\leftarrow' if v[g] < 0 else r'\rightarrow'
+#             color = 'red' if v[g] < 0 else 'green'
+#             pl.text(ig,
+#                     np.abs(v[g]),
+#                     r'$ ' + marker + '$ ' + adata.var_names[g],
+#                     color=color,
+#                     rotation='vertical',
+#                     verticalalignment='bottom',
+#                     horizontalalignment='center',
+#                     fontsize=8)
+#         title = adata.add['tgdyn_simple_groups'] + ' ' + str(adata.add['tgdyn_simple_groups_names'][igroup])
+#         pl.title(title)
+#         pl.xlim(-0.9, ig+1-0.1)
+#         pl.ylim(-0.02+ymin, 1.15)
+#         if n_panels <= 5 or count > n_panels_x:
+#             pl.xlabel('ranking')
+#         if count == 1 or count == n_panels_x + 1:
+#             pl.ylabel('|velocity$_{gene}$|/max$_{genes}$|velocity$_{gene}$|')
+#         else:
+#             pl.yticks([])
+#         count += 1
+
+#     writekey = 'tgdyn_simple_' + adata.add['tgdyn_simple_groups']
+#     savefig_or_show(writekey)
+
+
+def sim(adata, params=None, show=None, save=save):
     """Plot results of simulation.
+
+    Parameters
+    ----------
+    show : bool, optional (default: None)
+         Show the plot.
+    save : bool or str, optional (default: None)
+         If True or a str, save the figure. A string is appended to the
+         default filename.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
     from .. import utils as sc_utils
     X = adata.X
@@ -1523,4 +1499,4 @@ def sim(adata, params=None, show=None):
                xlim=[0, 1.25*X.shape[0]],
                highlightsX=np.arange(tmax, n_real * tmax, tmax),
                xlabel='index (arbitrary order)')
-    savefig_or_show('sim_shuffled')
+    savefig_or_show('sim_shuffled', save=save, show=show)
