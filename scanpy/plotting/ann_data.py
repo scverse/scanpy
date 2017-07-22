@@ -26,7 +26,7 @@ def scatter(
         legend_loc='right margin',
         legend_fontsize=None,
         color_map=None,
-        pal=None,
+        palette=None,
         right_margin=None,
         size=None,
         title=None,
@@ -213,7 +213,7 @@ def scatter(
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
-            for iname, name in enumerate(adata.add[color_key + '_groups']):
+            for iname, name in enumerate(adata.add[color_key + '_names']):
                 if name not in sett._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, projection, size=size)
@@ -254,11 +254,12 @@ def scatter(
                                             fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
-    savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
+    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     return axs
 
 
-def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=False):
+def ranking(adata, attr, keys, labels=None, color='black', n_points=30,
+            log=False):
     """Plot rankings.
 
     See, for example, how this is used in pl.pca_ranking.
@@ -268,9 +269,9 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=Fals
     adata : AnnData
         The data.
     attr : {'var', 'add', 'smp'}
-        An attribute of AnnData.
+        The attribute of AnnData that contains the score.
     keys : str or list of str
-        Used to look up an array from the attribute of adata.
+        The scores to look up an array from the attribute of adata.
 
     Returns
     -------
@@ -279,7 +280,7 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=Fals
     scores = getattr(adata, attr)[keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
-    if log: scores = np.log10(scores)
+    if log: scores = np.log(scores)
     if labels is None:
         labels = adata.var_names if attr == 'var' else np.arange(scores.shape[0]).astype(str)
     if isinstance(labels, str):
@@ -308,75 +309,6 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=Fals
         pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
                 (1.05 if score_max > 0 else 0.95) * score_max)
     return gs
-
-
-def ranking_deprecated(adata, toolkey, n_genes=20):
-    """Plot ranking.
-
-    Is still used by rank_genes_groups.
-
-    Parameters
-    ----------
-    adata : AnnData
-        Annotated data matrix.
-    n_genes : int
-        Number of genes.
-    """
-    # one panel for each ranking
-    scoreskey = adata.add[toolkey + '_scoreskey']
-    n_panels = len(adata.add[toolkey + '_rankings_names'])
-
-    def get_scores(irank):
-        allscores = adata.add[toolkey + '_' + scoreskey][irank]
-        scores = allscores[adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]]
-        scores = np.abs(scores)
-        return scores
-
-    # number of panels
-    if n_panels <= 5:
-        n_panels_y = 1
-        n_panels_x = n_panels
-    else:
-        n_panels_y = 2
-        n_panels_x = int(n_panels/2+0.5)
-
-    fig = pl.figure(figsize=(n_panels_x * 4, n_panels_y * 4))
-
-    from matplotlib import gridspec
-    left = 0.2/n_panels_x
-    bottom = 0.13/n_panels_y
-    gs = gridspec.GridSpec(nrows=n_panels_y,
-                           ncols=n_panels_x,
-                           left=left,
-                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-                           bottom=bottom,
-                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0.17)
-
-    count = 1
-    for irank in range(len(adata.add[toolkey + '_rankings_names'])):
-        pl.subplot(gs[count-1])
-        scores = get_scores(irank)
-        ymin = np.min(scores)
-        ymax = np.max(scores)
-        ymax += 0.3*(ymax-ymin)
-        for ig, g in enumerate(adata.add[toolkey + '_rankings_geneidcs'][irank, :n_genes]):
-            marker = (r'\leftarrow' if adata.add[toolkey + '_zscores'][irank, g] < 0
-                                    else r'\rightarrow')
-            pl.text(ig, scores[ig],
-                    adata.var_names[g],
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center',
-                    fontsize=8)
-        title = adata.add[toolkey + '_rankings_names'][irank]
-        pl.title(title)
-        if n_panels <= 5 or count > n_panels_x:
-            pl.xlabel('ranking')
-        if count == 1 or count == n_panels_x+1:
-            pl.ylabel(scoreskey)
-        pl.ylim([ymin, ymax])
-        pl.xlim(-0.9, ig+1-0.1)
-        count += 1
 
 
 def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
@@ -455,5 +387,5 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         ax = sns.stripplot(x=x, y=y, data=smp_tidy,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by)
-    savefig_or_show('violin', show=show, save=save)
+    utils.savefig_or_show('violin', show=show, save=save)
     return ax

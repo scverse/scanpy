@@ -616,14 +616,17 @@ class AnnData(IndexMixin):
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         add_ann = self.add
-        raised_warning = False
-        for k, v in self.add.items():  # TODO: make sure this really works as expected
-            if isinstance(v, sp.spmatrix) and v.shape == (self.n_smps, self.n_smps):
-                add_ann[k] = v.tocsc()[:, smp].tocsr()[smp, :]
-                if not raised_warning:
-                    logg.warn('Slicing adjacency matrices can be dangerous. '
-                              'Consider recomputing the data graph.')
-                    raised_warning = True
+        # slice sparse spatrices of n_smps x n_smps in self.add
+        if not (isinstance(smp, slice) and
+                smp.start is None and smp.step is None and smp.stop is None):
+            raised_warning = False
+            for k, v in self.add.items():  # TODO: make sure this really works as expected
+                if isinstance(v, sp.spmatrix) and v.shape == (self.n_smps, self.n_smps):
+                    add_ann[k] = v.tocsc()[:, smp].tocsr()[smp, :]
+                    if not raised_warning:
+                        logg.warn('Slicing adjacency matrices can be dangerous. '
+                                  'Consider recomputing the data graph.')
+                        raised_warning = True
         adata = AnnData(X, smp_ann, var_ann, add_ann)
         return adata
 

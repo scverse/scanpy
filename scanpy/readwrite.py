@@ -955,7 +955,7 @@ def check_datafile_present_and_download(filename, backup_url=''):
     if not os.path.exists(d):
         logg.info('creating directory', d + '/', 'for saving data')
         os.makedirs(d)
-    from .compat.urllib_request import urlretrieve
+    from urllib.request import urlretrieve
     urlretrieve(backup_url, filename, reporthook=download_progress)
     logg.info('')
     return True

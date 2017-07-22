@@ -3,13 +3,13 @@
 
 import numpy as np
 import networkx as nx
-from ..compat.matplotlib import pyplot as pl
-from .. import logging as logg
+from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
-
+from .. import logging as logg
+from .. import settings as sett
 
 # -------------------------------------------------------------------------------
 # Simple plotting functions
@@ -328,7 +328,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
                          .format(len(adata.add[key + '_colors']), key))
 
 
-def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
+def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
     """Scatter of group using representation of data Y.
     """
     if name + '_masks' in adata.add:
@@ -345,7 +345,7 @@ def scatter_group(ax, name, imask, adata, Y, layout='2d', size=3):
     if not is_color_like(color):
         raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
     data = [Y[mask, 0], Y[mask, 1]]
-    if layout == '3d': data.append(Y[mask, 2])
+    if projection == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,
                marker='.',
                # alpha=0.3,
@@ -360,14 +360,14 @@ def scatter_base(Y,
                  colors='blue',
                  highlights=[],
                  right_margin=None,
-                 layout='2d',
+                 projection='2d',
                  title=None,
                  component_name='DC',
                  component_indexnames=[1, 2, 3],
                  axis_labels=None,
                  colorbars=[False],
                  sizes=[1],
-                 cmap='viridis',
+                 color_map='viridis',
                  show_ticks=True,
                  ax=None):
     """Plot scatter plot of data.
@@ -376,7 +376,7 @@ def scatter_base(Y,
     ----------
     Y : np.ndarray
         Data array.
-    layout : {'2d', '3d'}
+    projection : {'2d', '3d'}
 
     Returns
     -------
@@ -384,7 +384,7 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    if '3d' in layout: from mpl_toolkits.mplot3d import Axes3D
+    if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
@@ -392,9 +392,9 @@ def scatter_base(Y,
         highlights_indices = highlights
         highlights_labels = []
     # if we have a single array, transform it into a list with a single array
-    avail_layouts = {'2d', '3d'}
-    if layout not in avail_layouts:
-        raise ValueError('choose layout from', avail_layouts)
+    avail_projections = {'2d', '3d'}
+    if projection not in avail_projections:
+        raise ValueError('choose projection from', avail_projections)
     if type(colors) == str: colors = [colors]
     if len(sizes) != len(colors):
         if len(sizes) == 1:
@@ -443,11 +443,11 @@ def scatter_base(Y,
         bottom = panel_pos[0][0]
         width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
-        if layout == '2d':
+        if projection == '2d':
             if axs_passed: ax = axs_passed[icolor]
             else: ax = pl.axes([left, bottom, width, height])
             data = Y[:, 0], Y[:, 1]
-        elif layout == '3d':
+        elif projection == '3d':
             ax = pl.axes([left, bottom, width, height], projection='3d')
             data = Y[:, 0], Y[:, 1], Y[:, 2]
         if not isinstance(color, str) or color != 'white':
@@ -456,10 +456,10 @@ def scatter_base(Y,
                              c=color,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
-                             cmap=cmap)
+                             cmap=color_map)
         if colorbars[icolor]:
             width = 0.006 * draw_region_width
-            left = panel_pos[2][2*icolor+1] + (1 if layout == '3d' else 0.2) * width
+            left = panel_pos[2][2*icolor+1] + (1 if projection == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
@@ -469,7 +469,7 @@ def scatter_base(Y,
         # output highlighted data points
         for iihighlight, ihighlight in enumerate(highlights_indices):
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
-            if '3d' in layout:
+            if '3d' in projection:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
             ax.scatter(*data, c='black',
                        facecolors='black', edgecolors='black',
@@ -485,7 +485,7 @@ def scatter_base(Y,
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
-            if '3d' in layout: ax.set_zticks([])
+            if '3d' in projection: ax.set_zticks([])
         # scale limits to match data
         ax.autoscale_view()
         axs.append(ax)
@@ -499,7 +499,7 @@ def scatter_base(Y,
     for iax, ax in enumerate(axs):
         ax.set_xlabel(axis_labels[iax][0])
         ax.set_ylabel(axis_labels[iax][1])
-        if '3d' in layout:
+        if '3d' in projection:
             # shift the label closer to the axis
             ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
     return axs

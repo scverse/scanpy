@@ -1,7 +1,8 @@
 from .ann_data import scatter, violin
-from .ann_data import matrix
-from .ann_data import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .ann_data import ranking
+
+from .utils import matrix
+from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
 from .preprocessing import filter_genes_dispersion
 

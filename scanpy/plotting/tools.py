@@ -8,15 +8,16 @@ import numpy as np
 import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
+from matplotlib import rcParams
 
 from . import utils
 from .. import settings as sett
 from .. import logging as logg
 
 from .ann_data import scatter, violin
-from .ann_data import matrix
-from .ann_data import timeseries, timeseries_subplot, timeseries_as_heatmap
-from .ann_data import ranking, ranking_deprecated
+from .ann_data import ranking
+from .utils import matrix
+from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
 
 # ------------------------------------------------------------------------------
@@ -134,7 +135,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
-def pca_variance_ratio(adata, show=None, save=None):
+def pca_variance_ratio(adata, log=False, show=None, save=None):
     """Plot the variance ratio.
 
     Parameters
@@ -145,7 +146,7 @@ def pca_variance_ratio(adata, show=None, save=None):
          If True or a str, save the figure. A string is appended to the
          default filename.
     """
-    ranking(adata, 'add', 'pca_variance_ratio', labels='PC')
+    ranking(adata, 'add', 'pca_variance_ratio', labels='PC', log=log)
     utils.savefig_or_show('pca_ranking_variance', show=show, save=save)
 
 
@@ -1200,15 +1201,19 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, n_genes=20, show=None, save=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, save=None):
     """Plot ranking of genes.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
+    groups : str or list of str
+        The groups for which to show the gene ranking.
     n_genes : int, optional (default: 20)
         Number of genes to show.
+    fontsize : int, optional (default: 8)
+        Fontsize for gene names.
     show : bool, optional (default: None)
          Show the plot.
     save : bool or str, optional (default: None)
@@ -1217,8 +1222,48 @@ def rank_genes_groups(adata, n_genes=20, show=None, save=None):
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    
-    ranking_deprecated(adata, toolkey='rank_genes_groups', n_genes=n_genes)
+    groups_key = adata.add['rank_genes_groups']
+    group_names = adata.add['rank_genes_groups_names'] if groups is None else groups
+    # one panel for each group
+    n_panels = len(group_names)
+    # set up the figure
+    if n_panels <= 5:
+        n_panels_y = 1
+        n_panels_x = n_panels
+    else:
+        n_panels_y = 2
+        n_panels_x = int(n_panels/2+0.5)
+    from matplotlib import gridspec
+    fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
+                             n_panels_y * rcParams['figure.figsize'][1]))
+    left = 0.2/n_panels_x
+    bottom = 0.13/n_panels_y
+    gs = gridspec.GridSpec(nrows=n_panels_y,
+                           ncols=n_panels_x,
+                           left=left,
+                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
+                           bottom=bottom,
+                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
+                           wspace=0.18)
+
+    for count, group_name in enumerate(group_names):
+        pl.subplot(gs[count])
+        gene_names = adata.add['rank_genes_groups_gene_names'][group_name]
+        scores = adata.add['rank_genes_groups_gene_scores'][group_name]
+        for ig, g in enumerate(gene_names[:n_genes]):
+            pl.text(ig, scores[ig], gene_names[ig],
+                    rotation='vertical', verticalalignment='bottom',
+                    horizontalalignment='center', fontsize=fontsize)
+        pl.title(group_name)
+        if n_panels <= 5 or count >= n_panels_x:
+            pl.xlabel('ranking')
+        if count == 0 or count == n_panels_x:
+            pl.ylabel('mean of z-score w.r.t. to bulk mean')
+        ymin = np.min(scores)
+        ymax = np.max(scores)
+        ymax += 0.3*(ymax-ymin)
+        pl.ylim([ymin, ymax])
+        pl.xlim(-0.9, ig+1-0.1)
     writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups']
     utils.savefig_or_show(writekey, show=show, save=save)
 
@@ -1252,7 +1297,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
     for group_name in group_loop:
         keys = []
         gene_names = []
-        gene_loop = (gene_item for gene_item in enumerate(adata.add['rank_genes_groups_names_of_top_ranked_genes'][group_name][:n_genes]))
+        gene_loop = (gene_item for gene_item in enumerate(adata.add['rank_genes_groups_gene_names'][group_name][:n_genes]))
         for gene_counter, gene_name in gene_loop:
             identifier = rank_genes_groups._build_identifier(
                 groups_key, group_name, gene_counter, gene_name)
@@ -1264,13 +1309,13 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
             gene_names.append(gene_name)
         ax = violin(adata, keys, show=False)
         ax.set_title(group_name)
-        ax.set_ylabel('z-score - bulk reference')
+        ax.set_ylabel('z-score w.r.t. to bulk mean')
         ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups'] + '_' + group_name
         utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def sim(adata, params=None, show=None, save=save):
+def sim(adata, params=None, show=None, save=None):
     """Plot results of simulation.
 
     Parameters

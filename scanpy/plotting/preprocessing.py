@@ -1,14 +1,14 @@
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
-from .toplevel import savefig_or_show
+from . import utils
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
 # --------------------------------------------------------------------------------
 
 
-def filter_genes_dispersion(result, log=False):
+def filter_genes_dispersion(result, log=False, save=None, show=None):
     """Plot dispersions vs. means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
@@ -43,4 +43,4 @@ def filter_genes_dispersion(result, log=False):
         pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expression of gene')
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersion of gene'
                   + (' (normalized)' if id == 0 else ' (not normalized)'))
-    savefig_or_show('filter_genes_dispersion')
+    utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
