@@ -10,9 +10,149 @@ from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 
+
+# -------------------------------------------------------------------------------
+# Simple plotting functions
+# -------------------------------------------------------------------------------
+
+
+def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
+           cmap='Greys', show=None, save=None, ax=None):
+    """Plot a matrix."""
+    if ax is None: ax = pl.gca()
+    ax.imshow(matrix, cmap=cmap)
+    if xlabels is not None:
+        ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
+    if ylabels is not None:
+        ax.set_yticks(range(len(ylabels)), ylabels)
+    ax.colorbar(shrink=cshrink)
+    savefig_or_show('matrix', show=show, save=save)
+
+
+def timeseries(X, **kwargs):
+    """Plot X. See timeseries_subplot."""
+    pl.figure(figsize=(2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]),
+              subplotpars=sppars(left=0.12, right=0.98, bottom=0.13))
+    timeseries_subplot(X, **kwargs)
+
+
+def timeseries_subplot(X,
+                       c=None,
+                       varnames=(),
+                       highlightsX=(),
+                       xlabel='',
+                       ylabel='gene expression',
+                       yticks=None,
+                       xlim=None,
+                       legend=True,
+                       palette=None,
+                       color_map='viridis'):
+    """Plot X.
+
+    Call this with:
+    X with one column, c categorical
+    X with one column, c continuous
+    X with n columns, c is of length n
+    """
+
+    if c is not None:
+        use_color_map = isinstance(c[0], float) or isinstance(c[0], np.float32)
+    palette = utils.default_palette(palette)
+    x_range = np.arange(X.shape[0])
+    if X.shape[1] > 1:
+        colors = palette[:X.shape[1]].by_key()['color']
+        subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
+    elif use_color_map:
+        colors = [c]
+        subsets = [(x_range, X[:, 0])]
+    else:
+        levels, _ = np.unique(c, return_inverse=True)
+        colors = np.array(palette[:len(levels)].by_key()['color'])
+        subsets = [(x_range[c == l], X[c == l, :]) for l in levels]
+
+    for i, (x, y) in enumerate(subsets):
+        pl.scatter(
+            x, y,
+            marker='.',
+            edgecolor='face',
+            s=rcParams['lines.markersize'],
+            c=colors[i],
+            label=varnames[i] if len(varnames) > 0 else '',
+            color_map=color_map,
+        )
+    ylim = pl.ylim()
+    for ih, h in enumerate(highlightsX):
+        pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
+    pl.ylim(ylim)
+    if xlim is not None:
+        pl.xlim(xlim)
+    pl.xlabel(xlabel)
+    pl.ylabel(ylabel)
+    if yticks is not None:
+        pl.yticks(yticks)
+    if len(varnames) > 0 and legend == True:
+        pl.legend(frameon=False)
+
+
+def timeseries_as_heatmap(X, varnames=None, highlightsX=None, color_map='viridis'):
+    """Plot timeseries as heatmap.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Data array.
+    varnames : array_like
+        Array of strings naming variables stored in columns of X.
+    """
+    if highlightsX is None:
+        highlightsX = []
+    if varnames is None:
+        varnames = []
+    if len(varnames) == 0:
+        varnames = np.arange(X.shape[1])
+    if varnames.ndim == 2:
+        varnames = varnames[:, 0]
+
+    # transpose X
+    X = X.T
+    minX = np.min(X)
+
+    # insert space into X
+    if False:
+        # generate new array with highlightsX
+        space = 10  # integer
+        Xnew = np.zeros((X.shape[0], X.shape[1] + space*len(highlightsX)))
+        hold = 0
+        _hold = 0
+        space_sum = 0
+        for ih, h in enumerate(highlightsX):
+            _h = h + space_sum
+            Xnew[:, _hold:_h] = X[:, hold:h]
+            Xnew[:, _h:_h+space] = minX * np.ones((X.shape[0], space))
+            # update variables
+            space_sum += space
+            _hold = _h + space
+            hold = h
+        Xnew[:, _hold:] = X[:, hold:]
+
+    fig = pl.figure(figsize=(1.5*4, 2*4))
+    im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
+                   interpolation='nearest', color_map=color_map)
+    pl.colorbar(shrink=0.5)
+    pl.yticks(range(X.shape[0]), varnames)
+    for ih, h in enumerate(highlightsX):
+        pl.plot([h, h], [0, X.shape[0]], '--', color='black')
+    pl.xlim([0, X.shape[1]-1])
+    pl.ylim([0, X.shape[0]-1])
+    
+
+# -------------------------------------------------------------------------------
+# Palettes
+# -------------------------------------------------------------------------------
+
 # color palette (is default in matplotlib 2.0 anyway)
 # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-pal_20_vega = [
+palette_20_vega = [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
     '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
     '#bcbd22', '#17becf',
@@ -20,22 +160,22 @@ pal_20_vega = [
     '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
     '#dbdb8d', '#9edae5',
     '#ad494a', '#8c6d31']  # manual additions
-pal_20 = pal_20_vega
+palette_20 = palette_20_vega
 
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 # update 1
 # orig reference http://epub.wu.ac.at/1692/1/document.pdf
-pal_26_zeileis = [
+palette_26_zeileis = [
     "#023fa5", "#7d87b9", "#bec1d4", "#d6bcc0", "#bb7784", "#8e063b", "#4a6fe3",
     "#8595e1", "#b5bbe3", "#e6afb9", "#e07b91", "#d33f6a", "#11c638", "#8dd593",
     "#c6dec7", "#ead3c6", "#f0b98d", "#ef9708", "#0fcfc0", "#9cded6", "#d5eae7",
     "#f3e1eb", "#f6c4e1", "#f79cd4",
     '#7f7f7f', "#c7c7c7", "#1CE6FF", "#336600"  # these last ones were added,
 ]
-pal_26 = pal_26_zeileis
+palette_26 = palette_26_zeileis
 
 # from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
-pal_64_godsnot = [
+palette_64_godsnot = [
     # "#000000",  # remove the black, as often, we have black colored annotation
     "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
     "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
@@ -50,7 +190,7 @@ pal_64_godsnot = [
     "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
     "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
     "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
-pal_64 = pal_64_godsnot
+palette_64 = palette_64_godsnot
 
 
 additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
@@ -63,6 +203,12 @@ additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
             'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
             '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
+
+
+# -------------------------------------------------------------------------------
+# Helper functions
+# -------------------------------------------------------------------------------
+
 
 def init_plotting_params():
     """Init default plotting parameters.
@@ -96,7 +242,7 @@ def init_plotting_params():
     rcParams['legend.handletextpad'] = 0.4
     # resolution of png output
     rcParams['savefig.dpi'] = 400
-    rcParams['axes.prop_cycle'] = cycler(color=pal_20)
+    rcParams['axes.prop_cycle'] = cycler(color=palette_20)
     # restore a few matplotlib defaults that Seaborn changes
     rcParams['axes.linewidth'] = 0.8
     rcParams['axes.edgecolor'] = 'black'
@@ -105,38 +251,78 @@ def init_plotting_params():
     rcParams['ytick.color'] = 'k'
     # same as seaborn default
     rcParams['axes.grid'] = True
+    
+# call this when importing
+init_plotting_params()
 
 
-def default_pal(pal=None):
-    if pal is None: return rcParams['axes.prop_cycle']
-    elif not isinstance(pal, Cycler): return cycler(color=pal)
-    else: return pal
+def savefig(writekey, dpi=None, ext=None):
+    """Save current figure to file.
 
-
-def adjust_pal(pal, length):
-    if len(pal.by_key()['color']) < length:
-        if length <= 28:
-            pal = pal_26
+    The filename is generated as follows:
+    ```
+    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
+    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
+    ```
+    """
+    if dpi is None:
+        if rcParams['savefig.dpi'] < 300:
+            dpi = 300
+            if sett._low_resolution_warning:
+                logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
+                sett._low_resolution_warning = False
         else:
-            pal = pal_64
+            dpi = rcParams['savefig.dpi']
+    if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
+    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
+    if sett.figdir[-1] != '/': sett.figdir += '/'
+    if ext is None: ext = sett.file_format_figs
+    filename = sett.figdir + writekey + sett.plotsuffix + '.' + ext
+    logg.info('... saving figure to file', filename)
+    pl.savefig(filename, dpi=dpi)
+
+
+def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
+    if isinstance(save, str):
+        writekey += save
+        save = True
+    save = sett.savefigs if save is None else save
+    show = (sett.autoshow and not save) if show is None else show
+    if save: savefig(writekey, dpi=dpi, ext=ext)
+    if show: pl.show()
+    if save: pl.close()  # clear figure
+
+
+def default_palette(palette=None):
+    if palette is None: return rcParams['axes.prop_cycle']
+    elif not isinstance(palette, Cycler): return cycler(color=palette)
+    else: return palette
+
+
+def adjust_palette(palette, length):
+    if len(palette.by_key()['color']) < length:
+        if length <= 28:
+            palette = palette_26
+        else:
+            palette = palette_64
         logg.m('... updating the color palette to provide enough colors')
-        return cycler(color=pal)
-    elif not isinstance(pal, Cycler):
-        return cycler(color=pal)
+        return cycler(color=palette)
+    elif not isinstance(palette, Cycler):
+        return cycler(color=palette)
     else:
-        return pal
+        return palette
 
 
-def add_colors_for_categorical_sample_annotation(adata, key, pal=None):
+def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     if (key + '_colors' in adata.add
         and len(adata.add[key + '_names']) > len(adata.add[key + '_colors'])):
         logg.info('    number of defined colors does not match number of categories,'
                   ' using palette')
     else:
         logg.m('generating colors for {} using palette'.format(key), v=4)
-    pal = default_pal(pal)
-    pal_adjusted = adjust_pal(pal, length=len(adata.add[key + '_names']))
-    adata.add[key + '_colors'] = pal_adjusted[:len(adata.add[key + '_names'])].by_key()['color']
+    palette = default_palette(palette)
+    palette_adjusted = adjust_palette(palette, length=len(adata.add[key + '_names']))
+    adata.add[key + '_colors'] = palette_adjusted[:len(adata.add[key + '_names'])].by_key()['color']
     if len(adata.add[key + '_names']) > len(adata.add[key + '_colors']):
         raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
                          .format(len(adata.add[key + '_colors']), key))
@@ -388,7 +574,7 @@ def ticks_formatter(x, pos):
         b = int(b)
         return r'${} \times 10^{{{}}}$'.format(a, b)
     else:
-        return ('%.3f'%(x)).rstrip('0').rstrip('.')
+        return ('%.3f' % (x)).rstrip('0').rstrip('.')
 
 
 def pimp_axis(x_or_y_ax):

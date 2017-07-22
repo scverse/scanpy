@@ -1,102 +1,38 @@
 # Authors: F. Alex Wolf <http://falexwolf.de>
 #          P. Angerer
-"""Generic plotting functions for AnnData.
+"""Plotting functions for AnnData.
 """
 
-import os
 import numpy as np
 from scipy.sparse import issparse
 
-from ..compat.matplotlib import pyplot as pl
+from matplotlib import pyplot as pl
 from matplotlib import rcParams
-from matplotlib.figure import SubplotParams as sppars
 from matplotlib.colors import is_color_like
 from .. import settings as sett
-from .. import logging as logg
-from .. import utils as sc_utils
-from .. import readwrite
 from . import utils
 from .utils import scatter_base, scatter_group
 
 
-# -------------------------------------------------------------------------------
-# Generic Helper Functions
-# -------------------------------------------------------------------------------
-
-
-def savefig(writekey, dpi=None, ext=None):
-    """Save current figure to file.
-
-    The filename is generated as follows:
-    ```
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
-    ```
-    """
-    if dpi is None:
-        if rcParams['savefig.dpi'] < 300:
-            dpi = 300
-            if sett._low_resolution_warning:
-                logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
-                sett._low_resolution_warning = False
-        else:
-            dpi = rcParams['savefig.dpi']
-    if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    if sett.figdir[-1] != '/': sett.figdir += '/'
-    if ext is None: ext = sett.file_format_figs
-    filename = sett.figdir + writekey + sett.plotsuffix + '.' + ext
-    logg.info('... saving figure to file', filename)
-    pl.savefig(filename, dpi=dpi)
-
-
-def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
-    if isinstance(save, str):
-        writekey += save
-        save = True
-    save = sett.savefigs if save is None else save
-    show = (sett.autoshow and not save) if show is None else show
-    if save: savefig(writekey, dpi=dpi, ext=ext)
-    if show: pl.show()
-    if save: pl.close()  # clear figure
-
-
-# -------------------------------------------------------------------------------
-# Generic plotting functions
-# -------------------------------------------------------------------------------
-
-
-def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
-           cmap='Greys', show=None, save=None, ax=None):
-    """Plot a matrix."""
-    if ax is None: ax = pl.gca()
-    ax.imshow(matrix, cmap=cmap)
-    if xlabels is not None:
-        ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
-    if ylabels is not None:
-        ax.set_yticks(range(len(ylabels)), ylabels)
-    ax.colorbar(shrink=cshrink)
-    savefig_or_show('matrix', show=show, save=save)
-
-
-def scatter(adata,
-            x=None,
-            y=None,
-            color='grey',
-            basis=None,
-            groups=None,
-            components=None,
-            projection='2d',
-            legend_loc='right margin',
-            legend_fontsize=None,
-            color_map=None,
-            pal=None,
-            right_margin=None,
-            size=None,
-            title=None,
-            show=None,
-            save=None,
-            ax=None):
+def scatter(
+        adata,
+        x=None,
+        y=None,
+        color='grey',
+        basis=None,
+        groups=None,
+        components=None,
+        projection='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        color_map=None,
+        pal=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None,
+        ax=None):
     """Scatter plot.
 
     Color with sample annotation (`color in adata.smp_keys()`) or gene
@@ -375,7 +311,9 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30, log=Fals
 
 
 def ranking_deprecated(adata, toolkey, n_genes=20):
-    """Plot ranking of genes
+    """Plot ranking.
+
+    Is still used by rank_genes_groups.
 
     Parameters
     ----------
@@ -384,7 +322,6 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
     n_genes : int
         Number of genes.
     """
-
     # one panel for each ranking
     scoreskey = adata.add[toolkey + '_scoreskey']
     n_panels = len(adata.add[toolkey + '_rankings_names'])
@@ -440,123 +377,6 @@ def ranking_deprecated(adata, toolkey, n_genes=20):
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
         count += 1
-
-
-def timeseries(X, **kwargs):
-    """Plot X. See timeseries_subplot."""
-    pl.figure(figsize=(2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]),
-              subplotpars=sppars(left=0.12, right=0.98, bottom=0.13))
-    timeseries_subplot(X, **kwargs)
-
-
-def timeseries_subplot(X,
-                       c=None,
-                       varnames=(),
-                       highlightsX=(),
-                       xlabel='',
-                       ylabel='gene expression',
-                       yticks=None,
-                       xlim=None,
-                       legend=True,
-                       palette=None,
-                       color_map='viridis'):
-    """Plot X.
-
-    Call this with:
-    X with one column, c categorical
-    X with one column, c continuous
-    X with n columns, c is of length n
-    """
-
-    if c is not None:
-        use_color_map = isinstance(c[0], float) or isinstance(c[0], np.float32)
-    palette = utils.default_palette(palette)
-    x_range = np.arange(X.shape[0])
-    if X.shape[1] > 1:
-        colors = palette[:X.shape[1]].by_key()['color']
-        subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
-    elif use_color_map:
-        colors = [c]
-        subsets = [(x_range, X[:, 0])]
-    else:
-        levels, _ = np.unique(c, return_inverse=True)
-        colors = np.array(palette[:len(levels)].by_key()['color'])
-        subsets = [(x_range[c == l], X[c == l, :]) for l in levels]
-
-    for i, (x, y) in enumerate(subsets):
-        pl.scatter(
-            x, y,
-            marker='.',
-            edgecolor='face',
-            s=rcParams['lines.markersize'],
-            c=colors[i],
-            label=varnames[i] if len(varnames) > 0 else '',
-            color_map=color_map,
-        )
-    ylim = pl.ylim()
-    for ih, h in enumerate(highlightsX):
-        pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
-    pl.ylim(ylim)
-    if xlim is not None:
-        pl.xlim(xlim)
-    pl.xlabel(xlabel)
-    pl.ylabel(ylabel)
-    if yticks is not None:
-        pl.yticks(yticks)
-    if len(varnames) > 0 and legend == True:
-        pl.legend(frameon=False)
-
-
-def timeseries_as_heatmap(X, varnames=None, highlightsX=None, color_map='viridis'):
-    """Plot timeseries as heatmap.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array.
-    varnames : array_like
-        Array of strings naming variables stored in columns of X.
-    """
-    if highlightsX is None:
-        highlightsX = []
-    if varnames is None:
-        varnames = []
-    if len(varnames) == 0:
-        varnames = np.arange(X.shape[1])
-    if varnames.ndim == 2:
-        varnames = varnames[:, 0]
-
-    # transpose X
-    X = X.T
-    minX = np.min(X)
-
-    # insert space into X
-    if False:
-        # generate new array with highlightsX
-        space = 10  # integer
-        Xnew = np.zeros((X.shape[0], X.shape[1] + space*len(highlightsX)))
-        hold = 0
-        _hold = 0
-        space_sum = 0
-        for ih, h in enumerate(highlightsX):
-            _h = h + space_sum
-            Xnew[:, _hold:_h] = X[:, hold:h]
-            Xnew[:, _h:_h+space] = minX * np.ones((X.shape[0], space))
-            # update variables
-            space_sum += space
-            _hold = _h + space
-            hold = h
-        Xnew[:, _hold:] = X[:, hold:]
-
-    fig = pl.figure(figsize=(1.5*4, 2*4))
-    im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-                   interpolation='nearest', color_map=color_map)
-    pl.colorbar(shrink=0.5)
-    pl.yticks(range(X.shape[0]), varnames)
-    for ih, h in enumerate(highlightsX):
-        pl.plot([h, h], [0, X.shape[0]], '--', color='black')
-    pl.xlim([0, X.shape[1]-1])
-    pl.ylim([0, X.shape[0]-1])
 
 
 def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
