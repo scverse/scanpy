@@ -164,6 +164,10 @@ def run_command_line_args(toolkey, args):
     from . import settings as sett
     from . import logging as logg
 
+    # init recompute for command-line usage differently than for
+    # api usage
+    sett.recompute = 'none'
+    
     # help on plot parameters
     if args['plot_params']:
         from . import plotting

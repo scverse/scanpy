@@ -52,7 +52,7 @@ _run_suffix = ''
 """Global suffix that is appended to project identifier.
 """
 
-plotsuffix = ''
+plot_suffix = ''
 """Global suffix that is appended to figure filenames.
 
 Is needed when the computation parameters remain unchanged, but only plotting
@@ -73,8 +73,8 @@ For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
 matplotlib.pyplot.savefig).
 """
 
-recompute = 'none'
-"""Don't use the results of previous calculations.
+recompute = 'read'
+"""If set to 'none', use the results of previous computations.
 
 Recompute and overwrite previous result and preprocessing files.
 """
@@ -269,8 +269,8 @@ def process_args(args):
     _run_suffix = args['suffix']
     args.pop('suffix')
 
-    global plotsuffix
-    plotsuffix = args['psuffix']
+    global plot_suffix
+    plot_suffix = args['psuffix']
     args.pop('psuffix')
 
     global recompute
