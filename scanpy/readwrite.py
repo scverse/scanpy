@@ -13,53 +13,53 @@ from . import settings as sett
 from . import logging as logg
 from .data_structs import AnnData
 
-avail_exts = ['csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data']
+avail_exts = {'csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data'}
 """ Available file formats for reading data. """
 
 
 # --------------------------------------------------------------------------------
 # Reading and Writing data files and AnnData objects
-# - for reading and writing runs, see examples/__init__.py
 # --------------------------------------------------------------------------------
 
 
-def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
-         backup_url='', return_dict=False, reread=None):
+def read(filename_or_filekey, sheet=None, ext='', delimiter=None,
+         first_column_names=None, backup_url='', return_dict=False,
+         cache=None):
     """Read file and return AnnData object.
 
-    To speed up reading and save storage space, this creates an hdf5 file if
-    it's not present yet.
+    To speed up reading, consider passing `cache=True`, which creates an hdf5
+    cache file.
 
     Parameters
     ----------
-    filename_or_key : str, None
-        Filename or filekey of data file. A filekey leads to a filename defined as
-            `sett.writedir + filekey + sett.file_format_data`
-        This is the same behavior as in `write(filekey, dict)`.
+    filename_or_filekey : str, None
+        Filename or filekey of data file. A filekey generates a filename via
+        `sc.settings.writedir + filekey + sc.settings.file_format_data`.
+        This is the same behavior as in `sc.write(filekey, ...)`.
     sheet : str, optional
         Name of sheet/table in hdf5 or Excel file.
+    cache : bool or None (default: None)
+        If false, read from source, if true, read from fast 'h5' cache.
     ext : str, optional (default: automatically inferred from filename)
         Extension that indicates the file type.
-    delim : str, optional
+    delimiter : str, optional
         Delimiter that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
     first_column_names : bool, optional
-        Assume the first column stores samplenames. Is unnecessary if the sample
-        names are not floats or integers: if they are strings, this will be
-        detected automatically.
+        Assume the first column stores samplenames. This is only necessary if
+        the sample are floats or integers: strings are automatically assumed to
+        be row names.
     backup_url : str, optional
-        Retrieve the file from a URL if not present on disk.
+        Retrieve the file from an URL if not present on disk.
     return_dict : bool, optional (default: False)
         Return dictionary instead of AnnData object.
-    reread : bool or None (default: None)
-        Reread source file instead of cached file if reading from a slow format.
 
     Returns
     -------
     data : sc.AnnData object or dict if return_dict == True
 
-    If a dict the dict contains
+    If a dict, the dict contains
         X : np.ndarray, optional
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
@@ -68,32 +68,29 @@ def read(filename_or_key, sheet='', ext='', delim=None, first_column_names=None,
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
     """
-    filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
-    if is_filename(filename_or_key):
-        d = read_file(filename_or_key, sheet, ext, delim, first_column_names,
-                      backup_url, reread)
-        if isinstance(d, dict):
-            if return_dict: return d
-            else: return AnnData(d)
-        elif isinstance(d, AnnData):
-            if return_dict: return d.to_dict()
-            else: return d
+    filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
+    if is_filename(filename_or_filekey):
+        data = read_file(filename_or_filekey, sheet, ext, delimiter,
+                      first_column_names, backup_url, cache)
+        if isinstance(data, dict):
+            return data if return_dict else AnnData(data)
+        elif isinstance(data, AnnData):
+            return data.to_dict() if return_dict else data
         else:
             raise ValueError('Do not know how to process read data.')
 
     # generate filename and read to dict
-    key = filename_or_key
-    filename = sett.writedir + key + '.' + sett.file_format_data
+    filekey = filename_or_filekey
+    filename = sett.writedir + filekey + '.' + sett.file_format_data
     if not os.path.exists(filename):
-        raise ValueError('Reading with key "{}" failed, the '
+        raise ValueError('Reading with filekey "{}" failed, the '
                          'inferred filename "{}" does not exist. '
                          'If you intended to provide a filename, either '
                          'use a filename ending on one of the available extensions {} '
                          'or pass the parameter `ext`.'
-                         .format(key, filename, avail_exts))
-    d = read_file_to_dict(filename, ext=sett.file_format_data)
-    if return_dict: return d
-    else: return AnnData(d)
+                         .format(filekey, filename, avail_exts))
+    data = read_file_to_dict(filename, ext=sett.file_format_data)
+    return data if return_dict else AnnData(data)
 
 
 def read_10x_h5(filename, genome):
@@ -107,7 +104,7 @@ def read_10x_h5(filename, genome):
             variables/genes by gene name. The data is stored in adata.X, cell
             names in adata.smp_names and gene names in adata.var_names.
     """
-    logg.m('... reading file', filename, r=True, end=' ')
+    logg.info('reading file', filename, r=True, end=' ')
     import tables
     with tables.open_file(filename, 'r') as f:
         try:
@@ -127,10 +124,10 @@ def read_10x_h5(filename, genome):
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
             adata = AnnData(matrix,
-                           {'smp_names': dsets['barcodes']},
-                           {'var_names': dsets['gene_names'],
-                            'gene_ids': dsets['genes']})
-            logg.m(t=True)
+                            {'smp_names': dsets['barcodes']},
+                            {'var_names': dsets['gene_names'],
+                             'gene_ids': dsets['genes']})
+            logg.info(t=True)
             return adata
         except tables.NoSuchNodeError:
             raise Exception('Genome %s does not exist in this file.' % genome)
@@ -138,30 +135,30 @@ def read_10x_h5(filename, genome):
             raise Exception('File is missing one or more required datasets.')
 
 
-def write(filename_or_key, data, ext=None):
+def write(filename_or_filekey, data, ext=None):
     """Write AnnData objects and dictionaries to file.
 
     If a key is passed, the filename is generated as
-        filename = sett.writedir + key + sett.file_format_data
-    This defaults to
-        filename = 'write/' + key + '.h5'
-    and can be changed by reseting sett.writedir and sett.file_format_data.
+    `filename = sc.settings.writedir + filekey + sc.settings.file_format_data`
+    This defaults to `filename = 'write/' + filekey + '.h5'`.
+    and can be changed by reseting `sc.settings.writedir` and
+    `sc.settings.file_format_data`.
 
     Parameters
     ----------
-    filename_or_key : str
+    filename_or_filekey : str
         Filename of data file or key to generate filename.
     data : dict, AnnData
         Annotated data object or dict storing arrays as values.
     ext : str or None (default: None)
         File extension from wich to infer file format.
     """
-    filename_or_key = str(filename_or_key)  # allow passing pathlib.Path objects
+    filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
     if isinstance(data, AnnData): d = data.to_dict()
     else: d = data
 
-    if is_filename(filename_or_key):
-        filename = filename_or_key
+    if is_filename(filename_or_filekey):
+        filename = filename_or_filekey
         ext_ = is_filename(filename, return_ext=True)
         if ext is None:
             ext = ext_
@@ -170,7 +167,7 @@ def write(filename_or_key, data, ext=None):
                              'providing a proper extension to the filename.'
                              'One of "txt", "csv", "h5" or "npz".')
     else:
-        key = filename_or_key
+        key = filename_or_filekey
         ext = sett.file_format_data if ext is None else ext
         filename = get_filename_from_key(key, ext)
     write_dict_to_file(filename, d, ext=ext)
@@ -204,7 +201,7 @@ def read_params(filename, asheader=False, verbosity=0):
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if not asheader:
-        sett.m(verbosity, '... reading params file', filename)
+        sett.m(verbosity, 'reading params file', filename)
     from collections import OrderedDict
     params = OrderedDict([])
     for line in open(filename):
@@ -261,8 +258,8 @@ def get_params_from_list(params_list):
 # -------------------------------------------------------------------------------
 
 
-def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
-              backup_url='', reread=None):
+def read_file(filename, sheet=None, ext='', delimiter=None, first_column_names=None,
+              backup_url='', cache=None):
     """Read file and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -274,9 +271,11 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         Filename of data file.
     sheet : str, optional
         Name of sheet in Excel file.
+    cache : bool or None (default: None)
+        If false, read from source, if true, read from fast 'h5' cache.
     ext : str, optional (default: inferred from filename)
         Extension that indicates the file type.
-    delim : str, optional
+    delimiter : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
@@ -285,8 +284,6 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
         names are not floats or integers, but strings.
     backup_url : str
         URL for download of file in case it's not present.
-    reread : bool or None (default: None)
-        Reread source file instead of cached file if reading from a slow format.
 
     Returns
     -------
@@ -313,57 +310,60 @@ def read_file(filename, sheet='', ext='', delim=None, first_column_names=None,
     if not is_present: logg.m('... did not find original file', filename)
     # read hdf5 files
     if ext == 'h5':
-        if sheet == '':
+        if sheet is None:
             return read_file_to_dict(filename, ext=sett.file_format_data)
         else:
-            logg.m('... reading sheet', sheet, 'from file', filename)
+            logg.info('reading sheet', sheet, 'from file', filename)
             return _read_hdf5_single(filename, sheet)
     # read other file types
-    # filename fast
     filename_stripped = filename.lstrip('./')
     if filename_stripped.startswith('data/'):
         filename_stripped = filename_stripped[5:]
     fast_ext = sett.file_format_data if sett.file_format_data in {'h5', 'npz'} else 'h5'
-    filename_fast = (sett.writedir + 'data/'
-                     + filename_stripped.replace('.' + ext, '.' + fast_ext))
-    reread = sett.recompute == 'read' if reread is None else reread
-    if not os.path.exists(filename_fast) or reread:
+    filename_cache = (sett.writedir + 'data/'
+                      + filename_stripped.replace('.' + ext, '.' + fast_ext))
+    cache = not sett.recompute == 'read' if cache is None else cache
+    if cache and os.path.exists(filename_cache):
+        ddata = read_file_to_dict(filename_cache, sett.file_format_data,
+                                  cache_warning=True)
+    else:
         if not is_present:
-            raise FileNotFoundError('Cannot reread original data file {}, is not present.'
-                                    .format(filename))
-        logg.m('... reading file', filename,
-               '\n    writing an', sett.file_format_data,
-               'version to speedup reading next time\n   ',
-               filename_fast)
-        if not os.path.exists(os.path.dirname(filename_fast)):
-            os.makedirs(os.path.dirname(filename_fast))
+            raise FileNotFoundError(
+                'Cannot read original data file {}, is not present.'
+                .format(filename))
+        logg.info('reading file', filename)
+        if not cache:
+            logg.warn('This might be very slow. Consider passing `cache=True`, '
+                      'which enables much faster reading from a cache file.')
         # do the actual reading
         if ext == 'xlsx' or ext == 'xls':
-            if sheet == '':
+            if sheet is None:
                 ddata = read_file_to_dict(filename, ext=ext)
             else:
                 ddata = _read_excel(filename, sheet)
         elif ext == 'mtx':
             ddata = _read_mtx(filename)
         elif ext == 'csv':
-            ddata = read_txt(filename, delim=',',
+            ddata = read_txt(filename, delimiter=',',
                              first_column_names=first_column_names)
-        elif ext in ['txt', 'tab', 'data']:
+        elif ext in {'txt', 'tab', 'data'}:
             if ext == 'data':
-                logg.m('... assuming ".data" means tab or white-space separated text file')
-                logg.m('--> change this by passing `ext` to sc.read')
-            ddata = read_txt(filename, delim, first_column_names)
+                logg.info('... assuming ".data" means tab or white-space separated text file')
+                logg.info('--> change this by passing `ext` to sc.read')
+            ddata = read_txt(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
         elif ext == 'txt.gz':
             sys.exit('TODO: implement similar to read_softgz')
         else:
-            raise ValueError('Unkown extension', ext)
-        # write for faster reading when calling the next time
-        write_dict_to_file(filename_fast, ddata, sett.file_format_data)
-    else:
-        ddata = read_file_to_dict(filename_fast, sett.file_format_data,
-                                  cache_warning=True)
+            raise ValueError('Unkown extension {}.'.format(ext))
+        if cache:
+            logg.info('... writing an', sett.file_format_data,
+                      'cache file to speedup reading next time')
+            if not os.path.exists(os.path.dirname(filename_cache)):
+                os.makedirs(os.path.dirname(filename_cache))
+            # write for faster reading when calling the next time
+            write_dict_to_file(filename_cache, ddata, sett.file_format_data)
     return ddata
 
 
@@ -382,23 +382,28 @@ def _read_mtx(filename, return_dict=True, dtype='float32'):
         return AnnData(X)
 
 
-def read_txt(filename, delim=None, first_column_names=None):
-    """Return data dictionary or AnnData object.
+def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
+             return_dict=True):
+    """Read text file and eturn data dictionary or AnnData object.
 
     Parameters
     ----------
     filename : str, Path
-        Filename to read from.
-    delim : str, optional
+        Filename of data file.
+    delimiter : str, optional
         Separator that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
         splitting at single white space ' '.
     first_column_names : bool, optional
         Assume the first column stores samplenames.
+    return_dict : bool, optional (default: True)
+        Return a dict, not an AnnData, if True.
 
     Returns
     -------
-    ddata : dict containing
+    data : An AnnData or a dict storing the data.
+
+    If a dict, it contains
         X : np.ndarray
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
@@ -406,30 +411,6 @@ def read_txt(filename, delim=None, first_column_names=None):
             Array storing the names of rows (experimental labels of samples).
         col_names : np.ndarray
             Array storing the names of columns (gene names).
-    """
-    filename = str(filename)  # allow passing pathlib.Path objects
-    data = read_txt_as_floats(filename, delim, first_column_names)
-    return data
-
-
-def read_txt_as_floats(filename, delim=None, first_column_names=None,
-                       dtype='float32', return_dict=True):
-    """Return data as list of lists of strings and the header as string.
-
-    Parameters
-    ----------
-    filename : str, Path
-        Filename of data file.
-    delim : str, optional
-        Separator that separates data within text file. If None, will split at
-        arbitrary number of white spaces, which is different from enforcing
-        splitting at single white space ' '.
-    first_column_names : bool, optional
-        Assume the first column stores samplenames.
-
-    Returns
-    -------
-    data : An AnnData or a dict storing the data.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     header = ''
@@ -443,12 +424,12 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
         if line.startswith('#'):
             header += line
         else:
-            if delim is not None and delim not in line:
-                logg.warn('did not find delimiter "{}" in first line'.format(delim))
-            line_list = line.split(delim)
+            if delimiter is not None and delimiter not in line:
+                logg.warn('did not find delimiter "{}" in first line'.format(delimiter))
+            line_list = line.split(delimiter)
             if not is_float(line_list[0]):
                 col_names = line_list
-                logg.m('    assuming first line in file stores column names')
+                logg.info('    assuming first line in file stores column names')
             else:
                 if not is_float(line_list[0]) or first_column_names:
                     first_column_names = True
@@ -471,7 +452,7 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
     if first_column_names is None:
         first_column_names = False
     for line in f:
-        line_list = line.split(delim)
+        line_list = line.split(delimiter)
         if not is_float(line_list[0]) or first_column_names:
             logg.info('    assuming first column in file stores row names')
             first_column_names = True
@@ -482,13 +463,13 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
         break
     # parse the file
     for line in f:
-        line_list = line.split(delim)
+        line_list = line.split(delimiter)
         if first_column_names:
             row_names.append(line_list[0])
             data.append(np.array(line_list[1:], dtype=dtype))
         else:
             data.append(np.array(line_list, dtype=dtype))
-    logg.m('    read data into list of lists', t=True)
+    logg.info('    read data into list of lists', t=True)
     # transfrom to array, this takes a long time and a lot of memory
     # but it's actually the same thing as np.genfromtext does
     # - we don't use the latter as it would involve another slicing step
@@ -498,11 +479,11 @@ def read_txt_as_floats(filename, delim=None, first_column_names=None,
         raise ValueError('length of first line {} is different from length of last line {}'
                          .format(data[0].size, data[-1].size))
     data = np.array(data, dtype=dtype)
-    logg.m('    constructed array from list of list', t=True)
+    logg.info('    constructed array from list of list', t=True)
     # transform row_names
     if not row_names:
         row_names = np.arange(len(data)).astype(str)
-        logg.m('    did not find row names in file')
+        logg.info('    did not find row names in file')
     else:
         row_names = np.array(row_names)
         for iname, name in enumerate(row_names):
@@ -566,14 +547,14 @@ def _read_hdf5_single(filename, key=''):
             else:
                 ddata[name] = np.arange(X.shape[0 if name == 'row_names' else 1])
                 if key == 'X':
-                    logg.m('did not find', name, 'in', filename)
+                    logg.info('did not find', name, 'in', filename)
             ddata[name] = ddata[name].astype(str)
             if X.ndim == 1:
                 break
     return ddata
 
 
-def _read_excel(filename, sheet=''):
+def _read_excel(filename, sheet):
     """Read excel file and return data dictionary.
 
     Parameters
@@ -669,8 +650,7 @@ def _read_softgz(filename):
             # and convert the strings to numbers
             x = [float(V[i]) for i in I]
             X.append(x)
-            gene_names.append(#  V[0] + ";" + # only use the second gene name
-                              V[1])
+            gene_names.append(V[1])
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
     X = np.array(X).T
@@ -709,10 +689,7 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if cache_warning: logg.warn('reading from cached file {} '
-                                '(pass `reread=True` to read from original file)'
-                                .format(filename))
-    else: logg.info('reading file {}'.format(filename))
+    logg.info('reading file {}'.format(filename))
     d = {}
     if ext == 'h5':
         with h5py.File(filename, 'r') as f:
@@ -972,32 +949,38 @@ def check_datafile_present_and_download(filename, backup_url=''):
     """
     if os.path.exists(filename): return True
     if backup_url == '': return False
-    logg.m('try downloading from url\n' + backup_url + '\n' +
-           '... this may take a while but only happens once')
+    logg.info('try downloading from url\n' + backup_url + '\n' +
+              '... this may take a while but only happens once')
     d = os.path.dirname(filename)
     if not os.path.exists(d):
-        logg.m('creating directory', d + '/', 'for saving data')
+        logg.info('creating directory', d + '/', 'for saving data')
         os.makedirs(d)
     from .compat.urllib_request import urlretrieve
     urlretrieve(backup_url, filename, reporthook=download_progress)
-    logg.m('')
+    logg.info('')
     return True
 
-def is_filename(filename_or_key, return_ext=False):
-    """ Check whether it is a filename. """
+
+def is_filename(filename_or_filekey, return_ext=False):
+    """Check whether the argument is a filename."""
     for ext in avail_exts:
         l = len('.' + ext)
         # check whether it ends on the extension
-        if '.' + ext in filename_or_key[-l:]:
+        if '.' + ext in filename_or_filekey[-l:]:
             if return_ext: return ext
             else: return True
     if return_ext:
-        raise ValueError('"' + filename_or_key + '"'
+        raise ValueError('"' + filename_or_filekey + '"'
                          + ' does not contain a valid extension\n'
                          + 'Please provide one of the available extensions.\n'
                          + avail_exts)
     else:
         return False
+
+
+# -------------------------------------------------------------------------------
+# Tests
+# -------------------------------------------------------------------------------
 
 
 # need data files to run this test
