@@ -11,7 +11,7 @@ from .tools import diffmap
 from .tools import draw_graph
 from .tools import tsne
 from .tools import aga, aga_attachedness, aga_graph, aga_graph, aga_scatter
-from .tools import dpt, dpt_scatter, dpt_segments_pseudotime, dpt_timeseries
+from .tools import dpt, dpt_scatter, dpt_groups_pseudotime, dpt_timeseries
 from .tools import louvain
 from .tools import rank_genes_groups, rank_genes_groups_violin
 from .tools import sim

@@ -98,10 +98,12 @@ def scatter(
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
-    else:
+    elif x is not None and y is not None:
         x_arr = adata.get_smp_array(x)
         y_arr = adata.get_smp_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
+    else:
+        raise ValueError('Either provide keys for a `basis` or for `x` and `y`.')
 
     if size is None:
         n = Y.shape[0]

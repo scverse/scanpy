@@ -91,11 +91,15 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
             Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
-    if 'xroot' not in adata.add and 'xroot' not in adata.var:
+    if ('iroot' not in adata.add
+        and 'xroot' not in adata.add
+        and 'xroot' not in adata.var):
         logg.m('    no root cell found, no computation of pseudotime')
         msg = \
-    '''To enable computation of pseudotime, pass the expression "xroot" of a root cell.
-    Either add
+    '''To enable computation of pseudotime, pass the index or expression vector
+    of a root cell. Either add
+        adata.add['iroot'] = root_cell_index
+    or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
@@ -103,12 +107,11 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         logg.m(msg, v='hint')
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
-    dpt = DPT(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
-              min_group_size=min_group_size,
-              n_jobs=n_jobs, recompute_diffmap=recompute_diffmap,
-              recompute_pca=recompute_pca, n_branchings=n_branchings,
-              allow_kendall_tau_shift=allow_kendall_tau_shift,
-              flavor=flavor)
+    dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
+              min_group_size=min_group_size, n_jobs=n_jobs,
+              recompute_diffmap=recompute_diffmap, recompute_pca=recompute_pca,
+              n_branchings=n_branchings,
+              allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
     adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
@@ -116,15 +119,8 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     if knn: adata.add['distance'] = dpt.Dsq
     if knn: adata.add['Ktilde'] = dpt.Ktilde
     logg.m('perform Diffusion Pseudotime analysis', r=True)
-    if n_branchings > 1:
-        logg.m('    this uses a hierarchical implementation')
-    if False:
-        # compute M matrix of cumulative transition probabilities,
-        # see Haghverdi et al. (2016)
-        dpt.compute_M_matrix()
+    if n_branchings > 1: logg.info('... this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
-    if False:  # we do not compute the full Ddiff matrix, only the elements we need
-        dpt.compute_Ddiff_matrix()
     if dpt.iroot is not None:
         dpt.set_pseudotime()  # pseudotimes are distances from root point
         adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
@@ -139,18 +135,19 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     # vector of length n_samples of groupnames
     adata.smp['dpt_groups'] = dpt.segs_names.astype('U')
     # the ordering according to segments and pseudotime
-    adata.smp['dpt_order'] = dpt.indices
-    # the changepoints - marking different segments - in the ordering above
+    ordering_id = np.zeros(adata.n_smps, dtype=int)
+    for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
+    adata.smp['dpt_order'] = ordering_id
+    adata.smp['dpt_order_indices'] = dpt.indices
+    # the "change points" separate segments in the ordering above
     adata.add['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
     adata.add['dpt_grouptips'] = dpt.segs_tips
-    # the tree/graph adjacency matrix
-    adata.add['dpt_groups_adjacency'] = dpt.segs_adjacency
-    adata.add['dpt_groups_connects'] = dpt.segs_connects
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
-           + ('    "dpt_pseudotime", stores pseudotime (adata.smp),\n' if dpt.iroot is not None else '')
-           + '    "dpt_groups", the segments of trajectories a long a tree (adata.smp)')
+           + ('    "dpt_pseudotime", the pseudotime (adata.smp),\n' if dpt.iroot is not None else '')
+           + '    "dpt_groups", the branching subgroups of dpt (adata.smp)\n'
+           + '    "dpt_order", order according to groups and increasing pseudtime (adata.smp)')
     return adata if copy else None
 
 
@@ -158,24 +155,18 @@ class DPT(data_graph.DataGraph):
     """Hierarchical Diffusion Pseudotime.
     """
 
-    def __init__(self, adata_or_X, k=30, knn=True,
-                 n_jobs=1, n_pcs=50,
-                 n_dcs=10,
-                 min_group_size=20,
-                 recompute_pca=None,
-                 recompute_diffmap=None,
-                 n_branchings=0,
-                 allow_kendall_tau_shift=False,
+    def __init__(self, adata, n_neighbors=30, knn=True, n_jobs=1, n_pcs=50, n_dcs=10,
+                 min_group_size=20, recompute_pca=None, recompute_diffmap=None,
+                 n_branchings=0, allow_kendall_tau_shift=False,
                  flavor='haghverdi16'):
-        super(DPT, self).__init__(adata_or_X, k=k, knn=knn, n_pcs=n_pcs,
-                                  n_dcs=n_dcs,
-                                  n_jobs=n_jobs,
+        super(DPT, self).__init__(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs,
+                                  n_dcs=n_dcs, n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
                                   recompute_diffmap=recompute_diffmap,
                                   flavor=flavor)
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
-        self.passed_adata = adata_or_X  # just for debugging purposes
+        self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = False
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 

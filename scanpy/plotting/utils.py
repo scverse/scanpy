@@ -37,8 +37,9 @@ def timeseries(X, **kwargs):
 
 
 def timeseries_subplot(X,
-                       c=None,
-                       varnames=(),
+                       time=None,
+                       color=None,
+                       var_names=(),
                        highlightsX=(),
                        xlabel='',
                        ylabel='gene expression',
@@ -49,26 +50,30 @@ def timeseries_subplot(X,
                        color_map='viridis'):
     """Plot X.
 
-    Call this with:
-    X with one column, c categorical
-    X with one column, c continuous
-    X with n columns, c is of length n
+    Parameters
+    ----------
+    X : np.ndarray
+        Call this with:
+        X with one column, color categorical.
+        X with one column, color continuous.
+        X with n columns, color is of length n.
     """
 
-    if c is not None:
-        use_color_map = isinstance(c[0], float) or isinstance(c[0], np.float32)
-    palette = utils.default_palette(palette)
-    x_range = np.arange(X.shape[0])
+    if color is not None:
+        use_color_map = isinstance(color[0], float) or isinstance(color[0], np.float32)
+    palette = default_palette(palette)
+    x_range = np.arange(X.shape[0]) if time is None else time
+    if X.ndim == 1: X = X[:, None]
     if X.shape[1] > 1:
         colors = palette[:X.shape[1]].by_key()['color']
         subsets = [(x_range, X[:, i]) for i in range(X.shape[1])]
     elif use_color_map:
-        colors = [c]
+        colors = [color]
         subsets = [(x_range, X[:, 0])]
     else:
-        levels, _ = np.unique(c, return_inverse=True)
+        levels, _ = np.unique(color, return_inverse=True)
         colors = np.array(palette[:len(levels)].by_key()['color'])
-        subsets = [(x_range[c == l], X[c == l, :]) for l in levels]
+        subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
 
     for i, (x, y) in enumerate(subsets):
         pl.scatter(
@@ -77,9 +82,8 @@ def timeseries_subplot(X,
             edgecolor='face',
             s=rcParams['lines.markersize'],
             c=colors[i],
-            label=varnames[i] if len(varnames) > 0 else '',
-            color_map=color_map,
-        )
+            label=var_names[i] if len(var_names) > 0 else '',
+            cmap=color_map)
     ylim = pl.ylim()
     for ih, h in enumerate(highlightsX):
         pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
@@ -90,28 +94,28 @@ def timeseries_subplot(X,
     pl.ylabel(ylabel)
     if yticks is not None:
         pl.yticks(yticks)
-    if len(varnames) > 0 and legend == True:
+    if len(var_names) > 0 and legend:
         pl.legend(frameon=False)
 
 
-def timeseries_as_heatmap(X, varnames=None, highlightsX=None, color_map='viridis'):
+def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map='viridis'):
     """Plot timeseries as heatmap.
 
     Parameters
     ----------
     X : np.ndarray
         Data array.
-    varnames : array_like
+    var_names : array_like
         Array of strings naming variables stored in columns of X.
     """
     if highlightsX is None:
         highlightsX = []
-    if varnames is None:
-        varnames = []
-    if len(varnames) == 0:
-        varnames = np.arange(X.shape[1])
-    if varnames.ndim == 2:
-        varnames = varnames[:, 0]
+    if var_names is None:
+        var_names = []
+    if len(var_names) == 0:
+        var_names = np.arange(X.shape[1])
+    if var_names.ndim == 2:
+        var_names = var_names[:, 0]
 
     # transpose X
     X = X.T
@@ -137,9 +141,9 @@ def timeseries_as_heatmap(X, varnames=None, highlightsX=None, color_map='viridis
 
     fig = pl.figure(figsize=(1.5*4, 2*4))
     im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-                   interpolation='nearest', color_map=color_map)
+                   interpolation='nearest', cmap=color_map)
     pl.colorbar(shrink=0.5)
-    pl.yticks(range(X.shape[0]), varnames)
+    pl.yticks(range(X.shape[0]), var_names)
     for ih, h in enumerate(highlightsX):
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
@@ -348,9 +352,8 @@ def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
     if projection == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,
                marker='.',
-               # alpha=0.3,
                c=color,
-               edgecolors='none',  # 'face',
+               edgecolors='none',
                s=size,
                label=adata.add[name + '_names'][imask])
     return mask
@@ -486,8 +489,6 @@ def scatter_base(Y,
             ax.set_xticks([])
             ax.set_yticks([])
             if '3d' in projection: ax.set_zticks([])
-        # scale limits to match data
-        ax.autoscale_view()
         axs.append(ax)
     # set default axis_labels
     if axis_labels is None:
@@ -502,6 +503,9 @@ def scatter_base(Y,
         if '3d' in projection:
             # shift the label closer to the axis
             ax.set_zlabel(axis_labels[iax][2], labelpad=-7)
+    for ax in axs:
+        # scale limits to match data
+        ax.autoscale_view()
     return axs
 
 

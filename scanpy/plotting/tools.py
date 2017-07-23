@@ -928,7 +928,7 @@ def dpt(
         color=None,
         groups=None,
         components=None,
-        layout='2d',
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
         color_map=None,
@@ -936,7 +936,8 @@ def dpt(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None,
+        save=None):
     """Plot results of DPT analysis.
 
     Parameters
@@ -953,8 +954,8 @@ def dpt(
         Restrict to a few categories in categorical sample annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -989,7 +990,7 @@ def dpt(
         color=color,
         groups=groups,
         components=components,
-        layout=layout,
+        projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         color_map=color_map,
@@ -997,13 +998,15 @@ def dpt(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=False)
+        show=False,
+        save=save)
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
-    dpt_timeseries(adata, color_map=color_map, show=show)
+    dpt_groups_pseudotime(adata, color_map=color_map, show=False, save=save)
+    dpt_timeseries(adata, color_map=color_map, show=show, save=save)
 
 
 def dpt_scatter(
@@ -1012,7 +1015,7 @@ def dpt_scatter(
         color=None,
         groups=None,
         components=None,
-        layout='2d',
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
         color_map=None,
@@ -1020,7 +1023,8 @@ def dpt_scatter(
         right_margin=None,
         size=None,
         title=None,
-        show=None):
+        show=None,
+        save=None):
     """See parameters of sc.pl.dpt().
     """
     from ..utils import check_adata
@@ -1034,91 +1038,72 @@ def dpt_scatter(
         components_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
     else:
         if components is None:
-            components = '1,2' if '2d' in layout else '1,2,3'
+            components = '1,2' if '2d' in projection else '1,2,3'
         if not isinstance(components, list): components_list = [components]
         else: components_list = components
-    # adata.add['highlights'] = (
-    #    # list([adata.add['iroot']])
-    #    [i for g in adata.add['dpt_groupconnects'] for i in g])
-    #  + [adata.add['dpt_grouptips'][i][1]
-    #     for i in range(len(adata.add['dpt_grouptips']))
-    #     if adata.add['dpt_grouptips'][i][1] != -1])
-    #  + [adata.add['dpt_grouptips'][i][0]
-    #     for i in range(len(adata.add['dpt_grouptips']))
-    #  if adata.add['dpt_grouptips'][i][1] != -1])
-
-    #    adata.add['highlights'] = adata.add['dpt_groups_connects'][adata.add['dpt_groups_connects'].nonzero()].A1
-    #    adata.add['highlights'] = {i: '{}, {}->{}'.format(
-    #        i,
-    #        adata.add['dpt_groups_connects'].nonzero()[0][ii],
-    #        adata.add['dpt_groups_connects'].nonzero()[1][ii])
-    #        for ii, i in enumerate(adata.add['highlights'])}
     for components in components_list:
-        axs = scatter(adata,
-                      basis=basis,
-                      color=colors,
-                      groups=groups,
-                      components=components,
-                      layout=layout,
-                      legend_loc=legend_loc,
-       legend_fontsize=legend_fontsize,
-                      color_map=color_map,
-                      palette=palette,
-                      right_margin=right_margin,
-                      size=size,
-                      title=title,
-                      show=False)
+        axs = scatter(
+            adata,
+            basis=basis,
+            color=colors,
+            groups=groups,
+            components=components,
+            projection=projection,
+            legend_loc=legend_loc,
+            legend_fontsize=legend_fontsize,
+            color_map=color_map,
+            palette=palette,
+            right_margin=right_margin,
+            size=size,
+            title=title,
+            show=False)
         writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
-        if sett.savefigs: utils.savefig(writekey)
-    show = sett.autoshow if show is None else show
-    if not sett.savefigs and show: pl.show()
+        save = False if save is None else save
+        if sett.savefigs or save: utils.savefig(writekey)
+    utils.savefig_or_show(writekey, show=show, save=False)
 
 
-def dpt_timeseries(adata, color_map=None, show=None):
-    # plot segments and pseudotime
-    if True:
-        dpt_segments_pseudotime(adata, 'viridis' if color_map is None else color_map)
-        # time series plot
-        # only if number of genes is not too high
-        if adata.X.shape[1] <= 11:
-            # plot time series as gene expression vs time
-            timeseries(adata.X[adata.smp['dpt_order']],
-                             varnames=adata.var_names,
-                             highlightsX=adata.add['dpt_changepoints'],
-                             xlim=[0, 1.3*adata.X.shape[0]])
-            pl.xlabel('dpt order')
-            if sett.savefigs: utils.savefig('dpt_vsorder')
-        elif adata.X.shape[1] < 50:
-            # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-            timeseries_as_heatmap(adata.X[adata.smp['dpt_order'], :40],
-                                        varnames=adata.var_names,
-                                        highlightsX=adata.add['dpt_changepoints'])
-            pl.xlabel('dpt order')
-            if sett.savefigs: utils.savefig('dpt_heatmap')
-    show = sett.autoshow if show is None else show
-    if not sett.savefigs and show: pl.show()
+def dpt_timeseries(adata, color_map=None, show=None, save=None):
+    # only if number of genes is not too high
+    if adata.n_vars <= 11:
+        # plot time series as gene expression vs time
+        timeseries(adata.X[adata.smp['dpt_order_indices']],
+                   var_names=adata.var_names,
+                   highlightsX=adata.add['dpt_changepoints'],
+                   xlim=[0, 1.3*adata.X.shape[0]])
+        pl.xlabel('dpt order')
+    elif adata.n_vars <= 50:
+        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'], :40],
+                              var_names=adata.var_names,
+                              highlightsX=adata.add['dpt_changepoints'])
+        pl.xlabel('dpt order')
+    if adata.n_vars <= 50:
+        utils.savefig_or_show('dpt_timeseries', save=save, show=show)
 
 
-def dpt_segments_pseudotime(adata, color_map=None, palette=None):
-    """Plot segments and pseudotime."""
+def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=None):
+    """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(adata.smp['dpt_groups'][adata.smp['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_groups'][adata.smp['dpt_order']],
-                             highlightsX=adata.add['dpt_changepoints'],
-                             ylabel='dpt groups',
-                             yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
+    timeseries_subplot(adata.smp['dpt_groups'],
+                       time=adata.smp['dpt_order'],
+                       color=adata.smp['dpt_groups'],
+                       highlightsX=adata.add['dpt_changepoints'],
+                       ylabel='dpt groups',
+                       yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
                                      if len(adata.add['dpt_groups_names']) < 5 else None),
-                             palette=palette)
+                       palette=palette)
     pl.subplot(212)
-    timeseries_subplot(adata.smp['dpt_pseudotime'][adata.smp['dpt_order'], np.newaxis],
-                             c=adata.smp['dpt_pseudotime'][adata.smp['dpt_order']],
-                             xlabel='dpt order',
-                             highlightsX=adata.add['dpt_changepoints'],
-                             ylabel='pseudotime',
-                             yticks=[0, 1],
-                             color_map=color_map)
-    if sett.savefigs: utils.savefig('dpt_segpt')
+    timeseries_subplot(adata.smp['dpt_pseudotime'],
+                       time=adata.smp['dpt_order'],
+                       color=adata.smp['dpt_pseudotime'],
+                       xlabel='dpt order',
+                       highlightsX=adata.add['dpt_changepoints'],
+                       ylabel='pseudotime',
+                       yticks=[0, 1],
+                       color_map=color_map)
+    utils.savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
     
 
 def louvain(
@@ -1127,7 +1112,7 @@ def louvain(
         color=None,
         groups=None,
         components=None,
-        layout='2d',
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
         color_map=None,
@@ -1152,8 +1137,8 @@ def louvain(
         Restrict to a few categories in categorical sample annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
-    layout : {'2d', '3d'}, optional (default: '2d')
-         Layout of plot.
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -1188,7 +1173,7 @@ def louvain(
         color=color,
         groups=groups,
         components=components,
-        layout=layout,
+        projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         color_map=color_map,
@@ -1334,7 +1319,7 @@ def sim(adata, params=None, show=None, save=None):
     tmax = adata.add['tmax_write']
     n_real = X.shape[0]/tmax
     timeseries(X,
-               varnames=genenames,
+               var_names=genenames,
                xlim=[0, 1.25*X.shape[0]],
                highlightsX=np.arange(tmax, n_real * tmax, tmax),
                xlabel='realizations / time steps')
@@ -1342,7 +1327,7 @@ def sim(adata, params=None, show=None, save=None):
     # shuffled data
     X, rows = sc_utils.subsample(X, seed=1)
     timeseries(X,
-               varnames=genenames,
+               var_names=genenames,
                xlim=[0, 1.25*X.shape[0]],
                highlightsX=np.arange(tmax, n_real * tmax, tmax),
                xlabel='index (arbitrary order)')
