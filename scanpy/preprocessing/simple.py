@@ -611,7 +611,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     return X if copy else None
 
 
-def subsample(data, fraction, seed=0, copy=False):
+def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     """Subsample to `fraction` of the data.
 
     Parameters
@@ -622,6 +622,8 @@ def subsample(data, fraction, seed=0, copy=False):
         Subsample to a fraction the number of samples.
     seed : int
         Random seed to change subsampling.
+    simply_skip_samples : bool, optional (default: False)
+        Simply skip samples instead of true sampling.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
@@ -638,18 +640,20 @@ def subsample(data, fraction, seed=0, copy=False):
         raise ValueError('`fraction` needs to be within [0, 1], not {}'
                          .format(fraction))
     np.random.seed(seed)
+    n_smps = data.n_smps if isinstance(data, AnnData) else data.shape[0]
+    new_n_smps = int(fraction * n_smps)
+    if simply_skip_samples:
+        smp_indices = np.arange(0, n_smps, int(1./fraction), dtype=int)
+    else:
+        smp_indices = np.random.choice(n_smps, size=new_n_smps, replace=False)
+    logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        new_n_smps = int(fraction * adata.n_smps)
-        logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
-        smp_indices = np.random.choice(adata.n_smps, size=new_n_smps, replace=False)
         adata.inplace_subset_smp(smp_indices)
         return adata if copy else None
     else:
         X = data
-        new_n_smps = int(fraction * X.shape[0])
         logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
-        smp_indices = np.random.choice(X.shape[0], size=new_n_smps, replace=False)
         return X[smp_indices]
 
 
