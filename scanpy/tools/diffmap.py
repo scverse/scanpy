@@ -62,8 +62,9 @@ def diffmap(adata, n_comps=10, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
             Eigenvalues of the transition matrix.
     """
     adata = adata.copy() if copy else adata
-    dmap = dpt.DPT(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_comps,
-                   n_jobs=n_jobs, recompute_diffmap=True, flavor=flavor)
+    dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
+                   n_dcs=n_comps, n_jobs=n_jobs, recompute_diffmap=True,
+                   flavor=flavor)
     dmap.update_diffmap()
     adata.smp['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]

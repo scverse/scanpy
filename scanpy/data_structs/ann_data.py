@@ -510,13 +510,14 @@ class AnnData(IndexMixin):
 
     def __repr__(self):
         return ('AnnData object with n_smps x n_vars = {} x {}\n'
-                '    smp_names = {}\n'
-                '    var_names = {}\n'
                 '    smp_keys = {}\n'
                 '    var_keys = {}\n'
                 '    add_keys = {}\n'
-                .format(self.n_smps, self.n_vars, self.smp_names, self.var_names,
-                        self.smp.keys(), self.var.keys(), list(self.add.keys())))
+                '    smp_names = {}\n'
+                '    var_names = {}'
+                .format(self.n_smps, self.n_vars,
+                        self.smp.keys(), self.var.keys(), list(self.add.keys()),
+                        self.smp_names, self.var_names))
 
     @property
     def smp_names(self):

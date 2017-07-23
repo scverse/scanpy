@@ -366,11 +366,11 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
-            logg.m('    finished', t=True, end=' ')
-            logg.m('and added\n'
-                   '    "X_pca", the PCA coordinates (adata.smp)\n'
-                   '    "PC1", "PC2", ..., the loadings (adata.var)\n'
-                   '    "pca_variance_ratio", the variance ratio (adata.add)')
+            logg.info('    finished', t=True, end=' ')
+            logg.info('and added\n'
+                      '    "X_pca", the PCA coordinates (adata.smp)\n'
+                      '    "PC1", "PC2", ..., the loadings (adata.var)\n'
+                      '    "pca_variance_ratio", the variance ratio (adata.add)')
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
@@ -432,14 +432,18 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     depending on `copy`.
     """
     if isinstance(data, AnnData):
+        logg.info('... normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.inplace_subset_smp(cell_subset)
+        adata.smp['n_counts'] = counts_per_cell
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
+        logg.info('    finished,', t=True, end=' ')
+        logg.info('    normalized adata.X and added\n'
+                  '    "n_counts", counts per cell before normalization (adata.smp)')
         return adata if copy else None
     # proceed with data matrix
-    logg.m('... normalizing by total count per cell', r=True, end=' ')
     X = data.copy() if copy else data
     if counts_per_cell is None:
         cell_subset, counts_per_cell = filter_cells(X, min_counts=1)
@@ -450,7 +454,6 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     counts_per_cell /= counts_per_cell_after
     if not issparse(X): X /= counts_per_cell[:, np.newaxis]
     else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
-    logg.m(t=True)
     return X if copy else None
 
 
@@ -515,13 +518,13 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
-    logg.m('regress out', keys, r=True)
+    logg.info('regressing out', keys, r=True)
     if issparse(adata.X):
-        logg.m('... sparse input is densified and may '
-               'lead to huge memory consumption')
+        logg.info('... sparse input is densified and may '
+                  'lead to huge memory consumption')
     if not copy:
-        logg.m('note that this is an inplace computation '
-               'and will return None: set `copy=True` if you want a copy', v='hint')
+        logg.hint('note that this is an inplace computation '
+                  'and will return None: set `copy=True` if you want a copy')
     adata = adata.copy() if copy else adata
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
@@ -534,7 +537,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
-        logg.m('... regressing on per-gene means within categories')
+        logg.info('... regressing on per-gene means within categories')
         unique_categories = np.unique(adata.smp[keys[0]])
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
@@ -564,9 +567,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 col_index, adata.X, regressors) for col_index in chunk)
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.m('finished', t=True)
-    logg.m('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`',
-           v='hint')
+    logg.info('finished', t=True)
+    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
     return adata if copy else None
 
 
@@ -686,8 +688,7 @@ def _regress_out(col_index, responses, regressors):
                         regressors_view, family=sm.families.Gaussian()).fit()
         new_column = result.resid_response
     except PerfectSeparationError:  # this emulates R's behavior
-        logg.m('warning: encountered PerfectSeparationError, setting to zero',
-               v='warning')
+        logg.warn('Encountered PerfectSeparationError, setting to zero as in R.')
         new_column = np.zeros(responses.shape[0])
     return new_column
 

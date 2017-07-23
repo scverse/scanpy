@@ -173,8 +173,6 @@ class DataGraph(object):
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
         # set iroot directly
         if 'iroot' in adata.add: self.iroot = adata.add['iroot']
-        if 'xroot' in adata.add and 'iroot' in adata.add:
-            raise ValueError('Either provide "iroot" or "xroot" in `adata.add`, but not both.')
         # use the fulll data matrix X
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
             or X.shape[1] <= self.n_pcs):
@@ -704,17 +702,20 @@ class DataGraph(object):
                              'reduced version, if you provided X_pca.')
         # this is the squared distance
         dsqroot = 1e10
-        self.iroot = 0
+        iroot = 0
         for i in range(self.X.shape[0]):
             diff = self.X[i, :] - xroot
             dsq = diff.dot(diff)
             if dsq < dsqroot:
                 dsqroot = dsq
-                self.iroot = i
+                iroot = i
                 if np.sqrt(dsqroot) < 1e-10:
                     sett.m(2, 'root found at machine prec')
                     break
-        logg.m('    setting root index to', self.iroot, v=4)
+        logg.m('    setting root index to', iroot, v=4)
+        if self.iroot is not None and iroot != self.iroot:
+            logg.warn('Changing index of iroot from {} to {}.'.format(self.iroot, iroot))
+        self.iroot = iroot
         return self.iroot
 
     def _test_embed(self):

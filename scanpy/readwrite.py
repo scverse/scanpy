@@ -22,8 +22,8 @@ avail_exts = {'csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'da
 # --------------------------------------------------------------------------------
 
 
-def read(filename_or_filekey, sheet=None, ext='', delimiter=None,
-         first_column_names=None, backup_url='', return_dict=False,
+def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
+         first_column_names=False, backup_url=None, return_dict=False,
          cache=None):
     """Read file and return AnnData object.
 
@@ -36,21 +36,22 @@ def read(filename_or_filekey, sheet=None, ext='', delimiter=None,
         Filename or filekey of data file. A filekey generates a filename via
         `sc.settings.writedir + filekey + sc.settings.file_format_data`.
         This is the same behavior as in `sc.write(filekey, ...)`.
-    sheet : str, optional
+    sheet : str, optional (default: None)
         Name of sheet/table in hdf5 or Excel file.
-    cache : bool or None (default: None)
-        If false, read from source, if true, read from fast 'h5' cache.
+    cache : bool or None, optional (default: False)
+        If False, read from source, if True, read from fast 'h5' cache.
+        If settings.recompute != 'read', this defaults to True.
     ext : str, optional (default: automatically inferred from filename)
         Extension that indicates the file type.
-    delimiter : str, optional
+    delimiter : str, optional (default: None)
         Delimiter that separates data within text file. If None, will split at
         arbitrary number of white spaces, which is different from enforcing
-        splitting at single white space ' '.
-    first_column_names : bool, optional
+        splitting at any single white space ' '.
+    first_column_names : bool, optional (default: False)
         Assume the first column stores samplenames. This is only necessary if
-        the sample are floats or integers: strings are automatically assumed to
-        be row names.
-    backup_url : str, optional
+        the sample are floats or integers: strings in the first column are
+        automatically assumed to be row names.
+    backup_url : str, optional (default: None)
         Retrieve the file from an URL if not present on disk.
     return_dict : bool, optional (default: False)
         Return dictionary instead of AnnData object.
@@ -60,7 +61,7 @@ def read(filename_or_filekey, sheet=None, ext='', delimiter=None,
     data : sc.AnnData object or dict if return_dict == True
 
     If a dict, the dict contains
-        X : np.ndarray, optional
+        X : array-like or sparse matrix, optional
             Data array for further processing, columns correspond to genes,
             rows correspond to samples.
         row_names : np.ndarray, optional
@@ -258,8 +259,8 @@ def get_params_from_list(params_list):
 # -------------------------------------------------------------------------------
 
 
-def read_file(filename, sheet=None, ext='', delimiter=None, first_column_names=None,
-              backup_url='', cache=None):
+def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names=None,
+              backup_url=None, cache=None):
     """Read file and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -300,7 +301,7 @@ def read_file(filename, sheet=None, ext='', delimiter=None, first_column_names=N
     contains all sheets instead.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if ext != '' and ext not in avail_exts:
+    if ext is not None and ext not in avail_exts:
         raise ValueError('Please provide one of the available extensions.\n'
                          + avail_exts)
     else:
@@ -715,6 +716,11 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
 def postprocess_reading(key, value):
     if value.dtype.kind == 'S':
         value = value.astype(str)
+    if key != 'smp' and key != 'var' and value.dtype.names is not None:
+        # TODO: come up with a better way of solving this, see also below
+        new_dtype = [((dt[0], 'U{}'.format(int(int(dt[1][2:])/4)))
+                      if dt[1][1] == 'S' else dt) for dt in value.dtype.descr]
+        value = value.astype(new_dtype)
     return key, value
 
 
@@ -773,7 +779,12 @@ def write_dict_to_file(filename, d, ext='h5'):
                 except TypeError:
                     # catch unicode string arrays
                     try:
-                        f.create_dataset(key, data=value.astype('S'))
+                        if value.dtype.names is None:
+                            f.create_dataset(key, data=value.astype('S'))
+                        else:
+                            new_dtype = [(dt[0], 'S{}'.format(int(dt[1][2:])*4))
+                                         for dt in value.dtype.descr]
+                            f.create_dataset(key, data=value.astype(new_dtype))
                     except Exception:
                         logg.warn('Could not save field with key = "{}" to h5 file '
                                   '(currently, no dictionaries are allowed!).'
@@ -944,11 +955,11 @@ def download_progress(count, blockSize, totalSize):
     sys.stdout.flush()
 
 
-def check_datafile_present_and_download(filename, backup_url=''):
+def check_datafile_present_and_download(filename, backup_url=None):
     """Check whether the file is present, otherwise download.
     """
     if os.path.exists(filename): return True
-    if backup_url == '': return False
+    if backup_url is None: return False
     logg.info('try downloading from url\n' + backup_url + '\n' +
               '... this may take a while but only happens once')
     d = os.path.dirname(filename)
@@ -964,16 +975,12 @@ def check_datafile_present_and_download(filename, backup_url=''):
 def is_filename(filename_or_filekey, return_ext=False):
     """Check whether the argument is a filename."""
     for ext in avail_exts:
-        l = len('.' + ext)
-        # check whether it ends on the extension
-        if '.' + ext in filename_or_filekey[-l:]:
-            if return_ext: return ext
-            else: return True
+        if filename_or_filekey.endswith('.' + ext):
+            return ext if return_ext else True
     if return_ext:
-        raise ValueError('"' + filename_or_filekey + '"'
-                         + ' does not contain a valid extension\n'
-                         + 'Please provide one of the available extensions.\n'
-                         + avail_exts)
+        raise ValueError('"{}" does not end on a valid extension.\n'
+                         'Please, provide one of the available extensions.\n{}'
+                         .format(filename_or_filekey, avail_exts))
     else:
         return False
 

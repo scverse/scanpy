@@ -839,15 +839,13 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
                 check = False
         if check:
             Xsamples.append(X)
-    #
     if not check:
-        sett.m(0,'restart',restart,'no new branch')
+        logg.m('realization {}:'.format(restart), 'no new branch', v=4)
     else:
-        sett.m(0,'restart',restart,'new branch')
-    #
+        logg.m('realization {}:'.format(restart), 'new branch', v=4)
     return check, Xsamples
 
-def check_nocycles(Adj,verbosity=2):
+def check_nocycles(Adj, verbosity=2):
     """ Checks that there are no cycles in graph described by adjacancy matrix.
 
         Args:

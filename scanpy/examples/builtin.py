@@ -92,7 +92,7 @@ def burczynski06():
     """
     filename = 'data/burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
-    adata = sc.read(filename, backup_url=url)
+    adata = sc.read(filename, backup_url=url, cache=True)
     return adata
 
 
@@ -119,7 +119,7 @@ def krumsiek11():
         logg.hint('you can reproduce the data file {} '
                   'by running `sc.tl.sim("krumsiek11")`'
                   .format(filename))
-    adata = sc.read(filename, first_column_names=True)
+    adata = sc.read(filename, first_column_names=True, cache=True)
     adata.add['xroot'] = adata.X[0]
     return adata
 
@@ -145,7 +145,7 @@ def moignard15():
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
-    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=backup_url)
+    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=backup_url, cache=True)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset]  # retain non-removed genes
@@ -261,7 +261,7 @@ def toggleswitch():
         logg.hint('you can reproduce the data file {} '
                   'by running `sc.tl.sim("toggleswitch")`'
                   .format(filename))
-    adata = sc.read(filename, first_column_names=True)
+    adata = sc.read(filename, first_column_names=True, cache=True)
     adata.add['xroot'] = adata.X[0]
     return adata
 

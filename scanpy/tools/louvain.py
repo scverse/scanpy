@@ -44,6 +44,8 @@ def louvain(adata,
     """
     logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
+    # TODO: it makes not much of a difference, but we should keep this here
+    # and make it an option at some point
     # if 'distance' not in adata.add or recompute_graph:
     #     graph = data_structs.DataGraph(adata,
     #                                    k=n_neighbors,
@@ -73,19 +75,19 @@ def louvain(adata,
                 louvain.set_rng_seed(0)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)
+                adata.add['louvain_quality'] = part.quality()
             except AttributeError:
-                logg.warn('Did not find louvain package >= 0.6.0 on your system, '
+                logg.warn('Did not find louvain package >= 0.6 on your system, '
                           'the result will therefore not be 100% reproducible, but '
                           'is influenced by randomness in the community detection '
-                          'algorithm. If not yet available via "pip install louvain", '
-                          'either get the, presumably development version, from '
-                          'https://github.com/vtraag/louvain-igraph or use the option'
-                          '`flavor=igraph`, which does not a `resolution` parameter, though.')
+                          'algorithm. Still you get very meaningful results!\n'
+                          'If you want 100% reproducible results, but 0.6 is not yet '
+                          'available via "pip install louvain", '
+                          'either get the latest (development) version from '
+                          'https://github.com/vtraag/louvain-igraph or use the option '
+                          '`flavor=igraph`, which does not a provide `resolution` parameter, though.')
                 part = louvain.find_partition(g, method='RBConfiguration',
                                               resolution_parameter=resolution)
-            adata.add['louvain_quality'] = part.quality()
-            # adata.add['louvain_part'] = part
-            # adata.add['louvain_graph'] = g
         elif flavor == 'igraph':
             part = g.community_multilevel()
         groups = np.array(part.membership, dtype='U')

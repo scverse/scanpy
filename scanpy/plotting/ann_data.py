@@ -354,8 +354,9 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     for key in keys:
         if key in adata.smp_keys():
             smp_keys = True
-        if smp_keys and key not in adata.smp_keys():
-            raise ValueError('Either use sample keys or variable names, but do not mix.')
+        if smp_keys and key not in set(adata.smp_keys()):
+            raise ValueError('Either use sample keys or variable names, but do not mix. '
+                             'Did not find {} in adata.smp_keys().'.format(key))
     if smp_keys:
         smp_df = adata.smp.to_df()
     else:
@@ -371,10 +372,15 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         smp_tidy = pd.melt(smp_df, value_vars=keys)
         x = 'variable'
         y = 'value'
+        order = None
     else:
         smp_tidy = smp_df
         x = group_by
         y = keys[0]
+        if not group_by + '_names' in adata.add:
+            from .. import utils as sc_utils
+            sc_utils.check_adata(adata)
+        order = adata.add[group_by + '_names']
     if multi_panel:
         sns.set_style('whitegrid')
         g = sns.FacetGrid(smp_tidy, col=x, sharey=False)
@@ -384,10 +390,14 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
                          col_template='{col_name}').set_xlabels('')
         ax = g
     else:
-        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None,
+        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None, order=order,
                             orient='vertical', scale=scale, ax=ax)
-        ax = sns.stripplot(x=x, y=y, data=smp_tidy,
+        ax = sns.stripplot(x=x, y=y, data=smp_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
-        ax.set_xlabel('' if group_by is None else group_by)
+        ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
+    # for some reason, we have to reset these things twice, as seaborn seems to change
+    # this even after importing
+    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
+    sett.set_dpi()  # reset resolution
     utils.savefig_or_show('violin', show=show, save=save)
     return ax

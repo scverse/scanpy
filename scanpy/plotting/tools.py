@@ -1300,13 +1300,15 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
         utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def sim(adata, params=None, show=None, save=None):
+def sim(adata, shuffle=False, show=None, save=None):
     """Plot results of simulation.
 
     Parameters
     ----------
     show : bool, optional (default: None)
          Show the plot.
+    shuffle : bool, optional (default: False)
+         Shuffle the data.
     save : bool or str, optional (default: None)
          If True or a str, save the figure. A string is appended to the
          default filename.
@@ -1318,17 +1320,19 @@ def sim(adata, params=None, show=None, save=None):
     genenames = adata.var_names
     tmax = adata.add['tmax_write']
     n_real = X.shape[0]/tmax
-    timeseries(X,
-               var_names=genenames,
-               xlim=[0, 1.25*X.shape[0]],
-               highlightsX=np.arange(tmax, n_real * tmax, tmax),
-               xlabel='realizations / time steps')
-    if sett.savefigs: utils.savefig('sim')
-    # shuffled data
-    X, rows = sc_utils.subsample(X, seed=1)
-    timeseries(X,
-               var_names=genenames,
-               xlim=[0, 1.25*X.shape[0]],
-               highlightsX=np.arange(tmax, n_real * tmax, tmax),
-               xlabel='index (arbitrary order)')
-    utils.savefig_or_show('sim_shuffled', save=save, show=show)
+    if not shuffle:
+        timeseries(X,
+                   var_names=genenames,
+                   xlim=[0, 1.25*X.shape[0]],
+                   highlightsX=np.arange(tmax, n_real * tmax, tmax),
+                   xlabel='realizations / time steps')
+        utils.savefig_or_show('sim', save=save, show=show)
+    else:
+        # shuffled data
+        X, rows = sc_utils.subsample(X, seed=1)
+        timeseries(X,
+                   var_names=genenames,
+                   xlim=[0, 1.25*X.shape[0]],
+                   highlightsX=np.arange(tmax, n_real * tmax, tmax),
+                   xlabel='index (arbitrary order)')
+        utils.savefig_or_show('sim_shuffled', save=save, show=show)

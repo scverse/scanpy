@@ -6,23 +6,18 @@ between sets detected in previous tools. Tools such as dpt, cluster,...
 """
 
 import numpy as np
-from itertools import combinations
-from scipy.stats.distributions import norm
 from scipy.sparse import issparse
 from .. import utils
 from .. import logging as logg
-from .. import settings as sett
 from ..preprocessing import simple
 
 def rank_genes_groups(
         adata,
         groupings,
-        compute_distribution=False,
         groups='all',
-        n_genes=30,
-        only_positive=None,
-        sig_level=0.05,
-        correction='Bonferroni',
+        n_genes=50,
+        compute_distribution=False,
+        only_positive=True,
         copy=False):
     """Compare groups by ranking genes according to differential expression.
 
@@ -36,7 +31,7 @@ def rank_genes_groups(
         Subset of categories - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - to which
         comparison shall be restricted. If not provided all categories will be
         compared to all other categories.
-    n_genes : int (default: 30)
+    n_genes : int (default: 50)
         How many genes to rank by default.
     compute_distribution : bool
         If True, also computes the distribution for top-ranked genes,
@@ -68,7 +63,6 @@ def rank_genes_groups(
     adata.add['rank_genes_groups'] = group_key
     adata.add['rank_genes_groups_names'] = groups_names
     X = adata.X
-    only_positive = True if only_positive is None else only_positive
 
     # loop over all masks and compute means, variances and sample numbers
     n_groups = groups_masks.shape[0]

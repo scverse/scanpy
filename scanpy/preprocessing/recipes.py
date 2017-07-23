@@ -52,7 +52,7 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     return adata if copy else None
 
 
-def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=True, copy=False):
+def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=False):
     """Normalization and filtering as of Zheng et al. (2017).
 
     This reproduces the preprocessing of the reference below, at the time, the
@@ -67,6 +67,8 @@ def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=True, copy=Fa
         serious memory problems.
     plot : bool, optional (default: True)
         Show a plot of the gene dispersion vs. mean relation.
+    copy : bool, optional (default: False)
+        Return a copy of adata instead of updating the passed object.
 
     Returns
     -------

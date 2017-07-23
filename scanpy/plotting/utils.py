@@ -239,6 +239,7 @@ def init_plotting_params():
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92 * fontsize
     rcParams['axes.titlesize'] = fontsize
+    rcParams['axes.labelsize'] = fontsize
     # legend
     rcParams['legend.numpoints'] = 1
     rcParams['legend.scatterpoints'] = 1
@@ -253,6 +254,8 @@ def init_plotting_params():
     rcParams['axes.facecolor'] = 'white'
     rcParams['xtick.color'] = 'k'
     rcParams['ytick.color'] = 'k'
+    rcParams['xtick.labelsize'] = fontsize
+    rcParams['ytick.labelsize'] = fontsize
     # same as seaborn default
     rcParams['axes.grid'] = True
     
