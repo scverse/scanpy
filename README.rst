@@ -176,7 +176,7 @@ diffmap
 draw_graph
 ^^^^^^^^^^
 
-`[source] <tl.draw_graph_>`__ `*Force-directed graph drawing*`_ describes a class of long-established algorithms for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_. Here, by default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many other layouts are available. Uses the igraph implementation [Csardi06]_.
+`[source] <tl.draw_graph_>`__ `Force-directed graph drawing`_ describes a class of long-established algorithms for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_. Here, by default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many other layouts are available. Uses the igraph implementation [Csardi06]_.
 
 .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
@@ -221,13 +221,13 @@ The tool is similar to the Matlab tool *Odefy* of [Krumsiek10]_.
 
 *Examples:* See this `use case <17-04-30_>`__.
 
-.. _tl.pca:               https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/pca.py
-.. _tl.tsne:              https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/tsne.py
-.. _tl.diffmap:           https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/diffmap.py
-.. _tl.draw_graph:        https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/draw_graph.py
-.. _tl.dpt:               https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/dpt.py
-.. _tl.louvain:           https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/louvain.py
-.. _tl.rank_genes_groups: https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/rank_genes_groups.py
+.. _tl.pca:               https://github.com/theislab/scanpy/tree/master/scanpy/tools/pca.py
+.. _tl.tsne:              https://github.com/theislab/scanpy/tree/master/scanpy/tools/tsne.py
+.. _tl.diffmap:           https://github.com/theislab/scanpy/tree/master/scanpy/tools/diffmap.py
+.. _tl.draw_graph:        https://github.com/theislab/scanpy/tree/master/scanpy/tools/draw_graph.py
+.. _tl.dpt:               https://github.com/theislab/scanpy/tree/master/scanpy/tools/dpt.py
+.. _tl.louvain:           https://github.com/theislab/scanpy/tree/master/scanpy/tools/louvain.py
+.. _tl.rank_genes_groups: https://github.com/theislab/scanpy/tree/master/scanpy/tools/rank_genes_groups.py
 
 
 Installation
