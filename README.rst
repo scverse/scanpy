@@ -61,10 +61,10 @@ sc.plotting_
 sc.settings_
   Settings.
 
-.. _sc.tools: scanpy/tools
-.. _sc.preprocessing: scanpy/preprocessing
-.. _sc.plotting: scanpy/plotting
-.. _sc.settings: scanpy/settings.py
+.. _sc.tools:         https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools
+.. _sc.preprocessing: https://github.com/theislab/scanpy_usage/tree/master/scanpy/preprocessing
+.. _sc.plotting:      https://github.com/theislab/scanpy_usage/tree/master/scanpy/plotting
+.. _sc.settings:      https://github.com/theislab/scanpy_usage/tree/master/scanpy/settings.py
 
 Preprocessing
 ^^^^^^^^^^^^^
@@ -157,26 +157,26 @@ Visualization
 pca
 ^^^
 
-`[source] <scanpy/tools/pca.py>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package [Pedregosa11]_.
+`[source] <tl.pca_>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package [Pedregosa11]_.
 
 tsne
 ^^^^
 
-`[source] <scanpy/tools/tsne.py>`__ Computes the tSNE representation ``X_tsne`` of data.
+`[source] <tl.tsne_>`__ Computes the tSNE representation ``X_tsne`` of data.
 
 The algorithm has been introduced by [Maaten08]_ and proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package [Pedregosa11]_. You can achieve a huge speedup if you install the Multicore-tSNE package by [Ulyanov16]_, which will be automatically detected by Scanpy.
 
 diffmap
 ^^^^^^^
 
-`[source] <scanpy/tools/diffmap.py>`__ Computes the diffusion maps representation ``X_diffmap`` of data.
+`[source] <tl.diffmap_>`__ Computes the diffusion maps representation ``X_diffmap`` of data.
 
 Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. The Scanpy implementation is due to [Wolf17]_.
 
 draw_graph
 ^^^^^^^^^^
 
-`[source] <scanpy/tools/draw_graph.py>`__ `Force-directed graph drawing`_ is a long-established algorithm for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_.
+`[source] <tl.draw_graph_>`__ `Force-directed graph drawing`_ is a long-established algorithm for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_.
 
 Here, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used by default, but many other layouts are available. We use the igraph implementation [Csardi06]_.
 
@@ -188,7 +188,7 @@ Discrete clustering of subgroups, continuous progression through subgroups, diff
 dpt
 ^^^
 
-`[source] <scanpy/tools/dpt.py>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi16]_ and implemented for Scanpy by [Wolf17]_.
+`[source] <tl.dpt_>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi16]_ and implemented for Scanpy by [Wolf17]_.
 
 The functionality of diffmap and dpt compare to the R package destiny_ of [Angerer16]_, but run faster and scale to much higher cell numbers.
 
@@ -199,7 +199,7 @@ The functionality of diffmap and dpt compare to the R package destiny_ of [Anger
 louvain
 ^^^^^^^
 
-`[source] <scanpy/tools/louvain.py>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_.
+`[source] <tl.louvain_>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_.
 
 The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
@@ -208,7 +208,7 @@ The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 rank_genes_groups
 ^^^^^^^^^^^^^^^^^
 
-`[source] <scanpy/tools/rank_genes_groups.py>`__ Rank genes by differential expression.
+`[source] <tl.rank_genes_groups_>`__ Rank genes by differential expression.
 
 *Examples:* See this `use case <17-05-05_>`__.
 
@@ -224,6 +224,14 @@ sim
 The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
 
 *Examples:* See this `use case <17-04-30_>`__.
+
+.. _tl.pca:               https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/pca.py
+.. _tl.tsne:              https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/tsne.py
+.. _tl.diffmap:           https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/diffmap.py
+.. _tl.draw_graph:        https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/draw_graph.py
+.. _tl.dpt:               https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/dpt.py
+.. _tl.louvain:           https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/louvain.py
+.. _tl.rank_genes_groups: https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools/rank_genes_groups.py
 
 
 Installation
