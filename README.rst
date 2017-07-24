@@ -123,17 +123,17 @@ One usually calls::
 
     adata = sc.read(filename)
 
-to initialize an AnnData object, possibly adds further annotation, e.g. by::
+to initialize an AnnData object, possibly adds further annotation using, e.g., `np.genfromtxt` or `pd.read_csv`::
 
-    annotation = np.genfromtxt(filename_annotation)
-    adata.smp['cell_groups'] = annotation[:, 2]  # categorical annotation of type str
-    adata.smp['time'] = annotation[:, 3]         # numerical annotation of type float
+    annotation = pd.read_csv(filename_annotation)
+    adata.smp['cell_groups'] = annotation['cell_groups']  # categorical annotation of type str or int
+    adata.smp['time'] = annotation['time']                # numerical annotation of type float
 
 and uses::
 
     sc.write(filename, adata)
 
-to save the ``adata`` to a file. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension.
+to save the ``adata`` to file. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension.
 
 AnnData objects
 ^^^^^^^^^^^^^^^
