@@ -8,16 +8,20 @@
 Scanpy – Single-Cell Analysis in Python
 =======================================
 
-Efficient tools for analyzing and simulating large-scale single-cell data that aim at an understanding of dynamic biological processes from snapshots of transcriptome or proteome. The draft `Wolf, Angerer & Theis (2017) <http://falexwolf.de/docs/scanpy.pdf>`__ explains conceptual ideas of the package. Any comments are appreciated!
+Highly-performant tools for analyzing and simulating large-scale single-cell data. The draft `Wolf, Angerer & Theis (2017) <http://falexwolf.de/docs/scanpy.pdf>`__ explains conceptual ideas of the package. Any comments are appreciated!
 
 Getting started
 ---------------
 
-Download or clone the repository – green button on top of the page – and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
+Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
 
-    pip install -e .
+  pip install scanpy
 
-Aside from enabling ``import scanpy as sc`` anywhere on your system, you can also work with the top-level command ``scanpy`` on the command-line (more info `here <Installation_>`__).
+To work with the latest updates on GitHub: clone the repository – green button on top of the page – and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
+
+    pip install --editable .
+
+You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line (more information on installation `here <Installation_>`__).
 
 Then go through the use cases compiled in scanpy_usage_, in particular, the recent additions
 
@@ -157,28 +161,22 @@ Visualization
 pca
 ^^^
 
-`[source] <tl.pca_>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package [Pedregosa11]_.
+`[source] <tl.pca_>`__ Computes PCA coordinates, loadings and variance decomposition. Uses the implementation of *scikit-learn* [Pedregosa11]_.
 
 tsne
 ^^^^
 
-`[source] <tl.tsne_>`__ Computes the tSNE representation ``X_tsne`` of data.
-
-The algorithm has been introduced by [Maaten08]_ and proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package [Pedregosa11]_. You can achieve a huge speedup if you install the Multicore-tSNE package by [Ulyanov16]_, which will be automatically detected by Scanpy.
+`[source] <tl.tsne_>`__ t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of *scikit-learn* [Pedregosa11]_. You can achieve a huge speedup if you install *Multicore-tSNE* by [Ulyanov16]_, which will be automatically detected by Scanpy.
 
 diffmap
 ^^^^^^^
 
-`[source] <tl.diffmap_>`__ Computes the diffusion maps representation ``X_diffmap`` of data.
-
-Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. The Scanpy implementation is due to [Wolf17]_.
+`[source] <tl.diffmap_>`__ Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. Uses the implementation of [Wolf17]_.
 
 draw_graph
 ^^^^^^^^^^
 
-`[source] <tl.draw_graph_>`__ `Force-directed graph drawing`_ is a long-established algorithm for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_.
-
-Here, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used by default, but many other layouts are available. We use the igraph implementation [Csardi06]_.
+`[source] <tl.draw_graph_>`__ `*Force-directed graph drawing*`_ describes a class of long-established algorithms for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_. Here, by default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many other layouts are available. Uses the igraph implementation [Csardi06]_.
 
 .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
@@ -188,9 +186,9 @@ Discrete clustering of subgroups, continuous progression through subgroups, diff
 dpt
 ^^^
 
-`[source] <tl.dpt_>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi16]_ and implemented for Scanpy by [Wolf17]_.
+`[source] <tl.dpt_>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi16]_. Here, we use a further developed version, which is able to detect multiple branching events [Wolf17]_.
 
-The functionality of diffmap and dpt compare to the R package destiny_ of [Angerer16]_, but run faster and scale to much higher cell numbers.
+The possibilities of *diffmap* and *dpt* are similar to those of the R package destiny_ of [Angerer16]_. The Scanpy tools though run faster and scale to much higher cell numbers.
 
 *Examples:* See this `use case <17-05-02_>`__.
 
@@ -199,9 +197,7 @@ The functionality of diffmap and dpt compare to the R package destiny_ of [Anger
 louvain
 ^^^^^^^
 
-`[source] <tl.louvain_>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_.
-
-The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
+`[source] <tl.louvain_>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_. The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
 *Examples:* See this `use case <17-05-05_>`__.
 
@@ -221,7 +217,7 @@ sim
 
 `[source] <scanpy/tools/sim.py>`__ Sample from a stochastic differential equation model built from literature-curated boolean gene regulatory networks, as suggested by [Wittmann09]_. The Scanpy implementation is due to [Wolf17]_.
 
-The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
+The tool is similar to the Matlab tool *Odefy* of [Krumsiek10]_.
 
 *Examples:* See this `use case <17-04-30_>`__.
 
@@ -237,17 +233,17 @@ The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
 Installation
 ------------
 
-If you use Windows or Mac OS X and do not have a current Python distribution (Python 3.5 or 3.6), download and install Miniconda_ (see below). If you use Linux, use your package manager to obtain a current python distribution.
+If you use Windows or Mac OS X and do not have a current Python distribution (Python 3.5 or 3.6), download and install Miniconda_ (see below). If you use Linux, use your package manager to obtain a current Python distribution.
 
-Then, download or clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
+Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
 
-    pip install -e .
+  pip install scanpy
 
-and work with the top-level command ``scanpy`` or::
+To work with the latest updates on GitHub: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
-    import scanpy.api as sc
+    pip install --editable .
 
-in any directory.
+You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~
@@ -264,15 +260,6 @@ and accept all suggestions. Either reopen a new terminal or ``source ~/.bashrc``
 
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 
-PyPi
-~~~~
-
-The package is registered_ in the `Python Packaging Index`_, but
-versioning has not started yet. In the future, installation will also be
-possible without reference to GitHub via ``pip install scanpy``.
-
-.. _registered: https://pypi.python.org/pypi/scanpy
-.. _Python Packaging Index: https://pypi.python.org/pypi
 
 References
 ----------
