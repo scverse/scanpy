@@ -7,6 +7,7 @@ from enum import Enum
 import numpy as np
 from numpy import ma
 from numpy.lib.recfunctions import append_fields
+import pandas as pd
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
 
@@ -278,6 +279,11 @@ class BoundStructArray(np.ndarray):
 
     def __setitem__(self, keys, values):
         """Either a single one- or multi-column or mulitiple one-colum items."""
+        if isinstance(values, pd.Series):
+            values = values.values
+            if values.dtype.char == 'O' or 'int' in values.dtype.name:
+                values = values.astype(str)
+        
         if isinstance(keys, str):
             # TODO: check that no-one accidentally overwrites the index?
             # quite unlikely though as self.index_key is not common
