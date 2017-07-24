@@ -8,7 +8,7 @@
 Scanpy – Single-Cell Analysis in Python
 =======================================
 
-Highly-performant tools for analyzing and simulating large-scale single-cell data. The draft `Wolf, Angerer & Theis (2017) <http://falexwolf.de/docs/scanpy.pdf>`__ explains conceptual ideas of the package. Any comments are appreciated!
+Scanpy is a scalable Python-based toolkit for analyzing single-cell gene expression data. It includes preprocessing, visualization, clustering, pseudotime and trajectory inference, differential expression testing and simulation of gene regulatory networks. The Python-based implementation efficiently deals with data sets of more than one million cells and enables easy integration of advanced machine learning algorithms.
 
 Getting started
 ---------------
