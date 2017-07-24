@@ -38,7 +38,7 @@ setup(
     url='http://github.com/theislab/scanpy',
     author='F. Alexander Wolf, P. Angerer',
     author_email='alex.wolf@helmholtz-muenchen.de',
-    license='GPL-3.0',
+    license='BSD-3-Clause',
     entry_points={
         'console_scripts': [
             'scanpy = scanpy.__main__:main',
