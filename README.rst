@@ -81,9 +81,7 @@ Visualizations
 `tl.tsne <tsne_>`__
   t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 `tl.draw_graph <draw_graph_>`__
-  `Force-directed graph drawing`_ [Csardi06]_ [Weinreb16]_.
-
-.. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
+  Force-directed graph drawing [Csardi06]_ [Weinreb17]_.
 
 Branching trajectories and pseudotime, clustering, differential expression
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,14 +128,14 @@ and uses::
 
     sc.write(filename, adata)
 
-to save the ``adata`` to a file. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension. By default, Scanpy writes to ``./write/filekey.h5``, an *hdf5* file which is configurable by setting ``sc.settings.writedir`` and ``sc.settings.file_format_data``.
+to save the ``adata`` to a file. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension.
 
 AnnData objects
 ^^^^^^^^^^^^^^^
 
 An ``AnnData`` instance stores an array-like data matrix as ``adata.X``, dict-like sample annotation as ``adata.smp``, dict-like variable annotation as ``adata.var`` and additional unstructured dict-like annotation as ``adata.add``. While ``adata.add`` is a conventional dictionary, ``adata.smp`` and ``adata.var`` are instances of a low-level Pandas dataframe-like class.
 
-Values can be retrieved and appended via ``adata.smp[Key]`` and ``adata.var[Key]``. Sample and variable names can be accessed via ``adata.smp_names`` and ``adata.var_names``, respectively. AnnData objects can be sliced like Pandas dataframes, for example, ``adata = adata[:, list_of_gene_names]``. The AnnData class is similar to R's ExpressionSet [Huber15]_ the latter though is not implemented for sparse data.
+Values can be retrieved and appended via ``adata.smp[key]`` and ``adata.var[key]``. Sample and variable names can be accessed via ``adata.smp_names`` and ``adata.var_names``, respectively. AnnData objects can be sliced like Pandas dataframes, for example, ``adata = adata[:, list_of_gene_names]``. The AnnData class is similar to R's ExpressionSet [Huber15]_ the latter though is not implemented for sparse data.
 
 Plotting
 ^^^^^^^^
@@ -146,7 +144,7 @@ For each tool, there is an associated plotting function::
 
     sc.pl.tool(adata)
 
-that retrieves and plots the elements of ``adata`` that were previously written by ``sc.tl.tool(adata)``. To not display figures interactively but save all plots to default locations, you can set ``sc.sett.savefigs = True``. By default, figures are saved as *png* to ``./figs/``. Reset ``sc.sett.file_format_figs`` and ``sc.sett.figdir`` if you want to change this. Scanpy's plotting module can be viewed similar to Seaborn_: an extension of matplotlib_ that allows visualizing certain frequent tasks with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions usually return a ``Matplotlib.Axes`` object.
+that retrieves and plots the elements of ``adata`` that were previously written by ``sc.tl.tool(adata)``. Scanpy's plotting module can be viewed similar to Seaborn_: an extension of matplotlib_ that allows visualizing operations on AnnData objects with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions accept and return a ``Matplotlib.Axes`` object.
 
 .. _Seaborn: http://seaborn.pydata.org/
 .. _matplotlib: http://matplotlib.org/
@@ -158,21 +156,21 @@ Visualization
 pca
 ^^^
 
-`[source] <scanpy/tools/pca.py>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package ([Pedregosa11]_).
+`[source] <scanpy/tools/pca.py>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package [Pedregosa11]_.
 
 tsne
 ^^^^
 
 `[source] <scanpy/tools/tsne.py>`__ Computes the tSNE representation ``X_tsne`` of data.
 
-The algorithm has been introduced by [Maaten08]_ and proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package ([Pedregosa11]_). You can achieve a huge speedup if you install the Multicore-tSNE package by [Ulyanov16]_, which will be automatically detected by Scanpy.
+The algorithm has been introduced by [Maaten08]_ and proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package [Pedregosa11]_. You can achieve a huge speedup if you install the Multicore-tSNE package by [Ulyanov16]_, which will be automatically detected by Scanpy.
 
 diffmap
 ^^^^^^^
 
 `[source] <scanpy/tools/diffmap.py>`__ Computes the diffusion maps representation ``X_diffmap`` of data.
 
-Diffusion maps ([Coifman05]_) has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. The Scanpy implementation is due to [Wolf17]_.
+Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. The Scanpy implementation is due to [Wolf17]_.
 
 draw_graph
 ^^^^^^^^^^
@@ -181,8 +179,8 @@ draw_graph
 
 Here, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used by default, but many other layouts are available. We use the igraph implementation [Csardi06]_.
 
-Discrete clustering of subgroups and continuous progression through subgroups
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Discrete clustering of subgroups, continuous progression through subgroups, differential expression
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 dpt
 ^^^
@@ -199,7 +197,7 @@ The functionality of diffmap and dpt compare to the R package destiny_ of [Anger
 louvain
 ^^^^^^
 
-`[source] <scanpy/tools/louvain.py>`__ Cluster cells using the Louvain algorithm ([Blondel08]_) in the implementation of ([Traag17]_).
+`[source] <scanpy/tools/louvain.py>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_.
 
 The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
@@ -207,15 +205,15 @@ The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
 .. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 
-Differential expression
-~~~~~~~~~~~~~~~~~~~~~~~
-
 rank_genes_groups
 ^^^^^^^^^^^^^^^^^
 
 `[source] <scanpy/tools/rank_genes_groups.py>`__ Rank genes by differential expression.
 
+*Examples:* See this `use case`_.
+
 .. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
+
 
 Simulation
 ~~~~~~~~~~
@@ -354,7 +352,7 @@ References
    `Cell <https://doi.org/10.1016/j.cell.2015.11.013>`__.
 
 .. [Traag17] Traag (2017),
-   *Lougvain*,
+   *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
    
 .. [Ulyanov16] Ulyanov (2016),
