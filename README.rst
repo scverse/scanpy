@@ -189,10 +189,10 @@ dpt
 
 The functionality of diffmap and dpt compare to the R package destiny_ of [Angerer16]_, but run faster and scale to much higher cell numbers.
 
-*Examples:* See this `use case`_.
+*Examples:* See this example_.
 
 .. _destiny: http://bioconductor.org/packages/destiny
-.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
+.. _example: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
 
 louvain
 ^^^^^^
@@ -201,18 +201,18 @@ louvain
 
 The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
-*Examples:* See this `use case`_.
+*Examples:* See this example_.
 
-.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
+.. _example: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 
 rank_genes_groups
 ^^^^^^^^^^^^^^^^^
 
 `[source] <scanpy/tools/rank_genes_groups.py>`__ Rank genes by differential expression.
 
-*Examples:* See this `use case`_.
+*Examples:* See this example_.
 
-.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
+.. _example: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 
 
 Simulation
@@ -225,9 +225,9 @@ sim
 
 The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
 
-*Examples:* See this `use case`_.
+*Examples:* See this example_.
 
-.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
+.. _example: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
 
 
 Installation 
