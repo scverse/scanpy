@@ -17,7 +17,7 @@ Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
 
   pip install scanpy
 
-To work with the latest updates on GitHub: clone the repository – green button on top of the page – and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
+To work with the latest updates on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory. With Python 3.5 or 3.6 (preferably Miniconda_) installed, type::
 
     pip install --editable .
 
@@ -239,7 +239,7 @@ Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
 
   pip install scanpy
 
-To work with the latest updates on GitHub: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
+To work with the latest updates on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
     pip install --editable .
 
