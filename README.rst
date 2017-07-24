@@ -33,6 +33,7 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 .. _17-05-05: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 .. _17-05-03: https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17
 .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
+.. _17-04-30: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
 
 .. _Guided Clustering tutorial: http://satijalab.org/seurat/pbmc-tutorial.html
 .. _Seurat: http://satijalab.org/seurat
@@ -175,9 +176,11 @@ Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell data b
 draw_graph
 ^^^^^^^^^^
 
-`[source] <scanpy/tools/draw_graph.py>`__ Force-directed graph drawing is a long-established algorithm for visualizing graphs, see `Force-directed graph drawing`_. It has been suggested for visualizing single-cell data by [Weinreb17]_.
+`[source] <scanpy/tools/draw_graph.py>`__ `Force-directed graph drawing`_ is a long-established algorithm for visualizing graphs. It has been suggested for visualizing single-cell data by [Weinreb17]_.
 
 Here, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used by default, but many other layouts are available. We use the igraph implementation [Csardi06]_.
+
+.. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
 Discrete clustering of subgroups, continuous progression through subgroups, differential expression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

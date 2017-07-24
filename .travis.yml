@@ -11,3 +11,4 @@ install:
 script:
   - pytest
   - python setup.py check --restructuredtext --strict
+  - rst2html --halt=2 README.rst >/dev/null
