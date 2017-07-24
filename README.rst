@@ -24,15 +24,15 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 .. _scanpy_usage: https://github.com/theislab/scanpy_usage
 
 17-05-05_
-  We reproduce some of the recent `Guided Clustering tutorial`_ of Seurat_ [macosco15]_.
+  We reproduce most of the `Guided Clustering tutorial`_ of Seurat_ [Macosco15]_.
 17-05-03_
-  Analyzing 64 000 cells from [zheng]_, we find that Scanpy is about a factor 5 to 10 faster and more memory efficient than the optimized `Cell Ranger`_ pipeline. For large-scale data, this becomes crucial for interactive analysis.
-17-05-01_
-  Diffusion Pseudotime analysis resolves developmental processes in data of [moignard15]_, reproducing results of [haghverdi16]_. Also, note that DPT has recently been very `favorably discussed`_ by the authors of Monocle_.
+  Analyzing 68 000 cells from [Zheng17]_, we find that Scanpy is about a factor 5 to 16 faster and more memory efficient than the `Cell Ranger`_ R kit for secondary analysis.
+17-05-02_
+  We reproduce the results of the Diffusion Pseudotime (DPT) paper of [Haghverdi16]_. Note that DPT has recently been very `favorably discussed`_ by the authors of Monocle_.
 
 .. _17-05-05: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 .. _17-05-03: https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17
-.. _17-05-01: https://github.com/theislab/scanpy_usage/tree/master/170501_moignard15/notebook.ipynb
+.. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
 
 .. _Guided Clustering tutorial: http://satijalab.org/seurat/pbmc-tutorial.html
 .. _Seurat: http://satijalab.org/seurat
@@ -69,19 +69,19 @@ Preprocessing
 ^^^^^^^^^^^^^
 
 `pp.* <sc.preprocessing_>`__
-  Filtering of highly-variable genes, batch-effect correction, per-cell (UMI normalization).
+  Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization.
 
 Visualizations
 ^^^^^^^^^^^^^^
 
 `tl.pca <pca_>`__
-  PCA ([pedregosa11]_).
+  PCA [Pedregosa11]_.
 `tl.diffmap <diffmap_>`__
-  Diffusion Maps ([coifman05]_; [haghverdi15]_; [wolf17]_).
+  Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 `tl.tsne <tsne_>`__
-  t-SNE ([maaten08]_; [amir13]_; [pedregosa11]_).
-`tl.spring <spring_>`__
-  `Force-directed graph drawing`_ ([weinreb16]_).
+  t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+`tl.draw_graph <draw_graph_>`__
+  `Force-directed graph drawing`_ [Csardi06]_ [Weinreb16]_.
 
 .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
@@ -89,17 +89,17 @@ Branching trajectories and pseudotime, clustering, differential expression
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 `tl.dpt <dpt_>`__
-  Infer progression of cells, identify *branching* subgroups ([haghverdi16]_; [wolf17]_).
-`tl.dbscan <dbscan_>`__
-  Cluster cells into subgroups ([ester96]_; [pedregosa11]_).
-`tl.diffrank <diffrank_>`__
-  Rank genes according to differential expression ([wolf17]_).
+  Infer progression of cells, identify *branching* subgroups [Haghverdi16]_ [Wolf17]_.
+`tl.louvain <louvain_>`__
+  Cluster cells into subgroups [Blondel08]_ [Traag17]_.
+`tl.rank_genes_groups <rank_genes_groups_>`__
+  Rank genes according to differential expression [Wolf17]_.
 
 Simulation
 ^^^^^^^^^^
 
 `tl.sim <sim_>`__
-  Simulate dynamic gene expression data ([wittmann09]_; [wolf17]_).
+  Simulate dynamic gene expression data [Wittmann09]_ [Wolf17]_.
 
 Basic Features
 ~~~~~~~~~~~~~~
@@ -137,7 +137,7 @@ AnnData objects
 
 An ``AnnData`` instance stores an array-like data matrix as ``adata.X``, dict-like sample annotation as ``adata.smp``, dict-like variable annotation as ``adata.var`` and additional unstructured dict-like annotation as ``adata.add``. While ``adata.add`` is a conventional dictionary, ``adata.smp`` and ``adata.var`` are instances of a low-level Pandas dataframe-like class.
 
-Values can be retrieved and appended via ``adata.smp[key]`` and ``adata.var[key]``. Sample and variable names can be accessed via ``adata.smp_names`` and ``adata.var_names``, respectively. AnnData objects can be sliced like Pandas dataframes, for example, ``adata = adata[:, list_of_gene_names]``. The AnnData class is similar to R's ExpressionSet ([huber15]_); the latter though is not implemented for sparse data.
+Values can be retrieved and appended via ``adata.smp[Key]`` and ``adata.var[Key]``. Sample and variable names can be accessed via ``adata.smp_names`` and ``adata.var_names``, respectively. AnnData objects can be sliced like Pandas dataframes, for example, ``adata = adata[:, list_of_gene_names]``. The AnnData class is similar to R's ExpressionSet [Huber15]_ the latter though is not implemented for sparse data.
 
 Plotting
 ^^^^^^^^
@@ -151,14 +151,6 @@ that retrieves and plots the elements of ``adata`` that were previously written 
 .. _Seaborn: http://seaborn.pydata.org/
 .. _matplotlib: http://matplotlib.org/
 
-Builtin examples
-^^^^^^^^^^^^^^^^
-
-Show all builtin example data using ``sc.show_exdata()`` and all builtin example use cases via ``sc.show_examples()``. Load annotated and preprocessed data using an *example key*, here 'paul15', via::
-
-    adata = sc.get_example('paul15')
-
-The key 'paul15' can also be used within ``sc.read('paul15')`` and ``sc.write('paul15')`` to write the current state of the AnnData object to disk.
 
 Visualization
 ~~~~~~~~~~~~~
@@ -166,30 +158,28 @@ Visualization
 pca
 ^^^
 
-`[source] <scanpy/tools/pca.py>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package ([pedregosa11]_).
+`[source] <scanpy/tools/pca.py>`__ Computes the PCA representation ``X_pca`` of data, principal components and variance decomposition. Uses the implementation of the ``scikit-learn`` package ([Pedregosa11]_).
 
 tsne
 ^^^^
 
 `[source] <scanpy/tools/tsne.py>`__ Computes the tSNE representation ``X_tsne`` of data.
 
-The algorithm has been introduced by [maaten08]_ and proposed for single-cell data by [amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package ([pedregosa11]_). You can achieve a huge speedup if you install the Multicore-tSNE package by [ulyanov16]_, which will be automatically detected by Scanpy.
+The algorithm has been introduced by [Maaten08]_ and proposed for single-cell data by [Amir13]_. By default, Scanpy uses the implementation of the ``scikit-learn`` package ([Pedregosa11]_). You can achieve a huge speedup if you install the Multicore-tSNE package by [Ulyanov16]_, which will be automatically detected by Scanpy.
 
 diffmap
 ^^^^^^^
 
 `[source] <scanpy/tools/diffmap.py>`__ Computes the diffusion maps representation ``X_diffmap`` of data.
 
-Diffusion maps ([coifman05]_) has been proposed for visualizing single-cell data by [haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [haghverdi16]_. The Scanpy implementation is due to [wolf17]_.
+Diffusion maps ([Coifman05]_) has been proposed for visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested by [Haghverdi16]_. The Scanpy implementation is due to [Wolf17]_.
 
-spring
-^^^^^^
+draw_graph
+^^^^^^^^^^
 
-Beta version.
+`[source] <scanpy/tools/draw_graph.py>`__ Force-directed graph drawing is a long-established algorithm for visualizing graphs, see `Force-directed graph drawing`_. It has been suggested for visualizing single-cell data by [Weinreb17]_.
 
-`[source] <scanpy/tools/spring.py>`__ Force-directed graph drawing is a long-established algorithm for visualizing graphs, see `Force-directed graph drawing`_. It has been suggested for visualizing single-cell data by [weinreb16]_.
-
-Here, the Fruchterman & Reingold ([fruchterman91]_) algorithm is used. The implementation uses elements of the NetworkX implementation ([hagberg08]_).
+Here, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used by default, but many other layouts are available. We use the igraph implementation [Csardi06]_.
 
 Discrete clustering of subgroups and continuous progression through subgroups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -197,33 +187,35 @@ Discrete clustering of subgroups and continuous progression through subgroups
 dpt
 ^^^
 
-`[source] <scanpy/tools/dpt.py>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [haghverdi16]_ and implemented for Scanpy by [wolf17]_.
+`[source] <scanpy/tools/dpt.py>`__ Reconstruct the progression of a biological process from snapshot data and detect branching subgroups. Diffusion Pseudotime analysis has been introduced by [Haghverdi16]_ and implemented for Scanpy by [Wolf17]_.
 
-The functionality of diffmap and dpt compare to the R package destiny_ of [angerer16]_, but run faster and scale to much higher cell numbers.
+The functionality of diffmap and dpt compare to the R package destiny_ of [Angerer16]_, but run faster and scale to much higher cell numbers.
 
-*Examples:* See one of the early examples [notebook_, `command line`_] dealing with data of [moignard15]_.
-
+*Examples:* See this `use case`_.
 
 .. _destiny: http://bioconductor.org/packages/destiny
-.. _notebook: https://github.com/theislab/scanpy_usage/tree/master/170503_moignard15.ipynb
-.. _command line: https://github.com/theislab/scanpy_usage/tree/master/EXAMPLES.md#moignard15
+.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
 
-dbscan
+louvain
 ^^^^^^
 
-`[source] <scanpy/tools/dbscan.py>`__ Cluster cells using DBSCAN_ ([ester96]_), in the implementation of ``scikit-learn`` ([pedregosa11]_).
+`[source] <scanpy/tools/louvain.py>`__ Cluster cells using the Louvain algorithm ([Blondel08]_) in the implementation of ([Traag17]_).
 
-This is a very simple clustering method. A better one – in the same framework as DPT and Diffusion Maps – will come soon.
+The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
-.. _DBSCAN: https://en.wikipedia.org/wiki/DBSCAN
+*Examples:* See this `use case`_.
+
+.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 
 Differential expression
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-diffrank
-^^^^^^^^
+rank_genes_groups
+^^^^^^^^^^^^^^^^^
 
-`[source] <scanpy/tools/diffrank.py>`__ Rank genes by differential expression.
+`[source] <scanpy/tools/rank_genes_groups.py>`__ Rank genes by differential expression.
+
+.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170505_seurat
 
 Simulation
 ~~~~~~~~~~
@@ -231,9 +223,14 @@ Simulation
 sim
 ^^^
 
-`[source] <scanpy/tools/sim.py>`__ Sample from a stochastic differential equation model built from literature-curated boolean gene regulatory networks, as suggested by [wittmann09]_. The Scanpy implementation is due to [wolf17]_.
+`[source] <scanpy/tools/sim.py>`__ Sample from a stochastic differential equation model built from literature-curated boolean gene regulatory networks, as suggested by [Wittmann09]_. The Scanpy implementation is due to [Wolf17]_.
 
-The tool compares to the Matlab tool *Odefy* of [krumsiek10]_.
+The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
+
+*Examples:* See this `use case`_.
+
+.. _use case: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
+
 
 Installation 
 -------------
@@ -246,7 +243,7 @@ Then, download or clone the repository – green button on top of the page – a
 
 and work with the top-level command ``scanpy`` or::
 
-    import scanpy as sc
+    import scanpy.api as sc
 
 in any directory.
 
@@ -278,86 +275,103 @@ possible without reference to GitHub via ``pip install scanpy``.
 References
 ----------
 
-.. [amir13] Amir *et al.* (2013),
-   *viSNE enables visualization of high dimensional single-cell data and reveals phenotypic heterogeneity of leukemia*
-   `Nature Biotechnology 31, 545 <http://dx.doi.org/10.1038/nbt.2594>`__.
+.. [Amir13] Amir *et al.* (2013),
+   *viSNE enables visualization of high dimensional single-cell data and reveals phenotypic heterogeneity of leukemia*,
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.2594>`__.
 
-.. [angerer16] Angerer *et al.* (2016),
+.. [Angerer16] Angerer *et al.* (2016),
    *destiny – diffusion maps for large-scale single-cell data in R*,
-   `Bioinformatics 32, 1241-1243 <https://doi.org/10.1093/bioinformatics/btv715>`__.
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btv715>`__.
 
-.. [coifman05] Coifman *et al.* (2005),
+.. [Blondel08] Blondel *et al.* (2008),
+   *Fast unfolding of communities in large networks*,
+   `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`__.   
+
+.. [Coifman05] Coifman *et al.* (2005),
    *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
-   `PNAS 102, 7426 <http://dx.doi.org/10.1038/nmeth.3971>`__.
+   `PNAS <https://doi.org/10.1038/nmeth.3971>`__.
 
-.. [ester96] Ester *et al.* (1996),
-   *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*
+.. [Csardi06] Csardi *et al.* (2006),
+   *The igraph software package for complex network researc*,
+   `InterJournal Complex Systems <http://igraph.org>`__.
+
+   
+.. [Ester96] Ester *et al.* (1996),
+   *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
    `Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
-   Portland, OR, pp. 226-231 <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
+   Portland, OR <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
 
-.. [fruchterman91] Fruchterman & Reingold (1991),
-   *Graph drawing by force-directed placement*
-   `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__
+.. [Fruchterman91] Fruchterman & Reingold (1991),
+   *Graph drawing by force-directed placement*,
+   `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
 
-.. [hagberg08] Hagberg *et al.* (2008),
-   *Exploring Network Structure, Dynamics, and Function using NetworkX*
-   `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__
+.. [Hagberg08] Hagberg *et al.* (2008),
+   *Exploring Network Structure, Dynamics, and Function using NetworkX*,
+   `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
 
-.. [haghverdi15] Haghverdi *et al.* (2015),
+.. [Haghverdi15] Haghverdi *et al.* (2015),
    *Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
-   `Bioinformatics 31, 2989 <http://dx.doi.org/10.1093/bioinformatics/btv325>`__.
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btv325>`__.
 
-.. [haghverdi16] Haghverdi *et al.* (2016),
+.. [Haghverdi16] Haghverdi *et al.* (2016),
    *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
-   `Nature Methods 13, 845 <http://dx.doi.org/10.1038/nmeth.3971>`__.
+   `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
 
-.. [huber15] Huber *et al.* (2015),
-   *Orchestrating high-throughput genomic analysis with Bioconductor*
-   `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__
+.. [Huber15] Huber *et al.* (2015),
+   *Orchestrating high-throughput genomic analysis with Bioconductor*,
+   `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
 
-.. [krumsiek10] Krumsiek *et al.* (2010),
+.. [Krumsiek10] Krumsiek *et al.* (2010),
    *Odefy – From discrete to continuous models*,
-   `BMC Bioinformatics 11, 233 <http://dx.doi.org/10.1186/1471-2105-11-233>`__.
+   `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`__.
 
-.. [krumsiek11] Krumsiek *et al.* (2011),
+.. [Krumsiek11] Krumsiek *et al.* (2011),
    *Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*,
-   `PLoS ONE 6, e22649 <http://dx.doi.org/10.1371/journal.pone.0022649>`__.
+   `PLoS ONE <https://doi.org/10.1371/journal.pone.0022649>`__.
 
-.. [maaten08] Maaten & Hinton (2008),
+.. [Levine15] Levine *et al.* (2015),
+   *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
+   `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
+   
+.. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
-   `JMLR 9, 2579 <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
+   `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
 
-.. [macosco15] Macosko *et al.* (2015)
-   *Highly Parallel Genome-wide Expression Profiling of Individual Cells Using Nanoliter Droplets*
-   `Cell <https://doi.org/10.1016/j.cell.2015.05.002>`__
+.. [Macosco15] Macosko *et al.* (2015),
+   *Highly Parallel Genome-wide Expression Profiling of Individual Cells Using Nanoliter Droplets*,
+   `Cell <https://doi.org/10.1016/j.cell.2015.05.002>`__.
 
-.. [moignard15] Moignard *et al.* (2015),
+.. [Moignard15] Moignard *et al.* (2015),
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
-   `Nature Biotechnology 33, 269 <http://dx.doi.org/10.1038/nbt.3154>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.3154>`__.
 
-.. [pedregosa11] Pedregosa *et al.* (2011),
+.. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
-   `JMLR 12, 2825 <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
+   `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
 
-.. [paul15] Paul *et al.* (2015),
+.. [Paul15] Paul *et al.* (2015),
    *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*,
-   `Cell 163, 1663 <http://dx.doi.org/10.1016/j.cell.2015.11.013>`__.
+   `Cell <https://doi.org/10.1016/j.cell.2015.11.013>`__.
 
-.. [ulyanov16] Ulyanov (2016),
-   *Multicore t-SNE*
-   `GitHub <https://github.com/DmitryUlyanov/Multicore-TSNE>`__
+.. [Traag17] Traag (2017),
+   *Lougvain*,
+   `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
+   
+.. [Ulyanov16] Ulyanov (2016),
+   *Multicore t-SNE*,
+   `GitHub <https://github.com/DmitryUlyanov/Multicore-TSNE>`__.
 
-.. [weinreb16] Weinreb *et al.* (2016),
-   *SPRING: a kinetic interface for visualizing high dimensional single-cell expression data*
-   `bioRXiv <https://doi.org/10.1101/090332>`__
+.. [Weinreb17] Weinreb *et al.* (2016),
+   *SPRING: a kinetic interface for visualizing high dimensional single-cell expression data*,
+   `bioRXiv <https://doi.org/10.1101/090332>`__.
 
-.. [wittmann09] Wittmann *et al.* (2009),
+.. [Wittmann09] Wittmann *et al.* (2009),
    *Transforming Boolean models to continuous models: methodology and application to T-cell receptor signaling*,
-   `BMC Systems Biology 3, 98 <http://dx.doi.org/10.1186/1752-0509-3-98>`__.
+   `BMC Systems Biology <https://doi.org/10.1186/1752-0509-3-98>`__.
 
-.. [wolf17] Wolf *et al* (2017),
-   TBD
+.. [Wolf17] Wolf *et al* (2017),
+   TBD.
 
-.. [zheng] Zheng *et al.* (2017),
-   *Massively parallel digital transcriptional profiling of single cells*
-   `Nature Communications <https://doi.org/10.1038/ncomms14049>`__
+.. [Zheng17] Zheng *et al.* (2017),
+   *Massively parallel digital transcriptional profiling of single cells*,
+   `Nature Communications <https://doi.org/10.1038/ncomms14049>`__.
