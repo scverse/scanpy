@@ -172,7 +172,13 @@ class DataGraph(object):
         if 'xroot' in adata.add: xroot = adata.add['xroot']
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
         # set iroot directly
-        if 'iroot' in adata.add: self.iroot = adata.add['iroot']
+        if 'iroot' in adata.add:
+            if adata.add['iroot'] >= adata.n_smps:
+                logg.warn('Root cell index {} does not exist for {} samples. '
+                          'Is ignored.'
+                          .format(adata.add['iroot'], adata.n_smps))
+            else:
+                self.iroot = adata.add['iroot']
         # use the fulll data matrix X
         if (self.n_pcs == 0  # use the full X as n_pcs == 0
             or X.shape[1] <= self.n_pcs):
