@@ -65,16 +65,16 @@ sc.plotting_
 sc.settings_
   Settings.
 
-.. _sc.tools:         https://github.com/theislab/scanpy_usage/tree/master/scanpy/tools
-.. _sc.preprocessing: https://github.com/theislab/scanpy_usage/tree/master/scanpy/preprocessing
-.. _sc.plotting:      https://github.com/theislab/scanpy_usage/tree/master/scanpy/plotting
-.. _sc.settings:      https://github.com/theislab/scanpy_usage/tree/master/scanpy/settings.py
+.. _sc.tools:         https://github.com/theislab/scanpy/tree/master/scanpy/tools
+.. _sc.preprocessing: https://github.com/theislab/scanpy/tree/master/scanpy/preprocessing
+.. _sc.plotting:      https://github.com/theislab/scanpy/tree/master/scanpy/plotting
+.. _sc.settings:      https://github.com/theislab/scanpy/tree/master/scanpy/settings.py
 
 Preprocessing
 ^^^^^^^^^^^^^
 
 `pp.* <sc.preprocessing_>`__
-  Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization.
+  Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
 
 Visualizations
 ^^^^^^^^^^^^^^
