@@ -41,8 +41,8 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 .. _Monocle: http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/
 
 
-Features 
----------
+Features
+--------
 
 Let us give an Overview_ of the toplevel user functions, followed by a few words on Scanpy's `Basic Features`_ and more `details <Visualization_>`__.
 
@@ -93,8 +93,8 @@ Branching trajectories and pseudotime, clustering, differential expression
 `tl.rank_genes_groups <rank_genes_groups_>`__
   Rank genes according to differential expression [Wolf17]_.
 
-Simulation
-^^^^^^^^^^
+Simulations
+^^^^^^^^^^^
 
 `tl.sim <sim_>`__
   Simulate dynamic gene expression data [Wittmann09]_ [Wolf17]_.
@@ -189,26 +189,25 @@ dpt
 
 The functionality of diffmap and dpt compare to the R package destiny_ of [Angerer16]_, but run faster and scale to much higher cell numbers.
 
-*Examples:* See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16>`__.
+*Examples:* See this `use case <17-05-02_>`__.
 
 .. _destiny: http://bioconductor.org/packages/destiny
 
 louvain
-^^^^^^
+^^^^^^^
 
 `[source] <scanpy/tools/louvain.py>`__ Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation of [Traag17]_.
 
 The Louvain algorithm has been proposed for single-cell analysis by [Levine15]_.
 
-*Examples:* See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`__.
-
+*Examples:* See this `use case <17-05-05_>`__.
 
 rank_genes_groups
 ^^^^^^^^^^^^^^^^^
 
 `[source] <scanpy/tools/rank_genes_groups.py>`__ Rank genes by differential expression.
 
-*Examples:* See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`__.
+*Examples:* See this `use case <17-05-05_>`__.
 
 
 Simulation
@@ -221,11 +220,11 @@ sim
 
 The tool compares to the Matlab tool *Odefy* of [Krumsiek10]_.
 
-*Examples:* See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11>`__.
+*Examples:* See this `use case <17-04-30_>`__.
 
 
-Installation 
--------------
+Installation
+------------
 
 If you use Windows or Mac OS X and do not have a current Python distribution (Python 3.5 or 3.6), download and install Miniconda_ (see below). If you use Linux, use your package manager to obtain a current python distribution.
 
