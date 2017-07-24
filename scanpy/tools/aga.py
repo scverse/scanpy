@@ -20,7 +20,7 @@ def aga(adata,
         n_pcs=50,
         n_dcs=10,
         resolution=1,
-        recompute_diffmap=False,
+        recompute_graph=False,
         recompute_pca=False,
         recompute_louvain=False,
         attachedness_measure='random_walk',
@@ -49,7 +49,7 @@ def aga(adata,
             PCA). Will be used if option `recompute_pca` is False.
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
-            `diffmap`). Will be used if option `recompute_diffmap` is False.
+            `diffmap`). Will be used if option `recompute_graph` is False.
     node_groups : any categorical sample annotation or {'louvain', 'segments'}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
         graph/data. 'louvain' uses the louvain algorithm and optimizes
@@ -74,9 +74,9 @@ def aga(adata,
     resolution : float, optional (default: 1.0)
         For Louvain algorithm. Note that you should set `recompute_louvain` to
         True if changing this to recompute.
-    recompute_diffmap : bool, optional (default: False)
-        Recompute diffusion maps. Only then `n_neighbors` has an effect if there
-        is already a cached `X_diffmap` in adata.
+    recompute_graph : bool, optional (default: False)
+        Recompute single-cell graph. Only then `n_neighbors` has an effect if
+        there is already a cached `distance` or `X_diffmap` in adata.
     recompute_pca : bool, optional (default: False)
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
@@ -130,13 +130,13 @@ def aga(adata,
               n_dcs=n_dcs,
               min_group_size=20/resolution,
               n_jobs=n_jobs,
-              recompute_diffmap=recompute_diffmap,
+              recompute_graph=recompute_graph,
               recompute_pca=recompute_pca,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    if not updated_diffmap and n_neighbors is not None and not recompute_diffmap:
-        logg.warn('`n_neighbors={}` has no effect (set `recompute_diffmap=True` to enable)'
+    if not updated_diffmap and n_neighbors is not None and not recompute_graph:
+        logg.warn('`n_neighbors={}` has no effect (set `recompute_graph=True` to enable)'
                   .format(n_neighbors))
     adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
@@ -264,18 +264,18 @@ class AGA(data_graph.DataGraph):
                  n_dcs=10,
                  min_group_size=20,
                  recompute_pca=None,
-                 recompute_diffmap=None,
+                 recompute_graph=None,
                  attachedness_measure='connectedness',
                  clusters=None,
                  n_jobs=1):
-        if 'Ktilde' not in adata.add: recompute_diffmap = True
+        if 'Ktilde' not in adata.add: recompute_graph = True
         super(AGA, self).__init__(adata,
                                   k=n_neighbors,
                                   n_pcs=n_pcs,
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
-                                  recompute_diffmap=recompute_diffmap)
+                                  recompute_diffmap=recompute_graph)
         self.n_neighbors = n_neighbors
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
