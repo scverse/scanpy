@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 from distutils.extension import Extension
-import numpy
+from pathlib import Path
 import versioneer
 
 try:
@@ -24,12 +24,22 @@ else:
                   ["scanpy/cython/utils_cy.c"]),
 ]
 
-with open('requirements.txt') as requirements:
+req_path = Path('requires.txt')
+if not req_path.is_file():
+    req_path = Path('scanpy.egg-info') / req_path
+with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
 with open('README.rst') as readme_f:
     readme = readme_f.read()
 
+def numpy_get_include():
+    try:
+        import numpy
+    except ImportError:
+        return []
+    return numpy.get_include()    
+    
 setup(
     name='scanpy',
     version=versioneer.get_version(),
@@ -46,7 +56,7 @@ setup(
     },
     install_requires=requires,
     packages=find_packages(exclude=['scripts', 'scripts.*']),
-    include_dirs=[numpy.get_include()],
+    include_dirs=[numpy_get_include()],
     cmdclass=versioneer.get_cmdclass(cmdclass),
     ext_modules=ext_modules,
     zip_safe=False,
