@@ -28,7 +28,7 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 .. _scanpy_usage: https://github.com/theislab/scanpy_usage
 
 17-05-05_
-  We reproduce most of the `Guided Clustering tutorial`_ of Seurat_ [Macosco15]_.
+  We reproduce most of the `Guided Clustering tutorial`_ of Seurat_ [Satija15]_.
 17-05-03_
   Analyzing 68 000 cells from [Zheng17]_, we find that Scanpy is about a factor 5 to 16 faster and more memory efficient than the `Cell Ranger`_ R kit for secondary analysis.
 17-05-02_
@@ -326,9 +326,9 @@ References
    *Visualizing data using t-SNE*,
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
 
-.. [Macosco15] Macosko *et al.* (2015),
-   *Highly Parallel Genome-wide Expression Profiling of Individual Cells Using Nanoliter Droplets*,
-   `Cell <https://doi.org/10.1016/j.cell.2015.05.002>`__.
+.. [Satija15] Satija *et al.* (2015),
+   *Spatial reconstruction of single-cell gene expression data*
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`__.
 
 .. [Moignard15] Moignard *et al.* (2015),
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
