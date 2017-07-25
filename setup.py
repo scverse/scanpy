@@ -2,13 +2,17 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 from pathlib import Path
 import versioneer
-
 try:
-    from Cython.Distutils import build_ext
+    import numpy
 except ImportError:
-    use_cython = False
-else:
-    use_cython = True
+    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy`.')
+
+use_cython = False
+if use_cython:
+    try:
+        from Cython.Distutils import build_ext
+    except ImportError:
+        raise ImportError('You need to install Cython manually if you want to install using Cython, e.g., by running `pip install cython`.')
 
 cmdclass = {}
 ext_modules = []
@@ -32,13 +36,6 @@ with req_path.open() as requirements:
 
 with open('README.rst') as readme_f:
     readme = readme_f.read()
-
-def numpy_get_include():
-    try:
-        import numpy
-    except ImportError:
-        raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy`.')
-    return numpy.get_include()    
     
 setup(
     name='scanpy',
@@ -56,7 +53,7 @@ setup(
     },
     install_requires=requires,
     packages=find_packages(exclude=['scripts', 'scripts.*']),
-    include_dirs=[numpy_get_include()],
+    include_dirs=[numpy.get_include()],
     cmdclass=versioneer.get_cmdclass(cmdclass),
     ext_modules=ext_modules,
     zip_safe=False,
