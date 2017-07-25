@@ -71,7 +71,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': None if random_state == -1 else random_state,
-                      'verbose': sett.verbosity,
+                      'verbose': max(0, sett.verbosity-3),
                       'learning_rate': 200,
                       'early_exaggeration': 12,
                       # 'method': 'exact'
@@ -92,11 +92,10 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     if n_jobs == 1 or multicore_failed:
         from sklearn.manifold import TSNE
         tsne = TSNE(**params_sklearn)
-        logg.m('consider installing the package MulticoreTSNE from\n'
-               '        https://github.com/DmitryUlyanov/Multicore-TSNE\n'
-               '    even for `n_jobs=1` this speeds up the computation considerably.',
-               v='hint')
-        logg.m('    using sklearn.manifold.TSNE')
+        logg.warn('Consider installing the package MulticoreTSNE.\n'
+                  '    https://github.com/DmitryUlyanov/Multicore-TSNE\n'
+                  'Even for `n_jobs=1` this speeds up the computation considerably.')
+        logg.info('    using sklearn.manifold.TSNE')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = X_tsne

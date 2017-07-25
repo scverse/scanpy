@@ -85,7 +85,8 @@ def louvain(adata,
                           'available via "pip install louvain", '
                           'either get the latest (development) version from '
                           'https://github.com/vtraag/louvain-igraph or use the option '
-                          '`flavor=igraph`, which does not a provide `resolution` parameter, though.')
+                          '`flavor=igraph` in sc.tl.louvain(). '
+                          'The latter does not a provide `resolution` parameter, though.')
                 part = louvain.find_partition(g, method='RBConfiguration',
                                               resolution_parameter=resolution)
         elif flavor == 'igraph':
