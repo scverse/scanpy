@@ -37,7 +37,7 @@ def numpy_get_include():
     try:
         import numpy
     except ImportError:
-        return []
+        raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy`.')
     return numpy.get_include()    
     
 setup(
