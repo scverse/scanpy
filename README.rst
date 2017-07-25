@@ -344,7 +344,7 @@ References
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
 
 .. [Satija15] Satija *et al.* (2015),
-   *Spatial reconstruction of single-cell gene expression data*
+   *Spatial reconstruction of single-cell gene expression data*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`__.
 
 .. [Moignard15] Moignard *et al.* (2015),

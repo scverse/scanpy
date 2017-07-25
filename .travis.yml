@@ -6,7 +6,7 @@ python:
   - "3.6"
   #- "nightly"  # takes long and is unlikely to fail
 install:
-  - "pip install -r requirements.txt"
+  - "pip install -r requires.txt"
   - "pip install docutils"
   - "python setup.py build_ext --inplace"
 script:
