@@ -255,6 +255,8 @@ def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):
     """Filter genes by coefficient of variance and mean.
 
     See `filter_genes_dispersion`.
+
+    Reference: Weinreb et al. (2017).
     """
     if issparse(X):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
@@ -268,6 +270,8 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
     """Filter genes by fano factor and mean.
 
     See `filter_genes_dispersion`.
+
+    Reference: Weinreb et al. (2017).
     """
     if issparse(X):
         raise ValueError('Not defined for sparse input. See `filter_genes_dispersion`.')
@@ -507,6 +511,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
 
     Yields a dense matrix.
 
+    This is inspired by Seurat's `regressOut` function in R.
+
     Parameters
     ----------
     adata : AnnData
@@ -661,6 +667,8 @@ def zscore_deprecated(X):
     """Z-score standardize each variable/gene in X.
 
     Use `scale` instead.
+
+    Reference: Weinreb et al. (2017).
 
     Parameters
     ----------

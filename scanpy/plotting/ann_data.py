@@ -4,11 +4,13 @@
 """
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
-
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.colors import is_color_like
+import seaborn as sns
+
 from .. import settings as sett
 from . import utils
 from .utils import scatter_base, scatter_group
@@ -317,7 +319,7 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
            multi_panel=False, show=None, save=None, ax=None):
     """Violin plot.
 
-    Wraps seaborn.violinplot.
+    Wraps seaborn.violinplot for AnnData.
 
     Parameters
     ----------
@@ -346,10 +348,6 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     if group_by is not None and isinstance(keys, list):
         raise ValueError('Pass a single key as string if using `group_by`.')
     if not isinstance(keys, list): keys = [keys]
-    import pandas as pd
-    import seaborn as sns
-    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
-    sett.set_dpi()  # reset resolution
     smp_keys = False
     for key in keys:
         if key in adata.smp_keys():
@@ -395,9 +393,5 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         ax = sns.stripplot(x=x, y=y, data=smp_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
-    # for some reason, we have to reset these things twice, as seaborn seems to change
-    # this even after importing
-    utils.init_plotting_params()  # reset fig_params, seaborn overwrites settings
-    sett.set_dpi()  # reset resolution
     utils.savefig_or_show('violin', show=show, save=save)
     return ax

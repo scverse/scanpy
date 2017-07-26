@@ -10,6 +10,8 @@ from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 from .. import logging as logg
 from .. import settings as sett
+from . import palettes
+
 
 # -------------------------------------------------------------------------------
 # Simple plotting functions
@@ -148,54 +150,12 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map='viridi
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
+
+
+# -------------------------------------------------------------------------------
+# Colors in additional to matplotlib's colors
+# -------------------------------------------------------------------------------
     
-
-# -------------------------------------------------------------------------------
-# Palettes
-# -------------------------------------------------------------------------------
-
-# color palette (is default in matplotlib 2.0 anyway)
-# see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-palette_20_vega = [
-    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-    '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
-    '#bcbd22', '#17becf',
-    '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-    '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
-    '#dbdb8d', '#9edae5',
-    '#ad494a', '#8c6d31']  # manual additions
-palette_20 = palette_20_vega
-
-# https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
-# update 1
-# orig reference http://epub.wu.ac.at/1692/1/document.pdf
-palette_26_zeileis = [
-    "#023fa5", "#7d87b9", "#bec1d4", "#d6bcc0", "#bb7784", "#8e063b", "#4a6fe3",
-    "#8595e1", "#b5bbe3", "#e6afb9", "#e07b91", "#d33f6a", "#11c638", "#8dd593",
-    "#c6dec7", "#ead3c6", "#f0b98d", "#ef9708", "#0fcfc0", "#9cded6", "#d5eae7",
-    "#f3e1eb", "#f6c4e1", "#f79cd4",
-    '#7f7f7f', "#c7c7c7", "#1CE6FF", "#336600"  # these last ones were added,
-]
-palette_26 = palette_26_zeileis
-
-# from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
-palette_64_godsnot = [
-    # "#000000",  # remove the black, as often, we have black colored annotation
-    "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
-    "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
-    "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
-    "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
-    "#DDEFFF", "#000035", "#7B4F4B", "#A1C299", "#300018", "#0AA6D8", "#013349", "#00846F",
-    "#372101", "#FFB500", "#C2FFED", "#A079BF", "#CC0744", "#C0B9B2", "#C2FF99", "#001E09",
-    "#00489C", "#6F0062", "#0CBD66", "#EEC3FF", "#456D75", "#B77B68", "#7A87A1", "#788D66",
-    "#885578", "#FAD09F", "#FF8A9A", "#D157A0", "#BEC459", "#456648", "#0086ED", "#886F4C",
-    "#34362D", "#B4A8BD", "#00A6AA", "#452C2C", "#636375", "#A3C8C9", "#FF913F", "#938A81",
-    "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
-    "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
-    "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
-    "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
-palette_64 = palette_64_godsnot
-
 
 additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             '#eee685', 'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c',
@@ -208,59 +168,10 @@ additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
             '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
 
-
+    
 # -------------------------------------------------------------------------------
 # Helper functions
 # -------------------------------------------------------------------------------
-
-
-def init_plotting_params():
-    """Init default plotting parameters.
-
-    Is called when importing sc.plotting.
-    """
-    # figure
-    rcParams['figure.figsize'] = (4, 4)
-    rcParams['figure.subplot.left'] = 0.18
-    rcParams['figure.subplot.right'] = 0.96
-    rcParams['figure.subplot.bottom'] = 0.15
-    rcParams['figure.subplot.top'] = 0.91
-
-    rcParams['lines.linewidth'] = 1.5
-    rcParams['lines.markersize'] = 6
-    rcParams['lines.markeredgewidth'] = 1
-    # font
-    rcParams['font.sans-serif'] = ['Arial',
-                                   'Helvetica',
-                                   'DejaVu Sans',
-                                   'Bitstream Vera Sans',
-                                   'sans-serif']
-    fontsize = 14
-    rcParams['font.size'] = fontsize
-    rcParams['legend.fontsize'] = 0.92 * fontsize
-    rcParams['axes.titlesize'] = fontsize
-    rcParams['axes.labelsize'] = fontsize
-    # legend
-    rcParams['legend.numpoints'] = 1
-    rcParams['legend.scatterpoints'] = 1
-    rcParams['legend.handlelength'] = 0.5
-    rcParams['legend.handletextpad'] = 0.4
-    # resolution of png output
-    rcParams['savefig.dpi'] = 400
-    rcParams['axes.prop_cycle'] = cycler(color=palette_20)
-    # restore a few matplotlib defaults that Seaborn changes
-    rcParams['axes.linewidth'] = 0.8
-    rcParams['axes.edgecolor'] = 'black'
-    rcParams['axes.facecolor'] = 'white'
-    rcParams['xtick.color'] = 'k'
-    rcParams['ytick.color'] = 'k'
-    rcParams['xtick.labelsize'] = fontsize
-    rcParams['ytick.labelsize'] = fontsize
-    # same as seaborn default
-    rcParams['axes.grid'] = True
-    
-# call this when importing
-init_plotting_params()
 
 
 def savefig(writekey, dpi=None, ext=None):
@@ -309,9 +220,9 @@ def default_palette(palette=None):
 def adjust_palette(palette, length):
     if len(palette.by_key()['color']) < length:
         if length <= 28:
-            palette = palette_26
+            palette = palettes.default_26
         else:
-            palette = palette_64
+            palette = palettes.default_64
         logg.m('... updating the color palette to provide enough colors')
         return cycler(color=palette)
     elif not isinstance(palette, Cycler):

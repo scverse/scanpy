@@ -131,10 +131,10 @@ Only affects progress bars
 is_run_from_ipython = _is_run_from_ipython()
 
 
-_dpi = 300
+_dpi = 400
 """Resolution of png figures.
 
-We also need a global variable as, for example, Seaborn resets the rcParams.
+Simply for enabling the convenience function set_dpi().
 """
 
 _ignore_categories = ['N/A', 'dontknow', 'no_gate', '?']

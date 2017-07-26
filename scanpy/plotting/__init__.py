@@ -1,3 +1,7 @@
+from .rcmod import reset_rcparams
+
+from . import palettes
+
 from .ann_data import scatter, violin
 from .ann_data import ranking
 
@@ -15,3 +19,6 @@ from .tools import dpt, dpt_scatter, dpt_groups_pseudotime, dpt_timeseries
 from .tools import louvain
 from .tools import rank_genes_groups, rank_genes_groups_violin
 from .tools import sim
+
+# reset matplotlib.rcParams
+reset_rcparams()
