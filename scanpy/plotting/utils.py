@@ -1,6 +1,7 @@
 # Authors: F. Alex Wolf (http://falexwolf.de)
 #          P. Angerer
 
+import os
 import numpy as np
 import networkx as nx
 from matplotlib import pyplot as pl
@@ -180,7 +181,7 @@ def savefig(writekey, dpi=None, ext=None):
     The filename is generated as follows:
     ```
     if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    filename = sett.figdir + writekey + sett.plotsuffix + '.' + sett.file_format_figs
+    filename = sett.figdir + writekey + sett.plot_suffix + '.' + sett.file_format_figs
     ```
     """
     if dpi is None:
@@ -195,7 +196,7 @@ def savefig(writekey, dpi=None, ext=None):
     if sett.run_name != '': writekey = sett.run_name + '_' + writekey
     if sett.figdir[-1] != '/': sett.figdir += '/'
     if ext is None: ext = sett.file_format_figs
-    filename = sett.figdir + writekey + sett.plotsuffix + '.' + ext
+    filename = sett.figdir + writekey + sett.plot_suffix + '.' + ext
     logg.info('... saving figure to file', filename)
     pl.savefig(filename, dpi=dpi)
 

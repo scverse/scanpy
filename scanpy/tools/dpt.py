@@ -12,7 +12,7 @@ from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
-        min_group_size=0.01, n_jobs=None, recompute_diffmap=False,
+        min_group_size=0.01, n_jobs=None, recompute_graph=False,
         recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
 
@@ -45,7 +45,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
             PCA). If it exists in adata, dpt will use this instead of adata.X.
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
-            `diffmap`).  Will be used if option `recompute_diffmap` is False.
+            `diffmap`).  Will be used if option `recompute_graph` is False.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     n_neighbors : int, optional (default: 30)
@@ -64,7 +64,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         Use `n_dcs` to compute the dpt distance.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
-    recompute_diffmap : bool, (default: False)
+    recompute_graph : bool, (default: False)
         Recompute diffusion maps.
     recompute_pca : bool, (default: False)
         Recompute PCA.
@@ -109,7 +109,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size, n_jobs=n_jobs,
-              recompute_diffmap=recompute_diffmap, recompute_pca=recompute_pca,
+              recompute_graph=recompute_graph, recompute_pca=recompute_pca,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
@@ -156,13 +156,13 @@ class DPT(data_graph.DataGraph):
     """
 
     def __init__(self, adata, n_neighbors=30, knn=True, n_jobs=1, n_pcs=50, n_dcs=10,
-                 min_group_size=20, recompute_pca=None, recompute_diffmap=None,
+                 min_group_size=20, recompute_pca=None, recompute_graph=None,
                  n_branchings=0, allow_kendall_tau_shift=False,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs,
                                   n_dcs=n_dcs, n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
-                                  recompute_diffmap=recompute_diffmap,
+                                  recompute_graph=recompute_graph,
                                   flavor=flavor)
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])

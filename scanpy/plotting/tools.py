@@ -579,6 +579,7 @@ def aga_graph(
         add_noise_to_node_positions=None,
         left_margin=0.01,
         attachedness_type='relative',
+        force_labels_to_front=False,
         show=None,
         save=None,
         ax=None):
@@ -620,7 +621,6 @@ def aga_graph(
         axs = ax
     if len(colors) == 1: axs = [axs]
     for icolor, color in enumerate(colors):
-        show_color = False if icolor != len(colors)-1 else show
         _aga_graph_single(
             adata,
             layout=layout,
@@ -635,7 +635,8 @@ def aga_graph(
             ext=ext,
             ax=axs[icolor],
             title=title[icolor],
-            add_noise_to_node_positions=add_noise_to_node_positions)
+            add_noise_to_node_positions=add_noise_to_node_positions,
+            force_labels_to_front=force_labels_to_front)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
@@ -657,7 +658,8 @@ def _aga_graph_single(
         layout=None,
         add_noise_to_node_positions=None,
         attachedness_type=False,
-        draw_edge_labels=False):
+        draw_edge_labels=False,
+        force_labels_to_front=False):
     from matplotlib import rcParams
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
@@ -688,6 +690,9 @@ def _aga_graph_single(
         if layout is None: layout = 'simple'
         if layout == 'simple':
             pos = utils.hierarchy_pos(nx_g, root)
+            if len(pos) < nx_g.number_of_nodes():
+                raise ValueError('This is a forest and not a single tree. '
+                                 'Try another `layout`, e.g.,  {"fr"}.')
         else:
             from .. import utils as sc_utils
             g = sc_utils.get_igraph_from_adjacency(adata.add['aga_adjacency'])
@@ -757,7 +762,7 @@ def _aga_graph_single(
     ax.set_yticks([])
     base_pie_size = 1/(np.sqrt(nx_g.number_of_nodes()) + 10) * node_size
     median_group_size = np.median(adata.add['aga_groups_sizes'])
-    for count, n in enumerate(nx_g):
+    for count, n in enumerate(nx_g.nodes_iter()):
         pie_size = base_pie_size
         pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
                              node_size_power)
@@ -776,21 +781,20 @@ def _aga_graph_single(
                 color = list(color)
                 color.append('grey')
                 fracs.append(1-sum(fracs))
-                # names[count] += '\n?'
         else:
             raise ValueError('{} is neither a dict of valid matplotlib colors '
                              'nor a valid matplotlib color.'.format(colors[count]))
         a.pie(fracs, colors=color)
-        # if names is not None:
-        #     a.text(0.5, 0.5, names[count],
-        #            verticalalignment='center',
-        #            horizontalalignment='center',
-        #            transform=a.transAxes,
-        #            size=fontsize)
+        if not force_labels_to_front and groups is not None:
+            a.text(0.5, 0.5, groups[count],
+                   verticalalignment='center',
+                   horizontalalignment='center',
+                   transform=a.transAxes,
+                   size=fontsize)
     # TODO: this is a terrible hack, but if we use the solution above, labels
     # get hidden behind pies
-    if groups is not None:
-        for count, n in enumerate(nx_g):
+    if force_labels_to_front and groups is not None:
+        for count, n in enumerate(nx_g.nodes_iter()):
             # all copy and paste from above
             pie_size = base_pie_size
             pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,

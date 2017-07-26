@@ -6,12 +6,12 @@ import numpy as np
 import scipy as sp
 import scipy.spatial
 import scipy.sparse
+from scipy.sparse import issparse
 from joblib import Parallel, delayed
 from ..cython import utils_cy
 from .. import settings as sett
 from .. import logging as logg
 from .. import utils
-from .ann_data import AnnData
 
 
 def get_neighbors(X, Y, k):
@@ -19,7 +19,7 @@ def get_neighbors(X, Y, k):
     chunk_range = np.arange(Dsq.shape[0])[:, None]
     indices_chunk = np.argpartition(Dsq, k-1, axis=1)[:, :k]
     indices_chunk = indices_chunk[chunk_range,
-                                np.argsort(Dsq[chunk_range, indices_chunk])]
+                                  np.argsort(Dsq[chunk_range, indices_chunk])]
     indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
     distances_chunk = Dsq[chunk_range, indices_chunk]
     return indices_chunk, distances_chunk
@@ -59,7 +59,7 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
             result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
                 delayed(get_neighbors)(X[chunk], X, k) for chunk in chunks)
         else:
-            logg.m('--> can be sped up by setting `n_jobs` > 1')
+            logg.info('--> can be sped up by setting `n_jobs` > 1')
         for i_chunk, chunk in enumerate(chunks):
             if n_jobs > 1:
                 indices_chunk, distances_chunk = result_lst[i_chunk]
@@ -129,7 +129,7 @@ class OnFlySymMatrix():
             return self.rows[glob_index_0][glob_index_1]
 
     def restrict(self, index_array):
-        """Generate a 1d view of the data.
+        """Generate a view restricted to a subset of indices.
         """
         new_shape = index_array.shape[0], index_array.shape[0]
         return OnFlySymMatrix(self.get_row, new_shape, DC_start=self.DC_start,
@@ -137,36 +137,81 @@ class OnFlySymMatrix():
                               rows=self.rows, restrict_array=index_array)
 
 
-class DataGraph(object):
-    """Represent data matrix as graph of closeby data points.
+class DataGraph():
+    """Represent data matrix as graph of neighborhood relations among data points.
     """
 
     def __init__(self,
-                 adata_or_X,
-                 k=30,
+                 adata,
+                 k=None,
                  knn=True,
                  n_jobs=None,
                  n_pcs=30,
                  n_dcs=10,
                  recompute_pca=None,
-                 recompute_diffmap=None,
+                 recompute_distances=False,
+                 recompute_graph=None,
                  flavor='haghverdi16'):
-        logg.info('initializing data graph with `n_neighbors={}`'
-                  .format(k))
-        self.k = k if k is not None else 30
-        self.knn = knn
-        self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-        self.n_pcs = n_pcs
-        self.n_dcs = n_dcs
-        self.flavor = flavor  # this is to experiment around
         self.sym = True  # we do not allow asymetric cases
-        self.iroot = None
-        isadata = isinstance(adata_or_X, AnnData)
-        if isadata:
-            adata = adata_or_X
-            X = adata_or_X.X
+        # use the graph in adata
+        if (not recompute_graph
+            and 'X_diffmap' in adata.smp
+            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
+                self.n_pcs = n_pcs
+                self.n_dcs = n_dcs
+                self.iroot = None if 'iroot' not in adata.add else adata.add['iroot']
+                self.X = adata.X  # this is a hack, PCA?
+                self.knn = issparse(adata.add['Ktilde'])
+                self.Ktilde = adata.add['Ktilde']
+                self.Dsq = adata.add['distance']
+                if self.knn:
+                    self.k = adata.add['distance'][0].nonzero()[0].size + 1
+                else:
+                    self.k = adata.X.shape[0]
+                # for output of spectrum
+                self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
+                self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
+                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
+                                    adata.smp['X_diffmap'][:, :n_dcs-1]]
+                self.lbasis = self.rbasis
+                self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
+                                              shape=(self.X.shape[0], self.X.shape[0]))
+                np.set_printoptions(precision=3)
+                logg.info('use stored data graph with `n_neighbors = {}` and '
+                          'spectrum\n    {}'
+                          .format(self.k,
+                                  str(self.evals).replace('\n', '\n    ')))
+        # recompute the graph
         else:
-            X = adata_or_X
+            self.k = k if k is not None else 30
+            logg.info('compute data graph with `n_neighbors={}`'
+                      .format(self.k))
+            self.evals = None
+            self.rbasis = None
+            self.lbasis = None
+            self.X_diffmap = None
+            self.Dsq = None
+            self.knn = knn
+            self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+            self.n_pcs = n_pcs
+            self.n_dcs = n_dcs
+            self.flavor = flavor  # this is to experiment around
+            self.iroot = None
+            self.X = adata.X  # might be overwritten with X_pca below
+            self.Dchosen = None
+            self.M = None
+            self.init_iroot_and_X_from_PCA(adata, recompute_pca, n_pcs)
+            if False:  # TODO
+                # in case we already computed distance relations
+                if not recompute_distances and 'distance' in adata.add:
+                    n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
+                    if (knn and issparse(adata.add['distance'])
+                        and n_neighbors == self.k):
+                        logg.info('    using stored distances with `n_neighbors={}`'
+                                  .format(self.k))
+                        self.Dsq = adata.add['distance']
+
+    def init_iroot_and_X_from_PCA(self, adata, recompute_pca, n_pcs):
         # retrieve xroot
         xroot = None
         if 'xroot' in adata.add: xroot = adata.add['xroot']
@@ -179,60 +224,29 @@ class DataGraph(object):
                           .format(adata.add['iroot'], adata.n_smps))
             else:
                 self.iroot = adata.add['iroot']
-        # use the fulll data matrix X
-        if (self.n_pcs == 0  # use the full X as n_pcs == 0
-            or X.shape[1] <= self.n_pcs):
-            self.X = X
-            logg.m('    using data matrix X directly for building graph (no PCA)')
-            if xroot is not None: self.set_root(xroot)
-        # use the precomupted X_pca
-        elif (isadata
-              and not recompute_pca
-              and 'X_pca' in adata.smp
-              and adata.smp['X_pca'].shape[1] >= self.n_pcs):
-            logg.info('    using X_pca for building graph')
-            if xroot is not None and xroot.size == adata.X.shape[1]:
-                self.X = adata.X
-                self.set_root(xroot)
+        # see whether we can set self.iroot using the full data matrix
+        if xroot is not None and xroot.size == self.X.shape[1]:
+            self.set_root(xroot)
+        # use the fulll data matrix X, nothing to be done
+        if self.n_pcs == 0 or self.X.shape[1] <= self.n_pcs:
+            logg.info('    using data matrix X directly for building graph (no PCA)')
+        # use X_pca
+        else:
+            # use a precomputed X_pca
+            if (not recompute_pca
+                and 'X_pca' in adata.smp
+                and adata.smp['X_pca'].shape[1] >= self.n_pcs):
+                logg.info('    using "X_pca" for building graph')
+            # compute X_pca
+            else:
+                logg.info('    compute "X_pca" for building graph')
+                from ..preprocessing import pca
+                pca(adata, n_comps=self.n_pcs)
+            # set the data matrix
             self.X = adata.smp['X_pca'][:, :n_pcs]
+            # see whether we can find xroot using X_pca
             if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
                 self.set_root(xroot[:n_pcs])
-        # compute X_pca
-        else:
-            self.X = X
-            if (isadata
-                and xroot is not None
-                and xroot.size == adata.X.shape[1]):
-                self.set_root(xroot)
-            logg.m('    compute `X_pca` for building graph')
-            from ..preprocessing import pca
-            pca(adata, n_comps=self.n_pcs)
-            self.X = adata.smp['X_pca']
-            if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
-                self.set_root(xroot)
-        self.Dchosen = None
-        self.Dsq = adata.add['distance'] if knn and 'distance' in adata.add else None
-        # use diffmap from previous calculation
-        if (isadata and 'X_diffmap' in adata.smp and not recompute_diffmap
-            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
-                self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
-                self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
-                np.set_printoptions(precision=3)
-                logg.info('    using stored "X_diffmap" with spectrum\n    {}'
-                          .format(str(self.evals).replace('\n', '\n    ')))
-                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
-                                    adata.smp['X_diffmap'][:, :n_dcs-1]]
-                self.lbasis = self.rbasis
-                if knn: self.Ktilde = adata.add['Ktilde']
-                self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                              shape=(self.X.shape[0], self.X.shape[0]))
-        else:
-            self.evals = None
-            self.rbasis = None
-            self.lbasis = None
-            self.Dsq = None
-        # further attributes that might be written during the computation
-        self.M = None
 
     def update_diffmap(self, n_comps=None):
         """Diffusion Map as of Coifman et al. (2005) and Haghverdi et al. (2016).
@@ -241,7 +255,8 @@ class DataGraph(object):
             self.n_dcs = n_comps
             logg.info('    updating number of DCs to', self.n_dcs)
         if self.evals is None or self.evals.size < self.n_dcs:
-            logg.info('computing Diffusion Map with', self.n_dcs, 'components', r=True)
+            logg.info('computing spectral decomposition ("diffmap") with',
+                      self.n_dcs, 'components', r=True)
             self.compute_transition_matrix()
             self.embed(n_evals=self.n_dcs)
             return True
@@ -272,7 +287,7 @@ class DataGraph(object):
         return ddmap
 
     def compute_distance_matrix(self):
-        logg.m('... computing distance matrix with n_neighbors={}'
+        logg.m('computing distance matrix with n_neighbors = {}'
                .format(self.k), v=4)
         Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
             X=self.X,
@@ -294,10 +309,9 @@ class DataGraph(object):
         neglect_selfloops : bool
             Discard selfloops.
 
-        See also
-        --------
-        Also Haghverdi et al. (2016, 2015) and Coifman and Lafon (2006) and
-        Coifman et al. (2005).
+        References
+        ----------
+        Haghverdi et al. (2016), Coifman and Lafon (2006), Coifman et al. (2005).
         """
         if self.Dsq is None or recompute_distance:
             Dsq, indices, distances_sq = self.compute_distance_matrix()
@@ -317,7 +331,8 @@ class DataGraph(object):
             # zero - in its sorted position
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
-        logg.m('determined k =', self.k, 'nearest neighbors of each point', t=True, v=4)
+        logg.m('determined n_neighbors =',
+               self.k, 'nearest neighbors of each point', t=True, v=4)
 
         if self.flavor == 'unweighted':
             if not self.knn:
@@ -364,10 +379,6 @@ class DataGraph(object):
                 logg.m('    note that now, we set the diagonal of the weight matrix to one!')
             W = W.tocsr()
         logg.m('computed W (weight matrix) with "knn" =', self.knn, t=True, v=4)
-
-        # if sp.sparse.issparse(W): W = W.toarray()
-        # print(W)
-        # quit()
 
         if False:
             pl.matshow(W)
@@ -422,13 +433,13 @@ class DataGraph(object):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
                 self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
-        logg.m('    computed Ktilde (normalized anistropic kernel)', v=4)
+        logg.m('computed Ktilde (normalized anistropic kernel)', v=4)
 
     def compute_L_matrix(self):
         """Graph Laplacian for K.
         """
         self.L = np.diag(self.z) - self.K
-        sett.mt(0, 'compute graph Laplacian')
+        logg.info('compute graph Laplacian')
 
     def embed(self, matrix=None, n_evals=15, sym=None, sort='decrease'):
         """Compute eigen decomposition of matrix.

@@ -29,7 +29,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 
 def identify_categories(adata, prediction, reference,
                         normalization='prediction',
-                        threshold=0.01, max_n_names=None):
+                        threshold=0.01, max_n_names=2):
     """Identify predicted categories with reference.
 
     Parameters
@@ -39,9 +39,15 @@ def identify_categories(adata, prediction, reference,
         smp_key of adata
     reference : str
         smp_key of adata
+    maximum : int or None, optional (default: 2)
+        Control how many reference names you want to be associated with per
+        predicted name. Set to `None`, if you want all.
 
     Returns
     -------
+    Tuple of
+    asso_names : list of associated reference names (`max_n_names` for each
+        predicted name)
     asso_matrix : matrix where rows correspond to the predicted labels and
         columns to the reference labels, entries are proportional to degree of
         association

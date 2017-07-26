@@ -20,8 +20,8 @@ def aga(adata,
         n_pcs=50,
         n_dcs=10,
         resolution=1,
+        recompute_pca=False,        
         recompute_graph=False,
-        recompute_pca=False,
         recompute_louvain=False,
         attachedness_measure='random_walk',
         n_jobs=None,
@@ -118,7 +118,11 @@ def aga(adata,
     fresh_compute_louvain = False
     if ((node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys())
         or recompute_louvain):
-        louvain(adata, resolution=resolution, n_neighbors=n_neighbors,
+        louvain(adata,
+                resolution=resolution,
+                n_neighbors=n_neighbors,
+                recompute_pca=recompute_pca,
+                recompute_graph=recompute_graph,
                 n_pcs=n_pcs)
         fresh_compute_louvain = True
     clusters = node_groups
@@ -130,8 +134,10 @@ def aga(adata,
               n_dcs=n_dcs,
               min_group_size=20/resolution,
               n_jobs=n_jobs,
-              recompute_graph=recompute_graph,
-              recompute_pca=recompute_pca,
+              # we no not need to recompute the graph both in the louvain
+              # function and here
+              recompute_graph=recompute_graph and not node_groups == 'louvain',
+              recompute_pca=recompute_pca and not node_groups == 'louvain',
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
@@ -259,7 +265,7 @@ class AGA(data_graph.DataGraph):
     def __init__(self,
                  adata,
                  n_nodes=None,
-                 n_neighbors=30,
+                 n_neighbors=None,
                  n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
@@ -275,7 +281,7 @@ class AGA(data_graph.DataGraph):
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
-                                  recompute_diffmap=recompute_graph)
+                                  recompute_graph=recompute_graph)
         self.n_neighbors = n_neighbors
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes

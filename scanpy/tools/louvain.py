@@ -7,7 +7,7 @@ Uses the pip packages "louvain" and "igraph".
 import numpy as np
 from .. import utils
 from .. import logging as logg
-from .. import data_structs
+from ..data_structs import DataGraph
 
 def louvain(adata,
             n_neighbors=30,
@@ -15,6 +15,7 @@ def louvain(adata,
             resolution=None,
             flavor='vtraag',
             directed=True,
+            recompute_pca=False,
             recompute_graph=False,
             n_jobs=None,
             copy=False):
@@ -44,22 +45,27 @@ def louvain(adata,
     """
     logg.m('run Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
-    # TODO: it makes not much of a difference, but we should keep this here
-    # and make it an option at some point
-    # if 'distance' not in adata.add or recompute_graph:
-    #     graph = data_structs.DataGraph(adata,
-    #                                    k=n_neighbors,
-    #                                    n_pcs=n_pcs,
-    #                                    n_jobs=n_jobs)
-    #     graph.compute_distance_matrix()
-    #     adata.add['distance'] = graph.Dsq
     if 'Ktilde' not in adata.add or recompute_graph:
-        graph = data_structs.DataGraph(adata,
-                                       k=n_neighbors,
-                                       n_pcs=n_pcs,
-                                       n_jobs=n_jobs)
-        graph.compute_transition_matrix()
+        graph = DataGraph(adata,
+                          k=n_neighbors,
+                          n_pcs=n_pcs,
+                          recompute_pca=recompute_pca,
+                          recompute_graph=recompute_graph,
+                          n_jobs=n_jobs)
+        # compute diffmap for later use although it's not needed here
+        # it does not cost much
+        graph.update_diffmap()
+        adata.add['distance'] = graph.Dsq
         adata.add['Ktilde'] = graph.Ktilde
+        adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
+        adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
+        adata.add['diffmap_evals'] = graph.evals[1:]
+    else:
+        # do not use the undirected kernel Ktilde here, but the
+        # sparse distance matrix
+        n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
+        logg.info('    using precomputed graph with n_neighbors={}'
+                  .format(n_neighbors))
     adjacency = adata.add['Ktilde']
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
@@ -86,7 +92,7 @@ def louvain(adata,
                           'either get the latest (development) version from '
                           'https://github.com/vtraag/louvain-igraph or use the option '
                           '`flavor=igraph` in sc.tl.louvain(). '
-                          'The latter does not a provide `resolution` parameter, though.')
+                          'The latter does not provide a `resolution` parameter, though.')
                 part = louvain.find_partition(g, method='RBConfiguration',
                                               resolution_parameter=resolution)
         elif flavor == 'igraph':

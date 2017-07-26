@@ -16,7 +16,8 @@ from .. import settings as sett
 from .. import logging as logg
 
 
-def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False):
+def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
+         use_fast_tsne=True, n_jobs=None, copy=False):
     """tSNE
 
     Parameters
@@ -36,6 +37,14 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
         is quite insensitive to this parameter.
+    learning_rate : float, optional (default: 1000)
+        The learning rate can be a critical parameter. It should be
+        between 100 and 1000. If the cost function increases during initial
+        optimization, the early exaggeration factor or the learning rate
+        might be too high. If the cost function gets stuck in a bad local
+        minimum increasing the learning rate helps sometimes.
+    use_fast_tsne : bool, optional (default: True)
+        Use the MulticoreTSNE package by D. Ulyanov if available.
     n_jobs : int or None (default: None)
         Use the multicore implementation, if it is installed. Defaults to
         sett.n_jobs.
@@ -45,52 +54,57 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
     Returns or updates adata depending on `copy` with
         "X_tsne", tSNE coordinates of data (adata.smp)
 
-    Reference
-    ---------
+    References
+    ----------
     L.J.P. van der Maaten and G.E. Hinton.
     Visualizing High-Dimensional Data Using t-SNE.
     Journal of Machine Learning Research 9(Nov):2579-2605, 2008.
+
+    D. Ulyanov
+    Multicore-TSNE
+    GitHub (2017)
     """
-    logg.m('compute tSNE', r=True)
+    logg.info('compute tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
     if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
         X = adata.smp['X_pca'][:, :n_pcs]
-        logg.m('    using X_pca for tSNE')
-        logg.m('    using', n_pcs, 'principal components')
+        logg.info('    using X_pca for tSNE')
+        logg.info('    using', n_pcs, 'principal components')
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            logg.m('    preprocess using PCA with', n_pcs, 'PCs')
-            logg.m('avoid this by setting n_pcs = 0', v='hint')
+            logg.info('    preprocess using PCA with', n_pcs, 'PCs')
+            logg.info('avoid this by setting n_pcs = 0', v='hint')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.smp['X_pca'] = X
-            logg.m('    using', n_pcs, 'principal components')
+            logg.info('    using', n_pcs, 'principal components')
         else:
             X = adata.X
-            logg.m('    using data matrix X directly (no PCA)')
+            logg.info('    using data matrix X directly (no PCA)')
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': None if random_state == -1 else random_state,
                       'verbose': max(0, sett.verbosity-3),
-                      'learning_rate': 200,
                       'early_exaggeration': 12,
-                      # 'method': 'exact'
                       }
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # deal with different tSNE implementations
     multicore_failed = False
-    if n_jobs > 1:
+    if n_jobs >= 1 and use_fast_tsne:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
+            params_sklearn['learning_rate'] = 200 if learning_rate is None else learning_rate
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.m('    using package MulticoreTSNE')
+            logg.info('    using package MulticoreTSNE')
             X_tsne = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             multicore_failed = True
-            logg.m('did not find package MulticoreTSNE: to speed up the computation, install it from\n'
-                   '    https://github.com/DmitryUlyanov/Multicore-TSNE', v='hint')
-    if n_jobs == 1 or multicore_failed:
+            logg.hint('did not find package MulticoreTSNE: to speed up the computation, install it from\n'
+                      '    https://github.com/DmitryUlyanov/Multicore-TSNE')
+    if multicore_failed:
         from sklearn.manifold import TSNE
+        # unfortunately, we cannot set a minimum number of iterations for barnes-hut
+        params_sklearn['learning_rate'] = 1000 if learning_rate is None else learning_rate
         tsne = TSNE(**params_sklearn)
         logg.warn('Consider installing the package MulticoreTSNE.\n'
                   '    https://github.com/DmitryUlyanov/Multicore-TSNE\n'
@@ -99,7 +113,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, n_jobs=None, copy=False
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = X_tsne
-    logg.m('    finished', t=True, end=' ')
-    logg.m('and added\n'
-           '    "X_tsne", tSNE coordinates (adata.smp)')
+    logg.info('    finished', t=True, end=' ')
+    logg.info('and added\n'
+              '    "X_tsne", tSNE coordinates (adata.smp)')
     return adata if copy else None

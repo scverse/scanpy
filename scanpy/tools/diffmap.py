@@ -63,14 +63,14 @@ def diffmap(adata, n_comps=10, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
     """
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
-                   n_dcs=n_comps, n_jobs=n_jobs, recompute_diffmap=True,
+                   n_dcs=n_comps, n_jobs=n_jobs, recompute_graph=True,
                    flavor=flavor)
     dmap.update_diffmap()
+    adata.add['distance'] = dmap.Dsq
+    adata.add['Ktilde'] = dmap.Ktilde
     adata.smp['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = dmap.evals[1:]
-    if knn: adata.add['distance'] = dmap.Dsq
-    if knn: adata.add['Ktilde'] = dmap.Ktilde
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "X_diffmap", the diffmap coordinates (adata.smp),\n'
