@@ -7,7 +7,8 @@ Uses the pip packages "louvain" and "igraph".
 import numpy as np
 from .. import utils
 from .. import logging as logg
-from ..data_structs import DataGraph
+from ..data_structs.data_graph import add_graph_to_adata
+
 
 def louvain(adata,
             n_neighbors=30,
@@ -43,28 +44,19 @@ def louvain(adata,
     - basic suggestion for single-cell: Levine et al., Cell 162, 184-197 (2015)
     - combination with "attachedness" matrix: Wolf et al., bioRxiv (2017)
     """
-    logg.m('run Louvain clustering', r=True)
+    logg.m('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
     if 'Ktilde' not in adata.add or recompute_graph:
-        graph = DataGraph(adata,
-                          k=n_neighbors,
-                          n_pcs=n_pcs,
-                          recompute_pca=recompute_pca,
-                          recompute_graph=recompute_graph,
-                          n_jobs=n_jobs)
-        # compute diffmap for later use although it's not needed here
-        # it does not cost much
-        graph.update_diffmap()
-        adata.add['distance'] = graph.Dsq
-        adata.add['Ktilde'] = graph.Ktilde
-        adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
-        adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
-        adata.add['diffmap_evals'] = graph.evals[1:]
+        add_graph_to_adata(
+            adata,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            recompute_pca=recompute_pca,
+            recompute_graph=recompute_graph,
+            n_jobs=n_jobs)
     else:
-        # do not use the undirected kernel Ktilde here, but the
-        # sparse distance matrix
         n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
-        logg.info('    using precomputed graph with n_neighbors={}'
+        logg.info('    using stored graph with n_neighbors = {}'
                   .format(n_neighbors))
     adjacency = adata.add['Ktilde']
     if flavor in {'vtraag', 'igraph'}:
@@ -83,11 +75,10 @@ def louvain(adata,
                                               resolution_parameter=resolution)
                 adata.add['louvain_quality'] = part.quality()
             except AttributeError:
-                logg.warn('Did not find louvain package >= 0.6 on your system, '
-                          'the result will therefore not be 100% reproducible, but '
-                          'is influenced by randomness in the community detection '
-                          'algorithm. Still you get very meaningful results!\n'
-                          'If you want 100% reproducible results, but 0.6 is not yet '
+                logg.warn('Did not find package louvain>=0.6, '
+                          'the clustering result will therefore not be 100% reproducible, '
+                          'but still meaningful! '
+                          'If you want 100% reproducible results, but louvain 0.6 is not yet '
                           'available via "pip install louvain", '
                           'either get the latest (development) version from '
                           'https://github.com/vtraag/louvain-igraph or use the option '

@@ -104,7 +104,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
     where "root_cell_name" is the name (a string) of the root cell.'''
-        logg.m(msg, v='hint')
+        logg.hint(msg)
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,

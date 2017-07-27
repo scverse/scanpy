@@ -108,12 +108,14 @@ def aga(adata,
         root_cell_was_passed = False
         logg.m('... no root cell found, no computation of pseudotime')
         msg = \
-    '''To enable computation of pseudotime, pass the expression "xroot" of a root cell.
-    Either add
+    '''To enable computation of pseudotime, pass the index or expression vector
+    of a root cell. Either add
+        adata.add['iroot'] = root_cell_index
+    or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
-    where `root_cell_index` is the integer index of the root cell, or
+    where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
-    where `root_cell_name` is the name (a string) of the root cell.'''
+    where "root_cell_name" is the name (a string) of the root cell.'''
         logg.hint(msg)
     fresh_compute_louvain = False
     if ((node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys())
@@ -127,6 +129,7 @@ def aga(adata,
         fresh_compute_louvain = True
     clusters = node_groups
     if node_groups == 'louvain': clusters = 'louvain_groups'
+    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
     aga = AGA(adata,
               clusters=clusters,
               n_neighbors=n_neighbors,
@@ -149,7 +152,6 @@ def aga(adata,
     adata.add['diffmap_evals'] = aga.evals[1:]
     adata.add['distance'] = aga.Dsq
     adata.add['Ktilde'] = aga.Ktilde
-    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
     if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example

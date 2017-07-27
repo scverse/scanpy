@@ -8,16 +8,21 @@ References
   transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016)
 """
 
+import numpy as np
+from .. import utils
+from ..data_structs.data_graph import add_graph_to_adata
+
 
 def draw_graph(adata,
                layout='fr',
+               root=None,
                n_neighbors=30,
                n_pcs=50,
-               root=None,
-               n_jobs=None,
                random_state=0,
+               recompute_pca=None,
                recompute_graph=False,
                adjacency=None,
+               n_jobs=None,
                copy=False):
     """Visualize data using standard graph drawing algorithms.
 
@@ -51,22 +56,21 @@ def draw_graph(adata,
     from .. import logging as logg
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
               r=True)
-    import numpy as np
-    from .. import data_structs
-    from .. import utils
     avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
     if 'Ktilde' not in adata.add or recompute_graph:
-        graph = data_structs.DataGraph(adata,
-                                       k=n_neighbors,
-                                       n_pcs=n_pcs,
-                                       n_jobs=n_jobs)
-        graph.compute_transition_matrix(recompute_distance=True)
-        adata.add['Ktilde'] = graph.Ktilde
-    elif n_neighbors is not None and not recompute_graph:
-        logg.warn('`n_neighbors={}` has no effect (set `recompute_graph=True` to enable it)'
+        add_graph_to_adata(
+            adata,
+            n_neighbors=n_neighbors,
+            n_pcs=n_pcs,
+            recompute_pca=recompute_pca,
+            recompute_graph=recompute_graph,
+            n_jobs=n_jobs)
+    else:
+        n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
+        logg.info('    using stored graph with n_neighbors = {}'
                   .format(n_neighbors))
     adjacency = adata.add['Ktilde']
     g = utils.get_igraph_from_adjacency(adjacency)

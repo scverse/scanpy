@@ -14,6 +14,27 @@ from .. import logging as logg
 from .. import utils
 
 
+def add_graph_to_adata(
+        adata,
+        n_neighbors=30,
+        n_pcs=50,
+        recompute_pca=None,
+        recompute_graph=False,
+        n_jobs=None):
+    graph = DataGraph(adata,
+                      k=n_neighbors,
+                      n_pcs=n_pcs,
+                      recompute_pca=recompute_pca,
+                      recompute_graph=recompute_graph,
+                      n_jobs=n_jobs)
+    graph.update_diffmap()
+    adata.add['distance'] = graph.Dsq
+    adata.add['Ktilde'] = graph.Ktilde
+    adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
+    adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
+    adata.add['diffmap_evals'] = graph.evals[1:]
+
+
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
     chunk_range = np.arange(Dsq.shape[0])[:, None]
@@ -159,7 +180,7 @@ class DataGraph():
             and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
                 self.n_pcs = n_pcs
                 self.n_dcs = n_dcs
-                self.iroot = None if 'iroot' not in adata.add else adata.add['iroot']
+                self.init_iroot_directly(adata)
                 self.X = adata.X  # this is a hack, PCA?
                 self.knn = issparse(adata.add['Ktilde'])
                 self.Ktilde = adata.add['Ktilde']
@@ -177,7 +198,7 @@ class DataGraph():
                 self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                               shape=(self.X.shape[0], self.X.shape[0]))
                 np.set_printoptions(precision=3)
-                logg.info('use stored data graph with `n_neighbors = {}` and '
+                logg.info('    using stored data graph with n_neighbors = {} and '
                           'spectrum\n    {}'
                           .format(self.k,
                                   str(self.evals).replace('\n', '\n    ')))
@@ -211,19 +232,24 @@ class DataGraph():
                                   .format(self.k))
                         self.Dsq = adata.add['distance']
 
+    def init_iroot_directly(self, adata):
+        if 'iroot' in adata.add:
+            if adata.add['iroot'] >= adata.n_smps:
+                logg.warn('Root cell index {} does not exist for {} samples. '
+                          'Is ignored.'
+                          .format(adata.add['iroot'], adata.n_smps))
+                self.iroot = None
+            else:
+                self.iroot = adata.add['iroot']
+            
+                        
     def init_iroot_and_X_from_PCA(self, adata, recompute_pca, n_pcs):
         # retrieve xroot
         xroot = None
         if 'xroot' in adata.add: xroot = adata.add['xroot']
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
         # set iroot directly
-        if 'iroot' in adata.add:
-            if adata.add['iroot'] >= adata.n_smps:
-                logg.warn('Root cell index {} does not exist for {} samples. '
-                          'Is ignored.'
-                          .format(adata.add['iroot'], adata.n_smps))
-            else:
-                self.iroot = adata.add['iroot']
+        self.init_iroot_directly(adata)
         # see whether we can set self.iroot using the full data matrix
         if xroot is not None and xroot.size == self.X.shape[1]:
             self.set_root(xroot)
