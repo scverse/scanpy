@@ -174,12 +174,19 @@ class DataGraph():
                  recompute_graph=None,
                  flavor='haghverdi16'):
         self.sym = True  # we do not allow asymetric cases
+        self.flavor = flavor  # this is to experiment around
+        self.n_pcs = n_pcs
+        self.n_dcs = n_dcs
         # use the graph in adata
         if (not recompute_graph
+            # make sure X_diffmap is there
             and 'X_diffmap' in adata.smp
-            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1):
-                self.n_pcs = n_pcs
-                self.n_dcs = n_dcs
+            # make sure enough DCs are there
+            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1
+            # make sure that it's sparse
+            and issparse(adata.add['Ktilde']) == knn
+            # make sure n_neighbors matches
+            and k == adata.add['distance'][0].nonzero()[0].size + 1):
                 self.init_iroot_directly(adata)
                 self.X = adata.X  # this is a hack, PCA?
                 self.knn = issparse(adata.add['Ktilde'])
@@ -188,7 +195,7 @@ class DataGraph():
                 if self.knn:
                     self.k = adata.add['distance'][0].nonzero()[0].size + 1
                 else:
-                    self.k = adata.X.shape[0]
+                    self.k = None  # currently do not store this, is unknown
                 # for output of spectrum
                 self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
                 self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
@@ -205,7 +212,7 @@ class DataGraph():
         # recompute the graph
         else:
             self.k = k if k is not None else 30
-            logg.info('compute data graph with `n_neighbors={}`'
+            logg.info('    computing data graph with n_neighbors = {} '
                       .format(self.k))
             self.evals = None
             self.rbasis = None
@@ -214,13 +221,8 @@ class DataGraph():
             self.Dsq = None
             self.knn = knn
             self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-            self.n_pcs = n_pcs
-            self.n_dcs = n_dcs
-            self.flavor = flavor  # this is to experiment around
-            self.iroot = None
             self.X = adata.X  # might be overwritten with X_pca below
             self.Dchosen = None
-            self.M = None
             self.init_iroot_and_X_from_PCA(adata, recompute_pca, n_pcs)
             if False:  # TODO
                 # in case we already computed distance relations
@@ -233,16 +235,15 @@ class DataGraph():
                         self.Dsq = adata.add['distance']
 
     def init_iroot_directly(self, adata):
+        self.iroot = None
         if 'iroot' in adata.add:
             if adata.add['iroot'] >= adata.n_smps:
                 logg.warn('Root cell index {} does not exist for {} samples. '
                           'Is ignored.'
                           .format(adata.add['iroot'], adata.n_smps))
-                self.iroot = None
             else:
                 self.iroot = adata.add['iroot']
-            
-                        
+
     def init_iroot_and_X_from_PCA(self, adata, recompute_pca, n_pcs):
         # retrieve xroot
         xroot = None
@@ -281,7 +282,7 @@ class DataGraph():
             self.n_dcs = n_comps
             logg.info('    updating number of DCs to', self.n_dcs)
         if self.evals is None or self.evals.size < self.n_dcs:
-            logg.info('computing spectral decomposition ("diffmap") with',
+            logg.info('    computing spectral decomposition ("diffmap") with',
                       self.n_dcs, 'components', r=True)
             self.compute_transition_matrix()
             self.embed(n_evals=self.n_dcs)

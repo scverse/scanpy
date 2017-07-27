@@ -64,7 +64,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
     Multicore-TSNE
     GitHub (2017)
     """
-    logg.info('compute tSNE', r=True)
+    logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
     if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
@@ -74,7 +74,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
             logg.info('    preprocess using PCA with', n_pcs, 'PCs')
-            logg.info('avoid this by setting n_pcs = 0', v='hint')
+            logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.smp['X_pca'] = X
             logg.info('    using', n_pcs, 'principal components')
@@ -95,7 +95,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
             from MulticoreTSNE import MulticoreTSNE as TSNE
             params_sklearn['learning_rate'] = 200 if learning_rate is None else learning_rate
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.info('    using package MulticoreTSNE')
+            logg.info('    using package MulticoreTSNE by D. Ulyanov')
             X_tsne = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             multicore_failed = True

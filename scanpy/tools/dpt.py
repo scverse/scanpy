@@ -107,6 +107,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         logg.hint(msg)
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
+    logg.m('perform Diffusion Pseudotime analysis', r=True)
     dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size, n_jobs=n_jobs,
               recompute_graph=recompute_graph, recompute_pca=recompute_pca,
@@ -118,8 +119,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     adata.add['diffmap_evals'] = dpt.evals[1:]
     if knn: adata.add['distance'] = dpt.Dsq
     if knn: adata.add['Ktilde'] = dpt.Ktilde
-    logg.m('perform Diffusion Pseudotime analysis', r=True)
-    if n_branchings > 1: logg.info('... this uses a hierarchical implementation')
+    if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
         dpt.set_pseudotime()  # pseudotimes are distances from root point
