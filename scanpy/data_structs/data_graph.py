@@ -21,7 +21,7 @@ def add_or_update_graph_in_adata(
         adata,
         n_neighbors=30,
         n_pcs=50,
-        n_dcs=None,
+        n_dcs=15,
         knn=None,
         recompute_pca=False,
         recompute_distances=False,
