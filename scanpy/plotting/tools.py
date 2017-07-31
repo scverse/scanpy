@@ -8,6 +8,7 @@ import numpy as np
 import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
+from matplotlib.figure import SubplotParams as sppars
 from matplotlib import rcParams
 
 from . import utils
@@ -48,7 +49,7 @@ def pca(adata, **params):
          Options for keyword argument 'loc'.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
@@ -185,7 +186,7 @@ def diffmap(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors cycle to use for categorical groups.
@@ -277,7 +278,7 @@ def draw_graph(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
@@ -355,7 +356,7 @@ def tsne(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
@@ -480,7 +481,7 @@ def aga_scatter(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
@@ -534,34 +535,40 @@ def aga_scatter(
     return ax
 
 
-def aga_attachedness(adata, type='scaled'):
+def aga_attachedness(
+        adata,
+        attachedness_type='scaled',
+        color_map=None,
+        show=None,
+        save=None):
     """Attachedness of aga groups.
     """
-    if type == 'scaled':
+    if attachedness_type == 'scaled':
         attachedness = adata.add['aga_attachedness']
-    elif type == 'distance':
+    elif attachedness_type == 'distance':
         attachedness = adata.add['aga_distances']
-    elif type == 'absolute':
+    elif attachedness_type == 'absolute':
         attachedness = adata.add['aga_attachedness_absolute']
     else:
-        raise ValueError('Unkown type {}.'.format(type))
+        raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
     adjacency = adata.add['aga_adjacency']
-    matrix(attachedness, show=False)
+    matrix(attachedness, color_map=color_map, show=False)
     for i in range(adjacency.shape[0]):
         neighbors = adjacency[i].nonzero()[1]
         pl.scatter([i for j in neighbors], neighbors, color='green')
     utils.savefig_or_show('aga_attachedness', show=show, save=save)
     # as a stripplot
-    # pl.figure()
-    # for i, ds in enumerate(attachedness):
-    #     ds = np.log1p(ds)
-    #     x = [i for j, d in enumerate(ds) if i != j]
-    #     y = [d for j, d in enumerate(ds) if i != j]
-    #     pl.scatter(x, y, color='gray')
-    #     neighbors = adjacency[i]
-    #     pl.scatter([i for j in neighbors],
-    #                ds[neighbors], color='green')
-    # pl.show()
+    if False:
+        pl.figure()
+        for i, ds in enumerate(attachedness):
+            ds = np.log1p(ds)
+            x = [i for j, d in enumerate(ds) if i != j]
+            y = [d for j, d in enumerate(ds) if i != j]
+            pl.scatter(x, y, color='gray')
+            neighbors = adjacency[i]
+            pl.scatter([i for j in neighbors],
+                       ds[neighbors], color='green')
+        pl.show()
 
 
 def aga_graph(
@@ -587,6 +594,9 @@ def aga_graph(
 
     Parameters
     ----------
+    attachedness_type : {'relative', 'absolute', 'full'}
+        For 'full', use the fully connected graph weighted with the
+        attachedness matrix.
     layout : {'simple', 'rt', 'rt_circular', 'circle', ...}
         Plotting layout. 'rt' stands for Reingold Tilford and uses
         the igraph layout function.
@@ -609,8 +619,6 @@ def aga_graph(
         raise ValueError('`colors` and `groups` lists need to have the same length.')
     if title is None or isinstance(title, str): title = [title for name in groups]
     if ax is None:
-        from matplotlib import rcParams
-        from matplotlib.figure import SubplotParams as sppars
         figure_width = rcParams['figure.figsize'][0] * len(colors)
         top = 0.93
         fig, axs = pl.subplots(ncols=len(colors),
@@ -660,7 +668,10 @@ def _aga_graph_single(
         attachedness_type=False,
         draw_edge_labels=False,
         force_labels_to_front=False):
-    from matplotlib import rcParams
+    avail_attachedness_types = {'relative', 'absolute', 'full'}
+    if attachedness_type not in avail_attachedness_types:
+        raise ValueError('Pass available `attachedness_type`, one of {}.'
+                         .format(avail_attachedness_types))
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
     if groups is None and 'aga_groups_names_original' in adata.add:
@@ -707,7 +718,7 @@ def _aga_graph_single(
             np.random.seed(0)
             pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
                    for n in pos.keys()}
-    else:
+    elif attachedness_type == 'full':
         from .. import utils as sc_utils
         if layout is None: layout = 'fr'
         g = sc_utils.get_igraph_from_adjacency(adata.add['aga_attachedness'])
@@ -819,7 +830,8 @@ def aga_path(
         adata,
         nodes=[0],
         keys=[0],
-        as_heatmap=False,
+        as_heatmap=True,
+        color_map=None,
         xlim=[None, None],
         n_avg=1,
         title=None,
@@ -887,7 +899,8 @@ def aga_path(
                 else:
                     x_tick_labels.append(label)
     if as_heatmap:
-        pl.imshow(np.array(X), aspect='auto', interpolation='nearest')
+        pl.imshow(np.array(X), aspect='auto', interpolation='nearest',
+                  cmap=color_map)
         pl.yticks(range(len(X)), keys, fontsize=ytick_fontsize)
         ax = pl.gca()
         ax.set_frame_on(False)
@@ -965,7 +978,7 @@ def dpt(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
@@ -1148,7 +1161,7 @@ def louvain(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
-    color_map : str (default: 'viridis')
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).

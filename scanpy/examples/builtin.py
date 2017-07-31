@@ -120,7 +120,7 @@ def krumsiek11():
                   'by running `sc.tl.sim("krumsiek11")`'
                   .format(filename))
     adata = sc.read(filename, first_column_names=True, cache=True)
-    adata.add['xroot'] = adata.X[0]
+    adata.add['iroot'] = 0
     return adata
 
 

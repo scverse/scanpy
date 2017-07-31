@@ -17,7 +17,7 @@ With Python 3.5 or 3.6 installed, get `releases on PyPI <https://pypi.python.org
 
   pip install scanpy
 
-To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directoryand type::
+To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory and type::
 
     pip install --editable .
 
@@ -39,7 +39,7 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
 .. _17-04-30: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
 
-.. _Guided Clustering tutorial: http://satijalab.org/seurat/pbmc-tutorial.html
+.. _Guided Clustering tutorial: http://satijalab.org/seurat/pbmc3k_tutorial.html
 .. _Seurat: http://satijalab.org/seurat
 .. _Cell Ranger: https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis
 .. _favorably discussed: https://doi.org/10.1101/110668

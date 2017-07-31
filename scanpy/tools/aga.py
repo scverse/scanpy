@@ -16,11 +16,12 @@ from ..plotting import utils as pl_utils
 def aga(adata,
         node_groups='louvain',
         n_nodes=None,
-        n_neighbors=None,
+        n_neighbors=30,
         n_pcs=50,
         n_dcs=10,
         resolution=1,
-        recompute_pca=False,        
+        recompute_pca=False,
+        recompute_distances=False,
         recompute_graph=False,
         recompute_louvain=False,
         attachedness_measure='random_walk',
@@ -103,10 +104,32 @@ def aga(adata,
             root node, if the latter was passed.
     """
     adata = adata.copy() if copy else adata
-    root_cell_was_passed = True
-    if 'xroot' not in adata.add and 'xroot' not in adata.var:
-        root_cell_was_passed = False
-        logg.m('... no root cell found, no computation of pseudotime')
+    fresh_compute_louvain = False
+    if (node_groups == 'louvain'
+        and ('louvain_groups' not in adata.smp_keys()
+             or recompute_louvain
+             or not data_graph.no_recompute_of_graph_necessary(
+            adata,
+            recompute_pca=recompute_pca,
+            recompute_distances=recompute_distances,
+            recompute_graph=recompute_graph,
+            n_neighbors=n_neighbors,
+            n_dcs=n_dcs))):
+        louvain(adata,
+                resolution=resolution,
+                n_neighbors=n_neighbors,
+                recompute_pca=recompute_pca,
+                recompute_graph=recompute_graph,
+                n_pcs=n_pcs,
+                n_dcs=n_dcs)
+        fresh_compute_louvain = True
+    clusters = node_groups
+    if node_groups == 'louvain': clusters = 'louvain_groups'
+    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
+    if ('iroot' not in adata.add
+        and 'xroot' not in adata.add
+        and 'xroot' not in adata.var):
+        logg.info('    no root cell found, no computation of pseudotime')
         msg = \
     '''To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
@@ -116,20 +139,7 @@ def aga(adata,
     where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
     where "root_cell_name" is the name (a string) of the root cell.'''
-        logg.hint(msg)
-    fresh_compute_louvain = False
-    if ((node_groups == 'louvain' and 'louvain_groups' not in adata.smp_keys())
-        or recompute_louvain):
-        louvain(adata,
-                resolution=resolution,
-                n_neighbors=n_neighbors,
-                recompute_pca=recompute_pca,
-                recompute_graph=recompute_graph,
-                n_pcs=n_pcs)
-        fresh_compute_louvain = True
-    clusters = node_groups
-    if node_groups == 'louvain': clusters = 'louvain_groups'
-    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
+        logg.hint(msg)    
     aga = AGA(adata,
               clusters=clusters,
               n_neighbors=n_neighbors,
@@ -137,16 +147,14 @@ def aga(adata,
               n_dcs=n_dcs,
               min_group_size=20/resolution,
               n_jobs=n_jobs,
-              # we no not need to recompute the graph both in the louvain
-              # function and here
-              recompute_graph=recompute_graph and not node_groups == 'louvain',
-              recompute_pca=recompute_pca and not node_groups == 'louvain',
+              # we do not need to recompute things both in the louvain
+              # call above and here
+              recompute_graph=recompute_graph and not fresh_compute_louvain,
+              recompute_distances=recompute_distances and not fresh_compute_louvain,
+              recompute_pca=recompute_pca and not fresh_compute_louvain,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    if not updated_diffmap and n_neighbors is not None and not recompute_graph:
-        logg.warn('`n_neighbors={}` has no effect (set `recompute_graph=True` to enable)'
-                  .format(n_neighbors))
     adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
     adata.add['diffmap_evals'] = aga.evals[1:]
@@ -197,7 +205,7 @@ def aga(adata,
     logg.info('and added\n'
               '    "aga_adjacency", adjacency matrix defining the abstracted graph (adata.add),\n'
               '    "aga_groups", groups corresponding to nodes of abstracted graph (adata.smp)'
-              + (',\n    "aga_pseudotime", pseudotime with respect to root cell (adata.smp)' if root_cell_was_passed else ''))
+              + (',\n    "aga_pseudotime", pseudotime with respect to root cell (adata.smp)' if aga.iroot is not None else ''))
     return adata if copy else None
 
 
@@ -267,22 +275,23 @@ class AGA(data_graph.DataGraph):
     def __init__(self,
                  adata,
                  n_nodes=None,
-                 n_neighbors=None,
+                 n_neighbors=30,
                  n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
-                 recompute_pca=None,
-                 recompute_graph=None,
+                 recompute_pca=False,
+                 recompute_distances=False,
+                 recompute_graph=False,
                  attachedness_measure='connectedness',
                  clusters=None,
                  n_jobs=1):
-        if 'Ktilde' not in adata.add: recompute_graph = True
         super(AGA, self).__init__(adata,
                                   k=n_neighbors,
                                   n_pcs=n_pcs,
                                   n_dcs=n_dcs,
                                   n_jobs=n_jobs,
                                   recompute_pca=recompute_pca,
+                                  recompute_distances=recompute_distances,
                                   recompute_graph=recompute_graph)
         self.n_neighbors = n_neighbors
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])

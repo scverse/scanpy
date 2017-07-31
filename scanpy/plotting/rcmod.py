@@ -64,3 +64,6 @@ def reset_rcparams():
     # axes grid
     rcParams['axes.grid'] = True
     rcParams['grid.color'] = '.8'
+
+    # color map
+    rcParams['image.cmap'] = 'Greys'  # seaborn 0.8.0 now has 'rocket'

@@ -1,5 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Standard graph drawing for the single-cell graph
+"""Graph drawing for the single-cell graph.
 
 References
 ----------
@@ -10,7 +10,7 @@ References
 
 import numpy as np
 from .. import utils
-from ..data_structs.data_graph import add_graph_to_adata
+from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
 def draw_graph(adata,
@@ -19,12 +19,15 @@ def draw_graph(adata,
                n_neighbors=30,
                n_pcs=50,
                random_state=0,
-               recompute_pca=None,
+               recompute_pca=False,
+               recompute_distances=False,
                recompute_graph=False,
                adjacency=None,
                n_jobs=None,
                copy=False):
-    """Visualize data using standard graph drawing algorithms.
+    """Visualize data using graph-drawing algorithms.
+
+    Sometimes a good alternative to tSNE, but runs considerably slower.
 
     Parameters
     ----------
@@ -60,18 +63,14 @@ def draw_graph(adata,
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
-    if 'Ktilde' not in adata.add or recompute_graph:
-        add_graph_to_adata(
-            adata,
-            n_neighbors=n_neighbors,
-            n_pcs=n_pcs,
-            recompute_pca=recompute_pca,
-            recompute_graph=recompute_graph,
-            n_jobs=n_jobs)
-    else:
-        n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
-        logg.info('    using stored graph with n_neighbors = {}'
-                  .format(n_neighbors))
+    add_or_update_graph_in_adata(
+        adata,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        recompute_pca=recompute_pca,
+        recompute_distances=recompute_distances,
+        recompute_graph=recompute_graph,
+        n_jobs=n_jobs)
     adjacency = adata.add['Ktilde']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:

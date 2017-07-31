@@ -95,7 +95,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
             from MulticoreTSNE import MulticoreTSNE as TSNE
             params_sklearn['learning_rate'] = 200 if learning_rate is None else learning_rate
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.info('    using package MulticoreTSNE by D. Ulyanov')
+            logg.info('    using the "MulticoreTSNE" package by Ulyanov (2017)')
             X_tsne = tsne.fit_transform(X.astype(np.float64))
         except ImportError:
             multicore_failed = True

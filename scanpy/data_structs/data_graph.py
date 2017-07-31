@@ -1,5 +1,8 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
 """Data Graph
+
+Represent a data matrix as a weighted graph of nearest neighbor relations
+(edges) among data points (nodes).
 """
 
 import numpy as np
@@ -14,17 +17,32 @@ from .. import logging as logg
 from .. import utils
 
 
-def add_graph_to_adata(
+def add_or_update_graph_in_adata(
         adata,
         n_neighbors=30,
         n_pcs=50,
-        recompute_pca=None,
+        n_dcs=None,
+        knn=None,
+        recompute_pca=False,
+        recompute_distances=False,
         recompute_graph=False,
         n_jobs=None):
+    if no_recompute_of_graph_necessary(
+            adata,
+            recompute_pca=recompute_pca,
+            recompute_distances=recompute_distances,
+            recompute_graph=recompute_graph,
+            n_neighbors=n_neighbors,
+            knn=knn,
+            n_dcs=n_dcs):
+        logg.info('    using stored data graph with n_neighbors = {}'
+                  .format(n_neighbors))
+        return None
     graph = DataGraph(adata,
                       k=n_neighbors,
                       n_pcs=n_pcs,
                       recompute_pca=recompute_pca,
+                      recompute_distances=recompute_distances,
                       recompute_graph=recompute_graph,
                       n_jobs=n_jobs)
     graph.update_diffmap()
@@ -33,7 +51,30 @@ def add_graph_to_adata(
     adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
     adata.add['diffmap_evals'] = graph.evals[1:]
+    
 
+def no_recompute_of_graph_necessary(
+        adata,
+        recompute_pca=False,
+        recompute_distances=False,
+        recompute_graph=False,
+        n_neighbors=None,
+        knn=None,
+        n_dcs=None):
+    return (not recompute_pca
+            and not recompute_distances
+            and not recompute_graph
+            # make sure X_diffmap is there
+            and 'X_diffmap' in adata.smp
+            # make sure enough DCs are there
+            and (adata.smp['X_diffmap'].shape[1] >= n_dcs-1
+                 if n_dcs is not None else True)
+            # make sure that it's sparse
+            and (issparse(adata.add['Ktilde']) == knn
+                 if knn is not None else True)
+            # make sure n_neighbors matches
+            and n_neighbors == adata.add['distance'][0].nonzero()[0].size + 1)
+    
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
@@ -159,7 +200,10 @@ class OnFlySymMatrix():
 
 
 class DataGraph():
-    """Represent data matrix as graph of neighborhood relations among data points.
+    """Data represented as a graph.
+
+    Represent a data matrix as a weighted graph of nearest neighbor relations
+    (edges) among data points (nodes).
     """
 
     def __init__(self,
@@ -169,46 +213,44 @@ class DataGraph():
                  n_jobs=None,
                  n_pcs=30,
                  n_dcs=10,
-                 recompute_pca=None,
+                 recompute_pca=False,
                  recompute_distances=False,
-                 recompute_graph=None,
+                 recompute_graph=False,
                  flavor='haghverdi16'):
         self.sym = True  # we do not allow asymetric cases
         self.flavor = flavor  # this is to experiment around
         self.n_pcs = n_pcs
         self.n_dcs = n_dcs
+        self.init_iroot_and_X(adata, recompute_pca, n_pcs)
         # use the graph in adata
-        if (not recompute_graph
-            # make sure X_diffmap is there
-            and 'X_diffmap' in adata.smp
-            # make sure enough DCs are there
-            and adata.smp['X_diffmap'].shape[1] >= n_dcs-1
-            # make sure that it's sparse
-            and issparse(adata.add['Ktilde']) == knn
-            # make sure n_neighbors matches
-            and k == adata.add['distance'][0].nonzero()[0].size + 1):
-                self.init_iroot_directly(adata)
-                self.X = adata.X  # this is a hack, PCA?
-                self.knn = issparse(adata.add['Ktilde'])
-                self.Ktilde = adata.add['Ktilde']
-                self.Dsq = adata.add['distance']
-                if self.knn:
-                    self.k = adata.add['distance'][0].nonzero()[0].size + 1
-                else:
-                    self.k = None  # currently do not store this, is unknown
-                # for output of spectrum
-                self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
-                self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
-                self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
-                                    adata.smp['X_diffmap'][:, :n_dcs-1]]
-                self.lbasis = self.rbasis
-                self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                              shape=(self.X.shape[0], self.X.shape[0]))
-                np.set_printoptions(precision=3)
-                logg.info('    using stored data graph with n_neighbors = {} and '
-                          'spectrum\n    {}'
-                          .format(self.k,
-                                  str(self.evals).replace('\n', '\n    ')))
+        if no_recompute_of_graph_necessary(
+                adata,
+                recompute_pca=recompute_pca,
+                recompute_distances=recompute_distances,
+                recompute_graph=recompute_graph,
+                n_neighbors=k,
+                knn=knn,
+                n_dcs=n_dcs):
+            self.knn = issparse(adata.add['Ktilde'])
+            self.Ktilde = adata.add['Ktilde']
+            self.Dsq = adata.add['distance']
+            if self.knn:
+                self.k = adata.add['distance'][0].nonzero()[0].size + 1
+            else:
+                self.k = None  # currently do not store this, is unknown
+            # for output of spectrum
+            self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
+            self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
+            self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
+                                adata.smp['X_diffmap'][:, :n_dcs-1]]
+            self.lbasis = self.rbasis
+            self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
+                                          shape=(self.X.shape[0], self.X.shape[0]))
+            np.set_printoptions(precision=3)
+            logg.info('    using stored data graph with n_neighbors = {} and '
+                      'spectrum\n    {}'
+                      .format(self.k,
+                              str(self.evals).replace('\n', '\n    ')))
         # recompute the graph
         else:
             self.k = k if k is not None else 30
@@ -221,9 +263,8 @@ class DataGraph():
             self.Dsq = None
             self.knn = knn
             self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-            self.X = adata.X  # might be overwritten with X_pca below
             self.Dchosen = None
-            self.init_iroot_and_X_from_PCA(adata, recompute_pca, n_pcs)
+            self.init_iroot_and_X(adata, recompute_pca, n_pcs)
             if False:  # TODO
                 # in case we already computed distance relations
                 if not recompute_distances and 'distance' in adata.add:
@@ -244,7 +285,8 @@ class DataGraph():
             else:
                 self.iroot = adata.add['iroot']
 
-    def init_iroot_and_X_from_PCA(self, adata, recompute_pca, n_pcs):
+    def init_iroot_and_X(self, adata, recompute_pca, n_pcs):
+        self.X = adata.X  # might be overwritten with X_pca in the next line
         # retrieve xroot
         xroot = None
         if 'xroot' in adata.add: xroot = adata.add['xroot']
@@ -753,10 +795,8 @@ class DataGraph():
             if dsq < dsqroot:
                 dsqroot = dsq
                 iroot = i
-                if np.sqrt(dsqroot) < 1e-10:
-                    sett.m(2, 'root found at machine prec')
-                    break
-        logg.m('    setting root index to', iroot, v=4)
+                if np.sqrt(dsqroot) < 1e-10: break
+        logg.m('setting root index to', iroot, v=4)
         if self.iroot is not None and iroot != self.iroot:
             logg.warn('Changing index of iroot from {} to {}.'.format(self.iroot, iroot))
         self.iroot = iroot

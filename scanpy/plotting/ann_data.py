@@ -196,7 +196,7 @@ def scatter(
                        colorbars=colorbars,
                        right_margin=right_margin,
                        sizes=[size for c in color_keys],
-                       color_map='viridis' if color_map is None else color_map,
+                       color_map=color_map,
                        show_ticks=show_ticks,
                        ax=ax)
 

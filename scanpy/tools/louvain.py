@@ -1,32 +1,31 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Cluster using Louvain community detection algorithm
+"""Cluster cells using Louvain community detection algorithm.
 
-Uses the pip packages "louvain" and "igraph".
+Uses the pip package "louvain" by V. Traag.
 """
 
 import numpy as np
 from .. import utils
 from .. import logging as logg
-from ..data_structs.data_graph import add_graph_to_adata
+from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
 def louvain(adata,
             n_neighbors=30,
-            n_pcs=50,
             resolution=None,
+            n_pcs=50,
             flavor='vtraag',
             directed=True,
             recompute_pca=False,
+            recompute_distances=False,
             recompute_graph=False,
+            n_dcs=None,
             n_jobs=None,
             copy=False):
     """Cluster cells using Louvain Community detection.
 
     The basic method has been suggested for single-cell transcriptomics by
     Levine et al., Cell 162, 184-197 (2015).
-
-    Wolf et al. (2017) suggested to compute, in addition, an "attachedness"
-    matrix.
 
     Parameters
     ----------
@@ -44,32 +43,30 @@ def louvain(adata,
     - basic suggestion for single-cell: Levine et al., Cell 162, 184-197 (2015)
     - combination with "attachedness" matrix: Wolf et al., bioRxiv (2017)
     """
-    logg.m('running Louvain clustering', r=True)
+    logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
-    if 'Ktilde' not in adata.add or recompute_graph:
-        add_graph_to_adata(
-            adata,
-            n_neighbors=n_neighbors,
-            n_pcs=n_pcs,
-            recompute_pca=recompute_pca,
-            recompute_graph=recompute_graph,
-            n_jobs=n_jobs)
-    else:
-        n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
-        logg.info('    using stored graph with n_neighbors = {}'
-                  .format(n_neighbors))
+    add_or_update_graph_in_adata(
+        adata,
+        n_neighbors=n_neighbors,
+        n_pcs=n_pcs,
+        recompute_pca=recompute_pca,
+        recompute_distances=recompute_distances,
+        recompute_graph=recompute_graph,
+        n_dcs=n_dcs,
+        n_jobs=n_jobs)
     adjacency = adata.add['Ktilde']
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
-        if not directed: logg.info('    using the undirected graph')
+        if not directed: logg.m('    using the undirected graph', v=4)
         g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if flavor == 'vtraag':
             import louvain
             if resolution is None: resolution = 1
             try:
+                logg.info('    using the "louvain" package of Traag (2017)')
                 louvain.set_rng_seed(0)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)

@@ -19,16 +19,16 @@ from . import palettes
 # -------------------------------------------------------------------------------
 
 
-def matrix(matrix, xlabels=None, ylabels=None, cshrink=0.5,
-           cmap='Greys', show=None, save=None, ax=None):
+def matrix(matrix, xlabels=None, ylabels=None, colorbar_shrink=0.5,
+           color_map=None, show=None, save=None, ax=None):
     """Plot a matrix."""
     if ax is None: ax = pl.gca()
-    ax.imshow(matrix, cmap=cmap)
+    img = ax.imshow(matrix, cmap=color_map)
     if xlabels is not None:
         ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
     if ylabels is not None:
         ax.set_yticks(range(len(ylabels)), ylabels)
-    ax.colorbar(shrink=cshrink)
+    pl.colorbar(img, shrink=colorbar_shrink, ax=ax)  # need a figure instance for colorbar
     savefig_or_show('matrix', show=show, save=save)
 
 
