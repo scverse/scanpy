@@ -121,7 +121,7 @@ def pca_scatter(
 
 def pca_loadings(adata, components=None, show=None, save=None):
     """Rank genes according to contributions to PCs.
-    
+
     Parameters
     ----------
     show : bool, optional (default: None)
@@ -611,11 +611,12 @@ def aga_graph(
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
-    if groups is None or isinstance(groups, dict): groups = [groups]
+    if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(groups, list) and isinstance(groups[0], str): groups = [groups]
+    if groups is None or isinstance(groups, dict) or isinstance(groups, str): groups = [groups]
     if len(colors) != len(groups):
+        print(colors, groups)
         raise ValueError('`colors` and `groups` lists need to have the same length.')
     if title is None or isinstance(title, str): title = [title for name in groups]
     if ax is None:
@@ -1121,7 +1122,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
                        yticks=[0, 1],
                        color_map=color_map)
     utils.savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
-    
+
 
 def louvain(
         adata,
