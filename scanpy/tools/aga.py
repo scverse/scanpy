@@ -139,7 +139,7 @@ def aga(adata,
     where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
     where "root_cell_name" is the name (a string) of the root cell.'''
-        logg.hint(msg)    
+        logg.hint(msg)
     aga = AGA(adata,
               clusters=clusters,
               n_neighbors=n_neighbors,

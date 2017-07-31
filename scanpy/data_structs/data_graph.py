@@ -27,31 +27,23 @@ def add_or_update_graph_in_adata(
         recompute_distances=False,
         recompute_graph=False,
         n_jobs=None):
-    if no_recompute_of_graph_necessary(
-            adata,
-            recompute_pca=recompute_pca,
-            recompute_distances=recompute_distances,
-            recompute_graph=recompute_graph,
-            n_neighbors=n_neighbors,
-            knn=knn,
-            n_dcs=n_dcs):
-        logg.info('    using stored data graph with n_neighbors = {}'
-                  .format(n_neighbors))
-        return None
     graph = DataGraph(adata,
                       k=n_neighbors,
                       n_pcs=n_pcs,
+                      n_dcs=n_dcs,
                       recompute_pca=recompute_pca,
                       recompute_distances=recompute_distances,
                       recompute_graph=recompute_graph,
                       n_jobs=n_jobs)
-    graph.update_diffmap()
-    adata.add['distance'] = graph.Dsq
-    adata.add['Ktilde'] = graph.Ktilde
-    adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
-    adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
-    adata.add['diffmap_evals'] = graph.evals[1:]
-    
+    if graph.fresh_compute:
+        graph.update_diffmap()
+        adata.add['distance'] = graph.Dsq
+        adata.add['Ktilde'] = graph.Ktilde
+        adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
+        adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
+        adata.add['diffmap_evals'] = graph.evals[1:]
+    return graph
+
 
 def no_recompute_of_graph_necessary(
         adata,
@@ -74,7 +66,7 @@ def no_recompute_of_graph_necessary(
                  if knn is not None else True)
             # make sure n_neighbors matches
             and n_neighbors == adata.add['distance'][0].nonzero()[0].size + 1)
-    
+
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
@@ -231,6 +223,7 @@ class DataGraph():
                 n_neighbors=k,
                 knn=knn,
                 n_dcs=n_dcs):
+            self.fresh_compute = False
             self.knn = issparse(adata.add['Ktilde'])
             self.Ktilde = adata.add['Ktilde']
             self.Dsq = adata.add['distance']
@@ -246,13 +239,14 @@ class DataGraph():
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
-            np.set_printoptions(precision=3)
+            np.set_printoptions(precision=10)
             logg.info('    using stored data graph with n_neighbors = {} and '
                       'spectrum\n    {}'
                       .format(self.k,
                               str(self.evals).replace('\n', '\n    ')))
         # recompute the graph
         else:
+            self.fresh_compute = True
             self.k = k if k is not None else 30
             logg.info('    computing data graph with n_neighbors = {} '
                       .format(self.k))
@@ -538,7 +532,7 @@ class DataGraph():
              these are simply the components of the right eigenvectors
              and can directly be used for plotting.
         """
-        np.set_printoptions(precision=3)
+        np.set_printoptions(precision=10)
         if sym is None: sym = self.sym
         self.rbasisBool = True
         if matrix is None: matrix = self.Ktilde
@@ -559,7 +553,7 @@ class DataGraph():
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
         if logg.verbosity_greater_or_equal_than(4):
-            logg.m('    computed eigenvalues', t=True, v=4)
+            logg.m('computed eigenvalues', t=True, v=4)
         else:
             logg.info('    eigenvalues of transition matrix')
         logg.info('   ', str(evals).replace('\n', '\n    '))
@@ -682,13 +676,13 @@ class DataGraph():
 
     def get_Ddiff_row(self, i):
         if not self.sym:
-            raise ValueError('The computation needs to be adjusted if sym=False.')
+            raise ValueError('Not bug-free implemented! '
+                             'Computation needs to be adjusted if sym=False.')
         row = sum([(self.evals[l]/(1-self.evals[l])
                      * (self.rbasis[i, l] - self.lbasis[:, l]))**2
                     for l in range(0, self.evals.size) if self.evals[l] < 1])
         row += sum([(self.rbasis[i, l] - self.lbasis[:, l])**2
                     for l in range(0, self.evals.size) if self.evals[l] == 1.0])
-        # row += (self.rbasis[i, 0] - self.lbasis[:, 0])**2
         return np.sqrt(row)
 
     def get_Ddiff_row_deprecated(self, i):
