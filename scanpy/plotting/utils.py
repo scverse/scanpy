@@ -101,7 +101,7 @@ def timeseries_subplot(X,
         pl.legend(frameon=False)
 
 
-def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map='viridis'):
+def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
     """Plot timeseries as heatmap.
 
     Parameters

@@ -13,6 +13,10 @@ from ..data_structs import data_graph
 from .louvain import louvain
 from ..plotting import utils as pl_utils
 
+
+MINIMAL_REALIZED_ATTACHEDNESS = 0.05
+
+
 def aga(adata,
         node_groups='louvain',
         n_nodes=None,
@@ -158,8 +162,8 @@ def aga(adata,
     adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
     adata.add['diffmap_evals'] = aga.evals[1:]
-    adata.add['distance'] = aga.Dsq
-    adata.add['Ktilde'] = aga.Ktilde
+    adata.add['data_graph_distance_local'] = aga.Dsq
+    adata.add['data_graph_norm_weights'] = aga.Ktilde
     if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
@@ -427,7 +431,7 @@ class AGA(data_graph.DataGraph):
             norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
             self.segs_attachedness_absolute /= norm
 
-        minimal_realized_attachedness = 0.1
+        minimal_realized_attachedness = MINIMAL_REALIZED_ATTACHEDNESS
         self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         self.segs_adjacency_absolute = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         for i, neighbors in enumerate(segs_adjacency):

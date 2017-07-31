@@ -235,7 +235,7 @@ def diffmap(
         writekey = 'diffmap'
         if isinstance(components, list): components = ','.join([str(comp) for comp in components])
         writekey += '_components' + components.replace(',', '')
-        if sett.savefigs or (save is not None): savefig(writekey)  # TODO: cleaner
+        if sett.savefigs or (save is not None): utils.savefig(writekey)  # TODO: cleaner
     show = sett.autoshow if show is None else show
     if not sett.savefigs and show: pl.show()
     return axs
@@ -422,6 +422,7 @@ def aga(
         title=None,
         left_margin=0.05,
         layout_graph=None,
+        minimal_realized_attachedness=None,
         attachedness_type='relative',
         show=None,
         save=None):
@@ -442,9 +443,10 @@ def aga(
                 show=False)
     axs[1].set_frame_on(False)
     aga_graph(adata, root=root, fontsize=fontsize, ax=axs[1],
-             layout=layout_graph,
-             attachedness_type=attachedness_type,
-             show=False)
+              layout=layout_graph,
+              attachedness_type=attachedness_type,
+              minimal_realized_attachedness=minimal_realized_attachedness,
+              show=False)
     utils.savefig_or_show('aga', show=show, save=save)
 
 
@@ -586,6 +588,7 @@ def aga_graph(
         add_noise_to_node_positions=None,
         left_margin=0.01,
         attachedness_type='relative',
+        minimal_realized_attachedness=None,
         force_labels_to_front=False,
         show=None,
         save=None,
@@ -620,6 +623,8 @@ def aga_graph(
         raise ValueError('`colors` and `groups` lists need to have the same length.')
     if title is None or isinstance(title, str): title = [title for name in groups]
     if ax is None:
+        # 3.72 is the default figure_width obtained in utils.scatter_base
+        # for a single panel when rcParams['figure.figsize'][0] = 4
         figure_width = rcParams['figure.figsize'][0] * len(colors)
         top = 0.93
         fig, axs = pl.subplots(ncols=len(colors),
@@ -641,6 +646,7 @@ def aga_graph(
             node_size_power=node_size_power,
             edge_width=edge_width,
             attachedness_type=attachedness_type,
+            minimal_realized_attachedness=minimal_realized_attachedness,
             ext=ext,
             ax=axs[icolor],
             title=title[icolor],
@@ -666,6 +672,7 @@ def _aga_graph_single(
         ax=None,
         layout=None,
         add_noise_to_node_positions=None,
+        minimal_realized_attachedness=None,
         attachedness_type=False,
         draw_edge_labels=False,
         force_labels_to_front=False):
@@ -733,6 +740,8 @@ def _aga_graph_single(
         fig = pl.figure()
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
     # edge widths
+    from ..tools import aga
+    minimal_realized_attachedness = aga.MINIMAL_REALIZED_ATTACHEDNESS if minimal_realized_attachedness is None else minimal_realized_attachedness
     base_edge_width = edge_width * 1.5*rcParams['lines.linewidth']
     if 'aga_attachedness' in adata.add:
         if attachedness_type == 'relative':
@@ -747,7 +756,11 @@ def _aga_graph_single(
                 nx_g = nx.Graph(adata.add['aga_adjacency'])
             else:
                 nx_g = nx.Graph(adata.add['aga_adjacency_absolute'])
-            widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
+            if minimal_realized_attachedness == aga.MINIMAL_REALIZED_ATTACHEDNESS:
+                widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
+            else:
+                widths = [base_edge_width*(x[-1]['weight'] if x[-1]['weight'] != aga.MINIMAL_REALIZED_ATTACHEDNESS else minimal_realized_attachedness)
+                          for x in nx_g.edges(data=True)]
             nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
         else:
             nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
@@ -863,7 +876,7 @@ def aga_path(
         ret[n:] = ret[n:] - ret[:-n]
         return ret[n - 1:] / n
 
-    ax = pl.gca()
+    ax = pl.gca() if ax is None else ax
     from matplotlib import transforms
     trans = transforms.blended_transform_factory(
         ax.transData, ax.transAxes)
@@ -885,7 +898,7 @@ def aga_path(
             x = moving_average(x)
             if ikey == 0: x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
         if not as_heatmap:
-            pl.plot(x[xlim[0]:xlim[1]], label=key)
+            ax.plot(x[xlim[0]:xlim[1]], label=key)
         else:
             X.append(x)
         if ikey == 0:
@@ -900,12 +913,12 @@ def aga_path(
                 else:
                     x_tick_labels.append(label)
     if as_heatmap:
-        pl.imshow(np.array(X), aspect='auto', interpolation='nearest',
-                  cmap=color_map)
-        pl.yticks(range(len(X)), keys, fontsize=ytick_fontsize)
-        ax = pl.gca()
+        img = ax.imshow(np.array(X), aspect='auto', interpolation='nearest',
+                        cmap=color_map)
+        ax.set_yticks(range(len(X)))
+        ax.set_yticklabels(keys, fontsize=ytick_fontsize)
         ax.set_frame_on(False)
-        pl.colorbar()
+        pl.colorbar(img, ax=ax)
         left_margin = 0.2 if left_margin is None else left_margin
         pl.subplots_adjust(left=left_margin)
     else:
@@ -913,10 +926,11 @@ def aga_path(
         pl.legend(frameon=False, loc='center left',
                   bbox_to_anchor=(-left_margin, 0.5),
                   fontsize=legend_fontsize)
-    pl.xticks(x_tick_locs, x_tick_labels)
-    pl.xlabel(adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
-              and adata.add['aga_groups_original'] != 'louvain_groups')
-              else 'aga groups')
+    ax.set_xticks(x_tick_locs)
+    ax.set_xticklabels(x_tick_labels)
+    ax.set_xlabel(adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
+                  and adata.add['aga_groups_original'] != 'louvain_groups')
+                  else 'aga groups')
     if show_left_y_ticks:
         utils.pimp_axis(pl.gca().get_yaxis())
         pl.ylabel('as indicated on legend')

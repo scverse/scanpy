@@ -71,7 +71,7 @@ def draw_graph(adata,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
         n_jobs=n_jobs)
-    adjacency = adata.add['Ktilde']
+    adjacency = adata.add['data_graph_norm_weights']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)

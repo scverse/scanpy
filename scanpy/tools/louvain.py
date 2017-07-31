@@ -32,7 +32,12 @@ def louvain(adata,
     n_neighbors : int, optional (default: 30)
         Number of neighbors to use for construction of knn graph.
     resolution : float or None, optional
-        For the default flavor, you provide a resolution, which defaults to 1.0.
+        For the default flavor ('vtraag'), you can provide a resolution (higher
+        resolution means finding more and smaller clusters), which defaults to
+        1.0.
+    flavor : {'vtraag', 'igraph'}
+        Choose between to packages for computing the clustering. 'vtraag' is
+        much more powerful.
     copy : bool (default: False)
 
     References
@@ -49,12 +54,12 @@ def louvain(adata,
         adata,
         n_neighbors=n_neighbors,
         n_pcs=n_pcs,
+        n_dcs=n_dcs,
         recompute_pca=recompute_pca,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
-        n_dcs=n_dcs,
         n_jobs=n_jobs)
-    adjacency = adata.add['Ktilde']
+    adjacency = adata.add['data_graph_norm_weights']
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
@@ -90,7 +95,7 @@ def louvain(adata,
         # this is deprecated
         import networkx as nx
         import community
-        g = nx.Graph(adata.add['distance'])
+        g = nx.Graph(adata.add['data_graph_distance_local'])
         partition = community.best_partition(g)
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v

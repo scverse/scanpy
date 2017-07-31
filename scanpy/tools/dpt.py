@@ -117,8 +117,8 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
     adata.add['diffmap_evals'] = dpt.evals[1:]
-    if knn: adata.add['distance'] = dpt.Dsq
-    if knn: adata.add['Ktilde'] = dpt.Ktilde
+    adata.add['data_graph_distance_local'] = dpt.Dsq
+    adata.add['data_graph_norm_weights'] = dpt.Ktilde
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:

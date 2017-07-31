@@ -17,6 +17,9 @@ from .. import logging as logg
 from .. import utils
 
 
+N_DCS = 15  # default number of diffusion components
+
+
 def add_or_update_graph_in_adata(
         adata,
         n_neighbors=30,
@@ -37,8 +40,8 @@ def add_or_update_graph_in_adata(
                       n_jobs=n_jobs)
     if graph.fresh_compute:
         graph.update_diffmap()
-        adata.add['distance'] = graph.Dsq
-        adata.add['Ktilde'] = graph.Ktilde
+        adata.add['data_graph_distance_local'] = graph.Dsq
+        adata.add['data_graph_norm_weights'] = graph.Ktilde
         adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
         adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
         adata.add['diffmap_evals'] = graph.evals[1:]
@@ -62,10 +65,10 @@ def no_recompute_of_graph_necessary(
             and (adata.smp['X_diffmap'].shape[1] >= n_dcs-1
                  if n_dcs is not None else True)
             # make sure that it's sparse
-            and (issparse(adata.add['Ktilde']) == knn
+            and (issparse(adata.add['data_graph_norm_weights']) == knn
                  if knn is not None else True)
             # make sure n_neighbors matches
-            and n_neighbors == adata.add['distance'][0].nonzero()[0].size + 1)
+            and n_neighbors == adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1)
 
 
 def get_neighbors(X, Y, k):
@@ -204,7 +207,7 @@ class DataGraph():
                  knn=True,
                  n_jobs=None,
                  n_pcs=50,
-                 n_dcs=15,
+                 n_dcs=N_DCS,
                  recompute_pca=False,
                  recompute_distances=False,
                  recompute_graph=False,
@@ -212,7 +215,7 @@ class DataGraph():
         self.sym = True  # we do not allow asymetric cases
         self.flavor = flavor  # this is to experiment around
         self.n_pcs = n_pcs
-        self.n_dcs = n_dcs
+        self.n_dcs = n_dcs if n_dcs is not None else N_DCS
         self.init_iroot_and_X(adata, recompute_pca, n_pcs)
         # use the graph in adata
         if no_recompute_of_graph_necessary(
@@ -224,11 +227,11 @@ class DataGraph():
                 knn=knn,
                 n_dcs=n_dcs):
             self.fresh_compute = False
-            self.knn = issparse(adata.add['Ktilde'])
-            self.Ktilde = adata.add['Ktilde']
-            self.Dsq = adata.add['distance']
+            self.knn = issparse(adata.add['data_graph_norm_weights'])
+            self.Ktilde = adata.add['data_graph_norm_weights']
+            self.Dsq = adata.add['data_graph_distance_local']
             if self.knn:
-                self.k = adata.add['distance'][0].nonzero()[0].size + 1
+                self.k = adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1
             else:
                 self.k = None  # currently do not store this, is unknown
             # for output of spectrum
@@ -261,13 +264,13 @@ class DataGraph():
             self.init_iroot_and_X(adata, recompute_pca, n_pcs)
             if False:  # TODO
                 # in case we already computed distance relations
-                if not recompute_distances and 'distance' in adata.add:
-                    n_neighbors = adata.add['distance'][0].nonzero()[0].size + 1
-                    if (knn and issparse(adata.add['distance'])
+                if not recompute_distances and 'data_graph_distance_local' in adata.add:
+                    n_neighbors = adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1
+                    if (knn and issparse(adata.add['data_graph_distance_local'])
                         and n_neighbors == self.k):
                         logg.info('    using stored distances with `n_neighbors={}`'
                                   .format(self.k))
-                        self.Dsq = adata.add['distance']
+                        self.Dsq = adata.add['data_graph_distance_local']
 
     def init_iroot_directly(self, adata):
         self.iroot = None
