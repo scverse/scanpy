@@ -6,7 +6,7 @@ from enum import Enum
 
 import numpy as np
 from numpy import ma
-from numpy.lib.recfunctions import append_fields
+from numpy.lib.recfunctions import append_fields, rec_drop_fields
 import pandas as pd
 from scipy import sparse as sp
 from scipy.sparse.sputils import IndexMixin
@@ -38,9 +38,8 @@ def _key_belongs_to_which_key_multicol(key, keys_multicol):
 
 def _gen_keys_from_key_multicol(key_multicol, n_keys):
     """Generates single-column keys from multicolumn key."""
-    keys = [key_multicol
-            + ('{:0' + str(int(np.ceil(np.log10(n_keys+1)))) + '}').format(i+1)
-            + 'of' + str(n_keys) for i in range(n_keys)]
+    keys = [('{}{:03}of{:03}')
+            .format(key_multicol, i+1, n_keys) for i in range(n_keys)]
     return keys
 
 
@@ -167,8 +166,14 @@ class BoundStructArray(np.ndarray):
                     arr._keys += [arr._keys_multicol[imk]]
                     arr._keys_multicol_lookup[arr._keys_multicol[imk]] = [key]
                 else:
-                    arr._keys_multicol_lookup[arr._keys_multicol[imk]].append(
-                        key)
+                    arr._keys_multicol_lookup[arr._keys_multicol[imk]].append(key)
+
+        # check multicol keys
+        for key in arr._keys_multicol:
+            if (int(arr._keys_multicol_lookup[key][-1].split('of')[-1])
+                != len(arr._keys_multicol_lookup[key])):
+                logg.error('Different formats in {}. Expect weird behavior! '
+                           'Recompute {}!'.format(arr._keys_multicol_lookup[key], key))
 
         return arr
 
@@ -202,6 +207,16 @@ class BoundStructArray(np.ndarray):
     def columns(self):
         """Get keys of fields excluding the index (same as `keys()`)."""
         return self._keys
+
+    def delete_field(self, name):
+        """Delete field with name."""
+        if name not in self.dtype.names:
+            raise ValueError('Currently, can only delete single names from {}.'
+                             .format(self.dtype.names))
+        new_array = rec_drop_fields(self, name)
+        new = BoundStructArray(new_array, self.index_key, self._is_attr_of,
+                               keys_multicol=self._keys_multicol)
+        setattr(self._is_attr_of[0], self._is_attr_of[1], new)
 
     def copy(self):
         return BoundStructArray(self, self.index_key,
@@ -283,7 +298,8 @@ class BoundStructArray(np.ndarray):
             values = values.values
             if values.dtype.char == 'O' or 'int' in values.dtype.name:
                 values = values.astype(str)
-        
+
+        names_to_remove = []
         if isinstance(keys, str):
             # TODO: check that no-one accidentally overwrites the index?
             # quite unlikely though as self.index_key is not common
@@ -301,15 +317,14 @@ class BoundStructArray(np.ndarray):
                 if keys[0] not in self._keys_multicol:
                     self._keys_multicol += [key_multicol]
                     self._keys += [key_multicol]
-                    # generate single-column keys
-                    keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
-                    self._keys_multicol_lookup[key_multicol] = keys
-                elif len(self._keys_multicol_lookup[key_multicol]) == len(values[0]):
-                    keys = self._keys_multicol_lookup[key_multicol]
-                else:
-                    # regenerate single-column keys
-                    keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
-                    self._keys_multicol_lookup[key_multicol] = keys
+                # generate single-column keys
+                keys = _gen_keys_from_key_multicol(key_multicol, len(values[0]))
+                self._keys_multicol_lookup[key_multicol] = keys
+                # remove all fields from the array that are not among keys
+                keys_set = set(keys)
+                for name in self.dtype.names:
+                    if name.startswith(key_multicol) and name not in keys_set:
+                        names_to_remove.append(name)
                 values = np.array(values)
                 if values.shape[0] == self.shape[0]:
                     values = values.T
@@ -375,6 +390,8 @@ class BoundStructArray(np.ndarray):
                                  .format(values.shape[1], len(self)))
             source = append_fields(self, absent, values[np.in1d(keys, absent)],
                                    usemask=False, asrecarray=True)
+            if names_to_remove:
+                source = rec_drop_fields(source, names_to_remove)
             new = BoundStructArray(source, self.index_key, self._is_attr_of,
                                    keys_multicol=self._keys_multicol)
             setattr(self._is_attr_of[0], self._is_attr_of[1], new)
