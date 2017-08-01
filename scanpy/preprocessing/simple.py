@@ -439,8 +439,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
         logg.info('... normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
-        adata.inplace_subset_smp(cell_subset)
         adata.smp['n_counts'] = counts_per_cell
+        adata.inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
         logg.info('    finished,', t=True, end=' ')

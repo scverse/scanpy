@@ -123,7 +123,7 @@ One usually calls::
 
     adata = sc.read(filename)
 
-to initialize an AnnData object, possibly adds further annotation using, e.g., `np.genfromtxt` or `pd.read_csv`::
+to initialize an AnnData object, possibly adds further annotation using, e.g., ``np.genfromtxt`` or ``pd.read_csv``::
 
     annotation = pd.read_csv(filename_annotation)
     adata.smp['cell_groups'] = annotation['cell_groups']  # categorical annotation of type str or int
