@@ -23,7 +23,7 @@ To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`
 
 You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
-Then go through the use cases compiled in scanpy_usage_, in particular, the recent additions
+Then go through the use cases compiled in scanpy_usage_, in particular, the following
 
 .. _scanpy_usage: https://github.com/theislab/scanpy_usage
 
@@ -49,7 +49,7 @@ Then go through the use cases compiled in scanpy_usage_, in particular, the rece
 Features
 --------
 
-Let us give an Overview_ of the toplevel user functions, followed by a few words on Scanpy's `Basic Features`_ and more `details <Visualization_>`__.
+Let us give an Overview_ of the toplevel user functions, followed by a few words on Scanpy's `Basic Features`_ and background information for the `Tools <Visualization_>`__. For detailed help on the functions, use Python's ``help``.
 
 Overview
 ~~~~~~~~
