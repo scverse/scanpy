@@ -17,6 +17,7 @@ from .. import logging as logg
 
 
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
+         recompute_pca=False,
          use_fast_tsne=True, n_jobs=None, copy=False):
     """tSNE
 
@@ -67,7 +68,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
-    if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs:
+    if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs and not recompute_pca:
         X = adata.smp['X_pca'][:, :n_pcs]
         logg.info('    using X_pca for tSNE')
         logg.info('    using', n_pcs, 'principal components')
@@ -106,7 +107,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
         tsne = TSNE(**params_sklearn)
         logg.info('    using sklearn.manifold.TSNE')
         logg.warn('Consider installing the package MulticoreTSNE '
-                  ' https://github.com/DmitryUlyanov/Multicore-TSNE.'
+                  ' https://github.com/DmitryUlyanov/Multicore-TSNE '
                   ' Even for `n_jobs=1` this speeds up the computation considerably and might yield better converged results.')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
