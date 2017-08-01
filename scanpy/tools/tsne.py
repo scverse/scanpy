@@ -17,8 +17,7 @@ from .. import logging as logg
 
 
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
-         recompute_pca=False,
-         use_fast_tsne=True, n_jobs=None, copy=False):
+         recompute_pca=False, use_fast_tsne=True, n_jobs=None, copy=False):
     """tSNE
 
     Parameters
@@ -90,7 +89,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
                       }
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # deal with different tSNE implementations
-    multicore_failed = False
+    multicore_failed = True
     if n_jobs >= 1 and use_fast_tsne:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
@@ -98,8 +97,9 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
             logg.info('    using the "MulticoreTSNE" package by Ulyanov (2017)')
             X_tsne = tsne.fit_transform(X.astype(np.float64))
+            multicore_failed = False
         except ImportError:
-            multicore_failed = True
+            pass
     if multicore_failed:
         from sklearn.manifold import TSNE
         # unfortunately, we cannot set a minimum number of iterations for barnes-hut
@@ -108,7 +108,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
         logg.info('    using sklearn.manifold.TSNE')
         logg.warn('Consider installing the package MulticoreTSNE '
                   ' https://github.com/DmitryUlyanov/Multicore-TSNE '
-                  ' Even for `n_jobs=1` this speeds up the computation considerably and might yield better converged results.')
+                  ' Even for `n_jobs=1` this speeds up the computation considerably and will yield better converged results.')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.smp['X_tsne'] = X_tsne
