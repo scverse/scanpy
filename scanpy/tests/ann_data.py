@@ -188,7 +188,7 @@ def test_multicol_single_key_setitem():
     adata = AnnData(np.array([[1, 2, 3], [4, 5, 6]]))
     # 'c' keeps the columns as should be
     adata.smp['c'] = np.array([[0, 1], [2, 3]])
-    assert adata.smp.dtype.names == (SMP_INDEX, 'c1of2', 'c2of2')
+    assert adata.smp.dtype.names == (SMP_INDEX, 'c001of002', 'c002of002')
     assert adata.smp.keys() == ['c']
     assert adata.smp['c'].tolist() == [[0, 1], [2, 3]]
 
@@ -198,7 +198,7 @@ def test_structdict_keys():
     adata.smp['foo'] = np.array([[0, 1], [2, 3]])
     assert adata.smp_keys() == ['foo']
     assert adata.smp.keys() == ['foo']
-    assert adata.smp.dtype.names == (SMP_INDEX, 'foo1of2', 'foo2of2')
+    assert adata.smp.dtype.names == (SMP_INDEX, 'foo001of002', 'foo002of002')
 
     adata.smp['d'] = np.array([[0, 1], [2, 3]])
     assert adata.smp.keys() == ['foo', 'd']
