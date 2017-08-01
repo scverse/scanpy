@@ -443,8 +443,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
         adata.inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.info('    finished,', t=True, end=' ')
-        logg.info('    normalized adata.X and added\n'
+        logg.info('    finished', t=True)
+        logg.info('    normalized adata.X and added, '
                   '    "n_counts", counts per cell before normalization (adata.smp)')
         return adata if copy else None
     # proceed with data matrix
