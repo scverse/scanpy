@@ -639,7 +639,7 @@ class AnnData(IndexMixin):
         var_ann = self.var[var]
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
-        add_ann = self.add
+        add_ann = self.add.copy()
         # slice sparse spatrices of n_smps x n_smps in self.add
         if not (isinstance(smp, slice) and
                 smp.start is None and smp.step is None and smp.stop is None):
