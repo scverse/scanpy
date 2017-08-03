@@ -125,10 +125,10 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
     if issparse(X):
         number_per_gene = number_per_gene.A1
     gene_subset = number_per_gene >= min_number
-    sett.m(0, '... filtered out', np.sum(~gene_subset),
+    logg.m('... filtered out', np.sum(~gene_subset),
            'genes that are detected',
            'in less than ' + str(min_cells) + ' cells' if min_counts is None
-           else 'with less than ' + str(min_counts) + ' counts')
+           else 'with less than ' + str(min_counts) + ' counts', v=4)
     return gene_subset, number_per_gene
 
 

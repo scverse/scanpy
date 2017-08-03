@@ -15,11 +15,11 @@ Getting started
 
 With Python 3.5 or 3.6 installed, get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via (more information on installation `here <Installation_>`__)::
 
-  pip install scanpy
+  pip3 install scanpy
 
 To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory and type::
 
-    pip install --editable .
+    pip3 install --editable .
 
 You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
@@ -237,11 +237,11 @@ If you use Windows or Mac OS X and do not have Python 3.5 or 3.6, download and i
 
 Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
 
-  pip install scanpy
+  pip3 install scanpy
 
 To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
-    pip install --editable .
+    pip3 install --editable .
 
 You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
