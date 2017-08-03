@@ -82,15 +82,15 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
     s = np.sum(~cell_subset)
-    logg.m('... filtered out {} cells that have'.format(s), end=' ')
+    logg.m('... filtered out {} cells that have'.format(s), end=' ', v=4)
     if min_genes is not None or min_counts is not None:
         logg.m('less than',
                str(min_genes) + ' genes expressed'
-               if min_counts is None else str(min_counts) + ' counts')
+               if min_counts is None else str(min_counts) + ' counts', v=4)
     if max_genes is not None or max_counts is not None:
         logg.m('more than ',
                str(max_genes) + ' genes expressed'
-               if max_counts is None else str(max_counts) + ' counts')
+               if max_counts is None else str(max_counts) + ' counts', v=4)
     return cell_subset, number_per_cell
 
 
@@ -185,7 +185,7 @@ def filter_genes_dispersion(data,
         adata.var['dispersions_norm'] = result['dispersions_norm']
         adata.inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    logg.m('... filter highly varying genes by dispersion and mean', r=True, end=' ')
+    logg.m('... filter highly varying genes by dispersion and mean', r=True, end=' ', v=4)
     X = data  # proceed with data matrix
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
@@ -227,15 +227,15 @@ def filter_genes_dispersion(data,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.m(t=True)
+        logg.m(t=True, v=4)
         logg.m('    the', n_top_genes,
                'top genes correspond to a normalized dispersion cutoff of',
-               disp_cut_off)
+               disp_cut_off, v=4)
     else:
-        logg.m(t=True)
+        logg.m(t=True, v=4)
         logg.m('    using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
-               .format(min_disp, max_disp, min_mean, max_mean))
-        logg.m('set `n_top_genes` to simply select top-scoring genes instead', v='hint')
+               .format(min_disp, max_disp, min_mean, max_mean), v=4)
+        logg.m('--> set `n_top_genes` to simply select top-scoring genes instead', v=4)
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
@@ -357,11 +357,11 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
             and adata.smp['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
-            logg.info('    not recomputing PCA, using "X_pca" contained '
-                      'in `adata.smp` (set `recompute=True` to avoid this)')
+            logg.m('    not recomputing PCA, using "X_pca" contained '
+                   'in `adata.smp` (set `recompute=True` to avoid this)', v=4)
             return adata
         else:
-            logg.m('compute PCA with n_comps =', n_comps, r=True)
+            logg.m('compute PCA with n_comps =', n_comps, r=True, v=4)
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
@@ -370,18 +370,18 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
-            logg.info('    finished', t=True, end=' ')
-            logg.info('and added\n'
+            logg.m('    finished', t=True, end=' ', v=4)
+            logg.m('and added\n'
                       '    "X_pca", the PCA coordinates (adata.smp)\n'
                       '    "PC1", "PC2", ..., the loadings (adata.var)\n'
-                      '    "pca_variance_ratio", the variance ratio (adata.add)')
+                      '    "pca_variance_ratio", the variance ratio (adata.add)', v=4)
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
     if X.shape[1] < n_comps:
         n_comps = X.shape[1] - 1
         logg.m('reducing number of computed PCs to',
-               n_comps, 'as dim of data is only', X.shape[1])
+               n_comps, 'as dim of data is only', X.shape[1], v=4)
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     from sklearn.decomposition import PCA, TruncatedSVD
     verbosity_level = np.inf if mute else 0
@@ -389,14 +389,14 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
         if issparse(X):
             logg.m('    as `zero_center=True`, '
                    'sparse input is densified and may '
-                   'lead to huge memory consumption')
+                   'lead to huge memory consumption', v=4)
             X = X.toarray()
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
         logg.m('    without zero-centering: \n'
                '    the explained variance does not correspond to the exact statistical defintion\n'
                '    the first component, e.g., might be heavily influenced by different means\n'
-               '    the following components often resemble the exact PCA very closely')
+               '    the following components often resemble the exact PCA very closely', v=4)
         pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
     X_pca = pca_.fit_transform(X)
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
@@ -436,16 +436,16 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     depending on `copy`.
     """
     if isinstance(data, AnnData):
-        logg.info('... normalizing by total count per cell', r=True)
+        logg.m('... normalizing by total count per cell', r=True, v=4)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.smp['n_counts'] = counts_per_cell
         adata.inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.info('    finished', t=True)
-        logg.info('    normalized adata.X and added, '
-                  '"n_counts", counts per cell before normalization (adata.smp)')
+        logg.m('    finished', t=True, v=4)
+        logg.m('    normalized adata.X and added, '
+                  '"n_counts", counts per cell before normalization (adata.smp)', v=4)
         return adata if copy else None
     # proceed with data matrix
     X = data.copy() if copy else data
@@ -524,13 +524,13 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
     """
-    logg.info('regressing out', keys, r=True)
+    logg.m('regressing out', keys, r=True, v=4)
     if issparse(adata.X):
-        logg.info('... sparse input is densified and may '
-                  'lead to huge memory consumption')
+        logg.m('... sparse input is densified and may '
+                  'lead to huge memory consumption', v=4)
     if not copy:
-        logg.hint('note that this is an inplace computation '
-                  'and will return None: set `copy=True` if you want a copy')
+        logg.m('--> note that this is an inplace computation '
+               'and will return None: set `copy=True` if you want a copy', v=4)
     adata = adata.copy() if copy else adata
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
@@ -543,7 +543,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
-        logg.info('... regressing on per-gene means within categories')
+        logg.m('... regressing on per-gene means within categories', v=4)
         unique_categories = np.unique(adata.smp[keys[0]])
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
@@ -573,8 +573,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 col_index, adata.X, regressors) for col_index in chunk)
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.info('finished', t=True)
-    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
+    logg.m('finished', t=True, v=4)
+    logg.m('--> after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`', v=4)
     return adata if copy else None
 
 
@@ -597,19 +597,19 @@ def scale(data, zero_center=True, max_value=None, copy=False):
         # need to add the following here to make inplace logic work
         if zero_center and issparse(adata.X):
             logg.m('... scale_data: as `zero_center=True`, sparse input is '
-                   'densified and may lead to large memory consumption')
+                   'densified and may lead to large memory consumption', v=4)
             adata.X = adata.X.toarray()
         scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if not zero_center and max_value is not None:
-        logg.m('... scale_data: be very careful to use `max_value` without `zero_center`')
+        logg.m('... scale_data: be very careful to use `max_value` without `zero_center`', v=4)
     if max_value is not None:
-        logg.m('... clipping at max_value', max_value)
+        logg.m('... clipping at max_value', max_value, v=4)
     if zero_center and issparse(X):
         logg.m('... scale_data: as `zero_center=True`, sparse input is '
-               'densified and may lead to large memory consumption, returning copy')
+               'densified and may lead to large memory consumption, returning copy', v=4)
         X = X.toarray()
         copy = True
     _scale(X, zero_center)
@@ -659,8 +659,7 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
         return adata if copy else None
     else:
         X = data
-        logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
-        return X[smp_indices]
+        return X[smp_indices], smp_indices
 
 
 def zscore_deprecated(X):
