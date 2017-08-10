@@ -84,7 +84,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
             'progenitor cells', 'undecided cells' or 'branches' of a process.
     Writes the following additional arrays as unstructured annotation to adata.
         X_diffmap : np.ndarray
-            Array of shape (number of samples) x (number of eigen
+            Array of shape (number of samples) × (number of eigen
             vectors). DiffMap representation of data, which is the right eigen
             basis of the transition matrix with eigenvectors as columns.
         dpt_evals : np.ndarray
@@ -178,10 +178,10 @@ class DPT(data_graph.DataGraph):
         Writes
         ------
         segs : np.ndarray
-            Array of dimension (number of segments) x (number of data
+            Array of dimension (number of segments) × (number of data
             points). Each row stores a mask array that defines a segment.
         segs_tips : np.ndarray
-            Array of dimension (number of segments) x 2. Each row stores the
+            Array of dimension (number of segments) × 2. Each row stores the
             indices of the two tip points of each segment.
         segs_names : np.ndarray
             Array of dimension (number of data points). Stores an integer label

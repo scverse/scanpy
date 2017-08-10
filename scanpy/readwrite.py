@@ -599,7 +599,7 @@ def _read_softgz(filename):
     -------
     ddata : dict, containing
         X : np.ndarray
-            A d x n array of gene expression values.
+            A d × n array of gene expression values.
         col_names : np.ndarray
             A list of gene identifiers of length d.
         row_names : np.ndarray

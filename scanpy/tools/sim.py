@@ -918,10 +918,10 @@ class StaticCauseEffect:
     """
 
     availModels = odict([
-        ('line', 'y = alpha x \n'),
+        ('line', 'y = αx \n'),
         ('noise', 'y = noise \n'),
         ('absline', 'y = |x| \n'),
-        ('parabola', 'y = alpha x^2 \n'),
+        ('parabola', 'y = αx² \n'),
         ('sawtooth', 'y = x - |x| \n'),
         ('tanh', 'y = tanh(x) \n'),
         ('combi', 'combinatorial regulation \n'),

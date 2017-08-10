@@ -46,7 +46,7 @@ def spring(adata, k=4, n_comps=2, n_steps=12, rep=None, copy=False):
     -------
     X_spring : np.ndarray
          Force-directed graph drawing representation of the data with shape
-         n_variables x n_comps.
+         n_variables × n_comps.
     """
     adata = adata.copy() if copy else adata
     sett.m(0, 'draw knn graph')
@@ -141,13 +141,13 @@ def fruchterman_reingold_layout(W,
         If None the distance is set to 1/sqrt(n) where n is the number of nodes.
         Increase this value to move nodes farther apart.
     Yinit : np.ndarray or None  optional (default=None)
-        Initial positions as an array with shape (W.shape[1] x 2). If None, then
+        Initial positions as an array with shape (W.shape[1] × 2). If None, then
         use random initial positions.
     iterations : int  optional (default=50)
         Number of iterations of spring-force relaxation
     scale : float (default=1.0)
         Scale factor for positions. The nodes are positioned
-        in a box of size [0, scale] x [0, scale].
+        in a box of size [0, scale] × [0, scale].
     dim : int
         Dimension of layout
 

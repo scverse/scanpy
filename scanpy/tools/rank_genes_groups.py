@@ -40,13 +40,13 @@ def rank_genes_groups(
     Writes to adata
     ---------------
     rank_genes_groups_zscores : np.ndarray
-        Array of shape (number of comparisons) x (number of genes) storing the
+        Array of shape (number of comparisons) × (number of genes) storing the
         zscore of the each gene for each test.
     rank_genes_groups_rankings_names : np.ndarray of dtype str
         Array of shape (number of comparisons). Stores the labels for each comparison,
         for example "C1 vs. C2" when comparing category 'C1' with 'C2'.
     rank_genes_groups_rankings_geneidcs : np.ndarray
-        Array of shape (number of comparisons) x (number of genes) storing gene
+        Array of shape (number of comparisons) × (number of genes) storing gene
         indices that sort them according to decreasing absolute value of the
         zscore.
     """
@@ -110,7 +110,7 @@ def rank_genes_groups(
                 full_col[:] = np.nan
                 full_col[mask] = (X_col - mean_rest[gene_idx])/denominator[gene_idx]
                 adata.smp[identifier] = full_col
-                
+
     adata.add['rank_genes_groups_gene_scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_zscores],
         dtype=[(rn, 'float32') for rn in groups_names])

@@ -53,7 +53,7 @@ def dbscan(adata, basis='tsne', n_comps=2, eps=None, min_samples=None, n_jobs=No
     if eps is None:
         if n_comps == 2:
             avg_area_per_point = (range_1 * range_2 / X.shape[0])
-            logg.m('... the "drawing range" is', range_1, 'x', range_2,
+            logg.m('... the "drawing range" is', range_1, '×', range_2,
                    'with the average area per point', avg_area_per_point)
             eps = 1.7 * np.sqrt(avg_area_per_point)
         else:

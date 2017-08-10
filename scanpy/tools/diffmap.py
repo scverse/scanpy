@@ -54,7 +54,7 @@ def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
     -----
     The following is added to adata.smp
         X_diffmap : np.ndarray
-            Array of shape n_samples x n_comps. DiffMap representation of data,
+            Array of shape n_samples × n_comps. DiffMap representation of data,
             which is the right eigen basis of transition matrix with eigenvectors as
             columns.
     The following is added to adata.add

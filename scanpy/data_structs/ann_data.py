@@ -410,9 +410,9 @@ class AnnData(IndexMixin):
     def __init__(self, data, smp=None, var=None, add=None, dtype='float32', single_col=False):
         """Annotated Data
 
-        Stores data matrix `X` of shape n_samples x n_variables, key-based
-        access to sample and variable annotations of shapes n_samples x
-        n_smp_keys and n_variables x n_var_keys and additional
+        Stores data matrix `X` of shape n_samples × n_variables, key-based
+        access to sample and variable annotations of shapes n_samples ×
+        n_smp_keys and n_variables × n_var_keys and additional
         unstructured annotation in a dict.
 
         Sample and variable annotation but are a subclass of np.ndarray with
@@ -425,7 +425,7 @@ class AnnData(IndexMixin):
         data : dict, np.ndarray, np.ma.MaskedArray, sp.spmatrix
             The data matrix `X`
             X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-                A n_samples x n_variables data matrix. Is flattened if either
+                A n_samples × n_variables data matrix. Is flattened if either
                 n_samples or n_variables is 1, so that numpys behavior is
                 reproduced: `adata[:, 0].X == adata.X[:, 0]`.
             or a dict containing `X` as 'X' and possibly
@@ -438,11 +438,11 @@ class AnnData(IndexMixin):
             'col' / 'var' : dict, optional
                 A dict with column annotation.
         smp : np.ndarray, dict or None (default: None)
-            A n_samples x n_smp_keys array containing sample names (`index`)
+            A n_samples × n_smp_keys array containing sample names (`index`)
             and other sample annotation in the columns. A passed dict is
             converted to a record array.
         var : np.ndarray, dict or None (default: None)
-            The same as `smp`, but of shape n_variables x n_var_keys for annotation of
+            The same as `smp`, but of shape n_variables × n_var_keys for annotation of
             variables.
         add : dict (default: None)
             Unstructured annotation for the whole dataset.
@@ -461,8 +461,8 @@ class AnnData(IndexMixin):
         smp_keys : keys to samples annotation
         var_keys : keys to variables annotation
         add_keys : keys to unstructured annotation
-        smp : sample annotation (shape n_smps x n_smp_keys)
-        var : variable annotation (shape n_vars x n_var_keys)
+        smp : sample annotation (shape n_smps × n_smp_keys)
+        var : variable annotation (shape n_vars × n_var_keys)
         add : unstructured annotation
         """
         if isinstance(data, Mapping):
@@ -532,7 +532,7 @@ class AnnData(IndexMixin):
         raise AttributeError("AnnData has no attribute __contains__, don't check `in adata`.")
 
     def __repr__(self):
-        return ('AnnData object with n_smps x n_vars = {} x {}\n'
+        return ('AnnData object with n_smps × n_vars = {} × {}\n'
                 '    smp_keys = {}\n'
                 '    var_keys = {}\n'
                 '    add_keys = {}\n'
@@ -640,7 +640,7 @@ class AnnData(IndexMixin):
         assert smp_ann.shape[0] == X.shape[0], (smp, smp_ann)
         assert var_ann.shape[0] == X.shape[1], (var, var_ann)
         add_ann = self.add.copy()
-        # slice sparse spatrices of n_smps x n_smps in self.add
+        # slice sparse spatrices of n_smps × n_smps in self.add
         if not (isinstance(smp, slice) and
                 smp.start is None and smp.step is None and smp.stop is None):
             raised_warning = False

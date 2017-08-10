@@ -341,10 +341,10 @@ class AGA(data_graph.DataGraph):
         Writes
         ------
         segs : np.ndarray
-            Array of dimension (number of segments) x (number of data
+            Array of dimension (number of segments) × (number of data
             points). Each row stores a mask array that defines a segment.
         segs_tips : np.ndarray
-            Array of dimension (number of segments) x 2. Each row stores the
+            Array of dimension (number of segments) × 2. Each row stores the
             indices of the two tip points of each segment.
         segs_names : np.ndarray
             Array of dimension (number of data points). Stores an integer label

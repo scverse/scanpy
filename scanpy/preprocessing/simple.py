@@ -31,7 +31,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     Paramaters
     ----------
     data : np.ndarray or AnnData
-        Data matrix of shape n_sample x n_variables. Rows correspond to cells
+        Data matrix of shape n_sample × n_variables. Rows correspond to cells
         and columns to genes.
     min_counts : int
         Minimum number of counts required for a cell to pass filtering.
@@ -310,7 +310,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
     ----------
     data : AnnData or array_like
         X : np.ndarray
-            Data matrix of shape n_samples x n_variables.
+            Data matrix of shape n_samples × n_variables.
     n_comps : int, optional (default: 10)
         Number of principal components to compute.
     zero_center : bool or None, optional (default: None)
@@ -340,11 +340,11 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
     If X is array-like and return_info == True, returns, otherwise adds to (a copy
     of) AnnData:
     X_pca : np.ndarray
-         PCA representation of the data with shape n_variables x n_comps.
+         PCA representation of the data with shape n_variables × n_comps.
          Depending on whether an AnnData or a data matrix has been
          provided, the array is written to AnnData or returned directly.
     components / PC1, PC2, PC3, ... : np.ndarray
-         The PCs containing the loadings as shape n_comps x n_vars. Written to
+         The PCs containing the loadings as shape n_comps × n_vars. Written to
          adata.var if an AnnData object is provided.
     variance_ratio : np.ndarray
          Ratio of explained variance. Written as unstructured annotation to

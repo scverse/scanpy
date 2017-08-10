@@ -88,7 +88,7 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
         # run the function
         adata = exfunc()
         # add run_name to adata
-        logg.m('... X has shape n_samples x n_variables = {} x {}'
+        logg.m('... X has shape n_samples × n_variables = {} × {}'
                .format(adata.X.shape[0], adata.X.shape[1]))
         # do sanity checks on data dictionary
         adata = check_adata(adata, verbosity=1)
