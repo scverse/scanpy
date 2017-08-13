@@ -24,7 +24,7 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
     ----------
     adata : AnnData
         Annotated data matrix, optionally with adata.smp['X_pca'], which is
-        written when running sc.pca(adata). Is directly used for tSNE.
+        written when running sc.pca(adata). Is directly used for tSNE if `n_pcs` > 0.
     random_state : unsigned int or -1, optional (default: 0)
         Change to use different intial states for the optimization, if -1, use
         default behavior of implementation (sklearn uses np.random.seed,
@@ -102,16 +102,17 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, learning_rate=None,
             pass
     if multicore_failed:
         from sklearn.manifold import TSNE
+        from . import _tsne_fix  # fix by D. DeTomaso for sklearn < 0.19
         # unfortunately, we cannot set a minimum number of iterations for barnes-hut
         params_sklearn['learning_rate'] = 1000 if learning_rate is None else learning_rate
         tsne = TSNE(**params_sklearn)
         logg.info('    using sklearn.manifold.TSNE')
         logg.warn('Consider installing the package MulticoreTSNE '
-                  ' https://github.com/DmitryUlyanov/Multicore-TSNE '
-                  ' Even for `n_jobs=1` this speeds up the computation considerably and will yield better converged results.')
+                  '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
+                  'Even for `n_jobs=1` this speeds up the computation considerably and might yield better converged results.')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.smp['X_tsne'] = X_tsne
+    adata.smp['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
               '    "X_tsne", tSNE coordinates (adata.smp)')
