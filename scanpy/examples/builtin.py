@@ -124,9 +124,11 @@ def moignard15_dpt(adata):
 
 
 def paul15():
-    """Myeloid Progenitors.
+    """Get logarithmized data for development of Myeloid Progenitors.
 
-    This largely follows an R tutorial by Maren Buttner.
+    The data has been sent out by Email from the Amit Lab.
+
+    An R version for loading the data can be found here
     https://github.com/theislab/scAnalysisTutorial
 
     Reference
@@ -144,26 +146,43 @@ paul15_diffmap_params = {'n_neighbors': 20, 'n_pcs': 0}
 paul15_dpt_params = {'n_neighbors': 20, 'n_pcs': 0}
 
 
-def paul15pca():
-    """Same as paul15.
-    """
-    adata = paul15_raw()
-    sc.pp.log1p(adata)
-    adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
-    return adata
-
-
-paul15pca_dpt_params = {'n_neighbors': 20, 'knn': True}
-
-
 def paul15_raw():
+    """Get raw data for development of Myeloid Progenitors.
+
+    The data has been sent out by Email from the Amit Lab.
+
+    An R version for loading the data can be found here
+    https://github.com/theislab/scAnalysisTutorial
+
+    Reference
+    ---------
+    Paul et al., "Transcriptional Heterogeneity and Lineage Commitment in
+    Myeloid Progenitors",
+    Cell 163, 1663 (2015)
+    """
     filename = 'data/paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     adata = sc.read(filename, 'data.debatched', backup_url=backup_url)
     # each row has to correspond to a sample, therefore transpose
     adata = adata.transpose()
-    # cluster assocations identified by Paul et al.
-    # groups = sc.read(filename, 'cluster.id', return_dict=True)['X']
+    # clusters identified by Paul et al.
+    clusters = sc.read(filename, 'cluster.id', return_dict=True)['X'].flatten()
+    # names reflecting the cell type identifications from the paper
+    cell_types = {i: 'Ery' for i in range(1, 7)}
+    cell_types[7] = 'MEP'
+    cell_types[8] = 'Mk'
+    cell_types[9] = 'GMP'
+    cell_types[10] = 'GMP'
+    cell_types[11] = 'DC'
+    cell_types[12] = 'Baso'
+    cell_types[13] = 'Baso'
+    cell_types[14] = 'Mo'
+    cell_types[15] = 'Mo'
+    cell_types[16] = 'Neu'
+    cell_types[17] = 'Neu'
+    cell_types[18] = 'Eos'
+    cell_types[19] = 'Other'
+    adata.smp['paul15_clusters'] = [str(i) + cell_types[i] for i in clusters.astype(int)]
     infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
     adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])
@@ -171,18 +190,17 @@ def paul15_raw():
     infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
     # restrict data array to the 3461 informative genes
     adata = adata[:, infogenes_names]
-    # set root cell as in Haghverdi et al. (2016)
+    # usually we'd set the root cell to an arbitrary cell in the MEP cluster
+    # adata.add['iroot'] = np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
+    # here, set the root cell as in Haghverdi et al. (2016)
     adata.add['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
-    adata.add['xroot'] = adata.X[iroot]
+    adata.add['xroot'] = adata.X[iroot]  # this is just to allow to find a meaningful root cell after subsampling
     return adata
 
 
 def paul15_dpt(adata):
+    """Post-processing for DPT."""
     adata.add['dpt_groups_names'] = ['', 'GMP', '', 'MEP']
-
-
-def paul15pca_dpt(adata):
-    adata.add['dpt_groups_names'] = ['', '', 'GMP', 'MEP']
 
 
 def toggleswitch():
