@@ -17,13 +17,13 @@ For conceptual ideas and context, see our `preprint`_; comments are highly appre
 Getting started
 ---------------
 
-With Python 3.5 or 3.6 installed, get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via (more information on installation `here <Installation_>`__)::
+With Python 3.5 or 3.6 installed, get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via (consider using ``pip3`` to access Python 3, more information on installation `here <Installation_>`__)::
 
-  pip3 install scanpy
+  pip install scanpy
 
 To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory and type::
 
-    pip3 install -e .
+    pip install -e .
 
 You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
@@ -242,13 +242,13 @@ Installation
 
 If you use Windows or Mac OS X and do not have Python 3.5 or 3.6, download and install Miniconda_ (see below). If you use Linux, use your package manager to obtain a current Python distribution.
 
-Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via::
+Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via (consider using ``pip3`` to access Python 3)::
 
-  pip3 install scanpy
+  pip install scanpy
 
 To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
-    pip3 install -e .
+    pip install -e .
 
 You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
 
