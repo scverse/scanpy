@@ -44,7 +44,7 @@ def verbosity_greater_or_equal_than(v):
     return global_v >= v
 
 
-def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
+def m(*msg, v='info', t=False, m=False, r=False, end='\n', no_indent=False):
     """Write message to log output.
 
     Log output defaults to standard output but can be set to a file
@@ -61,6 +61,8 @@ def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
         when passing one of t or m.
     end : str (default: '\n')
         As in python builtin print function.
+    no_indent : bool (default: False)
+        Indent depending on verbosity level.
     """
     if isinstance(v, str):
         v = verbosity_levels_from_strings[v]
@@ -70,7 +72,7 @@ def m(*msg, v='info', t=False, m=False, r=False, end='\n'):
         global_v = sett.verbosity
     if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
-    if v >= 4:
+    if v >= 4 and not no_indent:
         msg = ('   ',) + msg
     if global_v >= v:
         if not t and not m and len(msg) > 0:

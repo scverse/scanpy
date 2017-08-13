@@ -82,15 +82,15 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     if max_number is not None:
         cell_subset = number_per_cell <= max_number
     s = np.sum(~cell_subset)
-    logg.m('... filtered out {} cells that have'.format(s), end=' ', v=4)
+    logg.m('filtered out {} cells that have'.format(s), end=' ', v=4)
     if min_genes is not None or min_counts is not None:
         logg.m('less than',
                str(min_genes) + ' genes expressed'
-               if min_counts is None else str(min_counts) + ' counts', v=4)
+               if min_counts is None else str(min_counts) + ' counts', v=4, no_indent=True)
     if max_genes is not None or max_counts is not None:
         logg.m('more than ',
                str(max_genes) + ' genes expressed'
-               if max_counts is None else str(max_counts) + ' counts', v=4)
+               if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
     return cell_subset, number_per_cell
 
 
@@ -125,7 +125,7 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
     if issparse(X):
         number_per_gene = number_per_gene.A1
     gene_subset = number_per_gene >= min_number
-    logg.m('... filtered out', np.sum(~gene_subset),
+    logg.m('filtered out', np.sum(~gene_subset),
            'genes that are detected',
            'in less than ' + str(min_cells) + ' cells' if min_counts is None
            else 'with less than ' + str(min_counts) + ' counts', v=4)
@@ -185,7 +185,8 @@ def filter_genes_dispersion(data,
         adata.var['dispersions_norm'] = result['dispersions_norm']
         adata.inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    logg.m('... filter highly varying genes by dispersion and mean', r=True, end=' ', v=4)
+    logg.m('filter highly varying genes by dispersion and mean',
+           r=True, end=' ')
     X = data  # proceed with data matrix
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
@@ -227,15 +228,15 @@ def filter_genes_dispersion(data,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.m(t=True, v=4)
-        logg.m('    the', n_top_genes,
+        logg.m(t=True)
+        logg.m('the', n_top_genes,
                'top genes correspond to a normalized dispersion cutoff of',
                disp_cut_off, v=4)
     else:
-        logg.m(t=True, v=4)
-        logg.m('    using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
+        logg.m(t=True, no_indent=True)
+        logg.m('using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
                .format(min_disp, max_disp, min_mean, max_mean), v=4)
-        logg.m('--> set `n_top_genes` to simply select top-scoring genes instead', v=4)
+        logg.hint('set `n_top_genes` to simply select top-scoring genes instead')
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
@@ -407,7 +408,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
 
 
 def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
-                       counts_per_cell=None):
+                       counts_per_cell=None, field_name_counts=None):
     """Normalize each cell.
 
     Normalize each cell by UMI count, so that every cell has the same total
@@ -435,17 +436,20 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     Returns or updates adata with normalized version of the original adata.X,
     depending on `copy`.
     """
+    if field_name_counts is None: field_name_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.m('... normalizing by total count per cell', r=True, v=4)
+        logg.m('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
-        adata.smp['n_counts'] = counts_per_cell
+        adata.smp[field_name_counts] = counts_per_cell
         adata.inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.m('    finished', t=True, v=4)
-        logg.m('    normalized adata.X and added, '
-                  '"n_counts", counts per cell before normalization (adata.smp)', v=4)
+        logg.m('    finished', t=True, end=' ')
+        logg.m('normalized adata.X and added', no_indent=True)
+        logg.m('    "{}", counts per cell before normalization (adata.smp)'
+               .format(field_name_counts),
+               no_indent=True)
         return adata if copy else None
     # proceed with data matrix
     X = data.copy() if copy else data

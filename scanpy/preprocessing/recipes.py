@@ -47,8 +47,6 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
                    n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
     adata.smp['X_pca'] = X_pca
-    sett.m(0, 'X_pca (computed from z-scored X) has shape n_samples × n_comps =',
-           X_pca.shape[0], '×', X_pca.shape[1])
     return adata if copy else None
 
 
@@ -82,7 +80,8 @@ def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=F
     """
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
-    pp.normalize_per_cell(adata)          # normalize with total UMI count per cell
+    pp.normalize_per_cell(adata,  # normalize with total UMI count per cell
+                          field_name_counts='n_counts_all')
     filter_result = pp.filter_genes_dispersion(adata.X,
                                                flavor='cell_ranger',
                                                n_top_genes=n_top_genes,
