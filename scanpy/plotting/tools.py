@@ -844,6 +844,7 @@ def aga_path(
         adata,
         nodes=[0],
         keys=[0],
+        normalize_to_zero_one=False,
         as_heatmap=True,
         color_map=None,
         xlim=[None, None],
@@ -858,6 +859,11 @@ def aga_path(
         show=None,
         ax=None):
     """Gene expression changes along paths in the abstracted graph.
+
+    Parameters
+    ----------
+    normalize_to_zero_one : bool, optional (default: True)
+        Shift and scale the running average to [0, 1] per gene.
     """
     ax_was_none = ax is None
     if show_left_y_ticks is None:
@@ -897,6 +903,9 @@ def aga_path(
             old_len_x = len(x)
             x = moving_average(x)
             if ikey == 0: x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
+        if normalize_to_zero_one:
+            x -= np.min(x)
+            x /= np.max(x)
         if not as_heatmap:
             ax.plot(x[xlim[0]:xlim[1]], label=key)
         else:

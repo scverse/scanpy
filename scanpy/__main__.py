@@ -18,7 +18,6 @@ dpp = odict([
 # description of simple inquiries
 dsimple = odict([
     ('exdata', 'show example data'),
-    ('exparams', 'show example parameters'),
 ])
 
 # description of standard tools
@@ -26,10 +25,10 @@ dtools = odict([
     ('pca', 'visualize data using PCA'),
     ('diffmap', 'visualize data using Diffusion Map'''),
     ('tsne', 'visualize data using tSNE'),
-    ('spring', 'visualize data using force-directed graph drawing'),
+    ('draw_graph', 'visualize data using force-directed graph drawing'),
     ('dpt', 'perform Diffusion Pseudotime analysis'),
-    ('dbscan', 'cluster cells using dbscan'),
-    ('diffrank', 'test for differential expression'),
+    ('louvain', 'cluster cells using the louvain algorithm'),
+    ('rank_genes_groups', ' test groups for differential expression'),
     ('sim', 'simulate stochastic gene expression models'),
 ])
 
@@ -47,9 +46,7 @@ def main_descr():
         if key == 'dpt':
             string += '\n\nother tools\n-----------'
         string += '\n{:12}'.format(key) + descr
-    string += '\n\nppkey tool\n----------'
-    string += ('\n{:12}'.format('ppkey tool')
-                   + 'shortcut for providing ppkey argument to tool')
+    string += '\n\nNote: For convenience, you can swap the first argument (run_name) of any tool and the tool name.'
     return string
 
 
@@ -148,7 +145,7 @@ def run_command_line_args(toolkey, args):
     """Run specified tool, do preprocessing and read/write outfiles.
 
     Result files store the dictionary returned by the tool. File type is
-    determined by variable sett.file_format_data allowed are 'h5' (hdf5), 'xlsx' (Excel) or
+    determined by variable settings.file_format_data allowed are 'h5' (hdf5), 'xlsx' (Excel) or
     'csv' (comma separated value file).
 
     If called twice with the same settings the existing result file is used.
@@ -161,13 +158,10 @@ def run_command_line_args(toolkey, args):
         run_name : str
             String that identifies the example use key.
     """
-    from . import settings as sett
+    from . import settings
     from . import logging as logg
+    from . import readwrite
 
-    # init recompute for command-line usage differently than for
-    # api usage
-    sett.recompute = 'none'
-    
     # help on plot parameters
     if args['plot_params']:
         from . import plotting
@@ -180,10 +174,10 @@ def run_command_line_args(toolkey, args):
         from .examples import init_run
         adata, exmodule = init_run(
             args['run_name'],
-            suffix=sett._run_suffix,
+            suffix=settings._run_suffix,
             return_module=True,
-            recompute=sett.recompute == 'pp' or toolkey == 'pp',
-            reread=sett.recompute == 'read')
+            recompute=settings.recompute == 'pp' or toolkey == 'pp',
+            reread=settings.recompute == 'read')
         params = {}
         # try to load tool parameters from dexamples
         did_not_find_params_in_exmodule = False
@@ -195,7 +189,6 @@ def run_command_line_args(toolkey, args):
             did_not_find_params_in_exmodule = True
         # if optional parameters have been specified in a parameter file update
         # the current param dict with these
-        from . import readwrite
         from . import utils
         if args['pfile'] != '':
             add_params = readwrite.read_params(args['pfile'])
@@ -203,12 +196,12 @@ def run_command_line_args(toolkey, args):
         # same if optional parameters have been specified on the command line
         if args['params']:
             add_params = readwrite.get_params_from_list(args['params'])
-            sett.m(0, '... overwriting params', '"' +
+            logg.m('... overwriting params', '"' +
                    ' '.join(['='.join([k, str(v)]) for k, v in add_params.items()])
                    + '"', 'in call of', toolkey)
             params = utils.update_params(params, add_params)
         elif did_not_find_params_in_exmodule and args['pfile'] != '':
-            sett.m(0, 'using default parameters, change them using "--params"')
+            logg.m('using default parameters, change them using "--params"')
     elif toolkey == 'sim':
         if args['pfile'] != '':
             params = readwrite.read_params(args['pfile'])
@@ -217,14 +210,14 @@ def run_command_line_args(toolkey, args):
             from . import readwrite
             pfile_sim = os.path.dirname(sim_models.__file__) + '/' + args['run_name'] + '_params.txt'
             params = readwrite.read_params(pfile_sim)
-            sett.m(0, '--> you can specify your custom params file using the option\n'
+            logg.m('--> you can specify your custom params file using the option\n'
                    '    "--pfile" or provide parameters directly via "--params"')
         if 'writedir' not in params:
-            params['writedir'] = sett.writedir + sett.run_name + '_' + toolkey
+            params['writedir'] = settings.writedir + settings.run_name + '_' + toolkey
 
     if toolkey == 'pp': exit()
 
-    if (adata is not None and sett.recompute == 'none'):
+    if (adata is not None and settings.recompute == 'none'):
         try:
             run_plotting_and_postprocessing(args, adata, toolkey, exmodule)
             return
@@ -234,23 +227,20 @@ def run_command_line_args(toolkey, args):
     # actual call of tool
     from .api import tools
     tool = getattr(tools, toolkey)
-    if toolkey == 'sim':
-        adata = tool(**params)
-    elif toolkey == 'pca':
-        tool(adata, recompute=False, **params)
-    else:
-        tool(adata, **params)
-    readwrite.write(sett.run_name, adata)
-    if sett.file_format_data not in {'h5', 'npz'}:
-        readwrite.write(sett.run_name, adata, ext='h5')
+    if toolkey == 'sim': adata = tool(**params)
+    else: tool(adata, **params)
+    readwrite.write(settings.run_name, adata)
+    if settings.file_format_data not in {'h5', 'npz'}:
+        readwrite.write(settings.run_name, adata, ext='h5')
     # save a copy of the changed parameters
-    pfile = sett.writedir + sett.run_name + '_params/' + toolkey + '.txt'
+    pfile = settings.writedir + settings.run_name + '_params/' + toolkey + '.txt'
     readwrite.write_params(pfile, params)
     run_plotting_and_postprocessing(args, adata, toolkey, exmodule)
 
 
 def run_plotting_and_postprocessing(args, adata, toolkey, exmodule):
     from . import readwrite
+    from . import settings
     plot_params = (readwrite.get_params_from_list(args['plot_params'])
                if args['plot_params'] else {})
     # post-processing specific to example and tool
@@ -259,7 +249,7 @@ def run_plotting_and_postprocessing(args, adata, toolkey, exmodule):
         postprocess = args['run_name'] + '_' + toolkey
         if postprocess in dir(exmodule) and args['subsample'] == 1:
             getattr(exmodule, postprocess)(adata)
-            readwrite.write(sett.run_name, adata)
+            readwrite.write(settings.run_name, adata)
     from . import plotting
     getattr(plotting, toolkey)(adata, **plot_params)
 
@@ -279,20 +269,9 @@ def main():
         exit(0)
     # simple inquiries
     if argv[1] in dsimple:
-        # same keys as in dsimple
-        from .examples import show_exdata, show_exparams
-        func = {
-            'exdata': show_exdata,
-            'exparams': show_exparams
-        }
-        if len(argv) > 2:
-            func[argv[1]](argv[2])
-        elif argv[1] == 'exdata':
-            func[argv[1]]('plain')
-            print('See https://github.com/theislab/scanpy/blob/master/EXAMPLES.md for more.')
-            print('Call `scanpy exdata markdown` for markdown formatted output.')
-        else:
-            func[argv[1]]()
+        print('See https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py')
+        print('for builtin examples. Function names serve as "run_names" '
+              '(keys for looking up preprocessing and default parameters).')
         exit(0)
     # init the parsers for each tool
     main_parser = init_main_parser()

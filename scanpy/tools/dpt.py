@@ -16,10 +16,10 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
     """Hierarchical Diffusion Pseudotime.
 
-    Infer progression of cells, identify tree of branching subgroups.
+    Infer progression of cells and branchings.
 
-    This is an extension of Haghverdi et al., (2016) that is able to resolve
-    multi-branching events.
+    This is an extension of Haghverdi et al., (2016) that is formally able to resolve
+    multi-branching events. For more than one branching, though, DPT is not reliable.
 
     Reference
     ---------

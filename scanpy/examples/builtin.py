@@ -1,69 +1,16 @@
 """Builtin Examples.
 
 Provides functions for preprocessing data and default parameters.
+
+Defines command-line "runs" for builtin examples.
 """
 
-from collections import OrderedDict as odict
 import numpy as np
 from . import api_without_examples as sc
 
 
-# --------------------------------------------------------------------------------
-# The 'example_data dictionary' stores information about example data.
-# - please respect formatting of the 'addedby' entry as
-#   "Initials Surname (github_name), 2016-12-15"
-# --------------------------------------------------------------------------------
-
-example_data = {
-    'burczynski06': {
-        'ref': 'Burczynski et al., J Mol Diagn 8, 51 (2006)',
-        'title': 'Molecular classification of Crohn\'s disease and ulcerative colitis '
-                 'patients using transcriptional profiles in peripheral blood '
-                 'mononuclear cells',
-        'doi': '10.2353/jmoldx.2006.050079',
-        'type': 'bulk',
-        'addedby': 'FA Wolf (falexwolf), 2016-12-15',
-    },
-    'krumsiek11': {
-        'ref': 'Krumsiek et al., PLoS ONE 6, e22649 (2011)',
-        'title': 'Hierarchical Differentiation of Myeloid Progenitors Is Encoded in '
-                 'the Transcription Factor Network',
-        'doi': '10.1371/journal.pone.0022649',
-        'type': 'simulated',
-        'addedby': 'FA Wolf (falexwolf), 2016-12-15',
-    },
-    'moignard15': {
-        'ref': 'Moignard et al., Nature Biotechnology 33, 269 (2015)',
-        'title': 'Decoding the regulatory network of early blood development from '
-                 'single-cell gene expression measurements',
-        'type': 'scqPCR',
-        'doi': '10.1038/nbt.3154',
-        'addedby': 'FA Wolf (falexwolf), 2016-12-15',
-    },
-    'paul15': {
-        'ref': 'Paul et al., Cell 163, 1663 (2015)',
-        'title': 'Transcriptional Heterogeneity and Lineage Commitment in Myeloid '
-                 'Progenitors',
-        'type': 'scRNAseq',
-        'doi': '10.1016/j.cell.2015.11.013',
-        'addedby': 'FA Wolf (falexwolf), 2016-12-15',
-    },
-    'toggleswitch': {
-        'title': 'Simple toggle switch model.',
-        'type': 'simulated',
-        'addedby': 'FA Wolf (falexwolf), 2016-12-15',
-    },
-}
-
-
-# --------------------------------------------------------------------------------
-# One function per example that reads, annotates and preprocesses data
-# - one function 'exkey()' per 'exkey' (key in example_parameters)
-# --------------------------------------------------------------------------------
-
-
 def blobs(centers=5, cluster_std=1.0):
-    """Make Gaussian Blobs
+    """Make Gaussian Blobs.
 
     Same sample number as in krumsiek11, to compare with the latter.
     """
@@ -124,10 +71,8 @@ def krumsiek11():
     return adata
 
 
-krumsiek11_diffmap_params = {'k': 5, 'knn': False}
-krumsiek11_dpt_params = {'k': 5, 'knn': False, 'n_branchings': 2,
-        'allow_branching_at_root': True}
-krumsiek11_paths_params = {'k': 5, 'num_fates': 4}
+krumsiek11_diffmap_params = {'n_neighbors': 5, 'knn': False}
+krumsiek11_dpt_params = {'n_neighbors': 5, 'knn': False, 'n_branchings': 2}
 
 
 def moignard15():
@@ -145,12 +90,12 @@ def moignard15():
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
-    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=backup_url, cache=True)
+    adata = sc.read(filename, sheet='dCt_values.txt', cache=True, backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata.add['xroot'] = adata.X[532]  # note that in Matlab/R, counting starts at 1
+    adata.add['iroot'] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
@@ -163,10 +108,8 @@ def moignard15():
     return adata
 
 
-moignard15_dbscan_params = {'eps': 3, 'min_samples': 30}
-moignard15_dpt_params = {'k': 5, 'knn': False}
-moignard15_diffmap_params = {'k': 5, 'knn': False}
-moignard15_paths_params = {'fates': odict([('endothelial', 3617), ('erythorcytes', 2614)])}
+moignard15_diffmap_params = {'n_neighbors': 5, 'knn': False}
+moignard15_dpt_params = {'n_neighbors': 5, 'knn': False}
 
 
 def moignard15_dpt(adata):
@@ -197,11 +140,8 @@ def paul15():
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
-paul15_paths_params = {'fates': odict([('GMP', 877), ('MEP', 2156)])}
-paul15_dpt_params = {'k': 20, 'knn': True, 'n_pcs': 0}
-paul15_diffmap_params = {'k': 20, 'knn': True, 'n_pcs': 0}
-paul15_diffrank_params = {'log': False, 'names': 'GMP,MEP'}
-paul15_tgdyn_params = {'names': 'GMP,MEP'}
+paul15_diffmap_params = {'n_neighbors': 20, 'n_pcs': 0}
+paul15_dpt_params = {'n_neighbors': 20, 'n_pcs': 0}
 
 
 def paul15pca():
@@ -212,10 +152,8 @@ def paul15pca():
     adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
-paul15pca_paths_params = {'fates': odict([('GMP', 193), ('MEP', 2201)])}
-paul15pca_dpt_params = {'k': 20, 'knn': True}
-paul15pca_diffrank_params = {'log': False, 'names': 'GMP,MEP'}
-paul15pca_tgdyn_params = {'names': 'GMP,MEP'}
+
+paul15pca_dpt_params = {'n_neighbors': 20, 'knn': True}
 
 
 def paul15_raw():
@@ -265,7 +203,6 @@ def toggleswitch():
     adata.add['xroot'] = adata.X[0]
     return adata
 
-toggleswitch_dpt_params = {'k': 5, 'knn': False}
-toggleswitch_diffmap_params = toggleswitch_dpt_params
-toggleswitch_paths_params = {'fates': odict([('0', 95), ('1', 189)])}
-toggleswitch_diffrank_params = {'log': False}
+
+toggleswitch_diffmap_params = {'n_neighbors': 5, 'knn': False}
+toggleswitch_dpt_params = {'n_neighbors': 5, 'knn': False}

@@ -59,8 +59,8 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
                            and filename.endswith('.py')]
     if len(loop_over_filenames) == 0:
         logg.m('did not find user examples, to provide some,\n'
-               '    generate a file preprocessing_whatevername.py in your working directory,\n'
-               '    see https://github.com/theislab/scanpy#work-on-your-own-examples',
+               '    generate a file "runs_whatevername.py" in your working directory,\n'
+               '    analogous to https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py',
                v='hint')
     not_found = True
     sys.path.insert(0, '.')
