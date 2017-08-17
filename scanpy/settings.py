@@ -134,7 +134,7 @@ is_run_from_ipython = _is_run_from_ipython()
 _dpi = 400
 """Resolution of png figures.
 
-Simply for enabling the convenience function set_dpi().
+We need this global variable as, for example, Seaborn resets rcParams['savefig.dpi'].
 """
 
 _ignore_categories = ['N/A', 'dontknow', 'no_gate', '?']
@@ -150,21 +150,32 @@ _low_resolution_warning = True
 # --------------------------------------------------------------------------------
 
 
-def set_dpi(dots_per_inch=None):
-    """Set resolution of png figures.
-
-    We also need a global variable as, for example, Seaborn resets the rcParams.
+def set_figure_params(dpi=None, figure_formats=['png2x']):
+    """Set resolution and format of figures.
 
     Parameters
     ----------
     dpi : int, optional
         Resolution of png output in dots per inch.
+    figure_formats : list of strings
+        Only concerns the IPython environment; see
+        `IPython.core.display.set_matplotlib_formats` for more details. For
+        setting the default format for saving figures, directly set
+        `file_format_figs`.
     """
+    try:
+        import IPython
+        IPython.core.display.set_matplotlib_formats(*figure_formats)
+    except:
+        pass
     from matplotlib import rcParams
     global _dpi
-    if dots_per_inch is not None: _dpi = dots_per_inch
+    if dpi is not None: _dpi = dpi
     rcParams['savefig.dpi'] = _dpi
 
+
+set_dpi = set_figure_params
+"""Deprecated: merely for backwards compatibility. See `set_figure_params` instead."""
 
 # ------------------------------------------------------------------------------
 # Private global variables
