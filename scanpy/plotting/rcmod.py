@@ -12,7 +12,7 @@ import seaborn
 from . import palettes
 from .. import settings
 
-def reset_rcparams():
+def reset_rcParams():
     """Reset matplotlib.rcParams to Scanpy defaults."""
 
     # figure
