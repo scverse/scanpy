@@ -211,13 +211,13 @@ def scatter(
         palette = palettes[i]
         color_key = color_keys[icolor_key]
         if (not color_key + '_colors' in adata.add or not palette_was_none
-            or len(adata.add[color_key + '_names']) != len(adata.add[color_key + '_colors'])):
+            or len(adata.add[color_key + '_order']) != len(adata.add[color_key + '_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, color_key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
-            for iname, name in enumerate(adata.add[color_key + '_names']):
+            for iname, name in enumerate(adata.add[color_key + '_order']):
                 if name not in sett._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, projection, size=size)
@@ -225,12 +225,12 @@ def scatter(
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
             for name in names:
-                if name not in set(adata.add[color_key + '_names']):
+                if name not in set(adata.add[color_key + '_order']):
                     raise ValueError('"' + name + '" is invalid!'
                                      + ' specify valid name, one of '
-                                     + str(adata.add[color_key + '_names']))
+                                     + str(adata.add[color_key + '_order']))
                 else:
-                    iname = np.flatnonzero(adata.add[color_key + '_names'] == name)[0]
+                    iname = np.flatnonzero(adata.add[color_key + '_order'] == name)[0]
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, projection, size=size)
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
@@ -250,8 +250,8 @@ def scatter(
         elif legend_loc == 'right margin':
             legend = axs[icolor_key].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
-                                            ncol=(1 if len(adata.add[color_key + '_names']) <= 14
-                                                  else 2 if len(adata.add[color_key + '_names']) <= 30 else 3),
+                                            ncol=(1 if len(adata.add[color_key + '_order']) <= 14
+                                                  else 2 if len(adata.add[color_key + '_order']) <= 30 else 3),
                                             fontsize=legend_fontsize)
         elif legend_loc != 'none':
             legend = axs[icolor_key].legend(frameon=False, loc=legend_loc,
@@ -375,10 +375,10 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         smp_tidy = smp_df
         x = group_by
         y = keys[0]
-        if not group_by + '_names' in adata.add:
+        if not group_by + '_order' in adata.add:
             from .. import utils as sc_utils
             sc_utils.check_adata(adata)
-        order = adata.add[group_by + '_names']
+        order = adata.add[group_by + '_order']
     if multi_panel:
         sns.set_style('whitegrid')
         g = sns.FacetGrid(smp_tidy, col=x, sharey=False)

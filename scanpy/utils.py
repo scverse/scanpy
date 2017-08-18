@@ -73,13 +73,13 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     check_adata(adata)
     asso_names = []
     asso_matrix = []
-    for ipred_group, pred_group in enumerate(adata.add[prediction + '_names']):
+    for ipred_group, pred_group in enumerate(adata.add[prediction + '_order']):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.smp[prediction] == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
-        for ref_group in adata.add[reference + '_names']:
+        for ref_group in adata.add[reference + '_order']:
             mask_ref = (adata.smp[reference] == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
@@ -96,7 +96,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [adata.add[reference + '_names'][i]
+        name_list_pred = [adata.add[reference + '_order'][i]
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
@@ -251,8 +251,8 @@ def remove_repetitions_from_list(l):
 def plot_category_association(adata, prediction, reference, asso_matrix):
     pl.figure(figsize=(5, 5))
     pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
-    pl.xticks(range(len(adata.add[reference + '_names'])), adata.add[reference + '_names'], rotation='vertical')
-    pl.yticks(range(len(adata.add[prediction + '_names'])), adata.add[prediction + '_names'])
+    pl.xticks(range(len(adata.add[reference + '_order'])), adata.add[reference + '_order'], rotation='vertical')
+    pl.yticks(range(len(adata.add[prediction + '_order'])), adata.add[prediction + '_order'])
     pl.colorbar()
 
 
@@ -301,16 +301,16 @@ def check_adata(adata, verbosity=-3):
             info = 'sample annotation: '
         for ismp, smp in enumerate(adata.smp_keys()):
             # ordered unique categories for categorical annotation
-            if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                adata.add[smp + '_names'] = unique_categories(adata.smp[smp])
+            if not smp + '_order' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
+                adata.add[smp + '_order'] = unique_categories(adata.smp[smp])
             if settings.verbosity > 1-verbosity:
                 info += '"' + smp + '" = '
                 if adata.smp[smp].dtype.char in {'U', 'S'}:
-                    ann_info = str(adata.add[smp + '_names'])
-                    if len(adata.add[smp + '_names']) > 7:
-                        ann_info = (str(adata.add[smp + '_names'][0:3]).replace(']', '')
+                    ann_info = str(adata.add[smp + '_order'])
+                    if len(adata.add[smp + '_order']) > 7:
+                        ann_info = (str(adata.add[smp + '_order'][0:3]).replace(']', '')
                                     + ' ...'
-                                    + str(adata.add[smp + '_names'][-2:]).replace('[', ''))
+                                    + str(adata.add[smp + '_order'][-2:]).replace('[', ''))
                     info += ann_info
                 else:
                     info += 'continuous'
@@ -396,45 +396,45 @@ def default_tool_argparser(description, example_parameters):
 # --------------------------------------------------------------------------------
 
 
-def select_groups(adata, groups_names_subset='all', smp='groups'):
+def select_groups(adata, groups_order_subset='all', smp='groups'):
     """Get subset of groups in adata.smp[smp].
     """
-    groups_names = adata.add[smp + '_names']
+    groups_order = adata.add[smp + '_order']
     if smp + '_masks' in adata.add:
         groups_masks = adata.add[smp + '_masks']
     else:
-        groups_masks = np.zeros((len(adata.add[smp + '_names']),
+        groups_masks = np.zeros((len(adata.add[smp + '_order']),
                                  adata.smp[smp].size), dtype=bool)
-        for iname, name in enumerate(adata.add[smp + '_names']):
+        for iname, name in enumerate(adata.add[smp + '_order']):
             # if the name is not found, fallback to index retrieval
-            if adata.add[smp + '_names'][iname] in adata.smp[smp]:
-                mask = adata.add[smp + '_names'][iname] == adata.smp[smp]
+            if adata.add[smp + '_order'][iname] in adata.smp[smp]:
+                mask = adata.add[smp + '_order'][iname] == adata.smp[smp]
             else:
                 mask = str(iname) == adata.smp[smp]
             groups_masks[iname] = mask
-    groups_ids = list(range(len(groups_names)))
-    if groups_names_subset != 'all':
+    groups_ids = list(range(len(groups_order)))
+    if groups_order_subset != 'all':
         # get list from string
-        if isinstance(groups_names_subset, str):
-            groups_names_subset = groups_names_subset.split(',')
+        if isinstance(groups_order_subset, str):
+            groups_order_subset = groups_order_subset.split(',')
         groups_ids = []
-        for name in groups_names_subset:
-            groups_ids.append(np.where(adata.add[smp + '_names'] == name)[0][0])
+        for name in groups_order_subset:
+            groups_ids.append(np.where(adata.add[smp + '_order'] == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
-            groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_names'])).astype(str),
-                                          np.array(groups_names_subset)))[0]
+            groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_order'])).astype(str),
+                                          np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
-            logg.m(np.array(groups_names_subset),
-                   'invalid! specify valid groups_names (or indices) one of',
-                   adata.add[smp + '_names'])
+            logg.m(np.array(groups_order_subset),
+                   'invalid! specify valid groups_order (or indices) one of',
+                   adata.add[smp + '_order'])
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-        groups_names_subset = adata.add[smp + '_names'][groups_ids]
+        groups_order_subset = adata.add[smp + '_order'][groups_ids]
     else:
-        groups_names_subset = groups_names
-    return groups_names_subset, groups_masks
+        groups_order_subset = groups_order
+    return groups_order_subset, groups_masks
 
 
 def pretty_dict_string(d, indent=0):

@@ -685,12 +685,12 @@ def _aga_graph_single(
                          .format(avail_attachedness_types))
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
-    if groups is None and 'aga_groups_names_original' in adata.add:
-        groups = adata.add['aga_groups_names_original']
+    if groups is None and 'aga_groups_order_original' in adata.add:
+        groups = adata.add['aga_groups_order_original']
     elif groups in adata.smp_keys():
-        groups = adata.add[groups + '_names']
+        groups = adata.add[groups + '_order']
     elif groups is None:
-        groups = adata.add['aga_groups_names']
+        groups = adata.add['aga_groups_order']
     if isinstance(root, str) and root in groups:
         root = list(groups).index(root)
 
@@ -701,10 +701,10 @@ def _aga_graph_single(
     else:
         if colors is None:
             if ('aga_groups_colors' not in adata.add
-                or len(adata.add['aga_groups_names']) != len(adata.add['aga_groups_colors'])):
+                or len(adata.add['aga_groups_order']) != len(adata.add['aga_groups_colors'])):
                 utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
             colors = adata.add['aga_groups_colors']
-        for iname, name in enumerate(adata.add['aga_groups_names']):
+        for iname, name in enumerate(adata.add['aga_groups_order']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
         nx_g = nx.Graph(adata.add['aga_adjacency'])
     # node positions
@@ -875,11 +875,11 @@ def aga_path(
         show_left_y_ticks = False if show_nodes_twin else True
 
     orig_node_names = []
-    if ('aga_groups_names_original' in adata.add
+    if ('aga_groups_order_original' in adata.add
         and adata.add['aga_groups_original'] != 'louvain_groups'):
-        orig_node_names = adata.add['aga_groups_names_original']
+        orig_node_names = adata.add['aga_groups_order_original']
     else:
-        logg.m('did not find field "aga_groups_names_original" in adata.add, '
+        logg.m('did not find field "aga_groups_order_original" in adata.add, '
                'using aga_group integer ids instead', v=4)
 
     def moving_average(a, n=n_avg):
@@ -1137,8 +1137,8 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
                        color=adata.smp['dpt_groups'],
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='dpt groups',
-                       yticks=(np.arange(len(adata.add['dpt_groups_names']), dtype=int)
-                                     if len(adata.add['dpt_groups_names']) < 5 else None),
+                       yticks=(np.arange(len(adata.add['dpt_groups_order']), dtype=int)
+                                     if len(adata.add['dpt_groups_order']) < 5 else None),
                        palette=palette)
     pl.subplot(212)
     timeseries_subplot(adata.smp['dpt_pseudotime'],
@@ -1254,7 +1254,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
          A matplotlib axes object.
     """
     groups_key = adata.add['rank_genes_groups']
-    group_names = adata.add['rank_genes_groups_names'] if groups is None else groups
+    group_names = adata.add['rank_genes_groups_order'] if groups is None else groups
     # one panel for each group
     n_panels = len(group_names)
     # set up the figure
@@ -1322,7 +1322,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
     """
     from ..tools import rank_genes_groups
     groups_key = adata.add['rank_genes_groups']
-    group_names = adata.add['rank_genes_groups_names'] if groups is None else groups
+    group_names = adata.add['rank_genes_groups_order'] if groups is None else groups
     group_loop = (group_name for group_name in group_names)
     check_is_computed = True
     for group_name in group_loop:

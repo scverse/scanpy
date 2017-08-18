@@ -109,11 +109,11 @@ def louvain(adata,
         raise ValueError('flavor needs to be "vtraag" or "igraph"')
     adata.smp['louvain_groups'] = groups
     from natsort import natsorted
-    adata.add['louvain_groups_names'] = np.array(natsorted(np.unique(groups)))
+    adata.add['louvain_groups_order'] = np.array(natsorted(np.unique(groups)))
     adata.add['louvain_params'] = np.array((resolution,),
                                            dtype=[('resolution', float)])
     logg.m('    finished', t=True, end=' ')
-    logg.m('and found', len(adata.add['louvain_groups_names']), 'clusters, added\n'
+    logg.m('and found', len(adata.add['louvain_groups_order']), 'clusters, added\n'
            '    "louvain_groups", the cluster labels (adata.smp)\n'
-           '    "louvain_groups_names", the unique cluster labels (adata.add)')
+           '    "louvain_groups_order", the unique cluster labels (adata.add)')
     return adata if copy else None

@@ -80,9 +80,9 @@ def dbscan(adata, basis='tsne', n_comps=2, eps=None, min_samples=None, n_jobs=No
     # loop_over_labels = (label for label in np.unique(labels) if label >= 0)
     adata.smp['dbscan_groups'] = labels
     from natsort import natsorted
-    adata.add['dbscan_groups_names'] = np.array(natsorted(np.unique(labels)))[:-1]
+    adata.add['dbscan_groups_order'] = np.array(natsorted(np.unique(labels)))[:-1]
     logg.m('    finished', t=True, end=' ')
     logg.m('and found', len(np.unique(labels))-1, 'clusters, added\n'
            '    "dbscan_groups", the cluster labels (adata.smp)\n'
-           '    "dbscan_groups_names", the unique cluster labels (adata.add)')
+           '    "dbscan_groups_order", the unique cluster labels (adata.add)')
     return adata if copy else None

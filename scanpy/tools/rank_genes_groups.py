@@ -56,12 +56,12 @@ def rank_genes_groups(
     utils.check_adata(adata)
     # for clarity, rename variable
     group_key = groupings
-    groups_names = groups
-    if isinstance(groups_names, list) and isinstance(groups_names[0], int):
-        groups_names = [str(n) for n in groups_names]
-    groups_names, groups_masks = utils.select_groups(adata, groups_names, group_key)
+    groups_order = groups
+    if isinstance(groups_order, list) and isinstance(groups_order[0], int):
+        groups_order = [str(n) for n in groups_order]
+    groups_order, groups_masks = utils.select_groups(adata, groups_order, group_key)
     adata.add['rank_genes_groups'] = group_key
-    adata.add['rank_genes_groups_names'] = groups_names
+    adata.add['rank_genes_groups_order'] = groups_order
     X = adata.X
 
     # loop over all masks and compute means, variances and sample numbers
@@ -73,7 +73,7 @@ def rank_genes_groups(
     for imask, mask in enumerate(groups_masks):
         means[imask], vars[imask] = simple._get_mean_var(X[mask])
         ns[imask] = np.where(mask)[0].size
-    logg.info('... consider "{}":'.format(group_key), groups_names,
+    logg.info('... consider "{}":'.format(group_key), groups_order,
               'with sample numbers', ns)
 
     # test each group against the rest of the data
@@ -104,7 +104,7 @@ def rank_genes_groups(
                 gene_idx = global_indices[gene_counter]
                 X_col = X[mask, gene_idx]
                 if issparse(X): X_col = X_col.toarray()[:, 0]
-                identifier = _build_identifier(group_key, groups_names[igroup],
+                identifier = _build_identifier(group_key, groups_order[igroup],
                                                gene_counter, adata.var_names[gene_idx])
                 full_col = np.empty(adata.n_smps)
                 full_col[:] = np.nan
@@ -113,10 +113,10 @@ def rank_genes_groups(
 
     adata.add['rank_genes_groups_gene_scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_zscores],
-        dtype=[(rn, 'float32') for rn in groups_names])
+        dtype=[(rn, 'float32') for rn in groups_order])
     adata.add['rank_genes_groups_gene_names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
-        dtype=[(rn, 'U50') for rn in groups_names])
+        dtype=[(rn, 'U50') for rn in groups_order])
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "rank_genes_groups_gene_names", np.recarray to be indexed by the `groups` (adata.add)\n'

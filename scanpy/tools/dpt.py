@@ -128,10 +128,10 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
-    adata.add['dpt_groups_names'] = [str(n) for n in dpt.segs_names_unique]
+    adata.add['dpt_groups_order'] = [str(n) for n in dpt.segs_names_unique]
     # for itips, tips in enumerate(dpt.segs_tips):
-    #     # if tips[0] == -1: adata.add['dpt_groups_names'][itips] = '?'
-    #     if dpt.segs_undecided[itips]: adata.add['dpt_groups_names'][itips] += '?'
+    #     # if tips[0] == -1: adata.add['dpt_groups_order'][itips] = '?'
+    #     if dpt.segs_undecided[itips]: adata.add['dpt_groups_order'][itips] += '?'
     # vector of length n_samples of groupnames
     adata.smp['dpt_groups'] = dpt.segs_names.astype('U')
     # the ordering according to segments and pseudotime

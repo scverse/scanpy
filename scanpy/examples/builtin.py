@@ -97,13 +97,13 @@ def moignard15():
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
     adata.add['iroot'] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
-    groups_names = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    groups_order = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
     adata.smp['exp_groups'] = [
-        next(gname for gname in groups_names if sname.startswith(gname))
+        next(gname for gname in groups_order if sname.startswith(gname))
         for sname in adata.smp_names]
     # fix the order and colors of names in "groups"
-    adata.add['exp_groups_names'] = groups_names
+    adata.add['exp_groups_order'] = groups_order
     adata.add['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
@@ -116,10 +116,10 @@ def moignard15_dpt(adata):
     """Add some labeling information to DPT result.
     """
     sc.logg.m('... adding annotation for DPT groups')
-    if len(adata.add['dpt_groups_names']) > 1:
-        groups_names = ['undecided', 'endothelial',
+    if len(adata.add['dpt_groups_order']) > 1:
+        groups_order = ['undecided', 'endothelial',
                         'erythrocytes', 'trunk']
-        adata.add['dpt_groups_names'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_names)]
+        adata.add['dpt_groups_order'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_order)]
     return adata
 
 
@@ -200,7 +200,7 @@ def paul15_raw():
 
 def paul15_dpt(adata):
     """Post-processing for DPT."""
-    adata.add['dpt_groups_names'] = ['', 'GMP', '', 'MEP']
+    adata.add['dpt_groups_order'] = ['', 'GMP', '', 'MEP']
 
 
 def toggleswitch():

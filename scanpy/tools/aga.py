@@ -176,7 +176,7 @@ def aga(adata,
     # vector of length n_samples of group names
     adata.smp['aga_groups'] = aga.segs_names.astype('U')
     # vectors of length n_groups
-    adata.add['aga_groups_names'] = np.array([str(n) for n in aga.segs_names_unique])
+    adata.add['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
     adata.add['aga_groups_sizes'] = aga.segs_sizes
     # the ordering according to groups and pseudotime
     adata.smp['aga_indices'] = aga.indices
@@ -188,18 +188,18 @@ def aga(adata,
     adata.add['aga_adjacency'] = aga.segs_adjacency
     if fresh_compute_louvain:
         adata.smp['louvain_groups'] = adata.smp['aga_groups']
-        adata.add['louvain_groups_names'] = adata.add['aga_groups_names']
+        adata.add['louvain_groups_order'] = adata.add['aga_groups_order']
     if (clusters not in {'segments', 'unconstrained_segments'}
         and not fresh_compute_louvain):
         adata.add['aga_groups_original'] = clusters
-        adata.add['aga_groups_names_original'] = np.array(aga.segs_names_original)
+        adata.add['aga_groups_order_original'] = np.array(aga.segs_names_original)
         if clusters + '_colors' not in adata.add:
             pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
-        if clusters + '_names' not in adata.add:
+        if clusters + '_order' not in adata.add:
             from natsort import natsorted
-            adata.add[clusters + '_names'] = natsorted(np.unique(adata.smp[clusters]))
-        name_list = list(adata.add[clusters + '_names'])
+            adata.add[clusters + '_order'] = natsorted(np.unique(adata.smp[clusters]))
+        name_list = list(adata.add[clusters + '_order'])
         for name in aga.segs_names_original:
             idx = name_list.index(name)
             colors_original.append(adata.add[clusters + '_colors'][idx])
@@ -265,9 +265,9 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
     size_before = adata.add['aga_adjacency'].shape[0]
     adata.add['aga_adjacency'], adata.smp['aga_groups'] = contract_nodes(
         adata.add['aga_adjacency'], adata.smp['aga_groups'])
-    adata.add['aga_groups_names'] = np.unique(adata.smp['aga_groups'])
+    adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'])
     for key in ['aga_attachedness', 'aga_groups_original',
-                'aga_groups_names_original', 'aga_groups_colors_original']:
+                'aga_groups_order_original', 'aga_groups_colors_original']:
         if key in adata.add: del adata.add[key]
     logg.info('    contracted graph from {} to {} nodes'
               .format(size_before, adata.add['aga_adjacency'].shape[0]))
@@ -318,14 +318,14 @@ class AGA(data_graph.DataGraph):
             # transform to a list of index arrays
             self.clusters_precomputed = []
             # TODO: this is not a good solution
-            if clusters + '_names' in adata.add:
-                self.clusters_precomputed_names = list(adata.add[clusters + '_names'])
+            if clusters + '_order' in adata.add:
+                self.clusters_precomputed_names = list(adata.add[clusters + '_order'])
             else:
                 self.clusters_precomputed_names = []
             from natsort import natsorted
             for cluster_name in natsorted(np.unique(clusters_array)):
                 self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
-                if clusters + '_names' not in adata.add:
+                if clusters + '_order' not in adata.add:
                     self.clusters_precomputed_names.append(cluster_name)
             n_nodes = len(self.clusters_precomputed)
         else:
