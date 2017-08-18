@@ -25,7 +25,8 @@ if use_cython:
 else:
     ext_modules += [
         Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.c"]),
+                  ["scanpy/cython/utils_cy.c"],
+                  include_dirs=[numpy.get_include()]),
 ]
 
 req_path = Path('requires.txt')
@@ -36,7 +37,7 @@ with req_path.open() as requirements:
 
 with open('README.rst') as readme_f:
     readme = readme_f.read()
-    
+
 setup(
     name='scanpy',
     version=versioneer.get_version(),
