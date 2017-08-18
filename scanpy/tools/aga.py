@@ -10,11 +10,10 @@ import scipy.sparse
 from .. import logging as logg
 from ..data_structs import ann_data
 from ..data_structs import data_graph
-from .louvain import louvain
 from ..plotting import utils as pl_utils
 
 
-MINIMAL_REALIZED_ATTACHEDNESS = 0.05
+MINIMAL_TREE_ATTACHEDNESS = 0.05
 
 
 def aga(adata,
@@ -24,11 +23,12 @@ def aga(adata,
         n_pcs=50,
         n_dcs=10,
         resolution=1,
+        random_state=0,
+        attachedness_measure='connectedness',
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
         recompute_louvain=False,
-        attachedness_measure='random_walk',
         n_jobs=None,
         copy=False):
     """Approximate Graph Abstraction
@@ -45,10 +45,9 @@ def aga(adata,
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with metadata:
-        adata.add['xroot'] : np.ndarray
-            Root of stochastic process on data points (root cell), specified
-            as expression vector of shape adata.n_smps.
+        Annotated data matrix, optionally with:
+        adata.add['iroot'] : int or str
+            Index of root cell.
         adata.smp['X_pca']: np.ndarray
             PCA representation of the data matrix (result of preprocessing with
             PCA). Will be used if option `recompute_pca` is False.
@@ -77,8 +76,11 @@ def aga(adata,
         Number of diffusion components (very similar to eigen vectors of
         adjacency matrix) to use for distance computations.
     resolution : float, optional (default: 1.0)
-        For Louvain algorithm. Note that you should set `recompute_louvain` to
-        True if changing this to recompute.
+        See ``sc.tool.louvain``.
+    random_state : int, optional (default: 0)
+        See ``sc.tool.louvain``.
+    attachedness_measure : {'connectedness', 'random_walk'}, optional (default: 'connectedness')
+        How to measure attachedness.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
         there is already a cached `distance` or `X_diffmap` in adata.
@@ -86,8 +88,6 @@ def aga(adata,
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
         When changing the `resolution` parameter, you should set this to True.
-    attachedness_measure : {'connectedness', 'random_walk'}, optional (default: 'random_walk')
-        How to measure attachedness.
     n_jobs : int or None (default: None)
         Number of cpus to use for parallel processing (default: sett.n_jobs).
     copy : bool, optional (default: False)
@@ -111,6 +111,7 @@ def aga(adata,
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
         and ('louvain_groups' not in adata.smp_keys()
+             or ('louvain_params' in adata.add and adata.add['louvain_params']['resolution'] != resolution)
              or recompute_louvain
              or not data_graph.no_recompute_of_graph_necessary(
             adata,
@@ -119,13 +120,15 @@ def aga(adata,
             recompute_graph=recompute_graph,
             n_neighbors=n_neighbors,
             n_dcs=n_dcs))):
+        from .louvain import louvain
         louvain(adata,
                 resolution=resolution,
                 n_neighbors=n_neighbors,
                 recompute_pca=recompute_pca,
                 recompute_graph=recompute_graph,
                 n_pcs=n_pcs,
-                n_dcs=n_dcs)
+                n_dcs=n_dcs,
+                random_state=random_state)
         fresh_compute_louvain = True
     clusters = node_groups
     if node_groups == 'louvain': clusters = 'louvain_groups'
@@ -415,28 +418,32 @@ class AGA(data_graph.DataGraph):
             self.segs_sizes.append(len(seg))
         # self.segs_undecided = segs_undecided
         # the following is a bit too much, but this allows easy storage
-        realized_distances = []
+        tree_distances = []
         for i, neighbors in enumerate(segs_adjacency):
-            realized_distances += segs_distances[i][neighbors].tolist()
+            tree_distances += segs_distances[i][neighbors].tolist()
 
-        median_realized_distances = np.median(realized_distances)
+        median_tree_distances = np.median(tree_distances)
         self.segs_attachedness = np.zeros_like(segs_distances)
-        self.segs_attachedness[segs_distances <= median_realized_distances] = 1
-        self.segs_attachedness[segs_distances > median_realized_distances] = (
-            np.exp(-(segs_distances-median_realized_distances)/median_realized_distances)
-            [segs_distances > median_realized_distances])
+        self.segs_attachedness[segs_distances <= median_tree_distances] = 1
+        self.segs_attachedness[segs_distances > median_tree_distances] = (
+            np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
+            [segs_distances > median_tree_distances])
+        
         self.segs_distances = segs_distances
         self.segs_attachedness_absolute = 1/segs_distances
         if self.attachedness_measure == 'connectedness':
             norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
             self.segs_attachedness_absolute /= norm
+            
+        np.fill_diagonal(self.segs_attachedness, 0)
+        np.fill_diagonal(self.segs_attachedness_absolute, 0)
 
-        minimal_realized_attachedness = MINIMAL_REALIZED_ATTACHEDNESS
+        minimal_tree_attachedness = MINIMAL_TREE_ATTACHEDNESS
         self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         self.segs_adjacency_absolute = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         for i, neighbors in enumerate(segs_adjacency):
             clipped_attachedness = self.segs_attachedness[i][neighbors]
-            clipped_attachedness[clipped_attachedness < minimal_realized_attachedness] = minimal_realized_attachedness
+            clipped_attachedness[clipped_attachedness < minimal_tree_attachedness] = minimal_tree_attachedness
             self.segs_adjacency[i, neighbors] = clipped_attachedness
             self.segs_attachedness[i, neighbors] = clipped_attachedness
             self.segs_adjacency_absolute[i, neighbors] = self.segs_attachedness_absolute[i, neighbors]
@@ -907,7 +914,8 @@ class AGA(data_graph.DataGraph):
                     for j in self.Ktilde[reference_point_in_kseg].nonzero()[1]:
                         if j in segs_jseg:
                             connectedness += 1
-                distances.append(1./(connectedness+1))
+                # distances.append(1./(connectedness+1))
+                distances.append(1./connectedness if connectedness != 0 else np.inf)
             logg.m(' ', jseg, '-', kseg_list, '->', distances, v=4)
         else:
             raise ValueError('unknown attachedness measure')
@@ -946,8 +954,8 @@ class AGA(data_graph.DataGraph):
                         if len(segs_adjacency_nodes[kseg_list[trunk]][point_connect]) == 0:
                             del segs_adjacency_nodes[kseg_list[trunk]][point_connect]
                         connectedness[not_trunk] += score
-        # distances = [1/c if c > 0 else np.inf for c in connectedness]
-        distances = [1/(1+c) for c in connectedness]
+        distances = [1/c if c > 0 else np.inf for c in connectedness]
+        # distances = [1/(1+c) for c in connectedness]
         logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
 
@@ -977,8 +985,8 @@ class AGA(data_graph.DataGraph):
                 # if self.Dsq[q, p] > 0: score += 1. / (1 + self.Dsq[q, p])  # / (1 + len(segs_adjacency_nodes[kseg_loop]))  # len(seg_loop)
                 score = 1
                 connections += score
-        # distance = 1/connections if connections > 0 else np.inf
-        distance = 1/(1+connections)
+        # distance = 1/(1+connections)
+        distance = 1/connections if connections > 0 else np.inf        
         logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
 

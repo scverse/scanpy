@@ -1,4 +1,4 @@
-from .rcmod import reset_rcparams
+from .rcmod import reset_rcParams
 
 from . import palettes
 
@@ -21,4 +21,4 @@ from .tools import rank_genes_groups, rank_genes_groups_violin
 from .tools import sim
 
 # reset matplotlib.rcParams
-reset_rcparams()
+reset_rcParams()

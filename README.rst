@@ -140,7 +140,7 @@ and uses::
 
     sc.write(filename, adata)
 
-to save the ``adata`` as a collection of data arrays to a file in a platform and language-independent way. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. Instead of providing a filename, you can provide a *filekey*, i.e., any string that does *not* end on a valid file extension.
+to save the ``adata`` as a collection of data arrays to a file in a platform and language-independent way. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*.
 
 AnnData objects
 ^^^^^^^^^^^^^^^

@@ -422,7 +422,7 @@ def aga(
         title=None,
         left_margin=0.05,
         layout_graph=None,
-        minimal_realized_attachedness=None,
+        minimal_tree_attachedness=None,
         attachedness_type='relative',
         show=None,
         save=None):
@@ -445,7 +445,7 @@ def aga(
     aga_graph(adata, root=root, fontsize=fontsize, ax=axs[1],
               layout=layout_graph,
               attachedness_type=attachedness_type,
-              minimal_realized_attachedness=minimal_realized_attachedness,
+              minimal_tree_attachedness=minimal_tree_attachedness,
               show=False)
     utils.savefig_or_show('aga', show=show, save=save)
 
@@ -588,7 +588,8 @@ def aga_graph(
         add_noise_to_node_positions=None,
         left_margin=0.01,
         attachedness_type='relative',
-        minimal_realized_attachedness=None,
+        minimal_tree_attachedness=None,
+        random_state=0,
         force_labels_to_front=False,
         show=None,
         save=None,
@@ -646,11 +647,12 @@ def aga_graph(
             node_size_power=node_size_power,
             edge_width=edge_width,
             attachedness_type=attachedness_type,
-            minimal_realized_attachedness=minimal_realized_attachedness,
+            minimal_tree_attachedness=minimal_tree_attachedness,
             ext=ext,
             ax=axs[icolor],
             title=title[icolor],
             add_noise_to_node_positions=add_noise_to_node_positions,
+            random_state=0,
             force_labels_to_front=force_labels_to_front)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
@@ -672,9 +674,10 @@ def _aga_graph_single(
         ax=None,
         layout=None,
         add_noise_to_node_positions=None,
-        minimal_realized_attachedness=None,
+        minimal_tree_attachedness=None,
         attachedness_type=False,
         draw_edge_labels=False,
+        random_state=0,
         force_labels_to_front=False):
     avail_attachedness_types = {'relative', 'absolute', 'full'}
     if attachedness_type not in avail_attachedness_types:
@@ -718,7 +721,9 @@ def _aga_graph_single(
             if 'rt' in layout:
                 pos_list = g.layout(layout, root=[root]).coords
             else:
-                pos_list = g.layout(layout).coords
+                np.random.seed(random_state)
+                init_coords = np.random.random((nx_g.number_of_nodes(), 2)).tolist()
+                pos_list = g.layout(layout, seed=init_coords).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g)])
         pos_y_scale = np.max(pos_array[:, 1]) - np.min(pos_array[:, 1])
@@ -741,7 +746,7 @@ def _aga_graph_single(
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
     # edge widths
     from ..tools import aga
-    minimal_realized_attachedness = aga.MINIMAL_REALIZED_ATTACHEDNESS if minimal_realized_attachedness is None else minimal_realized_attachedness
+    minimal_tree_attachedness = aga.MINIMAL_TREE_ATTACHEDNESS if minimal_tree_attachedness is None else minimal_tree_attachedness
     base_edge_width = edge_width * 1.5*rcParams['lines.linewidth']
     if 'aga_attachedness' in adata.add:
         if attachedness_type == 'relative':
@@ -756,10 +761,10 @@ def _aga_graph_single(
                 nx_g = nx.Graph(adata.add['aga_adjacency'])
             else:
                 nx_g = nx.Graph(adata.add['aga_adjacency_absolute'])
-            if minimal_realized_attachedness == aga.MINIMAL_REALIZED_ATTACHEDNESS:
+            if minimal_tree_attachedness == aga.MINIMAL_TREE_ATTACHEDNESS:
                 widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
             else:
-                widths = [base_edge_width*(x[-1]['weight'] if x[-1]['weight'] != aga.MINIMAL_REALIZED_ATTACHEDNESS else minimal_realized_attachedness)
+                widths = [base_edge_width*(x[-1]['weight'] if x[-1]['weight'] != aga.MINIMAL_TREE_ATTACHEDNESS else minimal_tree_attachedness)
                           for x in nx_g.edges(data=True)]
             nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
         else:

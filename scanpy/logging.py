@@ -127,5 +127,12 @@ def print_version_and_date():
     sett.mi('Running Scanpy version', __version__, 'on {}.'.format(get_date()))
 
 
+def print_imported_modules():
+    import types
+    for _, var in sorted(globals().items()):
+        if isinstance(var, types.ModuleType):
+            print(var.__name__, var.__version__, end=' | ')
+
+
 def get_date():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")

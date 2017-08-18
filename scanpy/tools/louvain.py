@@ -14,6 +14,7 @@ def louvain(adata,
             n_neighbors=30,
             resolution=None,
             n_pcs=50,
+            random_state=0,
             flavor='vtraag',
             directed=True,
             recompute_pca=False,
@@ -35,6 +36,10 @@ def louvain(adata,
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
         1.0.
+    n_pcs : int, optional (default: 50)
+        Number of PCs to use for computation of data point graph.
+    random_state : int, optional (default: 0)
+        Change the initialization of the optimization.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
@@ -72,7 +77,7 @@ def louvain(adata,
             if resolution is None: resolution = 1
             try:
                 logg.info('    using the "louvain" package of Traag (2017)')
-                louvain.set_rng_seed(0)
+                louvain.set_rng_seed(random_state)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)
                 adata.add['louvain_quality'] = part.quality()
@@ -105,6 +110,8 @@ def louvain(adata,
     adata.smp['louvain_groups'] = groups
     from natsort import natsorted
     adata.add['louvain_groups_names'] = np.array(natsorted(np.unique(groups)))
+    adata.add['louvain_params'] = np.array((resolution,),
+                                           dtype=[('resolution', float)])
     logg.m('    finished', t=True, end=' ')
     logg.m('and found', len(adata.add['louvain_groups_names']), 'clusters, added\n'
            '    "louvain_groups", the cluster labels (adata.smp)\n'

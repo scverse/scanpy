@@ -2,9 +2,10 @@
 """Utility functions and classes
 """
 
+from collections import namedtuple
 import numpy as np
 from natsort import natsorted
-from . import settings as sett
+from . import settings
 from . import logging as logg
 
 # --------------------------------------------------------------------------------
@@ -12,7 +13,17 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 
 
+def get_graph_tool_from_adjacency(adjacency, directed=None):
+    """Get graph_tool graph from adjacency matrix."""
+    import graph_tool as gt
+    g = gt.Graph(directed=directed)
+    g.add_vertex(adjacency.shape[0])
+    g.add_edge_list(np.transpose(adjacency.nonzero()))
+    return g
+
+
 def get_igraph_from_adjacency(adjacency, directed=None):
+    """Get igraph graph from adjacency matrix."""
     import igraph as ig
     sources, targets = adjacency.nonzero()
     weights = adjacency[sources, targets]
@@ -27,19 +38,24 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     return g
 
 
-def identify_categories(adata, prediction, reference,
-                        normalization='prediction',
-                        threshold=0.01, max_n_names=2):
-    """Identify predicted categories with reference.
+def compute_association_matrix_of_groups(adata, prediction, reference,
+                                         normalization='prediction',
+                                         threshold=0.01, max_n_names=2):
+    """Identify predicted groups with reference groups.
 
     Parameters
     ----------
     adata : AnnData
     prediction : str
-        smp_key of adata
+        Field name of adata.smp.
     reference : str
-        smp_key of adata
-    maximum : int or None, optional (default: 2)
+        Field name of adata.smp.
+    normalization : {'prediction', 'reference'}
+        Whether to normalize with respect to the predicted groups or the
+        reference groups.
+    threshold : float, optional (default: 0.01)
+        Do not consider associations whose overlap is below this fraction.
+    max_n_names : int or None, optional (default: 2)
         Control how many reference names you want to be associated with per
         predicted name. Set to `None`, if you want all.
 
@@ -84,14 +100,152 @@ def identify_categories(adata, prediction, reference,
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
-    return asso_names, np.array(asso_matrix)
+    Result = namedtuple('compute_association_matrix_of_groups',
+                        ['asso_names', 'asso_matrix'])
+    return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-def get_associated_colors(reference_colors, asso_matrix):
+identify_categories = compute_association_matrix_of_groups
+"""Deprecated: For backwards compatibility. See compute_association_matrix_of_groups."""
+
+
+def get_associated_colors_of_groups(reference_colors, asso_matrix):
     asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
                     for i_ref in range(asso_matrix.shape[1])}
                    for i_pred in range(asso_matrix.shape[0])]
     return asso_colors
+
+
+get_associated_colors = get_associated_colors_of_groups
+"""Deprecated: For backwards compatibility. See get_associated_colors_of_groups."""
+
+
+def compute_group_overlap_score(ref_labels, pred_labels,
+                                threshold_overlap_pred=0.5,
+                                threshold_overlap_ref=0.5):
+    """How well do the pred_labels explain the ref_labels?
+
+    A predicted cluster explains a reference cluster if it is contained within the reference
+    cluster with at least 50% (threshold_overlap_pred) of its points and these correspond
+    to at least 50% (threshold_overlap_ref) of the reference cluster.
+    """
+    ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
+    ref_dict = dict(zip(ref_unique, ref_counts))
+    pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
+    pred_dict = dict(zip(pred_unique, pred_counts))
+    summary = []
+    for true in ref_unique:
+        sub_pred_unique, sub_pred_counts = np.unique(pred_labels[true == ref_labels], return_counts=True)
+        relative_overlaps_pred = [sub_pred_counts[i] / pred_dict[n] for i, n in enumerate(sub_pred_unique)]
+        relative_overlaps_ref = [sub_pred_counts[i] / ref_dict[true] for i, n in enumerate(sub_pred_unique)]
+        pred_best_index = np.argmax(relative_overlaps_pred)
+        summary.append(1 if (relative_overlaps_pred[pred_best_index] >= threshold_overlap_pred and
+                             relative_overlaps_ref[pred_best_index] >= threshold_overlap_ref)
+                       else 0)
+        # print(true, sub_pred_unique[pred_best_index], relative_overlaps_pred[pred_best_index],
+        #       relative_overlaps_ref[pred_best_index], summary[-1])
+    return sum(summary)/len(summary)
+
+
+def identify_groups(ref_labels, pred_labels, return_overlaps=False):
+    """Which predicted label explains which reference label?
+
+    A predicted label explains the reference label which maximizes the minimum
+    of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
+
+    Returns
+    -------
+    A dictionary of length ``len(np.unique(ref_labels))`` that stores for each
+    reference label the predicted label that best explains it.
+
+    If ``return_overlaps`` is ``True``, this will in addition return the overlap
+    of the reference group with the predicted group; normalized with respect to
+    the reference group size and the predicted group size, respectively.
+    """
+    ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
+    ref_dict = dict(zip(ref_unique, ref_counts))
+    pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
+    pred_dict = dict(zip(pred_unique, pred_counts))
+    associated_predictions = {}
+    associated_overlaps = {}
+    for ref_label in ref_unique:
+        sub_pred_unique, sub_pred_counts = np.unique(pred_labels[ref_label == ref_labels], return_counts=True)
+        relative_overlaps_pred = [sub_pred_counts[i] / pred_dict[n] for i, n in enumerate(sub_pred_unique)]
+        relative_overlaps_ref = [sub_pred_counts[i] / ref_dict[ref_label] for i, n in enumerate(sub_pred_unique)]
+        relative_overlaps = np.c_[relative_overlaps_pred, relative_overlaps_ref]
+        relative_overlaps_min = np.min(relative_overlaps, axis=1)
+        pred_best_index = np.argmax(relative_overlaps_min)
+        associated_predictions[ref_label] = sub_pred_unique[pred_best_index]
+        associated_overlaps[ref_label] = relative_overlaps[pred_best_index]
+    if return_overlaps: return associated_predictions, associated_overlaps
+    else: return associated_predictions
+
+
+def compute_fraction_of_agreeing_paths(adata1, adata2,
+                                       adjacency_key='aga_attachedness_absolute'):
+    """Compute the fraction of agreeing paths between leafs (nodes with degree
+    1), a measure for the topological similarity between graphs.
+
+    Notes
+    -----
+
+    By increasing the verbosity to level 4 and 5, the paths that do not agree
+    and the paths that agree are written to the output, respectively.
+    """
+    import networkx as nx
+    g1 = nx.Graph(adata1.add[adjacency_key])
+    leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
+    asso_groups1 = identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
+    asso_groups2 = identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
+    g2 = nx.Graph(adata2.add[adjacency_key])
+
+    import itertools
+    n_steps = 0
+    n_agreeing_steps = 0
+    n_paths = 0
+    n_agreeing_paths = 0
+    # loop over all pairs of leaf nodes in the reference adata1
+    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
+        r2, s2 = asso_groups1[r], asso_groups1[s]
+        path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
+        path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
+        path1_mapped = [asso_groups1[l] for l in path1]
+        path1_mapped = remove_repetitions_from_list(path1_mapped)
+        n_agreeing_steps_path = 0
+        for il2, l in enumerate(path2[:-1]):
+            if l in set(path1_mapped):
+                il1 = path1_mapped.index(l)
+                if path2[il2 + 1] == path1_mapped[il1 + 1]:
+                    n_agreeing_steps_path += 1
+        n_agreeing_steps += n_agreeing_steps_path
+        n_steps_path = len(path2) - 1
+        n_steps += n_steps_path
+        n_paths += 1
+        if n_agreeing_steps_path == n_steps_path:
+            n_agreeing_paths += 1
+            # output the paths that do agree
+            logg.m('do agree: path1 = {},\n'
+                   '   mapped path1 = {},\n'
+                   '          path2 = {}.'
+                   .format(path1, path1_mapped, path2), v=5, no_indent=True)
+        else:
+            # output the paths that do not agree
+            logg.m('no agree: path1 = {},\n'
+                   '   mapped path1 = {},\n'
+                   '          path2 = {}.'
+                   .format(path1, path1_mapped, path2), v=4, no_indent=True)
+            pass
+    Result = namedtuple('compute_fraction_of_agreeing_paths_result',
+                        ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
+    return Result(frac_steps=n_agreeing_steps/n_steps,
+                  n_steps=n_steps,
+                  frac_paths=n_agreeing_paths/n_paths,
+                  n_paths=n_paths)
+
+
+
+def remove_repetitions_from_list(l):
+    return [l[0]] + [e for (i, e) in enumerate(l[1:]) if l[i] != e]
 
 
 def plot_category_association(adata, prediction, reference, asso_matrix):
@@ -105,7 +259,7 @@ def plot_category_association(adata, prediction, reference, asso_matrix):
 def unique_categories(categories):
     """Pass array-like categories, return sorted cleaned unique categories."""
     categories = np.unique(categories)
-    categories = np.setdiff1d(categories, np.array(sett._ignore_categories))
+    categories = np.setdiff1d(categories, np.array(settings._ignore_categories))
     categories = np.array(natsorted(categories, key=lambda v: v.upper()))
     return categories
 
@@ -141,15 +295,15 @@ def check_adata(adata, verbosity=-3):
     Checks whether adata contains annotation.
     """
     if len(adata.smp_keys()) == 0:
-        sett.m(1-verbosity, _howto_specify_subgroups)
+        settings.m(1-verbosity, _howto_specify_subgroups)
     else:
-        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
+        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
             info = 'sample annotation: '
         for ismp, smp in enumerate(adata.smp_keys()):
             # ordered unique categories for categorical annotation
             if not smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
                 adata.add[smp + '_names'] = unique_categories(adata.smp[smp])
-            if sett.verbosity > 1-verbosity:
+            if settings.verbosity > 1-verbosity:
                 info += '"' + smp + '" = '
                 if adata.smp[smp].dtype.char in {'U', 'S'}:
                     ann_info = str(adata.add[smp + '_names'])
@@ -162,8 +316,8 @@ def check_adata(adata, verbosity=-3):
                     info += 'continuous'
                 if ismp < len(adata.smp_keys())-1:
                     info += ', '
-        if len(adata.smp_keys()) > 0 and sett.verbosity > 1-verbosity:
-            sett.m(1-verbosity, info)
+        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
+            settings.m(1-verbosity, info)
     return adata
 
 
@@ -212,13 +366,13 @@ def read_args_tool(toolkey, example_parameters, tool_add_args=None):
     """Read args for single tool.
     """
     import scanpy as sc
-    p = default_tool_argparser(sc.help(toolkey, string=True), example_parameters)
+    p = default_tool_argparser(help(toolkey), example_parameters)
     if tool_add_args is None:
         p = add_args(p)
     else:
         p = tool_add_args(p)
     args = vars(p.parse_args())
-    args = sett.process_args(args)
+    args = settings.process_args(args)
     return args
 
 
@@ -375,7 +529,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     import traceback
     traceback.print_stack()
     log = file if hasattr(file, 'write') else sys.stderr
-    sett.write(warnings.formatwarning(message, category, filename, lineno, line))
+    settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
 def subsample(X, subsample=1, seed=0):
@@ -511,7 +665,6 @@ def hierarch_cluster(M):
     indices = sp.cluster.hierarchy.leaves_list(link)
     Mclus = np.array(M[:, indices])
     Mclus = Mclus[indices, :]
-    sett.mt(0, 'clustered matrix')
     if False:
         pl.matshow(Mclus)
         pl.colorbar()

@@ -261,7 +261,6 @@ class DataGraph():
             self.knn = knn
             self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
             self.Dchosen = None
-            self.init_iroot_and_X(adata, recompute_pca, n_pcs)
             if False:  # TODO
                 # in case we already computed distance relations
                 if not recompute_distances and 'data_graph_distance_local' in adata.add:
@@ -293,7 +292,7 @@ class DataGraph():
         # see whether we can set self.iroot using the full data matrix
         if xroot is not None and xroot.size == self.X.shape[1]:
             self.set_root(xroot)
-        # use the fulll data matrix X, nothing to be done
+        # use the full data matrix X, nothing to be done
         if self.n_pcs == 0 or self.X.shape[1] <= self.n_pcs:
             logg.info('    using data matrix X directly for building graph (no PCA)')
         # use X_pca

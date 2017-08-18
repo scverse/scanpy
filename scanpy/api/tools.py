@@ -1,6 +1,17 @@
-"""Tools
+"""
+``scanpy.tools`` - Machine Learning and Statistics Tools
+----------------------------------------------------
 
-The user only sees convenience functions.
+Summary
++++++++
+
+.. autosummary::
+   :nosignatures:
+   
+   draw_graph
+
+Contents
+++++++++
 """
 
 # order alphabetically

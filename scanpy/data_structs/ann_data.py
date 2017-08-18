@@ -539,7 +539,7 @@ class AnnData(IndexMixin):
                 '    smp_names = {}\n'
                 '    var_names = {}'
                 .format(self.n_smps, self.n_vars,
-                        self.smp.keys(), self.var.keys(), list(self.add.keys()),
+                        self.smp.keys(), self.var.keys(), sorted(list(self.add.keys())),
                         self.smp_names, self.var_names))
 
     @property
