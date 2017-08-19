@@ -171,7 +171,10 @@ def set_figure_params(dpi=None, figure_formats=['png2x']):
     from matplotlib import rcParams
     global _dpi
     if dpi is not None: _dpi = dpi
+    # need to set the following two lines as older Jupyter notebooks seem to use
+    # 'savefig.dpi' and more rescent ones 'figure.dpi'
     rcParams['savefig.dpi'] = _dpi
+    rcParams['figure.dpi'] = _dpi
 
 
 set_dpi = set_figure_params
