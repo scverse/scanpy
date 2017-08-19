@@ -174,7 +174,7 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
         relative_overlaps_ref = [sub_pred_counts[i] / ref_dict[ref_label] for i, n in enumerate(sub_pred_unique)]
         relative_overlaps = np.c_[relative_overlaps_pred, relative_overlaps_ref]
         relative_overlaps_min = np.min(relative_overlaps, axis=1)
-        pred_best_index = np.argmax(relative_overlaps_min)
+        pred_best_index = np.argsort(relative_overlaps_min)[::-1]
         associated_predictions[ref_label] = sub_pred_unique[pred_best_index]
         associated_overlaps[ref_label] = relative_overlaps[pred_best_index]
     if return_overlaps: return associated_predictions, associated_overlaps
@@ -194,10 +194,10 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
     """
     import networkx as nx
     g1 = nx.Graph(adata1.add[adjacency_key])
+    g2 = nx.Graph(adata2.add[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
     asso_groups1 = identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
     asso_groups2 = identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
-    g2 = nx.Graph(adata2.add[adjacency_key])
 
     import itertools
     n_steps = 0
@@ -206,35 +206,57 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
     n_agreeing_paths = 0
     # loop over all pairs of leaf nodes in the reference adata1
     for (r, s) in itertools.combinations(leaf_nodes1, r=2):
-        r2, s2 = asso_groups1[r], asso_groups1[s]
+        r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
+        logg.m('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
+               .format(r, s, r2, s2), v=4, no_indent=True)
         path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
         path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
-        path1_mapped = [asso_groups1[l] for l in path1]
-        path1_mapped = remove_repetitions_from_list(path1_mapped)
+        if len(path1) >= len(path2):
+            path_mapped = [asso_groups1[l] for l in path1]
+            path_compare = path2
+            path_compare_id = 2
+        else:
+            path_mapped = [asso_groups2[l] for l in path2]
+            path_compare = path1
+            path_compare_id = 1
         n_agreeing_steps_path = 0
-        for il2, l in enumerate(path2[:-1]):
-            if l in set(path1_mapped):
-                il1 = path1_mapped.index(l)
-                if path2[il2 + 1] == path1_mapped[il1 + 1]:
-                    n_agreeing_steps_path += 1
+        ip_progress = 0
+        for il, l in enumerate(path_compare[:-1]):
+            for ip, p in enumerate(path_mapped):
+                if ip >= ip_progress and l in p:
+                    # check whether we can find the step forward of path_compare in path_mapped
+                    if (ip + 1 < len(path_mapped)
+                        and
+                        path_compare[il + 1] in path_mapped[ip + 1]):
+                        # make sure that a step backward leads us to the same value of l
+                        # in case we "jumped"
+                        logg.m('found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
+                               .format(l, path_compare[il + 1], il, path_compare_id, ip), v=6)
+                        consistent_history = True
+                        for iip in range(ip, ip_progress, -1):
+                            if l not in path_mapped[iip - 1]:
+                                consistent_history = False
+                        if consistent_history:
+                            # here, we take one step further back (ip_progress - 1); it's implied that this
+                            # was ok in the previous step
+                            logg.m('    step(s) backward to position(s) {} in path_mapped are fine, too: valid step'
+                                   .format(list(range(ip - 1, ip_progress - 2, -1))), v=6)
+                            n_agreeing_steps_path += 1
+                            ip_progress = ip + 1
+                            break
         n_agreeing_steps += n_agreeing_steps_path
-        n_steps_path = len(path2) - 1
+        n_steps_path = len(path_compare) - 1
         n_steps += n_steps_path
         n_paths += 1
+
         if n_agreeing_steps_path == n_steps_path:
             n_agreeing_paths += 1
-            # output the paths that do agree
-            logg.m('do agree: path1 = {},\n'
-                   '   mapped path1 = {},\n'
-                   '          path2 = {}.'
-                   .format(path1, path1_mapped, path2), v=5, no_indent=True)
-        else:
-            # output the paths that do not agree
-            logg.m('no agree: path1 = {},\n'
-                   '   mapped path1 = {},\n'
-                   '          path2 = {}.'
-                   .format(path1, path1_mapped, path2), v=4, no_indent=True)
-            pass
+        logg.m('      path1 = {},\n'
+               'path_mapped = {},\n'
+               '      path2 = {},\n'
+               '-> n_agreeing_steps = {} / n_steps = {}.'
+               .format(path1, [list(p) for p in path_mapped], path2,
+                       n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
     Result = namedtuple('compute_fraction_of_agreeing_paths_result',
                         ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
     return Result(frac_steps=n_agreeing_steps/n_steps,

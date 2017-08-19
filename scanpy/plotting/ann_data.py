@@ -11,7 +11,7 @@ from matplotlib import rcParams
 from matplotlib.colors import is_color_like
 import seaborn as sns
 
-from .. import settings as sett
+from .. import settings
 from . import utils
 from .utils import scatter_base, scatter_group
 
@@ -162,12 +162,12 @@ def scatter(
                 else:
                     continuous = True
                     c = adata.smp[color_key]
-                # sett.m(0, '... coloring according to', color_key)
+                # settings.m(0, '... coloring according to', color_key)
             # coloring according to gene expression
             elif color_key in set(adata.var_names):
                 c = adata[:, color_key].X
                 continuous = True
-                # sett.m(0, '... coloring according to expression of gene', color_key)
+                # settings.m(0, '... coloring according to expression of gene', color_key)
             else:
                 raise ValueError('"' + color_key + '" is invalid!'
                                  + ' specify valid sample annotation, one of '
@@ -210,6 +210,9 @@ def scatter(
     for i, icolor_key in enumerate(categoricals):
         palette = palettes[i]
         color_key = color_keys[icolor_key]
+        if len(adata.add[color_key + '_order']) != np.unique(adata.smp[color_key]):
+            from ..utils import unique_categories
+            adata.add[color_key + '_order'] = unique_categories(adata.smp[color_key])
         if (not color_key + '_colors' in adata.add or not palette_was_none
             or len(adata.add[color_key + '_order']) != len(adata.add[color_key + '_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, color_key, palette)
@@ -218,7 +221,7 @@ def scatter(
         centroids = {}
         if groups is None:
             for iname, name in enumerate(adata.add[color_key + '_order']):
-                if name not in sett._ignore_categories:
+                if name not in settings._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
                                          adata, Y, projection, size=size)
                     mask_remaining[mask] = False
