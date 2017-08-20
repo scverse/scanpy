@@ -404,10 +404,9 @@ def tsne(
 # and tree inference tools
 # ------------------------------------------------------------------------------
 
+
 def aga(
         adata,
-        root=0,       # aga_graph
-        fontsize=8,   # aga_graph
         basis='tsne',
         color=None,
         groups=None,
@@ -417,15 +416,13 @@ def aga(
         legend_fontsize=None,
         color_map=None,
         palette=None,
-        right_margin=None,
         size=None,
         title=None,
+        right_margin=None,
         left_margin=0.05,
-        layout_graph=None,
-        minimal_tree_attachedness=None,
-        attachedness_type='relative',
         show=None,
-        save=None):
+        save=None,
+        **aga_graph_params):
     """Summary figure for approximate graph abstraction.
 
     See `sc.pl.aga_scatter` and `sc.pl.aga_graph` for the parameters.
@@ -442,11 +439,8 @@ def aga(
                 ax=axs[0],
                 show=False)
     axs[1].set_frame_on(False)
-    aga_graph(adata, root=root, fontsize=fontsize, ax=axs[1],
-              layout=layout_graph,
-              attachedness_type=attachedness_type,
-              minimal_tree_attachedness=minimal_tree_attachedness,
-              show=False)
+    aga_graph(adata, ax=axs[1], show=False,
+              **aga_graph_params)
     utils.savefig_or_show('aga', show=show, save=save)
 
 
@@ -461,9 +455,9 @@ def aga_scatter(
         legend_fontsize=None,
         color_map=None,
         palette=None,
-        right_margin=None,
         size=None,
         title=None,
+        right_margin=None,
         show=None,
         save=None,
         ax=None):
@@ -487,13 +481,13 @@ def aga_scatter(
          String denoting matplotlib color map.
     palette : list of str (default: None)
          Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
     size : float (default: None)
          Point size.
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     show : bool, optional (default: None)
          Show the plot.
     save : bool or str, optional (default: None)
@@ -537,44 +531,10 @@ def aga_scatter(
     return ax
 
 
-def aga_attachedness(
-        adata,
-        attachedness_type='scaled',
-        color_map=None,
-        show=None,
-        save=None):
-    """Attachedness of aga groups.
-    """
-    if attachedness_type == 'scaled':
-        attachedness = adata.add['aga_attachedness']
-    elif attachedness_type == 'distance':
-        attachedness = adata.add['aga_distances']
-    elif attachedness_type == 'absolute':
-        attachedness = adata.add['aga_attachedness_absolute']
-    else:
-        raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
-    adjacency = adata.add['aga_adjacency']
-    matrix(attachedness, color_map=color_map, show=False)
-    for i in range(adjacency.shape[0]):
-        neighbors = adjacency[i].nonzero()[1]
-        pl.scatter([i for j in neighbors], neighbors, color='green')
-    utils.savefig_or_show('aga_attachedness', show=show, save=save)
-    # as a stripplot
-    if False:
-        pl.figure()
-        for i, ds in enumerate(attachedness):
-            ds = np.log1p(ds)
-            x = [i for j, d in enumerate(ds) if i != j]
-            y = [d for j, d in enumerate(ds) if i != j]
-            pl.scatter(x, y, color='gray')
-            neighbors = adjacency[i]
-            pl.scatter([i for j in neighbors],
-                       ds[neighbors], color='green')
-        pl.show()
-
-
 def aga_graph(
         adata,
+        solid_edges='aga_adjacency_tree_confidence',
+        dashed_edges='aga_adjacency_full_confidence',
         root=0,
         layout=None,
         colors=None,
@@ -585,12 +545,12 @@ def aga_graph(
         edge_width=1,
         title=None,
         ext='png',
-        add_noise_to_node_positions=None,
         left_margin=0.01,
-        attachedness_type='relative',
-        minimal_tree_attachedness=None,
+        minimal_edge_width=0,
         random_state=0,
         force_labels_to_front=False,
+        pos=None,
+        return_pos=False,
         show=None,
         save=None,
         ax=None):
@@ -598,12 +558,21 @@ def aga_graph(
 
     Parameters
     ----------
-    attachedness_type : {'relative', 'absolute', 'full'}
-        For 'full', use the fully connected graph weighted with the
-        attachedness matrix.
-    layout : {'simple', 'rt', 'rt_circular', 'circle', ...}
-        Plotting layout. 'rt' stands for Reingold Tilford and uses
-        the igraph layout function.
+    solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
+        Key for ``adata.add`` that specifies the matrix that stores the edges
+        to be drawn solid black.
+    dashed_edges : str, optional (default: 'aga_adjacency_full_confidence')
+        Key for ``adata.add`` that specifies the matrix that stores the edges
+        to be drawn dashed grey.
+    layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}
+        Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
+        Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
+        'eq_tree' use the igraph layout function. All other igraph layouts are
+        also permitted.
+    pos : array-like, optional (default: None)
+        Two-column array storing the x and y coordinates for drawing.
+    return_pos : bool, optional (default: False)
+        Return the positions.
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
@@ -614,6 +583,13 @@ def aga_graph(
          default filename.
     ax : matplotlib.Axes
          A matplotlib axes object.
+
+    Returns
+    -------
+    A matplotlib.Axes or an array of matplotlib.Axes if ax is ``None``.
+
+    If ``return_pos`` is ``True``, in addition, the positions of the nodes are
+    returned.
     """
     if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
     if colors is None or isinstance(colors, str): colors = [colors]
@@ -636,8 +612,10 @@ def aga_graph(
         axs = ax
     if len(colors) == 1: axs = [axs]
     for icolor, color in enumerate(colors):
-        _aga_graph_single(
+        pos = _aga_graph_single(
             adata,
+            solid_edges=solid_edges,
+            dashed_edges=dashed_edges,
             layout=layout,
             root=root,
             colors=color,
@@ -646,22 +624,25 @@ def aga_graph(
             node_size=node_size,
             node_size_power=node_size_power,
             edge_width=edge_width,
-            attachedness_type=attachedness_type,
-            minimal_tree_attachedness=minimal_tree_attachedness,
-            ext=ext,
+            minimal_edge_width=minimal_edge_width,
             ax=axs[icolor],
             title=title[icolor],
-            add_noise_to_node_positions=add_noise_to_node_positions,
             random_state=0,
+            pos=pos,
             force_labels_to_front=force_labels_to_front)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
-    return axs if ax is None else None
+    if return_pos:
+        return axs, pos if ax is None else pos
+    else:
+        return axs if ax is None else None
 
 
 def _aga_graph_single(
         adata,
+        solid_edges=None,
+        dashed_edges=None,
         root=0,
         colors=None,
         groups=None,
@@ -670,19 +651,12 @@ def _aga_graph_single(
         node_size_power=0.5,
         edge_width=1,
         title=None,
-        ext='pdf',
         ax=None,
         layout=None,
-        add_noise_to_node_positions=None,
-        minimal_tree_attachedness=None,
-        attachedness_type=False,
-        draw_edge_labels=False,
+        pos=None,
+        minimal_edge_width=None,
         random_state=0,
         force_labels_to_front=False):
-    avail_attachedness_types = {'relative', 'absolute', 'full'}
-    if attachedness_type not in avail_attachedness_types:
-        raise ValueError('Pass available `attachedness_type`, one of {}.'
-                         .format(avail_attachedness_types))
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
     if groups is None and 'aga_groups_order_original' in adata.add:
@@ -694,90 +668,74 @@ def _aga_graph_single(
     if isinstance(root, str) and root in groups:
         root = list(groups).index(root)
 
-    # plot the tree
-    if isinstance(adata, nx.Graph):
-        G = adata
-        colors = ['grey' for n in enumerate(G)]
-    else:
-        if colors is None:
-            if ('aga_groups_colors' not in adata.add
-                or len(adata.add['aga_groups_order']) != len(adata.add['aga_groups_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
-            colors = adata.add['aga_groups_colors']
-        for iname, name in enumerate(adata.add['aga_groups_order']):
-            if name in sett._ignore_categories: colors[iname] = 'grey'
-        nx_g = nx.Graph(adata.add['aga_adjacency'])
-    # node positions
-    if attachedness_type in {'relative', 'absolute'}:
-        if layout is None: layout = 'simple'
-        if layout == 'simple':
-            pos = utils.hierarchy_pos(nx_g, root)
-            if len(pos) < nx_g.number_of_nodes():
-                raise ValueError('This is a forest and not a single tree. '
-                                 'Try another `layout`, e.g.,  {"fr"}.')
-        else:
+    # define the objects
+    if colors is None:
+        if ('aga_groups_colors' not in adata.add
+            or len(adata.add['aga_groups_order'])
+               != len(adata.add['aga_groups_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
+        colors = adata.add['aga_groups_colors']
+    for iname, name in enumerate(adata.add['aga_groups_order']):
+        if name in sett._ignore_categories: colors[iname] = 'grey'
+    adjacency_solid = adata.add[solid_edges]
+    nx_g_solid = nx.Graph(adjacency_solid)
+
+    # node positions from adjacency_solid
+    if pos is None:
+        if layout is None:
+            layout = 'fr'
+        # igraph layouts
+        if layout != 'eq_tree':
             from .. import utils as sc_utils
-            g = sc_utils.get_igraph_from_adjacency(adata.add['aga_adjacency'])
+            g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
             if 'rt' in layout:
                 pos_list = g.layout(layout, root=[root]).coords
             else:
                 np.random.seed(random_state)
-                init_coords = np.random.random((nx_g.number_of_nodes(), 2)).tolist()
+                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
                 pos_list = g.layout(layout, seed=init_coords).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
-        pos_array = np.array([pos[n] for count, n in enumerate(nx_g)])
-        pos_y_scale = np.max(pos_array[:, 1]) - np.min(pos_array[:, 1])
-        if add_noise_to_node_positions:
-            np.random.seed(0)
-            pos = {n: pos[n] + 0.025*pos_y_scale*2*(np.random.random()-0.5)
-                   for n in pos.keys()}
-    elif attachedness_type == 'full':
-        from .. import utils as sc_utils
-        if layout is None: layout = 'fr'
-        g = sc_utils.get_igraph_from_adjacency(adata.add['aga_attachedness'])
-        if 'rt' in layout:
-            pos_list = g.layout(layout, root=[root]).coords
+        # equally spaced tree
         else:
-            pos_list = g.layout(layout).coords
-        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
-    if len(pos) == 1: pos[0] = 0.5, 0.5
+            pos = utils.hierarchy_pos(nx_g_solid, root)
+            if len(pos) < adjacency_solid.shape[0]:
+                raise ValueError('This is a forest and not a single tree. '
+                                 'Try another `layout`, e.g., {\'fr\'}.')
+        pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
+    else:
+        # convert the array-like positions to a dictionary
+        pos_array = pos
+        pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
+    if len(pos) == 1: pos[0] = (0.5, 0.5)
+
+    # init the figure
     if ax is None:
         fig = pl.figure()
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+
     # edge widths
     from ..tools import aga
-    minimal_tree_attachedness = aga.MINIMAL_TREE_ATTACHEDNESS if minimal_tree_attachedness is None else minimal_tree_attachedness
-    base_edge_width = edge_width * 1.5*rcParams['lines.linewidth']
-    if 'aga_attachedness' in adata.add:
-        if attachedness_type == 'relative':
-            nx_g = nx.Graph(adata.add['aga_attachedness'])
-        else:
-            nx_g = nx.Graph(adata.add['aga_attachedness_absolute'])
-        widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
-        if attachedness_type in {'relative', 'absolute'}:
-            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='grey',
-                                   style='dashed', alpha=0.5)
-            if attachedness_type == 'relative':
-                nx_g = nx.Graph(adata.add['aga_adjacency'])
-            else:
-                nx_g = nx.Graph(adata.add['aga_adjacency_absolute'])
-            if minimal_tree_attachedness == aga.MINIMAL_TREE_ATTACHEDNESS:
-                widths = [base_edge_width*x[-1]['weight'] for x in nx_g.edges(data=True)]
-            else:
-                widths = [base_edge_width*(x[-1]['weight'] if x[-1]['weight'] != aga.MINIMAL_TREE_ATTACHEDNESS else minimal_tree_attachedness)
-                          for x in nx_g.edges(data=True)]
-            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
-        else:
-            nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
-    else:
-        widths = [base_edge_width for x in nx_g.edges()]
-        nx.draw_networkx_edges(nx_g, pos, ax=ax, width=widths, edge_color='black')
-    # labels
-    if draw_edge_labels:
-        edge_labels = {}
-        for n1, n2, label in nx_g.edges(data=True):
-            edge_labels[(n1, n2)] = '{:.3f}'.format(1. / (1 + 10*label['weight']))
-        nx.draw_networkx_edge_labels(nx_g, pos, edge_labels=edge_labels, ax=ax, font_size=5)
+    base_edge_width = edge_width * 1.5 * rcParams['lines.linewidth']
+    # normalize if we have fully connected matrix
+    if isinstance(adjacency_solid, np.ndarray):
+        base_edge_width /= np.median(adjacency_solid[adjacency_solid.nonzero()])
+
+    # draw dashed edges
+    if dashed_edges is not None:
+        adjacency_dashed = adata.add[dashed_edges]
+        nx_g_dashed = nx.Graph(adjacency_dashed)
+        widths = [base_edge_width*x[-1]['weight'] for x in nx_g_dashed.edges(data=True)]
+        nx.draw_networkx_edges(nx_g_dashed, pos, ax=ax, width=widths, edge_color='grey',
+                               style='dashed', alpha=0.5)
+
+    # draw solid edges
+    widths = [base_edge_width*x[-1]['weight']
+              if base_edge_width*x[-1]['weight'] > minimal_edge_width
+              else minimal_edge_width
+              for x in nx_g_solid.edges(data=True)]
+    nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+
+    # draw the nodes (pie charts)
     trans = ax.transData.transform
     bbox = ax.get_position().get_points()
     ax_x_min = bbox[0, 0]
@@ -790,9 +748,9 @@ def _aga_graph_single(
     ax.set_frame_on(False)
     ax.set_xticks([])
     ax.set_yticks([])
-    base_pie_size = 1/(np.sqrt(nx_g.number_of_nodes()) + 10) * node_size
+    base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size
     median_group_size = np.median(adata.add['aga_groups_sizes'])
-    for count, n in enumerate(nx_g.nodes_iter()):
+    for count, n in enumerate(nx_g_solid.nodes_iter()):
         pie_size = base_pie_size
         pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
                              node_size_power)
@@ -821,10 +779,10 @@ def _aga_graph_single(
                    horizontalalignment='center',
                    transform=a.transAxes,
                    size=fontsize)
-    # TODO: this is a terrible hack, but if we use the solution above, labels
-    # get hidden behind pies
+    # TODO: this is a terrible hack, but if we use the solution above (``not
+    # force_labels_to_front``), labels get hidden behind pies
     if force_labels_to_front and groups is not None:
-        for count, n in enumerate(nx_g.nodes_iter()):
+        for count, n in enumerate(nx_g_solid.nodes_iter()):
             # all copy and paste from above
             pie_size = base_pie_size
             pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
@@ -842,7 +800,7 @@ def _aga_graph_single(
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
     if title is not None: ax.set_title(title)
-    return ax
+    return pos_array
 
 
 def aga_path(
@@ -966,6 +924,42 @@ def aga_path(
     else: show = sett.autoshow if show is None else show
     utils.savefig_or_show('aga_path', show=show, save=save)
     return ax if ax_was_none else None
+
+
+def aga_attachedness(
+        adata,
+        attachedness_type='scaled',
+        color_map=None,
+        show=None,
+        save=None):
+    """Attachedness of aga groups.
+    """
+    if attachedness_type == 'scaled':
+        attachedness = adata.add['aga_attachedness']
+    elif attachedness_type == 'distance':
+        attachedness = adata.add['aga_distances']
+    elif attachedness_type == 'absolute':
+        attachedness = adata.add['aga_attachedness_absolute']
+    else:
+        raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
+    adjacency = adata.add['aga_adjacency']
+    matrix(attachedness, color_map=color_map, show=False)
+    for i in range(adjacency.shape[0]):
+        neighbors = adjacency[i].nonzero()[1]
+        pl.scatter([i for j in neighbors], neighbors, color='green')
+    utils.savefig_or_show('aga_attachedness', show=show, save=save)
+    # as a stripplot
+    if False:
+        pl.figure()
+        for i, ds in enumerate(attachedness):
+            ds = np.log1p(ds)
+            x = [i for j, d in enumerate(ds) if i != j]
+            y = [d for j, d in enumerate(ds) if i != j]
+            pl.scatter(x, y, color='gray')
+            neighbors = adjacency[i]
+            pl.scatter([i for j in neighbors],
+                       ds[neighbors], color='green')
+        pl.show()
 
 
 def dpt(

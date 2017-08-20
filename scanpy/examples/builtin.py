@@ -9,18 +9,31 @@ import numpy as np
 from . import api_without_examples as sc
 
 
-def blobs(centers=5, cluster_std=1.0):
+def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
     """Make Gaussian Blobs.
 
-    Same sample number as in krumsiek11, to compare with the latter.
+    Parameters
+    ----------
+    n_centers : int, optional (default: 5)
+        Number of cluster centers.
+    cluster_std : float, optional (default: 1.0)
+        Standard deviation of clusters.
+    n_samples : int, optional (default: 640)
+        Number of samples. By default, this is the same sample number as in
+        ``sc.examples.krumsiek11()``.
+
+    Returns
+    -------
+    The resulting ``AnnData`` contains a sample annotation 'blobs' that indicates
+    cluster identity.
     """
     import sklearn.datasets
-    X, y = sklearn.datasets.make_blobs(n_samples=640,
+    X, y = sklearn.datasets.make_blobs(n_samples=n_samples,
                                        n_features=11,
-                                       centers=centers,
+                                       centers=n_centers,
                                        cluster_std=cluster_std,
                                        random_state=0)
-    return sc.AnnData(X, smp={'clusters': y.astype(str)})
+    return sc.AnnData(X, smp={'blobs': y.astype(str)})
 
 
 def burczynski06():

@@ -140,19 +140,18 @@ def write(filename_or_filekey, data, ext=None):
     """Write AnnData objects and dictionaries to file.
 
     If a key is passed, the filename is generated as
-    `filename = sc.settings.writedir + filekey + sc.settings.file_format_data`
-    This defaults to `filename = 'write/' + filekey + '.h5'`.
-    and can be changed by reseting `sc.settings.writedir` and
-    `sc.settings.file_format_data`.
+    ``filename = sc.settings.writedir + filekey + sc.settings.file_format_data``
+    This defaults to ``filename = 'write/' + filekey + '.h5'``.
 
     Parameters
     ----------
     filename_or_filekey : str
         Filename of data file or key to generate filename.
     data : dict, AnnData
-        Annotated data object or dict storing arrays as values.
-    ext : str or None (default: None)
-        File extension from wich to infer file format.
+        Instance of AnnData or dict.
+    ext : {``None``, 'h5', 'csv', 'txt', 'npz'} (default: None)
+        File extension from wich to infer file format. If ``None``, defaults to
+        ``sc.settings.file_format_data``.
     """
     filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
     if isinstance(data, AnnData): d = data.to_dict()
@@ -716,7 +715,10 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
 def postprocess_reading(key, value):
     if value.dtype.kind == 'S':
         value = value.astype(str)
-    if key != 'smp' and key != 'var' and value.dtype.names is not None:
+        # recover a dictionary that has been stored as a string
+        if value[0] == '{' and value[-1] == '}': value = eval(value)
+    if (key != 'smp' and key != 'var'
+        and not isinstance(value, dict) and value.dtype.names is not None):
         # TODO: come up with a better way of solving this, see also below
         new_dtype = [((dt[0], 'U{}'.format(int(int(dt[1][2:])/4)))
                       if dt[1][1] == 'S' else dt) for dt in value.dtype.descr]
@@ -725,9 +727,6 @@ def postprocess_reading(key, value):
 
 
 def preprocess_writing(key, value):
-    if isinstance(key, dict):
-        for k, v in value.items():
-            return preprocess_writing(k, v)
     value = np.array(value)
     # some output about the data to write
     logg.m(key, type(value),
@@ -777,7 +776,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 try:
                     f.create_dataset(key, data=value)
                 except TypeError:
-                    # catch unicode string arrays
+                    # try writing it as byte strings
                     try:
                         if value.dtype.names is None:
                             f.create_dataset(key, data=value.astype('S'))
@@ -786,8 +785,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                                          for dt in value.dtype.descr]
                             f.create_dataset(key, data=value.astype(new_dtype))
                     except Exception:
-                        logg.warn('Could not save field with key = "{}" to h5 file '
-                                  '(currently, no dictionaries are allowed!).'
+                        logg.warn('Could not save field with key = "{}" to h5 file.'
                                   .format(key))
     elif ext == 'npz':
         np.savez(filename, **d_write)
@@ -812,6 +810,7 @@ def write_dict_to_file(filename, d, ext='h5'):
                 df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
                           header=False, index=False)
             else:
+                if np.ndim(value) == 0: value = value[None]
                 df = DataFrame.from_records(value)
                 cols = list(df.select_dtypes(include=[object]).columns)
                 # convert to unicode string

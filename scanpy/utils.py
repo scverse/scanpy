@@ -8,17 +8,33 @@ from natsort import natsorted
 from . import settings
 from . import logging as logg
 
+
 # --------------------------------------------------------------------------------
 # Deal with stuff
 # --------------------------------------------------------------------------------
 
 
+def compute_minimum_spanning_tree(adjacency):
+    from scipy.sparse.csgraph import minimum_spanning_tree
+    return minimum_spanning_tree(adjacency)
+
+
 def get_graph_tool_from_adjacency(adjacency, directed=None):
     """Get graph_tool graph from adjacency matrix."""
     import graph_tool as gt
+    adjacency_edge_list = adjacency
+    if not directed:
+        from scipy.sparse import tril
+        adjacency_edge_list = tril(adjacency)
     g = gt.Graph(directed=directed)
     g.add_vertex(adjacency.shape[0])
-    g.add_edge_list(np.transpose(adjacency.nonzero()))
+    g.add_edge_list(np.transpose(adjacency_edge_list.nonzero()))
+    weights = g.new_edge_property('double')
+    for e in g.edges():
+        # graph_tool uses the following convention,
+        # which is opposite to the rest of scanpy
+        weights[e] = adjacency[int(e.source()), int(e.target())]
+    g.edge_properties['weight'] = weights
     return g
 
 

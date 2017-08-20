@@ -7,40 +7,24 @@ import numpy as np
 import scipy as sp
 import networkx as nx
 import scipy.sparse
+from textwrap import indent, dedent
 from .. import logging as logg
 from ..data_structs import ann_data
 from ..data_structs import data_graph
+from .. import utils
+from .. import settings
 from ..plotting import utils as pl_utils
 
 
 MINIMAL_TREE_ATTACHEDNESS = 0.05
 
+doc_string_base = dedent("""\
+    Approximate Graph Abstraction
 
-def aga(adata,
-        node_groups='louvain',
-        n_nodes=None,
-        n_neighbors=30,
-        n_pcs=50,
-        n_dcs=10,
-        resolution=1,
-        random_state=0,
-        attachedness_measure='connectedness',
-        recompute_pca=False,
-        recompute_distances=False,
-        recompute_graph=False,
-        recompute_louvain=False,
-        n_jobs=None,
-        copy=False):
-    """Approximate Graph Abstraction
-
-    Infer the relations of subgroups in the data through approximate graph
+    Infer the relations of subgroups in the data using approximate graph
     abstraction. The result is a much simpler graph where each node corresponds
     to a cell subgroup. The tree induces an ordering between nodes and the cells
     are ordered within each node.
-
-    Reference
-    ---------
-    Wolf et al., bioRxiv (2017)
 
     Parameters
     ----------
@@ -54,7 +38,7 @@ def aga(adata,
         adata.smp['X_diffmap']: np.ndarray
             Diffmap representation of the data matrix (result of running
             `diffmap`). Will be used if option `recompute_graph` is False.
-    node_groups : any categorical sample annotation or {'louvain', 'segments'}, optional (default: 'louvain')
+    node_groups : any categorical sample annotation or {{'louvain', 'segments'}}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
         graph/data. 'louvain' uses the louvain algorithm and optimizes
         modularity of the graph, 'segments' uses a bipartioning
@@ -79,7 +63,7 @@ def aga(adata,
         See ``sc.tool.louvain``.
     random_state : int, optional (default: 0)
         See ``sc.tool.louvain``.
-    attachedness_measure : {'connectedness', 'random_walk'}, optional (default: 'connectedness')
+    attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
         How to measure attachedness.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
@@ -94,19 +78,49 @@ def aga(adata,
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
 
-    Notes
-    -----
-    Writes the following.
-        aga_adjacency : sparse csr matrix
-            Array of dim (number of samples) that stores the pseudotime of each
-            cell, that is, the DPT distance with respect to the root cell.
-        aga_groups : np.ndarray of dtype string
-            Array of dim (number of samples) that stores the subgroup id ('0',
-            '1', ...) for each cell.
-        aga_pseudotime : np.ndarray of dtype float
-            Array of dim (number of samples) that stores a pseudotime from a
-            root node, if the latter was passed.
-    """
+    Returns
+    -------
+    Returns or updates adata depending on `copy` with
+    {returns}
+
+    Reference
+    ---------
+    Wolf et al., bioRxiv (2017)
+    """)
+
+
+doc_string_Returns = dedent("""\
+        aga_adjacency_full_attachedness : np.ndarray, adata.add
+            The full adjacency matrix of the abstracted graph, weights
+            correspond to attachedness.
+        aga_adjacency_full_confidence : np.ndarray, adata.add
+            The full adjacency matrix of the abstracted graph, weights
+            correspond to confidence in the presence of an edge.
+        aga_adjacency_tree_confidence : sparse csr matrix, adata.add
+            The weighted adjacency matrix of the most probable tree in the
+            abstracted graph.
+        aga_groups : np.ndarray of dtype string, adata.smp
+            Group labels for each sample.
+        aga_pseudotime : np.ndarray of dtype float, adata.smp
+            Pseudotime labels for each cell.
+    """)
+
+
+def aga(adata,
+        node_groups='louvain',
+        n_nodes=None,
+        n_neighbors=30,
+        n_pcs=50,
+        n_dcs=10,
+        resolution=1,
+        random_state=0,
+        attachedness_measure='connectedness',
+        recompute_pca=False,
+        recompute_distances=False,
+        recompute_graph=False,
+        recompute_louvain=False,
+        n_jobs=None,
+        copy=False):
     adata = adata.copy() if copy else adata
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
@@ -138,14 +152,14 @@ def aga(adata,
         and 'xroot' not in adata.var):
         logg.info('    no root cell found, no computation of pseudotime')
         msg = \
-    '''To enable computation of pseudotime, pass the index or expression vector
+    """To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
         adata.add['iroot'] = root_cell_index
     or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
         adata.var['xroot'] = adata[root_cell_name, :].X
-    where "root_cell_name" is the name (a string) of the root cell.'''
+    where "root_cell_name" is the name (a string) of the root cell."""
         logg.hint(msg)
     aga = AGA(adata,
               clusters=clusters,
@@ -178,22 +192,15 @@ def aga(adata,
     # vectors of length n_groups
     adata.add['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
     adata.add['aga_groups_sizes'] = aga.segs_sizes
-    # the ordering according to groups and pseudotime
-    adata.smp['aga_indices'] = aga.indices
-    # the changepoints - marking different segments - in the ordering above
-    adata.add['aga_changepoints'] = aga.changepoints
     # the tip points of segments
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
-    adata.add['aga_adjacency'] = aga.segs_adjacency
-    if fresh_compute_louvain:
-        adata.smp['louvain_groups'] = adata.smp['aga_groups']
-        adata.add['louvain_groups_order'] = adata.add['aga_groups_order']
-    if (clusters not in {'segments', 'unconstrained_segments'}
-        and not fresh_compute_louvain):
+    adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
+    if (clusters not in {'segments', 'unconstrained_segments'}):
         adata.add['aga_groups_original'] = clusters
         adata.add['aga_groups_order_original'] = np.array(aga.segs_names_original)
-        if clusters + '_colors' not in adata.add:
+        if (clusters + '_colors' not in adata.add
+            or len(adata.add[clusters + '_colors']) != len(adata.add['aga_groups_order'])):
             pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
         if clusters + '_order' not in adata.add:
@@ -204,32 +211,29 @@ def aga(adata,
             idx = name_list.index(name)
             colors_original.append(adata.add[clusters + '_colors'][idx])
         adata.add['aga_groups_colors_original'] = np.array(colors_original)
-    adata.add['aga_distances'] = aga.segs_distances
-    adata.add['aga_attachedness'] = aga.segs_attachedness
-    adata.add['aga_attachedness_absolute'] = aga.segs_attachedness_absolute
-    adata.add['aga_adjacency_absolute'] = aga.segs_adjacency_absolute
-    logg.info('    finished', t=True, end=' ')
-    logg.info('and added\n'
-              '    "aga_adjacency", adjacency matrix defining the abstracted graph (adata.add),\n'
-              '    "aga_groups", groups corresponding to nodes of abstracted graph (adata.smp)'
-              + (',\n    "aga_pseudotime", pseudotime with respect to root cell (adata.smp)' if aga.iroot is not None else ''))
+    adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_confidence
+    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
+    logg.info('... finished', t=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.m('added\n' + indent(doc_string_Returns, '    '), v=3)
     return adata if copy else None
+
+aga.__doc__ = doc_string_base.format(returns=doc_string_Returns)
 
 
 def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
     """Contract the abstracted graph.
     """
     adata = adata.copy() if copy else adata
-    if 'aga_adjacency' not in adata.add: raise ValueError('run tool aga first!')
+    if 'aga_adjacency_tree_confidence' not in adata.add: raise ValueError('run tool aga first!')
     min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
 
-    def propose_nodes_to_contract(adjacency, node_groups):
+    def propose_nodes_to_contract(adjacency_tree_confidence, node_groups):
         # nodes with two edges
-        n_edges_per_seg = np.sum(adjacency > 0, axis=1).A1
-        for i in range(adjacency.shape[0]):
+        n_edges_per_seg = np.sum(adjacency_tree_confidence > 0, axis=1).A1
+        for i in range(adjacency_tree_confidence.shape[0]):
             if n_edges_per_seg[i] == 2:
-                neighbors = adjacency[i].nonzero()[1]
+                neighbors = adjacency_tree_confidence[i].nonzero()[1]
                 for neighbors_edges in range(1, 20):
                     for n_cnt, n in enumerate(neighbors):
                         if n_edges_per_seg[n] == neighbors_edges:
@@ -237,9 +241,9 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                                    .format(i, n), v=4)
                             return i, n
         # node groups with a very small cell number
-        for i in range(adjacency.shape[0]):
+        for i in range(adjacency_tree_confidence.shape[0]):
             if node_groups[str(i) == node_groups].size < min_group_size:
-                neighbors = adjacency[i].nonzero()[1]
+                neighbors = adjacency_tree_confidence[i].nonzero()[1]
                 neighbor_sizes = [node_groups[str(n) == node_groups].size for n in neighbors]
                 n = neighbors[np.argmax(neighbor_sizes)]
                 logg.m('merging node {} into {} '
@@ -248,30 +252,30 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 return i, n
         return 0, 0
 
-    def contract_nodes(adjacency, node_groups):
+    def contract_nodes(adjacency_tree_confidence, node_groups):
         for count in range(max_n_contractions):
-            i, n = propose_nodes_to_contract(adjacency, node_groups)
+            i, n = propose_nodes_to_contract(adjacency_tree_confidence, node_groups)
             if i != 0 or n != 0:
-                G = nx.Graph(adjacency)
+                G = nx.Graph(adjacency_tree_confidence)
                 G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
-                adjacency = nx.to_scipy_sparse_matrix(G_contracted)
+                adjacency_tree_confidence = nx.to_scipy_sparse_matrix(G_contracted)
                 node_groups[str(i) == node_groups] = str(n)
                 for j in range(i+1, G.size()+1):
                     node_groups[str(j) == node_groups] = str(j-1)
             else:
                 break
-        return adjacency, node_groups
+        return adjacency_tree_confidence, node_groups
 
-    size_before = adata.add['aga_adjacency'].shape[0]
-    adata.add['aga_adjacency'], adata.smp['aga_groups'] = contract_nodes(
-        adata.add['aga_adjacency'], adata.smp['aga_groups'])
+    size_before = adata.add['aga_adjacency_tree_confidence'].shape[0]
+    adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
+        adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'])
     adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'])
-    for key in ['aga_attachedness', 'aga_groups_original',
+    for key in ['aga_adjacency_full_confidence', 'aga_groups_original',
                 'aga_groups_order_original', 'aga_groups_colors_original']:
         if key in adata.add: del adata.add[key]
     logg.info('    contracted graph from {} to {} nodes'
-              .format(size_before, adata.add['aga_adjacency'].shape[0]))
-    logg.m('removed adata.add["aga_attachedness"]', v=4)
+              .format(size_before, adata.add['aga_adjacency_tree_confidence'].shape[0]))
+    logg.m('removed adata.add["aga_adjacency_full_confidence"]', v=4)
     return adata if copy else None
 
 
@@ -414,40 +418,38 @@ class AGA(data_graph.DataGraph):
         self.segs = segs
         self.segs_tips = segs_tips
         self.segs_sizes = []
-        for iseg, seg in enumerate(self.segs):
-            self.segs_sizes.append(len(seg))
-        # self.segs_undecided = segs_undecided
-        # the following is a bit too much, but this allows easy storage
+        for iseg, seg in enumerate(self.segs): self.segs_sizes.append(len(seg))
+
+        # the full, unscaled adjacency matrix
+        self.segs_adjacency_full_attachedness = 1/segs_distances
+        if self.attachedness_measure == 'connectedness':
+            norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
+            self.segs_adjacency_full_attachedness /= norm
+        np.fill_diagonal(self.segs_adjacency_full_attachedness, 0)
+
+        # compute the average tree distances
         tree_distances = []
         for i, neighbors in enumerate(segs_adjacency):
             tree_distances += segs_distances[i][neighbors].tolist()
-
         median_tree_distances = np.median(tree_distances)
-        self.segs_attachedness = np.zeros_like(segs_distances)
-        self.segs_attachedness[segs_distances <= median_tree_distances] = 1
-        self.segs_attachedness[segs_distances > median_tree_distances] = (
+
+        # the full, scaled adjacency matrix
+        self.segs_adjacency_full_confidence = np.zeros_like(segs_distances)
+        self.segs_adjacency_full_confidence[segs_distances <= median_tree_distances] = 1
+        self.segs_adjacency_full_confidence[segs_distances > median_tree_distances] = (
             np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
             [segs_distances > median_tree_distances])
-        
-        self.segs_distances = segs_distances
-        self.segs_attachedness_absolute = 1/segs_distances
-        if self.attachedness_measure == 'connectedness':
-            norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
-            self.segs_attachedness_absolute /= norm
-            
-        np.fill_diagonal(self.segs_attachedness, 0)
-        np.fill_diagonal(self.segs_attachedness_absolute, 0)
+        np.fill_diagonal(self.segs_adjacency_full_confidence, 0)
 
+        # the scaled tree adjacency matrix
         minimal_tree_attachedness = MINIMAL_TREE_ATTACHEDNESS
-        self.segs_adjacency = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
-        self.segs_adjacency_absolute = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+        self.segs_adjacency_tree_confidence = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
         for i, neighbors in enumerate(segs_adjacency):
-            clipped_attachedness = self.segs_attachedness[i][neighbors]
+            clipped_attachedness = self.segs_adjacency_full_confidence[i][neighbors]
             clipped_attachedness[clipped_attachedness < minimal_tree_attachedness] = minimal_tree_attachedness
-            self.segs_adjacency[i, neighbors] = clipped_attachedness
-            self.segs_attachedness[i, neighbors] = clipped_attachedness
-            self.segs_adjacency_absolute[i, neighbors] = self.segs_attachedness_absolute[i, neighbors]
-        self.segs_adjacency = self.segs_adjacency.tocsr()
+            self.segs_adjacency_tree_confidence[i, neighbors] = clipped_attachedness
+            self.segs_adjacency_full_confidence[i, neighbors] = clipped_attachedness
+        self.segs_adjacency_tree_confidence = self.segs_adjacency_tree_confidence.tocsr()
 
     def do_split_constrained(self, segs, segs_tips,
                              segs_adjacency,
@@ -986,7 +988,7 @@ class AGA(data_graph.DataGraph):
                 score = 1
                 connections += score
         # distance = 1/(1+connections)
-        distance = 1/connections if connections > 0 else np.inf        
+        distance = 1/connections if connections > 0 else np.inf
         logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
 

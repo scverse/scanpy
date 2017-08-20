@@ -20,7 +20,7 @@ def louvain(adata,
             recompute_pca=False,
             recompute_distances=False,
             recompute_graph=False,
-            n_dcs=None,
+            n_dcs=15,
             n_jobs=None,
             copy=False):
     """Cluster cells using Louvain Community detection.
@@ -106,7 +106,7 @@ def louvain(adata,
         for k, v in partition.items(): groups[k] = v
         groups = groups.astype('U')
     else:
-        raise ValueError('flavor needs to be "vtraag" or "igraph"')
+        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     adata.smp['louvain_groups'] = groups
     from natsort import natsorted
     adata.add['louvain_groups_order'] = np.array(natsorted(np.unique(groups)))
