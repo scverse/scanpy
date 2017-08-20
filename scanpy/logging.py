@@ -3,7 +3,7 @@
 """
 
 import os
-import time
+import time as time_module
 import datetime
 from . import settings
 
@@ -44,8 +44,8 @@ def verbosity_greater_or_equal_than(v):
     return global_v >= v
 
 
-def msg(*msg, verbosity='info', t=False, m=False, r=False, end='\n', no_indent=False,
-        v=None):
+def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
+        no_indent=False, v=None, t=None, m=None, r=None):
     """Write message to logging output.
 
     Log output defaults to standard output but can be set to a file
@@ -53,19 +53,23 @@ def msg(*msg, verbosity='info', t=False, m=False, r=False, end='\n', no_indent=F
 
     verbosity : {'error', 'warn', 'info', 'hint'} or int, (default: 'info')
         0/'error', 1/'warn', 2/'info', 3/'hint' or integer 4.
-    t/timing : bool, optional (default: False)
-        Print timing information.
-    m/memory : bool, optional (default: Faulse)
+    time : bool, optional (default: False)
+        Print timing information; restart the clock.
+    memory : bool, optional (default: Faulse)
         Print memory information.
-    r/reset : bool, optional (default: False)
+    reset : bool, optional (default: False)
         Reset timing and memory measurement. Is automatically reset
-        when passing one of t or m.
+        when passing one of ``time`` or ``memory``.
     end : str (default: '\n')
-        As in python builtin print function.
+        Same meaning as in builtin ``print()`` function.
     no_indent : bool (default: False)
-        Indent depending on verbosity level.
+        Do not indent for ``verbosity >= 4``.
     """
+    # all deprecated variable namings
     if v is not None: verbosity = v
+    if t is not None: time = t
+    if m is not None: memory = m
+    if r is not None: reset = r
     if isinstance(verbosity, str):
         verbosity = verbosity_levels_from_strings[verbosity]
     if isinstance(settings.verbosity, str):
@@ -77,24 +81,24 @@ def msg(*msg, verbosity='info', t=False, m=False, r=False, end='\n', no_indent=F
     if verbosity >= 4 and not no_indent:
         msg = ('   ',) + msg
     if global_verbosity >= verbosity:
-        if not t and not m and len(msg) > 0:
+        if not time and not m and len(msg) > 0:
             settings.mi(*msg, end=end)
-        if r:
+        if reset:
             settings._previous_memory_usage, _ = get_memory_usage()
-            settings._previous_time = time.time()
-        if t:
+            settings._previous_time = time_module.time()
+        if time:
             elapsed = get_passed_time()
             msg = msg + ('({})'.format(settings._sec_to_str(elapsed)),)
             settings.mi(*msg, end=end)
-        if m:
+        if memory:
             settings.mi(format_memory_usage(get_memory_usage()),
-                    msg='' if t else msg, end=end)
+                        msg='' if time else msg, end=end)
 
 m = msg
 
-            
+
 def get_passed_time():
-    now = time.time()
+    now = time_module.time()
     elapsed = now - settings._previous_time
     settings._previous_time = now
     return elapsed

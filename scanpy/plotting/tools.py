@@ -542,13 +542,13 @@ def aga_graph(
         fontsize=None,
         node_size=1,
         node_size_power=0.5,
-        edge_width=1,
         title=None,
         ext='png',
         left_margin=0.01,
-        minimal_edge_width=0,
+        edge_width_scale=1,        
+        min_edge_width=None,
+        max_edge_width=None,
         random_state=0,
-        force_labels_to_front=False,
         pos=None,
         return_pos=False,
         show=None,
@@ -561,9 +561,15 @@ def aga_graph(
     solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
         Key for ``adata.add`` that specifies the matrix that stores the edges
         to be drawn solid black.
-    dashed_edges : str, optional (default: 'aga_adjacency_full_confidence')
+    dashed_edges : str or None, optional (default: 'aga_adjacency_full_confidence')
         Key for ``adata.add`` that specifies the matrix that stores the edges
-        to be drawn dashed grey.
+        to be drawn dashed grey. If ``None``, no dashed edges are drawn.
+    edge_width_scale : float, optional (default: 1.5)
+        Edge with scale in units of ``rcParams['lines.linewidth']``.
+    min_edge_width : float, optional (default: ``None``)
+        Min width of solid edges.
+    max_edge_width : float, optional (default: ``None``)
+        Max width of solid and dashed edges.
     layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
         Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
@@ -612,7 +618,7 @@ def aga_graph(
         axs = ax
     if len(colors) == 1: axs = [axs]
     for icolor, color in enumerate(colors):
-        pos = _aga_graph_single(
+        pos = _aga_graph(
             adata,
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
@@ -623,13 +629,13 @@ def aga_graph(
             fontsize=fontsize,
             node_size=node_size,
             node_size_power=node_size_power,
-            edge_width=edge_width,
-            minimal_edge_width=minimal_edge_width,
+            edge_width_scale=edge_width_scale,
+            min_edge_width=min_edge_width,
+            max_edge_width=max_edge_width,
             ax=axs[icolor],
             title=title[icolor],
             random_state=0,
-            pos=pos,
-            force_labels_to_front=force_labels_to_front)
+            pos=pos)
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
@@ -639,7 +645,7 @@ def aga_graph(
         return axs if ax is None else None
 
 
-def _aga_graph_single(
+def _aga_graph(
         adata,
         solid_edges=None,
         dashed_edges=None,
@@ -649,14 +655,14 @@ def _aga_graph_single(
         fontsize=None,
         node_size=1,
         node_size_power=0.5,
-        edge_width=1,
+        edge_width_scale=1,
         title=None,
         ax=None,
         layout=None,
         pos=None,
-        minimal_edge_width=None,
-        random_state=0,
-        force_labels_to_front=False):
+        min_edge_width=None,
+        max_edge_width=None,
+        random_state=0):
     if colors is None and 'aga_groups_colors_original' in adata.add:
         colors = adata.add['aga_groups_colors_original']
     if groups is None and 'aga_groups_order_original' in adata.add:
@@ -714,25 +720,29 @@ def _aga_graph_single(
         ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
 
     # edge widths
-    from ..tools import aga
-    base_edge_width = edge_width * 1.5 * rcParams['lines.linewidth']
-    # normalize if we have fully connected matrix
+    base_edge_width = edge_width_scale * rcParams['lines.linewidth']
+    # normalize with median
     if isinstance(adjacency_solid, np.ndarray):
         base_edge_width /= np.median(adjacency_solid[adjacency_solid.nonzero()])
+    else:
+        base_edge_width /= np.median(adjacency_solid.data)
 
     # draw dashed edges
     if dashed_edges is not None:
         adjacency_dashed = adata.add[dashed_edges]
         nx_g_dashed = nx.Graph(adjacency_dashed)
-        widths = [base_edge_width*x[-1]['weight'] for x in nx_g_dashed.edges(data=True)]
+        widths = [x[-1]['weight'] for x in nx_g_dashed.edges(data=True)]
+        widths = base_edge_width * np.array(widths)
+        if max_edge_width is not None:
+            widths = np.clip(widths, None, max_edge_width)        
         nx.draw_networkx_edges(nx_g_dashed, pos, ax=ax, width=widths, edge_color='grey',
                                style='dashed', alpha=0.5)
 
     # draw solid edges
-    widths = [base_edge_width*x[-1]['weight']
-              if base_edge_width*x[-1]['weight'] > minimal_edge_width
-              else minimal_edge_width
-              for x in nx_g_solid.edges(data=True)]
+    widths = [x[-1]['weight'] for x in nx_g_solid.edges(data=True)]
+    widths = base_edge_width * np.array(widths)
+    if min_edge_width is not None or max_edge_width is not None:
+        widths = np.clip(widths, min_edge_width, max_edge_width)
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
     # draw the nodes (pie charts)
@@ -750,6 +760,7 @@ def _aga_graph_single(
     ax.set_yticks([])
     base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size
     median_group_size = np.median(adata.add['aga_groups_sizes'])
+    force_labels_to_front = True  # TODO: solve this differently!
     for count, n in enumerate(nx_g_solid.nodes_iter()):
         pie_size = base_pie_size
         pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,

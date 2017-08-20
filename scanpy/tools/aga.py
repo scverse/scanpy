@@ -63,8 +63,10 @@ doc_string_base = dedent("""\
         See ``sc.tool.louvain``.
     random_state : int, optional (default: 0)
         See ``sc.tool.louvain``.
+    tree_detection : {{'connect_extremes', 'min_span_tree'}}, optional (default: 'connect_extremes')
+        How to detect a tree structure in the abstracted graph.
     attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
-        How to measure attachedness.
+        How to measure attachedness between groups.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
         there is already a cached `distance` or `X_diffmap` in adata.
@@ -89,7 +91,7 @@ doc_string_base = dedent("""\
     """)
 
 
-doc_string_Returns = dedent("""\
+doc_string_returns = dedent("""\
         aga_adjacency_full_attachedness : np.ndarray, adata.add
             The full adjacency matrix of the abstracted graph, weights
             correspond to attachedness.
@@ -102,7 +104,7 @@ doc_string_Returns = dedent("""\
         aga_groups : np.ndarray of dtype string, adata.smp
             Group labels for each sample.
         aga_pseudotime : np.ndarray of dtype float, adata.smp
-            Pseudotime labels for each cell.
+            Pseudotime labels for each cell.\
     """)
 
 
@@ -115,6 +117,7 @@ def aga(adata,
         resolution=1,
         random_state=0,
         attachedness_measure='connectedness',
+        tree_detection='connect_extremes',
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
@@ -146,7 +149,7 @@ def aga(adata,
         fresh_compute_louvain = True
     clusters = node_groups
     if node_groups == 'louvain': clusters = 'louvain_groups'
-    logg.info('running Approximate Graph Abstraction (AGA)', r=True)
+    logg.info('running Approximate Graph Abstraction (AGA)', reset=True)
     if ('iroot' not in adata.add
         and 'xroot' not in adata.add
         and 'xroot' not in adata.var):
@@ -195,7 +198,29 @@ def aga(adata,
     # the tip points of segments
     # adata.add['aga_grouptips'] = aga.segs_tips
     # the tree/graph adjacency matrix
-    adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
+
+    # add the adjacency matrices of the abstracted graph
+    adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_confidence
+    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
+
+    # add the adjacency matrix of the detected tree in the abstracted graph
+    if tree_detection == 'min_span_tree':
+        min_span_tree = utils.compute_minimum_spanning_tree(
+            1./adata.add['aga_adjacency_full_attachedness'])
+        min_span_tree.data = 1./min_span_tree.data
+        adata.add['aga_adjacency_tree_confidence'] = min_span_tree
+        adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_attachedness
+    else:
+        adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
+
+    # TODO: make these two hacks, which set the value in the _confidence fields
+    #       to the _attachedness field, unnecessary 
+    adata.add['aga_adjacency_tree_confidence'][
+        adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
+        adata.add['aga_adjacency_tree_confidence'].nonzero()]
+    adata.add['aga_adjacency_full_confidence'] = adata.add['aga_adjacency_full_attachedness']
+
+    # manage cluster names and colors
     if (clusters not in {'segments', 'unconstrained_segments'}):
         adata.add['aga_groups_original'] = clusters
         adata.add['aga_groups_order_original'] = np.array(aga.segs_names_original)
@@ -211,13 +236,11 @@ def aga(adata,
             idx = name_list.index(name)
             colors_original.append(adata.add[clusters + '_colors'][idx])
         adata.add['aga_groups_colors_original'] = np.array(colors_original)
-    adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_confidence
-    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
-    logg.info('... finished', t=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.m('added\n' + indent(doc_string_Returns, '    '), v=3)
+    logg.info('... finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n' + indent(doc_string_returns, '    '))
     return adata if copy else None
 
-aga.__doc__ = doc_string_base.format(returns=doc_string_Returns)
+aga.__doc__ = doc_string_base.format(returns=doc_string_returns)
 
 
 def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
