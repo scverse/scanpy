@@ -26,4 +26,3 @@ profilehooks
 tqdm
 # extensions (also needed if installing cython compiled .c files)
 # cython
-sphinx-bootstrap-theme
