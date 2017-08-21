@@ -1,7 +1,7 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Scanpy - Single-Cell Analysis in Python
-
-This is the API.
+"""\
+API
+===
 """
 
 from .. import __version__

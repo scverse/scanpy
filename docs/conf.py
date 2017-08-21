@@ -17,11 +17,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-import sphinx_bootstrap_theme
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.pardir))
 
 # -- General configuration ------------------------------------------------
 
@@ -44,8 +42,9 @@ extensions = ['sphinx.ext.autodoc',
               #'ipython_console_highlighting',
               ]
 
-# ['sphinx.ext.mathjax', 'numpydoc', 'sphinx.ext.autodoc',
-#     'sphinx.ext.viewcode']
+
+# Generate the API documentation when building
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -98,19 +97,10 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'bootstrap'  # 'sphinx_rtd_theme'  # 'alabaster'
+html_theme = 'bootstrap' # 'sphinx_rtd_theme' # 'alabaster'  # 'bootstrap'
+import sphinx_bootstrap_theme
 html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -127,21 +117,27 @@ html_static_path = ['_static']
 #     ]
 # }
 
-# This is for the bootstrap theme as in Seaborn
-html_theme_options = {
-    'navbar_site_name': "Site",
-    'navbar_pagenav_name': "Page",    
-    'source_link_position': "footer",
-    'bootswatch_theme': "paper",
-    'navbar_pagenav': False,
-    'navbar_sidebarrel': False,
-    'bootstrap_version': "3",
-    'navbar_links': [
-                     ("Use Cases", "use_cases"),
-                     ("API", "api"),
-                     ],
 
-}
+# This is for the bootstrap theme as in Seaborn
+# html_theme_options = {
+#     'navbar_site_name': "Site",
+#     'navbar_pagenav_name': "Page",    
+#     'source_link_position': "footer",
+#     'bootswatch_theme': "paper",
+#     'navbar_pagenav': False,
+#     'navbar_sidebarrel': False,
+#     'bootstrap_version': "3",
+#     'navbar_links': [
+#                      ("Use Cases", "use_cases"),
+#                      ("API", "api"),
+#                      ],
+# }
+
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
 
 
 # -- Options for HTMLHelp output ------------------------------------------
