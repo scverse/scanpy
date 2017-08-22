@@ -7,4 +7,6 @@
 Scanpy – Single-Cell Analysis in Python
 =======================================
 
+.. include:: docs/abstract.rst
+
 Read the docs at https://scanpy.readthedocs.io.
