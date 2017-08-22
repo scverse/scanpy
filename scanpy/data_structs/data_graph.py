@@ -11,7 +11,6 @@ import scipy.spatial
 import scipy.sparse
 from scipy.sparse import issparse
 from joblib import Parallel, delayed
-from ..cython import utils_cy
 from .. import settings as sett
 from .. import logging as logg
 from .. import utils
@@ -587,6 +586,7 @@ class DataGraph():
                                       shape=self.Dsq.shape)
 
     def _get_M_row_chunk(self, i_range):
+        from ..cython import utils_cy
         M_chunk = np.zeros((len(i_range), self.X.shape[0]), dtype=np.float32)
         for i_cnt, i in enumerate(i_range):
             if False:  # not much slower, but slower
@@ -664,6 +664,7 @@ class DataGraph():
         self.Dchosen = self.Ddiff
 
     def _get_Ddiff_row_chunk(self, m_i, j_range):
+        from ..cython import utils_cy
         M = self.M  # caching with a file on disk did not work
         d_i = np.zeros(len(j_range))
         for j_cnt, j in enumerate(j_range):
@@ -690,6 +691,7 @@ class DataGraph():
         return np.sqrt(row)
 
     def get_Ddiff_row_deprecated(self, i):
+        from ..cython import utils_cy
         if self.M is None:
             m_i = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
         else:
