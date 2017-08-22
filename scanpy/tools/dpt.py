@@ -14,19 +14,27 @@ from ..data_structs import data_graph
 def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, n_jobs=None, recompute_graph=False,
         recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
-    """Hierarchical Diffusion Pseudotime.
+    """Infer progression of cells, identify *branching* subgroups [Haghverdi16]_ [Wolf17]_.
 
-    Infer progression of cells and branchings.
+    `[source] <tl.dpt_>`__ Reconstruct the progression of a biological process
+    from snapshot data and detect branching subgroups. Diffusion Pseudotime
+    analysis has been introduced by [Haghverdi16]_. Here, we use a further
+    developed version, which is able to detect multiple branching events
+    [Wolf17]_.
 
-    This is an extension of Haghverdi et al., (2016) that is formally able to resolve
-    multi-branching events. For more than one branching, though, DPT is not reliable.
+    The possibilities of *diffmap* and *dpt* are similar to those of the R
+    package destiny_ of [Angerer16]_. The Scanpy tools though run faster and
+    scale to much higher cell numbers.
 
-    Reference
-    ---------
+    *Examples:* See this `use case <17-05-02_>`__.
+
+    .. _destiny: http://bioconductor.org/packages/destiny
+    .. _tl.dpt: https://github.com/theislab/scanpy/tree/master/scanpy/tools/dpt.py
+    .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
+
+    References
+    ----------
     - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-
-    See also
-    --------
     - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
     - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
       31, 2989 (2015).
@@ -36,16 +44,8 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with metadata:
-        adata.add['xroot'] : np.ndarray
-            Root of stochastic process on data points (root cell), specified
-            as expression vector of shape X.shape[1].
-        adata.smp['X_pca']: np.ndarray
-            PCA representation of the data matrix (result of preprocessing with
-            PCA). If it exists in adata, dpt will use this instead of adata.X.
-        adata.smp['X_diffmap']: np.ndarray
-            Diffmap representation of the data matrix (result of running
-            `diffmap`).  Will be used if option `recompute_graph` is False.
+        Annotated data matrix, optionally with ``adata.add['iroot']``, the index
+        of the root cell, ``adata.smp['X_pca']`` or ``adata.smp['X_diffmap']``.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     n_neighbors : int, optional (default: 30)
@@ -53,7 +53,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         Gaussian kernel width to the distance of the kth neighbor.
     knn : bool, optional (default: True)
         If True, use a hard threshold to restrict the number of neighbors to
-        k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
+        n_neighbors, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
     n_pcs : int, optional (default: 50)
@@ -72,8 +72,8 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
 
-    Notes
-    -----
+    Returns
+    -------
     Writes the following arrays as sample annotation to adata.smp.
         dpt_pseudotime : np.ndarray
             Array of dim (number of samples) that stores the pseudotime of each

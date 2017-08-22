@@ -1,5 +1,7 @@
 # Scanpy
 .scanpy
+docs/_build
+docs/generated
 archive/
 data/
 figs/
@@ -13,6 +15,10 @@ scanpy_later/
 scripts_test/
 thirdp/
 test.py
+README.html
+scripts/
+test_notebooks.txt
+upload_to_pypi.sh
 
 # private files
 scanpy/examples/builtin_private.py

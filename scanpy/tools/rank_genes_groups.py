@@ -19,8 +19,14 @@ def rank_genes_groups(
         compute_distribution=False,
         only_positive=True,
         copy=False):
-    """Compare groups by ranking genes according to differential expression.
+    """Rank genes according to differential expression [Wolf17]_.
 
+    `[source] <tl.rank_genes_groups_>`__ Rank genes by differential expression.
+
+    *Examples:* See this `use case <17-05-05_>`__.
+
+    .. _tl.rank_genes_groups: https://github.com/theislab/scanpy/tree/master/scanpy/tools/rank_genes_groups.py
+    
     Parameters
     ----------
     adata : AnnData

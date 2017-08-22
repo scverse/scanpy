@@ -305,7 +305,12 @@ def log1p(data, copy=False):
 
 def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
         random_state=0, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
-    """Embed data using PCA.
+    """Principal component analysis [Pedregosa11]_.
+
+    `[source] <tl.pca_>`__ Computes PCA coordinates, loadings and variance
+    decomposition. Uses the implementation of *scikit-learn* [Pedregosa11]_.
+
+    .. _tl.pca: https://github.com/theislab/scanpy/tree/master/scanpy/tools/pca.py
 
     Parameters
     ----------
@@ -333,23 +338,18 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
         defaults to true.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
-    dtype : str
+    dtype : str (default: 'float32')
         Numpy data type string to which to convert the result.
 
-    Notes
-    -----
-    If X is array-like and return_info == True, returns, otherwise adds to (a copy
-    of) AnnData:
-    X_pca : np.ndarray
+    Returns
+    -------
+    If X is array-like and ``return_info == True``, only returns ``X_pca``, otherwise adds to ``adata``:
+    X_pca : np.ndarray (adata.smp)
          PCA representation of the data with shape n_variables × n_comps.
-         Depending on whether an AnnData or a data matrix has been
-         provided, the array is written to AnnData or returned directly.
-    components / PC1, PC2, PC3, ... : np.ndarray
-         The PCs containing the loadings as shape n_comps × n_vars. Written to
-         adata.var if an AnnData object is provided.
-    variance_ratio : np.ndarray
-         Ratio of explained variance. Written as unstructured annotation to
-         adata, if provided.
+    components / PC1, PC2, PC3, ... : np.ndarray (adata.var)
+         The PCs containing the loadings as shape n_comps × n_vars.
+    variance_ratio : np.ndarray (adata.add)
+         Ratio of explained variance.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data

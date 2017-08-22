@@ -23,13 +23,19 @@ def louvain(adata,
             n_dcs=15,
             n_jobs=None,
             copy=False):
-    """Cluster cells using Louvain Community detection.
+    """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
-    The basic method has been suggested for single-cell transcriptomics by
-    Levine et al., Cell 162, 184-197 (2015).
+    `[source] <tl.louvain_>`__ Cluster cells using the Louvain algorithm
+    [Blondel08]_ in the implementation of [Traag17]_. The Louvain algorithm has
+    been proposed for single-cell analysis by [Levine15]_.
 
+    *Examples:* See this `use case <17-05-05_>`__.
+
+    .. _tl.louvain: https://github.com/theislab/scanpy/tree/master/scanpy/tools/louvain.py
     Parameters
     ----------
+    adata : AnnData
+        The annotated data matrix. 
     n_neighbors : int, optional (default: 30)
         Number of neighbors to use for construction of knn graph.
     resolution : float or None, optional

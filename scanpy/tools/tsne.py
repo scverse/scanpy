@@ -19,7 +19,17 @@ from .. import logging as logg
 def tsne(adata, random_state=0, n_pcs=50, perplexity=30, early_exaggeration=12,
          learning_rate=1000, recompute_pca=False, use_fast_tsne=True,
          n_jobs=None, copy=False):
-    """tSNE
+    """t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+
+    `[source] <tl.tsne_>`__ t-distributed stochastic neighborhood embedding
+    (tSNE) [Maaten08]_ has been proposed for single-cell data by [Amir13]_. By
+    default, Scanpy uses the implementation of *scikit-learn*
+    [Pedregosa11]_. You can achieve a huge speedup if you install
+    *Multicore-tSNE* by [Ulyanov16]_, which will be automatically detected by
+    Scanpy.
+
+    .. _tl.tsne: https://github.com/theislab/scanpy/tree/master/scanpy/tools/tsne.py
+
 
     Parameters
     ----------

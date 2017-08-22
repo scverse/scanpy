@@ -195,10 +195,12 @@ class OnFlySymMatrix():
 
 
 class DataGraph():
-    """Data represented as a graph.
+    """Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a weighted graph of nearest neighbor relations
     (edges) among data points (nodes).
+
+    This is much more efficient than, for example, the scikit-learn implementation.
     """
 
     def __init__(self,

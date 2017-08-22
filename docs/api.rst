@@ -1,12 +1,4 @@
-.. _api:
+API
+---
 
 .. automodule:: scanpy.api
-
-Data Structures
----------------
-
-.. autosummary::
-   :toctree: generated/
-
-   tools.pca
-   

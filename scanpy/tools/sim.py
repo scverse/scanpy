@@ -31,7 +31,20 @@ def sim(model,
         seed=0,
         writedir='',
         read_params_from_file=True):
-    """Simulate dynamic single-cell data
+    """Simulate dynamic gene expression data [Wittmann09]_ [Wolf17]_.
+
+    `[source] <scanpy/tools/sim.py>`__ Sample from a stochastic differential
+    equation model built from literature-curated boolean gene regulatory
+    networks, as suggested by [Wittmann09]_. The Scanpy implementation is due to
+    [Wolf17]_.
+
+    The tool is similar to the Matlab tool *Odefy* of [Krumsiek10]_.
+
+    *Examples:* See this `use case <17-04-30_>`__.
+
+    .. _tl.diffmap: https://github.com/theislab/scanpy/tree/master/scanpy/tools/diffmap.py
+    .. _17-04-30: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
+
 
     Parameters
     ----------

@@ -540,12 +540,12 @@ def aga_graph(
         colors=None,
         groups=None,
         fontsize=None,
-        node_size=1,
+        node_size_scale=1,
         node_size_power=0.5,
         title=None,
         ext='png',
         left_margin=0.01,
-        edge_width_scale=1,        
+        edge_width_scale=1,
         min_edge_width=None,
         max_edge_width=None,
         random_state=0,
@@ -627,7 +627,7 @@ def aga_graph(
             colors=color,
             groups=groups[icolor],
             fontsize=fontsize,
-            node_size=node_size,
+            node_size_scale=node_size_scale,
             node_size_power=node_size_power,
             edge_width_scale=edge_width_scale,
             min_edge_width=min_edge_width,
@@ -653,7 +653,7 @@ def _aga_graph(
         colors=None,
         groups=None,
         fontsize=None,
-        node_size=1,
+        node_size_scale=1,
         node_size_power=0.5,
         edge_width_scale=1,
         title=None,
@@ -734,7 +734,7 @@ def _aga_graph(
         widths = [x[-1]['weight'] for x in nx_g_dashed.edges(data=True)]
         widths = base_edge_width * np.array(widths)
         if max_edge_width is not None:
-            widths = np.clip(widths, None, max_edge_width)        
+            widths = np.clip(widths, None, max_edge_width)
         nx.draw_networkx_edges(nx_g_dashed, pos, ax=ax, width=widths, edge_color='grey',
                                style='dashed', alpha=0.5)
 
@@ -758,7 +758,7 @@ def _aga_graph(
     ax.set_frame_on(False)
     ax.set_xticks([])
     ax.set_yticks([])
-    base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size
+    base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
     median_group_size = np.median(adata.add['aga_groups_sizes'])
     force_labels_to_front = True  # TODO: solve this differently!
     for count, n in enumerate(nx_g_solid.nodes_iter()):
@@ -1114,23 +1114,26 @@ def dpt_scatter(
     utils.savefig_or_show(writekey, show=show, save=False)
 
 
-def dpt_timeseries(adata, color_map=None, show=None, save=None):
+def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
+    """Heatmap of pseudotime series.
+    """
+    if adata.n_vars > 100:
+        logg.warn('Plotting more than 100 genes might take some while,'
+                  'consider selecting only highly variables genes, for example.')
     # only if number of genes is not too high
-    if adata.n_vars <= 11:
+    if as_heatmap:
+        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'], :40],
+                              var_names=adata.var_names,
+                              highlightsX=adata.add['dpt_changepoints'])
+    else:
         # plot time series as gene expression vs time
         timeseries(adata.X[adata.smp['dpt_order_indices']],
                    var_names=adata.var_names,
                    highlightsX=adata.add['dpt_changepoints'],
                    xlim=[0, 1.3*adata.X.shape[0]])
-        pl.xlabel('dpt order')
-    elif adata.n_vars <= 50:
-        # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'], :40],
-                              var_names=adata.var_names,
-                              highlightsX=adata.add['dpt_changepoints'])
-        pl.xlabel('dpt order')
-    if adata.n_vars <= 50:
-        utils.savefig_or_show('dpt_timeseries', save=save, show=show)
+    pl.xlabel('dpt order')
+    utils.savefig_or_show('dpt_timeseries', save=save, show=show)
 
 
 def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=None):

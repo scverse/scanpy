@@ -1,18 +1,18 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Diffusion Maps
-"""
 
 from ..tools import dpt
 from .. import logging as logg
 
 def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
-    """Diffusion Maps
+    """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
-    Visualize data using Diffusion Maps.
+    `[source] <tl.diffmap_>`__ Diffusion maps [Coifman05]_ has been proposed for
+    visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted
+    Gaussian kernel suggested by [Haghverdi16]_. Uses the implementation of
+    [Wolf17]_.
 
-    Implements the crucial modifications to diffusion map introduced by
-    Haghverdi et al., Nature Methods (2016).
+    .. _tl.diffmap: https://github.com/theislab/scanpy/tree/master/scanpy/tools/diffmap.py
 
     References
     ----------

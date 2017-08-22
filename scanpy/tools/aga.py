@@ -1,6 +1,4 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""
-"""
 
 import sys, os
 import numpy as np
@@ -313,6 +311,7 @@ class AGA(data_graph.DataGraph):
                  n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
+                 minimal_distance_evidence=0.95,
                  recompute_pca=False,
                  recompute_distances=False,
                  recompute_graph=False,
@@ -328,6 +327,9 @@ class AGA(data_graph.DataGraph):
                                   recompute_distances=recompute_distances,
                                   recompute_graph=recompute_graph)
         self.n_neighbors = n_neighbors
+        self.minimal_distance_evidence = minimal_distance_evidence
+        # the ratio of max(minimal_distances)/min(minimal_distances) has to be smaller than minimal_distance_evidence
+        # in order to be considered convincing evidence, otherwise, consider median_distances
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
@@ -436,8 +438,8 @@ class AGA(data_graph.DataGraph):
                                                                  segs_adjacency_nodes,
                                                                  segs_distances)
                 if stop: break
-        # segs, segs_tips, segs_distances, segs_adjacency = self.compute_tree_from_clusters()
-        # store as class members
+                
+        # segments
         self.segs = segs
         self.segs_tips = segs_tips
         self.segs_sizes = []
@@ -1015,69 +1017,6 @@ class AGA(data_graph.DataGraph):
         logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
 
-    def compute_tree_from_clusters(self):
-        segs = self.clusters_precomputed
-        segs_tips = [[] for i in range(len(segs))]
-        segs_adjacency = [[] for i in range(len(segs))]
-        segs_distances = np.ones((len(segs), len(segs)))
-        segs_adjacency_nodes = [{} for i in range(len(segs))]
-        if not os.path.exists('./distances.npy'):
-            for i in range(len(segs)):
-                for j in range(i):
-                    distance = self.establish_new_connections([i, j], segs, segs_adjacency_nodes)
-                    segs_distances[i, j] = distance
-                    segs_distances[j, i] = distance
-            np.save('./distances.npy', segs_distances)
-        else:
-            segs_distances = np.load('./distances.npy')
-        already_connected = []
-        not_connected_points = np.arange(self.X.shape[0], dtype=int)
-        not_connected = list(range(len(segs)))
-        for count in range(self.n_splits):
-            new_tips = [not_connected_points[np.argmax(self.Dchosen[not_connected_points[0], not_connected_points])]]
-            dtip_others = self.Dchosen[new_tips[0], not_connected_points]
-            dists = [np.max(dtip_others)]
-            for j in range(10):
-                new_tip = not_connected_points[np.argmax(dtip_others)]
-                if new_tip in new_tips: break
-                new_tips.append(new_tip)
-                dtip_j = self.Dchosen[new_tips[-1], not_connected_points]
-                dists.append(np.max(dtip_j))
-                dtip_others += dtip_j
-            tip_idx_max = np.argmax(dists)
-            new_tip = new_tips.pop(tip_idx_max)
-            dist_max = dists.pop(tip_idx_max)
-            for iseg in not_connected:
-                if new_tip in set(segs[iseg]): break
-            new_seg = segs[iseg]
-            pos_new_seg = np.in1d(not_connected_points, new_seg, assume_unique=True)
-            not_connected_points = not_connected_points[~pos_new_seg]
-            # adjust adjacency
-            do_not_attach_ksegs_with_each_other = False
-            continue_after_distance_compute = False
-            kseg_list = [iseg]
-            for kseg in kseg_list:
-                jseg_list = [jseg for jseg in range(len(segs))
-                             if jseg != kseg and jseg not in segs_adjacency[kseg]]  # prev_connecting_segments]  # if it's a cluster split, this is allowed?
-                idcs = np.argsort(segs_distances[kseg, jseg_list])[::-1]
-                for idx in idcs:
-                    jseg_min = jseg_list[idx]
-                    logg.m('    consider connecting', kseg, 'to', jseg_min, v=4)
-                    if jseg_min not in kseg_list:
-                        segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
-                        for i, neighbors in enumerate(segs_adjacency):
-                            segs_adjacency_sparse[i, neighbors] = 1
-                        G = nx.Graph(segs_adjacency_sparse)
-                        paths_all = nx.single_source_dijkstra_path(G, source=kseg)
-                        if jseg_min not in paths_all:
-                            segs_adjacency[jseg_min].append(kseg)
-                            segs_adjacency[kseg].append(jseg_min)
-                            logg.m('            attaching new segment', kseg, 'at', jseg_min, v=4)
-                            break
-                        else:
-                            logg.m('        cannot attach new segment', kseg, 'at', jseg_min,
-                                      '(would produce cycle)', v=4)
-        return segs, segs_tips, segs_distances, segs_adjacency
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
                          segs_adjacency_nodes, segs_distances, trunk):
@@ -1105,11 +1044,15 @@ class AGA(data_graph.DataGraph):
                 segs_distances[jseg, kseg_list] = distances
                 segs_distances[kseg_list, jseg] = distances
             distances = segs_distances[jseg, kseg_list]
-            # in case we do not really have evidence for a connection based on the maximal distances
+            # in case we do not have convincing evidence for a connection based on the maximal distances
             if (median_distances
-                and ((max(distances) < 0.1 and max(distances) / min(distances) < 2.5)
-                     or (min(distances) >= 0.1 and max(distances) / min(distances) < 1.05))
-                and min(median_distances) / max(median_distances) < 0.95):
+                and ((max(distances) < 0.1 and min(distances) / max(distances) > 0.4)
+                     # all distances are very small, we require significant statistical evidence here
+                     or (min(distances) >= 0.1 and min(distances) / max(distances) > self.minimal_distance_evidence))
+                     # distances are larger 
+                and min(median_distances) / max(median_distances) < self.minimal_distance_evidence):
+                     # require median_distances to actually provide better evidence
+                logg.msg('        no convincing evidence in minimal distances, consider median distance')
                 idx = np.argmin(median_distances)
             else:
                 idx = np.argmin(distances)
@@ -1119,7 +1062,7 @@ class AGA(data_graph.DataGraph):
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
-            logg.m('    segment {} is now attached to {}'.format(jseg, kseg_min), v=4)
+            logg.m('    group {} is now attached to {}'.format(jseg, kseg_min), v=4)
         # in case the segment we split should correspond to two "clusters", we
         # need to check whether the new segments connect to any of the other old
         # segments

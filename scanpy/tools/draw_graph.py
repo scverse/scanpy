@@ -25,9 +25,20 @@ def draw_graph(adata,
                adjacency=None,
                n_jobs=None,
                copy=False):
-    """Visualize data using graph-drawing algorithms.
+    """Force-directed graph drawing [Fruchterman91]_ [Weinreb17]_ [Csardi06]_.
 
-    Sometimes a good alternative to tSNE, but runs considerably slower.
+    Often a good alternative to tSNE, but runs considerably slower.
+
+    `[source] <tl.draw_graph_>`__ `Force-directed graph drawing`_ describes a
+    class of long-established algorithms for visualizing graphs. It has been
+    suggested for visualizing single-cell data by [Weinreb17]_. Here, by
+    default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many
+    other layouts are available. Uses the igraph implementation [Csardi06]_.
+
+    .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
+    .. _tl.draw_graph: https://github.com/theislab/scanpy/tree/master/scanpy/tools/draw_graph.py
+
+
 
     Parameters
     ----------

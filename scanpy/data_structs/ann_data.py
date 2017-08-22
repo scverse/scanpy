@@ -406,65 +406,56 @@ class BoundStructArray(np.ndarray):
 
 
 class AnnData(IndexMixin):
+    """Store an annotated data matrix.
+
+    Stores an array-like data matrix as ``.X``, dataframe-like sample annotation
+    as ``.smp``, dataframe-like variable annotation as ``.var`` and
+    additional unstructured dict-like annotation as ``.add``. While
+    ``.add`` is a conventional dictionary, ``.smp`` and ``.var``
+    are instances of a low-level Pandas dataframe-like class.
+
+    Parameters
+    ----------
+    data : np.ndarray, np.ma.MaskedArray, sp.spmatrix, dict
+        A `n_smps` × `n_vars` data matrix. If a dict, the dict must contain `X`
+        as ``'X'`` and possibly a list-like ``'row_names'`` (``'smp_names'``)
+        storing names for the samples of length n_smps; similar for
+        ``'col_names'`` / ``'var_names'``. A `n_vars` array storing names for
+        variables.
+    smp : np.ndarray, dict or None, optional (default: None)
+        A `n_smps` × `n_smp_keys` array containing sample names (`index`) and
+        other sample annotation in the columns. A passed dict is converted to a
+        record array.
+    var : np.ndarray, dict or None, optional (default: None)
+        The same as `smp`, but of shape `n_vars` × `n_var_keys` for annotation of
+        variables.
+    add : dict (default: None)
+        Unstructured annotation for the whole dataset.
+    dtype : simple np.dtype, optional (default: ``'float32'``)
+        Convert data matrix to this type upon initialization.
+    single_col : bool, optional (default: ``False``)
+        Interpret one-dimensional input array as column.
+
+    Notes
+    -----
+    A data matrix is flattened if either `n_smps` or `n_vars` is 1, so that
+    Numpy's behavior is reproduced (``adata[:, 0].X == adata.X[:, 0]``).
+
+    Attributes
+    ----------
+    smp : dataframe-like
+        Samples annotation.
+    var : dataframe-like
+        Variables/ features annotation.
+    add : dict
+        Additional unstructured annotation.
+    smp_names : array-like
+        Sample index.
+    var_names : array-like
+        Variables index.
+    """
 
     def __init__(self, data, smp=None, var=None, add=None, dtype='float32', single_col=False):
-        """Annotated Data
-
-        Stores data matrix `X` of shape n_samples × n_variables, key-based
-        access to sample and variable annotations of shapes n_samples ×
-        n_smp_keys and n_variables × n_var_keys and additional
-        unstructured annotation in a dict.
-
-        Sample and variable annotation but are a subclass of np.ndarray with
-        access to a single or multiple columns with a single key. They provide
-        the basic functionality of a pd.DataFrame, if you want all of it, use
-        to_df().
-
-        Parameters
-        ----------
-        data : dict, np.ndarray, np.ma.MaskedArray, sp.spmatrix
-            The data matrix `X`
-            X : np.ndarray, np.ma.MaskedArray, sp.spmatrix
-                A n_samples × n_variables data matrix. Is flattened if either
-                n_samples or n_variables is 1, so that numpys behavior is
-                reproduced: `adata[:, 0].X == adata.X[:, 0]`.
-            or a dict containing `X` as 'X' and possibly
-            'row_names' / 'smp_names' : list, np.ndarray, optional
-                A n_samples array storing names for samples.
-            'col_names' / 'var_names' : list, np.ndarray, optional
-                A n_variables array storing names for variables.
-            'row' / 'smp' : dict, optional
-                A dict with row annotation.
-            'col' / 'var' : dict, optional
-                A dict with column annotation.
-        smp : np.ndarray, dict or None (default: None)
-            A n_samples × n_smp_keys array containing sample names (`index`)
-            and other sample annotation in the columns. A passed dict is
-            converted to a record array.
-        var : np.ndarray, dict or None (default: None)
-            The same as `smp`, but of shape n_variables × n_var_keys for annotation of
-            variables.
-        add : dict (default: None)
-            Unstructured annotation for the whole dataset.
-        dtype : simple np.dtype, optional (default: float32)
-            Convert data matrix to this type upon initialization.
-        single_col : bool, optional (default: False)
-            Interpret one-dimensional input array as column.
-
-        Attributes
-        ----------
-        X : array-like data matrix
-        n_smps : number of samples
-        n_vars : number of variables
-        smp_names : sample names/index
-        var_names : variable names/index
-        smp_keys : keys to samples annotation
-        var_keys : keys to variables annotation
-        add_keys : keys to unstructured annotation
-        smp : sample annotation (shape n_smps × n_smp_keys)
-        var : variable annotation (shape n_vars × n_var_keys)
-        add : unstructured annotation
-        """
         if isinstance(data, Mapping):
             if any((smp, var, add)):
                 raise ValueError('If `data` is a dict no further arguments must be provided.')
@@ -532,7 +523,7 @@ class AnnData(IndexMixin):
         raise AttributeError("AnnData has no attribute __contains__, don't check `in adata`.")
 
     def __repr__(self):
-        return ('AnnData object with n_smps × n_vars = {} × {}\n'
+        return ('AnnData object with `n_smps` × `n_vars`= {} × {}\n'
                 '    smp_keys = {}\n'
                 '    var_keys = {}\n'
                 '    add_keys = {}\n'
