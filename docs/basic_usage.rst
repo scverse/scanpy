@@ -1,5 +1,5 @@
-Basic Usage
------------
+Basic Usage Principles
+----------------------
 
 The typical workflow consists of subsequent calls of data analysis tools
 of the form::

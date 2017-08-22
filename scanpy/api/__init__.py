@@ -1,10 +1,8 @@
-"""Scanpy's high-level API for analyzing single-cell data.
-
-This gives an overview of all features relevant to pratical use.
-
-Import the module as::
+"""Scanpy's high-level API provides an overview of all features relevant to pratical use::
 
    import scanpy.api as sc   
+
+
 
 .. raw:: html
 
