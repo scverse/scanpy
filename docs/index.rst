@@ -1,18 +1,13 @@
-         
-Scanpy – Single-Cell Analysis in Python
-=======================================
+.. include:: ../README.rst
+   :end-line: 16
 
-.. include:: abstract.rst
-   
+Report issues and see the code `on GitHub <https://github.com/theislab/scanpy>`_. Learn more about conceptual ideas in our `preprint <https://doi.org/10.1101/174029>`_.
+
 .. toctree::
    :maxdepth: 1
-      
-   getting_started
+
+   api
    examples
    basic_usage
-   api
    installation
    references
-
-To see the code or report a bug, visit the `GitHub repository
-<https://github.com/theislab/scanpy>`_.

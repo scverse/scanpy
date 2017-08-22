@@ -257,7 +257,7 @@ def draw_graph(
         show=None,
         save=None,
         ax=None):
-    """Scatter in tSNE basis.
+    """Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
@@ -340,7 +340,7 @@ def tsne(
         title=None,
         show=None,
         save=None, ax=None):
-    """Scatter in tSNE basis.
+    """Scatter plot in tSNE basis.
 
     Parameters
     ----------
@@ -1076,7 +1076,9 @@ def dpt_scatter(
         title=None,
         show=None,
         save=None):
-    """See parameters of sc.pl.dpt().
+    """Scatter plot of DPT results.
+
+    See parameters of sc.pl.dpt().
     """
     from ..utils import check_adata
     adata = check_adata(adata)

@@ -74,21 +74,21 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
 
     Returns
     -------
-    Writes the following arrays as sample annotation to adata.smp.
-        dpt_pseudotime : np.ndarray
-            Array of dim (number of samples) that stores the pseudotime of each
-            cell, that is, the DPT distance with respect to the root cell.
-        dpt_groups : np.ndarray of dtype string
-            Array of dim (number of samples) that stores the subgroup id ('0',
-            '1', ...) for each cell. The groups  typically correspond to
-            'progenitor cells', 'undecided cells' or 'branches' of a process.
-    Writes the following additional arrays as unstructured annotation to adata.
-        X_diffmap : np.ndarray
-            Array of shape (number of samples) × (number of eigen
-            vectors). DiffMap representation of data, which is the right eigen
-            basis of the transition matrix with eigenvectors as columns.
-        dpt_evals : np.ndarray
-            Array of size (number of eigen vectors). Eigenvalues of transition matrix.
+    Depending on `copy`, returns or updates `adata` with the following fields.
+
+    dpt_pseudotime : np.ndarray (adata.smp)
+        Array of dim (number of samples) that stores the pseudotime of each
+        cell, that is, the DPT distance with respect to the root cell.
+    dpt_groups : np.ndarray of dtype string (adata.smp)
+        Array of dim (number of samples) that stores the subgroup id ('0',
+        '1', ...) for each cell. The groups  typically correspond to
+        'progenitor cells', 'undecided cells' or 'branches' of a process.
+    X_diffmap : np.ndarray (adata.smp)
+        Array of shape (number of samples) × (number of eigen
+        vectors). DiffMap representation of data, which is the right eigen
+        basis of the transition matrix with eigenvectors as columns.
+    dpt_evals : np.ndarray (adata.add)
+        Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
     if ('iroot' not in adata.add

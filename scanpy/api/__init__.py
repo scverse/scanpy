@@ -1,24 +1,87 @@
-"""A high-level API for analyzing single-cell data.
+"""Scanpy's high-level API for analyzing single-cell data.
 
-Import this as::
+This gives an overview of all features relevant to pratical use.
+
+Import the module as::
 
    import scanpy.api as sc   
 
-Consider using the builtin abbreviations (``sc.pp``, ``sc.tl``, ``sc.pl``) for
-the main modules (``sc.preprocessing``, ``sc.tools``, ``sc.plotting``) Scanpy's
-API.
+.. raw:: html
+
+   <h3>Preprocessing tools</h3>
+
+Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
 
 .. raw:: html
 
-   <h4>Main modules</h4>
+   <h4>Basic Preprocessing</h4>
 
 .. autosummary::
    :toctree: generated/
 
-   preprocessing                
-   tools
-   plotting
+   pp.filter_cells   
+   pp.filter_genes
+   pp.filter_genes_dispersion
+
+   pp.log1p
+   pp.pca
+   pp.normalize_per_cell
+   pp.regress_out
+   pp.scale
+   pp.subsample
+
+.. raw:: html
+
+   <h4>Recipes</h4>
+
+.. autosummary::
+   :toctree: generated/
    
+   pp.recipe_zheng17
+   pp.recipe_weinreb16
+
+
+.. raw:: html
+
+   <h3>Machine Learning and Statistics tools<h3>
+
+.. raw:: html
+
+   <h4>Visualization</h4>
+
+.. autosummary::
+   :toctree: generated/
+   
+   tl.pca
+   tl.tsne
+   tl.diffmap
+   tl.draw_graph
+
+.. raw:: html
+
+   <h4>Branching trajectories and pseudotime, clustering, differential expression</h4>
+
+.. autosummary::
+   :toctree: generated/
+   
+   tl.dpt
+   tl.louvain
+   tl.rank_genes_groups
+
+.. raw:: html
+
+   <h4>Simulations</h4>
+
+.. autosummary::
+   :toctree: generated/
+   
+   tl.sim
+
+
+.. raw:: html
+
+   <h3>Generic methods</h3>
+
 .. raw:: html
 
    <h4>Reading and Writing</h4>
@@ -39,29 +102,80 @@ API.
 
    AnnData
    DataGraph
+
+.. raw:: html
+
+   <h3>Plotting</h3>
+
+.. raw:: html
+
+   <h4>Generic plotting with AnnData</h4>
+
+.. autosummary::
+   :toctree: generated/
+
+   pl.scatter
+   pl.violin
+   pl.ranking
+
+.. raw:: html
+
+   <h4>Plotting tool results</h4>
+
+Methods that extract and visualize tool-specific annotation in an AnnData object.
+
+.. raw:: html
+
+   <h5>Visualization</h5>
+
+.. autosummary::
+   :toctree: generated/
+   
+   pl.pca
+   pl.pca_loadings
+   pl.pca_scatter
+   pl.pca_variance_ratio
+   pl.tsne
+   pl.diffmap
+   pl.draw_graph
+
+.. raw:: html
+
+   <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
+
+.. autosummary::
+   :toctree: generated/
+   
+   pl.dpt
+   pl.dpt_scatter
+   pl.dpt_groups_pseudotime
+   pl.dpt_timeseries
+   pl.louvain
+   pl.rank_genes_groups
+   pl.rank_genes_groups_violin
+
+.. raw:: html
+
+   <h5>Simulations</h5>
+
+.. autosummary::
+   :toctree: generated/
+   
+   pl.sim   
 """
 
 from .. import __version__
 
 from .. import settings
-"""Settings"""
 from .. import logging
-"""Logging"""
-from . import tools
-tl = tools       # abbreviation
-"""Tools"""
-from . import plotting
-pl = plotting    # abbreviation
-"""Plotting functions"""
-from . import preprocessing
-pp = preprocessing  # abbreviation
-"""Preprocessing functions"""
+from . import tl
+tools = tl
+from . import pl
+plotting = pl
+from . import pp
+preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
-"""Reading and writing."""
 from .. import examples
 from ..examples import init_run, read_run, write_run
-"""Manage runs and builtin examples."""
 from ..data_structs import AnnData, DataGraph
-"""Main class for storing an annotated data matrix."""
 from .. import utils
-"""Utils."""

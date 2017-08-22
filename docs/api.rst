@@ -1,4 +1,4 @@
-API
----
+Features/API
+------------
 
 .. automodule:: scanpy.api

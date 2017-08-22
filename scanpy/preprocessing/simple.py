@@ -19,42 +19,40 @@ from .. import logging as logg
 
 def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
                  max_genes=None, copy=False):
-    """Filter outliers based on counts and number of genes expressed.
+    """Filter cell outliers based on counts and numbers of genes expressed.
 
     For instance, only keep cells with at least `min_counts` UMI counts or
-    `min_genes` genes expressed.
+    `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
+    "unreliable" samples.
 
     Only provide one of the optional arguments per call.
 
-    This is to filter measurement outliers, i.e., "unreliable" samples.
-
-    Paramaters
+    Parameters
     ----------
-    data : np.ndarray or AnnData
-        Data matrix of shape n_sample × n_variables. Rows correspond to cells
-        and columns to genes.
-    min_counts : int
+    data : AnnData, np.ndarray, sp.spmatrix
+        Data matrix of shape n_smps × n_vars. Rows correspond to cells and
+        columns to genes.
+    min_counts : int, optional (default: None)
         Minimum number of counts required for a cell to pass filtering.
-    min_genes : int
+    min_genes : int, optional (default: None)
         Minimum number of genes expressed required for a cell to pass filtering.
-    min_counts : int
+    min_counts : int, optional (default: None)
         Maximum number of counts required for a cell to pass filtering.
-    max_genes : int
+    max_genes : int, optional (default: None)
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy : bool (default: False)
+    copy : bool, optional (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 
     Returns
     -------
-    If data is a data matrix X, the following to arrays are returned
+    If data is an AnnData, the filtered data matrix is returned, if it is an
+    array, the following to arrays are returned
         cell_subset : np.ndarray
             Boolean index mask that does filtering. True means that the cell is
             kept. False means the cell is removed.
         number_per_cell: np.ndarray
             Either n_counts or n_genes per cell.
-    otherwise, if copy == False, the adata object is updated, otherwise a copy is returned
-        adata : AnnData
-            The filtered adata object, with the count info stored in adata.smp.
+
     """
     if min_genes is not None and min_counts is not None:
         raise ValueError('Either provide min_counts or min_genes, but not both.')
@@ -95,15 +93,14 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
 
 
 def filter_genes(data, min_cells=None, min_counts=None, copy=False):
-    """Filter genes.
+    """Filter genes based on minimal number of cells or counts.
 
     Keep genes that have at least `min_counts` counts or are expressed in at
-    least `min_cells` cells / samples. The latter means that genes are filtered
-    whose expression is not supported by sufficient statistical evidence.
+    least `min_cells` cells.
 
     Parameters
     ----------
-    See filter_cells.
+    See ``pp.filter_cells()``.
     """
     if min_cells is not None and min_counts is not None:
         raise ValueError('Either specify min_counts or min_cells, but not both.')
@@ -139,7 +136,7 @@ def filter_genes_dispersion(data,
                             n_top_genes=None,
                             log=True,
                             copy=False):
-    """Extract highly variable genes.
+    """Filter genes based on dispersion: extract highly variable genes.
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
@@ -166,9 +163,12 @@ def filter_genes_dispersion(data,
     -------
     If an AnnData `adata` is passed, returns or updates `adata` depending on
     `copy`. It filters the adata object and adds the annotations
-        "means",  means per gene (adata.var)
-        "dispersions", dispersions per gene (adata.var)
-        "dispersions_norm", dispersions per gene (adata.var)
+        "means" : field in adata.var
+             Means per gene.
+        "dispersions" : field in adata.var
+             Dispersions per gene.
+        "dispersions_norm" : field in adata.var
+             Normalized dispersions per gene.
     If a data matrix `X` is passed, the annotation is returned as np.recarray
     with the columns:
         gene_subset, means, dispersions, dispersion_norm
@@ -283,7 +283,9 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 
 
 def log1p(data, copy=False):
-    """Apply logarithm to count data "+1", i.e., `adata.X+1`.
+    """Logarithmize the data matrix.
+
+    Computes `X = log(X + 1)`.
 
     Parameters
     ----------
@@ -303,20 +305,18 @@ def log1p(data, copy=False):
         return X.log1p()
 
 
-def pca(data, n_comps=50, zero_center=True, svd_solver='auto',
-        random_state=0, recompute=True, mute=False, return_info=None, copy=False, dtype='float32'):
+def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
+        recompute=True, mute=False, return_info=None, copy=False,
+        dtype='float32'):
     """Principal component analysis [Pedregosa11]_.
 
-    `[source] <tl.pca_>`__ Computes PCA coordinates, loadings and variance
-    decomposition. Uses the implementation of *scikit-learn* [Pedregosa11]_.
-
-    .. _tl.pca: https://github.com/theislab/scanpy/tree/master/scanpy/tools/pca.py
+    Computes PCA coordinates, loadings and variance decomposition. Uses the
+    implementation of *scikit-learn* [Pedregosa11]_.
 
     Parameters
     ----------
-    data : AnnData or array_like
-        X : np.ndarray
-            Data matrix of shape n_samples × n_variables.
+    data : AnnData, array-like
+        Data matrix of shape n_smps × n_vars.
     n_comps : int, optional (default: 10)
         Number of principal components to compute.
     zero_center : bool or None, optional (default: None)
@@ -414,9 +414,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     Normalize each cell by UMI count, so that every cell has the same total
     count.
 
-    Similar functions are used, for example, by Cell Ranger (Zheng et al.,
-    2017), Seurat (Macosko et al., 2015), Haghverdi et al. (2016) or Weinreb et
-    al. (2016).
+    Similar functions are used, for example, by Cell Ranger [Zheng17], Seurat
+    [Satija15], or SPRING [Weinreb17].
 
     Parameters
     ----------
@@ -433,7 +432,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
 
     Returns
     -------
-    Returns or updates adata with normalized version of the original adata.X,
+    Returns or updates ``adata`` with normalized version of the original ``adata.X``,
     depending on `copy`.
     """
     if field_name_counts is None: field_name_counts = 'n_counts'
@@ -513,9 +512,8 @@ def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
 def regress_out(adata, keys, n_jobs=None, copy=False):
     """Regress out unwanted sources of variation.
 
-    Yields a dense matrix.
-
-    This is inspired by Seurat's `regressOut` function in R.
+    Uses simple linear regression. This is inspired by Seurat's `regressOut`
+    function in R [Satija15].
 
     Parameters
     ----------
@@ -527,6 +525,10 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         Number of jobs for parallel computation.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
+
+    Returns
+    -------
+    Depening on `copy` returns or updates `adata` with the corrected data matrix.
     """
     logg.m('regressing out', keys, r=True, v=4)
     if issparse(adata.X):
@@ -583,7 +585,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
 
 
 def scale(data, zero_center=True, max_value=None, copy=False):
-    """Scale data to unit variance and zero mean (`if zero_center`).
+    """Scale data to unit variance and zero mean.
 
     Parameters
     ----------
@@ -595,6 +597,10 @@ def scale(data, zero_center=True, max_value=None, copy=False):
         Clip to this value after scaling. If None, do not clip.
     copy : bool (default: False)
         Perfrom operation inplace if False.
+
+    Returns
+    -------
+    Depending on `copy` returns or updates ``adata`` with a scaled ``adata.X``.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -622,15 +628,15 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
 
 def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
-    """Subsample to `fraction` of the data.
+    """Subsample to a fraction of the number of samples.
 
     Parameters
     ----------
     data : AnnData or array-like
         Annotated data matrix.
     fraction : float in [0, 1]
-        Subsample to a fraction the number of samples.
-    seed : int
+        Subsample to this `fraction` of the number of samples.
+    seed : int, optional (default: 0)
         Random seed to change subsampling.
     simply_skip_samples : bool, optional (default: False)
         Simply skip samples instead of true sampling.
@@ -639,12 +645,9 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
 
     Returns
     -------
-    Updates or returns the subsampled data object, depending on `copy`.
-
-    Notes
-    -----
-    Returns X, smp_indices if data is array-like, otherwise subsamples the passed
-    AnnData (copy == False) or a copy of it (copy == True).
+    Updates or returns the subsampled data, depending on `copy`. Returns
+    ``X, smp_indices`` if data is array-like, otherwise subsamples the passed
+    `AnnData` (``copy == False``) or a copy of it (``copy == True``).
     """
     if fraction > 1 or fraction < 0:
         raise ValueError('`fraction` needs to be within [0, 1], not {}'

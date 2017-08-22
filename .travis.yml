@@ -11,4 +11,5 @@ install:
   - "python setup.py build_ext --inplace"
 script:
   - pytest
+  - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null

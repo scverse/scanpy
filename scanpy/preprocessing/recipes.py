@@ -8,7 +8,7 @@ from . import simple as pp
 
 def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
                      n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
-    """Normalization and filtering as of Weinreb et al. (2016).
+    """Normalization and filtering as of [Weinreb17]_.
 
     This is deprecated but remains for backwards compatibility.
 
@@ -51,7 +51,7 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
 
 
 def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=False):
-    """Normalization and filtering as of Zheng et al. (2017).
+    """Normalization and filtering as of [Zheng17]_.
 
     This reproduces the preprocessing of the reference below, at the time, the
     Cell Ranger R Kit preprocessing of 10X Genomics.
