@@ -1,2 +1,17 @@
-sphinx-bootstrap-theme
+# stuff necessary for docs generation
 numpydoc
+# same as ../requires.txt, but omitting the c++ packages
+matplotlib==2.0.0  # 2.0.2 seems buggy
+pandas
+scipy
+seaborn
+psutil
+h5py
+xlrd
+scikit-learn
+statsmodels
+networkx
+natsort
+joblib
+profilehooks
+tqdm
