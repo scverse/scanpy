@@ -81,8 +81,6 @@ def sim(model,
     else:
         params = locals()
     adata = sample_dynamic_data(params)
-    if 'tools' not in adata.add:
-        adata.add['tools'] = np.array([], dtype=str)
     adata.add['xroot'] = adata.X[0]
     return adata
 

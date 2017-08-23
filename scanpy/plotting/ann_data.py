@@ -209,7 +209,7 @@ def scatter(
     for i, icolor_key in enumerate(categoricals):
         palette = palettes[i]
         color_key = color_keys[icolor_key]
-        if len(adata.add[color_key + '_order']) != np.unique(adata.smp[color_key]):
+        if len(adata.add[color_key + '_order']) != len(np.unique(adata.smp[color_key])):
             from ..utils import unique_categories
             adata.add[color_key + '_order'] = unique_categories(adata.smp[color_key])
         if (not color_key + '_colors' in adata.add or not palette_was_none
@@ -226,7 +226,7 @@ def scatter(
                     mask_remaining[mask] = False
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
-            for name in names:
+            for name in groups:
                 if name not in set(adata.add[color_key + '_order']):
                     raise ValueError('"' + name + '" is invalid!'
                                      + ' specify valid name, one of '

@@ -716,7 +716,8 @@ def postprocess_reading(key, value):
     if value.dtype.kind == 'S':
         value = value.astype(str)
         # recover a dictionary that has been stored as a string
-        if value[0] == '{' and value[-1] == '}': value = eval(value)
+        if len(value) > 0:
+            if value[0] == '{' and value[-1] == '}': value = eval(value)
     if (key != 'smp' and key != 'var'
         and not isinstance(value, dict) and value.dtype.names is not None):
         # TODO: come up with a better way of solving this, see also below
@@ -797,7 +798,12 @@ def write_dict_to_file(filename, d, ext='h5'):
         if not os.path.exists(dirname): os.makedirs(dirname)
         if not os.path.exists(dirname + 'add'): os.makedirs(dirname + 'add')
         from pandas import DataFrame
+        not_yet_raised_data_graph_warning = True
         for key, value in d_write.items():
+            if key.startswith('data_graph') and not_yet_raised_data_graph_warning:
+                logg.warn('Omitting to write neighborhood graph (`adata.add[\'data_graph...\']`).')
+                not_yet_raised_data_graph_warning = False
+                continue
             filename = dirname
             if key not in {'X', 'var', 'smp'}: filename += 'add/'
             filename += key + '.' + ext
