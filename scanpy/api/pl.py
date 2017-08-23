@@ -1,4 +1,4 @@
-
+# TODO: should not be duplicated from plotting.__init__
 from ..plotting.ann_data import scatter, violin
 from ..plotting.ann_data import ranking
 
@@ -20,5 +20,3 @@ from ..plotting import palettes
 from ..plotting.utils import matrix
 from ..plotting.utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
-# reset matplotlib.rcParams
-reset_rcParams()
