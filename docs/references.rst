@@ -28,13 +28,16 @@ References
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network researc*,
    `InterJournal Complex Systems <http://igraph.org>`__.
-
    
 .. [Ester96] Ester *et al.* (1996),
    *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
    `Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
    Portland, OR <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.121.9220>`__.
 
+.. [Eulenberg17] Eulenberg *et al.* (2017),
+   *Reconstructing cell cycle and disease progression using deep learning*
+   `Nat. Comms., accepted <https://doi.org/10.1101/081364>`__.
+             
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
    `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.

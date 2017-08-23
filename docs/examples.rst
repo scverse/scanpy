@@ -1,7 +1,7 @@
 Examples
 --------
 
-Good starting points are the following examples, which build on established results from the literature. All use cases are collected on the `GitHub <scanpy_usage_>`__.
+Good starting points are the following examples, which build on established results from the literature. All examples are versioned on `GitHub <scanpy_usage_>`__.
 
 .. _scanpy_usage: https://github.com/theislab/scanpy_usage
 
@@ -15,7 +15,7 @@ Good starting points are the following examples, which build on established resu
 
 ------------
 
-`Example 2: <17-05-02_>`__ The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_. Note that DPT has recently been very `favorably discussed`_ by the authors of Monocle_.
+`Example 2: <17-05-02_>`__ The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_ for data of [Paul15]_ and [Moignard15]_. Note that DPT has recently been very `favorably discussed`_ by the authors of Monocle_.
 
 .. raw:: html
 
@@ -45,6 +45,14 @@ Good starting points are the following examples, which build on established resu
 .. raw:: html
 
    <img src="http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/timeseries.png" style="width: 200px"><img src="http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/tsne.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/draw_graph.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170430_krumsiek11/diffmap.png" style="width: 100px">
+   
+------------
+
+`Example 6: <17-04-30_>`__ Pseudotime-based vs. deep-learning based reconstruction of cell cycle from image data [Eulenberg17]_.
+
+.. raw:: html
+
+   <img src="http://falexwolf.de/img/scanpy_usage/170529_images/dpt_DNA_content.png" style="width: 200px">
    
 ------------
 
