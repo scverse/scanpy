@@ -14,7 +14,7 @@ scikit-learn
 statsmodels
 # complex systems and graphs
 networkx
-igraph
+python-igraph
 louvain
 # natural human-readable sorting
 natsort
