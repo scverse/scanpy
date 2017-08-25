@@ -550,6 +550,7 @@ def aga_graph(
         max_edge_width=None,
         random_state=0,
         pos=None,
+        cmap=None,
         return_pos=False,
         show=None,
         save=None,
@@ -633,6 +634,7 @@ def aga_graph(
             min_edge_width=min_edge_width,
             max_edge_width=max_edge_width,
             ax=axs[icolor],
+            cmap=cmap,
             title=title[icolor],
             random_state=0,
             pos=pos)
@@ -660,6 +662,7 @@ def _aga_graph(
         ax=None,
         layout=None,
         pos=None,
+        cmap=None,
         min_edge_width=None,
         max_edge_width=None,
         random_state=0):
@@ -675,16 +678,36 @@ def _aga_graph(
         root = list(groups).index(root)
 
     # define the objects
+    adjacency_solid = adata.add[solid_edges]
+    nx_g_solid = nx.Graph(adjacency_solid)
+    if dashed_edges is not None:
+        adjacency_dashed = adata.add[dashed_edges]
+        nx_g_dashed = nx.Graph(adjacency_dashed)
     if colors is None:
         if ('aga_groups_colors' not in adata.add
             or len(adata.add['aga_groups_order'])
                != len(adata.add['aga_groups_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
         colors = adata.add['aga_groups_colors']
-    for iname, name in enumerate(adata.add['aga_groups_order']):
-        if name in sett._ignore_categories: colors[iname] = 'grey'
-    adjacency_solid = adata.add[solid_edges]
-    nx_g_solid = nx.Graph(adjacency_solid)
+        for iname, name in enumerate(adata.add['aga_groups_order']):
+            if name in sett._ignore_categories: colors[iname] = 'grey'
+
+    colorbar = False
+    if isinstance(colors, str) and colors.startswith('degree'):
+        import matplotlib
+        if colors == 'degree_dashed':
+            colors = [d for _, d in nx_g_dashed.degree_iter(weight='weight')]
+        elif colors == 'degree_solid':
+            colors = [d for _, d in nx_g_solid.degree_iter(weight='weight')]
+        else:
+            raise ValueError('`degree` either "degree_dashed" or "degree_solid".')
+        colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
+        norm = matplotlib.colors.Normalize()
+        colors = norm(colors)
+        if cmap is None: cmap = rcParams['image.cmap']
+        cmap = matplotlib.cm.get_cmap(cmap)
+        colors = [cmap(c) for c in colors]
+        colorbar = True
 
     # node positions from adjacency_solid
     if pos is None:
@@ -729,8 +752,6 @@ def _aga_graph(
 
     # draw dashed edges
     if dashed_edges is not None:
-        adjacency_dashed = adata.add[dashed_edges]
-        nx_g_dashed = nx.Graph(adjacency_dashed)
         widths = [x[-1]['weight'] for x in nx_g_dashed.edges(data=True)]
         widths = base_edge_width * np.array(widths)
         if max_edge_width is not None:
@@ -811,6 +832,10 @@ def _aga_graph(
                    horizontalalignment='center',
                    transform=a.transAxes, size=fontsize)
     if title is not None: ax.set_title(title)
+    if colorbar:
+        ax1 = pl.axes([0.95, 0.1, 0.03, 0.7])
+        cb = matplotlib.colorbar.ColorbarBase(ax1, cmap=cmap,
+                                              norm=norm)
     return pos_array
 
 
