@@ -20,6 +20,7 @@
 import os
 import sys
 import time
+from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.pardir))
 
 # -- General configuration ------------------------------------------------
@@ -68,29 +69,29 @@ if html_theme == 'sphinx_rtd_theme':
     html_theme_options = {
         'navigation_depth': 2,
     }
-    # html_context = {
-    #     "display_github": True, # Integrate GitHub
-    #     "github_user": "theislab", # Username
-    #     "github_repo": "scanpy", # Repo name
-    #     "github_version": "master", # Version
-    #     "conf_py_path": "/docs/", # Path in the checkout to the docs root
-    # }
+    html_context = {
+        "display_github": True, # Integrate GitHub
+        "github_user": "theislab", # Username
+        "github_repo": "scanpy", # Repo name
+        "github_version": "master", # Version
+        "conf_py_path": "/docs/", # Path in the checkout to the docs root
+    }
 elif html_theme == 'bootstrap':
     import sphinx_bootstrap_theme
     html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
     html_theme_options = {
         'navbar_site_name': "Site",
-        'navbar_pagenav_name': "Page",    
+        'navbar_pagenav_name': "Page",
         'source_link_position': "footer",
         'bootswatch_theme': "paper",
         'navbar_pagenav': False,
         'navbar_sidebarrel': False,
         'bootstrap_version': "3",
         'navbar_links': [
-                         ("API", "api"),
-                         ],
+            ("API", "api"),
+        ],
     }
-    
+
 html_static_path = ['_static']
 
 
@@ -151,4 +152,27 @@ texinfo_documents = [
 ]
 
 
+def modpath(fullname):
+    """ Get the full module path for some object’s qualname """
+    classname = None
+    modname = fullname
+    while modname not in sys.modules:
+        modname, classname = modname.rsplit('.', 1)
+
+    if classname:
+        cls = getattr(sys.modules[modname], classname)
+        modname = cls.__module__
+
+    module = sys.modules[modname]
+
+    project_dir = Path(scanpy.__file__).parent.parent
+    return Path(module.__file__).relative_to(project_dir)
+
+
+# html_context doesn’t apply to autosummary templates ☹
+# and there’s no way to insert filters into those templates
+# so we have to modify the default filters
+from jinja2.defaults import DEFAULT_FILTERS
+
+DEFAULT_FILTERS['modpath'] = modpath
 
