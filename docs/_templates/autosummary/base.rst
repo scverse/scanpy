@@ -1,4 +1,4 @@
-:github_url: https://github.com/theislab/scanpy/tree/master/{{ fullname | modpath }}
+:github_url: {{ fullname | modurl }}
 
 {% extends "!autosummary/base.rst" %}
 

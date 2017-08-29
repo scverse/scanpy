@@ -153,15 +153,16 @@ texinfo_documents = [
 ]
 
 
-def get_obj_module(fullname):
-    modname = fullname
+def get_obj_module(qualname):
+    """Get a module/class/attribute and its original module by qualname"""
+    modname = qualname
     classname = None
     attrname = None
     while modname not in sys.modules:
         attrname = classname
         modname, classname = modname.rsplit('.', 1)
 
-    # set obj and possibly modify modname
+    # retrieve object and find original module name
     if classname:
         cls = getattr(sys.modules[modname], classname)
         modname = cls.__module__
@@ -172,21 +173,20 @@ def get_obj_module(fullname):
     return obj, sys.modules[modname]
 
 
-def get_lines(obj):
+def get_linenos(obj):
+    """Get an object’s line numbers"""
     lines, start = inspect.getsourcelines(obj)
     return start, start + len(lines) - 1
 
 
-def modpath(fullname):
-    """ Get the full module path for some object’s qualname """
-    obj, module = get_obj_module(fullname)
-
-    fragment = '#L{}-L{}'.format(*get_lines(obj)) if obj else ''
-
-    project_dir = Path(scanpy.__file__).parent.parent
+project_dir = Path(__file__).parent.parent  # project/docs/conf.py/../.. → project/
+github_url = 'https://github.com/{github_user}/{github_repo}/tree/{github_version}'.format_map(html_context)
+def modurl(qualname):
+    """Get the full GitHub URL for some object’s qualname"""
+    obj, module = get_obj_module(qualname)
     path = Path(module.__file__).relative_to(project_dir)
-
-    return '{}{}'.format(path, fragment)
+    fragment = '#L{}-L{}'.format(*get_linenos(obj)) if obj else ''
+    return '{}/{}{}'.format(github_url, path, fragment)
 
 
 # html_context doesn’t apply to autosummary templates ☹
@@ -194,5 +194,5 @@ def modpath(fullname):
 # so we have to modify the default filters
 from jinja2.defaults import DEFAULT_FILTERS
 
-DEFAULT_FILTERS['modpath'] = modpath
+DEFAULT_FILTERS['modurl'] = modurl
 
