@@ -48,6 +48,7 @@ extensions = ['sphinx.ext.autodoc',
 
 # Generate the API documentation when building
 autosummary_generate = True
+autodoc_mock_imports = ['_tkinter']
 numpydoc_show_class_members = True
 numpydoc_class_members_toctree = False
 
