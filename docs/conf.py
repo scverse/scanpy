@@ -176,8 +176,12 @@ def get_obj_module(qualname):
 
 def get_linenos(obj):
     """Get an object’s line numbers"""
-    lines, start = inspect.getsourcelines(obj)
-    return start, start + len(lines) - 1
+    try:
+        lines, start = inspect.getsourcelines(obj)
+    except TypeError:
+        return None, None
+    else:
+        return start, start + len(lines) - 1
 
 
 project_dir = Path(__file__).parent.parent  # project/docs/conf.py/../.. → project/
@@ -186,7 +190,8 @@ def modurl(qualname):
     """Get the full GitHub URL for some object’s qualname"""
     obj, module = get_obj_module(qualname)
     path = Path(module.__file__).relative_to(project_dir)
-    fragment = '#L{}-L{}'.format(*get_linenos(obj)) if obj else ''
+    start, end = get_linenos(obj)
+    fragment = '#L{}-L{}'.format(start, end) if start and end else ''
     return '{}/{}{}'.format(github_url, path, fragment)
 
 
