@@ -20,6 +20,7 @@
 import os
 import sys
 import time
+import inspect
 from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.pardir))
 
@@ -152,21 +153,40 @@ texinfo_documents = [
 ]
 
 
-def modpath(fullname):
-    """ Get the full module path for some object’s qualname """
-    classname = None
+def get_obj_module(fullname):
     modname = fullname
+    classname = None
+    attrname = None
     while modname not in sys.modules:
+        attrname = classname
         modname, classname = modname.rsplit('.', 1)
 
+    # set obj and possibly modify modname
     if classname:
         cls = getattr(sys.modules[modname], classname)
         modname = cls.__module__
+        obj = getattr(cls, attrname) if attrname else cls
+    else:
+        obj = None
 
-    module = sys.modules[modname]
+    return obj, sys.modules[modname]
+
+
+def get_lines(obj):
+    lines, start = inspect.getsourcelines(obj)
+    return start, start + len(lines) - 1
+
+
+def modpath(fullname):
+    """ Get the full module path for some object’s qualname """
+    obj, module = get_obj_module(fullname)
+
+    fragment = '#L{}-L{}'.format(*get_lines(obj)) if obj else ''
 
     project_dir = Path(scanpy.__file__).parent.parent
-    return Path(module.__file__).relative_to(project_dir)
+    path = Path(module.__file__).relative_to(project_dir)
+
+    return '{}{}'.format(path, fragment)
 
 
 # html_context doesn’t apply to autosummary templates ☹
