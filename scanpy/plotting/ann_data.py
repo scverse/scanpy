@@ -4,6 +4,7 @@
 """
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -347,7 +348,6 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     -------
     A matplotlib.Axes object.
     """
-    import pandas as pd
     if group_by is not None and isinstance(keys, list):
         raise ValueError('Pass a single key as string if using `group_by`.')
     if not isinstance(keys, list): keys = [keys]
