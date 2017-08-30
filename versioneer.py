@@ -278,11 +278,7 @@ https://img.shields.io/travis/warner/python-versioneer/master.svg
 
 """
 
-from __future__ import print_function
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 import errno
 import json
 import os
@@ -341,9 +337,9 @@ def get_config_from_root(root):
     # configparser.NoOptionError (if it lacks "VCS="). See the docstring at
     # the top of versioneer.py for instructions on writing your setup.cfg .
     setup_cfg = os.path.join(root, "setup.cfg")
-    parser = configparser.SafeConfigParser()
+    parser = configparser.ConfigParser()
     with open(setup_cfg, "r") as f:
-        parser.readfp(f)
+        parser.read_file(f)
     VCS = parser.get("versioneer", "VCS")  # mandatory
 
     def get(parser, name):
@@ -390,7 +386,6 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False,
     p = None
     for c in commands:
         try:
-            dispcmd = str([c] + args)
             # remember shell=False, so use git.cmd on windows, not just git
             p = subprocess.Popen([c] + args, cwd=cwd, env=env,
                                  stdout=subprocess.PIPE,
@@ -402,7 +397,7 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False,
             if e.errno == errno.ENOENT:
                 continue
             if verbose:
-                print("unable to run %s" % dispcmd)
+                print("unable to run", [c] + args)
                 print(e)
             return None, None
     else:
