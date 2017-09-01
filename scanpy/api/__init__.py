@@ -1,6 +1,6 @@
 """Scanpy's high-level API provides an overview of all features relevant to pratical use::
 
-   import scanpy.api as sc   
+   import scanpy.api as sc
 
 
 
@@ -15,9 +15,9 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Basic Preprocessing</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
-   pp.filter_cells   
+   pp.filter_cells
    pp.filter_genes
    pp.filter_genes_dispersion
 
@@ -33,8 +33,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Recipes</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    pp.recipe_zheng17
    pp.recipe_weinreb16
 
@@ -48,8 +48,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Visualization</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    tl.pca
    tl.tsne
    tl.diffmap
@@ -60,8 +60,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Branching trajectories and pseudotime, clustering, differential expression</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    tl.dpt
    tl.louvain
    tl.rank_genes_groups
@@ -71,8 +71,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Simulations</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    tl.sim
 
 
@@ -85,18 +85,18 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Reading and Writing</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    read
    write
    read_10x_h5
-   
+
 .. raw:: html
 
    <h4>Data Structures</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    AnnData
    DataGraph
@@ -110,7 +110,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Generic plotting with AnnData</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    pl.scatter
    pl.violin
@@ -127,8 +127,8 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Visualization</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    pl.pca
    pl.pca_loadings
    pl.pca_scatter
@@ -142,8 +142,8 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    pl.dpt
    pl.dpt_scatter
    pl.dpt_groups_pseudotime
@@ -157,9 +157,9 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Simulations</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
-   pl.sim   
+   :toctree: .
+
+   pl.sim
 """
 
 from .. import __version__
