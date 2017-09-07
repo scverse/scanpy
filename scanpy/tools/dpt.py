@@ -12,62 +12,64 @@ from ..data_structs import data_graph
 
 
 def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
-        min_group_size=0.01, n_jobs=None, recompute_graph=False,
-        recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
+        min_group_size=0.01, recompute_graph=False, recompute_pca=False,
+        allow_kendall_tau_shift=True, flavor='haghverdi16', n_jobs=None,
+        copy=False):
     """Infer progression of cells, identify *branching* subgroups [Haghverdi16]_ [Wolf17]_.
 
-    `[source] <tl.dpt_>`__ Reconstruct the progression of a biological process
-    from snapshot data and detect branching subgroups. Diffusion Pseudotime
-    analysis has been introduced by [Haghverdi16]_. Here, we use a further
-    developed version, which is able to detect multiple branching events
-    [Wolf17]_.
+    Reconstruct the progression of a biological process from snapshot data and
+    detect branching subgroups. `Diffusion Pseudotime analysis` has been
+    introduced by [Haghverdi16]_. Here, we use a further developed,
+    `hierarchical` version, which is able to detect multiple branching events
+    [Wolf17]_ by setting the parameter `n_branchings`.
 
-    The possibilities of *diffmap* and *dpt* are similar to those of the R
-    package destiny_ of [Angerer16]_. The Scanpy tools though run faster and
-    scale to much higher cell numbers.
-
-    *Examples:* See this `use case <17-05-02_>`__.
+    The tool is similar to the R package destiny_ of [Angerer16]_; the Scanpy
+    implementation though runs faster and scales to much higher cell numbers.
 
     .. _destiny: http://bioconductor.org/packages/destiny
     .. _tl.dpt: https://github.com/theislab/scanpy/tree/master/scanpy/tools/dpt.py
     .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
 
-    References
-    ----------
-    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-      31, 2989 (2015).
-    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-      arXiv:0711.0189 (2007).
-
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with ``adata.add['iroot']``, the index
-        of the root cell, ``adata.smp['X_pca']`` or ``adata.smp['X_diffmap']``.
+        Annotated data matrix.
     n_branchings : int, optional (default: 1)
         Number of branchings to detect.
     n_neighbors : int, optional (default: 30)
-        Number of nearest neighbors on the knn graph. If knn == False, set the
-        Gaussian kernel width to the distance of the kth neighbor.
+        Number of nearest neighbors in the k-nearest-neighbor graph. If ``knn ==
+        False``, this sets the Gaussian kernel width to the distance of the
+        `n_neighbors` neighbor.
     knn : bool, optional (default: True)
-        If True, use a hard threshold to restrict the number of neighbors to
-        n_neighbors, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
-        to assign low weights to neighbors more distant than the kth nearest
-        neighbor.
+        If ``True``, use a hard threshold to restrict the number of neighbors to
+        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
+        Kernel to assign low weights to neighbors more distant than the
+        `n_neighbors` nearest neighbor.
     n_pcs : int, optional (default: 50)
         Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_dcs: int, optional (default: 10)
-        Use `n_dcs` to compute the dpt distance.
-    n_jobs : int or None (default: None)
-        Number of cpus to use for parallel processing (default: sett.n_jobs).
-    recompute_graph : bool, (default: False)
+        basis for generating the graph. Set to 0 if you don't want any
+        preprocessing with PCA.
+    n_dcs : int, optional (default: 10)
+        Use `n_dcs` diffusion components to compute the dpt distance.
+    min_group_size : [0, 1] or float, optional (default: 0.01)
+        During recursive splitting of branches ('dpt groups') for `n_branchings`
+        > 1, do not consider groups that contain less than `min_group_size` data
+        points. If a float, `min_group_size` refers to a fraction of the total
+        number of data points.
+    recompute_graph : bool, optional (default: False)
         Recompute diffusion maps.
-    recompute_pca : bool, (default: False)
+    recompute_pca : bool, optional (default: False)
         Recompute PCA.
+    allow_kendall_tau_shift : bool, optional (default: True)
+        If a very small branch is detected upon splitting, shift away from
+        maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
+        stabilize the splitting.
+    flavor : {'wolf17_bi', 'wolf17_tri', 'haghverdi16'}, optional (default: 'haghverdi16')
+        Parameter for development only. There is a lot of leeway in determining
+        how to split branches; this provides several alternatives to the Kendall
+        tau criterion of [Haghverdi16]_.
+    n_jobs : int or None (default: sc.settings.n_jobs)
+        Number of cpus to use for parallel processing.
     copy : bool, optional (default: False)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -76,19 +78,23 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    dpt_pseudotime : np.ndarray (adata.smp)
+    dpt_pseudotime : ``np.ndarray`` in ``adata.smp``
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    dpt_groups : np.ndarray of dtype string (adata.smp)
+    dpt_groups : ``np.ndarray`` of type string in ``adata.smp``
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
-    X_diffmap : np.ndarray (adata.smp)
+    X_diffmap : ``np.ndarray`` in ``adata.smp``
         Array of shape (number of samples) × (number of eigen
         vectors). DiffMap representation of data, which is the right eigen
         basis of the transition matrix with eigenvectors as columns.
-    dpt_evals : np.ndarray (adata.add)
+    dpt_evals : ``np.ndarray`` in ``adata.add``
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
+
+    Examples
+    --------
+    See this `use case <17-05-02_>`__.
     """
     adata = adata.copy() if copy else adata
     if ('iroot' not in adata.add
@@ -156,7 +162,7 @@ class DPT(data_graph.DataGraph):
     """
 
     def __init__(self, adata, n_neighbors=30, knn=True, n_jobs=1, n_pcs=50, n_dcs=10,
-                 min_group_size=20, recompute_pca=None, recompute_graph=None,
+                 min_group_size=0.01, recompute_pca=None, recompute_graph=None,
                  n_branchings=0, allow_kendall_tau_shift=False,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs,
