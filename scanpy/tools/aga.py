@@ -1095,7 +1095,7 @@ class AGA(data_graph.DataGraph):
                      # distances are larger
                 and min(median_distances) / max(median_distances) < self.minimal_distance_evidence):
                      # require median_distances to actually provide better evidence
-                logg.msg('        no convincing evidence in minimal distances, consider median distance')
+                logg.msg('        no convincing evidence in minimal distances, consider median distance', v=4)
                 idx = np.argmin(median_distances)
             else:
                 idx = np.argmin(distances)
