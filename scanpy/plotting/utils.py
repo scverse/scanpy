@@ -1,4 +1,4 @@
-# Authors: F. Alex Wolf (http://falexwolf.de)
+# Authors: Alex Wolf (http://falexwolf.de)
 #          P. Angerer
 
 import os

@@ -72,8 +72,8 @@ doc_string_base = dedent("""\
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
         When changing the `resolution` parameter, you should set this to True.
-    n_jobs : int or None (default: None)
-        Number of cpus to use for parallel processing (default: sett.n_jobs).
+    n_jobs : int or None (default: settings.n_jobs)
+        Number of cpus to use for parallel processing.
     copy : bool, optional (default: False)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -90,18 +90,18 @@ doc_string_base = dedent("""\
 
 
 doc_string_returns = dedent("""\
-        aga_adjacency_full_attachedness : np.ndarray, adata.add
+        aga_adjacency_full_attachedness : np.ndarray in adata.add
             The full adjacency matrix of the abstracted graph, weights
             correspond to attachedness.
-        aga_adjacency_full_confidence : np.ndarray, adata.add
+        aga_adjacency_full_confidence : np.ndarray in adata.add
             The full adjacency matrix of the abstracted graph, weights
             correspond to confidence in the presence of an edge.
-        aga_adjacency_tree_confidence : sparse csr matrix, adata.add
+        aga_adjacency_tree_confidence : sparse csr matrix in adata.add
             The weighted adjacency matrix of the most probable tree in the
             abstracted graph.
-        aga_groups : np.ndarray of dtype string, adata.smp
+        aga_groups : np.ndarray of dtype string in adata.smp
             Group labels for each sample.
-        aga_pseudotime : np.ndarray of dtype float, adata.smp
+        aga_pseudotime : np.ndarray of dtype float in adata.smp
             Pseudotime labels for each cell.\
     """)
 
@@ -212,7 +212,7 @@ def aga(adata,
         adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
 
     # TODO: make these two hacks, which set the value in the _confidence fields
-    #       to the _attachedness field, unnecessary 
+    #       to the _attachedness field, unnecessary
     adata.add['aga_adjacency_tree_confidence'][
         adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
         adata.add['aga_adjacency_tree_confidence'].nonzero()]
@@ -239,6 +239,49 @@ def aga(adata,
     return adata if copy else None
 
 aga.__doc__ = doc_string_base.format(returns=doc_string_returns)
+
+
+def aga_degrees(adata):
+    """Compute the degree of each node in the abstracted graph.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    degrees : list
+        List of degrees for each node.
+    """
+    import networkx as nx
+    g = nx.Graph(adata.add['aga_adjacency_full_confidence'])
+    degrees = [d for _, d in g.degree_iter(weight='weight')]
+    return degrees
+
+
+def aga_expression_entropies(adata):
+    """Compute the median expression entropy for each node-group.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    entropies : list
+        Entropies of median expressions for each node.
+    """
+    from scipy.stats import entropy
+    groups_order, groups_masks = utils.select_groups(adata, smp='aga_groups')
+    entropies = []
+    for mask in groups_masks:
+        X_mask = adata.X[mask]
+        x_median = np.median(X_mask, axis=0)
+        x_probs = (x_median - np.min(x_median)) / (np.max(x_median) - np.min(x_median))
+        entropies.append(entropy(x_probs))
+    return entropies
 
 
 def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
@@ -438,7 +481,7 @@ class AGA(data_graph.DataGraph):
                                                                  segs_adjacency_nodes,
                                                                  segs_distances)
                 if stop: break
-                
+
         # segments
         self.segs = segs
         self.segs_tips = segs_tips
@@ -1049,7 +1092,7 @@ class AGA(data_graph.DataGraph):
                 and ((max(distances) < 0.1 and min(distances) / max(distances) > 0.4)
                      # all distances are very small, we require significant statistical evidence here
                      or (min(distances) >= 0.1 and min(distances) / max(distances) > self.minimal_distance_evidence))
-                     # distances are larger 
+                     # distances are larger
                 and min(median_distances) / max(median_distances) < self.minimal_distance_evidence):
                      # require median_distances to actually provide better evidence
                 logg.msg('        no convincing evidence in minimal distances, consider median distance')

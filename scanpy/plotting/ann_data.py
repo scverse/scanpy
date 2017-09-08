@@ -1,4 +1,4 @@
-# Authors: F. Alex Wolf <http://falexwolf.de>
+# Authors: Alex Wolf (http://falexwolf.de)
 #          P. Angerer
 """Plotting functions for AnnData.
 """
@@ -201,11 +201,11 @@ def scatter(
                        ax=ax)
 
     def add_centroid(centroids, name, Y, mask):
-        masked_values = Y[mask]
-        if masked_values.shape[0] == 0: return
-        median = np.median(masked_values, axis=0)
-        i = np.argmin(np.sum(np.abs(masked_values - median), axis=1))
-        centroids[name] = masked_values[i]
+        Y_mask = Y[mask]
+        if Y_mask.shape[0] == 0: return
+        median = np.median(Y_mask, axis=0)
+        i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
+        centroids[name] = Y_mask[i]
 
     for i, icolor_key in enumerate(categoricals):
         palette = palettes[i]

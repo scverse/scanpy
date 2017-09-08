@@ -1,14 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
-"""tSNE
-
-Notes
------
-This module automatically choose from three t-SNE versions from
-- sklearn.manifold.TSNE
-- Dmitry Ulyanov (multicore, fastest)
-  https://github.com/DmitryUlyanov/Multicore-TSNE
-  install via 'pip install psutil cffi', get code from github
-"""
+# Author: Alex Wolf (http://falexwolf.de)
 
 import numpy as np
 from ..tools.pca import pca
@@ -16,29 +6,23 @@ from .. import settings
 from .. import logging as logg
 
 
-def tsne(adata, random_state=0, n_pcs=50, perplexity=30, early_exaggeration=12,
-         learning_rate=1000, recompute_pca=False, use_fast_tsne=True,
-         n_jobs=None, copy=False):
+def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
+         learning_rate=1000, random_state=0, use_fast_tsne=True,
+         recompute_pca=False, n_jobs=None, copy=False):
     """t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
-    `[source] <tl.tsne_>`__ t-distributed stochastic neighborhood embedding
-    (tSNE) [Maaten08]_ has been proposed for single-cell data by [Amir13]_. By
-    default, Scanpy uses the implementation of *scikit-learn*
-    [Pedregosa11]_. You can achieve a huge speedup if you install
-    *Multicore-tSNE* by [Ulyanov16]_, which will be automatically detected by
-    Scanpy.
-
-    .. _tl.tsne: https://github.com/theislab/scanpy/tree/master/scanpy/tools/tsne.py
-
+    t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
+    proposed for visualizating single-cell data by [Amir13]_. Here, by default,
+    we use the implementation of *scikit-learn* [Pedregosa11]_. You can achieve
+    a huge speedup and better convergence if you install `*Multicore-tSNE*
+    <https://github.com/DmitryUlyanov/Multicore-TSNE>`__ by [Ulyanov16]_, which
+    will be automatically detected by Scanpy.
 
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix, optionally with adata.smp['X_pca'], which is
         written when running sc.pca(adata). Is directly used for tSNE if `n_pcs` > 0.
-    random_state : int or None, optional (default: 0)
-        Change this to use different intial states for the optimization. If `None`,
-        the initial state is not reproducible.
     n_pcs : int, optional (default: 50)
         Number of principal components in preprocessing PCA.
     perplexity : float, optional (default: 30)
@@ -61,25 +45,20 @@ def tsne(adata, random_state=0, n_pcs=50, perplexity=30, early_exaggeration=12,
         optimization, the early exaggeration factor or the learning rate
         might be too high. If the cost function gets stuck in a bad local
         minimum increasing the learning rate helps sometimes.
+    random_state : int or None, optional (default: 0)
+        Change this to use different intial states for the optimization. If `None`,
+        the initial state is not reproducible.
     use_fast_tsne : bool, optional (default: True)
         Use the MulticoreTSNE package by D. Ulyanov if it is installed.
-    n_jobs : int or None (default: None)
-        Defaults to `sc.settings.n_jobs`.
+    n_jobs : int or None (default: sc.settings.n_jobs)
+        Number of jobs.
+    copy : bool (default: False)
+        Return a copy instead of writing to adata.
 
     Returns
     -------
     Returns or updates adata depending on `copy` with
         "X_tsne", tSNE coordinates of data (adata.smp)
-
-    References
-    ----------
-    L.J.P. van der Maaten and G.E. Hinton.
-    Visualizing High-Dimensional Data Using t-SNE.
-    Journal of Machine Learning Research 9(Nov):2579-2605, 2008.
-
-    D. Ulyanov
-    Multicore-TSNE
-    GitHub (2017)
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata

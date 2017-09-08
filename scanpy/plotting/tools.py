@@ -559,6 +559,9 @@ def aga_graph(
 
     Parameters
     ----------
+    colors : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
+        Besides cluster colors, lists and uniform colors this also acceppts
+        {'degree_dashed', 'degree_solid'}.
     solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
         Key for ``adata.add`` that specifies the matrix that stores the edges
         to be drawn solid black.
@@ -595,20 +598,15 @@ def aga_graph(
     -------
     A matplotlib.Axes or an array of matplotlib.Axes if ax is ``None``.
 
-    If ``return_pos`` is ``True``, in addition, the positions of the nodes are
+    If `return_pos` is ``True``, in addition, the positions of the nodes are
     returned.
     """
-    if isinstance(colors, list) and isinstance(colors[0], dict): colors = [colors]
+    if isinstance(colors, list) and not isinstance(colors[0], list): colors = [colors]
     if colors is None or isinstance(colors, str): colors = [colors]
     if isinstance(groups, list) and isinstance(groups[0], str): groups = [groups]
     if groups is None or isinstance(groups, dict) or isinstance(groups, str): groups = [groups]
-    if len(colors) != len(groups):
-        print(colors, groups)
-        raise ValueError('`colors` and `groups` lists need to have the same length.')
     if title is None or isinstance(title, str): title = [title for name in groups]
     if ax is None:
-        # 3.72 is the default figure_width obtained in utils.scatter_base
-        # for a single panel when rcParams['figure.figsize'][0] = 4
         figure_width = rcParams['figure.figsize'][0] * len(colors)
         top = 0.93
         fig, axs = pl.subplots(ncols=len(colors),
@@ -674,6 +672,7 @@ def _aga_graph(
         groups = adata.add[groups + '_order']
     elif groups is None:
         groups = adata.add['aga_groups_order']
+
     if isinstance(root, str) and root in groups:
         root = list(groups).index(root)
 
@@ -692,9 +691,9 @@ def _aga_graph(
         for iname, name in enumerate(adata.add['aga_groups_order']):
             if name in sett._ignore_categories: colors[iname] = 'grey'
 
-    colorbar = False
+    # degree of the graph for coloring
     if isinstance(colors, str) and colors.startswith('degree'):
-        import matplotlib
+        # see also tools.aga.aga_degrees
         if colors == 'degree_dashed':
             colors = [d for _, d in nx_g_dashed.degree_iter(weight='weight')]
         elif colors == 'degree_solid':
@@ -702,12 +701,21 @@ def _aga_graph(
         else:
             raise ValueError('`degree` either "degree_dashed" or "degree_solid".')
         colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
+
+    # plot numeric colors
+    colorbar = False
+    if isinstance(colors, (list, np.ndarray)) and not isinstance(colors[0], str):
+        import matplotlib
         norm = matplotlib.colors.Normalize()
         colors = norm(colors)
         if cmap is None: cmap = rcParams['image.cmap']
         cmap = matplotlib.cm.get_cmap(cmap)
         colors = [cmap(c) for c in colors]
         colorbar = True
+
+    if len(colors) != len(groups):
+        print(colors, groups)
+        raise ValueError('`colors` and `groups` lists need to have the same length.')
 
     # node positions from adjacency_solid
     if pos is None:
