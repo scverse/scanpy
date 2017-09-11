@@ -213,10 +213,11 @@ def aga(adata,
 
     # TODO: make these two hacks, which set the value in the _confidence fields
     #       to the _attachedness field, unnecessary
-    adata.add['aga_adjacency_tree_confidence'][
-        adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
-        adata.add['aga_adjacency_tree_confidence'].nonzero()]
-    adata.add['aga_adjacency_full_confidence'] = adata.add['aga_adjacency_full_attachedness']
+    # come up with some justification of the confidence ... model, also apply it to min_span_tree
+    # adata.add['aga_adjacency_tree_confidence'][
+    #     adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
+    #     adata.add['aga_adjacency_tree_confidence'].nonzero()]
+    # adata.add['aga_adjacency_full_confidence'] = adata.add['aga_adjacency_full_attachedness']
 
     # manage cluster names and colors
     if (clusters not in {'segments', 'unconstrained_segments'}):
@@ -1060,7 +1061,6 @@ class AGA(data_graph.DataGraph):
         logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
 
-
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
                          segs_adjacency_nodes, segs_distances, trunk):
         prev_connecting_segments = segs_adjacency[iseg].copy()
@@ -1089,9 +1089,9 @@ class AGA(data_graph.DataGraph):
             distances = segs_distances[jseg, kseg_list]
             # in case we do not have convincing evidence for a connection based on the maximal distances
             if (median_distances
-                and ((max(distances) < 0.1 and min(distances) / max(distances) > 0.4)
+                and ((max(distances) < 0.1 and min(distances) / max(distances) >= 0.4)
                      # all distances are very small, we require significant statistical evidence here
-                     or (min(distances) >= 0.1 and min(distances) / max(distances) > self.minimal_distance_evidence))
+                     or (min(distances) >= 0.1 and min(distances) / max(distances) >= self.minimal_distance_evidence))
                      # distances are larger
                 and min(median_distances) / max(median_distances) < self.minimal_distance_evidence):
                      # require median_distances to actually provide better evidence
