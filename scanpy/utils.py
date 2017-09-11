@@ -341,6 +341,10 @@ def check_adata(adata, verbosity=-3):
             # ordered unique categories for categorical annotation
             if not smp + '_order' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
                 adata.add[smp + '_order'] = unique_categories(adata.smp[smp])
+            if smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
+                logg.warn('"{}" uses a deprecated naming convention for specifying the '
+                          'order of a categorical data type; use "{}" instead!'
+                          .format(smp + '_names', smp + '_order'))
             if settings.verbosity > 1-verbosity:
                 info += '"' + smp + '" = '
                 if adata.smp[smp].dtype.char in {'U', 'S'}:
