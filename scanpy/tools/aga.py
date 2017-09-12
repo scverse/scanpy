@@ -1,13 +1,11 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 
-import sys, os
 import numpy as np
 import scipy as sp
 import networkx as nx
 import scipy.sparse
 from textwrap import indent, dedent
 from .. import logging as logg
-from ..data_structs import ann_data
 from ..data_structs import data_graph
 from .. import utils
 from .. import settings
@@ -17,7 +15,7 @@ from ..plotting import utils as pl_utils
 MINIMAL_TREE_ATTACHEDNESS = 0.05
 
 doc_string_base = dedent("""\
-    Approximate Graph Abstraction
+    Graph Abstraction
 
     Infer the relations of subgroups in the data using approximate graph
     abstraction. The result is a much simpler graph where each node corresponds
@@ -116,6 +114,7 @@ def aga(adata,
         random_state=0,
         attachedness_measure='connectedness',
         tree_detection='connect_extremes',
+        tree_based_confidence=True,
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
@@ -169,6 +168,7 @@ def aga(adata,
               n_dcs=n_dcs,
               min_group_size=20/resolution,
               n_jobs=n_jobs,
+              tree_based_confidence=tree_based_confidence,
               # we do not need to recompute things both in the louvain
               # call above and here
               recompute_graph=recompute_graph and not fresh_compute_louvain,
@@ -193,31 +193,19 @@ def aga(adata,
     # vectors of length n_groups
     adata.add['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
     adata.add['aga_groups_sizes'] = aga.segs_sizes
-    # the tip points of segments
-    # adata.add['aga_grouptips'] = aga.segs_tips
-    # the tree/graph adjacency matrix
 
-    # add the adjacency matrices of the abstracted graph
-    adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_confidence
-    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
-
-    # add the adjacency matrix of the detected tree in the abstracted graph
     if tree_detection == 'min_span_tree':
+        # here, we could use "full_confidence" instead of "full_attachedness"
         min_span_tree = utils.compute_minimum_spanning_tree(
-            1./adata.add['aga_adjacency_full_attachedness'])
+            1./aga.segs_adjacency_full_attachedness)
         min_span_tree.data = 1./min_span_tree.data
-        adata.add['aga_adjacency_tree_confidence'] = min_span_tree
-        adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_attachedness
+        full_confidence, tree_confidence = aga.compute_adjacency_confidence(
+            aga.segs_adjacency_full_attachedness, min_span_tree, tree_based_confidence)
     else:
-        adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
+        full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
-    # TODO: make these two hacks, which set the value in the _confidence fields
-    #       to the _attachedness field, unnecessary
-    # come up with some justification of the confidence ... model, also apply it to min_span_tree
-    # adata.add['aga_adjacency_tree_confidence'][
-    #     adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
-    #     adata.add['aga_adjacency_tree_confidence'].nonzero()]
-    # adata.add['aga_adjacency_full_confidence'] = adata.add['aga_adjacency_full_attachedness']
+    adata.add['aga_adjacency_full_confidence'] = full_confidence
+    adata.add['aga_adjacency_tree_confidence'] = tree_confidence
 
     # manage cluster names and colors
     if (clusters not in {'segments', 'unconstrained_segments'}):
@@ -355,6 +343,7 @@ class AGA(data_graph.DataGraph):
                  n_pcs=50,
                  n_dcs=10,
                  min_group_size=20,
+                 tree_based_confidence=True,
                  minimal_distance_evidence=0.95,
                  recompute_pca=False,
                  recompute_distances=False,
@@ -378,6 +367,7 @@ class AGA(data_graph.DataGraph):
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
         self.attachedness_measure = attachedness_measure
+        self.tree_based_confidence = tree_based_confidence
         self.clusters = clusters
         self.clusters_precomputed = None
         self.clusters_precomputed_names = None
@@ -491,34 +481,67 @@ class AGA(data_graph.DataGraph):
 
         # the full, unscaled adjacency matrix
         self.segs_adjacency_full_attachedness = 1/segs_distances
-        if self.attachedness_measure == 'connectedness':
-            norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
-            self.segs_adjacency_full_attachedness /= norm
+        # if self.attachedness_measure == 'connectedness':
+        #     norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
+        #     self.segs_adjacency_full_attachedness /= norm
+        self.segs_adjacency_full_confidence, self.segs_adjacency_tree_confidence \
+            = self.compute_adjacency_confidence(
+                self.segs_adjacency_full_attachedness,
+                segs_adjacency,
+                self.tree_based_confidence)
         np.fill_diagonal(self.segs_adjacency_full_attachedness, 0)
 
-        # compute the average tree distances
-        tree_distances = []
-        for i, neighbors in enumerate(segs_adjacency):
-            tree_distances += segs_distances[i][neighbors].tolist()
-        median_tree_distances = np.median(tree_distances)
+    def compute_adjacency_confidence(self, full_attachedness, tree_adjacency, tree_based_confidence):
+        if sp.sparse.issparse(tree_adjacency):
+            tree_adjacency = [tree_adjacency[i].nonzero()[1] for i in range(tree_adjacency.shape[0])]
+        segs_distances = 1/full_attachedness
+        if not tree_based_confidence:  # inter- and intra-cluster based confidence
+            from scipy.stats import norm
+            # intra-cluster connections
+            total_n = self.k * np.array(self.segs_sizes)  # total number of connections
+            a = full_attachedness
+            confidence = np.zeros_like(full_attachedness)
+            for i in range(a.shape[0]):
+                for j in range(i+1, a.shape[1]):
+                    expected = total_n[i] * total_n[j] / np.sum(total_n)**2
+                    actual = a[i, j] / np.sum(total_n)
+                    variance = expected * (1 - expected) / np.sum(total_n)
+                    if actual > expected:
+                        confidence[i, j] = 1
+                    elif actual < 1e-12:
+                        confidence[i, j] = 0
+                    else:
+                        confidence[i, j] = 2 * norm.cdf(actual, expected, np.sqrt(variance))
+                    # i_name = self.segs_names_original[i]
+                    # j_name = self.segs_names_original[j]
+                    # print(i_name, j_name, expected, actual, variance, confidence[i, j])
+            full_confidence = confidence + confidence.T
+            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency)
+        else:
+            # compute the average tree distances
+            tree_distances = []
+            for i, neighbors in enumerate(tree_adjacency):
+                tree_distances += segs_distances[i][neighbors].tolist()
+            median_tree_distances = np.median(tree_distances)
+            full_confidence = np.zeros_like(segs_distances)
+            full_confidence[segs_distances <= median_tree_distances] = 1
+            full_confidence[segs_distances > median_tree_distances] = (
+                np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
+                [segs_distances > median_tree_distances])
+            np.fill_diagonal(full_confidence, 0)
+            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency, minimal_tree_attachedness=MINIMAL_TREE_ATTACHEDNESS)
+        return full_confidence, tree_confidence
 
-        # the full, scaled adjacency matrix
-        self.segs_adjacency_full_confidence = np.zeros_like(segs_distances)
-        self.segs_adjacency_full_confidence[segs_distances <= median_tree_distances] = 1
-        self.segs_adjacency_full_confidence[segs_distances > median_tree_distances] = (
-            np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
-            [segs_distances > median_tree_distances])
-        np.fill_diagonal(self.segs_adjacency_full_confidence, 0)
-
-        # the scaled tree adjacency matrix
-        minimal_tree_attachedness = MINIMAL_TREE_ATTACHEDNESS
-        self.segs_adjacency_tree_confidence = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
-        for i, neighbors in enumerate(segs_adjacency):
-            clipped_attachedness = self.segs_adjacency_full_confidence[i][neighbors]
+    def compute_tree_confidence(self, full_confidence, tree_adjacency, minimal_tree_attachedness=1e-14):
+        n = full_confidence.shape[0]
+        tree_confidence = sp.sparse.lil_matrix((n, n), dtype=float)
+        for i, neighbors in enumerate(tree_adjacency):
+            clipped_attachedness = full_confidence[i][neighbors]
             clipped_attachedness[clipped_attachedness < minimal_tree_attachedness] = minimal_tree_attachedness
-            self.segs_adjacency_tree_confidence[i, neighbors] = clipped_attachedness
-            self.segs_adjacency_full_confidence[i, neighbors] = clipped_attachedness
-        self.segs_adjacency_tree_confidence = self.segs_adjacency_tree_confidence.tocsr()
+            tree_confidence[i, neighbors] = clipped_attachedness
+            full_confidence[i, neighbors] = clipped_attachedness
+        tree_confidence = tree_confidence.tocsr()
+        return tree_confidence
 
     def do_split_constrained(self, segs, segs_tips,
                              segs_adjacency,

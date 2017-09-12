@@ -536,6 +536,7 @@ def aga_graph(
         solid_edges='aga_adjacency_tree_confidence',
         dashed_edges='aga_adjacency_full_confidence',
         root=0,
+        rootlevel=None,
         layout=None,
         colors=None,
         groups=None,
@@ -579,6 +580,18 @@ def aga_graph(
         Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
         'eq_tree' use the igraph layout function. All other igraph layouts are
         also permitted.
+    root : int, str or list of int, optional (default: 0)
+        The index of the root node or root nodes. if this is a non-empty vector
+        then the supplied node IDs are used as the roots of the trees (or a
+        single tree if the graph is connected. If this is None or an empty list,
+        the root vertices are automatically calculated based on topological
+        sorting, performed with the opposite of the mode argument.
+    rootlevel : list of int, optional (default: None)
+        The index of the root node or root vertices. If this is a non-empty
+        vector then the supplied node IDs are used as the roots of the trees
+        (or a single tree if the graph is connected. If this is None or an empty
+        list, the root vertices are automatically calculated based on
+        topological sorting, performed with the opposite of the mode argument.
     pos : array-like, optional (default: None)
         Two-column array storing the x and y coordinates for drawing.
     return_pos : bool, optional (default: False)
@@ -623,6 +636,7 @@ def aga_graph(
             dashed_edges=dashed_edges,
             layout=layout,
             root=root,
+            rootlevel=rootlevel,
             colors=color,
             groups=groups[icolor],
             fontsize=fontsize,
@@ -650,6 +664,7 @@ def _aga_graph(
         solid_edges=None,
         dashed_edges=None,
         root=0,
+        rootlevel=None,
         colors=None,
         groups=None,
         fontsize=None,
@@ -675,7 +690,9 @@ def _aga_graph(
 
     if isinstance(root, str) and root in groups:
         root = list(groups).index(root)
-
+    if isinstance(root, list) and root[0] in groups:
+        root = [list(groups).index(r) for r in root]
+        
     # define the objects
     adjacency_solid = adata.add[solid_edges]
     nx_g_solid = nx.Graph(adjacency_solid)
@@ -726,7 +743,10 @@ def _aga_graph(
             from .. import utils as sc_utils
             g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
             if 'rt' in layout:
-                pos_list = g.layout(layout, root=[root]).coords
+                pos_list = g.layout(layout, root=root if isinstance(root, list) else [root],
+                                    rootlevel=rootlevel).coords
+            elif layout == 'circle':
+                pos_list = g.layout(layout).coords
             else:
                 np.random.seed(random_state)
                 init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
@@ -753,10 +773,10 @@ def _aga_graph(
     # edge widths
     base_edge_width = edge_width_scale * rcParams['lines.linewidth']
     # normalize with median
-    if isinstance(adjacency_solid, np.ndarray):
-        base_edge_width /= np.median(adjacency_solid[adjacency_solid.nonzero()])
-    else:
-        base_edge_width /= np.median(adjacency_solid.data)
+    # if isinstance(adjacency_solid, np.ndarray):
+    #     base_edge_width /= np.median(adjacency_solid[adjacency_solid.nonzero()])
+    # else:
+    #     base_edge_width /= np.median(adjacency_solid.data)
 
     # draw dashed edges
     if dashed_edges is not None:
