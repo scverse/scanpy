@@ -448,12 +448,11 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
             logg.info('    did not find column names in file')
             col_names = np.arange(len(data[0])).astype(str)
     col_names = np.array(col_names, dtype=str)
-    # check if first column contains row names or not
-    if first_column_names is None:
-        first_column_names = False
+    # read another line to check if first column contains row names or not
+    if first_column_names is None: first_column_names = False
     for line in f:
         line_list = line.split(delimiter)
-        if not is_float(line_list[0]) or first_column_names:
+        if first_column_names or not is_float(line_list[0]):
             logg.info('    assuming first column in file stores row names')
             first_column_names = True
             row_names.append(line_list[0])
@@ -461,6 +460,13 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
         else:
             data.append(np.array(line_list, dtype=dtype))
         break
+    # if row names are just integers
+    if data[0].size != data[1].size:
+        logg.info('    assuming first row stores column names and first column row names')
+        first_column_names = True
+        col_names = np.array(data[0]).astype(int).astype(str)
+        row_names.append(data[1][0].astype(int).astype(str))
+        data = [data[1][1:]]
     # parse the file
     for line in f:
         line_list = line.split(delimiter)

@@ -21,12 +21,14 @@ def scatter(
         x=None,
         y=None,
         color='grey',
+        alpha=None,
         basis=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -64,6 +66,8 @@ def scatter(
          for matplotlib.legend.
     legend_fontsize : int (default: None)
          Legend font size.
+    legend_fontweight : int (default: None)
+         Legend font weight.
     color_map : str (default: 'viridis')
          String denoting matplotlib color map for continuous coloring.
     palette : list of str (default: None)
@@ -187,6 +191,7 @@ def scatter(
 
     axs = scatter_base(Y,
                        title=title,
+                       alpha=alpha,
                        component_name=component_name,
                        axis_labels=axis_labels,
                        component_indexnames=components + 1,
@@ -223,7 +228,7 @@ def scatter(
             for iname, name in enumerate(adata.add[color_key + '_order']):
                 if name not in settings._ignore_categories:
                     mask = scatter_group(axs[icolor_key], color_key, iname,
-                                         adata, Y, projection, size=size)
+                                         adata, Y, projection, size=size, alpha=alpha)
                     mask_remaining[mask] = False
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
@@ -235,7 +240,7 @@ def scatter(
                 else:
                     iname = np.flatnonzero(adata.add[color_key + '_order'] == name)[0]
                     mask = scatter_group(axs[icolor_key], color_key, iname,
-                                         adata, Y, projection, size=size)
+                                         adata, Y, projection, size=size, alpha=alpha)
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
@@ -247,6 +252,7 @@ def scatter(
         if legend_loc == 'on data':
             for name, pos in centroids.items():
                 axs[icolor_key].text(pos[0], pos[1], name,
+                                     weight=legend_fontweight,
                                      verticalalignment='center',
                                      horizontalalignment='center',
                                      fontsize=legend_fontsize)

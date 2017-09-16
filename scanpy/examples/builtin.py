@@ -81,6 +81,9 @@ def krumsiek11():
                   .format(filename))
     adata = sc.read(filename, first_column_names=True, cache=True)
     adata.add['iroot'] = 0
+    fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
+                   459: 'megacaryocyte', 619: 'neutrophil'}
+    adata.add['highlights'] = fate_labels
     return adata
 
 

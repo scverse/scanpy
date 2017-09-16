@@ -81,6 +81,7 @@ def pca_scatter(
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -103,11 +104,13 @@ def pca_scatter(
         adata,
         basis='pca',
         color=color,
+        alpha=alpha,
         groups=groups,
         components=components,
         projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
         right_margin=right_margin,
@@ -154,11 +157,13 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
 def diffmap(
         adata,
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -219,11 +224,13 @@ def diffmap(
             adata,
             basis='diffmap',
             color=color,
+        alpha=alpha,
             groups=groups,
             components=components,
             projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
             right_margin=right_margin,
@@ -245,10 +252,12 @@ def draw_graph(
         adata,
         layout=None,
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -311,11 +320,13 @@ def draw_graph(
         adata,
         basis='draw_graph_' + layout,
         color=color,
+        alpha=alpha,
         groups=groups,
         components=components,
         projection='2d',
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
         right_margin=right_margin,
@@ -330,9 +341,11 @@ def draw_graph(
 def tsne(
         adata,
         color=None,
+        alpha=None,
         groups=None,
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -385,9 +398,11 @@ def tsne(
         adata,
         basis='tsne',
         color=color,
+        alpha=alpha,
         groups=groups,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
         right_margin=right_margin,
@@ -409,11 +424,13 @@ def aga(
         adata,
         basis='tsne',
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='on data',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         size=None,
@@ -422,25 +439,40 @@ def aga(
         left_margin=0.05,
         show=None,
         save=None,
+        title_graph=None,
+        groups_graph=None,
+        color_graph=None,
         **aga_graph_params):
     """Summary figure for approximate graph abstraction.
 
     See `sc.pl.aga_scatter` and `sc.pl.aga_graph` for the parameters.
 
-    Also see `sc.pl.aga_path` for more possibilities.
+    See `sc.pl.aga_path` for visualizing gene changes along paths through the
+    abstracted graph.
     """
-    _, axs = pl.subplots(figsize=(8, 4), ncols=2)
+    figsize = rcParams['figure.figsize']
+    _, axs = pl.subplots(figsize=(2*figsize[0], figsize[1]), ncols=2)
     pl.subplots_adjust(left=left_margin, bottom=0.05)
     aga_scatter(adata,
-                color='aga_groups',
                 basis=basis,
+                color=color,
+                alpha=alpha,
+                groups=groups,
+                components=components,
+                projection=projection,
                 legend_loc=legend_loc,
                 legend_fontsize=legend_fontsize,
+                legend_fontweight=legend_fontweight,
+                color_map=color_map,
+                palette=palette,
+                right_margin=right_margin,
+                size=size,
+                title=title,
                 ax=axs[0],
                 show=False)
     axs[1].set_frame_on(False)
-    aga_graph(adata, ax=axs[1], show=False,
-              **aga_graph_params)
+    aga_graph(adata, ax=axs[1], show=False, title=title_graph,
+              groups=groups_graph, color=color_graph, **aga_graph_params)
     utils.savefig_or_show('aga', show=show, save=save)
 
 
@@ -448,11 +480,13 @@ def aga_scatter(
         adata,
         basis='tsne',
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         size=None,
@@ -502,24 +536,21 @@ def aga_scatter(
     """
     from ..utils import check_adata
     adata = check_adata(adata)
-    if color is not None:
-        if not isinstance(color, list): color = color.split(',')
-    else:
-        # no need to add pseudotime, is usually not helpful in satter
+    if color is None:
         color = ['aga_groups']
-    if 'aga_groups_original' in adata.add:
-        if 'aga_groups' in color:
+        if 'aga_groups_original' in adata.add:
             color[color.index('aga_groups')] = adata.add['aga_groups_original']
-        else:
-            color += [adata.add['aga_groups_original']]
+    if not isinstance(color, list): color = [color]
     ax = scatter(adata,
                  basis=basis,
                  color=color,
+                 alpha=alpha,
                  groups=groups,
                  components=components,
                  projection=projection,
                  legend_loc=legend_loc,
                  legend_fontsize=legend_fontsize,
+                 legend_fontweight=legend_fontweight,
                  color_map=color_map,
                  palette=palette,
                  right_margin=right_margin,
@@ -538,7 +569,7 @@ def aga_graph(
         root=0,
         rootlevel=None,
         layout=None,
-        colors=None,
+        color=None,
         groups=None,
         fontsize=None,
         node_size_scale=1,
@@ -552,6 +583,7 @@ def aga_graph(
         random_state=0,
         pos=None,
         cmap=None,
+        frameon=False,
         return_pos=False,
         show=None,
         save=None,
@@ -560,7 +592,7 @@ def aga_graph(
 
     Parameters
     ----------
-    colors : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
+    color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
         Besides cluster colors, lists and uniform colors this also acceppts
         {'degree_dashed', 'degree_solid'}.
     solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
@@ -599,6 +631,8 @@ def aga_graph(
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
+    frameon : bool, optional (default: False)
+         Draw a frame around the abstracted graph.
     show : bool, optional (default: None)
          Show the plot.
     save : bool or str, optional (default: None)
@@ -614,30 +648,41 @@ def aga_graph(
     If `return_pos` is ``True``, in addition, the positions of the nodes are
     returned.
     """
-    if isinstance(colors, list) and not isinstance(colors[0], list): colors = [colors]
-    if colors is None or isinstance(colors, str): colors = [colors]
-    if isinstance(groups, list) and isinstance(groups[0], str): groups = [groups]
+
+    # colors is a list that contains no lists
+    if isinstance(color, list) and True not in [isinstance(c, list) for c in color]: color = [color]
+    if color is None or isinstance(color, str): color = [color]
+
+    # groups is a list that contains no lists
+    if isinstance(groups, list) and True not in [isinstance(g, list) for g in groups]: groups = [groups]
     if groups is None or isinstance(groups, dict) or isinstance(groups, str): groups = [groups]
+
     if title is None or isinstance(title, str): title = [title for name in groups]
+
     if ax is None:
-        figure_width = rcParams['figure.figsize'][0] * len(colors)
-        top = 0.93
-        fig, axs = pl.subplots(ncols=len(colors),
-                               figsize=(figure_width, rcParams['figure.figsize'][1]),
-                               subplotpars=sppars(left=left_margin, bottom=0,
-                                                  right=0.99, top=top))
+        figsize = rcParams['figure.figsize']
+        _, axs = pl.subplots(figsize=(len(color)*figsize[0], figsize[1]), ncols=len(color))
+        pl.subplots_adjust(bottom=0.05)
+        # figure_width = rcParams['figure.figsize'][0] * len(color)
+        # top = 0.93
+        # fig, axs = pl.subplots(ncols=len(color),
+        #                        figsize=(figure_width, rcParams['figure.figsize'][1]),
+        #                        subplotpars=sppars(left=left_margin, bottom=0,
+        #                                           right=0.99, top=top))
     else:
         axs = ax
-    if len(colors) == 1: axs = [axs]
-    for icolor, color in enumerate(colors):
+    if len(color) == 1: axs = [axs]
+
+    for icolor, color in enumerate(color):
         pos = _aga_graph(
             adata,
+            axs[icolor],
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
             layout=layout,
             root=root,
             rootlevel=rootlevel,
-            colors=color,
+            color=color,
             groups=groups[icolor],
             fontsize=fontsize,
             node_size_scale=node_size_scale,
@@ -645,7 +690,7 @@ def aga_graph(
             edge_width_scale=edge_width_scale,
             min_edge_width=min_edge_width,
             max_edge_width=max_edge_width,
-            ax=axs[icolor],
+            frameon=frameon,
             cmap=cmap,
             title=title[icolor],
             random_state=0,
@@ -661,26 +706,38 @@ def aga_graph(
 
 def _aga_graph(
         adata,
+        ax,
         solid_edges=None,
         dashed_edges=None,
         root=0,
         rootlevel=None,
-        colors=None,
+        color=None,
         groups=None,
         fontsize=None,
         node_size_scale=1,
         node_size_power=0.5,
         edge_width_scale=1,
         title=None,
-        ax=None,
         layout=None,
         pos=None,
         cmap=None,
+        frameon=False,
         min_edge_width=None,
         max_edge_width=None,
         random_state=0):
-    if colors is None and 'aga_groups_colors_original' in adata.add:
-        colors = adata.add['aga_groups_colors_original']
+    if groups is not None and isinstance(groups, str) and groups not in adata.smp_keys():
+        raise ValueError('Groups {} are not in adata.smp.'.format(groups))
+
+    if color is None and isinstance(groups, str):
+        if (groups + '_colors' not in adata.add
+            or len(adata.add[groups + '_order'])
+               != len(adata.add[groups + '_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, groups)
+        color = adata.add[groups + '_colors']
+        for iname, name in enumerate(adata.add[groups + '_order']):
+            if name in sett._ignore_categories: color[iname] = 'grey'
+
+    groups_name = groups if isinstance(groups, str) else None
     if groups is None and 'aga_groups_order_original' in adata.add:
         groups = adata.add['aga_groups_order_original']
     elif groups in adata.smp_keys():
@@ -692,47 +749,39 @@ def _aga_graph(
         root = list(groups).index(root)
     if isinstance(root, list) and root[0] in groups:
         root = [list(groups).index(r) for r in root]
-        
+
     # define the objects
     adjacency_solid = adata.add[solid_edges]
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.add[dashed_edges]
         nx_g_dashed = nx.Graph(adjacency_dashed)
-    if colors is None:
-        if ('aga_groups_colors' not in adata.add
-            or len(adata.add['aga_groups_order'])
-               != len(adata.add['aga_groups_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, 'aga_groups')
-        colors = adata.add['aga_groups_colors']
-        for iname, name in enumerate(adata.add['aga_groups_order']):
-            if name in sett._ignore_categories: colors[iname] = 'grey'
 
     # degree of the graph for coloring
-    if isinstance(colors, str) and colors.startswith('degree'):
+    if isinstance(color, str) and color.startswith('degree'):
         # see also tools.aga.aga_degrees
-        if colors == 'degree_dashed':
-            colors = [d for _, d in nx_g_dashed.degree_iter(weight='weight')]
-        elif colors == 'degree_solid':
-            colors = [d for _, d in nx_g_solid.degree_iter(weight='weight')]
+        if color == 'degree_dashed':
+            color = [d for _, d in nx_g_dashed.degree_iter(weight='weight')]
+        elif color == 'degree_solid':
+            color = [d for _, d in nx_g_solid.degree_iter(weight='weight')]
         else:
             raise ValueError('`degree` either "degree_dashed" or "degree_solid".')
-        colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
+        color = (np.array(color) - np.min(color)) / (np.max(color) - np.min(color))
 
     # plot numeric colors
     colorbar = False
-    if isinstance(colors, (list, np.ndarray)) and not isinstance(colors[0], str):
+    if isinstance(color, (list, np.ndarray)) and not isinstance(color[0], (str, dict)):
         import matplotlib
         norm = matplotlib.colors.Normalize()
-        colors = norm(colors)
+        color = norm(color)
         if cmap is None: cmap = rcParams['image.cmap']
         cmap = matplotlib.cm.get_cmap(cmap)
-        colors = [cmap(c) for c in colors]
+        color = [cmap(c) for c in color]
         colorbar = True
 
-    if len(colors) != len(groups):
-        print(colors, groups)
-        raise ValueError('`colors` and `groups` lists need to have the same length.')
+    if len(color) < len(groups):
+        print(groups, color)
+        raise ValueError('`color` list need to be at least as long as `groups` list.')
 
     # node positions from adjacency_solid
     if pos is None:
@@ -752,7 +801,7 @@ def _aga_graph(
                 init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
                 pos_list = g.layout(layout, seed=init_coords).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
-        # equally spaced tree
+        # equally-spaced tree
         else:
             pos = utils.hierarchy_pos(nx_g_solid, root)
             if len(pos) < adjacency_solid.shape[0]:
@@ -760,23 +809,14 @@ def _aga_graph(
                                  'Try another `layout`, e.g., {\'fr\'}.')
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     else:
-        # convert the array-like positions to a dictionary
         pos_array = pos
+        # convert to dictionary
         pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
-    if len(pos) == 1: pos[0] = (0.5, 0.5)
 
-    # init the figure
-    if ax is None:
-        fig = pl.figure()
-        ax = pl.axes([0.08, 0.08, 0.9, 0.9], frameon=False)
+    if len(pos) == 1: pos[0] = (0.5, 0.5)
 
     # edge widths
     base_edge_width = edge_width_scale * rcParams['lines.linewidth']
-    # normalize with median
-    # if isinstance(adjacency_solid, np.ndarray):
-    #     base_edge_width /= np.median(adjacency_solid[adjacency_solid.nonzero()])
-    # else:
-    #     base_edge_width /= np.median(adjacency_solid.data)
 
     # draw dashed edges
     if dashed_edges is not None:
@@ -794,6 +834,9 @@ def _aga_graph(
         widths = np.clip(widths, min_edge_width, max_edge_width)
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
+    # deal with empty graph
+    ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
+
     # draw the nodes (pie charts)
     trans = ax.transData.transform
     bbox = ax.get_position().get_points()
@@ -804,35 +847,43 @@ def _aga_graph(
     ax_len_x = ax_x_max - ax_x_min
     ax_len_y = ax_y_max - ax_y_min
     trans2 = ax.transAxes.inverted().transform
-    ax.set_frame_on(False)
+    ax.set_frame_on(frameon)
     ax.set_xticks([])
     ax.set_yticks([])
     base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
-    median_group_size = np.median(adata.add['aga_groups_sizes'])
+    if (groups_name is not None and groups_name in adata.add):
+        groups_sizes = adata.add[groups_name + '_sizes']
+    elif 'aga_groups_sizes' in adata.add:
+        groups_sizes = adata.add['aga_groups_sizes']
+    else:
+        groups_sizes = np.ones(len(groups))
+    median_group_size = np.median(groups_sizes)
     force_labels_to_front = True  # TODO: solve this differently!
     for count, n in enumerate(nx_g_solid.nodes_iter()):
         pie_size = base_pie_size
-        pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
+        pie_size *= np.power(groups_sizes[count] / median_group_size,
                              node_size_power)
         xx, yy = trans(pos[n])     # data coordinates
         xa, ya = trans2((xx, yy))  # axis coordinates
         xa = ax_x_min + (xa - pie_size/2) * ax_len_x
         ya = ax_y_min + (ya - pie_size/2) * ax_len_y
+        if ya < 0: ya = 0  # clip, the fruchterman layout sometimes places below figure
+        if xa < 0: xa = 0
         a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
-        if is_color_like(colors[count]):
+        if is_color_like(color[count]):
             fracs = [100]
-            color = [colors[count]]
-        elif isinstance(colors[count], dict):
-            color = colors[count].keys()
-            fracs = [colors[count][c] for c in color]
+            color_single = [color[count]]
+        elif isinstance(color[count], dict):
+            color_single = color[count].keys()
+            fracs = [color[count][c] for c in color_single]
             if sum(fracs) < 1:
-                color = list(color)
-                color.append('grey')
+                color_single = list(color_single)
+                color_single.append('grey')
                 fracs.append(1-sum(fracs))
         else:
             raise ValueError('{} is neither a dict of valid matplotlib colors '
-                             'nor a valid matplotlib color.'.format(colors[count]))
-        a.pie(fracs, colors=color)
+                             'nor a valid matplotlib color.'.format(color[count]))
+        a.pie(fracs, colors=color_single)
         if not force_labels_to_front and groups is not None:
             a.text(0.5, 0.5, groups[count],
                    verticalalignment='center',
@@ -845,12 +896,14 @@ def _aga_graph(
         for count, n in enumerate(nx_g_solid.nodes_iter()):
             # all copy and paste from above
             pie_size = base_pie_size
-            pie_size *= np.power(adata.add['aga_groups_sizes'][count] / median_group_size,
+            pie_size *= np.power(groups_sizes[count] / median_group_size,
                                  node_size_power)
             xx, yy = trans(pos[n])     # data coordinates
             xa, ya = trans2((xx, yy))  # axis coordinates
             xa = ax_x_min + (xa - pie_size/2.0000001) * ax_len_x  # make sure a new axis is created
             ya = ax_y_min + (ya - pie_size/2.0000001) * ax_len_y
+            if ya < 0: ya = 0  # clip, the fruchterman layout sometimes places below figure
+            if xa < 0: xa = 0
             a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
             a.set_frame_on(False)
             a.set_xticks([])
@@ -882,6 +935,7 @@ def aga_path(
         ytick_fontsize=None,
         show_nodes_twin=True,
         legend_fontsize=None,
+        legend_fontweight=None,
         save=None,
         show=None,
         ax=None):
@@ -1030,11 +1084,13 @@ def dpt(
         adata,
         basis='diffmap',
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -1088,15 +1144,20 @@ def dpt(
          result is pretty unreliable. Use tool `aga` (Approximate Graph
          Abstraction) instead.
     """
+    colors = ['dpt_pseudotime']
+    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if color is not None: colors = color
     dpt_scatter(
         adata,
         basis=basis,
         color=color,
+        alpha=alpha,
         groups=groups,
         components=components,
         projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
         right_margin=right_margin,
@@ -1104,11 +1165,6 @@ def dpt(
         title=title,
         show=False,
         save=save)
-    colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
-    if color is not None:
-        if not isinstance(color, list): colors = color.split(',')
-        else: colors = color
     dpt_groups_pseudotime(adata, color_map=color_map, show=False, save=save)
     dpt_timeseries(adata, color_map=color_map, show=show, save=save)
 
@@ -1117,11 +1173,13 @@ def dpt_scatter(
         adata,
         basis='diffmap',
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -1157,6 +1215,7 @@ def dpt_scatter(
             projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
             right_margin=right_margin,
@@ -1219,11 +1278,13 @@ def louvain(
         adata,
         basis='tsne',
         color=None,
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
+        legend_fontweight=None,
         color_map=None,
         palette=None,
         right_margin=None,
@@ -1280,11 +1341,13 @@ def louvain(
         adata,
         basis=basis,
         color=color,
+        alpha=alpha,
         groups=groups,
         components=components,
         projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
         right_margin=right_margin,

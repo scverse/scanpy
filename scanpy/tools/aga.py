@@ -59,8 +59,12 @@ doc_string_base = dedent("""\
         See ``sc.tool.louvain``.
     random_state : int, optional (default: 0)
         See ``sc.tool.louvain``.
-    tree_detection : {{'connect_extremes', 'min_span_tree'}}, optional (default: 'connect_extremes')
-        How to detect a tree structure in the abstracted graph.
+    tree_detection : {{'greedy_extremes', 'min_span_tree'}}, optional (default: 'min_span_tree')
+        How to detect a tree structure in the abstracted graph. If choosing
+        'min_span_tree', a minimum spanning tree is fitted for the abstracted
+        graph, weighted by inverse attachedness. If choosing 'greedy_extremes',
+        a recursive algorithm that greedily attaches partitions (groups) that
+        maximize the random-walk based distance measure is run.
     attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
         How to measure attachedness between groups.
     recompute_graph : bool, optional (default: False)
@@ -113,7 +117,7 @@ def aga(adata,
         resolution=1,
         random_state=0,
         attachedness_measure='connectedness',
-        tree_detection='connect_extremes',
+        tree_detection='min_span_tree',
         tree_based_confidence=True,
         recompute_pca=False,
         recompute_distances=False,
@@ -195,7 +199,6 @@ def aga(adata,
     adata.add['aga_groups_sizes'] = aga.segs_sizes
 
     if tree_detection == 'min_span_tree':
-        # here, we could use "full_confidence" instead of "full_attachedness"
         min_span_tree = utils.compute_minimum_spanning_tree(
             1./aga.segs_adjacency_full_attachedness)
         min_span_tree.data = 1./min_span_tree.data

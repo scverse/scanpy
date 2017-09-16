@@ -29,8 +29,9 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     ---------
     Weinreb et al., bioRxiv doi:10.1101/090332 (2016).
     """
-    from .. import logging as logg
-    logg.warn('``pp.recipe_weinreb16`` is a deprecated preprocessing recipe but remains for backwards compatibility.')
+    from scipy.sparse import issparse
+    if issparse(adata.X):
+        raise ValueError('recipe_weinreb16() does not support sparse matrices.')
     if copy: adata = adata.copy()
     adata.X = pp.normalize_per_cell_weinreb16_deprecated(adata.X,
                                                          max_fraction=0.05,

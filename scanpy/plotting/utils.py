@@ -19,15 +19,19 @@ from . import palettes
 # -------------------------------------------------------------------------------
 
 
-def matrix(matrix, xlabels=None, ylabels=None, colorbar_shrink=0.5,
-           color_map=None, show=None, save=None, ax=None):
+def matrix(matrix, xlabel=None, ylabel=None, xticks=None, yticks=None,
+           title=None, colorbar_shrink=0.5, color_map=None, show=None,
+           save=None, ax=None):
     """Plot a matrix."""
     if ax is None: ax = pl.gca()
     img = ax.imshow(matrix, cmap=color_map)
-    if xlabels is not None:
-        ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
-    if ylabels is not None:
-        ax.set_yticks(range(len(ylabels)), ylabels)
+    if xlabel is not None: ax.set_xlabel(xlabel)
+    if ylabel is not None: ax.set_ylabel(ylabel)
+    if title is not None: ax.set_title(title)
+    if xticks is not None:
+        ax.set_xticks(range(len(xticks)), xticks, rotation='vertical')
+    if yticks is not None:
+        ax.set_yticks(range(len(yticks)), yticks)
     pl.colorbar(img, shrink=colorbar_shrink, ax=ax)  # need a figure instance for colorbar
     savefig_or_show('matrix', show=show, save=save)
 
@@ -156,7 +160,7 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
 # -------------------------------------------------------------------------------
 # Colors in additional to matplotlib's colors
 # -------------------------------------------------------------------------------
-    
+
 
 additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             '#eee685', 'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c',
@@ -169,7 +173,7 @@ additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
             '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
 
-    
+
 # -------------------------------------------------------------------------------
 # Helper functions
 # -------------------------------------------------------------------------------
@@ -247,7 +251,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
                          .format(len(adata.add[key + '_colors']), key))
 
 
-def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
+def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3, alpha=None):
     """Scatter of group using representation of data Y.
     """
     if name + '_masks' in adata.add:
@@ -267,6 +271,7 @@ def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
     if projection == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,
                marker='.',
+               alpha=alpha,
                c=color,
                edgecolors='none',
                s=size,
@@ -276,6 +281,7 @@ def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
 
 def scatter_base(Y,
                  colors='blue',
+                 alpha=None,
                  highlights=[],
                  right_margin=None,
                  projection='2d',
@@ -372,6 +378,7 @@ def scatter_base(Y,
             sct = ax.scatter(*data,
                              marker='.',
                              c=color,
+                             alpha=alpha,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
                              cmap=color_map)

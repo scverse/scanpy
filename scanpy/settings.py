@@ -21,7 +21,7 @@ if not os.path.exists('.scanpy/'):
 # Global Settings Attributes
 # --------------------------------------------------------------------------------
 
-verbosity = 3
+verbosity = 1
 """Set global verbosity level.
 
 Level 0: only show 'error' messages.
@@ -95,7 +95,7 @@ writedir = './write/'
 """Directory where the function scanpy.write writes to by default.
 """
 
-figdir = './figs/'
+figdir = './figures/'
 """Directory where plots are saved.
 """
 

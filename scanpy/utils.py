@@ -27,7 +27,7 @@ def get_graph_tool_from_adjacency(adjacency, directed=None):
         from scipy.sparse import tril
         adjacency_edge_list = tril(adjacency)
     g = gt.Graph(directed=directed)
-    g.add_vertex(adjacency.shape[0])
+    g.add_vertex(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
     g.add_edge_list(np.transpose(adjacency_edge_list.nonzero()))
     weights = g.new_edge_property('double')
     for e in g.edges():
@@ -43,10 +43,17 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     import igraph as ig
     sources, targets = adjacency.nonzero()
     weights = adjacency[sources, targets]
-    weights = np.array(weights)[0]
-    g = ig.Graph(list(zip(sources, targets)),
-                 directed=directed,
-                 edge_attrs={'weight': weights})
+    # if len(weights) > 0: weights = np.array(weights)
+    # else:
+    #     # hack for empty graph
+    #     sources, targets = np.ones(adjacency.shape).nonzero()
+    #     weights = np.array([1e-12 for i in range(len(sources))])  # dummy edges
+    # if adjacency.shape[0] < 20:
+    #     print(list(zip(sources, targets)), weights)
+    g = ig.Graph(directed=directed)
+    g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
+    g.add_edges(list(zip(sources, targets)))
+    g.es['weight'] = weights
     if g.vcount() != adjacency.shape[0]:
         logg.warn('The constructed graph has only {} nodes. '
                   'Your adjacency matrix contained redundant nodes.'
@@ -57,7 +64,9 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 def compute_association_matrix_of_groups(adata, prediction, reference,
                                          normalization='prediction',
                                          threshold=0.01, max_n_names=2):
-    """Identify predicted groups with reference groups.
+    """Compute overlaps between groups.
+
+    See ``identify_groups`` for identifying the groups.
 
     Parameters
     ----------
@@ -121,19 +130,11 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-identify_categories = compute_association_matrix_of_groups
-"""Deprecated: For backwards compatibility. See compute_association_matrix_of_groups."""
-
-
 def get_associated_colors_of_groups(reference_colors, asso_matrix):
     asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
                     for i_ref in range(asso_matrix.shape[1])}
                    for i_pred in range(asso_matrix.shape[0])]
     return asso_colors
-
-
-get_associated_colors = get_associated_colors_of_groups
-"""Deprecated: For backwards compatibility. See get_associated_colors_of_groups."""
 
 
 def compute_group_overlap_score(ref_labels, pred_labels,
@@ -169,6 +170,8 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     A predicted label explains the reference label which maximizes the minimum
     of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
 
+    Compare this with ``compute_association_matrix_of_groups``.
+
     Returns
     -------
     A dictionary of length ``len(np.unique(ref_labels))`` that stores for each
@@ -198,13 +201,12 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
 
 
 def compute_fraction_of_agreeing_paths(adata1, adata2,
-                                       adjacency_key='aga_attachedness_absolute'):
+                                       adjacency_key='aga_adjacency_full_confidence'):
     """Compute the fraction of agreeing paths between leafs (nodes with degree
     1), a measure for the topological similarity between graphs.
 
     Notes
     -----
-
     By increasing the verbosity to level 4 and 5, the paths that do not agree
     and the paths that agree are written to the output, respectively.
     """
@@ -214,6 +216,8 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
     leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
     asso_groups1 = identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
     asso_groups2 = identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
+    orig_names1 = adata1.add['aga_groups_order_original']
+    orig_names2 = adata2.add['aga_groups_order_original']
 
     import itertools
     n_steps = 0
@@ -223,18 +227,24 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
     # loop over all pairs of leaf nodes in the reference adata1
     for (r, s) in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
+        orig_names = [orig_names1[int(i)] for i in [r, s]]
+        orig_names += [orig_names2[int(i)] for i in [r2, s2]]
         logg.m('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
-               .format(r, s, r2, s2), v=4, no_indent=True)
+               .format(*orig_names), v=4, no_indent=True)
         path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
         path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
         if len(path1) >= len(path2):
             path_mapped = [asso_groups1[l] for l in path1]
             path_compare = path2
             path_compare_id = 2
+            path_compare_orig_names = [[orig_names2[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names2[int(s)] for s in l] for l in path_mapped]
         else:
             path_mapped = [asso_groups2[l] for l in path2]
             path_compare = path1
             path_compare_id = 1
+            path_compare_orig_names = [[orig_names1[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names1[int(s)] for s in l] for l in path_mapped]
         n_agreeing_steps_path = 0
         ip_progress = 0
         for il, l in enumerate(path_compare[:-1]):
@@ -247,7 +257,7 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
                         # make sure that a step backward leads us to the same value of l
                         # in case we "jumped"
                         logg.m('found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
-                               .format(l, path_compare[il + 1], il, path_compare_id, ip), v=6)
+                               .format(l, path_compare_orig_names[il + 1], il, path_compare_id, ip), v=6)
                         consistent_history = True
                         for iip in range(ip, ip_progress, -1):
                             if l not in path_mapped[iip - 1]:
@@ -264,14 +274,18 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
         n_steps_path = len(path_compare) - 1
         n_steps += n_steps_path
         n_paths += 1
+        if n_agreeing_steps_path == n_steps_path: n_agreeing_paths += 1
 
-        if n_agreeing_steps_path == n_steps_path:
-            n_agreeing_paths += 1
+        # only for the output, use original names
+        path1_orig_names = [orig_names1[int(s)] for s in path1]
+        path2_orig_names = [orig_names2[int(s)] for s in path2]
         logg.m('      path1 = {},\n'
                'path_mapped = {},\n'
                '      path2 = {},\n'
                '-> n_agreeing_steps = {} / n_steps = {}.'
-               .format(path1, [list(p) for p in path_mapped], path2,
+               .format(path1_orig_names,
+                       [list(p) for p in path_mapped_orig_names],
+                       path2_orig_names,
                        n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
     Result = namedtuple('compute_fraction_of_agreeing_paths_result',
                         ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
@@ -279,8 +293,6 @@ def compute_fraction_of_agreeing_paths(adata1, adata2,
                   n_steps=n_steps,
                   frac_paths=n_agreeing_paths/n_paths,
                   n_paths=n_paths)
-
-
 
 def remove_repetitions_from_list(l):
     return [l[0]] + [e for (i, e) in enumerate(l[1:]) if l[i] != e]
