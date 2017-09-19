@@ -12,7 +12,7 @@ from matplotlib.figure import SubplotParams as sppars
 from matplotlib import rcParams
 
 from . import utils
-from .. import settings as sett
+from .. import settings
 from .. import logging as logg
 
 from .ann_data import scatter, violin
@@ -242,9 +242,9 @@ def diffmap(
         writekey = 'diffmap'
         if isinstance(components, list): components = ','.join([str(comp) for comp in components])
         writekey += '_components' + components.replace(',', '')
-        if sett.savefigs or (save is not None): utils.savefig(writekey)  # TODO: cleaner
-    show = sett.autoshow if show is None else show
-    if not sett.savefigs and show: pl.show()
+        if settings.savefigs or (save is not None): utils.savefig(writekey)  # TODO: cleaner
+    show = settings.autoshow if show is None else show
+    if not settings.savefigs and show: pl.show()
     return axs
 
 
@@ -451,8 +451,9 @@ def aga(
     abstracted graph.
     """
     figsize = rcParams['figure.figsize']
-    _, axs = pl.subplots(figsize=(2*figsize[0], figsize[1]), ncols=2)
-    pl.subplots_adjust(left=left_margin, bottom=0.05)
+    # _, axs = pl.subplots(figsize=(2*figsize[0], figsize[1]), ncols=2)
+    # pl.subplots_adjust(left=left_margin, bottom=0.05)
+    axs, _, _, _ = utils.setup_axes(colors=[0, 1])  # dummy colors
     aga_scatter(adata,
                 basis=basis,
                 color=color,
@@ -470,11 +471,10 @@ def aga(
                 title=title,
                 ax=axs[0],
                 show=False)
-    axs[1].set_frame_on(False)
     aga_graph(adata, ax=axs[1], show=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
     utils.savefig_or_show('aga', show=show, save=save)
-
+    return axs
 
 def aga_scatter(
         adata,
@@ -660,18 +660,19 @@ def aga_graph(
     if title is None or isinstance(title, str): title = [title for name in groups]
 
     if ax is None:
-        figsize = rcParams['figure.figsize']
-        _, axs = pl.subplots(figsize=(len(color)*figsize[0], figsize[1]), ncols=len(color))
-        pl.subplots_adjust(bottom=0.05)
+        # figsize = rcParams['figure.figsize']
+        # _, axs = pl.subplots(figsize=(len(color)*figsize[0], figsize[1]), ncols=len(color))
+        # pl.subplots_adjust(bottom=0.05)
         # figure_width = rcParams['figure.figsize'][0] * len(color)
         # top = 0.93
         # fig, axs = pl.subplots(ncols=len(color),
         #                        figsize=(figure_width, rcParams['figure.figsize'][1]),
         #                        subplotpars=sppars(left=left_margin, bottom=0,
         #                                           right=0.99, top=top))
+        axs, _, _, _ = utils.setup_axes(colors=color)
     else:
         axs = ax
-    if len(color) == 1: axs = [axs]
+    if len(color) == 1 and not isinstance(axs, list): axs = [axs]
 
     for icolor, color in enumerate(color):
         pos = _aga_graph(
@@ -728,22 +729,27 @@ def _aga_graph(
     if groups is not None and isinstance(groups, str) and groups not in adata.smp_keys():
         raise ValueError('Groups {} are not in adata.smp.'.format(groups))
 
-    if color is None and isinstance(groups, str):
-        if (groups + '_colors' not in adata.add
-            or len(adata.add[groups + '_order'])
-               != len(adata.add[groups + '_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, groups)
-        color = adata.add[groups + '_colors']
-        for iname, name in enumerate(adata.add[groups + '_order']):
-            if name in sett._ignore_categories: color[iname] = 'grey'
-
     groups_name = groups if isinstance(groups, str) else None
     if groups is None and 'aga_groups_order_original' in adata.add:
         groups = adata.add['aga_groups_order_original']
+        groups_name = adata.add['aga_groups_original']
     elif groups in adata.smp_keys():
         groups = adata.add[groups + '_order']
     elif groups is None:
         groups = adata.add['aga_groups_order']
+        groups_name = 'aga_groups'
+
+    if color is None and groups_name is not None:
+        if groups_name == adata.add['aga_groups_original']:
+            color = adata.add['aga_groups_colors_original']
+        else:
+            if (groups_name + '_colors' not in adata.add
+                or len(adata.add[groups_name + '_order'])
+                   != len(adata.add[groups_name + '_colors'])):
+                utils.add_colors_for_categorical_sample_annotation(adata, groups_name)
+            color = adata.add[groups_name + '_colors']
+        for iname, name in enumerate(adata.add[groups_name + '_order']):
+            if name in settings._ignore_categories: color[iname] = 'grey'
 
     if isinstance(root, str) and root in groups:
         root = list(groups).index(root)
@@ -846,6 +852,8 @@ def _aga_graph(
     ax_y_max = bbox[1, 1]
     ax_len_x = ax_x_max - ax_x_min
     ax_len_y = ax_y_max - ax_y_min
+    # print([ax_x_min, ax_x_max, ax_y_min, ax_y_max])
+    # print([ax_len_x, ax_len_y])
     trans2 = ax.transAxes.inverted().transform
     ax.set_frame_on(frameon)
     ax.set_xticks([])
@@ -1013,17 +1021,23 @@ def aga_path(
         pl.subplots_adjust(left=left_margin)
     else:
         left_margin = 0.4 if left_margin is None else left_margin
-        pl.legend(frameon=False, loc='center left',
-                  bbox_to_anchor=(-left_margin, 0.5),
-                  fontsize=legend_fontsize)
+        if len(keys) > 1:
+            pl.legend(frameon=False, loc='center left',
+                      bbox_to_anchor=(-left_margin, 0.5),
+                      fontsize=legend_fontsize)
     ax.set_xticks(x_tick_locs)
     ax.set_xticklabels(x_tick_labels)
-    ax.set_xlabel(adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
-                  and adata.add['aga_groups_original'] != 'louvain_groups')
-                  else 'aga groups')
+    xlabel = (adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
+              and adata.add['aga_groups_original'] != 'louvain_groups')
+              else 'aga groups')
+    if as_heatmap:
+        ax.set_xlabel(xlabel)
+    else:
+        ax.set_xlabel(xlabel)
     if show_left_y_ticks:
         utils.pimp_axis(pl.gca().get_yaxis())
-        pl.ylabel('as indicated on legend')
+        if len(keys) > 1: pl.ylabel('as indicated on legend')
+        else: pl.ylabel(keys[0])
     elif not as_heatmap:
         pl.yticks([])
         pl.ylabel('as indicated on legend (a.u.)')
@@ -1039,7 +1053,7 @@ def aga_path(
         utils.pimp_axis(pl.gca().get_yaxis())
     if title is not None: pl.title(title)
     if show is None and not ax_was_none: show = False
-    else: show = sett.autoshow if show is None else show
+    else: show = settings.autoshow if show is None else show
     utils.savefig_or_show('aga_path', show=show, save=save)
     return ax if ax_was_none else None
 
@@ -1224,7 +1238,7 @@ def dpt_scatter(
             show=False)
         writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
         save = False if save is None else save
-        if sett.savefigs or save: utils.savefig(writekey)
+        if settings.savefigs or save: utils.savefig(writekey)
     utils.savefig_or_show(writekey, show=show, save=False)
 
 

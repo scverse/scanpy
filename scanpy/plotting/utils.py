@@ -279,11 +279,76 @@ def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3, alpha=None
     return mask
 
 
+def setup_axes(
+        ax=None,
+        colors='blue',
+        colorbars=[False],
+        right_margin=None,
+        left_margin=None,
+        show_ticks=False):
+    """Grid of axes for plotting, legends and colorbars.
+    """
+    if left_margin is not None:
+        raise ValueError('Currently not supporting to pass `left_margin`.')
+    if np.any(colorbars) and right_margin is None: right_margin = 0.25
+    elif right_margin is None: right_margin = 0.10
+    # make a list of right margins for each panel
+    if not isinstance(right_margin, list):
+        right_margin_list = [right_margin for i in range(len(colors))]
+    else:
+        right_margin_list = right_margin
+
+    # make a figure with len(colors) panels in a row side by side
+    top_offset = 1 - rcParams['figure.subplot.top']
+    bottom_offset = 0.15 if show_ticks else 0.08
+    left_offset = 1 if show_ticks else 0.3  # in units of base_height
+    base_height = rcParams['figure.figsize'][1]
+    height = base_height
+    base_width = rcParams['figure.figsize'][0]
+    if show_ticks: base_width *= 1.1
+
+    draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
+
+    right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
+    width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
+
+    right_offset = (len(colors) - 1) * left_offset
+    figure_width = width_without_offsets + left_offset + right_offset
+    draw_region_width_frac = draw_region_width / figure_width
+    left_offset_frac = left_offset / figure_width
+    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
+
+    if ax is None:
+        pl.figure(figsize=(figure_width, height),
+                  subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
+    left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
+    for i in range(1, len(colors)):
+        right_margin = right_margin_list[i-1]
+        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
+        left_positions.append(left_positions[-1] + draw_region_width_frac)
+    panel_pos = [[bottom_offset], [1-top_offset], left_positions]
+
+    axs = []
+    if ax is None:
+        for icolor, color in enumerate(colors):
+            left = panel_pos[2][2*icolor]
+            bottom = panel_pos[0][0]
+            width = draw_region_width / figure_width
+            height = panel_pos[1][0] - bottom
+            ax = pl.axes([left, bottom, width, height])
+            axs.append(ax)
+    else:
+        axs = ax if isinstance(ax, list) else [ax]
+
+    return axs, panel_pos, draw_region_width, figure_width
+
+
 def scatter_base(Y,
                  colors='blue',
                  alpha=None,
                  highlights=[],
                  right_margin=None,
+                 left_margin=None,
                  projection='2d',
                  title=None,
                  component_name='DC',
@@ -320,45 +385,11 @@ def scatter_base(Y,
     if projection not in avail_projections:
         raise ValueError('choose projection from', avail_projections)
     if type(colors) == str: colors = [colors]
-    if len(sizes) != len(colors):
-        if len(sizes) == 1:
-            sizes = [sizes[0] for i in range(len(colors))]
-    # grid of axes for plotting and legends/colorbars
-    if np.any(colorbars) and right_margin is None: right_margin = 0.25
-    elif right_margin is None: right_margin = 0.10
-    # make a list of right margins for each panel
-    if not isinstance(right_margin, list):
-        right_margin_list = [right_margin for i in range(len(colors))]
-    else:
-        right_margin_list = right_margin
-    # make a figure with len(colors) panels in a row side by side
-    top_offset = 1 - rcParams['figure.subplot.top']
-    bottom_offset = 0.15 if show_ticks else 0.08
-    left_offset = 1 if show_ticks else 0.3  # in units of base_height
-    base_height = rcParams['figure.figsize'][1]
-    height = base_height
-    base_width = rcParams['figure.figsize'][0]
-    if show_ticks: base_width *= 1.1
-    draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
-
-    right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
-    width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
-
-    right_offset = (len(colors) - 1) * left_offset
-    figure_width = width_without_offsets + left_offset + right_offset
-    draw_region_width_frac = draw_region_width / figure_width
-    left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
-
-    if ax is None:
-        fig = pl.figure(figsize=(figure_width, height),
-                        subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
-    left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
-    for i in range(1, len(colors)):
-        right_margin = right_margin_list[i-1]
-        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
-        left_positions.append(left_positions[-1] + draw_region_width_frac)
-    panel_pos = [[bottom_offset], [1-top_offset], left_positions]
+    if len(sizes) != len(colors) and len(sizes) == 1:
+        sizes = [sizes[0] for i in range(len(colors))]
+    _, panel_pos, draw_region_width, figure_width = setup_axes(
+        ax=ax, colors=colors, colorbars=colorbars,
+        right_margin=right_margin, left_margin=left_margin, show_ticks=show_ticks)
     axs_passed = []
     if ax is not None: axs_passed = ax if isinstance(ax, list) else [ax]
     axs = []

@@ -197,7 +197,7 @@ def paul15_raw():
     cell_types[16] = 'Neu'
     cell_types[17] = 'Neu'
     cell_types[18] = 'Eos'
-    cell_types[19] = 'Other'
+    cell_types[19] = 'Lymph'
     adata.smp['paul15_clusters'] = [str(i) + cell_types[i] for i in clusters.astype(int)]
     infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
