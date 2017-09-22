@@ -201,7 +201,8 @@ def savefig(writekey, dpi=None, ext=None):
     if sett.figdir[-1] != '/': sett.figdir += '/'
     if ext is None: ext = sett.file_format_figs
     filename = sett.figdir + writekey + sett.plot_suffix + '.' + ext
-    logg.info('... saving figure to file', filename)
+    # output the following msg at warning level; it's really important for the user
+    logg.msg('saving figure to file', filename, v=1)
     pl.savefig(filename, dpi=dpi)
 
 
@@ -210,7 +211,7 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
         writekey += save
         save = True
     save = sett.savefigs if save is None else save
-    show = (sett.autoshow and not save) if show is None else show
+    show = (sett.autoshow and not sett.savefigs) if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
@@ -285,9 +286,14 @@ def setup_axes(
         colorbars=[False],
         right_margin=None,
         left_margin=None,
+        projection='2d',
         show_ticks=False):
     """Grid of axes for plotting, legends and colorbars.
     """
+    if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
+    avail_projections = {'2d', '3d'}
+    if projection not in avail_projections:
+        raise ValueError('choose projection from', avail_projections)
     if left_margin is not None:
         raise ValueError('Currently not supporting to pass `left_margin`.')
     if np.any(colorbars) and right_margin is None: right_margin = 0.25
@@ -335,7 +341,8 @@ def setup_axes(
             bottom = panel_pos[0][0]
             width = draw_region_width / figure_width
             height = panel_pos[1][0] - bottom
-            ax = pl.axes([left, bottom, width, height])
+            if projection == '2d': ax = pl.axes([left, bottom, width, height])
+            elif projection == '3d': ax = pl.axes([left, bottom, width, height], projection='3d')
             axs.append(ax)
     else:
         axs = ax if isinstance(ax, list) else [ax]
@@ -373,7 +380,6 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
@@ -381,30 +387,21 @@ def scatter_base(Y,
         highlights_indices = highlights
         highlights_labels = []
     # if we have a single array, transform it into a list with a single array
-    avail_projections = {'2d', '3d'}
-    if projection not in avail_projections:
-        raise ValueError('choose projection from', avail_projections)
     if type(colors) == str: colors = [colors]
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for i in range(len(colors))]
-    _, panel_pos, draw_region_width, figure_width = setup_axes(
-        ax=ax, colors=colors, colorbars=colorbars,
-        right_margin=right_margin, left_margin=left_margin, show_ticks=show_ticks)
-    axs_passed = []
-    if ax is not None: axs_passed = ax if isinstance(ax, list) else [ax]
-    axs = []
+    axs, panel_pos, draw_region_width, figure_width = setup_axes(
+        ax=ax, colors=colors, colorbars=colorbars, projection=projection,
+        right_margin=right_margin, left_margin=left_margin,
+        show_ticks=show_ticks)
     for icolor, color in enumerate(colors):
+        ax = axs[icolor]
         left = panel_pos[2][2*icolor]
         bottom = panel_pos[0][0]
         width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
-        if projection == '2d':
-            if axs_passed: ax = axs_passed[icolor]
-            else: ax = pl.axes([left, bottom, width, height])
-            data = Y[:, 0], Y[:, 1]
-        elif projection == '3d':
-            ax = pl.axes([left, bottom, width, height], projection='3d')
-            data = Y[:, 0], Y[:, 1], Y[:, 2]
+        if projection == '2d': data = Y[:, 0], Y[:, 1]
+        elif projection == '3d': data = Y[:, 0], Y[:, 1], Y[:, 2]
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(*data,
                              marker='.',

@@ -160,6 +160,27 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    :toctree: .
 
    pl.sim
+
+
+.. raw:: html
+
+   <h4>Builtin datasets</h4>
+
+Simple functions that provide annotated datasets for benchmarking. See
+`here <https://scanpy.readthedocs.io/en/latest/examples.html>`_ for extensive
+documented tutorials and use cases.
+
+All of these functions return an Annotated Data object.
+
+.. autosummary::
+   :toctree: .
+
+   datasets.paul15
+   datasets.toggleswitch
+   datasets.krumsiek11
+   datasets.blobs
+   datasets.moignard15
+
 """
 
 from .. import __version__
@@ -173,7 +194,6 @@ plotting = pl
 from . import pp
 preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
-from .. import examples
-from ..examples import init_run, read_run, write_run
+from . import datasets
 from ..data_structs import AnnData, DataGraph
 from .. import utils

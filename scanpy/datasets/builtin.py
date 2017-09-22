@@ -1,8 +1,4 @@
-"""Builtin Examples.
-
-Provides functions for preprocessing data and default parameters.
-
-Defines command-line "runs" for builtin examples.
+"""Builtin Datasets.
 """
 
 import numpy as np
@@ -155,7 +151,6 @@ def paul15():
     """
     adata = paul15_raw()
     sc.pp.log1p(adata)
-    adata.add['xroot'] = adata.X[adata.add['iroot']]  # adjust expression vector of root cell
     return adata
 
 paul15_diffmap_params = {'n_neighbors': 20, 'n_pcs': 0}
@@ -210,7 +205,6 @@ def paul15_raw():
     # adata.add['iroot'] = np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
     adata.add['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
-    adata.add['xroot'] = adata.X[iroot]  # this is just to allow to find a meaningful root cell after subsampling
     return adata
 
 

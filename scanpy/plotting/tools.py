@@ -574,7 +574,7 @@ def aga_graph(
         fontsize=None,
         node_size_scale=1,
         node_size_power=0.5,
-        title=None,
+        title='abstracted graph',
         ext='png',
         left_margin=0.01,
         edge_width_scale=1,
@@ -583,7 +583,7 @@ def aga_graph(
         random_state=0,
         pos=None,
         cmap=None,
-        frameon=False,
+        frameon=True,
         return_pos=False,
         show=None,
         save=None,
@@ -631,7 +631,7 @@ def aga_graph(
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
-    frameon : bool, optional (default: False)
+    frameon : bool, optional (default: True)
          Draw a frame around the abstracted graph.
     show : bool, optional (default: None)
          Show the plot.
@@ -722,7 +722,7 @@ def _aga_graph(
         layout=None,
         pos=None,
         cmap=None,
-        frameon=False,
+        frameon=True,
         min_edge_width=None,
         max_edge_width=None,
         random_state=0):
@@ -740,7 +740,7 @@ def _aga_graph(
         groups_name = 'aga_groups'
 
     if color is None and groups_name is not None:
-        if groups_name == adata.add['aga_groups_original']:
+        if 'aga_groups_original' in adata.add and groups_name == adata.add['aga_groups_original']:
             color = adata.add['aga_groups_colors_original']
         else:
             if (groups_name + '_colors' not in adata.add
@@ -1029,9 +1029,17 @@ def aga_path(
     ax.set_xticklabels(x_tick_labels)
     xlabel = (adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
               and adata.add['aga_groups_original'] != 'louvain_groups')
-              else 'aga groups')
+              else 'AGA groups')
     if as_heatmap:
-        ax.set_xlabel(xlabel)
+        s = ytick_fontsize if ytick_fontsize is not None else rcParams['ytick.labelsize']
+        s += 1
+        ticklab = ax.xaxis.get_ticklabels()[0]
+        trans = ticklab.get_transform()
+        ax.set_xlabel('{}  '.format(xlabel), ha='right', va='top')
+        ax.xaxis.set_label_coords(0, 0, transform=trans)
+        # yticks = ax.get_yticks()
+        # ypos = yticks[-1] + yticks[-1] - yticks[-2]
+        # ax.text(0, ypos, '{}  '.format(xlabel), ha='right', va='center', size=s)
     else:
         ax.set_xlabel(xlabel)
     if show_left_y_ticks:

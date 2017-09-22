@@ -1,5 +1,6 @@
 # Author: Alex Wolf (http://falexwolf.de)
 
+from collections import namedtuple
 import numpy as np
 import scipy as sp
 import networkx as nx
@@ -59,10 +60,10 @@ doc_string_base = dedent("""\
         See ``sc.tool.louvain``.
     random_state : int, optional (default: 0)
         See ``sc.tool.louvain``.
-    tree_detection : {{'greedy_extremes', 'min_span_tree'}}, optional (default: 'min_span_tree')
+    tree_detection : {{'iterative_matching', 'min_span_tree'}}, optional (default: 'min_span_tree')
         How to detect a tree structure in the abstracted graph. If choosing
         'min_span_tree', a minimum spanning tree is fitted for the abstracted
-        graph, weighted by inverse attachedness. If choosing 'greedy_extremes',
+        graph, weighted by inverse attachedness. If choosing 'iterative_matching',
         a recursive algorithm that greedily attaches partitions (groups) that
         maximize the random-walk based distance measure is run.
     attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
@@ -126,6 +127,9 @@ def aga(adata,
         n_jobs=None,
         copy=False):
     adata = adata.copy() if copy else adata
+    if tree_detection not in {'iterative_matching', 'min_span_tree'}:
+        raise ValueError('`tree_detection` needs to be one of {}'
+                         .format({'iterative_matching', 'min_span_tree'}))
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
         and ('louvain_groups' not in adata.smp_keys()
@@ -276,6 +280,135 @@ def aga_expression_entropies(adata):
     return entropies
 
 
+def aga_compare_paths(adata1, adata2,
+                      adjacency_key='aga_adjacency_full_confidence'):
+    """Compare paths in abstracted graphs in two datasets.
+
+    Compute the fraction of consistent paths between leafs, a measure for the
+    topological similarity between graphs.
+
+    By increasing the verbosity to level 4 and 5, the paths that do not agree
+    and the paths that agree are written to the output, respectively.
+
+    Parameters
+    ----------
+    adata1, adata2 : AnnData
+        Annotated data matrices to compare.
+    adjacency_key : str
+        Key for indexing the adjacency matrices to be used in adata1 and adata2.
+
+    Returns
+    -------
+    OrderedTuple with attributes ``n_steps`` (total number of steps in paths)
+    and ``frac_steps`` (fraction of consistent steps), ``n_paths`` and
+    ``frac_paths``.
+    """
+    import networkx as nx
+    g1 = nx.Graph(adata1.add[adjacency_key])
+    g2 = nx.Graph(adata2.add[adjacency_key])
+    leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
+    logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
+    asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
+    asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
+    orig_names1 = adata1.add['aga_groups_order_original']
+    orig_names2 = adata2.add['aga_groups_order_original']
+
+    import itertools
+    n_steps = 0
+    n_agreeing_steps = 0
+    n_paths = 0
+    n_agreeing_paths = 0
+    # loop over all pairs of leaf nodes in the reference adata1
+    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
+        r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
+        orig_names = [orig_names1[int(i)] for i in [r, s]]
+        orig_names += [orig_names2[int(i)] for i in [r2, s2]]
+        logg.msg('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
+               .format(*orig_names), v=4, no_indent=True)
+        no_path1 = False
+        try:
+            path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
+        except nx.NetworkXNoPath:
+            no_path1 = True
+        no_path2 = False
+        try:
+            path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
+        except nx.NetworkXNoPath:
+            no_path2 = True
+        if no_path1 and no_path2:
+            # consistent behavior
+            n_paths += 1
+            n_agreeing_paths += 1
+            n_steps += 1
+            n_agreeing_steps += 1
+            continue
+        elif no_path1 or no_path2:
+            # non-consistent result
+            n_paths += 1
+            n_steps += 1
+            continue
+        if len(path1) >= len(path2):
+            path_mapped = [asso_groups1[l] for l in path1]
+            path_compare = path2
+            path_compare_id = 2
+            path_compare_orig_names = [[orig_names2[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names2[int(s)] for s in l] for l in path_mapped]
+        else:
+            path_mapped = [asso_groups2[l] for l in path2]
+            path_compare = path1
+            path_compare_id = 1
+            path_compare_orig_names = [[orig_names1[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names1[int(s)] for s in l] for l in path_mapped]
+        n_agreeing_steps_path = 0
+        ip_progress = 0
+        for il, l in enumerate(path_compare[:-1]):
+            for ip, p in enumerate(path_mapped):
+                if ip >= ip_progress and l in p:
+                    # check whether we can find the step forward of path_compare in path_mapped
+                    if (ip + 1 < len(path_mapped)
+                        and
+                        path_compare[il + 1] in path_mapped[ip + 1]):
+                        # make sure that a step backward leads us to the same value of l
+                        # in case we "jumped"
+                        logg.msg('found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
+                               .format(l, path_compare_orig_names[il + 1], il, path_compare_id, ip), v=6)
+                        consistent_history = True
+                        for iip in range(ip, ip_progress, -1):
+                            if l not in path_mapped[iip - 1]:
+                                consistent_history = False
+                        if consistent_history:
+                            # here, we take one step further back (ip_progress - 1); it's implied that this
+                            # was ok in the previous step
+                            logg.msg('    step(s) backward to position(s) {} in path_mapped are fine, too: valid step'
+                                   .format(list(range(ip - 1, ip_progress - 2, -1))), v=6)
+                            n_agreeing_steps_path += 1
+                            ip_progress = ip + 1
+                            break
+        n_steps_path = len(path_compare) - 1
+        n_agreeing_steps += n_agreeing_steps_path
+        n_steps += n_steps_path
+        n_paths += 1
+        if n_agreeing_steps_path == n_steps_path: n_agreeing_paths += 1
+
+        # only for the output, use original names
+        path1_orig_names = [orig_names1[int(s)] for s in path1]
+        path2_orig_names = [orig_names2[int(s)] for s in path2]
+        logg.msg('      path1 = {},\n'
+               'path_mapped = {},\n'
+               '      path2 = {},\n'
+               '-> n_agreeing_steps = {} / n_steps = {}.'
+               .format(path1_orig_names,
+                       [list(p) for p in path_mapped_orig_names],
+                       path2_orig_names,
+                       n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
+    Result = namedtuple('aga_compare_paths_result',
+                        ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
+    return Result(frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
+                  n_steps=n_steps if n_steps > 0 else np.nan,
+                  frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
+                  n_paths=n_paths if n_steps > 0 else np.nan)
+
+
 def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
     """Contract the abstracted graph.
     """
@@ -293,7 +426,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 for neighbors_edges in range(1, 20):
                     for n_cnt, n in enumerate(neighbors):
                         if n_edges_per_seg[n] == neighbors_edges:
-                            logg.m('merging node {} into {} (two edges)'
+                            logg.msg('merging node {} into {} (two edges)'
                                    .format(i, n), v=4)
                             return i, n
         # node groups with a very small cell number
@@ -302,7 +435,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 neighbors = adjacency_tree_confidence[i].nonzero()[1]
                 neighbor_sizes = [node_groups[str(n) == node_groups].size for n in neighbors]
                 n = neighbors[np.argmax(neighbor_sizes)]
-                logg.m('merging node {} into {} '
+                logg.msg('merging node {} into {} '
                        '(smaller than `min_group_size` = {})'
                        .format(i, n, min_group_size), v=4)
                 return i, n
@@ -331,7 +464,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
         if key in adata.add: del adata.add[key]
     logg.info('    contracted graph from {} to {} nodes'
               .format(size_before, adata.add['aga_adjacency_tree_confidence'].shape[0]))
-    logg.m('removed adata.add["aga_adjacency_full_confidence"]', v=4)
+    logg.msg('removed adata.add["aga_adjacency_full_confidence"]', v=4)
     return adata if copy else None
 
 
@@ -469,7 +602,7 @@ class AGA(data_graph.DataGraph):
                                                segs_distances,
                                                iseg, new_tips)
             else:
-                logg.m('    split', ibranch + 1, v=4)
+                logg.msg('    split', ibranch + 1, v=4)
                 stop, segs_distances = self.do_split_constrained(segs, segs_tips,
                                                                  segs_adjacency,
                                                                  segs_adjacency_nodes,
@@ -558,7 +691,7 @@ class AGA(data_graph.DataGraph):
             isegs = np.argsort([len(seg) for seg in segs])[::-1]
             for iseg in isegs:
                 seg = segs[iseg]
-                logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+                logg.msg('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
                 jsegs = [jseg for jseg in range(len(segs)) if jseg != iseg]
                 dtip = np.zeros(len(seg))
                 for jseg in jsegs:
@@ -576,9 +709,9 @@ class AGA(data_graph.DataGraph):
                 ssegs_tips = [[new_itip], []]
                 sizes = [len(ssegs[0]), len(ssegs[1])]
                 if sizes[0] != 0 and sizes[1] != 0: break
-            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+            logg.msg('    new tip {} with distance {:.6}, constraint was {}'
                    .format(new_itip, dist_new_itip, itip), v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             if len(segs_tips[iseg]) > 0: ssegs_tips[1] = [segs_tips[iseg][0]]
             return iseg, seg, ssegs, ssegs_tips, sizes
@@ -635,7 +768,7 @@ class AGA(data_graph.DataGraph):
             itip = second_tips[iseg]
             third_itip = third_tips[iseg]
             seg = segs[iseg]
-            logg.m('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+            logg.msg('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
             size_0 = np.sum(new_seg)
             if False:
@@ -650,11 +783,11 @@ class AGA(data_graph.DataGraph):
             ssegs = [seg[new_seg], seg[~new_seg]]
             ssegs_tips = [[new_itip], []]
             sizes = [len(ssegs[0]), len(ssegs[1])]
-            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+            logg.msg('    new tip {} with distance {:.6}, constraint was {}'
                    .format(new_itip, 0.0, itip), v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
-            logg.m('    the scores where', scores, v=4)
+            logg.msg('    the scores where', scores, v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         def star_split(segs_tips):
@@ -684,11 +817,11 @@ class AGA(data_graph.DataGraph):
             ssegs_tips = [[new_tip], new_tips]
             sizes = [len(ssegs[0]), len(ssegs[1])]
             np.set_printoptions(precision=4)
-            logg.m('    new tip', new_tip, 'with distance', dist_max,
+            logg.msg('    new tip', new_tip, 'with distance', dist_max,
                    'using constraints {} with distances'
                    .format(new_tips), v=4)
-            logg.m('   ', dists, v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('   ', dists, v=4)
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
@@ -698,10 +831,11 @@ class AGA(data_graph.DataGraph):
                 segs_tips.append([])
             iseg = 0
             seg = segs[iseg]
-            logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+            logg.msg('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             new_tips = [seg[np.argmax(self.Dchosen[seg[0], seg])]]
             dtip_others = self.Dchosen[new_tips[0], seg]
             dists = [np.max(dtip_others)]
+            # it would be equivalent to just consider one pair of points
             for j in range(10):
                 new_tip = seg[np.argmax(dtip_others)]
                 if new_tip in new_tips: break
@@ -722,11 +856,11 @@ class AGA(data_graph.DataGraph):
             ssegs_tips = [[new_tip], new_tips]
             sizes = [len(ssegs[0]), len(ssegs[1])]
             np.set_printoptions(precision=4)
-            logg.m('    new tip', new_tip, 'with distance', dist_max,
+            logg.msg('    new tip', new_tip, 'with distance', dist_max,
                    'using constraints {} with distances'
                    .format(new_tips), v=4)
-            logg.m('   ', dists, v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('   ', dists, v=4)
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
@@ -813,7 +947,7 @@ class AGA(data_graph.DataGraph):
                 raise ValueError('unknown `self.flavor_develop`')
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
             # self.choose_largest_segment = False
-            logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
+            logg.msg('... group', iseg, 'score', score, 'n_points', len(seg),
                    '(too small)' if len(seg) < self.min_group_size else '', v=4)
             if len(seg) <= self.min_group_size: score = 0
             # write result
@@ -954,7 +1088,7 @@ class AGA(data_graph.DataGraph):
                 reference_point_in_jseg = measure_points_in_jseg[-1]
                 measure_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_jseg, segs[kseg]])])
                 distances.append(self.Dchosen[measure_points_in_jseg[-1], measure_points_in_kseg[-1]])
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
@@ -980,7 +1114,7 @@ class AGA(data_graph.DataGraph):
                 distances.append(closest_distance)
                 median_distance = np.median(self.Dchosen[measure_point_in_kseg, segs[jseg]])
                 median_distances.append(median_distance)
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '({})'.format(measure_points_in_jseg[-1]),
                        kseg, '({})'.format(measure_points_in_kseg[-1]),
                        '->', distances[-1], median_distance, v=4)
@@ -999,7 +1133,7 @@ class AGA(data_graph.DataGraph):
                 measure_points_in_jseg.append(measure_point_in_jseg)
                 closest_distance = 1/closest_similarity
                 distances.append(closest_distance)
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
@@ -1013,7 +1147,7 @@ class AGA(data_graph.DataGraph):
                             connectedness += 1
                 # distances.append(1./(connectedness+1))
                 distances.append(1./connectedness if connectedness != 0 else np.inf)
-            logg.m(' ', jseg, '-', kseg_list, '->', distances, v=4)
+            logg.msg(' ', jseg, '-', kseg_list, '->', distances, v=4)
         else:
             raise ValueError('unknown attachedness measure')
         return distances, median_distances, measure_points_in_jseg, measure_points_in_kseg
@@ -1053,7 +1187,7 @@ class AGA(data_graph.DataGraph):
                         connectedness[not_trunk] += score
         distances = [1/c if c > 0 else np.inf for c in connectedness]
         # distances = [1/(1+c) for c in connectedness]
-        logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
+        logg.msg('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
 
     def establish_new_connections(self, kseg_list, segs, segs_adjacency_nodes):
@@ -1084,7 +1218,7 @@ class AGA(data_graph.DataGraph):
                 connections += score
         # distance = 1/(1+connections)
         distance = 1/connections if connections > 0 else np.inf
-        logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
+        logg.msg('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
@@ -1131,7 +1265,7 @@ class AGA(data_graph.DataGraph):
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
-            logg.m('    group {} is now attached to {}'.format(jseg, kseg_min), v=4)
+            logg.msg('    group {} is now attached to {}'.format(jseg, kseg_min), v=4)
         # in case the segment we split should correspond to two "clusters", we
         # need to check whether the new segments connect to any of the other old
         # segments
@@ -1150,34 +1284,49 @@ class AGA(data_graph.DataGraph):
                 segs_distances[jseg_list, kseg] = distances
             if continue_after_distance_compute: continue
             idx = np.argmin(segs_distances[kseg, jseg_list])
+            # candidate for the segment to which we attach would attach the new
+            # segment
             jseg_min = jseg_list[idx]
-            logg.m('    consider connecting', kseg, 'to', jseg_min, v=4)
+            logg.msg('    consider connecting', kseg, 'to', jseg_min, v=4)
+            # if the closest segment is not among the two new segments
             if jseg_min not in kseg_list:
-                segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+                segs_adjacency_sparse = sp.sparse.lil_matrix(
+                    (len(segs), len(segs)), dtype=float)
                 for i, neighbors in enumerate(segs_adjacency):
                     segs_adjacency_sparse[i, neighbors] = 1
                 G = nx.Graph(segs_adjacency_sparse)
                 paths_all = nx.single_source_dijkstra_path(G, source=kseg)
+                # we can attach the new segment to an old segment
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
                     segs_adjacency[kseg].append(jseg_min)
-                    logg.m('        attaching new segment', kseg, 'at', jseg_min, v=4)
-                    # if we split the cluster, we should not attach kseg
+                    logg.msg('        attaching new segment',
+                           kseg, 'at', jseg_min, v=4)
+                    # if we establish the new connection with an old segment
+                    # we should not add a new connection to the second new segment
                     do_not_attach_ksegs_with_each_other = True
+                # we cannot attach it to an old segment as this
+                # would produce a cycle
                 else:
-                    logg.m('        cannot attach new segment', kseg, 'at', jseg_min,
+                    logg.msg('        cannot attach new segment',
+                           kseg, 'at', jseg_min,
                            '(would produce cycle)', v=4)
+                    # we still have the other new segment to inspect so it's not
+                    # a drama that we couldn't establish a new connection
                     if kseg != kseg_list[-1]:
-                        logg.m('            continue', v=4)
+                        logg.msg('            continue', v=4)
                         continue
+                    # we do not add add a new link
                     else:
-                        logg.m('            do not add another link', v=4)
+                        logg.msg('            do not add another link', v=4)
                         continue_after_distance_compute = True
             if jseg_min in kseg_list and not do_not_attach_ksegs_with_each_other:
                 segs_adjacency[jseg_min].append(kseg)
                 segs_adjacency[kseg].append(jseg_min)
+                # we're already done as we found the new connection
                 continue_after_distance_compute = True
-                logg.m('        attaching new segment', kseg, 'with new segment', jseg_min, v=4)
+                logg.msg('        attaching new segment',
+                         kseg, 'with new segment', jseg_min, v=4)
         return segs_distances
 
     def _do_split(self, Dseg, tips, seg_reference, old_tips):
@@ -1472,7 +1621,7 @@ class AGA(data_graph.DataGraph):
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            logg.m('... is root itself, never obtain significant correlation', v=4)
+            logg.msg('... is root itself, never obtain significant correlation', v=4)
         return imax
 
     def _kendall_tau_add(self, len_old, diff_pos, tau_old):
