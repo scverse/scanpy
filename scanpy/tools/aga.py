@@ -628,6 +628,8 @@ class AGA(data_graph.DataGraph):
         np.fill_diagonal(self.segs_adjacency_full_attachedness, 0)
 
     def compute_adjacency_confidence(self, full_attachedness, tree_adjacency, tree_based_confidence):
+        """Translates the attachedness measure into a confidence measure.
+        """
         if sp.sparse.issparse(tree_adjacency):
             tree_adjacency = [tree_adjacency[i].nonzero()[1] for i in range(tree_adjacency.shape[0])]
         segs_distances = 1/full_attachedness

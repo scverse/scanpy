@@ -285,7 +285,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 def log1p(data, copy=False):
     """Logarithmize the data matrix.
 
-    Computes `X = log(X + 1)`.
+    Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
 
     Parameters
     ----------
@@ -293,6 +293,10 @@ def log1p(data, copy=False):
         The data matrix.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
+
+    Returns
+    -------
+    Returns or updates data, depending on `copy`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data

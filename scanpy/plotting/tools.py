@@ -76,6 +76,7 @@ def pca(adata, **params):
 def pca_scatter(
         adata,
         color=None,
+        alpha=None,        
         groups=None,
         components=None,
         projection='2d',
@@ -951,8 +952,11 @@ def aga_path(
 
     Parameters
     ----------
+    as_heatmap : bool (default: False)
+        Plot the timeseries as heatmap.
     normalize_to_zero_one : bool, optional (default: True)
         Shift and scale the running average to [0, 1] per gene.
+
     """
     ax_was_none = ax is None
     if show_left_y_ticks is None:
@@ -1252,6 +1256,11 @@ def dpt_scatter(
 
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
     """Heatmap of pseudotime series.
+
+    Parameters
+    ----------
+    as_heatmap : bool (default: False)
+        Plot the timeseries as heatmap.
     """
     if adata.n_vars > 100:
         logg.warn('Plotting more than 100 genes might take some while,'
@@ -1259,7 +1268,7 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'], :40],
+        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices']],
                               var_names=adata.var_names,
                               highlightsX=adata.add['dpt_changepoints'])
     else:
@@ -1494,39 +1503,52 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
         utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def sim(adata, shuffle=False, show=None, save=None):
+def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
+        show=None, save=None):
     """Plot results of simulation.
 
     Parameters
     ----------
-    show : bool, optional (default: None)
-         Show the plot.
+    as_heatmap : bool (default: False)
+        Plot the timeseries as heatmap.
+    tmax_realization : int or None (default: False)
+        Number of samples in one realization of the time series. The data matrix
+        adata.X consists in concatenated realizations.
     shuffle : bool, optional (default: False)
-         Shuffle the data.
+        Shuffle the data.
     save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
+        If True or a str, save the figure. A string is appended to the
+        default filename.
+    show : bool, optional (default: None)
+        Show the plot.
     """
     from .. import utils as sc_utils
-    X = adata.X
-    genenames = adata.var_names
-    tmax = adata.add['tmax_write']
-    n_real = X.shape[0]/tmax
+    if tmax_realization is not None: tmax = tmax_realization
+    elif 'tmax_write' in adata.add: tmax = adata.add['tmax_write']
+    else: tmax = adata.n_smps
+    n_realizations = adata.n_smps/tmax
     if not shuffle:
-        timeseries(X,
-                   var_names=genenames,
-                   xlim=[0, 1.25*X.shape[0]],
-                   highlightsX=np.arange(tmax, n_real * tmax, tmax),
-                   xlabel='realizations / time steps')
+        if not as_heatmap:
+            timeseries(adata.X,
+                       var_names=adata.var_names,
+                       xlim=[0, 1.25*adata.n_smps],
+                       highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+                       xlabel='realizations')
+        else:
+            # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
+            timeseries_as_heatmap(adata.X,
+                                  var_names=adata.var_names,
+                                  highlightsX=np.arange(tmax, n_realizations*tmax, tmax))
+        pl.xticks(np.arange(0, n_realizations*tmax, tmax),
+                  np.arange(n_realizations).astype(int) + 1)
         utils.savefig_or_show('sim', save=save, show=show)
     else:
         # shuffled data
+        X = adata.X
         X, rows = sc_utils.subsample(X, seed=1)
         timeseries(X,
-                   var_names=genenames,
-                   xlim=[0, 1.25*X.shape[0]],
-                   highlightsX=np.arange(tmax, n_real * tmax, tmax),
+                   var_names=adata.var_names,
+                   xlim=[0, 1.25*adata.n_smps],
+                   highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
                    xlabel='index (arbitrary order)')
         utils.savefig_or_show('sim_shuffled', save=save, show=show)

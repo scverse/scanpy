@@ -182,11 +182,8 @@ def scatter(
         if categorical: categoricals.append(icolor_key)
         color_ids[icolor_key] = c
 
-    if right_margin is None:
-        if legend_loc == 'right margin':
-            right_margin = 0.5
-        # else:
-        #     right_margin = 0.1
+    if right_margin is None and len(categoricals) > 0:
+        if legend_loc == 'right margin': right_margin = 0.5
     if title is None and color_keys[0] is not None:
         title = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
 
