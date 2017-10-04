@@ -12,6 +12,7 @@ from matplotlib.figure import SubplotParams as sppars
 from matplotlib import rcParams
 
 from . import utils
+from . import palettes
 from .. import settings
 from .. import logging as logg
 
@@ -19,7 +20,6 @@ from .ann_data import scatter, violin
 from .ann_data import ranking
 from .utils import matrix
 from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-
 
 # ------------------------------------------------------------------------------
 # Visualization tools
@@ -76,7 +76,7 @@ def pca(adata, **params):
 def pca_scatter(
         adata,
         color=None,
-        alpha=None,        
+        alpha=None,
         groups=None,
         components=None,
         projection='2d',
@@ -593,6 +593,8 @@ def aga_graph(
 
     Parameters
     ----------
+    groups : str, list, dict, key for `adata.add`
+       The node groups labels.
     color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
         Besides cluster colors, lists and uniform colors this also acceppts
         {'degree_dashed', 'degree_solid'}.
@@ -661,21 +663,12 @@ def aga_graph(
     if title is None or isinstance(title, str): title = [title for name in groups]
 
     if ax is None:
-        # figsize = rcParams['figure.figsize']
-        # _, axs = pl.subplots(figsize=(len(color)*figsize[0], figsize[1]), ncols=len(color))
-        # pl.subplots_adjust(bottom=0.05)
-        # figure_width = rcParams['figure.figsize'][0] * len(color)
-        # top = 0.93
-        # fig, axs = pl.subplots(ncols=len(color),
-        #                        figsize=(figure_width, rcParams['figure.figsize'][1]),
-        #                        subplotpars=sppars(left=left_margin, bottom=0,
-        #                                           right=0.99, top=top))
         axs, _, _, _ = utils.setup_axes(colors=color)
     else:
         axs = ax
     if len(color) == 1 and not isinstance(axs, list): axs = [axs]
 
-    for icolor, color in enumerate(color):
+    for icolor, c in enumerate(color):
         pos = _aga_graph(
             adata,
             axs[icolor],
@@ -684,7 +677,7 @@ def aga_graph(
             layout=layout,
             root=root,
             rootlevel=rootlevel,
-            color=color,
+            color=c,
             groups=groups[icolor],
             fontsize=fontsize,
             node_size_scale=node_size_scale,
@@ -700,6 +693,7 @@ def aga_graph(
     if ext == 'pdf':
         logg.warn('Be aware that saving as pdf exagerates thin lines.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
+    if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
         return axs, pos if ax is None else pos
     else:
@@ -943,6 +937,8 @@ def aga_path(
         show_left_y_ticks=None,
         ytick_fontsize=None,
         show_nodes_twin=True,
+        palette_groups=None,
+        color_map_pseudotime=None,
         legend_fontsize=None,
         legend_fontweight=None,
         save=None,
@@ -952,11 +948,13 @@ def aga_path(
 
     Parameters
     ----------
+    palette_groups : list of colors or None, (default: None)
+        Ususally, use the same `sc.pl.palettes...` as used for coloring the
+        abstracted graph.
     as_heatmap : bool (default: False)
         Plot the timeseries as heatmap.
     normalize_to_zero_one : bool, optional (default: True)
         Shift and scale the running average to [0, 1] per gene.
-
     """
     ax_was_none = ax is None
     if show_left_y_ticks is None:
@@ -969,6 +967,10 @@ def aga_path(
     else:
         logg.m('did not find field "aga_groups_order_original" in adata.add, '
                'using aga_group integer ids instead', v=4)
+
+    if palette_groups is None:
+        palette_groups = palettes.default_20
+        palette_groups = utils.adjust_palette(palette_groups, len(adata.add['aga_groups_order']))
 
     def moving_average(a, n=n_avg):
         ret = np.cumsum(a, dtype=float)
@@ -983,6 +985,8 @@ def aga_path(
         X = []
     x_tick_locs = []
     x_tick_labels = []
+    groups = []
+    pseudotimes = []
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
@@ -992,10 +996,13 @@ def aga_path(
             idcs = idcs[idcs_group]
             if key in adata.smp_keys(): x += list(adata.smp[key][idcs])
             else: x += list(adata[:, key].X[idcs])
+            if ikey == 0: groups += [group for i in range(len(idcs))]
+            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'][idcs])
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
             if ikey == 0: x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
+            if ikey == 0: pseudotimes = moving_average(pseudotimes)
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
@@ -1009,11 +1016,11 @@ def aga_path(
                     label = orig_node_names[int(group)]
                 else:
                     label = group
-                if not isinstance(label, int):
-                    pl.text(x_tick_locs[igroup], -0.05*(igroup+1),
-                            label, transform=trans)
-                else:
-                    x_tick_labels.append(label)
+                # if not isinstance(label, int):
+                #     pl.text(x_tick_locs[igroup], -0.05*(igroup+1),
+                #             label, transform=trans)
+                # else:
+                x_tick_labels.append(label)
     if as_heatmap:
         img = ax.imshow(np.array(X), aspect='auto', interpolation='nearest',
                         cmap=color_map)
@@ -1029,21 +1036,47 @@ def aga_path(
             pl.legend(frameon=False, loc='center left',
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
-    ax.set_xticks(x_tick_locs)
-    ax.set_xticklabels(x_tick_labels)
     xlabel = (adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
               and adata.add['aga_groups_original'] != 'louvain_groups')
-              else 'AGA groups')
+              else 'groups $i$')
     if as_heatmap:
-        s = ytick_fontsize if ytick_fontsize is not None else rcParams['ytick.labelsize']
-        s += 1
-        ticklab = ax.xaxis.get_ticklabels()[0]
-        trans = ticklab.get_transform()
-        ax.set_xlabel('{}  '.format(xlabel), ha='right', va='top')
-        ax.xaxis.set_label_coords(0, 0, transform=trans)
-        # yticks = ax.get_yticks()
-        # ypos = yticks[-1] + yticks[-1] - yticks[-2]
-        # ax.text(0, ypos, '{}  '.format(xlabel), ha='right', va='center', size=s)
+        import matplotlib.colors
+        # groups bar
+        ax_bounds = ax.get_position().bounds
+        groups_axis = pl.axes([ax_bounds[0],
+                               ax_bounds[1],
+                               ax_bounds[2],
+                               - ax_bounds[3] / len(keys)])
+        groups = np.array(groups)[None, :]
+        groups_axis.imshow(groups, aspect='auto',
+                           interpolation="nearest",
+                           cmap=matplotlib.colors.ListedColormap(
+                               # the following line doesn't work because of normalization
+                               # adata.add['aga_groups_colors'])
+                               palette_groups,
+                               N=np.max(groups)+1))
+        pos = list(groups_axis.get_position().bounds)
+        groups_axis.set_yticklabels(['', xlabel, ''])
+        groups_axis.set_frame_on(False)
+        groups_axis.set_xticks([])
+        ax.set_xticks([])
+        # pseudotime bar
+        pseudotime_axis = pl.axes([ax_bounds[0],
+                                   ax_bounds[1] - ax_bounds[3] / len(keys),
+                                   ax_bounds[2],
+                                   - ax_bounds[3] / len(keys)])
+        pseudotimes = np.array(pseudotimes)[None, :]
+        if color_map_pseudotime is None:
+            color_map_pseudotime = 'RdBu_r'
+        img = pseudotime_axis.imshow(pseudotimes, aspect='auto',
+                               interpolation='nearest',
+                               cmap=color_map_pseudotime)
+        pos = list(pseudotime_axis.get_position().bounds)
+        pseudotime_axis.set_yticklabels(['', 'distance $d$', ''])
+        pseudotime_axis.set_frame_on(False)
+        pseudotime_axis.set_xticks([])
+        # pl.colorbar(img, ax=pseudotime_axis)
+        ax.set_xticks([])
     else:
         ax.set_xlabel(xlabel)
     if show_left_y_ticks:
@@ -1063,11 +1096,11 @@ def aga_path(
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
         pl.ylabel(label)
         utils.pimp_axis(pl.gca().get_yaxis())
-    if title is not None: pl.title(title)
+    if title is not None: ax.set_title(title)
     if show is None and not ax_was_none: show = False
     else: show = settings.autoshow if show is None else show
     utils.savefig_or_show('aga_path', show=show, save=save)
-    return ax if ax_was_none else None
+    return ax, groups if ax_was_none else None
 
 
 def aga_attachedness(

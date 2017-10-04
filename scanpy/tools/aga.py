@@ -174,7 +174,6 @@ def aga(adata,
               n_neighbors=n_neighbors,
               n_pcs=n_pcs,
               n_dcs=n_dcs,
-              min_group_size=20/resolution,
               n_jobs=n_jobs,
               tree_based_confidence=tree_based_confidence,
               # we do not need to recompute things both in the louvain
@@ -211,6 +210,7 @@ def aga(adata,
     else:
         full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
+    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
     adata.add['aga_adjacency_full_confidence'] = full_confidence
     adata.add['aga_adjacency_tree_confidence'] = tree_confidence
 
@@ -478,7 +478,7 @@ class AGA(data_graph.DataGraph):
                  n_neighbors=30,
                  n_pcs=50,
                  n_dcs=10,
-                 min_group_size=20,
+                 min_group_size=1,
                  tree_based_confidence=True,
                  minimal_distance_evidence=0.95,
                  recompute_pca=False,
@@ -879,6 +879,7 @@ class AGA(data_graph.DataGraph):
         segs.insert(iseg, ssegs[trunk])
         segs_tips.insert(iseg, ssegs_tips[trunk])
         if self.clusters_precomputed_names:
+            # there is one partition that corresponds to all other partitions...
             iseg_name = ' '.join(np.setdiff1d(self.clusters_precomputed_names,
                                               [n for n in self.segs_names_original]
                                               + [clus_name]))

@@ -224,13 +224,19 @@ def default_palette(palette=None):
 
 
 def adjust_palette(palette, length):
-    if len(palette.by_key()['color']) < length:
+    islist = False
+    if isinstance(palette, list):
+        islist = True
+    if ((islist and len(palette) < length)
+       or (not isinstance(palette, list) and len(palette.by_key()['color']) < length)):
         if length <= 28:
             palette = palettes.default_26
         else:
             palette = palettes.default_64
         logg.m('... updating the color palette to provide enough colors')
-        return cycler(color=palette)
+        return palette if islist else cycler(color=palette)
+    elif islist:
+        return palette
     elif not isinstance(palette, Cycler):
         return cycler(color=palette)
     else:

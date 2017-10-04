@@ -461,7 +461,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
             data.append(np.array(line_list, dtype=dtype))
         break
     # if row names are just integers
-    if data[0].size != data[1].size:
+    if len(data) > 1 and data[0].size != data[1].size:
         logg.info('    assuming first row stores column names and first column row names')
         first_column_names = True
         col_names = np.array(data[0]).astype(int).astype(str)
