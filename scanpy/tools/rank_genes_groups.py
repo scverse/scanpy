@@ -89,9 +89,9 @@ def rank_genes_groups(
         mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
         # Make a more conservative assumption on the variance reduction
         # in the reference. Instead of this
-        # ns_rest = np.where(mask_rest)[0].size
+        ns_rest = np.where(mask_rest)[0].size
         # use this
-        ns_rest = ns[igroup]
+        # ns_rest = ns[igroup]
         denominator = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
         denominator[np.flatnonzero(denominator == 0)] = np.nan
         zscores = (means[igroup] - mean_rest) / denominator
