@@ -13,55 +13,53 @@ from ..preprocessing import simple
 
 def rank_genes_groups(
         adata,
-        groupings,
+        grouping,
         groups='all',
-        n_genes=50,
+        n_genes=100,
         compute_distribution=False,
         only_positive=True,
         copy=False):
     """Rank genes according to differential expression [Wolf17]_.
 
-    `[source] <tl.rank_genes_groups_>`__ Rank genes by differential expression.
+    Rank genes by differential expression. By default, a t-test-like ranking is
+    used, in which means are normalized with variances. Soon, a Wilcoxon-rank
+    test and other alternatives will be provided.
 
-    *Examples:* See this `use case <17-05-05_>`__.
-
-    .. _tl.rank_genes_groups: https://github.com/theislab/scanpy/tree/master/scanpy/tools/rank_genes_groups.py
-    
     Parameters
     ----------
-    adata : AnnData
+    adata : `AnnData`
         Annotated data matrix.
-    grouping : str
+    grouping : `str`
         The key of the sample grouping to consider.
-    groups : str, list, np.ndarray, optional (default: 'all')
-        Subset of categories - e.g. 'C1,C2,C3' or ['C1', 'C2', 'C3'] - to which
-        comparison shall be restricted. If not provided all categories will be
-        compared to all other categories.
-    n_genes : int (default: 50)
+    groups : `str`, `list`, optional (default: `'all'`)
+        Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
+        be restricted. If not passed, all categories will be compared to all
+        other categories.
+    n_genes : `int` (default: 100)
         How many genes to rank by default.
-    compute_distribution : bool
-        If True, also computes the distribution for top-ranked genes,
-        which can be visualized using sc.pl.rank_genes_groups_violin(adata).
+    compute_distribution : `bool`
+        If `True`, also computes the distribution for top-ranked genes, which
+        can be visualized using `sc.pl.rank_genes_groups_violin(adata)`.
 
-    Writes to adata
-    ---------------
-    rank_genes_groups_zscores : np.ndarray
+    Returns
+    -------
+    rank_genes_groups_zscores : np.ndarray of dtype float (adata.add)
         Array of shape (number of comparisons) × (number of genes) storing the
         zscore of the each gene for each test.
-    rank_genes_groups_rankings_names : np.ndarray of dtype str
+    rank_genes_groups_rankings_names : np.ndarray of dtype str (adata.add)
         Array of shape (number of comparisons). Stores the labels for each comparison,
         for example "C1 vs. C2" when comparing category 'C1' with 'C2'.
-    rank_genes_groups_rankings_geneidcs : np.ndarray
+    rank_genes_groups_rankings_geneidcs : np.ndarray of dtype int (adata.add)
         Array of shape (number of comparisons) × (number of genes) storing gene
         indices that sort them according to decreasing absolute value of the
         zscore.
     """
-    logg.m('find differentially expressed genes', r=True)
+    logg.info('find differentially expressed genes', r=True)
     adata = adata.copy() if copy else adata
     n_genes_user = n_genes
     utils.check_adata(adata)
     # for clarity, rename variable
-    group_key = groupings
+    group_key = grouping
     groups_order = groups
     if isinstance(groups_order, list) and isinstance(groups_order[0], int):
         groups_order = [str(n) for n in groups_order]
@@ -91,7 +89,7 @@ def rank_genes_groups(
         mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
         # Make a more conservative assumption on the variance reduction
         # in the reference. Instead of this
-        # ns_rest = np.where(mask)[0].size
+        # ns_rest = np.where(mask_rest)[0].size
         # use this
         ns_rest = ns[igroup]
         denominator = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
