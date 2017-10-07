@@ -440,6 +440,7 @@ def aga(
         left_margin=0.05,
         show=None,
         save=None,
+        ext=None,
         title_graph=None,
         groups_graph=None,
         color_graph=None,
@@ -451,10 +452,8 @@ def aga(
     See `sc.pl.aga_path` for visualizing gene changes along paths through the
     abstracted graph.
     """
-    figsize = rcParams['figure.figsize']
-    # _, axs = pl.subplots(figsize=(2*figsize[0], figsize[1]), ncols=2)
-    # pl.subplots_adjust(left=left_margin, bottom=0.05)
-    axs, _, _, _ = utils.setup_axes(colors=[0, 1])  # dummy colors
+    axs, _, _, _ = utils.setup_axes(colors=[0, 1],
+                                    right_margin=right_margin)  # dummy colors
     aga_scatter(adata,
                 basis=basis,
                 color=color,
@@ -467,14 +466,15 @@ def aga(
                 legend_fontweight=legend_fontweight,
                 color_map=color_map,
                 palette=palette,
-                right_margin=right_margin,
+                right_margin=None,
                 size=size,
                 title=title,
                 ax=axs[0],
-                show=False)
-    aga_graph(adata, ax=axs[1], show=False, title=title_graph,
+                show=False,
+                save=False)
+    aga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
-    utils.savefig_or_show('aga', show=show, save=save)
+    utils.savefig_or_show('aga', show=show, save=save, ext=ext)
     return axs
 
 def aga_scatter(
