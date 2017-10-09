@@ -546,8 +546,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     if issparse(adata.X):
         adata.X = adata.X.toarray()
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-    # regress on categorical variable
-    if adata.smp[keys[0]].dtype.char == np.dtype('U').char:
+    # regress on a single categorical variable
+    if keys[0] in adata.smp_keys() and adata.smp[keys[0]].dtype.char == np.dtype('U').char:
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
@@ -562,7 +562,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
     else:
-        regressors = np.array([adata.smp[key] for key in keys]).T
+        regressors = np.array([adata.smp[key] if key in adata.smp_keys() else adata[:, key].X for key in keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
