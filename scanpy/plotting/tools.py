@@ -1053,8 +1053,8 @@ def aga_path(
                            cmap=matplotlib.colors.ListedColormap(
                                # the following line doesn't work because of normalization
                                # adata.add['aga_groups_colors'])
-                               palette_groups,
-                               N=np.max(groups)+1))
+                               palette_groups[np.min(groups).astype(int):],
+                               N=np.max(groups)+1-np.min(groups)))
         pos = list(groups_axis.get_position().bounds)
         groups_axis.set_yticklabels(['', xlabel, ''])
         groups_axis.set_frame_on(False)
@@ -1067,10 +1067,10 @@ def aga_path(
                                    - ax_bounds[3] / len(keys)])
         pseudotimes = np.array(pseudotimes)[None, :]
         if color_map_pseudotime is None:
-            color_map_pseudotime = 'RdBu_r'
+            color_map_pseudotime = 'Greys'
         img = pseudotime_axis.imshow(pseudotimes, aspect='auto',
-                               interpolation='nearest',
-                               cmap=color_map_pseudotime)
+                                     interpolation='nearest',
+                                     cmap=color_map_pseudotime)
         pos = list(pseudotime_axis.get_position().bounds)
         pseudotime_axis.set_yticklabels(['', 'distance $d$', ''])
         pseudotime_axis.set_frame_on(False)
