@@ -216,11 +216,16 @@ def rank_genes_groups(
             rankings_gene_names.append(adata.var_names[global_indices])
             if compute_distribution:
                 # remove line: current mask already available
+                # Add calculation of means, var: (Unnecessary for wilcoxon if compute distribution=False)
+                mean, vars = simple._get_mean_var(X[mask])
+                mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
+                denominator = np.sqrt(vars/ ns[imask] + var_rest / ns_rest[imask])
+                denominator[np.flatnonzero(denominator == 0)] = np.nan
                 for gene_counter in range(n_genes_user):
                     gene_idx = global_indices[gene_counter]
                     X_col = X[mask, gene_idx]
                     if issparse(X): X_col = X_col.toarray()[:, 0]
-                    identifier = _build_identifier(groupby, groups_order[igroup],
+                    identifier = _build_identifier(groupby, groups_order[imask],
                                                    gene_counter, adata.var_names[gene_idx])
                     full_col = np.empty(adata.n_smps)
                     full_col[:] = np.nan
