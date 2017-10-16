@@ -215,7 +215,7 @@ def rank_genes_groups(
             rankings_gene_zscores.append(zscores[global_indices])
             rankings_gene_names.append(adata.var_names[global_indices])
             if compute_distribution:
-                mask = groups_masks[igroup]
+                # remove line: current mask already available
                 for gene_counter in range(n_genes_user):
                     gene_idx = global_indices[gene_counter]
                     X_col = X[mask, gene_idx]
@@ -227,7 +227,6 @@ def rank_genes_groups(
                     full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
                     adata.smp[identifier] = full_col
 
-    # TODO: Check if compute distributions can be unified
     # Here ends the test-specific part, do logging
 
 
