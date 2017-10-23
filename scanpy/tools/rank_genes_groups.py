@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from math import sqrt, floor
 from scipy.sparse import issparse
+from scipy.stats import rankdata
+from scipy.stats import norm
 from .. import utils
 from .. import logging as logg
 from ..preprocessing import simple
@@ -95,7 +97,7 @@ def rank_genes_groups(
 
     # Here begins the part that is test-specific.
 
-    if test_type not in {'t_test','wilcoxon'}:
+    if test_type not in {'t_test','wilcoxon', 'wilcoxon2', 'wilcoxon3'}:
         # TODO: Print Error Message in logging
         print('Error: test_type should be either "wilcoxon" or "t_test". T-test is being used as default' )
         # For convenience, and to avoid total collapse, set test_type to t_test
@@ -195,9 +197,15 @@ def rank_genes_groups(
                 batch.append(n_genes - 1)
             left = 0
             for batch_index, right in enumerate(batch):
-                df1 = pd.DataFrame(data=X[mask, left:right].todense())
-                df2 = pd.DataFrame(data=X[mask_rest, left:right].todense(),
-                                   index=np.arange(start=n_active, stop=n_active + m_active))
+                # Check if issparse is true
+                if issparse(X):
+                    df1 = pd.DataFrame(data=X[mask, left:right].todense())
+                    df2 = pd.DataFrame(data=X[mask_rest, left:right].todense(),
+                                       index=np.arange(start=n_active, stop=n_active + m_active))
+                else:
+                    df1 = pd.DataFrame(data=X[mask, left:right])
+                    df2 = pd.DataFrame(data=X[mask_rest, left:right],
+                                       index=np.arange(start=n_active, stop=n_active + m_active))
                 df1 = df1.append(df2)
                 ranks = df1.rank()
                 # sum up adjusted_ranks to calculate W_m,n
@@ -209,6 +217,7 @@ def rank_genes_groups(
                 # print('Finished inner loup for current group')
             zscores=(zscores-(n_active*(n_active+m_active+1)/2))/sqrt((n_active*m_active*(n_active+m_active+1)/12))
             zscores = zscores if only_positive else np.abs(zscores)
+            zscores[np.isnan(zscores)] = 0
             partition = np.argpartition(zscores, -n_genes_user)[-n_genes_user:]
             partial_indices = np.argsort(zscores[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
@@ -231,6 +240,174 @@ def rank_genes_groups(
                     full_col[:] = np.nan
                     full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
                     adata.smp[identifier] = full_col
+    elif test_type is 'wilcoxon2':
+        ns_rest = np.zeros(n_groups, dtype=int)
+        for imask, mask in enumerate(groups_masks):
+            # print('Start group' + str(imask))
+            if group_reference is None:
+                mask_rest = ~groups_masks[imask]
+            else:
+                if imask == ireference:
+                    continue
+                else:
+                    mask_rest = groups_masks[ireference]
+            ns_rest[imask] = np.where(mask_rest)[0].size
+            if ns_rest[imask] <= 25 or ns[imask] <= 25:
+                # TODO: Change print command into logging or remove
+                print("Warning: Few observations in a group for normal approximations (<=25). Consider regrouping")
+            n_active = ns[imask]
+            m_active = ns_rest[imask]
+            # Create union of both masks
+            fullmask=~np.multiply(~mask,~mask_rest)
+            help=mask[fullmask]
+            print(fullmask.shape)
+            print(help.shape)
+            ranks= np.apply_along_axis(rankdata,axis=0,arr=X[fullmask].todense())
+            print(type(ranks))
+            print(ranks.shape)
+            # sum up adjusted_ranks to calculate W_m,n
+            zscores = sum(ranks[help,:])
+            print(zscores.shape)
+            # Now calculate the correct ranks.
+
+            # Here, nothing should change for mannwhitneyu implementation
+            zscores = (zscores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
+                (n_active * m_active * (n_active + m_active + 1) / 12))
+            zscores = zscores if only_positive else np.abs(zscores)
+            partition = np.argpartition(zscores, -n_genes_user)[-n_genes_user:]
+            partial_indices = np.argsort(zscores[partition])[::-1]
+            global_indices = reference_indices[partition][partial_indices]
+            rankings_gene_zscores.append(zscores[global_indices])
+            rankings_gene_names.append(adata.var_names[global_indices])
+            if compute_distribution:
+                # remove line: current mask already available
+                # Add calculation of means, var: (Unnecessary for wilcoxon if compute distribution=False)
+                mean, vars = simple._get_mean_var(X[mask])
+                mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
+                denominator = np.sqrt(vars / ns[imask] + var_rest / ns_rest[imask])
+                denominator[np.flatnonzero(denominator == 0)] = np.nan
+                for gene_counter in range(n_genes_user):
+                    gene_idx = global_indices[gene_counter]
+                    X_col = X[mask, gene_idx]
+                    if issparse(X): X_col = X_col.toarray()[:, 0]
+                    identifier = _build_identifier(groupby, groups_order[imask],
+                                                   gene_counter, adata.var_names[gene_idx])
+                    full_col = np.empty(adata.n_smps)
+                    full_col[:] = np.nan
+                    full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
+                    adata.smp[identifier] = full_col
+    elif test_type is 'wilcoxon3':
+        # TODO: Add scientific justifications
+        # Limit maximal RAM that is required by the calculation. Currently set fixed to roughly 100 MByte
+        # Tried to find a reasonable trade-off between run-time and storage capacity.
+        CONST_MAX_SIZE = 10000000
+        ns_rest = np.zeros(n_groups, dtype=int)
+        # initialize space for z-scores
+        zscores = np.zeros(n_genes)
+        # First loop: Loop over all genes
+        if group_reference is not None:
+            for imask, mask in enumerate(groups_masks):
+                # print('Start group' + str(imask))
+                if imask == ireference:
+                    continue
+                else:
+                    mask_rest = groups_masks[ireference]
+                ns_rest[imask] = np.where(mask_rest)[0].size
+                if ns_rest[imask] <= 25 or ns[imask] <= 25:
+                    # TODO: Change print command into logging or remove
+                    print("Warning: Few observations in a group for normal approximations (<=25). Consider regrouping")
+                n_active = ns[imask]
+                m_active = ns_rest[imask]
+                # print(str(n_active))
+                # print(str(m_active))
+                # Now calculate blocks. Then (potentially) parallelize (loop for a start)
+                batch = []
+                n_genes_max_batch = floor(CONST_MAX_SIZE / (n_active + m_active))
+                if n_genes_max_batch < n_genes - 1:
+                    batch_index = n_genes_max_batch
+                    while batch_index < n_genes - 1:
+                        batch.append(batch_index)
+                        batch_index = batch_index + n_genes_max_batch
+                    batch.append(n_genes - 1)
+                else:
+                    batch.append(n_genes - 1)
+                left = 0
+                for batch_index, right in enumerate(batch):
+                    # Check if issparse is true
+                    if issparse(X):
+                        df1 = pd.DataFrame(data=X[mask, left:right].todense())
+                        df2 = pd.DataFrame(data=X[mask_rest, left:right].todense(),
+                                           index=np.arange(start=n_active, stop=n_active + m_active))
+                    else:
+                        df1 = pd.DataFrame(data=X[mask, left:right])
+                        df2 = pd.DataFrame(data=X[mask_rest, left:right],
+                                           index=np.arange(start=n_active, stop=n_active + m_active))
+                    df1 = df1.append(df2)
+                    ranks = df1.rank()
+                    # sum up adjusted_ranks to calculate W_m,n
+                    zscores[left:right] = np.sum(ranks.loc[0:n_active, :])
+                    left = right + 1
+                    # print('concluded batch')
+        else:
+            zscores=np.zeros((n_groups,n_genes))
+            batch = []
+            n_cells=X.shape[0]
+            n_genes_max_batch = floor(CONST_MAX_SIZE / n_cells)
+            if n_genes_max_batch < n_genes - 1:
+                batch_index = n_genes_max_batch
+                while batch_index < n_genes - 1:
+                    batch.append(batch_index)
+                    batch_index = batch_index + n_genes_max_batch
+                batch.append(n_genes - 1)
+            else:
+                batch.append(n_genes - 1)
+            left = 0
+            for batch_index, right in enumerate(batch):
+                # Check if issparse is true
+                if issparse(X):
+                    df1 = pd.DataFrame(data=X[:, left:right].todense())
+                else:
+                    df1 = pd.DataFrame(data=X[:, left:right])
+                ranks = df1.rank()
+                # sum up adjusted_ranks to calculate W_m,n
+                for imask, mask in enumerate(groups_masks):
+                    zscores[imask,left:right] = np.sum(ranks.loc[mask, :])
+                left = right + 1
+                # print('concluded batch')
+
+
+                # This can be done universally for all
+                # print('Finished inner loup for current group')
+            for imask, mask in enumerate(groups_masks):
+
+                zscores[imask,:] = (zscores[imask,:] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
+                    (ns[imask] * (n_cells-ns[imask]) * (n_cells + 1) / 12))
+                zscores = zscores if only_positive else np.abs(zscores)
+                zscores[np.isnan(zscores)] = 0
+                partition = np.argpartition(zscores[imask,:], -n_genes_user)[-n_genes_user:]
+                partial_indices = np.argsort(zscores[imask,partition])[::-1]
+                global_indices = reference_indices[partition][partial_indices]
+                rankings_gene_zscores.append(zscores[imask, global_indices])
+                rankings_gene_names.append(adata.var_names[global_indices])
+                if compute_distribution:
+                    # remove line: current mask already available
+                    # Add calculation of means, var: (Unnecessary for wilcoxon if compute distribution=False)
+                    mean, vars = simple._get_mean_var(X[mask])
+                    mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
+                    denominator = np.sqrt(vars / ns[imask] + var_rest / (n_cells-ns[imask]))
+                    denominator[np.flatnonzero(denominator == 0)] = np.nan
+                    for gene_counter in range(n_genes_user):
+                        gene_idx = global_indices[gene_counter]
+                        X_col = X[mask, gene_idx]
+                        if issparse(X): X_col = X_col.toarray()[:, 0]
+                        identifier = _build_identifier(groupby, groups_order[imask],
+                                                       gene_counter, adata.var_names[gene_idx])
+                        full_col = np.empty(adata.n_smps)
+                        full_col[:] = np.nan
+                        full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
+                        adata.smp[identifier] = full_col
+
+
 
     # Here ends the test-specific part, do logging
 
