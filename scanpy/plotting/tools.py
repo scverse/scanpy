@@ -843,11 +843,17 @@ def _aga_graph(
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
     if export_to_dot:
-        for count, n in enumerate(nx_g_solid.nodes_iter()):
-            nx_g_solid.node[count]['label'] = groups[count]
-            nx_g_solid.node[count]['color'] = color[count]
-        logg.msg('exporting to {}'.format(settings.writedir + '/aga_graph.dot'), v=1)
-        nx.drawing.nx_pydot.write_dot(nx_g_dashed, settings.writedir + '/aga_graph.dot')
+        for count, n in enumerate(nx_g_dashed.nodes_iter()):
+            nx_g_dashed.node[count]['label'] = groups[count]
+            nx_g_dashed.node[count]['color'] = color[count]
+            nx_g_dashed.node[count]['viz'] = {'position': {'x': 100*pos[count][0], 'y': 100*pos[count][1], 'z': 0}}
+        logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph...'), v=1)
+        nx.drawing.nx_pydot.write_dot(nx_g_dashed, settings.writedir + 'aga_graph.dot')
+        nx.write_gexf(nx_g_dashed, settings.writedir + 'aga_graph.gexf')
+        # from ..exporting import GEXFWriter
+        # writer = GEXFWriter()
+        # writer.add_graph(nx_g_dashed)
+        # writer.write(settings.writedir + 'aga_graph.gexf')
 
     # deal with empty graph
     ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')

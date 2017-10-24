@@ -281,6 +281,26 @@ def check_adata(adata, verbosity=-3):
     return adata
 
 
+def moving_average(a, n):
+    """Moving average over one-dimensional array.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        One-dimensional array.
+    n : int
+        Number of entries to average over. n=2 means averaging over the currrent
+        the previous entry.
+
+    Returns
+    -------
+    An array view storing the moving average.
+    """
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
+
 # --------------------------------------------------------------------------------
 # Deal with tool parameters
 # --------------------------------------------------------------------------------
