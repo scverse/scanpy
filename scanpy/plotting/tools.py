@@ -588,7 +588,7 @@ def aga_graph(
         cmap=None,
         frameon=True,
         return_pos=False,
-        export_to_dot=False,
+        export_to_gexf=False,
         show=None,
         save=None,
         ax=None):
@@ -617,7 +617,16 @@ def aga_graph(
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
         Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
         'eq_tree' use the igraph layout function. All other igraph layouts are
-        also permitted.
+        also permitted. See also parameter `pos`.
+    pos : filename, array-like, optional (default: None)
+        Two-column array/list storing the x and y coordinates for drawing.
+        Otherwise, path to ``.gdf`` file that has been exported from Gephi or a
+        similar graph visualization software.
+    export_to_gexf : boolean, optional (default: None)
+        Export to gexf format to be read by graph visualization programs such as
+        Gephi.
+    return_pos : bool, optional (default: False)
+        Return the positions.
     root : int, str or list of int, optional (default: 0)
         The index of the root node or root nodes. if this is a non-empty vector
         then the supplied node IDs are used as the roots of the trees (or a
@@ -630,12 +639,6 @@ def aga_graph(
         (or a single tree if the graph is connected. If this is None or an empty
         list, the root vertices are automatically calculated based on
         topological sorting, performed with the opposite of the mode argument.
-    pos : array-like, optional (default: None)
-        Two-column array storing the x and y coordinates for drawing.
-    export_to_dot : boolean, optional (default: None)
-        Export to Graphviz dot format.
-    return_pos : bool, optional (default: False)
-        Return the positions.
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
@@ -694,10 +697,10 @@ def aga_graph(
             cmap=cmap,
             title=title[icolor],
             random_state=0,
-            export_to_dot=export_to_dot,
+            export_to_gexf=export_to_gexf,
             pos=pos)
     if ext == 'pdf':
-        logg.warn('Be aware that saving as pdf exagerates thin lines.')
+        logg.warn('Be aware that saving as pdf exagerates thin lines, use "svg" instead.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
@@ -726,7 +729,7 @@ def _aga_graph(
         frameon=True,
         min_edge_width=None,
         max_edge_width=None,
-        export_to_dot=False,
+        export_to_gexf=False,
         random_state=0):
     if groups is not None and isinstance(groups, str) and groups not in adata.smp_keys():
         raise ValueError('Groups {} are not in adata.smp.'.format(groups))
@@ -817,6 +820,20 @@ def _aga_graph(
                                  'Try another `layout`, e.g., {\'fr\'}.')
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     else:
+        if isinstance(pos, str):
+            if not pos.endswith('.gdf'):
+                raise ValueError('Currently only supporting reading positions from .gdf files.'
+                                 'Consider generating them using, for instance, Gephi.')
+            s = ''  # read the node definition from the file
+            with open(pos) as f:
+                f.readline()
+                for line in f:
+                    if line.startswith('edgedef>'):
+                        break
+                    s += line
+            from io import StringIO
+            df = pd.read_csv(StringIO(s), header=-1)
+            pos = df[[4, 5]].values
         pos_array = pos
         # convert to dictionary
         pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
@@ -842,18 +859,13 @@ def _aga_graph(
         widths = np.clip(widths, min_edge_width, max_edge_width)
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
-    if export_to_dot:
+    if export_to_gexf:
         for count, n in enumerate(nx_g_dashed.nodes_iter()):
             nx_g_dashed.node[count]['label'] = groups[count]
             nx_g_dashed.node[count]['color'] = color[count]
             nx_g_dashed.node[count]['viz'] = {'position': {'x': 100*pos[count][0], 'y': 100*pos[count][1], 'z': 0}}
-        logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph...'), v=1)
-        nx.drawing.nx_pydot.write_dot(nx_g_dashed, settings.writedir + 'aga_graph.dot')
+        logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph.gexf'), v=1)
         nx.write_gexf(nx_g_dashed, settings.writedir + 'aga_graph.gexf')
-        # from ..exporting import GEXFWriter
-        # writer = GEXFWriter()
-        # writer.add_graph(nx_g_dashed)
-        # writer.write(settings.writedir + 'aga_graph.gexf')
 
     # deal with empty graph
     ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
