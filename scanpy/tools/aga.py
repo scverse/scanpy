@@ -113,16 +113,16 @@ doc_string_returns = dedent("""\
 
 
 def aga(adata,
-        node_groups='louvain',
-        n_nodes=None,
         n_neighbors=30,
         n_pcs=50,
         n_dcs=10,
+        node_groups='louvain',
         resolution=1,
         random_state=0,
         attachedness_measure='connectedness',
         tree_detection='min_span_tree',
         tree_based_confidence=True,
+        n_nodes=None,
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
