@@ -262,7 +262,10 @@ def rank_genes_groups(
             help=mask[fullmask]
             print(fullmask.shape)
             print(help.shape)
-            ranks= np.apply_along_axis(rankdata,axis=0,arr=X[fullmask].todense())
+            if issparse(X):
+                ranks= np.apply_along_axis(rankdata,axis=0,arr=X[fullmask].todense())
+            else:
+                ranks = np.apply_along_axis(rankdata, axis=0, arr=X[fullmask])
             print(type(ranks))
             print(ranks.shape)
             # sum up adjusted_ranks to calculate W_m,n
