@@ -309,7 +309,7 @@ def aga_compare_paths(adata1, adata2,
     import networkx as nx
     g1 = nx.Graph(adata1.add[adjacency_key])
     g2 = nx.Graph(adata2.add[adjacency_key])
-    leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
+    leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
     asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
     asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])

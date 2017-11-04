@@ -860,7 +860,7 @@ def _aga_graph(
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
     if export_to_gexf:
-        for count, n in enumerate(nx_g_dashed.nodes_iter()):
+        for count, n in enumerate(nx_g_dashed.nodes()):
             nx_g_dashed.node[count]['label'] = groups[count]
             nx_g_dashed.node[count]['color'] = color[count]
             nx_g_dashed.node[count]['viz'] = {'position': {'x': 100*pos[count][0], 'y': 100*pos[count][1], 'z': 0}}
@@ -894,7 +894,7 @@ def _aga_graph(
         groups_sizes = np.ones(len(groups))
     median_group_size = np.median(groups_sizes)
     force_labels_to_front = True  # TODO: solve this differently!
-    for count, n in enumerate(nx_g_solid.nodes_iter()):
+    for count, n in enumerate(nx_g_solid.nodes()):
         pie_size = base_pie_size
         pie_size *= np.power(groups_sizes[count] / median_group_size,
                              node_size_power)
@@ -928,7 +928,7 @@ def _aga_graph(
     # TODO: this is a terrible hack, but if we use the solution above (``not
     # force_labels_to_front``), labels get hidden behind pies
     if force_labels_to_front and groups is not None:
-        for count, n in enumerate(nx_g_solid.nodes_iter()):
+        for count, n in enumerate(nx_g_solid.nodes()):
             # all copy and paste from above
             pie_size = base_pie_size
             pie_size *= np.power(groups_sizes[count] / median_group_size,
