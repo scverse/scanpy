@@ -5,6 +5,7 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 """
 
 import numpy as np
+import pandas as pd
 import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
@@ -13,6 +14,7 @@ from matplotlib import rcParams
 
 from . import utils
 from . import palettes
+from .. import utils as sc_utils
 from .. import settings
 from .. import logging as logg
 
@@ -586,6 +588,7 @@ def aga_graph(
         cmap=None,
         frameon=True,
         return_pos=False,
+        export_to_gexf=False,
         show=None,
         save=None,
         ax=None):
@@ -614,7 +617,16 @@ def aga_graph(
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
         Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
         'eq_tree' use the igraph layout function. All other igraph layouts are
-        also permitted.
+        also permitted. See also parameter `pos`.
+    pos : filename, array-like, optional (default: None)
+        Two-column array/list storing the x and y coordinates for drawing.
+        Otherwise, path to ``.gdf`` file that has been exported from Gephi or a
+        similar graph visualization software.
+    export_to_gexf : boolean, optional (default: None)
+        Export to gexf format to be read by graph visualization programs such as
+        Gephi.
+    return_pos : bool, optional (default: False)
+        Return the positions.
     root : int, str or list of int, optional (default: 0)
         The index of the root node or root nodes. if this is a non-empty vector
         then the supplied node IDs are used as the roots of the trees (or a
@@ -627,10 +639,6 @@ def aga_graph(
         (or a single tree if the graph is connected. If this is None or an empty
         list, the root vertices are automatically calculated based on
         topological sorting, performed with the opposite of the mode argument.
-    pos : array-like, optional (default: None)
-        Two-column array storing the x and y coordinates for drawing.
-    return_pos : bool, optional (default: False)
-        Return the positions.
     title : str, optional (default: None)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
@@ -689,9 +697,10 @@ def aga_graph(
             cmap=cmap,
             title=title[icolor],
             random_state=0,
+            export_to_gexf=export_to_gexf,
             pos=pos)
     if ext == 'pdf':
-        logg.warn('Be aware that saving as pdf exagerates thin lines.')
+        logg.warn('Be aware that saving as pdf exagerates thin lines, use "svg" instead.')
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
@@ -720,6 +729,7 @@ def _aga_graph(
         frameon=True,
         min_edge_width=None,
         max_edge_width=None,
+        export_to_gexf=False,
         random_state=0):
     if groups is not None and isinstance(groups, str) and groups not in adata.smp_keys():
         raise ValueError('Groups {} are not in adata.smp.'.format(groups))
@@ -810,6 +820,20 @@ def _aga_graph(
                                  'Try another `layout`, e.g., {\'fr\'}.')
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     else:
+        if isinstance(pos, str):
+            if not pos.endswith('.gdf'):
+                raise ValueError('Currently only supporting reading positions from .gdf files.'
+                                 'Consider generating them using, for instance, Gephi.')
+            s = ''  # read the node definition from the file
+            with open(pos) as f:
+                f.readline()
+                for line in f:
+                    if line.startswith('edgedef>'):
+                        break
+                    s += line
+            from io import StringIO
+            df = pd.read_csv(StringIO(s), header=-1)
+            pos = df[[4, 5]].values
         pos_array = pos
         # convert to dictionary
         pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
@@ -834,6 +858,14 @@ def _aga_graph(
     if min_edge_width is not None or max_edge_width is not None:
         widths = np.clip(widths, min_edge_width, max_edge_width)
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+
+    if export_to_gexf:
+        for count, n in enumerate(nx_g_dashed.nodes()):
+            nx_g_dashed.node[count]['label'] = groups[count]
+            nx_g_dashed.node[count]['color'] = color[count]
+            nx_g_dashed.node[count]['viz'] = {'position': {'x': 100*pos[count][0], 'y': 100*pos[count][1], 'z': 0}}
+        logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph.gexf'), v=1)
+        nx.write_gexf(nx_g_dashed, settings.writedir + 'aga_graph.gexf')
 
     # deal with empty graph
     ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
@@ -862,7 +894,7 @@ def _aga_graph(
         groups_sizes = np.ones(len(groups))
     median_group_size = np.median(groups_sizes)
     force_labels_to_front = True  # TODO: solve this differently!
-    for count, n in enumerate(nx_g_solid.nodes_iter()):
+    for count, n in enumerate(nx_g_solid.nodes()):
         pie_size = base_pie_size
         pie_size *= np.power(groups_sizes[count] / median_group_size,
                              node_size_power)
@@ -896,7 +928,7 @@ def _aga_graph(
     # TODO: this is a terrible hack, but if we use the solution above (``not
     # force_labels_to_front``), labels get hidden behind pies
     if force_labels_to_front and groups is not None:
-        for count, n in enumerate(nx_g_solid.nodes_iter()):
+        for count, n in enumerate(nx_g_solid.nodes()):
             # all copy and paste from above
             pie_size = base_pie_size
             pie_size *= np.power(groups_sizes[count] / median_group_size,
@@ -936,11 +968,15 @@ def aga_path(
         left_margin=None,
         show_left_y_ticks=None,
         ytick_fontsize=None,
+        title_fontsize=None,
         show_nodes_twin=True,
         palette_groups=None,
+        show_yticks=True,
+        show_colorbar=True,
         color_map_pseudotime=None,
         legend_fontsize=None,
         legend_fontweight=None,
+        return_data=False,
         save=None,
         show=None,
         ax=None):
@@ -972,10 +1008,8 @@ def aga_path(
         palette_groups = palettes.default_20
         palette_groups = utils.adjust_palette(palette_groups, len(adata.add['aga_groups_order']))
 
-    def moving_average(a, n=n_avg):
-        ret = np.cumsum(a, dtype=float)
-        ret[n:] = ret[n:] - ret[:-n]
-        return ret[n - 1:] / n
+    def moving_average(a):
+        return sc_utils.moving_average(a, n_avg)
 
     ax = pl.gca() if ax is None else ax
     from matplotlib import transforms
@@ -983,14 +1017,13 @@ def aga_path(
         ax.transData, ax.transAxes)
     if as_heatmap:
         X = []
-    x_tick_locs = []
+    x_tick_locs = [0]
     x_tick_labels = []
     groups = []
     pseudotimes = []
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
-            if ikey == 0: x_tick_locs.append(len(x))
             idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
             idcs_group = np.argsort(adata.smp['aga_pseudotime'][adata.smp['aga_groups'] == str(group)])
             idcs = idcs[idcs_group]
@@ -998,10 +1031,10 @@ def aga_path(
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0: groups += [group for i in range(len(idcs))]
             if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'][idcs])
+            if ikey == 0: x_tick_locs.append(len(x))
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
-            if ikey == 0: x_tick_locs = len(x)/old_len_x * np.array(x_tick_locs)
             if ikey == 0: pseudotimes = moving_average(pseudotimes)
         if normalize_to_zero_one:
             x -= np.min(x)
@@ -1016,18 +1049,21 @@ def aga_path(
                     label = orig_node_names[int(group)]
                 else:
                     label = group
-                # if not isinstance(label, int):
-                #     pl.text(x_tick_locs[igroup], -0.05*(igroup+1),
-                #             label, transform=trans)
-                # else:
                 x_tick_labels.append(label)
+    X = np.array(X)
     if as_heatmap:
-        img = ax.imshow(np.array(X), aspect='auto', interpolation='nearest',
+        img = ax.imshow(X, aspect='auto', interpolation='nearest',
                         cmap=color_map)
-        ax.set_yticks(range(len(X)))
-        ax.set_yticklabels(keys, fontsize=ytick_fontsize)
+        if show_yticks:
+            ax.set_yticks(range(len(X)))
+            ax.set_yticklabels(keys, fontsize=ytick_fontsize)
+        else:
+            ax.set_yticks([])
         ax.set_frame_on(False)
-        pl.colorbar(img, ax=ax)
+        ax.set_xticks([])
+        ax.grid(False)
+        if show_colorbar:
+            pl.colorbar(img, ax=ax)
         left_margin = 0.2 if left_margin is None else left_margin
         pl.subplots_adjust(left=left_margin)
     else:
@@ -1055,11 +1091,19 @@ def aga_path(
                                # adata.add['aga_groups_colors'])
                                palette_groups[np.min(groups).astype(int):],
                                N=np.max(groups)+1-np.min(groups)))
-        pos = list(groups_axis.get_position().bounds)
-        groups_axis.set_yticklabels(['', xlabel, ''])
+        if show_yticks:
+            groups_axis.set_yticklabels(['', xlabel, ''], fontsize=ytick_fontsize)
+        else:
+            groups_axis.set_yticks([])
         groups_axis.set_frame_on(False)
+        ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0])/2
+        x_tick_locs = sc_utils.moving_average(x_tick_locs, n=2)
+        for ilabel, label in enumerate(x_tick_labels):
+            groups_axis.text(x_tick_locs[ilabel], ypos, x_tick_labels[ilabel],
+                             fontdict={'horizontalalignment': 'center',
+                                       'verticalalignment': 'center'})
         groups_axis.set_xticks([])
-        ax.set_xticks([])
+        groups_axis.grid(False)
         # pseudotime bar
         pseudotime_axis = pl.axes([ax_bounds[0],
                                    ax_bounds[1] - ax_bounds[3] / len(keys),
@@ -1071,12 +1115,13 @@ def aga_path(
         img = pseudotime_axis.imshow(pseudotimes, aspect='auto',
                                      interpolation='nearest',
                                      cmap=color_map_pseudotime)
-        pos = list(pseudotime_axis.get_position().bounds)
-        pseudotime_axis.set_yticklabels(['', 'distance $d$', ''])
+        if show_yticks:
+            pseudotime_axis.set_yticklabels(['', 'distance $d$', ''], fontsize=ytick_fontsize)
+        else:
+            pseudotime_axis.set_yticks([])
         pseudotime_axis.set_frame_on(False)
         pseudotime_axis.set_xticks([])
-        # pl.colorbar(img, ax=pseudotime_axis)
-        ax.set_xticks([])
+        pseudotime_axis.grid(False)
     else:
         ax.set_xlabel(xlabel)
     if show_left_y_ticks:
@@ -1096,11 +1141,17 @@ def aga_path(
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
         pl.ylabel(label)
         utils.pimp_axis(pl.gca().get_yaxis())
-    if title is not None: ax.set_title(title)
+    if title is not None: ax.set_title(title, fontsize=title_fontsize)
     if show is None and not ax_was_none: show = False
     else: show = settings.autoshow if show is None else show
     utils.savefig_or_show('aga_path', show=show, save=save)
-    return ax, groups if ax_was_none else None
+    if return_data:
+        df = pd.DataFrame(data=X.T, columns=keys)
+        df['groups'] = moving_average(groups)  # groups is without moving average, yet
+        df['distance'] = pseudotimes.T
+        return ax, df if ax_was_none else df
+    else:
+        return ax if ax_was_none else None
 
 
 def aga_attachedness(

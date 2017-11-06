@@ -16,50 +16,47 @@ from ..plotting import utils as pl_utils
 MINIMAL_TREE_ATTACHEDNESS = 0.05
 
 doc_string_base = dedent("""\
-    Graph Abstraction
+    Generate cellular maps of differentiation manifolds with complex
+    topologies [Wolf17i]_.
 
-    Infer the relations of subgroups in the data using approximate graph
-    abstraction. The result is a much simpler graph where each node corresponds
-    to a cell subgroup. The tree induces an ordering between nodes and the cells
-    are ordered within each node.
+    Approximate graph abstraction (AGA) quantifies the connectivity of partitions of a
+    neighborhood graph of single cells, thereby generating a much simpler
+    abstracted graph whose nodes label the partitions. Together with a random
+    walk-based distance measure, this generates a topology preserving map of
+    single cells --- a partial coordinatization of data useful for exploring and
+    explaining its variation. We use the abstracted graph to assess which
+    subsets of data are better explained by discrete clusters than by a
+    continuous variable, to trace gene expression changes along aggregated
+    single-cell paths through data and to infer abstracted trees that best
+    explain the global topology of data.
+
+    Most of the following parameters appear similarly in other tools.
 
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with:
-        adata.add['iroot'] : int or str
-            Index of root cell.
-        adata.smp['X_pca']: np.ndarray
-            PCA representation of the data matrix (result of preprocessing with
-            PCA). Will be used if option `recompute_pca` is False.
-        adata.smp['X_diffmap']: np.ndarray
-            Diffmap representation of the data matrix (result of running
-            `diffmap`). Will be used if option `recompute_graph` is False.
+        Annotated data matrix, optionally with `adata.add['iroot']`, the index
+        of root cell for computing a pseudotime.
+    n_neighbors : int or None, optional (default: 30)
+        Number of nearest neighbors on the knn graph. Often this can be reduced
+        down to a value of 4.
+    n_pcs : int, optional (default: 50)
+        Use n_pcs PCs to compute the euclidean distance matrix, which is the
+        basis for generating the graph. Set to 0 if you don't want preprocessing
+        with PCA.
+    n_dcs : int, optional (default: 10)
+        Number of diffusion components (very similar to eigen vectors of
+        adjacency matrix) to use for distance computations.
     node_groups : any categorical sample annotation or {{'louvain', 'segments'}}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
         graph/data. 'louvain' uses the louvain algorithm and optimizes
         modularity of the graph, 'segments' uses a bipartioning
         criterium that is loosely inspired by hierarchical clustering. You can
         also pass your predefined groups by choosing any sample annotation.
-    n_nodes : int or None, optional (default: None)
-        Number of nodes in the abstracted graph. Except when choosing
-        'segments' for `node_groups`, for which `n_nodes` defaults to
-        `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
-        choice of `node_groups`.
-    n_neighbors : int or None, optional (default: None)
-        Number of nearest neighbors on the knn graph. See the default
-        of data_graph (usually 30).
-    n_pcs : int, optional (default: 50)
-        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_dcs : int, optional (default: 10)
-        Number of diffusion components (very similar to eigen vectors of
-        adjacency matrix) to use for distance computations.
     resolution : float, optional (default: 1.0)
-        See ``sc.tool.louvain``.
+        See tool `louvain`.
     random_state : int, optional (default: 0)
-        See ``sc.tool.louvain``.
+        See tool `louvain`.
     tree_detection : {{'iterative_matching', 'min_span_tree'}}, optional (default: 'min_span_tree')
         How to detect a tree structure in the abstracted graph. If choosing
         'min_span_tree', a minimum spanning tree is fitted for the abstracted
@@ -67,7 +64,12 @@ doc_string_base = dedent("""\
         a recursive algorithm that greedily attaches partitions (groups) that
         maximize the random-walk based distance measure is run.
     attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
-        How to measure attachedness between groups.
+        How to measure connectedness between groups.
+    n_nodes : int or None, optional (default: None)
+        Number of nodes in the abstracted graph. Except when choosing
+        'segments' for `node_groups`, for which `n_nodes` defaults to
+        `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
+        choice of `node_groups`.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
         there is already a cached `distance` or `X_diffmap` in adata.
@@ -95,31 +97,32 @@ doc_string_base = dedent("""\
 doc_string_returns = dedent("""\
         aga_adjacency_full_attachedness : np.ndarray in adata.add
             The full adjacency matrix of the abstracted graph, weights
-            correspond to attachedness.
+            correspond to connectedness.
         aga_adjacency_full_confidence : np.ndarray in adata.add
             The full adjacency matrix of the abstracted graph, weights
             correspond to confidence in the presence of an edge.
         aga_adjacency_tree_confidence : sparse csr matrix in adata.add
-            The weighted adjacency matrix of the most probable tree in the
-            abstracted graph.
+            The adjacency matrix of the tree-like subgraph that best explains
+            the topology
         aga_groups : np.ndarray of dtype string in adata.smp
             Group labels for each sample.
         aga_pseudotime : np.ndarray of dtype float in adata.smp
-            Pseudotime labels for each cell.\
+            Pseudotime labels, that is, distance a long the manifold for each
+            cell.
     """)
 
 
 def aga(adata,
-        node_groups='louvain',
-        n_nodes=None,
         n_neighbors=30,
         n_pcs=50,
         n_dcs=10,
+        node_groups='louvain',
         resolution=1,
         random_state=0,
         attachedness_measure='connectedness',
         tree_detection='min_span_tree',
         tree_based_confidence=True,
+        n_nodes=None,
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
@@ -306,7 +309,7 @@ def aga_compare_paths(adata1, adata2,
     import networkx as nx
     g1 = nx.Graph(adata1.add[adjacency_key])
     g2 = nx.Graph(adata2.add[adjacency_key])
-    leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
+    leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
     asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
     asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])

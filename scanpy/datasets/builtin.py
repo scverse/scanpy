@@ -78,8 +78,14 @@ def krumsiek11():
     adata = sc.read(filename, first_column_names=True, cache=True)
     adata.add['iroot'] = 0
     fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
-                   459: 'megacaryocyte', 619: 'neutrophil'}
+                   459: 'megakaryocyte', 619: 'neutrophil'}
     adata.add['highlights'] = fate_labels
+    cell_type = np.array(['progenitor' for i in range(adata.n_smps)])
+    cell_type[80:160] = 'monocyte'
+    cell_type[240:320] = 'erythrocyte'
+    cell_type[400:480] = 'megakaryocyte'
+    cell_type[560:640] = 'neutrophil'
+    adata.smp['cell_type'] = cell_type
     return adata
 
 
@@ -179,21 +185,21 @@ def paul15_raw():
     # clusters identified by Paul et al.
     clusters = sc.read(filename, 'cluster.id', return_dict=True)['X'].flatten()
     # names reflecting the cell type identifications from the paper
-    cell_types = {i: 'Ery' for i in range(1, 7)}
-    cell_types[7] = 'MEP'
-    cell_types[8] = 'Mk'
-    cell_types[9] = 'GMP'
-    cell_types[10] = 'GMP'
-    cell_types[11] = 'DC'
-    cell_types[12] = 'Baso'
-    cell_types[13] = 'Baso'
-    cell_types[14] = 'Mo'
-    cell_types[15] = 'Mo'
-    cell_types[16] = 'Neu'
-    cell_types[17] = 'Neu'
-    cell_types[18] = 'Eos'
-    cell_types[19] = 'Lymph'
-    adata.smp['paul15_clusters'] = [str(i) + cell_types[i] for i in clusters.astype(int)]
+    cell_type = {i: 'Ery' for i in range(1, 7)}
+    cell_type[7] = 'MEP'
+    cell_type[8] = 'Mk'
+    cell_type[9] = 'GMP'
+    cell_type[10] = 'GMP'
+    cell_type[11] = 'DC'
+    cell_type[12] = 'Baso'
+    cell_type[13] = 'Baso'
+    cell_type[14] = 'Mo'
+    cell_type[15] = 'Mo'
+    cell_type[16] = 'Neu'
+    cell_type[17] = 'Neu'
+    cell_type[18] = 'Eos'
+    cell_type[19] = 'Lymph'
+    adata.smp['paul15_clusters'] = [str(i) + cell_type[i] for i in clusters.astype(int)]
     infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
     adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])

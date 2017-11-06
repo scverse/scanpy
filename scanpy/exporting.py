@@ -1,4 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
+#         T. Callies 
 """Exporting to formats for other software.
 """
 
@@ -124,7 +125,6 @@ def save_spring_dir(adata, k, project_directory, D=None,
               open(project_directory + '/color_stats.json', 'w'), indent=4, sort_keys=True)
 
     # save cell labels
-
     # Categorical coloring data:
     categorical_coloring_data = {}
     # Adapt groupby
@@ -204,8 +204,7 @@ def get_knn_edges_sparse(dmat, k):
         for j, val in enumerate(saved_values):
             dmat[i, j] = val
     return edge_dict.keys()
-
-
+    
 def write_color_tracks(ctracks, fname):
     out = []
     for name, score in ctracks.items():

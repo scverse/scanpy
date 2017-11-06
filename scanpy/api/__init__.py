@@ -62,8 +62,9 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 .. autosummary::
    :toctree: .
 
-   tl.dpt
+   tl.aga
    tl.louvain
+   tl.dpt
    tl.rank_genes_groups
 
 .. raw:: html
@@ -144,11 +145,14 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
 .. autosummary::
    :toctree: .
 
+   pl.aga
+   pl.aga_graph
+   pl.aga_path
+   pl.louvain
    pl.dpt
    pl.dpt_scatter
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
-   pl.louvain
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
 

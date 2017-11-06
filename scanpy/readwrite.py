@@ -777,7 +777,6 @@ def write_dict_to_file(filename, d, ext='h5'):
             key, value = preprocess_writing(key, value)
             d_write[key] = value
     # now open the file
-    wait_until_file_unused(filename)  # thread-safe writing
     if ext == 'h5':
         with h5py.File(filename, 'w') as f:
             for key, value in d_write.items():

@@ -685,9 +685,10 @@ class DataGraph():
                              'Computation needs to be adjusted if sym=False.')
         row = sum([(self.evals[l]/(1-self.evals[l])
                      * (self.rbasis[i, l] - self.lbasis[:, l]))**2
-                    for l in range(0, self.evals.size) if self.evals[l] < 1])
+                   # account for float32 precision
+                    for l in range(0, self.evals.size) if self.evals[l] < 0.999999])
         row += sum([(self.rbasis[i, l] - self.lbasis[:, l])**2
-                    for l in range(0, self.evals.size) if self.evals[l] == 1.0])
+                    for l in range(0, self.evals.size) if self.evals[l] >= 0.999999])
         return np.sqrt(row)
 
     def get_Ddiff_row_deprecated(self, i):
