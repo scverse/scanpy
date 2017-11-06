@@ -203,6 +203,9 @@ def rank_genes_groups(
                     # sum up adjusted_ranks to calculate W_m,n
                     zscores[left:right] = np.sum(ranks.loc[0:n_active, :])
                     left = right + 1
+                zscores = (zscores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
+                    (n_active * m_active * (n_active + m_active + 1) / 12))
+                zscores = zscores if only_positive else np.abs(zscores)
                 zscores[np.isnan(zscores)] = 0
                 partition = np.argpartition(zscores, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(zscores[partition])[::-1]
