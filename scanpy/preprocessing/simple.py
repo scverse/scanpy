@@ -9,8 +9,6 @@ import scipy as sp
 import warnings
 from joblib import Parallel, delayed
 from scipy.sparse import issparse
-import statsmodels.api as sm
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from sklearn.utils import sparsefuncs
 from ..data_structs import AnnData
 from .. import settings as sett
@@ -568,23 +566,47 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
     chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
               for start in range(0, n_chunks * len_chunk, len_chunk)]
+    
     if sett.is_run_from_ipython:
         from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
         # tqdm = lambda x: x
         # from tqdm import tqdm
-        # sett.m(1, 'TODO: get nice waitbars also in interactive mode')
-        # logg.m('... nicer progress bars as on command line come soon')
     else:
         from tqdm import tqdm
+        
+    import statsmodels.api as sm
+    from statsmodels.tools.sm_exceptions import PerfectSeparationError
+    
+    def _regress_out(col_index, responses, regressors):
+        try:
+            if regressors.shape[1] - 1 == responses.shape[1]:
+                regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
+            else:
+                regressors_view = regressors
+            result = sm.GLM(responses[:, col_index],
+                            regressors_view, family=sm.families.Gaussian()).fit()
+            new_column = result.resid_response
+        except PerfectSeparationError:  # this emulates R's behavior
+            logg.warn('Encountered PerfectSeparationError, setting to 0 as in R.')
+            new_column = np.zeros(responses.shape[0])
+        return new_column
+
+    def _regress_out_chunk(chunk, responses, regressors):
+        chunk_array = np.zeros((responses.shape[0], chunk.size),
+                               dtype=responses.dtype)
+        for i, col_index in enumerate(chunk):
+            chunk_array[:, i] = _regress_out(col_index, responses, regressors)
+        return chunk_array
+    
     for chunk in tqdm(chunks):
         result_lst = Parallel(n_jobs=n_jobs)(
             delayed(_regress_out)(
                 col_index, adata.X, regressors) for col_index in chunk)
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.m('finished', t=True, v=4)
-    logg.m('--> after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`', v=4)
+    logg.msg('finished', t=True, v=4)
+    logg.msg('--> after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`', v=4)
     return adata if copy else None
 
 
@@ -698,29 +720,6 @@ def zscore_deprecated(X):
 # --------------------------------------------------------------------------------
 # Helper Functions
 # --------------------------------------------------------------------------------
-
-
-def _regress_out(col_index, responses, regressors):
-    try:
-        if regressors.shape[1] - 1 == responses.shape[1]:
-            regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
-        else:
-            regressors_view = regressors
-        result = sm.GLM(responses[:, col_index],
-                        regressors_view, family=sm.families.Gaussian()).fit()
-        new_column = result.resid_response
-    except PerfectSeparationError:  # this emulates R's behavior
-        logg.warn('Encountered PerfectSeparationError, setting to zero as in R.')
-        new_column = np.zeros(responses.shape[0])
-    return new_column
-
-
-def _regress_out_chunk(chunk, responses, regressors):
-    chunk_array = np.zeros((responses.shape[0], chunk.size),
-                           dtype=responses.dtype)
-    for i, col_index in enumerate(chunk):
-        chunk_array[:, i] = _regress_out(col_index, responses, regressors)
-    return chunk_array
 
 
 def _pca_fallback(data, n_comps=2):
