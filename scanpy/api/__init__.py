@@ -187,6 +187,8 @@ All of these functions return an Annotated Data object.
 
 """
 
+from anndata import AnnData
+
 from .. import __version__
 
 from .. import settings
@@ -199,5 +201,5 @@ from . import pp
 preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
-from ..data_structs import AnnData, DataGraph
+from ..data_structs import DataGraph
 from .. import utils

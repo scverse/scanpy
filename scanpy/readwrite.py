@@ -8,10 +8,10 @@ import h5py
 import numpy as np
 import psutil
 import time
+from anndata import AnnData
 
 from . import settings as sett
 from . import logging as logg
-from .data_structs import AnnData
 
 avail_exts = {'csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data'}
 """ Available file formats for reading data. """
