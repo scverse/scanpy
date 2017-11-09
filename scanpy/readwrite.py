@@ -105,7 +105,7 @@ def read_10x_h5(filename, genome):
             variables/genes by gene name. The data is stored in adata.X, cell
             names in adata.smp_names and gene names in adata.var_names.
     """
-    logg.msg('reading', filename, r=True, end=' ', v=1)
+    logg.info('reading', filename, r=True, end=' ')
     import tables
     with tables.open_file(filename, 'r') as f:
         try:
@@ -331,7 +331,7 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
             raise FileNotFoundError(
                 'Cannot read original data file {}, is not present.'
                 .format(filename))
-        logg.msg('reading', filename, v=1)
+        logg.info('reading', filename)
         if not cache:
             logg.warn('This might be very slow. Consider passing `cache=True`, '
                       'which enables much faster reading from a cache file.')
@@ -695,7 +695,7 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    logg.msg('reading', filename, v=1)
+    logg.info('reading', filename)
     d = {}
     if ext == 'h5':
         with h5py.File(filename, 'r') as f:
@@ -724,7 +724,7 @@ def postprocess_reading(key, value):
         # recover a dictionary that has been stored as a string
         if len(value) > 0:
             if value[0] == '{' and value[-1] == '}': value = eval(value)
-    if (key != 'smp' and key != 'var'
+    if (key != 'smp' and key != 'var' and key != '_smp' and key != '_var'
         and not isinstance(value, dict) and value.dtype.names is not None):
         # TODO: come up with a better way of solving this, see also below
         new_dtype = [((dt[0], 'U{}'.format(int(int(dt[1][2:])/4)))
@@ -766,7 +766,7 @@ def write_dict_to_file(filename, d, ext='h5'):
         logg.info('creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
     # output the following at warning level, it's very important for the users
-    if ext in {'h5', 'npz'}: logg.msg('writing', filename, v=1)
+    if ext in {'h5', 'npz'}: logg.info('writing', filename)
     d_write = {}
     from scipy.sparse import issparse
     for key, value in d.items():
@@ -801,7 +801,7 @@ def write_dict_to_file(filename, d, ext='h5'):
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
         # write the following at warning level, it's very important for the users
-        logg.msg('writing', ext, 'files to', dirname, v=1)
+        logg.info('writing', ext, 'files to', dirname)
         if not os.path.exists(dirname): os.makedirs(dirname)
         if not os.path.exists(dirname + 'add'): os.makedirs(dirname + 'add')
         from pandas import DataFrame
