@@ -10,7 +10,7 @@ import warnings
 from joblib import Parallel, delayed
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
-from ..data_structs import AnnData
+from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
 
