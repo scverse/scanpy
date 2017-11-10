@@ -63,8 +63,10 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
-    if 'X_pca' in adata.smp and adata.smp['X_pca'].shape[1] >= n_pcs and not recompute_pca:
-        X = adata.smp['X_pca'][:, :n_pcs]
+    if ('X_pca' in adata.smp
+        and adata.get_multicol_field_smp('X_pca').shape[1] >= n_pcs
+        and not recompute_pca):
+        X = adata.get_multicol_field_smp('X_pca')[:, :n_pcs]
         logg.info('    using X_pca for tSNE')
         logg.info('    using', n_pcs, 'principal components')
     else:
@@ -72,7 +74,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
             logg.info('    preprocess using PCA with', n_pcs, 'PCs')
             logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
-            adata.smp['X_pca'] = X
+            adata.set_multicol_field_smp('X_pca', X)
             logg.info('    using', n_pcs, 'principal components')
         else:
             X = adata.X
@@ -108,8 +110,8 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         logg.info('    using sklearn.manifold.TSNE with a fix by D. DeTomaso')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.set_multicol_field_smp['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
-    logg.info('    finished', t=True, end=' ')
-    logg.info('and added\n'
+    adata.set_multicol_field_smp('X_tsne', X_tsne)  # annotate samples with tSNE coordinates
+    logg.info('    finished', t=True, end=': ')
+    logg.info(' added\n'
               '    "X_tsne", tSNE coordinates (adata.smp)')
     return adata if copy else None

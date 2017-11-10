@@ -120,7 +120,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
-    adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
+    adata.set_multicol_field_smp('X_diffmap', dpt.rbasis[:, 1:])
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
     adata.add['diffmap_evals'] = dpt.evals[1:]
     adata.add['data_graph_distance_local'] = dpt.Dsq
@@ -658,19 +658,6 @@ class DPT(data_graph.DataGraph):
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
             trunk = 3
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(len(ssegs_connects[iseg_new])):
-            #         pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 1], marker='o', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
         elif len(ssegs) == 3:
             reference_point = np.zeros(3, dtype=int)
             reference_point[0] = ssegs_tips[0][0]
@@ -697,26 +684,6 @@ class DPT(data_graph.DataGraph):
             ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
                               [closest_points[trunk, j] for j in range(3) if j != trunk]
                               for i in range(3)]
-            # print(ssegs_connects)
-            # print(ssegs_adjacency)
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(3):
-            #         if i != iseg_new:
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 1], marker='o', c='black')
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 1], marker='x', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
-            # print('trunk', trunk)
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]

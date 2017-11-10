@@ -97,8 +97,7 @@ def scatter(
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
-    title = None if title is None else title.split(',') if isinstance(title, str) else title
-    color_keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
+    keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
@@ -131,7 +130,7 @@ def scatter(
         else:
             palettes = [palette]
     else:
-        palettes = [palette for i in range(len(color_keys))]
+        palettes = [palette for i in range(len(keys))]
     for i, palette in enumerate(palettes):
         palettes[i] = utils.default_palette(palette)
 
@@ -148,13 +147,13 @@ def scatter(
     show_ticks = True if component_name is None else False
 
     # the actual color ids, e.g. 'grey' or '#109482'
-    color_ids = [None if not is_color_like(color_key)
-                 else color_key for color_key in color_keys]
+    color_ids = [None if not is_color_like(key)
+                 else key for key in keys]
     categoricals = []
     colorbars = []
-    for icolor_key, color_key in enumerate(color_keys):
-        if color_ids[icolor_key] is not None:
-            c = color_ids[icolor_key]
+    for ikey, key in enumerate(keys):
+        if color_ids[ikey] is not None:
+            c = color_ids[ikey]
             continuous = True
             categorical = False
             colorbars.append(False)
@@ -163,31 +162,29 @@ def scatter(
             categorical = False
             continuous = False
             # test whether we have categorial or continuous annotation
-            if color_key in adata.smp_keys():
-                if is_categorical_dtype(adata.smp[color_key]):
+            if key in adata.smp_keys():
+                if is_categorical_dtype(adata.smp[key]):
                     categorical = True
                 else:
                     continuous = True
-                    c = adata.smp[color_key]
-                # settings.m(0, '... coloring according to', color_key)
+                    c = adata.smp[key]
             # coloring according to gene expression
-            elif color_key in set(adata.var_names):
-                c = adata[:, color_key].X
+            elif key in set(adata.var_names):
+                c = adata[:, key].X
                 continuous = True
-                # settings.m(0, '... coloring according to expression of gene', color_key)
             else:
-                raise ValueError('"' + color_key + '" is invalid!'
+                raise ValueError('"' + key + '" is invalid!'
                                  + ' specify valid sample annotation, one of '
                                  + str(adata.smp_keys()) + ' or a gene name '
                                  + str(adata.var_names))
             colorbars.append(True if continuous else False)
-        if categorical: categoricals.append(icolor_key)
-        color_ids[icolor_key] = c
+        if categorical: categoricals.append(ikey)
+        color_ids[ikey] = c
 
     if right_margin is None and len(categoricals) > 0:
         if legend_loc == 'right margin': right_margin = 0.5
-    if title is None and color_keys[0] is not None:
-        title = [color_key.replace('_', ' ') if not is_color_like(color_key) else '' for color_key in color_keys]
+    if title is None and keys[0] is not None:
+        title = [key.replace('_', ' ') if not is_color_like(key) else '' for key in keys]
 
     axs = scatter_base(Y,
                        title=title,
@@ -201,7 +198,7 @@ def scatter(
                        colorbars=colorbars,
                        right_margin=right_margin,
                        left_margin=left_margin,
-                       sizes=[size for c in color_keys],
+                       sizes=[size for c in keys],
                        color_map=color_map,
                        show_ticks=show_ticks,
                        ax=ax)
@@ -213,58 +210,56 @@ def scatter(
         i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
         centroids[name] = Y_mask[i]
 
-    for i, icolor_key in enumerate(categoricals):
+    for i, ikey in enumerate(categoricals):
         palette = palettes[i]
-        color_key = color_keys[icolor_key]
-        if len(adata.add[color_key + '_order']) != len(np.unique(adata.smp[color_key])):
-            from ..utils import unique_categories
-            adata.add[color_key + '_order'] = unique_categories(adata.smp[color_key])
-        if (not color_key + '_colors' in adata.add or not palette_was_none
-            or len(adata.add[color_key + '_order']) != len(adata.add[color_key + '_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, color_key, palette)
+        key = keys[ikey]
+        if (not key + '_colors' in adata.add
+            or not palette_was_none
+            or len(adata.smp[key].cat.categories) != len(adata.add[key + '_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
-            for iname, name in enumerate(adata.add[color_key + '_order']):
+            for iname, name in enumerate(adata.smp[key].cat.categories):
                 if name not in settings._ignore_categories:
-                    mask = scatter_group(axs[icolor_key], color_key, iname,
+                    mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     mask_remaining[mask] = False
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
             for name in groups:
-                if name not in set(adata.add[color_key + '_order']):
+                if name not in set(adata.smp[key].cat.categories):
                     raise ValueError('"' + name + '" is invalid!'
                                      + ' specify valid name, one of '
-                                     + str(adata.add[color_key + '_order']))
+                                     + str(adata.smp[key].cat.categories))
                 else:
-                    iname = np.flatnonzero(adata.add[color_key + '_order'] == name)[0]
-                    mask = scatter_group(axs[icolor_key], color_key, iname,
+                    iname = np.flatnonzero(adata.smp[key].cat.categories.values == name)[0]
+                    mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
             if projection == '3d': data.append(Y[mask_remaining, 2])
-            axs[icolor_key].scatter(*data, marker='.', c='grey', s=size,
+            axs[ikey].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
         legend = None
         if legend_loc == 'on data':
             for name, pos in centroids.items():
-                axs[icolor_key].text(pos[0], pos[1], name,
+                axs[ikey].text(pos[0], pos[1], name,
                                      weight=legend_fontweight,
                                      verticalalignment='center',
                                      horizontalalignment='center',
                                      fontsize=legend_fontsize)
         elif legend_loc == 'right margin':
-            legend = axs[icolor_key].legend(frameon=False, loc='center left',
+            legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
-                                            ncol=(1 if len(adata.add[color_key + '_order']) <= 14
-                                                  else 2 if len(adata.add[color_key + '_order']) <= 30 else 3),
+                                            ncol=(1 if len(adata.smp[key].cat.categories) <= 14
+                                                  else 2 if len(adata.smp[key].cat.categories) <= 30 else 3),
                                             fontsize=legend_fontsize)
         elif legend_loc != 'none':
-            legend = axs[icolor_key].legend(frameon=False, loc=legend_loc,
+            legend = axs[ikey].legend(frameon=False, loc=legend_loc,
                                             fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
@@ -326,21 +321,25 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30,
 
 
 def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
-           multi_panel=False, show=None, save=None, ax=None):
+           order=None, multi_panel=False, show=None, save=None, ax=None):
     """Violin plot.
 
     Wraps seaborn.violinplot for AnnData.
 
     Parameters
     ----------
+    adata : AnnData
+        Annotated data matrix.
     keys : str
         Keys for accessing fields of adata.smp.
-    group_by : str
+    group_by : str, optional
         Key that denotes grouping (categorical annotation) to index adata.smp.
-    multi_panel : bool
+    multi_panel : bool, optional
         Show fields in multiple panels. Returns a seaborn FacetGrid in that case.
-    jitter : float or bool (default: True)
+    jitter : float or bool, optional (default: True)
         See sns.stripplot.
+    order : list of str, optional (default: True)
+        Order in which to show the categories.
     scale : str (default: 'width')
         See sns.violinplot.
     show : bool, optional (default: None)
@@ -355,6 +354,7 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     -------
     A matplotlib.Axes object.
     """
+    sanitize_anndata(adata)
     if group_by is not None and isinstance(keys, list):
         raise ValueError('Pass a single key as string if using `group_by`.')
     if not isinstance(keys, list): keys = [keys]
@@ -366,12 +366,12 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
             raise ValueError('Either use sample keys or variable names, but do not mix. '
                              'Did not find {} in adata.smp_keys().'.format(key))
     if smp_keys:
-        smp_df = adata.smp.to_df()
+        smp_df = adata.smp
     else:
         if group_by is None:
             smp_df = pd.DataFrame()
         else:
-            smp_df = adata.smp.to_df()
+            smp_df = adata.smp
         for key in keys:
             X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
@@ -380,15 +380,10 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         smp_tidy = pd.melt(smp_df, value_vars=keys)
         x = 'variable'
         y = 'value'
-        order = None
     else:
         smp_tidy = smp_df
         x = group_by
         y = keys[0]
-        if not group_by + '_order' in adata.add:
-            from .. import utils as sc_utils
-            sc_utils.check_adata(adata)
-        order = adata.add[group_by + '_order']
     if multi_panel:
         sns.set_style('whitegrid')
         g = sns.FacetGrid(smp_tidy, col=x, sharey=False)

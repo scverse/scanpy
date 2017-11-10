@@ -213,7 +213,7 @@ def diffmap(
     """
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
-                      for i in range(1, adata.smp['X_diffmap'].shape[1])]
+            for i in range(1, adata.get_multicol_field_smp('X_diffmap').shape[1])]
     else:
         if components is None: components = '1,2' if '2d' in projection else '1,2,3'
         if not isinstance(components, list): components_list = [components]
@@ -1014,13 +1014,14 @@ def aga_path(
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
-            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
-            idcs_group = np.argsort(adata.smp['aga_pseudotime'][adata.smp['aga_groups'] == str(group)])
+            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'].values == str(group)]
+            idcs_group = np.argsort(adata.smp['aga_pseudotime'].values[
+                adata.smp['aga_groups'].values == str(group)])
             idcs = idcs[idcs_group]
-            if key in adata.smp_keys(): x += list(adata.smp[key][idcs])
+            if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0: groups += [group for i in range(len(idcs))]
-            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'][idcs])
+            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'].values[idcs])
             if ikey == 0: x_tick_locs.append(len(x))
         if n_avg > 1:
             old_len_x = len(x)
@@ -1125,7 +1126,7 @@ def aga_path(
         pl.twinx()
         x = []
         for g in nodes:
-            x += list(adata.smp['aga_groups'][adata.smp['aga_groups'] == str(g)].astype(int))
+            x += list(adata.smp['aga_groups'].values[adata.smp['aga_groups'].values == str(g)].astype(int))
         if n_avg > 1: x = moving_average(x)
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
@@ -1245,7 +1246,7 @@ def dpt(
          Abstraction) instead.
     """
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None: colors = color
     dpt_scatter(
         adata,
@@ -1293,7 +1294,7 @@ def dpt_scatter(
     """
 
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
@@ -1341,12 +1342,12 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices']],
+        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'].values],
                               var_names=adata.var_names,
                               highlightsX=adata.add['dpt_changepoints'])
     else:
         # plot time series as gene expression vs time
-        timeseries(adata.X[adata.smp['dpt_order_indices']],
+        timeseries(adata.X[adata.smp['dpt_order_indices'].values],
                    var_names=adata.var_names,
                    highlightsX=adata.add['dpt_changepoints'],
                    xlim=[0, 1.3*adata.X.shape[0]])
@@ -1358,18 +1359,18 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(adata.smp['dpt_groups'],
-                       time=adata.smp['dpt_order'],
-                       color=adata.smp['dpt_groups'],
+    timeseries_subplot(adata.smp['dpt_groups'].values,
+                       time=adata.smp['dpt_order'].values,
+                       color=adata.smp['dpt_groups'].values,
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='dpt groups',
                        yticks=(np.arange(len(adata.add['dpt_groups_order']), dtype=int)
                                      if len(adata.add['dpt_groups_order']) < 5 else None),
                        palette=palette)
     pl.subplot(212)
-    timeseries_subplot(adata.smp['dpt_pseudotime'],
-                       time=adata.smp['dpt_order'],
-                       color=adata.smp['dpt_pseudotime'],
+    timeseries_subplot(adata.smp['dpt_pseudotime'].values,
+                       time=adata.smp['dpt_order'].values,
+                       color=adata.smp['dpt_pseudotime'].values,
                        xlabel='dpt order',
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='pseudotime',
