@@ -5,7 +5,7 @@ import versioneer
 try:
     import numpy
 except ImportError:
-    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy`.')
+    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy` or `conda install numpy`.')
 
 use_cython = False
 if use_cython:
@@ -41,10 +41,11 @@ with open('README.rst') as readme_f:
 setup(
     name='scanpy',
     version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(cmdclass),
     description='Single-Cell Analysis in Python.',
     long_description=readme,
-    url='http://github.com/theislab/scanpy',
-    author='F. Alexander Wolf, P. Angerer',
+    url='http://github.com/theislab/anndata',
+    author='Alex Wolf, Philipp Angerer',
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD-3-Clause',
     entry_points={
@@ -57,7 +58,6 @@ setup(
     include_dirs=[numpy.get_include()],
     package_data={'': '*.txt'},
     include_package_data=True,
-    cmdclass=versioneer.get_cmdclass(cmdclass),
     ext_modules=ext_modules,
     zip_safe=False,
     classifiers=[
@@ -66,7 +66,6 @@ setup(
         'Framework :: Jupyter',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
