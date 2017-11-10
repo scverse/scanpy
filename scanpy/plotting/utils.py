@@ -245,33 +245,27 @@ def adjust_palette(palette, length):
 
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     if (key + '_colors' in adata.add
-        and len(adata.add[key + '_order']) > len(adata.add[key + '_colors'])):
+        and len(adata.smp[key].cat.categories) > len(adata.add[key + '_colors'])):
         logg.info('    number of defined colors does not match number of categories,'
                   ' using palette')
     else:
         logg.m('generating colors for {} using palette'.format(key), v=4)
     palette = default_palette(palette)
-    palette_adjusted = adjust_palette(palette, length=len(adata.add[key + '_order']))
-    adata.add[key + '_colors'] = palette_adjusted[:len(adata.add[key + '_order'])].by_key()['color']
-    if len(adata.add[key + '_order']) > len(adata.add[key + '_colors']):
+    palette_adjusted = adjust_palette(palette, length=len(adata.smp[key].cat.categories))
+    adata.add[key + '_colors'] = palette_adjusted[:len(adata.smp[key].cat.categories)].by_key()['color']
+    if len(adata.smp[key].cat.categories) > len(adata.add[key + '_colors']):
         raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
                          .format(len(adata.add[key + '_colors']), key))
 
 
-def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3, alpha=None):
+def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
     """Scatter of group using representation of data Y.
     """
-    if name + '_masks' in adata.add:
-        mask = adata.add[name + '_masks'][imask]
-    else:
-        if adata.add[name + '_order'][imask] in adata.smp[name]:
-            mask = adata.add[name + '_order'][imask] == adata.smp[name]
-        else:
-            mask = str(imask) == adata.smp[name]
-    color = adata.add[name + '_colors'][imask]
+    mask = adata.smp[key].cat.categories[imask] == adata.smp[key].values
+    color = adata.add[key + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
-        color = rgb2hex(adata.add[name + '_colors'][imask])
+        color = rgb2hex(adata.add[key + '_colors'][imask])
     if not is_color_like(color):
         raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
     data = [Y[mask, 0], Y[mask, 1]]
@@ -282,7 +276,7 @@ def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3, alpha=None
                c=color,
                edgecolors='none',
                s=size,
-               label=adata.add[name + '_order'][imask])
+               label=adata.smp[key].cat.categories[imask])
     return mask
 
 

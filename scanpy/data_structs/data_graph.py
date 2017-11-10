@@ -41,7 +41,7 @@ def add_or_update_graph_in_adata(
         graph.update_diffmap()
         adata.add['data_graph_distance_local'] = graph.Dsq
         adata.add['data_graph_norm_weights'] = graph.Ktilde
-        adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
+        adata.set_multicol_field_smp('X_diffmap', graph.rbasis[:, 1:])
         adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
         adata.add['diffmap_evals'] = graph.evals[1:]
     return graph
@@ -236,10 +236,10 @@ class DataGraph():
             else:
                 self.k = None  # currently do not store this, is unknown
             # for output of spectrum
-            self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
+            self.X_diffmap = adata.get_multicol_field_smp('X_diffmap')[:, :n_dcs-1]
             self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
             self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
-                                adata.smp['X_diffmap'][:, :n_dcs-1]]
+                                adata.get_multicol_field_smp('X_diffmap')[:, :n_dcs-1]]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
@@ -309,7 +309,7 @@ class DataGraph():
                 from ..preprocessing import pca
                 pca(adata, n_comps=self.n_pcs)
             # set the data matrix
-            self.X = adata.smp['X_pca'][:, :n_pcs]
+            self.X = adata.get_multicol_field_smp('X_pca')[:, :n_pcs]
             # see whether we can find xroot using X_pca
             if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
                 self.set_root(xroot[:n_pcs])

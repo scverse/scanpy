@@ -63,7 +63,7 @@ def rank_genes_groups(
     logg.info('find differentially expressed genes', r=True)
     adata = adata.copy() if copy else adata
     n_genes_user = n_genes
-    utils.check_adata(adata)
+    utils.sanitize_anndata(adata)
     # for clarity, rename variable
     groups_order = groups
     if isinstance(groups_order, list) and isinstance(groups_order[0], int):
@@ -71,7 +71,7 @@ def rank_genes_groups(
     if group_reference is not None and group_reference not in set(groups_order):
         groups_order += [group_reference]
     if (group_reference is not None
-        and group_reference not in set(adata.add[groupby + '_order'])):
+        and group_reference not in set(adata.smp[groupby].cat.categories)):
         raise ValueError('group_reference = {} needs to be one of groupby = {}.'
                          .format(group_reference, groupby))
     groups_order, groups_masks = utils.select_groups(
@@ -87,7 +87,7 @@ def rank_genes_groups(
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
-    logg.info('... consider "{}":'.format(groupby), groups_order,
+    logg.info('... consider \'{}\':'.format(groupby), groups_order,
               'with sample numbers', ns)
     if group_reference is not None:
         ireference = np.where(groups_order == group_reference)[0][0]

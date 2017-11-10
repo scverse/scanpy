@@ -1,10 +1,11 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Cluster cells using Louvain community detection algorithm.
 
 Uses the pip package "louvain" by V. Traag.
 """
 
 import numpy as np
+import pandas as pd
 from .. import utils
 from .. import logging as logg
 from ..data_structs.data_graph import add_or_update_graph_in_adata
@@ -35,7 +36,7 @@ def louvain(adata,
     Parameters
     ----------
     adata : AnnData
-        The annotated data matrix. 
+        The annotated data matrix.
     n_neighbors : int, optional (default: 30)
         Number of neighbors to use for construction of knn graph.
     resolution : float or None, optional
@@ -113,13 +114,15 @@ def louvain(adata,
         groups = groups.astype('U')
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
-    adata.smp['louvain_groups'] = groups
     from natsort import natsorted
-    adata.add['louvain_groups_order'] = np.array(natsorted(np.unique(groups)))
+    adata.smp['louvain_groups'] = pd.Categorical(
+        values=groups,
+        categories=natsorted(np.unique(groups)))
     adata.add['louvain_params'] = np.array((resolution,),
                                            dtype=[('resolution', float)])
-    logg.m('    finished', t=True, end=' ')
-    logg.m('and found', len(adata.add['louvain_groups_order']), 'clusters, added\n'
-           '    "louvain_groups", the cluster labels (adata.smp)\n'
-           '    "louvain_groups_order", the unique cluster labels (adata.add)')
+    logg.info('    finished', t=True, end=': ')
+    logg.info('found {} clusters and added\n'
+              '    \'louvain_groups\', the cluster labels (adata.smp, dtype=category)\n'
+              '    \'louvain_params\', the parameters (adata.add, structured np.array)'
+              .format(len(adata.smp['louvain_groups'].cat.categories)))
     return adata if copy else None

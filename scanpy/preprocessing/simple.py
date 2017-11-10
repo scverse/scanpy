@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Simple Preprocessing Functions
 
 Compositions of these functions are found in sc.preprocess.recipes.
@@ -10,6 +10,7 @@ import warnings
 from joblib import Parallel, delayed
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
+from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
@@ -183,8 +184,8 @@ def filter_genes_dispersion(data,
         adata.var['dispersions_norm'] = result['dispersions_norm']
         adata.inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    logg.m('filter highly varying genes by dispersion and mean',
-           r=True, end=' ')
+    logg.info('filter highly variable genes by dispersion and mean',
+              r=True, end=' ')
     X = data  # proceed with data matrix
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
@@ -357,7 +358,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
         if ('X_pca' in adata.smp
-            and adata.smp['X_pca'].shape[1] >= n_comps
+            and adata.get_multicol_field_smp('X_pca').shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
             logg.m('    not recomputing PCA, using "X_pca" contained '
@@ -369,7 +370,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio = result
-            adata.smp['X_pca'] = X_pca  # this is multicolumn-sample annotation
+            adata.set_multicol_field_smp('X_pca', X_pca)
             for icomp, comp in enumerate(components):
                 adata.var['PC' + str(icomp+1)] = comp
             adata.add['pca_variance_ratio'] = pca_variance_ratio
@@ -439,16 +440,16 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     """
     if field_name_counts is None: field_name_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.m('normalizing by total count per cell', r=True)
+        logg.info('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.smp[field_name_counts] = counts_per_cell
         adata.inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.m('    finished', t=True, end=' ')
-        logg.m('normalized adata.X and added', no_indent=True)
-        logg.m('    "{}", counts per cell before normalization (adata.smp)'
+        logg.info('    finished', t=True, end=': ')
+        logg.info('normalized adata.X and added', no_indent=True)
+        logg.info('    \'{}\', counts per cell before normalization (adata.smp)'
                .format(field_name_counts),
                no_indent=True)
         return adata if copy else None
@@ -532,7 +533,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     -------
     Depening on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    logg.m('regressing out', keys, r=True, v=4)
+    logg.msg('regressing out', keys, r=True, v=4)
     if issparse(adata.X):
         logg.m('... sparse input is densified and may '
                   'lead to huge memory consumption', v=4)
@@ -543,30 +544,34 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
         adata.X = adata.X.toarray()
+    if n_jobs is not None:
+        logg.warn('Is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on a single categorical variable
-    if keys[0] in adata.smp_keys() and adata.smp[keys[0]].dtype.char == np.dtype('U').char:
+    if keys[0] in adata.smp_keys() and is_categorical_dtype(adata.smp[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
         logg.m('... regressing on per-gene means within categories', v=4)
-        unique_categories = np.unique(adata.smp[keys[0]])
+        unique_categories = np.unique(adata.smp[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
-            mask = category == adata.smp[keys[0]]
+            mask = category == adata.smp[keys[0]].values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
     else:
-        regressors = np.array([adata.smp[key] if key in adata.smp_keys() else adata[:, key].X for key in keys]).T
+        regressors = np.array(
+            [adata.smp[key].values if key in adata.smp_keys()
+             else adata[:, key].X for key in keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
     chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
               for start in range(0, n_chunks * len_chunk, len_chunk)]
-    
+
     if sett.is_run_from_ipython:
         from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
@@ -574,10 +579,10 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         # from tqdm import tqdm
     else:
         from tqdm import tqdm
-        
+
     import statsmodels.api as sm
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
-    
+
     def _regress_out(col_index, responses, regressors):
         try:
             if regressors.shape[1] - 1 == responses.shape[1]:
@@ -598,15 +603,18 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         for i, col_index in enumerate(chunk):
             chunk_array[:, i] = _regress_out(col_index, responses, regressors)
         return chunk_array
-    
+
     for chunk in tqdm(chunks):
-        result_lst = Parallel(n_jobs=n_jobs)(
-            delayed(_regress_out)(
-                col_index, adata.X, regressors) for col_index in chunk)
+        # why did this break after migrating to dataframes?
+        # result_lst = Parallel(n_jobs=n_jobs)(
+        #     delayed(_regress_out)(
+        #         col_index, adata.X, regressors) for col_index in chunk)
+        result_lst = [_regress_out(
+            col_index, adata.X, regressors) for col_index in chunk]
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
     logg.msg('finished', t=True, v=4)
-    logg.msg('--> after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`', v=4)
+    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
     return adata if copy else None
 
 
