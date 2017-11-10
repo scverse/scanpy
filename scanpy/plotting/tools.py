@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Plotting
 
 Plotting functions for each tool and toplevel plotting functions for AnnData.
@@ -101,8 +101,6 @@ def pca_scatter(
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata, verbosity=-1)
     axs = scatter(
         adata,
         basis='pca',
@@ -213,8 +211,6 @@ def diffmap(
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
                       for i in range(1, adata.smp['X_diffmap'].shape[1])]
@@ -313,8 +309,6 @@ def draw_graph(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if layout is None: layout = adata.add['draw_graph_layout'][-1]
     if 'X_draw_graph_' + layout not in adata.smp_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
@@ -395,8 +389,6 @@ def tsne(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     axs = scatter(
         adata,
         basis='tsne',
@@ -537,8 +529,6 @@ def aga_scatter(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if color is None:
         color = ['aga_groups']
         if 'aga_groups_original' in adata.add:
@@ -1301,8 +1291,7 @@ def dpt_scatter(
 
     See parameters of sc.pl.dpt().
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
+
     colors = ['dpt_pseudotime']
     if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
     if color is not None:
@@ -1446,8 +1435,6 @@ def louvain(
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     add_color = []
     if color is not None:
         add_color = color if isinstance(color, list) else color.split(',')

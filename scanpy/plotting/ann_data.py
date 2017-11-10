@@ -5,6 +5,7 @@
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -14,7 +15,7 @@ import seaborn as sns
 from .. import settings
 from . import utils
 from .utils import scatter_base, scatter_group
-
+from ..utils import sanitize_anndata
 
 def scatter(
         adata,
@@ -92,6 +93,7 @@ def scatter(
     -------
     A list of matplotlib.Axis objects.
     """
+    sanitize_anndata(adata)
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
@@ -101,7 +103,7 @@ def scatter(
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
         try:
-            Y = adata.smp['X_' + basis][:, components]
+            Y = adata.get_multicol_field_smp('X_' + basis)[:, components]
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
@@ -162,7 +164,7 @@ def scatter(
             continuous = False
             # test whether we have categorial or continuous annotation
             if color_key in adata.smp_keys():
-                if adata.smp[color_key].dtype.char in ['S', 'U']:
+                if is_categorical_dtype(adata.smp[color_key]):
                     categorical = True
                 else:
                     continuous = True

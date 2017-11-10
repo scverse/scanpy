@@ -791,7 +791,9 @@ def write_dict_to_file(filename, d, ext='h5'):
                             new_dtype = [(dt[0], 'S{}'.format(int(dt[1][2:])*4))
                                          for dt in value.dtype.descr]
                             f.create_dataset(key, data=value.astype(new_dtype))
-                    except Exception:
+                    except Exception as e:
+                        raise e
+                        logg.info(str(e))
                         logg.warn('Could not save field with key = "{}" to h5 file.'
                                   .format(key))
     elif ext == 'npz':
