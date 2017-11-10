@@ -4,7 +4,7 @@
 
 
 from .builtin import *
-from ..utils import check_adata
+from ..utils import sanitize_anndata
 
 
 def init_run(run_name, suffix='', recompute=True, reread=False,
@@ -91,7 +91,7 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
         logg.m('... X has shape n_samples × n_variables = {} × {}'
                .format(adata.X.shape[0], adata.X.shape[1]))
         # do sanity checks on data dictionary
-        adata = check_adata(adata, verbosity=1)
+        adata = sanitize_anndata(adata, verbosity=1)
         # write the prepocessed data
         readwrite.write(sett.run_name, adata)
     else:

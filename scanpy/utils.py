@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Utility functions and classes
 """
 
@@ -245,40 +245,21 @@ _howto_specify_subgroups = '''sample annotation in adata only consists of sample
     adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
 
 
-def check_adata(adata, verbosity=-3):
+def sanitize_anndata(adata, verbosity=-3):
     """Do sanity checks on adata object.
 
-    Checks whether adata contains annotation.
+    Transform string arrays to categorical data types.
     """
-    if len(adata.smp_keys()) == 0:
-        settings.m(1-verbosity, _howto_specify_subgroups)
-    else:
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            info = 'sample annotation: '
-        for ismp, smp in enumerate(adata.smp_keys()):
-            # ordered unique categories for categorical annotation
-            if not smp + '_order' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                adata.add[smp + '_order'] = unique_categories(adata.smp[smp])
-            if smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                logg.warn('"{}" uses a deprecated naming convention for specifying the '
-                          'order of a categorical data type; use "{}" instead!'
-                          .format(smp + '_names', smp + '_order'))
-            if settings.verbosity > 1-verbosity:
-                info += '"' + smp + '" = '
-                if adata.smp[smp].dtype.char in {'U', 'S'}:
-                    ann_info = str(adata.add[smp + '_order'])
-                    if len(adata.add[smp + '_order']) > 7:
-                        ann_info = (str(adata.add[smp + '_order'][0:3]).replace(']', '')
-                                    + ' ...'
-                                    + str(adata.add[smp + '_order'][-2:]).replace('[', ''))
-                    info += ann_info
-                else:
-                    info += 'continuous'
-                if ismp < len(adata.smp_keys())-1:
-                    info += ', '
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            settings.m(1-verbosity, info)
-    return adata
+    from pandas.api.types import is_string_dtype
+    for ann in ['smp', 'var']:
+        for key in getattr(adata, ann).columns:
+            df = getattr(adata, ann)
+            if is_string_dtype(df[key]):
+                df[key] = df[key].astype('category')
+                df[key].cat.categories = df[key].cat.categories.astype('U')
+                logg.info('... storing {} as categorical type'.format(key))
+                logg.hint('... access categories as adata.{}.{}.cat.categories'
+                          .format(ann, key))
 
 
 def moving_average(a, n):

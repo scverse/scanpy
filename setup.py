@@ -29,9 +29,11 @@ else:
                   include_dirs=[numpy.get_include()]),
 ]
 
+package_name = 'scanpy'
+
 req_path = Path('requires.txt')
 if not req_path.is_file():
-    req_path = Path('scanpy.egg-info') / req_path
+    req_path = Path(package_name + '.egg-info') / req_path
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
@@ -39,7 +41,7 @@ with open('README.rst') as readme_f:
     readme = readme_f.read()
 
 setup(
-    name='scanpy',
+    name=package_name,
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(cmdclass),
     description='Single-Cell Analysis in Python.',

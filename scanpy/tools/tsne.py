@@ -57,8 +57,8 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
 
     Returns
     -------
-    Returns or updates adata depending on `copy` with
-        "X_tsne", tSNE coordinates of data (adata.smp)
+    Returns or updates adata depending on `copy` with the multicolumn field
+    "X_tsne", tSNE coordinates of data (adata.smp).
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
@@ -97,17 +97,18 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         except ImportError:
             logg.warn('Consider installing the package MulticoreTSNE '
                       '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
-                      'Even for `n_jobs=1` this speeds up the computation considerably and might yield better converged results.')
+                      'Even for n_jobs=1 this speeds up the computation considerably '
+                      'and might yield better converged results.')
             pass
     if multicore_failed:
         from sklearn.manifold import TSNE
-        from . import _tsne_fix  # fix by D. DeTomaso for sklearn < 0.19
+        from . import _tsne_fix   # fix by D. DeTomaso for sklearn < 0.19
         # unfortunately, sklearn does not allow to set a minimum number of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
         logg.info('    using sklearn.manifold.TSNE with a fix by D. DeTomaso')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.smp['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.set_multicol_field_smp['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
               '    "X_tsne", tSNE coordinates (adata.smp)')
