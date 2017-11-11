@@ -787,7 +787,9 @@ def write_anndata_to_file(filename, adata, ext='h5'):
         with h5py.File(filename, 'w') as f:
             for key, value in d_write.items():
                 try:
-                    f.create_dataset(key, data=value)
+                    # ignore arrays with empty dtypes
+                    if value.dtype.descr:
+                        f.create_dataset(key, data=value)
                 except TypeError:
                     # try writing it as byte strings
                     try:
@@ -814,11 +816,11 @@ def write_anndata_to_file(filename, adata, ext='h5'):
         not_yet_raised_data_graph_warning = True
         for key, value in d_write.items():
             if key.startswith('data_graph') and not_yet_raised_data_graph_warning:
-                logg.warn('Omitting to write neighborhood graph (`adata.add[\'data_graph...\']`).')
+                logg.warn('Omitting to write neighborhood graph (`adata.uns[\'data_graph...\']`).')
                 not_yet_raised_data_graph_warning = False
                 continue
             filename = dirname
-            if key not in {'X', 'var', 'smp', '_X', '_var', '_smp'}:
+            if key not in {'X', 'var', 'smp', 'smpm', 'varm'}:
                 filename += 'uns/'
             filename += key + '.' + ext
             from pandas import DataFrame

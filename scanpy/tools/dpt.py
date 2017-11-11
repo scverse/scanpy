@@ -120,7 +120,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
-    adata.set_multicol_field_smp('X_diffmap', dpt.rbasis[:, 1:])
+    adata.smpm['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
     adata.add['diffmap_evals'] = dpt.evals[1:]
     adata.add['data_graph_distance_local'] = dpt.Dsq
