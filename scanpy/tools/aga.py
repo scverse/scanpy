@@ -187,7 +187,7 @@ def aga(adata,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    adata.set_multicol_field_smp('X_diffmap', aga.rbasis[:, 1:])
+    adata.smpm['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
     adata.add['diffmap_evals'] = aga.evals[1:]
     adata.add['data_graph_distance_local'] = aga.Dsq

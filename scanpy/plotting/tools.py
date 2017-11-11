@@ -128,15 +128,20 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
     Parameters
     ----------
+    adata : AnnData
+        Annotated data matrix.
+    components : str or list of integers, optional
+        For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
+        principal component.
     show : bool, optional (default: None)
-         Show the plot.
+        Show the plot.
     save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+        If True or a str, save the figure. A string is appended to the
+        default filename.
     """
     if isinstance(components, str): components = components.split(',')
-    keys = ['PC1', 'PC2', 'PC3'] if components is None else ['PC{}'.format(c) for c in components]
-    ranking(adata, 'var', keys)
+    components = np.array(components) - 1
+    ranking(adata, 'varm', keys, indices=components)
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
@@ -213,7 +218,7 @@ def diffmap(
     """
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
-            for i in range(1, adata.get_multicol_field_smp('X_diffmap').shape[1])]
+            for i in range(1, adata.smpm['X_diffmap'].shape[1])]
     else:
         if components is None: components = '1,2' if '2d' in projection else '1,2,3'
         if not isinstance(components, list): components_list = [components]

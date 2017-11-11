@@ -68,7 +68,7 @@ def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
     dmap.update_diffmap()
     adata.add['data_graph_distance_local'] = dmap.Dsq
     adata.add['data_graph_norm_weights'] = dmap.Ktilde
-    adata.set_multicol_field_smp('X_diffmap', dmap.rbasis[:, 1:])
+    adata.smpm['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.add['diffmap_evals'] = dmap.evals[1:]
     logg.m('    finished', t=True, end=' ')

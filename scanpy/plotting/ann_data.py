@@ -102,7 +102,7 @@ def scatter(
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
     if basis is not None:
         try:
-            Y = adata.get_multicol_field_smp('X_' + basis)[:, components]
+            Y = adata.smpm['X_' + basis][:, components]
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
@@ -267,7 +267,8 @@ def scatter(
     return axs
 
 
-def ranking(adata, attr, keys, labels=None, color='black', n_points=30,
+def ranking(adata, attr, keys, indices=None,
+            labels=None, color='black', n_points=30,
             log=False):
     """Plot rankings.
 
@@ -277,7 +278,7 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30,
     ----------
     adata : AnnData
         The data.
-    attr : {'var', 'add', 'smp'}
+    attr : {'var', 'smp', 'add', 'varm', 'smpm'}
         The attribute of AnnData that contains the score.
     keys : str or list of str
         The scores to look up an array from the attribute of adata.
@@ -286,7 +287,11 @@ def ranking(adata, attr, keys, labels=None, color='black', n_points=30,
     -------
     Returns matplotlib gridspec with access to the axes.
     """
-    scores = getattr(adata, attr)[keys]
+    if isinstance(keys, str) and indices is not None:
+        scores = getattr(adata, attr)[keys][:, indices]
+        keys = ['{}{}'.format(keys[:-1], i+1) for i in indices]
+    else:
+        scores = getattr(adata, attr)[keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
     if log: scores = np.log(scores)

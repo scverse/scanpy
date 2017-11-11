@@ -358,7 +358,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
         if ('X_pca' in adata.smp
-            and adata.get_multicol_field_smp('X_pca').shape[1] >= n_comps
+            and adata.smpm['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
             logg.m('    not recomputing PCA, using "X_pca" contained '
@@ -370,9 +370,8 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio = result
-            adata.set_multicol_field_smp('X_pca', X_pca)
-            for icomp, comp in enumerate(components):
-                adata.var['PC' + str(icomp+1)] = comp
+            adata.smpm['X_pca'] = X_pca
+            adata.varm['PCs'] = components.T
             adata.add['pca_variance_ratio'] = pca_variance_ratio
             logg.m('    finished', t=True, end=' ', v=4)
             logg.m('and added\n'
