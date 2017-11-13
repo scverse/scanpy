@@ -1,8 +1,6 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-"""Differential Gene Expression Analysis
-
-This is a Beta Version of a tool for differential gene expression testing
-between sets detected in previous tools. Tools such as dpt, cluster,...
+#         T. Callies
+"""Rank genes according to differential expression [Wolf17]_.
 """
 
 import numpy as np
@@ -24,7 +22,7 @@ def rank_genes_groups(
         compute_distribution=False,
         only_positive=True,
         copy=False,
-        test_type='t_test'):
+        test_type='t_test_overestim_var'):
     """Rank genes according to differential expression [Wolf17]_.
 
     Rank genes by differential expression. By default, a t-test-like ranking is
@@ -49,9 +47,10 @@ def rank_genes_groups(
     compute_distribution : `bool`
         If `True`, also computes the distribution for top-ranked genes, which
         can be visualized using `sc.pl.rank_genes_groups_violin(adata)`.
-    test_type : 't_test' or 'wilcoxon' (default: 't_test')
+    test_type : {'t_test_incr_var', 't_test', 'wilcoxon'} (default: 't_test_overestim_var')
         If 't_test', use t_test to calculate test statistics. If 'wilcoxon', use Wilcoxon-Rank-Sum
-        to calculate test statistic.
+        to calculate test statistic. If 't_test_overestim_var', overestimate variance.
+
     Returns
     -------
     rank_genes_groups_gene_zscores : np.ndarray of dtype float (adata.add)
@@ -64,7 +63,7 @@ def rank_genes_groups(
     logg.info('find differentially expressed genes', r=True)
     adata = adata.copy() if copy else adata
     n_genes_user = n_genes
-    utils.check_adata(adata)
+    utils.sanitize_anndata(adata)
     # for clarity, rename variable
     groups_order = groups
     if isinstance(groups_order, list) and isinstance(groups_order[0], int):
@@ -72,7 +71,7 @@ def rank_genes_groups(
     if group_reference is not None and group_reference not in set(groups_order):
         groups_order += [group_reference]
     if (group_reference is not None
-        and group_reference not in set(adata.add[groupby + '_order'])):
+        and group_reference not in set(adata.smp[groupby].cat.categories)):
         raise ValueError('group_reference = {} needs to be one of groupby = {}.'
                          .format(group_reference, groupby))
     groups_order, groups_masks = utils.select_groups(
@@ -88,39 +87,23 @@ def rank_genes_groups(
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
-    # TODO: Add logging such that test-type is included
-    logg.info('... consider "{}":'.format(groupby), groups_order,
+    logg.info('... consider \'{}\':'.format(groupby), groups_order,
               'with sample numbers', ns)
     if group_reference is not None:
         ireference = np.where(groups_order == group_reference)[0][0]
     reference_indices = np.arange(adata.n_vars, dtype=int)
 
-    # Here begins the part that is test-specific.
+    if test_type not in {'t_test', 't_test_overestim_var', 'wilcoxon'}:
+        raise ValueError('test_type should be either "wilcoxon" or "t_test". "t_test" is being used as default.')
 
-    if test_type not in {'t_test', 'wilcoxon'}:
-        # TODO: Print Error Message in logging
-        logg.warn('Test_type should be either "wilcoxon" or "t_test". T-test is being used as default' )
-        # For convenience, and to avoid total collapse, set test_type to t_test
-        test_type='t_test'
-
-    if test_type is 't_test':
+    if test_type in {'t_test', 't_test_overestim_var'}:
         # loop over all masks and compute means, variances and sample numbers
-        # Definition of n_groups and n_genes was moved ahead since required for all test-types
-
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
-        # Definition of ns Moved ahead
         for imask, mask in enumerate(groups_masks):
             means[imask], vars[imask] = simple._get_mean_var(X[mask])
-            # Definition of ns moved ahead
-        # The following code parts were moved ahead since required by all test-types: Logging, ireference,
-        # ankings_gene_zscores = [] and rankings_gene_names = [] and reference_indices
-
-
-        # test each either against the union of all other groups
-        # or against a specific group
-
-
+        # test each either against the union of all other groups or against a
+        # specific group
         for igroup in range(n_groups):
             if group_reference is None:
                 mask_rest = ~groups_masks[igroup]
@@ -128,11 +111,10 @@ def rank_genes_groups(
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
             mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
-            # Make a more conservative assumption on the variance reduction
-            # in the reference. Instead of this
-            ns_rest = np.where(mask_rest)[0].size
-            # use this
-            # ns_rest = ns[igroup]
+            if test_type == 't_test':
+                ns_rest = np.where(mask_rest)[0].size
+            else:  # hack for overestimating the variance
+                ns_rest = ns[igroup]
             denominator = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
             denominator[np.flatnonzero(denominator == 0)] = np.nan
             zscores = (means[igroup] - mean_rest) / denominator
@@ -155,7 +137,7 @@ def rank_genes_groups(
                     full_col[:] = np.nan
                     full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
                     adata.smp[identifier] = full_col
-    elif test_type is 'wilcoxon':
+    elif test_type == 'wilcoxon':
         # Wilcoxon-rank-sum test is usually more powerful in detecting marker genes
         # Limit maximal RAM that is required by the calculation. Currently set fixed to roughly 100 MByte
         CONST_MAX_SIZE = 10000000
@@ -232,9 +214,9 @@ def rank_genes_groups(
 
         # If no reference group exists, ranking needs only to be done once (full mask)
         else:
-            zscores=np.zeros((n_groups,n_genes))
+            zscores = np.zeros((n_groups, n_genes))
             batch = []
-            n_cells=X.shape[0]
+            n_cells = X.shape[0]
             n_genes_max_batch = floor(CONST_MAX_SIZE / n_cells)
             if n_genes_max_batch < n_genes - 1:
                 batch_index = n_genes_max_batch
@@ -283,12 +265,6 @@ def rank_genes_groups(
                         full_col[:] = np.nan
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
                         adata.smp[identifier] = full_col
-
-
-
-    # Here ends the test-specific part, do logging
-
-
 
     groups_order_save = groups_order
     if group_reference is not None:

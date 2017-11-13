@@ -5,7 +5,7 @@ import versioneer
 try:
     import numpy
 except ImportError:
-    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy`.')
+    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy` or `conda install numpy`.')
 
 use_cython = False
 if use_cython:
@@ -29,9 +29,11 @@ else:
                   include_dirs=[numpy.get_include()]),
 ]
 
+package_name = 'scanpy'
+
 req_path = Path('requires.txt')
 if not req_path.is_file():
-    req_path = Path('scanpy.egg-info') / req_path
+    req_path = Path(package_name + '.egg-info') / req_path
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
@@ -39,12 +41,13 @@ with open('README.rst') as readme_f:
     readme = readme_f.read()
 
 setup(
-    name='scanpy',
+    name=package_name,
     version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(cmdclass),
     description='Single-Cell Analysis in Python.',
     long_description=readme,
-    url='http://github.com/theislab/scanpy',
-    author='F. Alexander Wolf, P. Angerer',
+    url='http://github.com/theislab/anndata',
+    author='Alex Wolf, Philipp Angerer',
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD-3-Clause',
     entry_points={
@@ -53,9 +56,10 @@ setup(
         ],
     },
     install_requires=requires,
-    packages=find_packages(exclude=['scripts', 'scripts.*']),
+    packages=find_packages() + ['scanpy.sim_models'],
     include_dirs=[numpy.get_include()],
-    cmdclass=versioneer.get_cmdclass(cmdclass),
+    package_data={'': '*.txt'},
+    include_package_data=True,
     ext_modules=ext_modules,
     zip_safe=False,
     classifiers=[
@@ -64,7 +68,6 @@ setup(
         'Framework :: Jupyter',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',

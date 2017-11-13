@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Plotting
 
 Plotting functions for each tool and toplevel plotting functions for AnnData.
@@ -101,8 +101,6 @@ def pca_scatter(
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata, verbosity=-1)
     axs = scatter(
         adata,
         basis='pca',
@@ -130,15 +128,20 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
     Parameters
     ----------
+    adata : AnnData
+        Annotated data matrix.
+    components : str or list of integers, optional
+        For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
+        principal component.
     show : bool, optional (default: None)
-         Show the plot.
+        Show the plot.
     save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+        If True or a str, save the figure. A string is appended to the
+        default filename.
     """
     if isinstance(components, str): components = components.split(',')
-    keys = ['PC1', 'PC2', 'PC3'] if components is None else ['PC{}'.format(c) for c in components]
-    ranking(adata, 'var', keys)
+    components = np.array(components) - 1
+    ranking(adata, 'varm', keys, indices=components)
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
@@ -213,11 +216,9 @@ def diffmap(
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
-                      for i in range(1, adata.smp['X_diffmap'].shape[1])]
+            for i in range(1, adata.smpm['X_diffmap'].shape[1])]
     else:
         if components is None: components = '1,2' if '2d' in projection else '1,2,3'
         if not isinstance(components, list): components_list = [components]
@@ -313,8 +314,6 @@ def draw_graph(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if layout is None: layout = adata.add['draw_graph_layout'][-1]
     if 'X_draw_graph_' + layout not in adata.smp_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
@@ -395,8 +394,6 @@ def tsne(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     axs = scatter(
         adata,
         basis='tsne',
@@ -537,8 +534,6 @@ def aga_scatter(
     -------
     matplotlib.Axes object
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     if color is None:
         color = ['aga_groups']
         if 'aga_groups_original' in adata.add:
@@ -1024,13 +1019,14 @@ def aga_path(
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
-            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'] == str(group)]
-            idcs_group = np.argsort(adata.smp['aga_pseudotime'][adata.smp['aga_groups'] == str(group)])
+            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'].values == str(group)]
+            idcs_group = np.argsort(adata.smp['aga_pseudotime'].values[
+                adata.smp['aga_groups'].values == str(group)])
             idcs = idcs[idcs_group]
-            if key in adata.smp_keys(): x += list(adata.smp[key][idcs])
+            if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0: groups += [group for i in range(len(idcs))]
-            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'][idcs])
+            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'].values[idcs])
             if ikey == 0: x_tick_locs.append(len(x))
         if n_avg > 1:
             old_len_x = len(x)
@@ -1135,7 +1131,7 @@ def aga_path(
         pl.twinx()
         x = []
         for g in nodes:
-            x += list(adata.smp['aga_groups'][adata.smp['aga_groups'] == str(g)].astype(int))
+            x += list(adata.smp['aga_groups'].values[adata.smp['aga_groups'].values == str(g)].astype(int))
         if n_avg > 1: x = moving_average(x)
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
         label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
@@ -1255,7 +1251,7 @@ def dpt(
          Abstraction) instead.
     """
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None: colors = color
     dpt_scatter(
         adata,
@@ -1301,10 +1297,9 @@ def dpt_scatter(
 
     See parameters of sc.pl.dpt().
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
+
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'])) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
@@ -1352,12 +1347,12 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices']],
+        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'].values],
                               var_names=adata.var_names,
                               highlightsX=adata.add['dpt_changepoints'])
     else:
         # plot time series as gene expression vs time
-        timeseries(adata.X[adata.smp['dpt_order_indices']],
+        timeseries(adata.X[adata.smp['dpt_order_indices'].values],
                    var_names=adata.var_names,
                    highlightsX=adata.add['dpt_changepoints'],
                    xlim=[0, 1.3*adata.X.shape[0]])
@@ -1369,18 +1364,18 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(adata.smp['dpt_groups'],
-                       time=adata.smp['dpt_order'],
-                       color=adata.smp['dpt_groups'],
+    timeseries_subplot(adata.smp['dpt_groups'].values,
+                       time=adata.smp['dpt_order'].values,
+                       color=adata.smp['dpt_groups'].values,
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='dpt groups',
                        yticks=(np.arange(len(adata.add['dpt_groups_order']), dtype=int)
                                      if len(adata.add['dpt_groups_order']) < 5 else None),
                        palette=palette)
     pl.subplot(212)
-    timeseries_subplot(adata.smp['dpt_pseudotime'],
-                       time=adata.smp['dpt_order'],
-                       color=adata.smp['dpt_pseudotime'],
+    timeseries_subplot(adata.smp['dpt_pseudotime'].values,
+                       time=adata.smp['dpt_order'].values,
+                       color=adata.smp['dpt_pseudotime'].values,
                        xlabel='dpt order',
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='pseudotime',
@@ -1446,8 +1441,6 @@ def louvain(
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    from ..utils import check_adata
-    adata = check_adata(adata)
     add_color = []
     if color is not None:
         add_color = color if isinstance(color, list) else color.split(',')

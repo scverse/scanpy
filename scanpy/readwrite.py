@@ -8,10 +8,11 @@ import h5py
 import numpy as np
 import psutil
 import time
+from anndata import AnnData
 
+from .utils import merge_dicts
 from . import settings as sett
 from . import logging as logg
-from .data_structs import AnnData
 
 avail_exts = {'csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'data'}
 """ Available file formats for reading data. """
@@ -105,7 +106,7 @@ def read_10x_h5(filename, genome):
             variables/genes by gene name. The data is stored in adata.X, cell
             names in adata.smp_names and gene names in adata.var_names.
     """
-    logg.msg('reading', filename, r=True, end=' ', v=1)
+    logg.info('reading', filename, r=True, end=' ')
     import tables
     with tables.open_file(filename, 'r') as f:
         try:
@@ -136,7 +137,7 @@ def read_10x_h5(filename, genome):
             raise Exception('File is missing one or more required datasets.')
 
 
-def write(filename_or_filekey, data, ext=None):
+def write(filename_or_filekey, adata, ext=None):
     """Write AnnData objects and dictionaries to file.
 
     If a key is passed, the filename is generated as
@@ -147,16 +148,13 @@ def write(filename_or_filekey, data, ext=None):
     ----------
     filename_or_filekey : str
         Filename of data file or key to generate filename.
-    data : dict, AnnData
-        Instance of AnnData or dict.
+    adata : AnnData
+        Instance of AnnData/
     ext : {``None``, 'h5', 'csv', 'txt', 'npz'} (default: None)
         File extension from wich to infer file format. If ``None``, defaults to
         ``sc.settings.file_format_data``.
     """
     filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
-    if isinstance(data, AnnData): d = data.to_dict()
-    else: d = data
-
     if is_filename(filename_or_filekey):
         filename = filename_or_filekey
         ext_ = is_filename(filename, return_ext=True)
@@ -170,7 +168,7 @@ def write(filename_or_filekey, data, ext=None):
         key = filename_or_filekey
         ext = sett.file_format_data if ext is None else ext
         filename = get_filename_from_key(key, ext)
-    write_dict_to_file(filename, d, ext=ext)
+    write_anndata_to_file(filename, adata, ext=ext)
 
 
 # -------------------------------------------------------------------------------
@@ -313,7 +311,7 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
         if sheet is None:
             return read_file_to_dict(filename, ext=sett.file_format_data)
         else:
-            logg.info('reading sheet', sheet, 'from file', filename)
+            logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return _read_hdf5_single(filename, sheet)
     # read other file types
     filename_stripped = filename.lstrip('./')
@@ -331,7 +329,7 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
             raise FileNotFoundError(
                 'Cannot read original data file {}, is not present.'
                 .format(filename))
-        logg.msg('reading', filename, v=1)
+        logg.msg('reading', filename, v=4)
         if not cache:
             logg.warn('This might be very slow. Consider passing `cache=True`, '
                       'which enables much faster reading from a cache file.')
@@ -363,7 +361,7 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
             if not os.path.exists(os.path.dirname(filename_cache)):
                 os.makedirs(os.path.dirname(filename_cache))
             # write for faster reading when calling the next time
-            write_dict_to_file(filename_cache, ddata, sett.file_format_data)
+            write_anndata_to_file(filename_cache, AnnData(ddata), sett.file_format_data)
     return ddata
 
 
@@ -695,7 +693,8 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
     d : dict
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    logg.msg('reading', filename, v=1)
+    if cache_warning: logg.info('reading cache', filename)
+    else: logg.msg('reading', filename, v=4)
     d = {}
     if ext == 'h5':
         with h5py.File(filename, 'r') as f:
@@ -724,7 +723,7 @@ def postprocess_reading(key, value):
         # recover a dictionary that has been stored as a string
         if len(value) > 0:
             if value[0] == '{' and value[-1] == '}': value = eval(value)
-    if (key != 'smp' and key != 'var'
+    if (key != 'smp' and key != 'var' and key != '_smp' and key != '_var'
         and not isinstance(value, dict) and value.dtype.names is not None):
         # TODO: come up with a better way of solving this, see also below
         new_dtype = [((dt[0], 'U{}'.format(int(int(dt[1][2:])/4)))
@@ -745,7 +744,7 @@ def preprocess_writing(key, value):
     return key, value
 
 
-def write_dict_to_file(filename, d, ext='h5'):
+def write_anndata_to_file(filename, adata, ext='h5'):
     """Write dictionary to file.
 
     Values need to be np.arrays or transformable to numpy arrays.
@@ -766,9 +765,13 @@ def write_dict_to_file(filename, d, ext='h5'):
         logg.info('creating directory', directory + '/', 'for saving output files')
         os.makedirs(directory)
     # output the following at warning level, it's very important for the users
-    if ext in {'h5', 'npz'}: logg.msg('writing', filename, v=1)
-    d_write = {}
+    if ext in {'h5', 'npz'}:
+        logg.msg('writing', filename, v=4)
+        d = adata.to_dict_fixed_width_arrays()
+    else:
+        d = adata.to_dict_dataframes()
     from scipy.sparse import issparse
+    d_write = {}
     for key, value in d.items():
         if issparse(value):
             for k, v in save_sparse_csr(value, key=key).items():
@@ -778,10 +781,15 @@ def write_dict_to_file(filename, d, ext='h5'):
             d_write[key] = value
     # now open the file
     if ext == 'h5':
+        if issparse(value):
+            for k, v in save_sparse_csr(value, key=key).items():
+                d_write[k] = v
         with h5py.File(filename, 'w') as f:
             for key, value in d_write.items():
                 try:
-                    f.create_dataset(key, data=value)
+                    # ignore arrays with empty dtypes
+                    if value.dtype.descr:
+                        f.create_dataset(key, data=value)
                 except TypeError:
                     # try writing it as byte strings
                     try:
@@ -791,7 +799,8 @@ def write_dict_to_file(filename, d, ext='h5'):
                             new_dtype = [(dt[0], 'S{}'.format(int(dt[1][2:])*4))
                                          for dt in value.dtype.descr]
                             f.create_dataset(key, data=value.astype(new_dtype))
-                    except Exception:
+                    except Exception as e:
+                        logg.info(str(e))
                         logg.warn('Could not save field with key = "{}" to h5 file.'
                                   .format(key))
     elif ext == 'npz':
@@ -801,42 +810,28 @@ def write_dict_to_file(filename, d, ext='h5'):
         # single hdf5 file
         dirname = filename.replace('.' + ext, '/')
         # write the following at warning level, it's very important for the users
-        logg.msg('writing', ext, 'files to', dirname, v=1)
+        logg.info('writing', ext, 'files to', dirname)
         if not os.path.exists(dirname): os.makedirs(dirname)
-        if not os.path.exists(dirname + 'add'): os.makedirs(dirname + 'add')
-        from pandas import DataFrame
+        if not os.path.exists(dirname + 'uns'): os.makedirs(dirname + 'uns')
         not_yet_raised_data_graph_warning = True
         for key, value in d_write.items():
             if key.startswith('data_graph') and not_yet_raised_data_graph_warning:
-                logg.warn('Omitting to write neighborhood graph (`adata.add[\'data_graph...\']`).')
+                logg.warn('Omitting to write neighborhood graph (`adata.uns[\'data_graph...\']`).')
                 not_yet_raised_data_graph_warning = False
                 continue
             filename = dirname
-            if key not in {'X', 'var', 'smp'}: filename += 'add/'
+            if key not in {'X', 'var', 'smp', 'smpm', 'varm'}:
+                filename += 'uns/'
             filename += key + '.' + ext
-            if value.dtype.names is None:
-                if value.dtype.char == 'S': value = value.astype('U')
+            from pandas import DataFrame
+            if not isinstance(value, DataFrame):
                 try:
                     df = DataFrame(value)
-                except ValueError:
+                except:
+                    logg.warn('Omitting to write \'{}\'.'.format(key))
                     continue
-                df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
-                          header=False, index=False)
-            else:
-                if np.ndim(value) == 0: value = value[None]
-                df = DataFrame.from_records(value)
-                cols = list(df.select_dtypes(include=[object]).columns)
-                # convert to unicode string
-                df[cols] = df[cols].values.astype('U')
-                if key == 'var':
-                    df = df.T
-                    df.to_csv(filename,
-                              sep=(' ' if ext == 'txt' else ','),
-                              header=False)
-                else:
-                    df.to_csv(filename,
-                              sep=(' ' if ext == 'txt' else ','),
-                              index=False)
+            df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
+                      header=False, index=False)
 
 
 # -------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Utility functions and classes
 """
 
@@ -95,17 +95,17 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     """
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
-    check_adata(adata)
+    sanitize_andata(adata)
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.add[prediction + '_order']):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
-        mask_pred = adata.smp[prediction] == pred_group
+        mask_pred = adata.smp[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
         for ref_group in adata.add[reference + '_order']:
-            mask_ref = (adata.smp[reference] == ref_group).astype(np.int8)
+            mask_ref = (adata.smp[reference].values == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
@@ -239,46 +239,21 @@ def fill_in_datakeys(example_parameters, dexdata):
     return example_parameters
 
 
-_howto_specify_subgroups = '''sample annotation in adata only consists of sample names
---> you can provide additional annotation by setting, for example,
-    adata.smp['groups'] = ['A', 'B', 'A', ... ]
-    adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
-
-
-def check_adata(adata, verbosity=-3):
+def sanitize_anndata(adata, verbosity=-3):
     """Do sanity checks on adata object.
 
-    Checks whether adata contains annotation.
+    Transform string arrays to categorical data types.
     """
-    if len(adata.smp_keys()) == 0:
-        settings.m(1-verbosity, _howto_specify_subgroups)
-    else:
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            info = 'sample annotation: '
-        for ismp, smp in enumerate(adata.smp_keys()):
-            # ordered unique categories for categorical annotation
-            if not smp + '_order' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                adata.add[smp + '_order'] = unique_categories(adata.smp[smp])
-            if smp + '_names' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                logg.warn('"{}" uses a deprecated naming convention for specifying the '
-                          'order of a categorical data type; use "{}" instead!'
-                          .format(smp + '_names', smp + '_order'))
-            if settings.verbosity > 1-verbosity:
-                info += '"' + smp + '" = '
-                if adata.smp[smp].dtype.char in {'U', 'S'}:
-                    ann_info = str(adata.add[smp + '_order'])
-                    if len(adata.add[smp + '_order']) > 7:
-                        ann_info = (str(adata.add[smp + '_order'][0:3]).replace(']', '')
-                                    + ' ...'
-                                    + str(adata.add[smp + '_order'][-2:]).replace('[', ''))
-                    info += ann_info
-                else:
-                    info += 'continuous'
-                if ismp < len(adata.smp_keys())-1:
-                    info += ', '
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            settings.m(1-verbosity, info)
-    return adata
+    from pandas.api.types import is_string_dtype
+    for ann in ['smp', 'var']:
+        for key in getattr(adata, ann).columns:
+            df = getattr(adata, ann)
+            if is_string_dtype(df[key]):
+                df[key] = df[key].astype('category')
+                df[key].cat.categories = df[key].cat.categories.astype('U')
+                logg.info('... storing {} as categorical type'.format(key))
+                logg.hint('... access categories as adata.{}.{}.cat.categories'
+                          .format(ann, key))
 
 
 def moving_average(a, n):
@@ -376,44 +351,43 @@ def default_tool_argparser(description, example_parameters):
 # --------------------------------------------------------------------------------
 
 
-def select_groups(adata, groups_order_subset='all', smp='groups'):
-    """Get subset of groups in adata.smp[smp].
+def select_groups(adata, groups_order_subset='all', key='groups'):
+    """Get subset of groups in adata.smp[key].
     """
-    groups_order = adata.add[smp + '_order']
-    if smp + '_masks' in adata.add:
-        groups_masks = adata.add[smp + '_masks']
+    groups_order = adata.smp[key].cat.categories
+    if key + '_masks' in adata.add:
+        groups_masks = adata.add[key + '_masks']
     else:
-        groups_masks = np.zeros((len(adata.add[smp + '_order']),
-                                 adata.smp[smp].size), dtype=bool)
-        for iname, name in enumerate(adata.add[smp + '_order']):
+        groups_masks = np.zeros((len(adata.smp[key].cat.categories),
+                                 adata.smp[key].values.size), dtype=bool)
+        for iname, name in enumerate(adata.smp[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.add[smp + '_order'][iname] in adata.smp[smp]:
-                mask = adata.add[smp + '_order'][iname] == adata.smp[smp]
+            if adata.smp[key].cat.categories[iname] in adata.smp[key].values:
+                mask = adata.smp[key].cat.categories[iname] == adata.smp[key].values
             else:
-                mask = str(iname) == adata.smp[smp]
+                mask = str(iname) == adata.smp[key].values
             groups_masks[iname] = mask
     groups_ids = list(range(len(groups_order)))
     if groups_order_subset != 'all':
-        # get list from string
-        if isinstance(groups_order_subset, str):
-            groups_order_subset = groups_order_subset.split(',')
         groups_ids = []
         for name in groups_order_subset:
-            groups_ids.append(np.where(adata.add[smp + '_order'] == name)[0][0])
+            groups_ids.append(
+                np.where(adata.smp[key].cat.categories.values == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
-            groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_order'])).astype(str),
+            groups_ids = np.where(
+                np.in1d(np.arange(len(adata.smp[key].cat.categories)).astype(str),
                                           np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
             logg.m(np.array(groups_order_subset),
                    'invalid! specify valid groups_order (or indices) one of',
-                   adata.add[smp + '_order'])
+                   adata.smp[key].cat.categories)
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-        groups_order_subset = adata.add[smp + '_order'][groups_ids]
+        groups_order_subset = adata.smp[key].cat.categories[groups_ids].values
     else:
-        groups_order_subset = groups_order
+        groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks
 
 

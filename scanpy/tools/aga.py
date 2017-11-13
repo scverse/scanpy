@@ -187,7 +187,7 @@ def aga(adata,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
+    adata.smpm['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
     adata.add['diffmap_evals'] = aga.evals[1:]
     adata.add['data_graph_distance_local'] = aga.Dsq
@@ -311,8 +311,10 @@ def aga_compare_paths(adata1, adata2,
     g2 = nx.Graph(adata2.add[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
-    asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
-    asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
+    asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'].values,
+                                         adata2.smp['aga_groups'].values)
+    asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'].values,
+                                         adata1.smp['aga_groups'].values)
     orig_names1 = adata1.add['aga_groups_order_original']
     orig_names2 = adata2.add['aga_groups_order_original']
 
@@ -460,8 +462,8 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
 
     size_before = adata.add['aga_adjacency_tree_confidence'].shape[0]
     adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
-        adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'])
-    adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'])
+        adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'].values)
+    adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'].values)
     for key in ['aga_adjacency_full_confidence', 'aga_groups_original',
                 'aga_groups_order_original', 'aga_groups_colors_original']:
         if key in adata.add: del adata.add[key]
@@ -516,7 +518,7 @@ class AGA(data_graph.DataGraph):
                 raise ValueError('Did not find {} in adata.smp_keys()! '
                                  'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
                                  .format(clusters))
-            clusters_array = adata.smp[clusters]
+            clusters_array = adata.smp[clusters].values
             # transform to a list of index arrays
             self.clusters_precomputed = []
             # TODO: this is not a good solution
@@ -1394,17 +1396,6 @@ class AGA(data_graph.DataGraph):
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
             trunk = 3
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
         elif len(ssegs) == 3:
             reference_point = np.zeros(3, dtype=int)
             reference_point[0] = ssegs_tips[0][0]
@@ -1428,25 +1419,6 @@ class AGA(data_graph.DataGraph):
             ssegs_adjacency = [[trunk] if i != trunk else
                                [j for j in range(3) if j != trunk]
                                for i in range(3)]
-            # print(ssegs_adjacency)
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(3):
-            #         if i != iseg_new:
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[iseg_new, i], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[iseg_new, i], 1], marker='o', c='black')
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[i, iseg_new], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[i, iseg_new], 1], marker='x', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
-            # print('trunk', trunk)
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]
