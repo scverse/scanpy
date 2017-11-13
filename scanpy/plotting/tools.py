@@ -536,9 +536,7 @@ def aga_scatter(
     matplotlib.Axes object
     """
     if color is None:
-        color = ['aga_groups']
-        if 'aga_groups_original' in adata.uns:
-            color[color.index('aga_groups')] = adata.uns['aga_groups_original']
+        color = [adata.uns['aga_groups_key']]
     if not isinstance(color, list): color = [color]
     ax = scatter(adata,
                  basis=basis,
@@ -727,35 +725,29 @@ def _aga_graph(
         max_edge_width=None,
         export_to_gexf=False,
         random_state=0):
-    if groups is not None and isinstance(groups, str) and groups not in adata.smp_keys():
-        raise ValueError('Groups {} are not in adata.smp.'.format(groups))
+    node_labels = groups
+    if (node_labels is not None
+        and isinstance(node_labels, str)
+        and node_labels != adata.uns['aga_groups_key']):
+        raise ValueError('Provide a list of group labels for the AGA groups {}, not {}.'
+                         .format(adata.uns['aga_groups_key'], node_labels))
+    groups_key = adata.uns['aga_groups_key']
+    if node_labels is None:
+        node_labels = adata.smp[groups_key].cat.categories
 
-    groups_name = groups if isinstance(groups, str) else None
-    if groups is None and 'aga_groups_order_original' in adata.uns:
-        groups = adata.uns['aga_groups_order_original']
-        groups_name = adata.uns['aga_groups_original']
-    elif groups in adata.smp_keys():
-        groups = adata.uns[groups + '_order']
-    elif groups is None:
-        groups = adata.uns['aga_groups_order']
-        groups_name = 'aga_groups'
-
-    if color is None and groups_name is not None:
-        if 'aga_groups_original' in adata.uns and groups_name == adata.uns['aga_groups_original']:
-            color = adata.uns['aga_groups_colors_original']
-        else:
-            if (groups_name + '_colors' not in adata.uns
-                or len(adata.uns[groups_name + '_order'])
-                   != len(adata.uns[groups_name + '_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, groups_name)
-            color = adata.uns[groups_name + '_colors']
-        for iname, name in enumerate(adata.uns[groups_name + '_order']):
+    if color is None and groups_key is not None:
+        if (groups_key + '_colors' not in adata.uns
+            or len(adata.smp[groups_key].cat.categories)
+               != len(adata.uns[groups_key + '_colors'])):
+            utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
+        color = adata.uns[groups_key + '_colors']
+        for iname, name in enumerate(adata.smp[groups_key].cat.categories):
             if name in settings._ignore_categories: color[iname] = 'grey'
 
-    if isinstance(root, str) and root in groups:
-        root = list(groups).index(root)
-    if isinstance(root, list) and root[0] in groups:
-        root = [list(groups).index(r) for r in root]
+    if isinstance(root, str) and root in node_labels:
+        root = list(node_labels).index(root)
+    if isinstance(root, list) and root[0] in node_labels:
+        root = [list(node_labels).index(r) for r in root]
 
     # define the objects
     adjacency_solid = adata.uns[solid_edges]
@@ -786,9 +778,9 @@ def _aga_graph(
         color = [cmap(c) for c in color]
         colorbar = True
 
-    if len(color) < len(groups):
-        print(groups, color)
-        raise ValueError('`color` list need to be at least as long as `groups` list.')
+    if len(color) < len(node_labels):
+        print(node_labels, color)
+        raise ValueError('`color` list need to be at least as long as `node_labels` list.')
 
     # node positions from adjacency_solid
     if pos is None:
@@ -857,14 +849,17 @@ def _aga_graph(
 
     if export_to_gexf:
         for count, n in enumerate(nx_g_dashed.nodes()):
-            nx_g_dashed.node[count]['label'] = groups[count]
+            nx_g_dashed.node[count]['label'] = node_labels[count]
             nx_g_dashed.node[count]['color'] = color[count]
-            nx_g_dashed.node[count]['viz'] = {'position': {'x': 100*pos[count][0], 'y': 100*pos[count][1], 'z': 0}}
+            nx_g_dashed.node[count]['viz'] = {
+                'position': {'x': 100*pos[count][0],
+                             'y': 100*pos[count][1],
+                             'z': 0}}
         logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph.gexf'), v=1)
         nx.write_gexf(nx_g_dashed, settings.writedir + 'aga_graph.gexf')
 
     # deal with empty graph
-    ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
+    # ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
 
     # draw the nodes (pie charts)
     trans = ax.transData.transform
@@ -881,68 +876,75 @@ def _aga_graph(
     ax.set_frame_on(frameon)
     ax.set_xticks([])
     ax.set_yticks([])
-    base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
-    if (groups_name is not None and groups_name in adata.uns):
-        groups_sizes = adata.uns[groups_name + '_sizes']
-    elif 'aga_groups_sizes' in adata.uns:
-        groups_sizes = adata.uns['aga_groups_sizes']
+    if (groups_key is not None and groups_key + '_sizes' in adata.uns):
+        groups_sizes = adata.uns[groups_key + '_sizes']
     else:
-        groups_sizes = np.ones(len(groups))
+        groups_sizes = np.ones(len(node_labels))
+    base_scale_scatter = 2000
+    base_pie_size = (base_scale_scatter / (np.sqrt(adjacency_solid.shape[0]) + 10)
+                     * node_size_scale)
     median_group_size = np.median(groups_sizes)
-    force_labels_to_front = True  # TODO: solve this differently!
-    for count, n in enumerate(nx_g_solid.nodes()):
-        pie_size = base_pie_size
-        pie_size *= np.power(groups_sizes[count] / median_group_size,
-                             node_size_power)
-        xx, yy = trans(pos[n])     # data coordinates
-        xa, ya = trans2((xx, yy))  # axis coordinates
-        xa = ax_x_min + (xa - pie_size/2) * ax_len_x
-        ya = ax_y_min + (ya - pie_size/2) * ax_len_y
-        if ya < 0: ya = 0  # clip, the fruchterman layout sometimes places below figure
-        if xa < 0: xa = 0
-        a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
-        if is_color_like(color[count]):
-            fracs = [100]
-            color_single = [color[count]]
-        elif isinstance(color[count], dict):
+    groups_sizes = base_pie_size * np.power(
+        groups_sizes / median_group_size, node_size_power)
+    # usual scatter plot
+    if is_color_like(color[0]):
+        ax.scatter(pos_array[:, 0], pos_array[:, 1],
+                   c=color, edgecolors='face', s=groups_sizes)
+        for count, group in enumerate(node_labels):
+            ax.text(pos_array[count, 0], pos_array[count, 1], group,
+                verticalalignment='center',
+                horizontalalignment='center', size=fontsize)
+    # else pie chart plot
+    else:
+        force_labels_to_front = True  # TODO: solve this differently!
+        for count, n in enumerate(nx_g_solid.nodes()):
+            pie_size = groups_sizes[count] / base_scale_scatter
+            xx, yy = trans(pos[n])     # data coordinates
+            xa, ya = trans2((xx, yy))  # axis coordinates
+            xa = ax_x_min + (xa - pie_size/2) * ax_len_x
+            ya = ax_y_min + (ya - pie_size/2) * ax_len_y
+            # clip, the fruchterman layout sometimes places below figure
+            if ya < 0: ya = 0
+            if xa < 0: xa = 0
+            a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
+            if not isinstance(color[count], dict):
+                raise ValueError('{} is neither a dict of valid matplotlib colors '
+                                 'nor a valid matplotlib color.'.format(color[count]))
             color_single = color[count].keys()
             fracs = [color[count][c] for c in color_single]
             if sum(fracs) < 1:
                 color_single = list(color_single)
                 color_single.append('grey')
                 fracs.append(1-sum(fracs))
-        else:
-            raise ValueError('{} is neither a dict of valid matplotlib colors '
-                             'nor a valid matplotlib color.'.format(color[count]))
-        a.pie(fracs, colors=color_single)
-        if not force_labels_to_front and groups is not None:
-            a.text(0.5, 0.5, groups[count],
-                   verticalalignment='center',
-                   horizontalalignment='center',
-                   transform=a.transAxes,
-                   size=fontsize)
-    # TODO: this is a terrible hack, but if we use the solution above (``not
-    # force_labels_to_front``), labels get hidden behind pies
-    if force_labels_to_front and groups is not None:
-        for count, n in enumerate(nx_g_solid.nodes()):
-            # all copy and paste from above
-            pie_size = base_pie_size
-            pie_size *= np.power(groups_sizes[count] / median_group_size,
-                                 node_size_power)
-            xx, yy = trans(pos[n])     # data coordinates
-            xa, ya = trans2((xx, yy))  # axis coordinates
-            xa = ax_x_min + (xa - pie_size/2.0000001) * ax_len_x  # make sure a new axis is created
-            ya = ax_y_min + (ya - pie_size/2.0000001) * ax_len_y
-            if ya < 0: ya = 0  # clip, the fruchterman layout sometimes places below figure
-            if xa < 0: xa = 0
-            a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
-            a.set_frame_on(False)
-            a.set_xticks([])
-            a.set_yticks([])
-            a.text(0.5, 0.5, groups[count],
-                   verticalalignment='center',
-                   horizontalalignment='center',
-                   transform=a.transAxes, size=fontsize)
+            a.pie(fracs, colors=color_single)
+            if not force_labels_to_front and node_labels is not None:
+                a.text(0.5, 0.5, node_labels[count],
+                       verticalalignment='center',
+                       horizontalalignment='center',
+                       transform=a.transAxes,
+                       size=fontsize)
+        # TODO: this is a terrible hack, but if we use the solution above (``not
+        # force_labels_to_front``), labels get hidden behind pies
+        if force_labels_to_front and node_labels is not None:
+            for count, n in enumerate(nx_g_solid.nodes()):
+                pie_size = groups_sizes[count] / base_scale_scatter
+                # all copy and paste from above
+                xx, yy = trans(pos[n])     # data coordinates
+                xa, ya = trans2((xx, yy))  # axis coordinates
+                # make sure a new axis is created
+                xa = ax_x_min + (xa - pie_size/2.0000001) * ax_len_x
+                ya = ax_y_min + (ya - pie_size/2.0000001) * ax_len_y
+                # clip, the fruchterman layout sometimes places below figure
+                if ya < 0: ya = 0
+                if xa < 0: xa = 0
+                a = pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y])
+                a.set_frame_on(False)
+                a.set_xticks([])
+                a.set_yticks([])
+                a.text(0.5, 0.5, node_labels[count],
+                       verticalalignment='center',
+                       horizontalalignment='center',
+                       transform=a.transAxes, size=fontsize)
     if title is not None: ax.set_title(title)
     if colorbar:
         ax1 = pl.axes([0.95, 0.1, 0.03, 0.7])
@@ -953,6 +955,7 @@ def _aga_graph(
 
 def aga_path(
         adata,
+        groups=None,
         nodes=[0],
         keys=[0],
         normalize_to_zero_one=False,
@@ -980,10 +983,15 @@ def aga_path(
 
     Parameters
     ----------
-    palette_groups : list of colors or None, (default: None)
+    adata : AnnData
+        Annotated data matrix.
+    groups : str, optional (default: None)
+        Key of the grouping used to run AGA. If None, defaults to
+        `adata.uns['aga_groups_key']`.
+    palette_groups : list of colors or None, optional (default: None)
         Ususally, use the same `sc.pl.palettes...` as used for coloring the
         abstracted graph.
-    as_heatmap : bool (default: False)
+    as_heatmap : bool, optional (default: False)
         Plot the timeseries as heatmap.
     normalize_to_zero_one : bool, optional (default: True)
         Shift and scale the running average to [0, 1] per gene.
@@ -992,17 +1000,20 @@ def aga_path(
     if show_left_y_ticks is None:
         show_left_y_ticks = False if show_nodes_twin else True
 
-    orig_node_names = []
-    if ('aga_groups_order_original' in adata.uns
-        and adata.uns['aga_groups_original'] != 'louvain_groups'):
-        orig_node_names = adata.uns['aga_groups_order_original']
+    if groups is None:
+        if 'aga_groups_key' not in adata.uns:
+            raise KeyError(
+                'Pass the key of the grouping with which you ran AGA, '
+                'using the parameter `groups`.')
+        groups_key = adata.uns['aga_groups_key']
     else:
-        logg.m('did not find field "aga_groups_order_original" in adata.uns, '
-               'using aga_group integer ids instead', v=4)
+        groups_key = groups
+    groups_names = adata.smp[groups_key].cat.categories
 
     if palette_groups is None:
         palette_groups = palettes.default_20
-        palette_groups = utils.adjust_palette(palette_groups, len(adata.uns['aga_groups_order']))
+        palette_groups = utils.adjust_palette(
+            palette_groups, len(adata.smp[groups_key].cat.categories))
 
     def moving_average(a):
         return sc_utils.moving_average(a, n_avg)
@@ -1020,9 +1031,9 @@ def aga_path(
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
-            idcs = np.arange(adata.n_smps)[adata.smp['aga_groups'].values == str(group)]
+            idcs = np.arange(adata.n_smps)[adata.smp[groups_key].values == str(group)]
             idcs_group = np.argsort(adata.smp['aga_pseudotime'].values[
-                adata.smp['aga_groups'].values == str(group)])
+                adata.smp[groups_key].values == str(group)])
             idcs = idcs[idcs_group]
             if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
@@ -1042,8 +1053,8 @@ def aga_path(
             X.append(x)
         if ikey == 0:
             for igroup, group in enumerate(nodes):
-                if len(orig_node_names) > 0 and group not in orig_node_names:
-                    label = orig_node_names[int(group)]
+                if len(groups_names) > 0 and group not in groups_names:
+                    label = groups_names[int(group)]
                 else:
                     label = group
                 x_tick_labels.append(label)
@@ -1069,9 +1080,7 @@ def aga_path(
             pl.legend(frameon=False, loc='center left',
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
-    xlabel = (adata.uns['aga_groups_original'] if ('aga_groups_original' in adata.uns
-              and adata.uns['aga_groups_original'] != 'louvain_groups')
-              else 'groups $i$')
+    xlabel = groups_key if groups_key != 'louvain_groups' else 'groups $i$'
     if as_heatmap:
         import matplotlib.colors
         # groups bar
@@ -1113,7 +1122,8 @@ def aga_path(
                                      interpolation='nearest',
                                      cmap=color_map_pseudotime)
         if show_yticks:
-            pseudotime_axis.set_yticklabels(['', 'distance $d$', ''], fontsize=ytick_fontsize)
+            pseudotime_axis.set_yticklabels(['', 'distance $d$', ''],
+                                            fontsize=ytick_fontsize)
         else:
             pseudotime_axis.set_yticks([])
         pseudotime_axis.set_frame_on(False)
@@ -1132,10 +1142,10 @@ def aga_path(
         pl.twinx()
         x = []
         for g in nodes:
-            x += list(adata.smp['aga_groups'].values[adata.smp['aga_groups'].values == str(g)].astype(int))
+            x += list(adata.smp[groups_key].values[adata.smp[groups_key].values == str(g)].astype(int))
         if n_avg > 1: x = moving_average(x)
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
-        label = 'aga groups' + (' / original groups' if len(orig_node_names) > 0 else '')
+        label = 'aga groups' + (' / original groups' if len(groups_names) > 0 else '')
         pl.ylabel(label)
         utils.pimp_axis(pl.gca().get_yaxis())
     if title is not None: ax.set_title(title, fontsize=title_fontsize)

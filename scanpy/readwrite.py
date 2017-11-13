@@ -829,6 +829,7 @@ def write_anndata_to_file(filename, adata, ext='h5'):
             filename += key + '.' + ext
             df = value
             if not isinstance(value, pd.DataFrame):
+                if np.ndim(value) == 0: value = value[None]
                 try:
                     df = pd.DataFrame(value)
                 except:

@@ -297,7 +297,7 @@ def ranking(adata, attr, keys, indices=None,
     if n_panels == 1: scores, keys = scores[:, None], [keys]
     if log: scores = np.log(scores)
     if labels is None:
-        labels = adata.var_names if attr == 'var' else np.arange(scores.shape[0]).astype(str)
+        labels = adata.var_names if attr in {'var', 'varm'} else np.arange(scores.shape[0]).astype(str)
     if isinstance(labels, str):
         labels = [labels + str(i+1) for i in range(scores.shape[0])]
     from matplotlib import gridspec

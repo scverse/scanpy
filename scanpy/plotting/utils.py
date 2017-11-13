@@ -251,11 +251,19 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     else:
         logg.m('generating colors for {} using palette'.format(key), v=4)
     palette = default_palette(palette)
-    palette_adjusted = adjust_palette(palette, length=len(adata.smp[key].cat.categories))
-    adata.uns[key + '_colors'] = palette_adjusted[:len(adata.smp[key].cat.categories)].by_key()['color']
+    palette_adjusted = adjust_palette(palette,
+                                      length=len(adata.smp[key].cat.categories))
+    adata.uns[key + '_colors'] = palette_adjusted[
+        :len(adata.smp[key].cat.categories)].by_key()['color']
     if len(adata.smp[key].cat.categories) > len(adata.uns[key + '_colors']):
         raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
                          .format(len(adata.uns[key + '_colors']), key))
+    for iname, name in enumerate(adata.smp[key].cat.categories):
+        if name in settings._ignore_categories:
+            logg.info('Setting color of group {} in {} to grey as it appears in'
+                      '`sc.settings._ignore_categories`.'
+                      .format(name, key))
+            adata.uns[key + '_colors'][iname] = 'grey'
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):

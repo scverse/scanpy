@@ -1,5 +1,5 @@
 anndata
-matplotlib==2.0.0  # 2.0.2 seems buggy
+matplotlib==2.0.0  # 2.0.2 and higher seems buggy
 pandas
 scipy
 # neat visualizations

@@ -3,9 +3,11 @@
 from collections import namedtuple
 import numpy as np
 import scipy as sp
+import pandas as pd
 import networkx as nx
 import scipy.sparse
 from textwrap import indent, dedent
+from natsort import natsorted
 from .. import logging as logg
 from ..data_structs import data_graph
 from .. import utils
@@ -130,6 +132,7 @@ def aga(adata,
         n_jobs=None,
         copy=False):
     adata = adata.copy() if copy else adata
+    utils.sanitize_anndata(adata)
     if tree_detection not in {'iterative_matching', 'min_span_tree'}:
         raise ValueError('`tree_detection` needs to be one of {}'
                          .format({'iterative_matching', 'min_span_tree'}))
@@ -198,11 +201,6 @@ def aga(adata,
         adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
-    # vector of length n_samples of group names
-    adata.smp['aga_groups'] = aga.segs_names.astype('U')
-    # vectors of length n_groups
-    adata.uns['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
-    adata.uns['aga_groups_sizes'] = aga.segs_sizes
 
     if tree_detection == 'min_span_tree':
         min_span_tree = utils.compute_minimum_spanning_tree(
@@ -213,27 +211,18 @@ def aga(adata,
     else:
         full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
-    adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
-    adata.uns['aga_adjacency_full_confidence'] = full_confidence
-    adata.uns['aga_adjacency_tree_confidence'] = tree_confidence
-
-    # manage cluster names and colors
-    if (clusters not in {'segments', 'unconstrained_segments'}):
-        adata.uns['aga_groups_original'] = clusters
-        adata.uns['aga_groups_order_original'] = np.array(aga.segs_names_original)
-        if (clusters + '_colors' not in adata.uns
-            or len(adata.uns[clusters + '_colors']) != len(adata.uns['aga_groups_order'])):
-            pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
-        colors_original = []
-        if clusters + '_order' not in adata.uns:
-            from natsort import natsorted
-            adata.uns[clusters + '_order'] = natsorted(np.unique(adata.smp[clusters]))
-        name_list = list(adata.uns[clusters + '_order'])
-        for name in aga.segs_names_original:
-            idx = name_list.index(name)
-            colors_original.append(adata.uns[clusters + '_colors'][idx])
-        adata.uns['aga_groups_colors_original'] = np.array(colors_original)
-    logg.info('... finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    y = adata.smp[clusters].cat.categories
+    x = np.array(aga.segs_names_original)
+    xsorted = np.argsort(x)
+    ypos = np.searchsorted(x[xsorted], y)
+    indices = xsorted[ypos]
+        
+    adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness[indices, :][:, indices]
+    adata.uns['aga_adjacency_full_confidence'] = full_confidence[indices, :][:, indices]
+    adata.uns['aga_adjacency_tree_confidence'] = tree_confidence[indices, :][:, indices]
+    adata.uns['aga_groups_key'] = clusters
+    adata.uns[clusters + '_sizes'] = np.array(aga.segs_sizes)[indices]
+    logg.info('    finished', time=True, end=': ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n' + indent(doc_string_returns, '    '))
     return adata if copy else None
 
