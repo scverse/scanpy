@@ -315,7 +315,7 @@ def draw_graph(
     matplotlib.Axes object
     """
     if layout is None: layout = adata.add['draw_graph_layout'][-1]
-    if 'X_draw_graph_' + layout not in adata.smp_keys():
+    if 'X_draw_graph_' + layout not in adata.smpm_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
     axs = scatter(
@@ -1349,7 +1349,8 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
         timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'].values],
                               var_names=adata.var_names,
-                              highlightsX=adata.add['dpt_changepoints'])
+                              highlightsX=adata.add['dpt_changepoints'],
+                              color_map=color_map)
     else:
         # plot time series as gene expression vs time
         timeseries(adata.X[adata.smp['dpt_order_indices'].values],
@@ -1364,13 +1365,13 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(adata.smp['dpt_groups'].values,
+    timeseries_subplot(np.asarray(adata.smp['dpt_groups']),
                        time=adata.smp['dpt_order'].values,
-                       color=adata.smp['dpt_groups'].values,
+                       color=np.asarray(adata.smp['dpt_groups']),
                        highlightsX=adata.add['dpt_changepoints'],
                        ylabel='dpt groups',
-                       yticks=(np.arange(len(adata.add['dpt_groups_order']), dtype=int)
-                                     if len(adata.add['dpt_groups_order']) < 5 else None),
+                       yticks=(np.arange(len(adata.smp['dpt_groups'].cat.categories), dtype=int)
+                                     if len(adata.smp['dpt_groups'].cat.categories) < 5 else None),
                        palette=palette)
     pl.subplot(212)
     timeseries_subplot(adata.smp['dpt_pseudotime'].values,

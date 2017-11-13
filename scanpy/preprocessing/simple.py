@@ -66,7 +66,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         cell_subset, number = filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
         if min_genes is None and max_genes is None: adata.smp['n_counts'] = number
         else: adata.smp['n_genes'] = number
-        adata.inplace_subset_smp(cell_subset)
+        adata._inplace_subset_smp(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
@@ -113,7 +113,7 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
             adata.var['n_counts'] = number
         else:
             adata.var['n_cells'] = number
-        adata.inplace_subset_var(gene_subset)
+        adata._inplace_subset_var(gene_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
@@ -182,7 +182,7 @@ def filter_genes_dispersion(data,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata.inplace_subset_var(result['gene_subset'])
+        adata._inplace_subset_var(result['gene_subset'])
         return adata if copy else None
     logg.info('filter highly variable genes by dispersion and mean',
               r=True, end=' ')
@@ -443,7 +443,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.smp[field_name_counts] = counts_per_cell
-        adata.inplace_subset_smp(cell_subset)
+        adata._inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
         logg.info('    finished', t=True, end=': ')
@@ -695,7 +695,7 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.inplace_subset_smp(smp_indices)
+        adata._inplace_subset_smp(smp_indices)
         return adata if copy else None
     else:
         X = data

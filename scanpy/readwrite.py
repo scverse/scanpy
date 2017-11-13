@@ -6,6 +6,7 @@ import os
 import sys
 import h5py
 import numpy as np
+import pandas as pd
 import psutil
 import time
 from anndata import AnnData
@@ -77,7 +78,7 @@ def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
         if isinstance(data, dict):
             return data if return_dict else AnnData(data)
         elif isinstance(data, AnnData):
-            return data.to_dict() if return_dict else data
+            return data._to_dict_fixed_width_arrays() if return_dict else data
         else:
             raise ValueError('Do not know how to process read data.')
 
@@ -767,17 +768,19 @@ def write_anndata_to_file(filename, adata, ext='h5'):
     # output the following at warning level, it's very important for the users
     if ext in {'h5', 'npz'}:
         logg.msg('writing', filename, v=4)
-        d = adata.to_dict_fixed_width_arrays()
+        d = adata._to_dict_fixed_width_arrays()
     else:
-        d = adata.to_dict_dataframes()
+        d = adata._to_dict_dataframes()
     from scipy.sparse import issparse
     d_write = {}
     for key, value in d.items():
         if issparse(value):
             for k, v in save_sparse_csr(value, key=key).items():
                 d_write[k] = v
-        else:
+        elif not isinstance(value, pd.DataFrame):
             key, value = preprocess_writing(key, value)
+            d_write[key] = value
+        else:
             d_write[key] = value
     # now open the file
     if ext == 'h5':
@@ -815,23 +818,25 @@ def write_anndata_to_file(filename, adata, ext='h5'):
         if not os.path.exists(dirname + 'uns'): os.makedirs(dirname + 'uns')
         not_yet_raised_data_graph_warning = True
         for key, value in d_write.items():
-            if key.startswith('data_graph') and not_yet_raised_data_graph_warning:
-                logg.warn('Omitting to write neighborhood graph (`adata.uns[\'data_graph...\']`).')
-                not_yet_raised_data_graph_warning = False
+            if key.startswith('data_graph'):
+                if not_yet_raised_data_graph_warning:
+                    logg.warn('Omitting to write neighborhood graph (`adata.uns[\'data_graph...\']`).')
+                    not_yet_raised_data_graph_warning = False
                 continue
             filename = dirname
-            if key not in {'X', 'var', 'smp', 'smpm', 'varm'}:
+            if key not in {'data', 'var', 'smp', 'smpm', 'varm'}:
                 filename += 'uns/'
             filename += key + '.' + ext
-            from pandas import DataFrame
-            if not isinstance(value, DataFrame):
+            df = value
+            if not isinstance(value, pd.DataFrame):
                 try:
-                    df = DataFrame(value)
+                    df = pd.DataFrame(value)
                 except:
                     logg.warn('Omitting to write \'{}\'.'.format(key))
                     continue
             df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
-                      header=False, index=False)
+                      header=True if key != 'data' else False,
+                      index=True if key in {'smp', 'var'} else False)
 
 
 # -------------------------------------------------------------------------------

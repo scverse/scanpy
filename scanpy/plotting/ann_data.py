@@ -97,6 +97,7 @@ def scatter(
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
+    title = None if title is None else title.split(',') if isinstance(title, str) else title
     keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
     highlights = adata.add['highlights'] if 'highlights' in adata.add else []
@@ -107,8 +108,8 @@ def scatter(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata.get_smp_array(x)
-        y_arr = adata.get_smp_array(y)
+        x_arr = adata._get_smp_array(x)
+        y_arr = adata._get_smp_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide keys for a `basis` or for `x` and `y`.')
