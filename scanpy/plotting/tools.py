@@ -852,8 +852,8 @@ def _aga_graph(
             nx_g_dashed.node[count]['label'] = node_labels[count]
             nx_g_dashed.node[count]['color'] = color[count]
             nx_g_dashed.node[count]['viz'] = {
-                'position': {'x': 100*pos[count][0],
-                             'y': 100*pos[count][1],
+                'position': {'x': 1000*pos[count][0],
+                             'y': 1000*pos[count][1],
                              'z': 0}}
         logg.msg('exporting to {}'.format(settings.writedir + 'aga_graph.gexf'), v=1)
         nx.write_gexf(nx_g_dashed, settings.writedir + 'aga_graph.gexf')

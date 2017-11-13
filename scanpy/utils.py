@@ -96,6 +96,12 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
     sanitize_anndata(adata)
+    cats = adata.smp[reference].cat.categories
+    for cat in cats:
+        if cat in settings._ignore_categories:
+            logg.info('Ignoring category \'{}\' '
+                      'as it\'s in `settings._ignore_categories`.'
+                      .format(cat))
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(
@@ -122,7 +128,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [adata.smp[reference].cat.categories[i]
+        name_list_pred = [cats[i] if cats[i] not in settings._ignore_categories else ''
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]

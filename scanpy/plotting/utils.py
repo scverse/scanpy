@@ -10,7 +10,7 @@ from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 from .. import logging as logg
-from .. import settings as sett
+from .. import settings
 from . import palettes
 
 
@@ -184,23 +184,23 @@ def savefig(writekey, dpi=None, ext=None):
 
     The filename is generated as follows:
     ```
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    filename = sett.figdir + writekey + sett.plot_suffix + '.' + sett.file_format_figs
+    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
+    filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
     ```
     """
     if dpi is None:
         if rcParams['savefig.dpi'] < 300:
             dpi = 300
-            if sett._low_resolution_warning:
+            if settings._low_resolution_warning:
                 logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
-                sett._low_resolution_warning = False
+                settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
-    if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    if sett.figdir[-1] != '/': sett.figdir += '/'
-    if ext is None: ext = sett.file_format_figs
-    filename = sett.figdir + writekey + sett.plot_suffix + '.' + ext
+    if not os.path.exists(settings.figdir): os.makedirs(settings.figdir)
+    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
+    if settings.figdir[-1] != '/': settings.figdir += '/'
+    if ext is None: ext = settings.file_format_figs
+    filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
     # output the following msg at warning level; it's really important for the user
     logg.msg('saving figure to file', filename, v=1)
     pl.savefig(filename, dpi=dpi)
@@ -210,8 +210,8 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if isinstance(save, str):
         writekey += save
         save = True
-    save = sett.savefigs if save is None else save
-    show = (sett.autoshow and not sett.savefigs) if show is None else show
+    save = settings.savefigs if save is None else save
+    show = (settings.autoshow and not settings.savefigs) if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure

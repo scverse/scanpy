@@ -63,7 +63,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
-    if ('X_pca' in adata.smp
+    if ('X_pca' in adata.smpm_keys()
         and adata.smpm['X_pca'].shape[1] >= n_pcs
         and not recompute_pca):
         X = adata.smpm['X_pca'][:, :n_pcs]
