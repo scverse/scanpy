@@ -1,12 +1,12 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Diffusion Pseudotime Analysis
 """
 
-import sys
 import numpy as np
+import pandas as pd
 import scipy as sp
 import networkx as nx
-import scipy.sparse
+from natsort import natsorted
 from .. import logging as logg
 from ..data_structs import data_graph
 
@@ -134,12 +134,13 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
-    adata.add['dpt_groups_order'] = [str(n) for n in dpt.segs_names_unique]
     # for itips, tips in enumerate(dpt.segs_tips):
     #     # if tips[0] == -1: adata.add['dpt_groups_order'][itips] = '?'
     #     if dpt.segs_undecided[itips]: adata.add['dpt_groups_order'][itips] += '?'
     # vector of length n_samples of groupnames
-    adata.smp['dpt_groups'] = dpt.segs_names.astype('U')
+    adata.smp['dpt_groups'] = pd.Categorical(
+        values=dpt.segs_names.astype('U'),
+        categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
     # the ordering according to segments and pseudotime
     ordering_id = np.zeros(adata.n_smps, dtype=int)
     for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
