@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Graph drawing for the single-cell graph.
 
 References
@@ -86,7 +86,7 @@ def draw_graph(adata,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
         n_jobs=n_jobs)
-    adjacency = adata.add['data_graph_norm_weights']
+    adjacency = adata.uns['data_graph_norm_weights']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
@@ -98,15 +98,15 @@ def draw_graph(adata,
         ig_layout = g.layout(layout, root=root, **kwargs)
     else:
         ig_layout = g.layout(layout, **kwargs)
-    if 'draw_graph_layout' in adata.add:
-        adata.add['draw_graph_layout'] = list(adata.add['draw_graph_layout']) + [layout]
+    if 'draw_graph_layout' in adata.uns:
+        adata.uns['draw_graph_layout'] = list(adata.uns['draw_graph_layout']) + [layout]
     else:
-        adata.add['draw_graph_layout'] = [layout]
+        adata.uns['draw_graph_layout'] = [layout]
     smp_key = 'X_draw_graph_' + layout
     adata.smpm[smp_key] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "{}", graph_drawing coordinates (adata.smp)\n'
-           '    "draw_graph_layout", the chosen layout (adata.add)'
+           '    "draw_graph_layout", the chosen layout (adata.uns)'
            .format(smp_key))
     return adata if copy else None

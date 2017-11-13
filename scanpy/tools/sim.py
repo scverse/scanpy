@@ -81,7 +81,7 @@ def sim(model,
     else:
         params = locals()
     adata = sample_dynamic_data(params)
-    adata.add['xroot'] = adata.X[0]
+    adata.uns['xroot'] = adata.X[0]
     return adata
 
 
@@ -89,7 +89,7 @@ def add_args(p):
     """
     Update parser with tool specific arguments.
 
-    This overwrites was is done in utils.add_args.
+    This overwrites was is done in utils.uns_args.
     """
     # dictionary for adding arguments
     dadd_args = {

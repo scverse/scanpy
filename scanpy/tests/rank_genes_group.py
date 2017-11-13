@@ -28,8 +28,8 @@ def test_results_dense():
     true_groups = np.zeros((2, 100), dtype=bool)
     true_groups[0, 0:10] = 1
     true_groups[1, 10:100] = 1
-    adata.add[smp + '_masks'] = true_groups
-    adata.add[smp + '_order'] = np.asarray(['0', '1'])
+    adata.uns[smp + '_masks'] = true_groups
+    adata.uns[smp + '_order'] = np.asarray(['0', '1'])
     # Now run the rank_genes_groups, test functioning.
     # Note: Default value is on copying = true.
     with open('objs_t_test.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
@@ -37,12 +37,12 @@ def test_results_dense():
     with open('objs_wilcoxon.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
     rank_genes_groups(adata, 'true_groups', n_genes=20, test_type='t_test')
-    assert np.array_equal(true_scores_t_test,adata.add['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_t_test, adata.add['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_t_test,adata.uns['rank_genes_groups_gene_scores'])
+    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups_gene_names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, test_type='wilcoxon')
-    assert np.array_equal(true_scores_wilcoxon,adata.add['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_wilcoxon,adata.add['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_wilcoxon,adata.uns['rank_genes_groups_gene_scores'])
+    assert np.array_equal(true_names_wilcoxon,adata.uns['rank_genes_groups_gene_names'])
 
 
 def test_results_sparse():
@@ -61,8 +61,8 @@ def test_results_sparse():
     true_groups = np.zeros((2, 100), dtype=bool)
     true_groups[0, 0:10] = 1
     true_groups[1, 10:100] = 1
-    adata_sparse.add[smp + '_masks'] = true_groups
-    adata_sparse.add[smp + '_order'] = np.asarray(['0', '1'])
+    adata_sparse.uns[smp + '_masks'] = true_groups
+    adata_sparse.uns[smp + '_order'] = np.asarray(['0', '1'])
 
     # Here, we have saved the true results
 
@@ -76,16 +76,16 @@ def test_results_sparse():
     # Here, we allow a minor error tolerance due to different multiplication for sparse/non-spars objects
     ERROR_TOLERANCE=5e-7
     max_error=0
-    for i, k in enumerate(adata_sparse.add['rank_genes_groups_gene_scores']):
+    for i, k in enumerate(adata_sparse.uns['rank_genes_groups_gene_scores']):
         max_error = max(max_error, abs(
-            adata_sparse.add['rank_genes_groups_gene_scores'][i][0] - true_scores_t_test[i][0]))
+            adata_sparse.uns['rank_genes_groups_gene_scores'][i][0] - true_scores_t_test[i][0]))
         max_error = max(max_error, abs(
-            adata_sparse.add['rank_genes_groups_gene_scores'][i][1] - true_scores_t_test[i][1]))
-    # assert np.array_equal(true_scores_t_test,adata_sparse.add['rank_genes_groups_gene_scores'])
+            adata_sparse.uns['rank_genes_groups_gene_scores'][i][1] - true_scores_t_test[i][1]))
+    # assert np.array_equal(true_scores_t_test,adata_sparse.uns['rank_genes_groups_gene_scores'])
     assert max_error<ERROR_TOLERANCE
     rank_genes_groups(adata_sparse, 'true_groups', n_genes=20, test_type='wilcoxon')
-    assert np.array_equal(true_scores_wilcoxon,adata_sparse.add['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_wilcoxon, adata_sparse.add['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_wilcoxon,adata_sparse.uns['rank_genes_groups_gene_scores'])
+    assert np.array_equal(true_names_wilcoxon, adata_sparse.uns['rank_genes_groups_gene_names'])
 
 def test_compute_distribution():
     # set seed
@@ -101,8 +101,8 @@ def test_compute_distribution():
     true_groups = np.zeros((2, 100), dtype=bool)
     true_groups[0, 0:10] = 1
     true_groups[1, 10:100] = 1
-    adata.add[smp + '_masks'] = true_groups
-    adata.add[smp + '_order'] = np.asarray(['0', '1'])
+    adata.uns[smp + '_masks'] = true_groups
+    adata.uns[smp + '_order'] = np.asarray(['0', '1'])
     # Now run the rank_genes_groups, test functioning.
     # Note: Default value is on copying = true.
     with open('objs_t_test.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
@@ -110,9 +110,9 @@ def test_compute_distribution():
     with open('objs_wilcoxon.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
     rank_genes_groups(adata, 'true_groups', n_genes=20,compute_distribution=True, test_type='t_test')
-    assert np.array_equal(true_scores_t_test,adata.add['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_t_test, adata.add['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_t_test,adata.uns['rank_genes_groups_gene_scores'])
+    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups_gene_names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20,compute_distribution=True, test_type='wilcoxon')
-    assert np.array_equal(true_scores_wilcoxon,adata.add['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_wilcoxon,adata.add['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_wilcoxon,adata.uns['rank_genes_groups_gene_scores'])
+    assert np.array_equal(true_names_wilcoxon,adata.uns['rank_genes_groups_gene_names'])

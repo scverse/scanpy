@@ -36,7 +36,7 @@ def init_run(run_name, suffix='', recompute=True, reread=False,
     -------
     adata : AnnData
         Annotated data matrix, optionally with metadata such as
-        adata.add['xroot'] : np.ndarray or int
+        adata.uns['xroot'] : np.ndarray or int
             Expression vector or index of root cell for DPT analysis.
     Additionally, if return_module == True:
     exmodule : dict, optional
