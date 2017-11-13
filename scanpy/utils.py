@@ -95,7 +95,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     """
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
-    sanitize_andata(adata)
+    sanitize_anndata(adata)
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(adata.uns[prediction + '_order']):
