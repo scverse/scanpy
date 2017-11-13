@@ -21,3 +21,4 @@ from ..readwrite import read, read_10x_h5, write, read_params, write_params
 """Reading and writing."""
 from anndata import AnnData
 """Main class for storing an annotated data matrix."""
+from .. import utils

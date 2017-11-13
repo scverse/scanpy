@@ -61,6 +61,7 @@ def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
         diffmap_evals : np.ndarray
             Eigenvalues of the transition matrix.
     """
+    logg.info('running Diffusion Maps', r=True)
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
                    n_dcs=n_comps, n_jobs=n_jobs, recompute_graph=True,
@@ -73,6 +74,6 @@ def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
     adata.uns['diffmap_evals'] = dmap.evals[1:]
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
-              '    "X_diffmap", the diffmap coordinates (adata.smp),\n'
+              '    "X_diffmap", the diffmap coordinates (adata.smpm),\n'
               '    "diffmap_evals", the eigenvalues of the transition matrix (adata.uns)')
     return adata if copy else None

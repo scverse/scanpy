@@ -199,7 +199,10 @@ def paul15_raw():
     cell_type[17] = 'Neu'
     cell_type[18] = 'Eos'
     cell_type[19] = 'Lymph'
-    adata.smp['paul15_clusters'] = [str(i) + cell_type[i] for i in clusters.astype(int)]
+    adata.smp['paul15_clusters'] = [str(i) + cell_type[i]
+                                    for i in clusters.astype(int)]
+    # make all string annotations categorical (not needed)
+    sc.utils.sanitize_anndata(adata)
     infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
     adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])

@@ -98,13 +98,14 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     sanitize_anndata(adata)
     asso_names = []
     asso_matrix = []
-    for ipred_group, pred_group in enumerate(adata.uns[prediction + '_order']):
+    for ipred_group, pred_group in enumerate(
+            adata.smp[prediction].cat.categories):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.smp[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
-        for ref_group in adata.uns[reference + '_order']:
+        for ref_group in adata.smp[reference].cat.categories:
             mask_ref = (adata.smp[reference].values == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
@@ -121,7 +122,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [adata.uns[reference + '_order'][i]
+        name_list_pred = [adata.smp[reference].cat.categories[i]
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
@@ -249,7 +250,8 @@ def sanitize_anndata(adata, verbosity=-3):
         for key in getattr(adata, ann).columns:
             df = getattr(adata, ann)
             if is_string_dtype(df[key]):
-                df[key] = df[key].astype('category')
+                df[key] = df[key].astype(
+                    'category', categories=natsorted(np.unique(df[key])))
                 df[key].cat.categories = df[key].cat.categories.astype('U')
                 logg.info('... storing {} as categorical type'.format(key))
                 logg.hint('access categories as adata.{}.{}.cat.categories'

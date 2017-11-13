@@ -35,7 +35,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         Minimum number of counts required for a cell to pass filtering.
     min_genes : int, optional (default: None)
         Minimum number of genes expressed required for a cell to pass filtering.
-    min_counts : int, optional (default: None)
+    max_counts : int, optional (default: None)
         Maximum number of counts required for a cell to pass filtering.
     max_genes : int, optional (default: None)
         Maximum number of genes expressed required for a cell to pass filtering.
