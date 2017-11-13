@@ -223,7 +223,7 @@ def aga(adata,
         adata.uns['aga_groups_order_original'] = np.array(aga.segs_names_original)
         if (clusters + '_colors' not in adata.uns
             or len(adata.uns[clusters + '_colors']) != len(adata.uns['aga_groups_order'])):
-            pl_utils.uns_colors_for_categorical_sample_annotation(adata, clusters)
+            pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
         if clusters + '_order' not in adata.uns:
             from natsort import natsorted
