@@ -1,5 +1,5 @@
 # Author: F. Alex Wolf (http://falexwolf.de)
-#         T. Callies 
+#         T. Callies
 """Exporting to formats for other software.
 """
 
@@ -10,9 +10,10 @@ import pdb
 from math import inf
 from .data_structs.data_graph import add_or_update_graph_in_adata
 from scipy.sparse import issparse
+import logging as logg
 
-def save_spring_dir(adata, k, project_directory, D=None,
-                    custom_colors={}, cell_groupings=None, use_genes=[]):
+def save_spring_dir(adata, project_directory,k=30, D=None,
+                    custom_color_tracks=None, cell_groupings=None, use_genes=[]):
     """Builds a SPRING project directory.
     This is based on a preprocessing function by Caleb Weinreb:
     https://github.com/AllonKleinLab/SPRING/
@@ -21,29 +22,29 @@ def save_spring_dir(adata, k, project_directory, D=None,
     adata : AnnData() object
         Matrix of gene expression. Rows correspond to cells and columns
         correspond to genes.
-    k : int
-        Number of edges assigned to each node in knn graph
     project_directory : str
         Path to a directory where SPRING readable files will be written. The
         directory does not have to exist before running this function.
-    D : np.ndarray (default: None)
+    k : int , optional (default: 30)
+        K used in knn-graph (so k-1 edges in the graph)
+    D : np.ndarray , optional (default: None)
         Distance matrix for construction of knn graph. Any distance matrix can
         be used as long as higher values correspond to greater distances.
-        If nothing is given, local graph distance is used (if available) or (re-)computed
-    cell_groupings : list of str (default: None)
-        Optional list of strings containing adata.add key to grouping. Adata.add should contain cell_groupings+'_order'
-        and cell_groupings+'colors' as keys with names / colors for groupings and for each cell the corresponding group
-        Furthermore. adata.smp[cell_groupings] should return an array of adata.X.shape[0] elements
-    custom_colors : dict (default: {})
+        If nothing is given, local_graph_distance is used as computed by
+        add_or_update_graph_in_adata
+    custom_color_tracks : str, list of str, optional (default: None)
         Dictionary with one key-value pair for each custom color.  The key is
         the name of the color track and the value is a list of scalar values
         (i.e. color intensities). If there are N cells total (i.e. X.shape[0] ==
         N), then the list of labels should have N entries.
         Currently not used
+    cell_groupings : str, list of str , optional (default: None)
+        Optional list of strings containing adata.add key to grouping. Adata.add should contain cell_groupings+'_order'
+        and cell_groupings+'colors' as keys with names / colors for groupings and for each cell the corresponding group
+        Furthermore. adata.smp[cell_groupings] should return an array of adata.X.shape[0] elements
     use_genes : list, default: []
         Selects certain genes that are written into the coloring files. Default ([]) selects all genes
     """
-    # TODO: (LATER:) Make sure that this works for sparse adata objects as well
 
     X= adata.X
     # gene_list: list, np.ndarry - like
@@ -56,34 +57,31 @@ def save_spring_dir(adata, k, project_directory, D=None,
     if not project_directory[-1] == '/': project_directory += '/'
 
     if D==None:
-        if 'data_graph_distance_local' in adata.add:
-            D=adata.add['data_graph_distance_local']
-            edges= get_knn_edges_sparse(D, k)
-        else:
-            # if not available and nothing is given, calculate distances and add data_graph_distance_local to dictionary
             add_or_update_graph_in_adata(
-                adata,
-                n_neighbors=30,
-                n_pcs=50,
-                n_dcs=15,
-                knn=None,
-                recompute_pca=False,
-                recompute_distances=False,
-                recompute_graph=False,
-                n_jobs=None)
+            adata,
+            n_neighbors=k,
+            n_pcs=50,
+            n_dcs=15,
+            knn=None,
+            recompute_pca=True,
+            recompute_distances=True,
+            recompute_graph=True,
+            n_jobs=None)
             # Note that output here will always be sparse
             D = adata.add['data_graph_distance_local']
             edges = get_knn_edges_sparse(D, k)
     else:
-        if issparse(D):
-            edges = get_knn_edges_sparse(D, k)
-        else:
-            edges = get_knn_edges(D,k)
+        edges = get_knn_edges_sparse(D, k)
 
-    # save genesets
-    #TODO: (LATER:) Include when everything else works. Check how to include efficiently
-    # custom_colors['Uniform'] = np.zeros(X.shape[0])
-    # write_color_tracks(custom_colors, project_directory + 'color_data_gene_sets.csv')
+    # write custom color tracks
+    if isinstance(custom_color_tracks, str):
+        custom_color_tracks = [custom_color_tracks]
+    if custom_color_tracks is None:
+        pass
+    else:
+        custom_colors = {g: adata.smp[g] for i, g in enumerate(custom_color_tracks)}
+        write_color_tracks(custom_colors, project_directory + 'color_data_gene_sets.csv')
+
     all = []
 
     # save gene colortracks
@@ -93,7 +91,7 @@ def save_spring_dir(adata, k, project_directory, D=None,
     left=0
     right=II
     for j in range(50):
-        fname = project_directory + '/gene_colors/color_data_all_genes-' + repr(j) + '.csv'
+        fname = project_directory + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
         if len(use_genes) > 0:
             all_gene_colors = {
                 # Adapted slicing, so that it won't be OOB
@@ -125,17 +123,21 @@ def save_spring_dir(adata, k, project_directory, D=None,
               open(project_directory + '/color_stats.json', 'w'), indent=4, sort_keys=True)
 
     # save cell labels
+
     # Categorical coloring data:
     categorical_coloring_data = {}
     # Adapt groupby
+    if isinstance(cell_groupings, str):
+        cell_groupings = [cell_groupings]
+
     if cell_groupings is None:
         # In this case, do nothing
         pass
     else:
-        for j in range(cell_groupings):
+        for j, i in enumerate(cell_groupings):
             if (cell_groupings[j]+'_order' not in adata.add) or (cell_groupings[j]+'_colors' not in adata.add) :
                 # TODO: Change to logging
-                print('Adata annotation does not exist. Check input' )
+                logg.warn('Adata annotation does not exist. Check input' )
             else:
                 groups=adata.smp[cell_groupings[j]]
                 group_names=adata.add[cell_groupings[j]+'_order']
@@ -146,14 +148,12 @@ def save_spring_dir(adata, k, project_directory, D=None,
                 categorical_coloring_data[cell_groupings[j]] = {'label_colors': label_colors, 'label_list': labels}
         json.dump(categorical_coloring_data, open(
                 project_directory + '/categorical_coloring_data.json', 'w'), indent=4)
-    #
 
     nodes = [{'name': i, 'number': i} for i in range(X.shape[0])]
     edges = [{'source': int(i), 'target': int(j)} for i, j in edges]
     out = {'nodes': nodes, 'links': edges}
-    # Possible Error: ' instead of ": For now, it seems to work
     open(project_directory + 'graph_data.json', 'w').write(
-         json.dumps(out, indent=4, separators=(',', ': ')))
+        json.dumps(out, indent=4, separators=(',', ': ')))
 
 
 # The following method is only used when a full (non-sparse) distance matrix is given as an input parameter
@@ -188,10 +188,10 @@ def get_knn_edges_sparse(dmat, k):
         return get_knn_edges(dmat,k)
     else:
         for i in range(dmat.shape[0]):
-            row = dmat.getrow(i)
             l=1
             saved_values={}
             while l<k:
+                row = dmat.getrow(i)
                 data_index=row.data.argmin()
                 j=row.indices[data_index]
                 saved_values[j] = dmat[i, j]
@@ -201,10 +201,10 @@ def get_knn_edges_sparse(dmat, k):
                 dmat[i, j] = inf
                 l = l + 1
             # Rewrite safed values:
-        for j, val in enumerate(saved_values):
-            dmat[i, j] = val
+            for j in saved_values:
+                dmat[i, j] = saved_values[j]
     return edge_dict.keys()
-    
+
 def write_color_tracks(ctracks, fname):
     out = []
     for name, score in ctracks.items():
