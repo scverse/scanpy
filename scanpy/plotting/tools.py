@@ -747,7 +747,7 @@ def _aga_graph(
             if (groups_name + '_colors' not in adata.uns
                 or len(adata.uns[groups_name + '_order'])
                    != len(adata.uns[groups_name + '_colors'])):
-                utils.uns_colors_for_categorical_sample_annotation(adata, groups_name)
+                utils.add_colors_for_categorical_sample_annotation(adata, groups_name)
             color = adata.uns[groups_name + '_colors']
         for iname, name in enumerate(adata.uns[groups_name + '_order']):
             if name in settings._ignore_categories: color[iname] = 'grey'

@@ -100,7 +100,7 @@ def scatter(
     title = None if title is None else title.split(',') if isinstance(title, str) else title
     keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
     groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
-    highlights = adata.add['highlights'] if 'highlights' in adata.add else []
+    highlights = adata.uns['highlights'] if 'highlights' in adata.uns else []
     if basis is not None:
         try:
             Y = adata.smpm['X_' + basis][:, components]
@@ -214,9 +214,9 @@ def scatter(
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
         key = keys[ikey]
-        if (not key + '_colors' in adata.add
+        if (not key + '_colors' in adata.uns
             or not palette_was_none
-            or len(adata.smp[key].cat.categories) != len(adata.add[key + '_colors'])):
+            or len(adata.smp[key].cat.categories) != len(adata.uns[key + '_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
