@@ -190,15 +190,18 @@ def get_linenos(obj):
 
 
 project_dir = Path(__file__).parent.parent  # project/docs/conf.py/../.. → project/
-github_url = 'https://github.com/{github_user}/{github_repo}/tree/{github_version}'.format_map(html_context)
+github_url1 = 'https://github.com/{github_user}/{github_repo}/tree/{github_version}'.format_map(html_context)
+github_url2 = 'https://github.com/theislab/anndata/tree/master'
 def modurl(qualname):
     """Get the full GitHub URL for some object’s qualname."""
     obj, module = get_obj_module(qualname)
+    github_url = github_url1
     try:
         path = Path(module.__file__).relative_to(project_dir)
     except ValueError:
         # trying to document something from another package
-        path = 'NOT_FOUND'
+        github_url = github_url2
+        path = '/'.join(module.__file__.split('/')[-2:])
     start, end = get_linenos(obj)
     fragment = '#L{}-L{}'.format(start, end) if start and end else ''
     return '{}/{}{}'.format(github_url, path, fragment)

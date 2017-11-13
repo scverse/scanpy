@@ -300,8 +300,8 @@ class DataGraph():
         else:
             # use a precomputed X_pca
             if (not recompute_pca
-                and 'X_pca' in adata.smp
-                and adata.smp['X_pca'].shape[1] >= self.n_pcs):
+                and 'X_pca' in adata.smpm_keys()
+                and adata.smpm['X_pca'].shape[1] >= self.n_pcs):
                 logg.info('    using "X_pca" for building graph')
             # compute X_pca
             else:
