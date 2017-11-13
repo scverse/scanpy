@@ -98,13 +98,13 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     sanitize_andata(adata)
     asso_names = []
     asso_matrix = []
-    for ipred_group, pred_group in enumerate(adata.add[prediction + '_order']):
+    for ipred_group, pred_group in enumerate(adata.uns[prediction + '_order']):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
         mask_pred = adata.smp[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
-        for ref_group in adata.add[reference + '_order']:
+        for ref_group in adata.uns[reference + '_order']:
             mask_ref = (adata.smp[reference].values == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
@@ -121,7 +121,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [adata.add[reference + '_order'][i]
+        name_list_pred = [adata.uns[reference + '_order'][i]
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
@@ -207,8 +207,8 @@ def remove_repetitions_from_list(l):
 def plot_category_association(adata, prediction, reference, asso_matrix):
     pl.figure(figsize=(5, 5))
     pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
-    pl.xticks(range(len(adata.add[reference + '_order'])), adata.add[reference + '_order'], rotation='vertical')
-    pl.yticks(range(len(adata.add[prediction + '_order'])), adata.add[prediction + '_order'])
+    pl.xticks(range(len(adata.uns[reference + '_order'])), adata.uns[reference + '_order'], rotation='vertical')
+    pl.yticks(range(len(adata.uns[prediction + '_order'])), adata.uns[prediction + '_order'])
     pl.colorbar()
 
 
@@ -355,8 +355,8 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     """Get subset of groups in adata.smp[key].
     """
     groups_order = adata.smp[key].cat.categories
-    if key + '_masks' in adata.add:
-        groups_masks = adata.add[key + '_masks']
+    if key + '_masks' in adata.uns:
+        groups_masks = adata.uns[key + '_masks']
     else:
         groups_masks = np.zeros((len(adata.smp[key].cat.categories),
                                  adata.smp[key].values.size), dtype=bool)

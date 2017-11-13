@@ -351,7 +351,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
          PCA representation of the data with shape n_variables × n_comps.
     components / PC1, PC2, PC3, ... : np.ndarray (adata.var)
          The PCs containing the loadings as shape n_comps × n_vars.
-    variance_ratio : np.ndarray (adata.add)
+    variance_ratio : np.ndarray (adata.uns)
          Ratio of explained variance.
     """
     if isinstance(data, AnnData):
@@ -372,12 +372,12 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
             X_pca, components, pca_variance_ratio = result
             adata.smpm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
-            adata.add['pca_variance_ratio'] = pca_variance_ratio
+            adata.uns['pca_variance_ratio'] = pca_variance_ratio
             logg.m('    finished', t=True, end=' ', v=4)
             logg.m('and added\n'
                       '    "X_pca", the PCA coordinates (adata.smp)\n'
                       '    "PC1", "PC2", ..., the loadings (adata.var)\n'
-                      '    "pca_variance_ratio", the variance ratio (adata.add)', v=4)
+                      '    "pca_variance_ratio", the variance ratio (adata.uns)', v=4)
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett

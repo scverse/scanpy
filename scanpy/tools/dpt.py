@@ -89,7 +89,7 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         Array of shape (number of samples) × (number of eigen
         vectors). DiffMap representation of data, which is the right eigen
         basis of the transition matrix with eigenvectors as columns.
-    dpt_evals : ``np.ndarray`` in ``adata.add``
+    dpt_evals : ``np.ndarray`` in ``adata.uns``
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
 
     Examples
@@ -97,14 +97,14 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     See this `use case <17-05-02_>`__.
     """
     adata = adata.copy() if copy else adata
-    if ('iroot' not in adata.add
-        and 'xroot' not in adata.add
+    if ('iroot' not in adata.uns
+        and 'xroot' not in adata.uns
         and 'xroot' not in adata.var):
         logg.m('    no root cell found, no computation of pseudotime')
         msg = \
     '''To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
-        adata.add['iroot'] = root_cell_index
+        adata.uns['iroot'] = root_cell_index
     or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
@@ -122,21 +122,21 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     dpt.update_diffmap()
     adata.smpm['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
-    adata.add['diffmap_evals'] = dpt.evals[1:]
-    adata.add['data_graph_distance_local'] = dpt.Dsq
-    adata.add['data_graph_norm_weights'] = dpt.Ktilde
+    adata.uns['diffmap_evals'] = dpt.evals[1:]
+    adata.uns['data_graph_distance_local'] = dpt.Dsq
+    adata.uns['data_graph_norm_weights'] = dpt.Ktilde
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
         dpt.set_pseudotime()  # pseudotimes are distances from root point
-        adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
     # for itips, tips in enumerate(dpt.segs_tips):
-    #     # if tips[0] == -1: adata.add['dpt_groups_order'][itips] = '?'
-    #     if dpt.segs_undecided[itips]: adata.add['dpt_groups_order'][itips] += '?'
+    #     # if tips[0] == -1: adata.uns['dpt_groups_order'][itips] = '?'
+    #     if dpt.segs_undecided[itips]: adata.uns['dpt_groups_order'][itips] += '?'
     # vector of length n_samples of groupnames
     adata.smp['dpt_groups'] = pd.Categorical(
         values=dpt.segs_names.astype('U'),
@@ -147,9 +147,9 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     adata.smp['dpt_order'] = ordering_id
     adata.smp['dpt_order_indices'] = dpt.indices
     # the "change points" separate segments in the ordering above
-    adata.add['dpt_changepoints'] = dpt.changepoints
+    adata.uns['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
-    adata.add['dpt_grouptips'] = dpt.segs_tips
+    adata.uns['dpt_grouptips'] = dpt.segs_tips
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
            + ('    "dpt_pseudotime", the pseudotime (adata.smp),\n' if dpt.iroot is not None else '')

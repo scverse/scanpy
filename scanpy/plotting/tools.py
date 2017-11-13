@@ -315,7 +315,7 @@ def draw_graph(
     -------
     matplotlib.Axes object
     """
-    if layout is None: layout = adata.add['draw_graph_layout'][-1]
+    if layout is None: layout = adata.uns['draw_graph_layout'][-1]
     if 'X_draw_graph_' + layout not in adata.smpm_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
@@ -537,8 +537,8 @@ def aga_scatter(
     """
     if color is None:
         color = ['aga_groups']
-        if 'aga_groups_original' in adata.add:
-            color[color.index('aga_groups')] = adata.add['aga_groups_original']
+        if 'aga_groups_original' in adata.uns:
+            color[color.index('aga_groups')] = adata.uns['aga_groups_original']
     if not isinstance(color, list): color = [color]
     ax = scatter(adata,
                  basis=basis,
@@ -592,16 +592,16 @@ def aga_graph(
 
     Parameters
     ----------
-    groups : str, list, dict, key for `adata.add`
+    groups : str, list, dict, key for `adata.uns`
        The node groups labels.
     color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
         Besides cluster colors, lists and uniform colors this also acceppts
         {'degree_dashed', 'degree_solid'}.
     solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
-        Key for ``adata.add`` that specifies the matrix that stores the edges
+        Key for ``adata.uns`` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : str or None, optional (default: 'aga_adjacency_full_confidence')
-        Key for ``adata.add`` that specifies the matrix that stores the edges
+        Key for ``adata.uns`` that specifies the matrix that stores the edges
         to be drawn dashed grey. If ``None``, no dashed edges are drawn.
     edge_width_scale : float, optional (default: 1.5)
         Edge with scale in units of ``rcParams['lines.linewidth']``.
@@ -731,25 +731,25 @@ def _aga_graph(
         raise ValueError('Groups {} are not in adata.smp.'.format(groups))
 
     groups_name = groups if isinstance(groups, str) else None
-    if groups is None and 'aga_groups_order_original' in adata.add:
-        groups = adata.add['aga_groups_order_original']
-        groups_name = adata.add['aga_groups_original']
+    if groups is None and 'aga_groups_order_original' in adata.uns:
+        groups = adata.uns['aga_groups_order_original']
+        groups_name = adata.uns['aga_groups_original']
     elif groups in adata.smp_keys():
-        groups = adata.add[groups + '_order']
+        groups = adata.uns[groups + '_order']
     elif groups is None:
-        groups = adata.add['aga_groups_order']
+        groups = adata.uns['aga_groups_order']
         groups_name = 'aga_groups'
 
     if color is None and groups_name is not None:
-        if 'aga_groups_original' in adata.add and groups_name == adata.add['aga_groups_original']:
-            color = adata.add['aga_groups_colors_original']
+        if 'aga_groups_original' in adata.uns and groups_name == adata.uns['aga_groups_original']:
+            color = adata.uns['aga_groups_colors_original']
         else:
-            if (groups_name + '_colors' not in adata.add
-                or len(adata.add[groups_name + '_order'])
-                   != len(adata.add[groups_name + '_colors'])):
-                utils.add_colors_for_categorical_sample_annotation(adata, groups_name)
-            color = adata.add[groups_name + '_colors']
-        for iname, name in enumerate(adata.add[groups_name + '_order']):
+            if (groups_name + '_colors' not in adata.uns
+                or len(adata.uns[groups_name + '_order'])
+                   != len(adata.uns[groups_name + '_colors'])):
+                utils.uns_colors_for_categorical_sample_annotation(adata, groups_name)
+            color = adata.uns[groups_name + '_colors']
+        for iname, name in enumerate(adata.uns[groups_name + '_order']):
             if name in settings._ignore_categories: color[iname] = 'grey'
 
     if isinstance(root, str) and root in groups:
@@ -758,10 +758,10 @@ def _aga_graph(
         root = [list(groups).index(r) for r in root]
 
     # define the objects
-    adjacency_solid = adata.add[solid_edges]
+    adjacency_solid = adata.uns[solid_edges]
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
-        adjacency_dashed = adata.add[dashed_edges]
+        adjacency_dashed = adata.uns[dashed_edges]
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
     # degree of the graph for coloring
@@ -882,10 +882,10 @@ def _aga_graph(
     ax.set_xticks([])
     ax.set_yticks([])
     base_pie_size = 1/(np.sqrt(adjacency_solid.shape[0]) + 10) * node_size_scale
-    if (groups_name is not None and groups_name in adata.add):
-        groups_sizes = adata.add[groups_name + '_sizes']
-    elif 'aga_groups_sizes' in adata.add:
-        groups_sizes = adata.add['aga_groups_sizes']
+    if (groups_name is not None and groups_name in adata.uns):
+        groups_sizes = adata.uns[groups_name + '_sizes']
+    elif 'aga_groups_sizes' in adata.uns:
+        groups_sizes = adata.uns['aga_groups_sizes']
     else:
         groups_sizes = np.ones(len(groups))
     median_group_size = np.median(groups_sizes)
@@ -993,16 +993,16 @@ def aga_path(
         show_left_y_ticks = False if show_nodes_twin else True
 
     orig_node_names = []
-    if ('aga_groups_order_original' in adata.add
-        and adata.add['aga_groups_original'] != 'louvain_groups'):
-        orig_node_names = adata.add['aga_groups_order_original']
+    if ('aga_groups_order_original' in adata.uns
+        and adata.uns['aga_groups_original'] != 'louvain_groups'):
+        orig_node_names = adata.uns['aga_groups_order_original']
     else:
-        logg.m('did not find field "aga_groups_order_original" in adata.add, '
+        logg.m('did not find field "aga_groups_order_original" in adata.uns, '
                'using aga_group integer ids instead', v=4)
 
     if palette_groups is None:
         palette_groups = palettes.default_20
-        palette_groups = utils.adjust_palette(palette_groups, len(adata.add['aga_groups_order']))
+        palette_groups = utils.adjust_palette(palette_groups, len(adata.uns['aga_groups_order']))
 
     def moving_average(a):
         return sc_utils.moving_average(a, n_avg)
@@ -1069,8 +1069,8 @@ def aga_path(
             pl.legend(frameon=False, loc='center left',
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
-    xlabel = (adata.add['aga_groups_original'] if ('aga_groups_original' in adata.add
-              and adata.add['aga_groups_original'] != 'louvain_groups')
+    xlabel = (adata.uns['aga_groups_original'] if ('aga_groups_original' in adata.uns
+              and adata.uns['aga_groups_original'] != 'louvain_groups')
               else 'groups $i$')
     if as_heatmap:
         import matplotlib.colors
@@ -1085,7 +1085,7 @@ def aga_path(
                            interpolation="nearest",
                            cmap=matplotlib.colors.ListedColormap(
                                # the following line doesn't work because of normalization
-                               # adata.add['aga_groups_colors'])
+                               # adata.uns['aga_groups_colors'])
                                palette_groups[np.min(groups).astype(int):],
                                N=np.max(groups)+1-np.min(groups)))
         if show_yticks:
@@ -1160,14 +1160,14 @@ def aga_attachedness(
     """Attachedness of aga groups.
     """
     if attachedness_type == 'scaled':
-        attachedness = adata.add['aga_attachedness']
+        attachedness = adata.uns['aga_attachedness']
     elif attachedness_type == 'distance':
-        attachedness = adata.add['aga_distances']
+        attachedness = adata.uns['aga_distances']
     elif attachedness_type == 'absolute':
-        attachedness = adata.add['aga_attachedness_absolute']
+        attachedness = adata.uns['aga_attachedness_absolute']
     else:
         raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
-    adjacency = adata.add['aga_adjacency']
+    adjacency = adata.uns['aga_adjacency']
     matrix(attachedness, color_map=color_map, show=False)
     for i in range(adjacency.shape[0]):
         neighbors = adjacency[i].nonzero()[1]
@@ -1350,13 +1350,13 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
         timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'].values],
                               var_names=adata.var_names,
-                              highlightsX=adata.add['dpt_changepoints'],
+                              highlightsX=adata.uns['dpt_changepoints'],
                               color_map=color_map)
     else:
         # plot time series as gene expression vs time
         timeseries(adata.X[adata.smp['dpt_order_indices'].values],
                    var_names=adata.var_names,
-                   highlightsX=adata.add['dpt_changepoints'],
+                   highlightsX=adata.uns['dpt_changepoints'],
                    xlim=[0, 1.3*adata.X.shape[0]])
     pl.xlabel('dpt order')
     utils.savefig_or_show('dpt_timeseries', save=save, show=show)
@@ -1369,7 +1369,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     timeseries_subplot(np.asarray(adata.smp['dpt_groups']),
                        time=adata.smp['dpt_order'].values,
                        color=np.asarray(adata.smp['dpt_groups']),
-                       highlightsX=adata.add['dpt_changepoints'],
+                       highlightsX=adata.uns['dpt_changepoints'],
                        ylabel='dpt groups',
                        yticks=(np.arange(len(adata.smp['dpt_groups'].cat.categories), dtype=int)
                                      if len(adata.smp['dpt_groups'].cat.categories) < 5 else None),
@@ -1379,7 +1379,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
                        time=adata.smp['dpt_order'].values,
                        color=adata.smp['dpt_pseudotime'].values,
                        xlabel='dpt order',
-                       highlightsX=adata.add['dpt_changepoints'],
+                       highlightsX=adata.uns['dpt_changepoints'],
                        ylabel='pseudotime',
                        yticks=[0, 1],
                        color_map=color_map)
@@ -1489,8 +1489,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
-    groups_key = adata.add['rank_genes_groups']
-    group_names = adata.add['rank_genes_groups_order'] if groups is None else groups
+    groups_key = adata.uns['rank_genes_groups']
+    group_names = adata.uns['rank_genes_groups_order'] if groups is None else groups
     # one panel for each group
     n_panels = len(group_names)
     # set up the figure
@@ -1515,8 +1515,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
 
     for count, group_name in enumerate(group_names):
         pl.subplot(gs[count])
-        gene_names = adata.add['rank_genes_groups_gene_names'][group_name]
-        scores = adata.add['rank_genes_groups_gene_scores'][group_name]
+        gene_names = adata.uns['rank_genes_groups_gene_names'][group_name]
+        scores = adata.uns['rank_genes_groups_gene_scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             pl.text(ig, scores[ig], gene_names[ig],
                     rotation='vertical', verticalalignment='bottom',
@@ -1531,7 +1531,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         ymax += 0.3*(ymax-ymin)
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
-    writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups']
+    writekey = 'rank_genes_groups_' + adata.uns['rank_genes_groups']
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
@@ -1557,14 +1557,14 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
          A matplotlib axes object.
     """
     from ..tools import rank_genes_groups
-    groups_key = adata.add['rank_genes_groups']
-    group_names = adata.add['rank_genes_groups_order'] if groups is None else groups
+    groups_key = adata.uns['rank_genes_groups']
+    group_names = adata.uns['rank_genes_groups_order'] if groups is None else groups
     group_loop = (group_name for group_name in group_names)
     check_is_computed = True
     for group_name in group_loop:
         keys = []
         gene_names = []
-        gene_loop = (gene_item for gene_item in enumerate(adata.add['rank_genes_groups_gene_names'][group_name][:n_genes]))
+        gene_loop = (gene_item for gene_item in enumerate(adata.uns['rank_genes_groups_gene_names'][group_name][:n_genes]))
         for gene_counter, gene_name in gene_loop:
             identifier = rank_genes_groups._build_identifier(
                 groups_key, group_name, gene_counter, gene_name)
@@ -1578,7 +1578,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
         ax.set_title(group_name)
         ax.set_ylabel('z-score w.r.t. to bulk mean')
         ax.set_xticklabels(gene_names, rotation='vertical')
-        writekey = 'rank_genes_groups_' + adata.add['rank_genes_groups'] + '_' + group_name
+        writekey = 'rank_genes_groups_' + adata.uns['rank_genes_groups'] + '_' + group_name
         utils.savefig_or_show(writekey, show=show, save=save)
 
 
@@ -1603,7 +1603,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     """
     from .. import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
-    elif 'tmax_write' in adata.add: tmax = adata.add['tmax_write']
+    elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
     else: tmax = adata.n_smps
     n_realizations = adata.n_smps/tmax
     if not shuffle:

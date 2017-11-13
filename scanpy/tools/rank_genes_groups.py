@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 #         T. Callies
 """Rank genes according to differential expression [Wolf17]_.
 """
@@ -53,10 +53,10 @@ def rank_genes_groups(
 
     Returns
     -------
-    rank_genes_groups_gene_zscores : np.ndarray of dtype float (adata.add)
+    rank_genes_groups_gene_zscores : np.ndarray of dtype float (adata.uns)
         Array of shape (number of comparisons) × (number of genes) storing the
         zscore of the each gene for each test.
-    rank_genes_groups_gene_names : np.ndarray of dtype str (adata.add)
+    rank_genes_groups_gene_names : np.ndarray of dtype str (adata.uns)
         Array of shape (number of comparisons). Stores the labels for each comparison,
         for example "C1 vs. C2" when comparing category 'C1' with 'C2'.
     """
@@ -76,8 +76,8 @@ def rank_genes_groups(
                          .format(group_reference, groupby))
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
-    adata.add['rank_genes_groups'] = groupby
-    adata.add['rank_genes_groups_order'] = groups_order
+    adata.uns['rank_genes_groups'] = groupby
+    adata.uns['rank_genes_groups_order'] = groups_order
     X = adata.X
 
     rankings_gene_zscores = []
@@ -269,16 +269,16 @@ def rank_genes_groups(
     groups_order_save = groups_order
     if group_reference is not None:
         groups_order_save = [g for g in groups_order if g != group_reference]
-    adata.add['rank_genes_groups_gene_scores'] = np.rec.fromarrays(
+    adata.uns['rank_genes_groups_gene_scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_zscores],
         dtype=[(rn, 'float32') for rn in groups_order_save])
-    adata.add['rank_genes_groups_gene_names'] = np.rec.fromarrays(
+    adata.uns['rank_genes_groups_gene_names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
-           '    "rank_genes_groups_gene_names", np.recarray to be indexed by the `groups` (adata.add)\n'
-           '    "rank_genes_groups_gene_zscores", the scores (adata.add)\n'
+           '    "rank_genes_groups_gene_names", np.recarray to be indexed by the `groups` (adata.uns)\n'
+           '    "rank_genes_groups_gene_zscores", the scores (adata.uns)\n'
            '    "rank_genes_...", distributions of top-ranked genes (adata.smp)')
     return adata if copy else None
 

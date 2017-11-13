@@ -35,7 +35,7 @@ doc_string_base = dedent("""\
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with `adata.add['iroot']`, the index
+        Annotated data matrix, optionally with `adata.uns['iroot']`, the index
         of root cell for computing a pseudotime.
     n_neighbors : int or None, optional (default: 30)
         Number of nearest neighbors on the knn graph. Often this can be reduced
@@ -95,13 +95,13 @@ doc_string_base = dedent("""\
 
 
 doc_string_returns = dedent("""\
-        aga_adjacency_full_attachedness : np.ndarray in adata.add
+        aga_adjacency_full_attachedness : np.ndarray in adata.uns
             The full adjacency matrix of the abstracted graph, weights
             correspond to connectedness.
-        aga_adjacency_full_confidence : np.ndarray in adata.add
+        aga_adjacency_full_confidence : np.ndarray in adata.uns
             The full adjacency matrix of the abstracted graph, weights
             correspond to confidence in the presence of an edge.
-        aga_adjacency_tree_confidence : sparse csr matrix in adata.add
+        aga_adjacency_tree_confidence : sparse csr matrix in adata.uns
             The adjacency matrix of the tree-like subgraph that best explains
             the topology
         aga_groups : np.ndarray of dtype string in adata.smp
@@ -136,7 +136,7 @@ def aga(adata,
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
         and ('louvain_groups' not in adata.smp_keys()
-             or ('louvain_params' in adata.add and adata.add['louvain_params']['resolution'] != resolution)
+             or ('louvain_params' in adata.uns and adata.uns['louvain_params']['resolution'] != resolution)
              or recompute_louvain
              or not data_graph.no_recompute_of_graph_necessary(
             adata,
@@ -158,14 +158,14 @@ def aga(adata,
     clusters = node_groups
     if node_groups == 'louvain': clusters = 'louvain_groups'
     logg.info('running Approximate Graph Abstraction (AGA)', reset=True)
-    if ('iroot' not in adata.add
-        and 'xroot' not in adata.add
+    if ('iroot' not in adata.uns
+        and 'xroot' not in adata.uns
         and 'xroot' not in adata.var):
         logg.info('    no root cell found, no computation of pseudotime')
         msg = \
     """To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
-        adata.add['iroot'] = root_cell_index
+        adata.uns['iroot'] = root_cell_index
     or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
@@ -189,20 +189,20 @@ def aga(adata,
     updated_diffmap = aga.update_diffmap()
     adata.smpm['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
-    adata.add['diffmap_evals'] = aga.evals[1:]
-    adata.add['data_graph_distance_local'] = aga.Dsq
-    adata.add['data_graph_norm_weights'] = aga.Ktilde
+    adata.uns['diffmap_evals'] = aga.evals[1:]
+    adata.uns['data_graph_distance_local'] = aga.Dsq
+    adata.uns['data_graph_norm_weights'] = aga.Ktilde
     if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
-        adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
     # vector of length n_samples of group names
     adata.smp['aga_groups'] = aga.segs_names.astype('U')
     # vectors of length n_groups
-    adata.add['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
-    adata.add['aga_groups_sizes'] = aga.segs_sizes
+    adata.uns['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
+    adata.uns['aga_groups_sizes'] = aga.segs_sizes
 
     if tree_detection == 'min_span_tree':
         min_span_tree = utils.compute_minimum_spanning_tree(
@@ -213,26 +213,26 @@ def aga(adata,
     else:
         full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
-    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
-    adata.add['aga_adjacency_full_confidence'] = full_confidence
-    adata.add['aga_adjacency_tree_confidence'] = tree_confidence
+    adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
+    adata.uns['aga_adjacency_full_confidence'] = full_confidence
+    adata.uns['aga_adjacency_tree_confidence'] = tree_confidence
 
     # manage cluster names and colors
     if (clusters not in {'segments', 'unconstrained_segments'}):
-        adata.add['aga_groups_original'] = clusters
-        adata.add['aga_groups_order_original'] = np.array(aga.segs_names_original)
-        if (clusters + '_colors' not in adata.add
-            or len(adata.add[clusters + '_colors']) != len(adata.add['aga_groups_order'])):
-            pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
+        adata.uns['aga_groups_original'] = clusters
+        adata.uns['aga_groups_order_original'] = np.array(aga.segs_names_original)
+        if (clusters + '_colors' not in adata.uns
+            or len(adata.uns[clusters + '_colors']) != len(adata.uns['aga_groups_order'])):
+            pl_utils.uns_colors_for_categorical_sample_annotation(adata, clusters)
         colors_original = []
-        if clusters + '_order' not in adata.add:
+        if clusters + '_order' not in adata.uns:
             from natsort import natsorted
-            adata.add[clusters + '_order'] = natsorted(np.unique(adata.smp[clusters]))
-        name_list = list(adata.add[clusters + '_order'])
+            adata.uns[clusters + '_order'] = natsorted(np.unique(adata.smp[clusters]))
+        name_list = list(adata.uns[clusters + '_order'])
         for name in aga.segs_names_original:
             idx = name_list.index(name)
-            colors_original.append(adata.add[clusters + '_colors'][idx])
-        adata.add['aga_groups_colors_original'] = np.array(colors_original)
+            colors_original.append(adata.uns[clusters + '_colors'][idx])
+        adata.uns['aga_groups_colors_original'] = np.array(colors_original)
     logg.info('... finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n' + indent(doc_string_returns, '    '))
     return adata if copy else None
@@ -254,7 +254,7 @@ def aga_degrees(adata):
         List of degrees for each node.
     """
     import networkx as nx
-    g = nx.Graph(adata.add['aga_adjacency_full_confidence'])
+    g = nx.Graph(adata.uns['aga_adjacency_full_confidence'])
     degrees = [d for _, d in g.degree_iter(weight='weight')]
     return degrees
 
@@ -307,16 +307,16 @@ def aga_compare_paths(adata1, adata2,
     ``frac_paths``.
     """
     import networkx as nx
-    g1 = nx.Graph(adata1.add[adjacency_key])
-    g2 = nx.Graph(adata2.add[adjacency_key])
+    g1 = nx.Graph(adata1.uns[adjacency_key])
+    g2 = nx.Graph(adata2.uns[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
     asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'].values,
                                          adata2.smp['aga_groups'].values)
     asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'].values,
                                          adata1.smp['aga_groups'].values)
-    orig_names1 = adata1.add['aga_groups_order_original']
-    orig_names2 = adata2.add['aga_groups_order_original']
+    orig_names1 = adata1.uns['aga_groups_order_original']
+    orig_names2 = adata2.uns['aga_groups_order_original']
 
     import itertools
     n_steps = 0
@@ -418,7 +418,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
     """Contract the abstracted graph.
     """
     adata = adata.copy() if copy else adata
-    if 'aga_adjacency_tree_confidence' not in adata.add: raise ValueError('run tool aga first!')
+    if 'aga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool aga first!')
     min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
 
@@ -460,16 +460,16 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 break
         return adjacency_tree_confidence, node_groups
 
-    size_before = adata.add['aga_adjacency_tree_confidence'].shape[0]
-    adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
-        adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'].values)
-    adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'].values)
+    size_before = adata.uns['aga_adjacency_tree_confidence'].shape[0]
+    adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
+        adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'].values)
+    adata.uns['aga_groups_order'] = np.unique(adata.smp['aga_groups'].values)
     for key in ['aga_adjacency_full_confidence', 'aga_groups_original',
                 'aga_groups_order_original', 'aga_groups_colors_original']:
-        if key in adata.add: del adata.add[key]
+        if key in adata.uns: del adata.uns[key]
     logg.info('    contracted graph from {} to {} nodes'
-              .format(size_before, adata.add['aga_adjacency_tree_confidence'].shape[0]))
-    logg.msg('removed adata.add["aga_adjacency_full_confidence"]', v=4)
+              .format(size_before, adata.uns['aga_adjacency_tree_confidence'].shape[0]))
+    logg.msg('removed adata.uns["aga_adjacency_full_confidence"]', v=4)
     return adata if copy else None
 
 
@@ -522,14 +522,14 @@ class AGA(data_graph.DataGraph):
             # transform to a list of index arrays
             self.clusters_precomputed = []
             # TODO: this is not a good solution
-            if clusters + '_order' in adata.add:
-                self.clusters_precomputed_names = list(adata.add[clusters + '_order'])
+            if clusters + '_order' in adata.uns:
+                self.clusters_precomputed_names = list(adata.uns[clusters + '_order'])
             else:
                 self.clusters_precomputed_names = []
             from natsort import natsorted
             for cluster_name in natsorted(np.unique(clusters_array)):
                 self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
-                if clusters + '_order' not in adata.add:
+                if clusters + '_order' not in adata.uns:
                     self.clusters_precomputed_names.append(cluster_name)
             n_nodes = len(self.clusters_precomputed)
         else:

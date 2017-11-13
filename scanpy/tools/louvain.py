@@ -71,7 +71,7 @@ def louvain(adata,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
         n_jobs=n_jobs)
-    adjacency = adata.add['data_graph_norm_weights']
+    adjacency = adata.uns['data_graph_norm_weights']
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
@@ -87,7 +87,7 @@ def louvain(adata,
                 louvain.set_rng_seed(random_state)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)
-                adata.add['louvain_quality'] = part.quality()
+                adata.uns['louvain_quality'] = part.quality()
             except AttributeError:
                 logg.warn('Did not find package louvain>=0.6, '
                           'the clustering result will therefore not be 100% reproducible, '
@@ -107,7 +107,7 @@ def louvain(adata,
         # this is deprecated
         import networkx as nx
         import community
-        g = nx.Graph(adata.add['data_graph_distance_local'])
+        g = nx.Graph(adata.uns['data_graph_distance_local'])
         partition = community.best_partition(g)
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v
@@ -118,11 +118,11 @@ def louvain(adata,
     adata.smp['louvain_groups'] = pd.Categorical(
         values=groups,
         categories=natsorted(np.unique(groups)))
-    adata.add['louvain_params'] = np.array((resolution,),
+    adata.uns['louvain_params'] = np.array((resolution,),
                                            dtype=[('resolution', float)])
     logg.info('    finished', t=True, end=': ')
     logg.info('found {} clusters and added\n'
               '    \'louvain_groups\', the cluster labels (adata.smp, dtype=category)\n'
-              '    \'louvain_params\', the parameters (adata.add, structured np.array)'
+              '    \'louvain_params\', the parameters (adata.uns, structured np.array)'
               .format(len(adata.smp['louvain_groups'].cat.categories)))
     return adata if copy else None

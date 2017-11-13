@@ -39,7 +39,7 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
         N), then the list of labels should have N entries.
         Currently not used
     cell_groupings : str, list of str , optional (default: None)
-        Optional list of strings containing adata.add key to grouping. Adata.add should contain cell_groupings+'_order'
+        Optional list of strings containing adata.uns key to grouping. Adata.uns should contain cell_groupings+'_order'
         and cell_groupings+'colors' as keys with names / colors for groupings and for each cell the corresponding group
         Furthermore. adata.smp[cell_groupings] should return an array of adata.X.shape[0] elements
     use_genes : list, default: []
@@ -68,7 +68,7 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
             recompute_graph=True,
             n_jobs=None)
             # Note that output here will always be sparse
-            D = adata.add['data_graph_distance_local']
+            D = adata.uns['data_graph_distance_local']
             edges = get_knn_edges_sparse(D, k)
     else:
         edges = get_knn_edges_sparse(D, k)
@@ -135,13 +135,13 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
         pass
     else:
         for j, i in enumerate(cell_groupings):
-            if (cell_groupings[j]+'_order' not in adata.add) or (cell_groupings[j]+'_colors' not in adata.add) :
+            if (cell_groupings[j]+'_order' not in adata.uns) or (cell_groupings[j]+'_colors' not in adata.uns) :
                 # TODO: Change to logging
                 logg.warn('Adata annotation does not exist. Check input' )
             else:
                 groups=adata.smp[cell_groupings[j]]
-                group_names=adata.add[cell_groupings[j]+'_order']
-                group_colors=adata.add[cell_groupings[j]+'_colors']
+                group_names=adata.uns[cell_groupings[j]+'_order']
+                group_colors=adata.uns[cell_groupings[j]+'_colors']
                 label_colors = {l: group_colors[i] for i, l in enumerate(group_names)}
                 labels = list(groups)
                 # SPRING expects a Dictionary for label_colors, but a list for labels !

@@ -76,10 +76,10 @@ def krumsiek11():
                   'by running `sc.tl.sim("krumsiek11")`'
                   .format(filename))
     adata = sc.read(filename, first_column_names=True, cache=True)
-    adata.add['iroot'] = 0
+    adata.uns['iroot'] = 0
     fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
                    459: 'megakaryocyte', 619: 'neutrophil'}
-    adata.add['highlights'] = fate_labels
+    adata.uns['highlights'] = fate_labels
     cell_type = np.array(['progenitor' for i in range(adata.n_smps)])
     cell_type[80:160] = 'monocyte'
     cell_type[240:320] = 'erythrocyte'
@@ -113,7 +113,7 @@ def moignard15():
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset]  # retain non-removed genes
     # choose root cell for DPT analysis as in Haghverdi et al. (2016)
-    adata.add['iroot'] = 532  # note that in Matlab/R, counting starts at 1
+    adata.uns['iroot'] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_order = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
@@ -121,8 +121,8 @@ def moignard15():
         next(gname for gname in groups_order if sname.startswith(gname))
         for sname in adata.smp_names]
     # fix the order and colors of names in "groups"
-    adata.add['exp_groups_order'] = groups_order
-    adata.add['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    adata.uns['exp_groups_order'] = groups_order
+    adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
 
@@ -134,10 +134,10 @@ def moignard15_dpt(adata):
     """Add some labeling information to DPT result.
     """
     sc.logg.m('... adding annotation for DPT groups')
-    if len(adata.add['dpt_groups_order']) > 1:
+    if len(adata.uns['dpt_groups_order']) > 1:
         groups_order = ['undecided', 'endothelial',
                         'erythrocytes', 'trunk']
-        adata.add['dpt_groups_order'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_order)]
+        adata.uns['dpt_groups_order'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_order)]
     return adata
 
 
@@ -208,15 +208,15 @@ def paul15_raw():
     # restrict data array to the 3461 informative genes
     adata = adata[:, infogenes_names]
     # usually we'd set the root cell to an arbitrary cell in the MEP cluster
-    # adata.add['iroot'] = np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
+    # adata.uns['iroot'] = np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
-    adata.add['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
+    adata.uns['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
     return adata
 
 
 def paul15_dpt(adata):
     """Post-processing for DPT."""
-    adata.add['dpt_groups_order'] = ['', 'GMP', '', 'MEP']
+    adata.uns['dpt_groups_order'] = ['', 'GMP', '', 'MEP']
 
 
 def toggleswitch():
@@ -234,7 +234,7 @@ def toggleswitch():
                   'by running `sc.tl.sim("toggleswitch")`'
                   .format(filename))
     adata = sc.read(filename, first_column_names=True, cache=True)
-    adata.add['xroot'] = adata.X[0]
+    adata.uns['xroot'] = adata.X[0]
     return adata
 
 
