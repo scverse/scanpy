@@ -56,7 +56,7 @@ setup(
         ],
     },
     install_requires=requires,
-    packages=find_packages() + ['scanpy.sim_models'],
+    packages=find_packages(),  # + ['scanpy.sim_models'], might need to include sim_models
     include_dirs=[numpy.get_include()],
     package_data={'': '*.txt'},
     include_package_data=True,

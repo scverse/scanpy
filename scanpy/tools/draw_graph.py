@@ -103,7 +103,7 @@ def draw_graph(adata,
     else:
         adata.add['draw_graph_layout'] = [layout]
     smp_key = 'X_draw_graph_' + layout
-    adata.smp[smp_key] = np.array(ig_layout.coords)
+    adata.smpm[smp_key] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "{}", graph_drawing coordinates (adata.smp)\n'
