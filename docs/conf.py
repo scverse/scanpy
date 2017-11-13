@@ -38,17 +38,20 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.coverage',
               'sphinx.ext.mathjax',
               'sphinx.ext.autosummary',
-              #'plot_generator',
-              #'plot_directive',
+              # 'plot_generator',
+              # 'plot_directive',
               'numpydoc',
-              #'ipython_directive',
-              #'ipython_console_highlighting',
+              # 'ipython_directive',
+              # 'ipython_console_highlighting',
               ]
-
 
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_mock_imports = ['_tkinter']
+# both of the following two lines don't work
+# see falexwolf's issue for numpydoc
+# autodoc_member_order = 'bysource'
+# autodoc_default_flags = ['members']
 numpydoc_show_class_members = True
 numpydoc_class_members_toctree = False
 
@@ -60,23 +63,25 @@ copyright = '{}, Alex Wolf, Philipp Angerer'.format(time.strftime("%Y"))
 author = 'Alex Wolf, Philipp Angerer'
 
 import scanpy
-version = '0.2.6' # scanpy.__version__
-release = '0.2.6' # scanpy.__version__
+version = scanpy.__version__
+release = scanpy.__version__
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 todo_include_todos = False
+
 # -- Options for HTML output ----------------------------------------------
+
 html_theme = 'sphinx_rtd_theme'
 if html_theme == 'sphinx_rtd_theme':
     html_theme_options = {
         'navigation_depth': 2,
     }
     html_context = {
-        "display_github": True, # Integrate GitHub
-        "github_user": "theislab", # Username
-        "github_repo": "scanpy", # Repo name
-        "github_version": "master", # Version
-        "conf_py_path": "/docs/", # Path in the checkout to the docs root
+        "display_github": True,  # Integrate GitHub
+        "github_user": "theislab",  # Username
+        "github_repo": "scanpy",  # Repo name
+        "github_version": "master",  # Version
+        "conf_py_path": "/docs/",  # Path in the checkout to the docs root
     }
 elif html_theme == 'bootstrap':
     import sphinx_bootstrap_theme
@@ -187,9 +192,13 @@ def get_linenos(obj):
 project_dir = Path(__file__).parent.parent  # project/docs/conf.py/../.. → project/
 github_url = 'https://github.com/{github_user}/{github_repo}/tree/{github_version}'.format_map(html_context)
 def modurl(qualname):
-    """Get the full GitHub URL for some object’s qualname"""
+    """Get the full GitHub URL for some object’s qualname."""
     obj, module = get_obj_module(qualname)
-    path = Path(module.__file__).relative_to(project_dir)
+    try:
+        path = Path(module.__file__).relative_to(project_dir)
+    except ValueError:
+        # trying to document something from another package
+        path = 'NOT_FOUND'
     start, end = get_linenos(obj)
     fragment = '#L{}-L{}'.format(start, end) if start and end else ''
     return '{}/{}{}'.format(github_url, path, fragment)
@@ -201,4 +210,3 @@ def modurl(qualname):
 from jinja2.defaults import DEFAULT_FILTERS
 
 DEFAULT_FILTERS['modurl'] = modurl
-
