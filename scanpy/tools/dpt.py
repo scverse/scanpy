@@ -11,7 +11,7 @@ from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
+def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, recompute_graph=False, recompute_pca=False,
         allow_kendall_tau_shift=True, flavor='haghverdi16', n_jobs=None,
         copy=False):
@@ -26,41 +26,37 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     The tool is similar to the R package destiny_ of [Angerer16]_; the Scanpy
     implementation though runs faster and scales to much higher cell numbers.
 
-    .. _destiny: http://bioconductor.org/packages/destiny
-    .. _tl.dpt: https://github.com/theislab/scanpy/tree/master/scanpy/tools/dpt.py
-    .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
-
     Parameters
     ----------
     adata : AnnData
         Annotated data matrix.
-    n_branchings : int, optional (default: 1)
+    n_branchings : `int`, optional (default: 1)
         Number of branchings to detect.
-    n_neighbors : int, optional (default: 30)
-        Number of nearest neighbors in the k-nearest-neighbor graph. If ``knn ==
-        False``, this sets the Gaussian kernel width to the distance of the
+    n_neighbors : `int`, optional (default: 30)
+        Number of nearest neighbors in the k-nearest-neighbor graph. If `knn` is
+        `False`, this sets the Gaussian kernel width to the distance of the
         `n_neighbors` neighbor.
-    knn : bool, optional (default: True)
-        If ``True``, use a hard threshold to restrict the number of neighbors to
+    knn : `bool`, optional (default: `True`)
+        If `True`, use a hard threshold to restrict the number of neighbors to
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    n_pcs : int, optional (default: 50)
+    n_pcs : `int`, optional (default: 50)
         Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want any
         preprocessing with PCA.
-    n_dcs : int, optional (default: 10)
+    n_dcs : `int`, optional (default: 10)
         Use `n_dcs` diffusion components to compute the dpt distance.
-    min_group_size : [0, 1] or float, optional (default: 0.01)
+    min_group_size : [0, 1] or `float`, optional (default: 0.01)
         During recursive splitting of branches ('dpt groups') for `n_branchings`
         > 1, do not consider groups that contain less than `min_group_size` data
         points. If a float, `min_group_size` refers to a fraction of the total
         number of data points.
-    recompute_graph : bool, optional (default: False)
+    recompute_graph : `bool`, optional (default: `False`)
         Recompute diffusion maps.
-    recompute_pca : bool, optional (default: False)
+    recompute_pca : `bool`, optional (default: `False`)
         Recompute PCA.
-    allow_kendall_tau_shift : bool, optional (default: True)
+    allow_kendall_tau_shift : `bool`, optional (default: `True`)
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
@@ -68,9 +64,9 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         Parameter for development only. There is a lot of leeway in determining
         how to split branches; this provides several alternatives to the Kendall
         tau criterion of [Haghverdi16]_.
-    n_jobs : int or None (default: sc.settings.n_jobs)
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of cpus to use for parallel processing.
-    copy : bool, optional (default: False)
+    copy : `bool`, optional (default: `False`)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
 
@@ -91,10 +87,6 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
         basis of the transition matrix with eigenvectors as columns.
     dpt_evals : ``np.ndarray`` in ``adata.uns``
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
-
-    Examples
-    --------
-    See this `use case <17-05-02_>`__.
     """
     adata = adata.copy() if copy else adata
     if ('iroot' not in adata.uns

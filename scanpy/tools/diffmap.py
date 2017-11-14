@@ -3,7 +3,7 @@
 from ..tools import dpt
 from .. import logging as logg
 
-def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
+def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
     """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
