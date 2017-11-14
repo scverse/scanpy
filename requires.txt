@@ -15,8 +15,8 @@ scikit-learn
 statsmodels
 # complex systems and graphs
 networkx
-python-igraph
-louvain
+# python-igraph  # added a note about manual install
+# louvain
 # natural human-readable sorting
 natsort
 # simple parallel computing
