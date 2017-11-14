@@ -233,11 +233,11 @@ def toggleswitch():
     filename = 'write/toggleswitch_sim/sim_000000.txt'
     if not os.path.exists(filename):
         filename = os.path.dirname(__file__) + '/toggleswitch.txt'
-        logg.hint('you can reproduce the data file {} '
-                  'by running `sc.tl.sim("toggleswitch")`'
+        logg.hint('You can reproduce the data file {} '
+                  'by running `sc.tl.sim("toggleswitch")`.'
                   .format(filename))
     adata = sc.read(filename, first_column_names=True, cache=True)
-    adata.uns['xroot'] = adata.X[0]
+    adata.uns['iroot'] = 0
     return adata
 
 

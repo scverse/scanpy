@@ -97,9 +97,7 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
     Keep genes that have at least `min_counts` counts or are expressed in at
     least `min_cells` cells.
 
-    Parameters
-    ----------
-    See ``pp.filter_cells()``.
+    See :func:`~scanpy.api.pp.filter_cells`.
     """
     if min_cells is not None and min_counts is not None:
         raise ValueError('Either specify min_counts or min_cells, but not both.')
@@ -409,47 +407,74 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
         return X_pca
 
 
-def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
-                       counts_per_cell=None, field_name_counts=None):
+def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
+                       key_n_counts=None, copy=False):
     """Normalize each cell.
 
-    Normalize each cell by UMI count, so that every cell has the same total
-    count.
+    Normalize each cell by total counts over all genes, so that every cell has
+    the same total count after normalization.
 
-    Similar functions are used, for example, by Cell Ranger [Zheng17], Seurat
-    [Satija15], or SPRING [Weinreb17].
+    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
+    [Zheng17]_ or SPRING [Weinreb17]_.
 
     Parameters
     ----------
-    data : array_like, sparse or AnnData
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
         Data matrix. Rows correspond to cells and columns to genes.
-    counts_per_cell_after : float or None (default: None)
-        If None, after normalization, each cell has a total count equal
-        to the median of the counts_per_cell before normalization.
-    counts_per_cell : array (default: None)
+    counts_per_cell_after : `float` or `None`, optional (default: `None`)
+        If `None`, after normalization, each cell has a total count equal
+        to the median of the *counts_per_cell* before normalization.
+    counts_per_cell : `np.array`, optional (default: `None`)
         Precomputed counts per cell.
-    copy : bool (default: False)
+    key_n_counts : str, optional (default: `'n_counts'`)
+        Name of the field in `adata.smp` where the total counts per cell are
+        stored.
+    copy : `bool` (default: `False`)
         Determines whether function operates inplace (default) or a copy is
         returned.
 
     Returns
     -------
-    Returns or updates ``adata`` with normalized version of the original ``adata.X``,
-    depending on `copy`.
+    Returns or updates `adata` with normalized version of the original
+    `adata.X`, depending on `copy`.
+
+    Examples
+    --------
+    >>> adata = AnnData(
+    >>>     data=np.array([[1, 0], [3, 0], [5, 6]]))
+    >>> print(adata.X.sum(axis=1))
+    [  1.   3.  11.]
+    >>> sc.pp.normalize_per_cell(adata)
+    >>> print(adata.smp)
+    >>> print(adata.X.sum(axis=1))
+       n_counts
+    0       1.0
+    1       3.0
+    2      11.0
+    [ 3.  3.  3.]
+    >>> sc.pp.normalize_per_cell(adata, counts_per_cell_after=1,
+    >>>                          key_n_counts='n_counts2')
+    >>> print(adata.smp)
+    >>> print(adata.X.sum(axis=1))
+       n_counts  n_counts2
+    0       1.0        3.0
+    1       3.0        3.0
+    2      11.0        3.0
+    [ 1.  1.  1.]
     """
-    if field_name_counts is None: field_name_counts = 'n_counts'
+    if key_n_counts is None: key_n_counts = 'n_counts'
     if isinstance(data, AnnData):
         logg.info('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
-        adata.smp[field_name_counts] = counts_per_cell
+        adata.smp[key_n_counts] = counts_per_cell
         adata._inplace_subset_smp(cell_subset)
-        normalize_per_cell(adata.X, counts_per_cell_after, copy,
+        normalize_per_cell(adata.X, counts_per_cell_after,
                            counts_per_cell=counts_per_cell[cell_subset])
         logg.info('    finished', t=True, end=': ')
         logg.info('normalized adata.X and added', no_indent=True)
         logg.info('    \'{}\', counts per cell before normalization (adata.smp)'
-               .format(field_name_counts),
+               .format(key_n_counts),
                no_indent=True)
         return adata if copy else None
     # proceed with data matrix
