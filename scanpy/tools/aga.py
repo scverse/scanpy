@@ -39,9 +39,10 @@ doc_string_base = dedent("""\
     adata : AnnData
         Annotated data matrix, optionally with `adata.uns['iroot']`, the index
         of root cell for computing a pseudotime.
-    n_neighbors : int or None, optional (default: 30)
+    n_neighbors : int or None, optional (default: None)
         Number of nearest neighbors on the knn graph. Often this can be reduced
-        down to a value of 4.
+        down to a value of 4. Defaults to the number of neighbors in a
+        precomputed graph. If there is none, defaults to 30.
     n_pcs : int, optional (default: 50)
         Use n_pcs PCs to compute the euclidean distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
@@ -115,7 +116,7 @@ doc_string_returns = dedent("""\
 
 
 def aga(adata,
-        n_neighbors=30,
+        n_neighbors=None,
         n_pcs=50,
         n_dcs=10,
         node_groups='louvain',
@@ -510,16 +511,9 @@ class AGA(data_graph.DataGraph):
             clusters_array = adata.smp[clusters].values
             # transform to a list of index arrays
             self.clusters_precomputed = []
-            # TODO: this is not a good solution
-            if clusters + '_order' in adata.uns:
-                self.clusters_precomputed_names = list(adata.uns[clusters + '_order'])
-            else:
-                self.clusters_precomputed_names = []
-            from natsort import natsorted
-            for cluster_name in natsorted(np.unique(clusters_array)):
+            self.clusters_precomputed_names = list(adata.smp[clusters].cat.categories)
+            for cluster_name in self.clusters_precomputed_names:
                 self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
-                if clusters + '_order' not in adata.uns:
-                    self.clusters_precomputed_names.append(cluster_name)
             n_nodes = len(self.clusters_precomputed)
         else:
             if n_nodes is None:

@@ -59,15 +59,16 @@ def no_recompute_of_graph_necessary(
             and not recompute_distances
             and not recompute_graph
             # make sure X_diffmap is there
-            and 'X_diffmap' in adata.smp
+            and 'X_diffmap' in adata.smpm_keys()
             # make sure enough DCs are there
-            and (adata.smp['X_diffmap'].shape[1] >= n_dcs-1
+            and (adata.smpm['X_diffmap'].shape[1] >= n_dcs-1
                  if n_dcs is not None else True)
             # make sure that it's sparse
             and (issparse(adata.uns['data_graph_norm_weights']) == knn
                  if knn is not None else True)
             # make sure n_neighbors matches
-            and n_neighbors == adata.uns['data_graph_distance_local'][0].nonzero()[0].size + 1)
+            and n_neighbors is not None and n_neighbors == adata.uns[
+                'data_graph_distance_local'][0].nonzero()[0].size + 1)
 
 
 def get_neighbors(X, Y, k):
