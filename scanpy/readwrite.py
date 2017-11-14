@@ -24,7 +24,7 @@ avail_exts = {'csv', 'xlsx', 'txt', 'h5', 'soft.gz', 'txt.gz', 'mtx', 'tab', 'da
 # --------------------------------------------------------------------------------
 
 
-def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
+def read(filename, sheet=None, ext=None, delimiter=None,
          first_column_names=False, backup_url=None, return_dict=False,
          cache=None):
     """Read file and return AnnData object.
@@ -34,10 +34,11 @@ def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
 
     Parameters
     ----------
-    filename_or_filekey : str, None
-        Filename or filekey of data file. A filekey generates a filename via
-        `sc.settings.writedir + filekey + sc.settings.file_format_data`.
-        This is the same behavior as in `sc.write(filekey, ...)`.
+    filename : str, None
+        If the filename has no file extension, it is interpreted as a key for
+        generating a filename via `sc.settings.writedir + filename +
+        sc.settings.file_format_data`.  This is the same behavior as in
+        `sc.read(filename, ...)`.
     sheet : str, optional (default: None)
         Name of sheet/table in hdf5 or Excel file.
     cache : bool or None, optional (default: False)
@@ -71,9 +72,9 @@ def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
         col_names : np.ndarray, optional
             Array storing the names of columns (gene names).
     """
-    filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
-    if is_filename(filename_or_filekey):
-        data = read_file(filename_or_filekey, sheet, ext, delimiter,
+    filename = str(filename)  # allow passing pathlib.Path objects
+    if is_filename(filename):
+        data = read_file(filename, sheet, ext, delimiter,
                       first_column_names, backup_url, cache)
         if isinstance(data, dict):
             return data if return_dict else AnnData(data)
@@ -83,7 +84,7 @@ def read(filename_or_filekey, sheet=None, ext=None, delimiter=None,
             raise ValueError('Do not know how to process read data.')
 
     # generate filename and read to dict
-    filekey = filename_or_filekey
+    filekey = filename
     filename = sett.writedir + filekey + '.' + sett.file_format_data
     if not os.path.exists(filename):
         raise ValueError('Reading with filekey "{}" failed, the '
@@ -138,26 +139,100 @@ def read_10x_h5(filename, genome):
             raise Exception('File is missing one or more required datasets.')
 
 
-def write(filename_or_filekey, adata, ext=None):
-    """Write AnnData objects and dictionaries to file.
-
-    If a key is passed, the filename is generated as
-    ``filename = sc.settings.writedir + filekey + sc.settings.file_format_data``
-    This defaults to ``filename = 'write/' + filekey + '.h5'``.
+def write(filename, adata, ext=None, compression=None, compression_opts=None):
+    """Write AnnData objects to file.
 
     Parameters
     ----------
-    filename_or_filekey : str
-        Filename of data file or key to generate filename.
-    adata : AnnData
-        Instance of AnnData/
-    ext : {``None``, 'h5', 'csv', 'txt', 'npz'} (default: None)
-        File extension from wich to infer file format. If ``None``, defaults to
-        ``sc.settings.file_format_data``.
+    filename : `str`
+        If the filename has no file extension, it is interpreted as a key for
+        generating a filename via `sc.settings.writedir + filename +
+        sc.settings.file_format_data`.  This is the same behavior as in
+        `sc.read(filename, ...)`.
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    ext : {`None`, `'h5'`, `'csv'`, `'txt'`, `'npz'`} (default: `None`)
+        File extension from wich to infer file format. If `None`, defaults to
+        `sc.settings.file_format_data`.
+    compression : None or {'gzip', 'lzf'}, optional (default: `None`)
+        Only applies for hdf5 files. See
+        http://docs.h5py.org/en/latest/high/dataset.html.
+    compression_opts : int, optional (default: `None`)
+        Only applies for hdf5 files. See
+        See http://docs.h5py.org/en/latest/high/dataset.html.
+
+    Examples
+    --------
+    Writing a usual numpy array.
+
+    >>> adata = AnnData(
+    >>>     data=np.array([[1, 0], [3, 0], [5, 6]]),
+    >>>     smp={'row_names': ['name1', 'name2', 'name3'],
+    >>>          'sanno1': ['cat1', 'cat2', 'cat2'],
+    >>>          'sanno2': [2.1, 2.2, 2.3]},
+    >>>     var={'vanno1': [3.1, 3.2]},
+    >>>     uns={'sanno1_colors': ['#000000', '#FFFFFF'],
+    >>>          'uns2': ['some annotation']})
+    >>> assert pd.api.types.is_string_dtype(adata.smp['sanno1'])
+    >>> write('./test.h5', adata)
+    $ h5ls test.h5
+    _data                    Dataset {3, 2}
+    _smp                     Dataset {3}
+    _var                     Dataset {2}
+    sanno1_categories        Dataset {2}
+    sanno1_colors            Dataset {2}
+    uns2                     Dataset {1}
+    $ h5ls -d test.h5
+    ...
+    _smp                     Dataset {3/3}
+        Location:  1:1400
+        Links:     1
+        Storage:   42 logical bytes, 42 allocated bytes, 100.00% utilization
+        Type:      struct {
+                       "index"            +0    5-byte null-padded ASCII string
+                       "sanno2"           +5    native double
+                       "sanno1"           +13   native signed char
+                   } 14 bytes
+    ...
+
+    Using compression
+
+    >>> adata = AnnData(np.ones((10000, 1000)))
+    >>> write('./test_compr.h5', adata, compression='gzip')
+    >>> write('./test_no_compr.h5', adata)
+    $ ls -lh test_no_compr.h5
+    -rw-r--r--  1 alexwolf  staff    38M Nov 14 14:38 test_no_compr.h5
+    $ ls -lh test_compr.h5
+    -rw-r--r--  1 alexwolf  staff   161K Nov 14 15:15 test_compr.h5
+
+    Writing an :class:`~scanpy.api.AnnData` that contains sparse data.
+
+    >>> from scipy.sparse import csr_matrix
+    >>> adata = AnnData(
+    >>>     data=csr_matrix([[1, 0], [3, 0], [5, 6]]),
+    >>>     smp={'row_names': ['name1', 'name2', 'name3'],
+    >>>          'sanno1': ['cat1', 'cat2', 'cat2'],
+    >>>          'sanno2': [2.1, 2.2, 2.3]},
+    >>>     var={'vanno1': [3.1, 3.2]},
+    >>>     uns={'sanno1_colors': ['#000000', '#FFFFFF'],
+    >>>          'uns2_sparse': csr_matrix([[1, 0], [3, 0]])})
+    $ h5ls test.h5
+    _data_csr_data           Dataset {4}
+    _data_csr_indices        Dataset {4}
+    _data_csr_indptr         Dataset {4}
+    _data_csr_shape          Dataset {2}
+    _smp                     Dataset {3}
+    _var                     Dataset {2}
+    sanno1_categories        Dataset {2}
+    sanno1_colors            Dataset {2}
+    uns2_sparse_csr_data     Dataset {2}
+    uns2_sparse_csr_indices  Dataset {2}
+    uns2_sparse_csr_indptr   Dataset {3}
+    uns2_sparse_csr_shape    Dataset {2}
     """
-    filename_or_filekey = str(filename_or_filekey)  # allow passing pathlib.Path objects
-    if is_filename(filename_or_filekey):
-        filename = filename_or_filekey
+    filename = str(filename)  # allow passing pathlib.Path objects
+    if is_filename(filename):
+        filename = filename
         ext_ = is_filename(filename, return_ext=True)
         if ext is None:
             ext = ext_
@@ -166,10 +241,12 @@ def write(filename_or_filekey, adata, ext=None):
                              'providing a proper extension to the filename.'
                              'One of "txt", "csv", "h5" or "npz".')
     else:
-        key = filename_or_filekey
+        key = filename
         ext = sett.file_format_data if ext is None else ext
         filename = get_filename_from_key(key, ext)
-    write_anndata_to_file(filename, adata, ext=ext)
+    write_anndata_to_file(filename, adata, ext=ext,
+                          compression=compression,
+                          compression_opts=compression_opts)
 
 
 # -------------------------------------------------------------------------------
@@ -745,7 +822,8 @@ def preprocess_writing(key, value):
     return key, value
 
 
-def write_anndata_to_file(filename, adata, ext='h5'):
+def write_anndata_to_file(filename, adata, ext='h5',
+                          compression=None, compression_opts=None):
     """Write dictionary to file.
 
     Values need to be np.arrays or transformable to numpy arrays.
@@ -792,16 +870,22 @@ def write_anndata_to_file(filename, adata, ext='h5'):
                 try:
                     # ignore arrays with empty dtypes
                     if value.dtype.descr:
-                        f.create_dataset(key, data=value)
+                        f.create_dataset(key, data=value,
+                                         compression=compression,
+                                         compression_opts=compression_opts)
                 except TypeError:
                     # try writing it as byte strings
                     try:
                         if value.dtype.names is None:
-                            f.create_dataset(key, data=value.astype('S'))
+                            f.create_dataset(key, data=value.astype('S'),
+                                             compression=compression,
+                                             compression_opts=compression_opts)
                         else:
                             new_dtype = [(dt[0], 'S{}'.format(int(dt[1][2:])*4))
                                          for dt in value.dtype.descr]
-                            f.create_dataset(key, data=value.astype(new_dtype))
+                            f.create_dataset(key, data=value.astype(new_dtype),
+                                             compression=compression,
+                                             compression_opts=compression_opts)
                     except Exception as e:
                         logg.info(str(e))
                         logg.warn('Could not save field with key = "{}" to h5 file.'
@@ -985,15 +1069,15 @@ def check_datafile_present_and_download(filename, backup_url=None):
     return True
 
 
-def is_filename(filename_or_filekey, return_ext=False):
+def is_filename(filename, return_ext=False):
     """Check whether the argument is a filename."""
     for ext in avail_exts:
-        if filename_or_filekey.endswith('.' + ext):
+        if filename.endswith('.' + ext):
             return ext if return_ext else True
     if return_ext:
         raise ValueError('"{}" does not end on a valid extension.\n'
                          'Please, provide one of the available extensions.\n{}'
-                         .format(filename_or_filekey, avail_exts))
+                         .format(filename, avail_exts))
     else:
         return False
 

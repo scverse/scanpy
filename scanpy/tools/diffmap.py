@@ -7,24 +7,9 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_
             flavor='haghverdi16', copy=False):
     """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
-    `[source] <tl.diffmap_>`__ Diffusion maps [Coifman05]_ has been proposed for
-    visualizing single-cell data by [Haghverdi15]_. The tool uses the adapted
-    Gaussian kernel suggested by [Haghverdi16]_. Uses the implementation of
-    [Wolf17]_.
-
-    .. _tl.diffmap: https://github.com/theislab/scanpy/tree/master/scanpy/tools/diffmap.py
-
-    References
-    ----------
-    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-      31, 2989 (2015).
-    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-
-    See also
-    --------
-    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-      arXiv:0711.0189 (2007).
+    Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
+    data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
+    by [Haghverdi16]_. Uses the implementation of [Wolf17]_.
 
     Parameters
     ----------
@@ -50,8 +35,8 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_
     copy : bool (default: False)
         Return a copy instead of writing to adata.
 
-    Notes
-    -----
+    Returns
+    -------
     The following is added to adata.smp
         X_diffmap : np.ndarray
             Array of shape n_samples × n_comps. DiffMap representation of data,
@@ -60,6 +45,15 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_
     The following is added to adata.uns
         diffmap_evals : np.ndarray
             Eigenvalues of the transition matrix.
+
+    References
+    ----------
+    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
+    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
+      31, 2989 (2015).
+    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
+    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
+      arXiv:0711.0189 (2007).
     """
     logg.info('running Diffusion Maps', r=True)
     adata = adata.copy() if copy else adata

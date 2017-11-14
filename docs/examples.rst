@@ -11,7 +11,7 @@ Good starting points are the following examples, which build on established resu
 
 .. raw:: html
 
-   <img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/filter_genes_dispersion.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/louvain.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/NKG7.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/violin.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/cell_types.png" style="width: 200px">
+   <a href="https://github.com/theislab/scanpy_usage/tree/master/170505_seurat"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/filter_genes_dispersion.png" style="width: 100px"></a><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/louvain.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/NKG7.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/violin.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/cell_types.png" style="width: 200px">
 
 ------------
 
@@ -19,7 +19,7 @@ Good starting points are the following examples, which build on established resu
 
 .. raw:: html
 
-   <img src="http://falexwolf.de/img/scanpy_usage/170501_moignard/scatter.png" style="width: 350px"><img src="http://falexwolf.de/img/scanpy_usage/170501_moignard/heatmap.png" style="width: 80px">
+   <a href="https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16"><img src="http://falexwolf.de/img/scanpy_usage/170501_moignard/scatter.png" style="width: 350px"></a><img src="http://falexwolf.de/img/scanpy_usage/170501_moignard/heatmap.png" style="width: 80px">
 
 
 ------------
@@ -28,7 +28,7 @@ Good starting points are the following examples, which build on established resu
 
 .. raw:: html
 
-   <img src="http://falexwolf.de/img/scanpy_usage/170503_zheng17/speedup.png" style="width: 300px"><img src="http://falexwolf.de/img/scanpy_usage/170503_zheng17/scatter.png" style="width: 100px">
+   <a href="https://github.com/theislab/scanpy_usage/tree/master/170503_zheng17"><img src="http://falexwolf.de/img/scanpy_usage/170503_zheng17/speedup.png" style="width: 300px"></a><img src="http://falexwolf.de/img/scanpy_usage/170503_zheng17/scatter.png" style="width: 100px">
    
 ------------
 
