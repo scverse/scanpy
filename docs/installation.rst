@@ -7,16 +7,14 @@ Get `releases on PyPI <https://pypi.python.org/pypi/scanpy>`__ via (consider usi
 
   pip install scanpy
 
-To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository – green button on top of the page – and ``cd`` into its root directory. To install with symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
+To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`__: clone the repository and ``cd`` into its root directory. To install using symbolic links (stay up to date with your cloned version after you update with ``git pull``) call::
 
     pip install -e .
 
-You can now ``import scanpy.api as sc`` anywhere on your system and work with the command ``scanpy`` on the command-line.
+Two further packages, needed for some of Scanpy's features, have not been automatically installed. Manually install them in this order
 
-Two further packages, relevant for some of Scanpy's features, have not been automatically installed:
-
-- `python-igraph` [Csardi06]_
-- `louvain` [Traag17]_: version 0.6 or higher
+- `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` 
+- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain>=0.6``
 
   
 Trouble shooting
