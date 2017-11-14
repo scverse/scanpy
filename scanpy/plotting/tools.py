@@ -1027,7 +1027,9 @@ def aga_path(
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
-    pseudotimes = []
+    # todo: allow plotting more annotations
+    annotations_x = {}
+    annotatations_x['pseudotimes'] = []
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
@@ -1038,12 +1040,12 @@ def aga_path(
             if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0: groups += [group for i in range(len(idcs))]
-            if ikey == 0: pseudotimes += list(adata.smp['aga_pseudotime'].values[idcs])
+            if ikey == 0: annotatations_x['pseudotimes'] += list(adata.smp['aga_pseudotime'].values[idcs])
             if ikey == 0: x_tick_locs.append(len(x))
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
-            if ikey == 0: pseudotimes = moving_average(pseudotimes)
+            if ikey == 0: annotatations_x['pseudotimes'] = moving_average(annotatations_x['pseudotimes'])
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
@@ -1115,10 +1117,10 @@ def aga_path(
                                    ax_bounds[1] - ax_bounds[3] / len(keys),
                                    ax_bounds[2],
                                    - ax_bounds[3] / len(keys)])
-        pseudotimes = np.array(pseudotimes)[None, :]
+        annotatations_x['pseudotimes'] = np.array(annotatations_x['pseudotimes'])[None, :]
         if color_map_pseudotime is None:
             color_map_pseudotime = 'Greys'
-        img = pseudotime_axis.imshow(pseudotimes, aspect='auto',
+        img = pseudotime_axis.imshow(annotatations_x['pseudotimes'], aspect='auto',
                                      interpolation='nearest',
                                      cmap=color_map_pseudotime)
         if show_yticks:
@@ -1155,7 +1157,7 @@ def aga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = pseudotimes.T
+        df['distance'] = annotatations_x['pseudotimes'].T
         return ax, df if ax_was_none else df
     else:
         return ax if ax_was_none else None

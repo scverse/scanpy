@@ -1,6 +1,8 @@
 # Scanpy
 .scanpy
 test.h5
+test_compr.h5
+test_no_compr.h5
 docs/_build
 docs/api/scanpy.api.*
 archive/
