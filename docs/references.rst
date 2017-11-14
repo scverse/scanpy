@@ -112,7 +112,7 @@ References
 
 .. [Wolf17i] Wolf *et al.* (2017),
    *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
-   soon on bioRxiv.
+   `bioRxiv <https://doi.org/10.1101/208819>`__.
    
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
