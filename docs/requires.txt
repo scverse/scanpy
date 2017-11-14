@@ -1,6 +1,7 @@
 # stuff necessary for docs generation
 numpydoc
 # same as ../requires.txt, but omitting the c++ packages
+anndata>=0.3
 matplotlib==2.0.0  # 2.0.2 seems buggy
 pandas
 scipy

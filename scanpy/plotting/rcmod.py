@@ -12,7 +12,7 @@ import seaborn
 from . import palettes
 from .. import settings
 
-def reset_rcParams():
+def reset_rcParams(fontsize=14):
     """Reset matplotlib.rcParams to Scanpy defaults."""
 
     # figure
@@ -32,7 +32,7 @@ def reset_rcParams():
                                    'DejaVu Sans',
                                    'Bitstream Vera Sans',
                                    'sans-serif']
-    fontsize = 14
+    fontsize = fontsize
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92 * fontsize
     rcParams['axes.titlesize'] = fontsize

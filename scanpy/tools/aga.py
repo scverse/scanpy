@@ -1,13 +1,14 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 
-import sys, os
+from collections import namedtuple
 import numpy as np
 import scipy as sp
+import pandas as pd
 import networkx as nx
 import scipy.sparse
 from textwrap import indent, dedent
+from natsort import natsorted
 from .. import logging as logg
-from ..data_structs import ann_data
 from ..data_structs import data_graph
 from .. import utils
 from .. import settings
@@ -17,54 +18,61 @@ from ..plotting import utils as pl_utils
 MINIMAL_TREE_ATTACHEDNESS = 0.05
 
 doc_string_base = dedent("""\
-    Approximate Graph Abstraction
+    Generate cellular maps of differentiation manifolds with complex
+    topologies [Wolf17i]_.
 
-    Infer the relations of subgroups in the data using approximate graph
-    abstraction. The result is a much simpler graph where each node corresponds
-    to a cell subgroup. The tree induces an ordering between nodes and the cells
-    are ordered within each node.
+    Approximate graph abstraction (AGA) quantifies the connectivity of partitions of a
+    neighborhood graph of single cells, thereby generating a much simpler
+    abstracted graph whose nodes label the partitions. Together with a random
+    walk-based distance measure, this generates a topology preserving map of
+    single cells --- a partial coordinatization of data useful for exploring and
+    explaining its variation. We use the abstracted graph to assess which
+    subsets of data are better explained by discrete clusters than by a
+    continuous variable, to trace gene expression changes along aggregated
+    single-cell paths through data and to infer abstracted trees that best
+    explain the global topology of data.
+
+    Most of the following parameters appear similarly in other tools.
 
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with:
-        adata.add['iroot'] : int or str
-            Index of root cell.
-        adata.smp['X_pca']: np.ndarray
-            PCA representation of the data matrix (result of preprocessing with
-            PCA). Will be used if option `recompute_pca` is False.
-        adata.smp['X_diffmap']: np.ndarray
-            Diffmap representation of the data matrix (result of running
-            `diffmap`). Will be used if option `recompute_graph` is False.
+        Annotated data matrix, optionally with `adata.uns['iroot']`, the index
+        of root cell for computing a pseudotime.
+    n_neighbors : int or None, optional (default: None)
+        Number of nearest neighbors on the knn graph. Often this can be reduced
+        down to a value of 4. Defaults to the number of neighbors in a
+        precomputed graph. If there is none, defaults to 30.
+    n_pcs : int, optional (default: 50)
+        Use n_pcs PCs to compute the euclidean distance matrix, which is the
+        basis for generating the graph. Set to 0 if you don't want preprocessing
+        with PCA.
+    n_dcs : int, optional (default: 10)
+        Number of diffusion components (very similar to eigen vectors of
+        adjacency matrix) to use for distance computations.
     node_groups : any categorical sample annotation or {{'louvain', 'segments'}}, optional (default: 'louvain')
         Criterion to determine the resoluting partitions of the
         graph/data. 'louvain' uses the louvain algorithm and optimizes
         modularity of the graph, 'segments' uses a bipartioning
         criterium that is loosely inspired by hierarchical clustering. You can
         also pass your predefined groups by choosing any sample annotation.
+    resolution : float, optional (default: 1.0)
+        See tool `louvain`.
+    random_state : int, optional (default: 0)
+        See tool `louvain`.
+    tree_detection : {{'iterative_matching', 'min_span_tree'}}, optional (default: 'min_span_tree')
+        How to detect a tree structure in the abstracted graph. If choosing
+        'min_span_tree', a minimum spanning tree is fitted for the abstracted
+        graph, weighted by inverse attachedness. If choosing 'iterative_matching',
+        a recursive algorithm that greedily attaches partitions (groups) that
+        maximize the random-walk based distance measure is run.
+    attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
+        How to measure connectedness between groups.
     n_nodes : int or None, optional (default: None)
         Number of nodes in the abstracted graph. Except when choosing
         'segments' for `node_groups`, for which `n_nodes` defaults to
         `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
         choice of `node_groups`.
-    n_neighbors : int or None, optional (default: None)
-        Number of nearest neighbors on the knn graph. See the default
-        of data_graph (usually 30).
-    n_pcs : int, optional (default: 50)
-        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_dcs : int, optional (default: 10)
-        Number of diffusion components (very similar to eigen vectors of
-        adjacency matrix) to use for distance computations.
-    resolution : float, optional (default: 1.0)
-        See ``sc.tool.louvain``.
-    random_state : int, optional (default: 0)
-        See ``sc.tool.louvain``.
-    tree_detection : {{'connect_extremes', 'min_span_tree'}}, optional (default: 'connect_extremes')
-        How to detect a tree structure in the abstracted graph.
-    attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
-        How to measure attachedness between groups.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
         there is already a cached `distance` or `X_diffmap` in adata.
@@ -72,8 +80,8 @@ doc_string_base = dedent("""\
         Recompute PCA.
     recompute_louvain : bool, optional (default: False)
         When changing the `resolution` parameter, you should set this to True.
-    n_jobs : int or None (default: None)
-        Number of cpus to use for parallel processing (default: sett.n_jobs).
+    n_jobs : int or None (default: settings.n_jobs)
+        Number of cpus to use for parallel processing.
     copy : bool, optional (default: False)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -90,32 +98,34 @@ doc_string_base = dedent("""\
 
 
 doc_string_returns = dedent("""\
-        aga_adjacency_full_attachedness : np.ndarray, adata.add
+        aga_adjacency_full_attachedness : np.ndarray in adata.uns
             The full adjacency matrix of the abstracted graph, weights
-            correspond to attachedness.
-        aga_adjacency_full_confidence : np.ndarray, adata.add
+            correspond to connectedness.
+        aga_adjacency_full_confidence : np.ndarray in adata.uns
             The full adjacency matrix of the abstracted graph, weights
             correspond to confidence in the presence of an edge.
-        aga_adjacency_tree_confidence : sparse csr matrix, adata.add
-            The weighted adjacency matrix of the most probable tree in the
-            abstracted graph.
-        aga_groups : np.ndarray of dtype string, adata.smp
+        aga_adjacency_tree_confidence : sparse csr matrix in adata.uns
+            The adjacency matrix of the tree-like subgraph that best explains
+            the topology
+        aga_groups : np.ndarray of dtype string in adata.smp
             Group labels for each sample.
-        aga_pseudotime : np.ndarray of dtype float, adata.smp
-            Pseudotime labels for each cell.\
+        aga_pseudotime : np.ndarray of dtype float in adata.smp
+            Pseudotime labels, that is, distance a long the manifold for each
+            cell.
     """)
 
 
 def aga(adata,
-        node_groups='louvain',
-        n_nodes=None,
-        n_neighbors=30,
+        n_neighbors=None,
         n_pcs=50,
         n_dcs=10,
+        node_groups='louvain',
         resolution=1,
         random_state=0,
         attachedness_measure='connectedness',
-        tree_detection='connect_extremes',
+        tree_detection='min_span_tree',
+        tree_based_confidence=True,
+        n_nodes=None,
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
@@ -123,10 +133,14 @@ def aga(adata,
         n_jobs=None,
         copy=False):
     adata = adata.copy() if copy else adata
+    utils.sanitize_anndata(adata)
+    if tree_detection not in {'iterative_matching', 'min_span_tree'}:
+        raise ValueError('`tree_detection` needs to be one of {}'
+                         .format({'iterative_matching', 'min_span_tree'}))
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
         and ('louvain_groups' not in adata.smp_keys()
-             or ('louvain_params' in adata.add and adata.add['louvain_params']['resolution'] != resolution)
+             or ('louvain_params' in adata.uns and adata.uns['louvain_params']['resolution'] != resolution)
              or recompute_louvain
              or not data_graph.no_recompute_of_graph_necessary(
             adata,
@@ -148,14 +162,14 @@ def aga(adata,
     clusters = node_groups
     if node_groups == 'louvain': clusters = 'louvain_groups'
     logg.info('running Approximate Graph Abstraction (AGA)', reset=True)
-    if ('iroot' not in adata.add
-        and 'xroot' not in adata.add
+    if ('iroot' not in adata.uns
+        and 'xroot' not in adata.uns
         and 'xroot' not in adata.var):
         logg.info('    no root cell found, no computation of pseudotime')
         msg = \
     """To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
-        adata.add['iroot'] = root_cell_index
+        adata.uns['iroot'] = root_cell_index
     or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
@@ -167,8 +181,8 @@ def aga(adata,
               n_neighbors=n_neighbors,
               n_pcs=n_pcs,
               n_dcs=n_dcs,
-              min_group_size=20/resolution,
               n_jobs=n_jobs,
+              tree_based_confidence=tree_based_confidence,
               # we do not need to recompute things both in the louvain
               # call above and here
               recompute_graph=recompute_graph and not fresh_compute_louvain,
@@ -177,75 +191,224 @@ def aga(adata,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    adata.smp['X_diffmap'] = aga.rbasis[:, 1:]
+    adata.smpm['X_diffmap'] = aga.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
-    adata.add['diffmap_evals'] = aga.evals[1:]
-    adata.add['data_graph_distance_local'] = aga.Dsq
-    adata.add['data_graph_norm_weights'] = aga.Ktilde
+    adata.uns['diffmap_evals'] = aga.evals[1:]
+    adata.uns['data_graph_distance_local'] = aga.Dsq
+    adata.uns['data_graph_norm_weights'] = aga.Ktilde
     if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
-        adata.add['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
-    # vector of length n_samples of group names
-    adata.smp['aga_groups'] = aga.segs_names.astype('U')
-    # vectors of length n_groups
-    adata.add['aga_groups_order'] = np.array([str(n) for n in aga.segs_names_unique])
-    adata.add['aga_groups_sizes'] = aga.segs_sizes
-    # the tip points of segments
-    # adata.add['aga_grouptips'] = aga.segs_tips
-    # the tree/graph adjacency matrix
 
-    # add the adjacency matrices of the abstracted graph
-    adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_confidence
-    adata.add['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness
-
-    # add the adjacency matrix of the detected tree in the abstracted graph
     if tree_detection == 'min_span_tree':
         min_span_tree = utils.compute_minimum_spanning_tree(
-            1./adata.add['aga_adjacency_full_attachedness'])
+            1./aga.segs_adjacency_full_attachedness)
         min_span_tree.data = 1./min_span_tree.data
-        adata.add['aga_adjacency_tree_confidence'] = min_span_tree
-        adata.add['aga_adjacency_full_confidence'] = aga.segs_adjacency_full_attachedness
+        full_confidence, tree_confidence = aga.compute_adjacency_confidence(
+            aga.segs_adjacency_full_attachedness, min_span_tree, tree_based_confidence)
     else:
-        adata.add['aga_adjacency_tree_confidence'] = aga.segs_adjacency_tree_confidence
+        full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
-    # TODO: make these two hacks, which set the value in the _confidence fields
-    #       to the _attachedness field, unnecessary 
-    adata.add['aga_adjacency_tree_confidence'][
-        adata.add['aga_adjacency_tree_confidence'].nonzero()] = adata.add['aga_adjacency_full_attachedness'][
-        adata.add['aga_adjacency_tree_confidence'].nonzero()]
-    adata.add['aga_adjacency_full_confidence'] = adata.add['aga_adjacency_full_attachedness']
-
-    # manage cluster names and colors
-    if (clusters not in {'segments', 'unconstrained_segments'}):
-        adata.add['aga_groups_original'] = clusters
-        adata.add['aga_groups_order_original'] = np.array(aga.segs_names_original)
-        if (clusters + '_colors' not in adata.add
-            or len(adata.add[clusters + '_colors']) != len(adata.add['aga_groups_order'])):
-            pl_utils.add_colors_for_categorical_sample_annotation(adata, clusters)
-        colors_original = []
-        if clusters + '_order' not in adata.add:
-            from natsort import natsorted
-            adata.add[clusters + '_order'] = natsorted(np.unique(adata.smp[clusters]))
-        name_list = list(adata.add[clusters + '_order'])
-        for name in aga.segs_names_original:
-            idx = name_list.index(name)
-            colors_original.append(adata.add[clusters + '_colors'][idx])
-        adata.add['aga_groups_colors_original'] = np.array(colors_original)
-    logg.info('... finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    y = adata.smp[clusters].cat.categories
+    x = np.array(aga.segs_names_original)
+    xsorted = np.argsort(x)
+    ypos = np.searchsorted(x[xsorted], y)
+    indices = xsorted[ypos]
+        
+    adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness[indices, :][:, indices]
+    adata.uns['aga_adjacency_full_confidence'] = full_confidence[indices, :][:, indices]
+    adata.uns['aga_adjacency_tree_confidence'] = tree_confidence[indices, :][:, indices]
+    adata.uns['aga_groups_key'] = clusters
+    adata.uns[clusters + '_sizes'] = np.array(aga.segs_sizes)[indices]
+    logg.info('    finished', time=True, end=': ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n' + indent(doc_string_returns, '    '))
     return adata if copy else None
 
 aga.__doc__ = doc_string_base.format(returns=doc_string_returns)
 
 
+def aga_degrees(adata):
+    """Compute the degree of each node in the abstracted graph.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    degrees : list
+        List of degrees for each node.
+    """
+    import networkx as nx
+    g = nx.Graph(adata.uns['aga_adjacency_full_confidence'])
+    degrees = [d for _, d in g.degree_iter(weight='weight')]
+    return degrees
+
+
+def aga_expression_entropies(adata):
+    """Compute the median expression entropy for each node-group.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    entropies : list
+        Entropies of median expressions for each node.
+    """
+    from scipy.stats import entropy
+    groups_order, groups_masks = utils.select_groups(adata, smp='aga_groups')
+    entropies = []
+    for mask in groups_masks:
+        X_mask = adata.X[mask]
+        x_median = np.median(X_mask, axis=0)
+        x_probs = (x_median - np.min(x_median)) / (np.max(x_median) - np.min(x_median))
+        entropies.append(entropy(x_probs))
+    return entropies
+
+
+def aga_compare_paths(adata1, adata2,
+                      adjacency_key='aga_adjacency_full_confidence'):
+    """Compare paths in abstracted graphs in two datasets.
+
+    Compute the fraction of consistent paths between leafs, a measure for the
+    topological similarity between graphs.
+
+    By increasing the verbosity to level 4 and 5, the paths that do not agree
+    and the paths that agree are written to the output, respectively.
+
+    Parameters
+    ----------
+    adata1, adata2 : AnnData
+        Annotated data matrices to compare.
+    adjacency_key : str
+        Key for indexing the adjacency matrices to be used in adata1 and adata2.
+
+    Returns
+    -------
+    OrderedTuple with attributes ``n_steps`` (total number of steps in paths)
+    and ``frac_steps`` (fraction of consistent steps), ``n_paths`` and
+    ``frac_paths``.
+    """
+    import networkx as nx
+    g1 = nx.Graph(adata1.uns[adjacency_key])
+    g2 = nx.Graph(adata2.uns[adjacency_key])
+    leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
+    logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
+    asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'].values,
+                                         adata2.smp['aga_groups'].values)
+    asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'].values,
+                                         adata1.smp['aga_groups'].values)
+    orig_names1 = adata1.uns['aga_groups_order_original']
+    orig_names2 = adata2.uns['aga_groups_order_original']
+
+    import itertools
+    n_steps = 0
+    n_agreeing_steps = 0
+    n_paths = 0
+    n_agreeing_paths = 0
+    # loop over all pairs of leaf nodes in the reference adata1
+    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
+        r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
+        orig_names = [orig_names1[int(i)] for i in [r, s]]
+        orig_names += [orig_names2[int(i)] for i in [r2, s2]]
+        logg.msg('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
+               .format(*orig_names), v=4, no_indent=True)
+        no_path1 = False
+        try:
+            path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
+        except nx.NetworkXNoPath:
+            no_path1 = True
+        no_path2 = False
+        try:
+            path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
+        except nx.NetworkXNoPath:
+            no_path2 = True
+        if no_path1 and no_path2:
+            # consistent behavior
+            n_paths += 1
+            n_agreeing_paths += 1
+            n_steps += 1
+            n_agreeing_steps += 1
+            continue
+        elif no_path1 or no_path2:
+            # non-consistent result
+            n_paths += 1
+            n_steps += 1
+            continue
+        if len(path1) >= len(path2):
+            path_mapped = [asso_groups1[l] for l in path1]
+            path_compare = path2
+            path_compare_id = 2
+            path_compare_orig_names = [[orig_names2[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names2[int(s)] for s in l] for l in path_mapped]
+        else:
+            path_mapped = [asso_groups2[l] for l in path2]
+            path_compare = path1
+            path_compare_id = 1
+            path_compare_orig_names = [[orig_names1[int(s)] for s in l] for l in path_compare]
+            path_mapped_orig_names = [[orig_names1[int(s)] for s in l] for l in path_mapped]
+        n_agreeing_steps_path = 0
+        ip_progress = 0
+        for il, l in enumerate(path_compare[:-1]):
+            for ip, p in enumerate(path_mapped):
+                if ip >= ip_progress and l in p:
+                    # check whether we can find the step forward of path_compare in path_mapped
+                    if (ip + 1 < len(path_mapped)
+                        and
+                        path_compare[il + 1] in path_mapped[ip + 1]):
+                        # make sure that a step backward leads us to the same value of l
+                        # in case we "jumped"
+                        logg.msg('found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
+                               .format(l, path_compare_orig_names[il + 1], il, path_compare_id, ip), v=6)
+                        consistent_history = True
+                        for iip in range(ip, ip_progress, -1):
+                            if l not in path_mapped[iip - 1]:
+                                consistent_history = False
+                        if consistent_history:
+                            # here, we take one step further back (ip_progress - 1); it's implied that this
+                            # was ok in the previous step
+                            logg.msg('    step(s) backward to position(s) {} in path_mapped are fine, too: valid step'
+                                   .format(list(range(ip - 1, ip_progress - 2, -1))), v=6)
+                            n_agreeing_steps_path += 1
+                            ip_progress = ip + 1
+                            break
+        n_steps_path = len(path_compare) - 1
+        n_agreeing_steps += n_agreeing_steps_path
+        n_steps += n_steps_path
+        n_paths += 1
+        if n_agreeing_steps_path == n_steps_path: n_agreeing_paths += 1
+
+        # only for the output, use original names
+        path1_orig_names = [orig_names1[int(s)] for s in path1]
+        path2_orig_names = [orig_names2[int(s)] for s in path2]
+        logg.msg('      path1 = {},\n'
+               'path_mapped = {},\n'
+               '      path2 = {},\n'
+               '-> n_agreeing_steps = {} / n_steps = {}.'
+               .format(path1_orig_names,
+                       [list(p) for p in path_mapped_orig_names],
+                       path2_orig_names,
+                       n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
+    Result = namedtuple('aga_compare_paths_result',
+                        ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
+    return Result(frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
+                  n_steps=n_steps if n_steps > 0 else np.nan,
+                  frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
+                  n_paths=n_paths if n_steps > 0 else np.nan)
+
+
 def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
     """Contract the abstracted graph.
     """
     adata = adata.copy() if copy else adata
-    if 'aga_adjacency_tree_confidence' not in adata.add: raise ValueError('run tool aga first!')
+    if 'aga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool aga first!')
     min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
 
@@ -258,7 +421,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 for neighbors_edges in range(1, 20):
                     for n_cnt, n in enumerate(neighbors):
                         if n_edges_per_seg[n] == neighbors_edges:
-                            logg.m('merging node {} into {} (two edges)'
+                            logg.msg('merging node {} into {} (two edges)'
                                    .format(i, n), v=4)
                             return i, n
         # node groups with a very small cell number
@@ -267,7 +430,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 neighbors = adjacency_tree_confidence[i].nonzero()[1]
                 neighbor_sizes = [node_groups[str(n) == node_groups].size for n in neighbors]
                 n = neighbors[np.argmax(neighbor_sizes)]
-                logg.m('merging node {} into {} '
+                logg.msg('merging node {} into {} '
                        '(smaller than `min_group_size` = {})'
                        .format(i, n, min_group_size), v=4)
                 return i, n
@@ -287,16 +450,16 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 break
         return adjacency_tree_confidence, node_groups
 
-    size_before = adata.add['aga_adjacency_tree_confidence'].shape[0]
-    adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
-        adata.add['aga_adjacency_tree_confidence'], adata.smp['aga_groups'])
-    adata.add['aga_groups_order'] = np.unique(adata.smp['aga_groups'])
+    size_before = adata.uns['aga_adjacency_tree_confidence'].shape[0]
+    adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
+        adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'].values)
+    adata.uns['aga_groups_order'] = np.unique(adata.smp['aga_groups'].values)
     for key in ['aga_adjacency_full_confidence', 'aga_groups_original',
                 'aga_groups_order_original', 'aga_groups_colors_original']:
-        if key in adata.add: del adata.add[key]
+        if key in adata.uns: del adata.uns[key]
     logg.info('    contracted graph from {} to {} nodes'
-              .format(size_before, adata.add['aga_adjacency_tree_confidence'].shape[0]))
-    logg.m('removed adata.add["aga_adjacency_full_confidence"]', v=4)
+              .format(size_before, adata.uns['aga_adjacency_tree_confidence'].shape[0]))
+    logg.msg('removed adata.uns["aga_adjacency_full_confidence"]', v=4)
     return adata if copy else None
 
 
@@ -310,7 +473,8 @@ class AGA(data_graph.DataGraph):
                  n_neighbors=30,
                  n_pcs=50,
                  n_dcs=10,
-                 min_group_size=20,
+                 min_group_size=1,
+                 tree_based_confidence=True,
                  minimal_distance_evidence=0.95,
                  recompute_pca=False,
                  recompute_distances=False,
@@ -334,6 +498,7 @@ class AGA(data_graph.DataGraph):
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
         self.attachedness_measure = attachedness_measure
+        self.tree_based_confidence = tree_based_confidence
         self.clusters = clusters
         self.clusters_precomputed = None
         self.clusters_precomputed_names = None
@@ -343,19 +508,12 @@ class AGA(data_graph.DataGraph):
                 raise ValueError('Did not find {} in adata.smp_keys()! '
                                  'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
                                  .format(clusters))
-            clusters_array = adata.smp[clusters]
+            clusters_array = adata.smp[clusters].values
             # transform to a list of index arrays
             self.clusters_precomputed = []
-            # TODO: this is not a good solution
-            if clusters + '_order' in adata.add:
-                self.clusters_precomputed_names = list(adata.add[clusters + '_order'])
-            else:
-                self.clusters_precomputed_names = []
-            from natsort import natsorted
-            for cluster_name in natsorted(np.unique(clusters_array)):
+            self.clusters_precomputed_names = list(adata.smp[clusters].cat.categories)
+            for cluster_name in self.clusters_precomputed_names:
                 self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
-                if clusters + '_order' not in adata.add:
-                    self.clusters_precomputed_names.append(cluster_name)
             n_nodes = len(self.clusters_precomputed)
         else:
             if n_nodes is None:
@@ -432,13 +590,13 @@ class AGA(data_graph.DataGraph):
                                                segs_distances,
                                                iseg, new_tips)
             else:
-                logg.m('    split', ibranch + 1, v=4)
+                logg.msg('    split', ibranch + 1, v=4)
                 stop, segs_distances = self.do_split_constrained(segs, segs_tips,
                                                                  segs_adjacency,
                                                                  segs_adjacency_nodes,
                                                                  segs_distances)
                 if stop: break
-                
+
         # segments
         self.segs = segs
         self.segs_tips = segs_tips
@@ -447,34 +605,69 @@ class AGA(data_graph.DataGraph):
 
         # the full, unscaled adjacency matrix
         self.segs_adjacency_full_attachedness = 1/segs_distances
-        if self.attachedness_measure == 'connectedness':
-            norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
-            self.segs_adjacency_full_attachedness /= norm
+        # if self.attachedness_measure == 'connectedness':
+        #     norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
+        #     self.segs_adjacency_full_attachedness /= norm
+        self.segs_adjacency_full_confidence, self.segs_adjacency_tree_confidence \
+            = self.compute_adjacency_confidence(
+                self.segs_adjacency_full_attachedness,
+                segs_adjacency,
+                self.tree_based_confidence)
         np.fill_diagonal(self.segs_adjacency_full_attachedness, 0)
 
-        # compute the average tree distances
-        tree_distances = []
-        for i, neighbors in enumerate(segs_adjacency):
-            tree_distances += segs_distances[i][neighbors].tolist()
-        median_tree_distances = np.median(tree_distances)
+    def compute_adjacency_confidence(self, full_attachedness, tree_adjacency, tree_based_confidence):
+        """Translates the attachedness measure into a confidence measure.
+        """
+        if sp.sparse.issparse(tree_adjacency):
+            tree_adjacency = [tree_adjacency[i].nonzero()[1] for i in range(tree_adjacency.shape[0])]
+        segs_distances = 1/full_attachedness
+        if not tree_based_confidence:  # inter- and intra-cluster based confidence
+            from scipy.stats import norm
+            # intra-cluster connections
+            total_n = self.k * np.array(self.segs_sizes)  # total number of connections
+            a = full_attachedness
+            confidence = np.zeros_like(full_attachedness)
+            for i in range(a.shape[0]):
+                for j in range(i+1, a.shape[1]):
+                    expected = total_n[i] * total_n[j] / np.sum(total_n)**2
+                    actual = a[i, j] / np.sum(total_n)
+                    variance = expected * (1 - expected) / np.sum(total_n)
+                    if actual > expected:
+                        confidence[i, j] = 1
+                    elif actual < 1e-12:
+                        confidence[i, j] = 0
+                    else:
+                        confidence[i, j] = 2 * norm.cdf(actual, expected, np.sqrt(variance))
+                    # i_name = self.segs_names_original[i]
+                    # j_name = self.segs_names_original[j]
+                    # print(i_name, j_name, expected, actual, variance, confidence[i, j])
+            full_confidence = confidence + confidence.T
+            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency)
+        else:
+            # compute the average tree distances
+            tree_distances = []
+            for i, neighbors in enumerate(tree_adjacency):
+                tree_distances += segs_distances[i][neighbors].tolist()
+            median_tree_distances = np.median(tree_distances)
+            full_confidence = np.zeros_like(segs_distances)
+            full_confidence[segs_distances <= median_tree_distances] = 1
+            full_confidence[segs_distances > median_tree_distances] = (
+                np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
+                [segs_distances > median_tree_distances])
+            np.fill_diagonal(full_confidence, 0)
+            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency, minimal_tree_attachedness=MINIMAL_TREE_ATTACHEDNESS)
+        return full_confidence, tree_confidence
 
-        # the full, scaled adjacency matrix
-        self.segs_adjacency_full_confidence = np.zeros_like(segs_distances)
-        self.segs_adjacency_full_confidence[segs_distances <= median_tree_distances] = 1
-        self.segs_adjacency_full_confidence[segs_distances > median_tree_distances] = (
-            np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
-            [segs_distances > median_tree_distances])
-        np.fill_diagonal(self.segs_adjacency_full_confidence, 0)
-
-        # the scaled tree adjacency matrix
-        minimal_tree_attachedness = MINIMAL_TREE_ATTACHEDNESS
-        self.segs_adjacency_tree_confidence = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
-        for i, neighbors in enumerate(segs_adjacency):
-            clipped_attachedness = self.segs_adjacency_full_confidence[i][neighbors]
+    def compute_tree_confidence(self, full_confidence, tree_adjacency, minimal_tree_attachedness=1e-14):
+        n = full_confidence.shape[0]
+        tree_confidence = sp.sparse.lil_matrix((n, n), dtype=float)
+        for i, neighbors in enumerate(tree_adjacency):
+            clipped_attachedness = full_confidence[i][neighbors]
             clipped_attachedness[clipped_attachedness < minimal_tree_attachedness] = minimal_tree_attachedness
-            self.segs_adjacency_tree_confidence[i, neighbors] = clipped_attachedness
-            self.segs_adjacency_full_confidence[i, neighbors] = clipped_attachedness
-        self.segs_adjacency_tree_confidence = self.segs_adjacency_tree_confidence.tocsr()
+            tree_confidence[i, neighbors] = clipped_attachedness
+            full_confidence[i, neighbors] = clipped_attachedness
+        tree_confidence = tree_confidence.tocsr()
+        return tree_confidence
 
     def do_split_constrained(self, segs, segs_tips,
                              segs_adjacency,
@@ -488,7 +681,7 @@ class AGA(data_graph.DataGraph):
             isegs = np.argsort([len(seg) for seg in segs])[::-1]
             for iseg in isegs:
                 seg = segs[iseg]
-                logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+                logg.msg('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
                 jsegs = [jseg for jseg in range(len(segs)) if jseg != iseg]
                 dtip = np.zeros(len(seg))
                 for jseg in jsegs:
@@ -506,9 +699,9 @@ class AGA(data_graph.DataGraph):
                 ssegs_tips = [[new_itip], []]
                 sizes = [len(ssegs[0]), len(ssegs[1])]
                 if sizes[0] != 0 and sizes[1] != 0: break
-            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+            logg.msg('    new tip {} with distance {:.6}, constraint was {}'
                    .format(new_itip, dist_new_itip, itip), v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             if len(segs_tips[iseg]) > 0: ssegs_tips[1] = [segs_tips[iseg][0]]
             return iseg, seg, ssegs, ssegs_tips, sizes
@@ -565,7 +758,7 @@ class AGA(data_graph.DataGraph):
             itip = second_tips[iseg]
             third_itip = third_tips[iseg]
             seg = segs[iseg]
-            logg.m('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+            logg.msg('... splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             new_seg = self.Dchosen[new_itip, seg] < self.Dchosen[itip, seg]
             size_0 = np.sum(new_seg)
             if False:
@@ -580,11 +773,11 @@ class AGA(data_graph.DataGraph):
             ssegs = [seg[new_seg], seg[~new_seg]]
             ssegs_tips = [[new_itip], []]
             sizes = [len(ssegs[0]), len(ssegs[1])]
-            logg.m('    new tip {} with distance {:.6}, constraint was {}'
+            logg.msg('    new tip {} with distance {:.6}, constraint was {}'
                    .format(new_itip, 0.0, itip), v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
-            logg.m('    the scores where', scores, v=4)
+            logg.msg('    the scores where', scores, v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
         def star_split(segs_tips):
@@ -614,11 +807,11 @@ class AGA(data_graph.DataGraph):
             ssegs_tips = [[new_tip], new_tips]
             sizes = [len(ssegs[0]), len(ssegs[1])]
             np.set_printoptions(precision=4)
-            logg.m('    new tip', new_tip, 'with distance', dist_max,
+            logg.msg('    new tip', new_tip, 'with distance', dist_max,
                    'using constraints {} with distances'
                    .format(new_tips), v=4)
-            logg.m('   ', dists, v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('   ', dists, v=4)
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes
 
@@ -628,10 +821,11 @@ class AGA(data_graph.DataGraph):
                 segs_tips.append([])
             iseg = 0
             seg = segs[iseg]
-            logg.m('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
+            logg.msg('    splitting group {} with size {}'.format(iseg, len(seg)), v=4)
             new_tips = [seg[np.argmax(self.Dchosen[seg[0], seg])]]
             dtip_others = self.Dchosen[new_tips[0], seg]
             dists = [np.max(dtip_others)]
+            # it would be equivalent to just consider one pair of points
             for j in range(10):
                 new_tip = seg[np.argmax(dtip_others)]
                 if new_tip in new_tips: break
@@ -652,11 +846,11 @@ class AGA(data_graph.DataGraph):
             ssegs_tips = [[new_tip], new_tips]
             sizes = [len(ssegs[0]), len(ssegs[1])]
             np.set_printoptions(precision=4)
-            logg.m('    new tip', new_tip, 'with distance', dist_max,
+            logg.msg('    new tip', new_tip, 'with distance', dist_max,
                    'using constraints {} with distances'
                    .format(new_tips), v=4)
-            logg.m('   ', dists, v=4)
-            logg.m('    new sizes {} and {}'
+            logg.msg('   ', dists, v=4)
+            logg.msg('    new sizes {} and {}'
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
@@ -673,6 +867,7 @@ class AGA(data_graph.DataGraph):
         segs.insert(iseg, ssegs[trunk])
         segs_tips.insert(iseg, ssegs_tips[trunk])
         if self.clusters_precomputed_names:
+            # there is one partition that corresponds to all other partitions...
             iseg_name = ' '.join(np.setdiff1d(self.clusters_precomputed_names,
                                               [n for n in self.segs_names_original]
                                               + [clus_name]))
@@ -743,7 +938,7 @@ class AGA(data_graph.DataGraph):
                 raise ValueError('unknown `self.flavor_develop`')
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
             # self.choose_largest_segment = False
-            logg.m('... group', iseg, 'score', score, 'n_points', len(seg),
+            logg.msg('... group', iseg, 'score', score, 'n_points', len(seg),
                    '(too small)' if len(seg) < self.min_group_size else '', v=4)
             if len(seg) <= self.min_group_size: score = 0
             # write result
@@ -884,7 +1079,7 @@ class AGA(data_graph.DataGraph):
                 reference_point_in_jseg = measure_points_in_jseg[-1]
                 measure_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_jseg, segs[kseg]])])
                 distances.append(self.Dchosen[measure_points_in_jseg[-1], measure_points_in_kseg[-1]])
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
@@ -910,7 +1105,7 @@ class AGA(data_graph.DataGraph):
                 distances.append(closest_distance)
                 median_distance = np.median(self.Dchosen[measure_point_in_kseg, segs[jseg]])
                 median_distances.append(median_distance)
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '({})'.format(measure_points_in_jseg[-1]),
                        kseg, '({})'.format(measure_points_in_kseg[-1]),
                        '->', distances[-1], median_distance, v=4)
@@ -929,7 +1124,7 @@ class AGA(data_graph.DataGraph):
                 measure_points_in_jseg.append(measure_point_in_jseg)
                 closest_distance = 1/closest_similarity
                 distances.append(closest_distance)
-                logg.m('   ',
+                logg.msg('   ',
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
@@ -943,7 +1138,7 @@ class AGA(data_graph.DataGraph):
                             connectedness += 1
                 # distances.append(1./(connectedness+1))
                 distances.append(1./connectedness if connectedness != 0 else np.inf)
-            logg.m(' ', jseg, '-', kseg_list, '->', distances, v=4)
+            logg.msg(' ', jseg, '-', kseg_list, '->', distances, v=4)
         else:
             raise ValueError('unknown attachedness measure')
         return distances, median_distances, measure_points_in_jseg, measure_points_in_kseg
@@ -983,7 +1178,7 @@ class AGA(data_graph.DataGraph):
                         connectedness[not_trunk] += score
         distances = [1/c if c > 0 else np.inf for c in connectedness]
         # distances = [1/(1+c) for c in connectedness]
-        logg.m('    ', jseg, '-', kseg_list, '->', distances, v=5)
+        logg.msg('    ', jseg, '-', kseg_list, '->', distances, v=5)
         return distances
 
     def establish_new_connections(self, kseg_list, segs, segs_adjacency_nodes):
@@ -1014,9 +1209,8 @@ class AGA(data_graph.DataGraph):
                 connections += score
         # distance = 1/(1+connections)
         distance = 1/connections if connections > 0 else np.inf
-        logg.m('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
+        logg.msg('    ', kseg_list[0], '-', kseg_list[1], '->', distance, v=5)
         return distance
-
 
     def adjust_adjacency(self, iseg, n_add, segs, segs_tips, segs_adjacency,
                          segs_adjacency_nodes, segs_distances, trunk):
@@ -1046,13 +1240,13 @@ class AGA(data_graph.DataGraph):
             distances = segs_distances[jseg, kseg_list]
             # in case we do not have convincing evidence for a connection based on the maximal distances
             if (median_distances
-                and ((max(distances) < 0.1 and min(distances) / max(distances) > 0.4)
+                and ((max(distances) < 0.1 and min(distances) / max(distances) >= 0.4)
                      # all distances are very small, we require significant statistical evidence here
-                     or (min(distances) >= 0.1 and min(distances) / max(distances) > self.minimal_distance_evidence))
-                     # distances are larger 
+                     or (min(distances) >= 0.1 and min(distances) / max(distances) >= self.minimal_distance_evidence))
+                     # distances are larger
                 and min(median_distances) / max(median_distances) < self.minimal_distance_evidence):
                      # require median_distances to actually provide better evidence
-                logg.msg('        no convincing evidence in minimal distances, consider median distance')
+                logg.msg('        no convincing evidence in minimal distances, consider median distance', v=4)
                 idx = np.argmin(median_distances)
             else:
                 idx = np.argmin(distances)
@@ -1062,7 +1256,7 @@ class AGA(data_graph.DataGraph):
             pos_2 = segs_adjacency[iseg].index(jseg)
             segs_adjacency[iseg].pop(pos_2)
             segs_adjacency[kseg_min].append(jseg)
-            logg.m('    group {} is now attached to {}'.format(jseg, kseg_min), v=4)
+            logg.msg('    group {} is now attached to {}'.format(jseg, kseg_min), v=4)
         # in case the segment we split should correspond to two "clusters", we
         # need to check whether the new segments connect to any of the other old
         # segments
@@ -1081,34 +1275,49 @@ class AGA(data_graph.DataGraph):
                 segs_distances[jseg_list, kseg] = distances
             if continue_after_distance_compute: continue
             idx = np.argmin(segs_distances[kseg, jseg_list])
+            # candidate for the segment to which we attach would attach the new
+            # segment
             jseg_min = jseg_list[idx]
-            logg.m('    consider connecting', kseg, 'to', jseg_min, v=4)
+            logg.msg('    consider connecting', kseg, 'to', jseg_min, v=4)
+            # if the closest segment is not among the two new segments
             if jseg_min not in kseg_list:
-                segs_adjacency_sparse = sp.sparse.lil_matrix((len(segs), len(segs)), dtype=float)
+                segs_adjacency_sparse = sp.sparse.lil_matrix(
+                    (len(segs), len(segs)), dtype=float)
                 for i, neighbors in enumerate(segs_adjacency):
                     segs_adjacency_sparse[i, neighbors] = 1
                 G = nx.Graph(segs_adjacency_sparse)
                 paths_all = nx.single_source_dijkstra_path(G, source=kseg)
+                # we can attach the new segment to an old segment
                 if jseg_min not in paths_all:
                     segs_adjacency[jseg_min].append(kseg)
                     segs_adjacency[kseg].append(jseg_min)
-                    logg.m('        attaching new segment', kseg, 'at', jseg_min, v=4)
-                    # if we split the cluster, we should not attach kseg
+                    logg.msg('        attaching new segment',
+                           kseg, 'at', jseg_min, v=4)
+                    # if we establish the new connection with an old segment
+                    # we should not add a new connection to the second new segment
                     do_not_attach_ksegs_with_each_other = True
+                # we cannot attach it to an old segment as this
+                # would produce a cycle
                 else:
-                    logg.m('        cannot attach new segment', kseg, 'at', jseg_min,
+                    logg.msg('        cannot attach new segment',
+                           kseg, 'at', jseg_min,
                            '(would produce cycle)', v=4)
+                    # we still have the other new segment to inspect so it's not
+                    # a drama that we couldn't establish a new connection
                     if kseg != kseg_list[-1]:
-                        logg.m('            continue', v=4)
+                        logg.msg('            continue', v=4)
                         continue
+                    # we do not add add a new link
                     else:
-                        logg.m('            do not add another link', v=4)
+                        logg.msg('            do not add another link', v=4)
                         continue_after_distance_compute = True
             if jseg_min in kseg_list and not do_not_attach_ksegs_with_each_other:
                 segs_adjacency[jseg_min].append(kseg)
                 segs_adjacency[kseg].append(jseg_min)
+                # we're already done as we found the new connection
                 continue_after_distance_compute = True
-                logg.m('        attaching new segment', kseg, 'with new segment', jseg_min, v=4)
+                logg.msg('        attaching new segment',
+                         kseg, 'with new segment', jseg_min, v=4)
         return segs_distances
 
     def _do_split(self, Dseg, tips, seg_reference, old_tips):
@@ -1170,17 +1379,6 @@ class AGA(data_graph.DataGraph):
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
             trunk = 3
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
         elif len(ssegs) == 3:
             reference_point = np.zeros(3, dtype=int)
             reference_point[0] = ssegs_tips[0][0]
@@ -1204,25 +1402,6 @@ class AGA(data_graph.DataGraph):
             ssegs_adjacency = [[trunk] if i != trunk else
                                [j for j in range(3) if j != trunk]
                                for i in range(3)]
-            # print(ssegs_adjacency)
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(3):
-            #         if i != iseg_new:
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[iseg_new, i], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[iseg_new, i], 1], marker='o', c='black')
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[i, iseg_new], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][measure_points[i, iseg_new], 1], marker='x', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
-            # print('trunk', trunk)
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]
@@ -1403,7 +1582,7 @@ class AGA(data_graph.DataGraph):
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            logg.m('... is root itself, never obtain significant correlation', v=4)
+            logg.msg('... is root itself, never obtain significant correlation', v=4)
         return imax
 
     def _kendall_tau_add(self, len_old, diff_pos, tau_old):

@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Utility functions and classes
 """
 
@@ -27,7 +27,7 @@ def get_graph_tool_from_adjacency(adjacency, directed=None):
         from scipy.sparse import tril
         adjacency_edge_list = tril(adjacency)
     g = gt.Graph(directed=directed)
-    g.add_vertex(adjacency.shape[0])
+    g.add_vertex(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
     g.add_edge_list(np.transpose(adjacency_edge_list.nonzero()))
     weights = g.new_edge_property('double')
     for e in g.edges():
@@ -43,10 +43,17 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     import igraph as ig
     sources, targets = adjacency.nonzero()
     weights = adjacency[sources, targets]
-    weights = np.array(weights)[0]
-    g = ig.Graph(list(zip(sources, targets)),
-                 directed=directed,
-                 edge_attrs={'weight': weights})
+    # if len(weights) > 0: weights = np.array(weights)
+    # else:
+    #     # hack for empty graph
+    #     sources, targets = np.ones(adjacency.shape).nonzero()
+    #     weights = np.array([1e-12 for i in range(len(sources))])  # dummy edges
+    # if adjacency.shape[0] < 20:
+    #     print(list(zip(sources, targets)), weights)
+    g = ig.Graph(directed=directed)
+    g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
+    g.add_edges(list(zip(sources, targets)))
+    g.es['weight'] = weights
     if g.vcount() != adjacency.shape[0]:
         logg.warn('The constructed graph has only {} nodes. '
                   'Your adjacency matrix contained redundant nodes.'
@@ -57,7 +64,9 @@ def get_igraph_from_adjacency(adjacency, directed=None):
 def compute_association_matrix_of_groups(adata, prediction, reference,
                                          normalization='prediction',
                                          threshold=0.01, max_n_names=2):
-    """Identify predicted groups with reference groups.
+    """Compute overlaps between groups.
+
+    See ``identify_groups`` for identifying the groups.
 
     Parameters
     ----------
@@ -86,17 +95,24 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     """
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
-    check_adata(adata)
+    sanitize_anndata(adata)
+    cats = adata.smp[reference].cat.categories
+    for cat in cats:
+        if cat in settings._ignore_categories:
+            logg.info('Ignoring category \'{}\' '
+                      'as it\'s in `settings._ignore_categories`.'
+                      .format(cat))
     asso_names = []
     asso_matrix = []
-    for ipred_group, pred_group in enumerate(adata.add[prediction + '_order']):
+    for ipred_group, pred_group in enumerate(
+            adata.smp[prediction].cat.categories):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
-        mask_pred = adata.smp[prediction] == pred_group
+        mask_pred = adata.smp[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
-        for ref_group in adata.add[reference + '_order']:
-            mask_ref = (adata.smp[reference] == ref_group).astype(np.int8)
+        for ref_group in adata.smp[reference].cat.categories:
+            mask_ref = (adata.smp[reference].values == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
@@ -112,7 +128,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [adata.add[reference + '_order'][i]
+        name_list_pred = [cats[i] if cats[i] not in settings._ignore_categories else ''
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
@@ -121,19 +137,11 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     return Result(asso_names=asso_names, asso_matrix=np.array(asso_matrix))
 
 
-identify_categories = compute_association_matrix_of_groups
-"""Deprecated: For backwards compatibility. See compute_association_matrix_of_groups."""
-
-
 def get_associated_colors_of_groups(reference_colors, asso_matrix):
     asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
                     for i_ref in range(asso_matrix.shape[1])}
                    for i_pred in range(asso_matrix.shape[0])]
     return asso_colors
-
-
-get_associated_colors = get_associated_colors_of_groups
-"""Deprecated: For backwards compatibility. See get_associated_colors_of_groups."""
 
 
 def compute_group_overlap_score(ref_labels, pred_labels,
@@ -169,6 +177,8 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     A predicted label explains the reference label which maximizes the minimum
     of ``relative_overlaps_pred`` and ``relative_overlaps_ref``.
 
+    Compare this with ``compute_association_matrix_of_groups``.
+
     Returns
     -------
     A dictionary of length ``len(np.unique(ref_labels))`` that stores for each
@@ -197,91 +207,6 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     else: return associated_predictions
 
 
-def compute_fraction_of_agreeing_paths(adata1, adata2,
-                                       adjacency_key='aga_attachedness_absolute'):
-    """Compute the fraction of agreeing paths between leafs (nodes with degree
-    1), a measure for the topological similarity between graphs.
-
-    Notes
-    -----
-
-    By increasing the verbosity to level 4 and 5, the paths that do not agree
-    and the paths that agree are written to the output, respectively.
-    """
-    import networkx as nx
-    g1 = nx.Graph(adata1.add[adjacency_key])
-    g2 = nx.Graph(adata2.add[adjacency_key])
-    leaf_nodes1 = [str(x) for x in g1.nodes_iter() if g1.degree(x) == 1]
-    asso_groups1 = identify_groups(adata1.smp['aga_groups'], adata2.smp['aga_groups'])
-    asso_groups2 = identify_groups(adata2.smp['aga_groups'], adata1.smp['aga_groups'])
-
-    import itertools
-    n_steps = 0
-    n_agreeing_steps = 0
-    n_paths = 0
-    n_agreeing_paths = 0
-    # loop over all pairs of leaf nodes in the reference adata1
-    for (r, s) in itertools.combinations(leaf_nodes1, r=2):
-        r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
-        logg.m('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
-               .format(r, s, r2, s2), v=4, no_indent=True)
-        path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
-        path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
-        if len(path1) >= len(path2):
-            path_mapped = [asso_groups1[l] for l in path1]
-            path_compare = path2
-            path_compare_id = 2
-        else:
-            path_mapped = [asso_groups2[l] for l in path2]
-            path_compare = path1
-            path_compare_id = 1
-        n_agreeing_steps_path = 0
-        ip_progress = 0
-        for il, l in enumerate(path_compare[:-1]):
-            for ip, p in enumerate(path_mapped):
-                if ip >= ip_progress and l in p:
-                    # check whether we can find the step forward of path_compare in path_mapped
-                    if (ip + 1 < len(path_mapped)
-                        and
-                        path_compare[il + 1] in path_mapped[ip + 1]):
-                        # make sure that a step backward leads us to the same value of l
-                        # in case we "jumped"
-                        logg.m('found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
-                               .format(l, path_compare[il + 1], il, path_compare_id, ip), v=6)
-                        consistent_history = True
-                        for iip in range(ip, ip_progress, -1):
-                            if l not in path_mapped[iip - 1]:
-                                consistent_history = False
-                        if consistent_history:
-                            # here, we take one step further back (ip_progress - 1); it's implied that this
-                            # was ok in the previous step
-                            logg.m('    step(s) backward to position(s) {} in path_mapped are fine, too: valid step'
-                                   .format(list(range(ip - 1, ip_progress - 2, -1))), v=6)
-                            n_agreeing_steps_path += 1
-                            ip_progress = ip + 1
-                            break
-        n_agreeing_steps += n_agreeing_steps_path
-        n_steps_path = len(path_compare) - 1
-        n_steps += n_steps_path
-        n_paths += 1
-
-        if n_agreeing_steps_path == n_steps_path:
-            n_agreeing_paths += 1
-        logg.m('      path1 = {},\n'
-               'path_mapped = {},\n'
-               '      path2 = {},\n'
-               '-> n_agreeing_steps = {} / n_steps = {}.'
-               .format(path1, [list(p) for p in path_mapped], path2,
-                       n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
-    Result = namedtuple('compute_fraction_of_agreeing_paths_result',
-                        ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
-    return Result(frac_steps=n_agreeing_steps/n_steps,
-                  n_steps=n_steps,
-                  frac_paths=n_agreeing_paths/n_paths,
-                  n_paths=n_paths)
-
-
-
 def remove_repetitions_from_list(l):
     return [l[0]] + [e for (i, e) in enumerate(l[1:]) if l[i] != e]
 
@@ -289,8 +214,8 @@ def remove_repetitions_from_list(l):
 def plot_category_association(adata, prediction, reference, asso_matrix):
     pl.figure(figsize=(5, 5))
     pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
-    pl.xticks(range(len(adata.add[reference + '_order'])), adata.add[reference + '_order'], rotation='vertical')
-    pl.yticks(range(len(adata.add[prediction + '_order'])), adata.add[prediction + '_order'])
+    pl.xticks(range(len(adata.uns[reference + '_order'])), adata.uns[reference + '_order'], rotation='vertical')
+    pl.yticks(range(len(adata.uns[prediction + '_order'])), adata.uns[prediction + '_order'])
     pl.colorbar()
 
 
@@ -321,42 +246,42 @@ def fill_in_datakeys(example_parameters, dexdata):
     return example_parameters
 
 
-_howto_specify_subgroups = '''sample annotation in adata only consists of sample names
---> you can provide additional annotation by setting, for example,
-    adata.smp['groups'] = ['A', 'B', 'A', ... ]
-    adata.smp['time'] = [0.1, 0.2, 0.7, ... ]'''
-
-
-def check_adata(adata, verbosity=-3):
+def sanitize_anndata(adata, verbosity=-3):
     """Do sanity checks on adata object.
 
-    Checks whether adata contains annotation.
+    Transform string arrays to categorical data types.
     """
-    if len(adata.smp_keys()) == 0:
-        settings.m(1-verbosity, _howto_specify_subgroups)
-    else:
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            info = 'sample annotation: '
-        for ismp, smp in enumerate(adata.smp_keys()):
-            # ordered unique categories for categorical annotation
-            if not smp + '_order' in adata.add and adata.smp[smp].dtype.char in {'U', 'S'}:
-                adata.add[smp + '_order'] = unique_categories(adata.smp[smp])
-            if settings.verbosity > 1-verbosity:
-                info += '"' + smp + '" = '
-                if adata.smp[smp].dtype.char in {'U', 'S'}:
-                    ann_info = str(adata.add[smp + '_order'])
-                    if len(adata.add[smp + '_order']) > 7:
-                        ann_info = (str(adata.add[smp + '_order'][0:3]).replace(']', '')
-                                    + ' ...'
-                                    + str(adata.add[smp + '_order'][-2:]).replace('[', ''))
-                    info += ann_info
-                else:
-                    info += 'continuous'
-                if ismp < len(adata.smp_keys())-1:
-                    info += ', '
-        if len(adata.smp_keys()) > 0 and settings.verbosity > 1-verbosity:
-            settings.m(1-verbosity, info)
-    return adata
+    from pandas.api.types import is_string_dtype
+    for ann in ['smp', 'var']:
+        for key in getattr(adata, ann).columns:
+            df = getattr(adata, ann)
+            if is_string_dtype(df[key]):
+                df[key] = df[key].astype(
+                    'category', categories=natsorted(np.unique(df[key])))
+                df[key].cat.categories = df[key].cat.categories.astype('U')
+                logg.info('... storing {} as categorical type'.format(key))
+                logg.hint('access categories as adata.{}.{}.cat.categories'
+                          .format(ann, key))
+
+
+def moving_average(a, n):
+    """Moving average over one-dimensional array.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        One-dimensional array.
+    n : int
+        Number of entries to average over. n=2 means averaging over the currrent
+        the previous entry.
+
+    Returns
+    -------
+    An array view storing the moving average.
+    """
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
 
 
 # --------------------------------------------------------------------------------
@@ -434,44 +359,43 @@ def default_tool_argparser(description, example_parameters):
 # --------------------------------------------------------------------------------
 
 
-def select_groups(adata, groups_order_subset='all', smp='groups'):
-    """Get subset of groups in adata.smp[smp].
+def select_groups(adata, groups_order_subset='all', key='groups'):
+    """Get subset of groups in adata.smp[key].
     """
-    groups_order = adata.add[smp + '_order']
-    if smp + '_masks' in adata.add:
-        groups_masks = adata.add[smp + '_masks']
+    groups_order = adata.smp[key].cat.categories
+    if key + '_masks' in adata.uns:
+        groups_masks = adata.uns[key + '_masks']
     else:
-        groups_masks = np.zeros((len(adata.add[smp + '_order']),
-                                 adata.smp[smp].size), dtype=bool)
-        for iname, name in enumerate(adata.add[smp + '_order']):
+        groups_masks = np.zeros((len(adata.smp[key].cat.categories),
+                                 adata.smp[key].values.size), dtype=bool)
+        for iname, name in enumerate(adata.smp[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.add[smp + '_order'][iname] in adata.smp[smp]:
-                mask = adata.add[smp + '_order'][iname] == adata.smp[smp]
+            if adata.smp[key].cat.categories[iname] in adata.smp[key].values:
+                mask = adata.smp[key].cat.categories[iname] == adata.smp[key].values
             else:
-                mask = str(iname) == adata.smp[smp]
+                mask = str(iname) == adata.smp[key].values
             groups_masks[iname] = mask
     groups_ids = list(range(len(groups_order)))
     if groups_order_subset != 'all':
-        # get list from string
-        if isinstance(groups_order_subset, str):
-            groups_order_subset = groups_order_subset.split(',')
         groups_ids = []
         for name in groups_order_subset:
-            groups_ids.append(np.where(adata.add[smp + '_order'] == name)[0][0])
+            groups_ids.append(
+                np.where(adata.smp[key].cat.categories.values == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
-            groups_ids = np.where(np.in1d(np.arange(len(adata.add[smp + '_order'])).astype(str),
+            groups_ids = np.where(
+                np.in1d(np.arange(len(adata.smp[key].cat.categories)).astype(str),
                                           np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
             logg.m(np.array(groups_order_subset),
                    'invalid! specify valid groups_order (or indices) one of',
-                   adata.add[smp + '_order'])
+                   adata.smp[key].cat.categories)
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-        groups_order_subset = adata.add[smp + '_order'][groups_ids]
+        groups_order_subset = adata.smp[key].cat.categories[groups_ids].values
     else:
-        groups_order_subset = groups_order
+        groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks
 
 

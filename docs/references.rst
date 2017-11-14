@@ -110,6 +110,10 @@ References
    *Scanpy for analysis of large-scale single-cell gene expression data*,
    `bioRxiv <https://doi.org/10.1101/174029>`__.
 
+.. [Wolf17i] Wolf *et al.* (2017),
+   *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+   soon on bioRxiv.
+   
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
    `Nature Communications <https://doi.org/10.1038/ncomms14049>`__.

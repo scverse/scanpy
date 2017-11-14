@@ -1,6 +1,6 @@
 """Scanpy's high-level API provides an overview of all features relevant to pratical use::
 
-   import scanpy.api as sc   
+   import scanpy.api as sc
 
 
 
@@ -15,9 +15,9 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Basic Preprocessing</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
-   pp.filter_cells   
+   pp.filter_cells
    pp.filter_genes
    pp.filter_genes_dispersion
 
@@ -33,8 +33,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Recipes</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    pp.recipe_zheng17
    pp.recipe_weinreb16
 
@@ -48,8 +48,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Visualization</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    tl.pca
    tl.tsne
    tl.diffmap
@@ -60,10 +60,11 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Branching trajectories and pseudotime, clustering, differential expression</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
-   tl.dpt
+   :toctree: .
+
+   tl.aga
    tl.louvain
+   tl.dpt
    tl.rank_genes_groups
 
 .. raw:: html
@@ -71,8 +72,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Simulations</h4>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    tl.sim
 
 
@@ -85,18 +86,18 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Reading and Writing</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    read
    write
    read_10x_h5
-   
+
 .. raw:: html
 
    <h4>Data Structures</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    AnnData
    DataGraph
@@ -110,7 +111,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    <h4>Generic plotting with AnnData</h4>
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: .
 
    pl.scatter
    pl.violin
@@ -127,8 +128,8 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Visualization</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
    pl.pca
    pl.pca_loadings
    pl.pca_scatter
@@ -142,13 +143,16 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
+   :toctree: .
+
+   pl.aga
+   pl.aga_graph
+   pl.aga_path
+   pl.louvain
    pl.dpt
    pl.dpt_scatter
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
-   pl.louvain
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
 
@@ -157,10 +161,33 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    <h5>Simulations</h5>
 
 .. autosummary::
-   :toctree: generated/
-   
-   pl.sim   
+   :toctree: .
+
+   pl.sim
+
+
+.. raw:: html
+
+   <h4>Builtin datasets</h4>
+
+Simple functions that provide annotated datasets for benchmarking. See
+`here <https://scanpy.readthedocs.io/en/latest/examples.html>`_ for extensive
+documented tutorials and use cases.
+
+All of these functions return an Annotated Data object.
+
+.. autosummary::
+   :toctree: .
+
+   datasets.paul15
+   datasets.toggleswitch
+   datasets.krumsiek11
+   datasets.blobs
+   datasets.moignard15
+
 """
+
+from anndata import AnnData
 
 from .. import __version__
 
@@ -173,7 +200,6 @@ plotting = pl
 from . import pp
 preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
-from .. import examples
-from ..examples import init_run, read_run, write_run
-from ..data_structs import AnnData, DataGraph
+from . import datasets
+from ..data_structs import DataGraph
 from .. import utils

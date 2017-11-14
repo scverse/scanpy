@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Graph drawing for the single-cell graph.
 
 References
@@ -24,7 +24,8 @@ def draw_graph(adata,
                recompute_graph=False,
                adjacency=None,
                n_jobs=None,
-               copy=False):
+               copy=False,
+               **kwargs):
     """Force-directed graph drawing [Fruchterman91]_ [Weinreb17]_ [Csardi06]_.
 
     Often a good alternative to tSNE, but runs considerably slower.
@@ -54,6 +55,9 @@ def draw_graph(adata,
         Number of nearest neighbors in graph.
     n_pcs : int
         Number of PCs used to compute distances.
+    **kwargs : further parameters
+        Parameters of chosen igraph algorithm. See, e.g.,
+        http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold.
 
     Returns
     -------
@@ -82,27 +86,27 @@ def draw_graph(adata,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
         n_jobs=n_jobs)
-    adjacency = adata.add['data_graph_norm_weights']
+    adjacency = adata.uns['data_graph_norm_weights']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
         ig_layout = g.layout(layout,  # weights='weight',
-                             seed=init_coords)
+                             seed=init_coords, **kwargs)
     elif 'rt' in layout:
         if root is not None: root = [root]
-        ig_layout = g.layout(layout, root=root)
+        ig_layout = g.layout(layout, root=root, **kwargs)
     else:
-        ig_layout = g.layout(layout)
-    if 'draw_graph_layout' in adata.add:
-        adata.add['draw_graph_layout'] = list(adata.add['draw_graph_layout']) + [layout]
+        ig_layout = g.layout(layout, **kwargs)
+    if 'draw_graph_layout' in adata.uns:
+        adata.uns['draw_graph_layout'] = list(adata.uns['draw_graph_layout']) + [layout]
     else:
-        adata.add['draw_graph_layout'] = [layout]
+        adata.uns['draw_graph_layout'] = [layout]
     smp_key = 'X_draw_graph_' + layout
-    adata.smp[smp_key] = np.array(ig_layout.coords)
+    adata.smpm[smp_key] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "{}", graph_drawing coordinates (adata.smp)\n'
-           '    "draw_graph_layout", the chosen layout (adata.add)'
+           '    "draw_graph_layout", the chosen layout (adata.uns)'
            .format(smp_key))
     return adata if copy else None

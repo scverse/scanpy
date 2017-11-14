@@ -1,4 +1,4 @@
-# Authors: F. Alex Wolf (http://falexwolf.de)
+# Authors: Alex Wolf (http://falexwolf.de)
 #          P. Angerer
 
 import os
@@ -10,7 +10,7 @@ from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 from .. import logging as logg
-from .. import settings as sett
+from .. import settings
 from . import palettes
 
 
@@ -19,15 +19,19 @@ from . import palettes
 # -------------------------------------------------------------------------------
 
 
-def matrix(matrix, xlabels=None, ylabels=None, colorbar_shrink=0.5,
-           color_map=None, show=None, save=None, ax=None):
+def matrix(matrix, xlabel=None, ylabel=None, xticks=None, yticks=None,
+           title=None, colorbar_shrink=0.5, color_map=None, show=None,
+           save=None, ax=None):
     """Plot a matrix."""
     if ax is None: ax = pl.gca()
     img = ax.imshow(matrix, cmap=color_map)
-    if xlabels is not None:
-        ax.set_xticks(range(len(xlabels)), xlabels, rotation='vertical')
-    if ylabels is not None:
-        ax.set_yticks(range(len(ylabels)), ylabels)
+    if xlabel is not None: ax.set_xlabel(xlabel)
+    if ylabel is not None: ax.set_ylabel(ylabel)
+    if title is not None: ax.set_title(title)
+    if xticks is not None:
+        ax.set_xticks(range(len(xticks)), xticks, rotation='vertical')
+    if yticks is not None:
+        ax.set_yticks(range(len(yticks)), yticks)
     pl.colorbar(img, shrink=colorbar_shrink, ax=ax)  # need a figure instance for colorbar
     savefig_or_show('matrix', show=show, save=save)
 
@@ -156,7 +160,7 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
 # -------------------------------------------------------------------------------
 # Colors in additional to matplotlib's colors
 # -------------------------------------------------------------------------------
-    
+
 
 additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             '#eee685', 'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c',
@@ -169,7 +173,7 @@ additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
             'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
             '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
 
-    
+
 # -------------------------------------------------------------------------------
 # Helper functions
 # -------------------------------------------------------------------------------
@@ -180,24 +184,25 @@ def savefig(writekey, dpi=None, ext=None):
 
     The filename is generated as follows:
     ```
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    filename = sett.figdir + writekey + sett.plot_suffix + '.' + sett.file_format_figs
+    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
+    filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
     ```
     """
     if dpi is None:
         if rcParams['savefig.dpi'] < 300:
             dpi = 300
-            if sett._low_resolution_warning:
+            if settings._low_resolution_warning:
                 logg.m('... you are using a very low resolution for saving figures, adjusting to dpi=300')
-                sett._low_resolution_warning = False
+                settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
-    if not os.path.exists(sett.figdir): os.makedirs(sett.figdir)
-    if sett.run_name != '': writekey = sett.run_name + '_' + writekey
-    if sett.figdir[-1] != '/': sett.figdir += '/'
-    if ext is None: ext = sett.file_format_figs
-    filename = sett.figdir + writekey + sett.plot_suffix + '.' + ext
-    logg.info('... saving figure to file', filename)
+    if not os.path.exists(settings.figdir): os.makedirs(settings.figdir)
+    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
+    if settings.figdir[-1] != '/': settings.figdir += '/'
+    if ext is None: ext = settings.file_format_figs
+    filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
+    # output the following msg at warning level; it's really important for the user
+    logg.msg('saving figure to file', filename, v=1)
     pl.savefig(filename, dpi=dpi)
 
 
@@ -205,8 +210,8 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if isinstance(save, str):
         writekey += save
         save = True
-    save = sett.savefigs if save is None else save
-    show = (sett.autoshow and not save) if show is None else show
+    save = settings.savefigs if save is None else save
+    show = (settings.autoshow and not settings.savefigs) if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
@@ -219,13 +224,19 @@ def default_palette(palette=None):
 
 
 def adjust_palette(palette, length):
-    if len(palette.by_key()['color']) < length:
+    islist = False
+    if isinstance(palette, list):
+        islist = True
+    if ((islist and len(palette) < length)
+       or (not isinstance(palette, list) and len(palette.by_key()['color']) < length)):
         if length <= 28:
             palette = palettes.default_26
         else:
             palette = palettes.default_64
         logg.m('... updating the color palette to provide enough colors')
-        return cycler(color=palette)
+        return palette if islist else cycler(color=palette)
+    elif islist:
+        return palette
     elif not isinstance(palette, Cycler):
         return cycler(color=palette)
     else:
@@ -233,51 +244,128 @@ def adjust_palette(palette, length):
 
 
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
-    if (key + '_colors' in adata.add
-        and len(adata.add[key + '_order']) > len(adata.add[key + '_colors'])):
+    if (key + '_colors' in adata.uns
+        and len(adata.smp[key].cat.categories) > len(adata.uns[key + '_colors'])):
         logg.info('    number of defined colors does not match number of categories,'
                   ' using palette')
     else:
         logg.m('generating colors for {} using palette'.format(key), v=4)
     palette = default_palette(palette)
-    palette_adjusted = adjust_palette(palette, length=len(adata.add[key + '_order']))
-    adata.add[key + '_colors'] = palette_adjusted[:len(adata.add[key + '_order'])].by_key()['color']
-    if len(adata.add[key + '_order']) > len(adata.add[key + '_colors']):
+    palette_adjusted = adjust_palette(palette,
+                                      length=len(adata.smp[key].cat.categories))
+    adata.uns[key + '_colors'] = palette_adjusted[
+        :len(adata.smp[key].cat.categories)].by_key()['color']
+    if len(adata.smp[key].cat.categories) > len(adata.uns[key + '_colors']):
         raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
-                         .format(len(adata.add[key + '_colors']), key))
+                         .format(len(adata.uns[key + '_colors']), key))
+    for iname, name in enumerate(adata.smp[key].cat.categories):
+        if name in settings._ignore_categories:
+            logg.info('Setting color of group {} in {} to grey as it appears in'
+                      '`sc.settings._ignore_categories`.'
+                      .format(name, key))
+            adata.uns[key + '_colors'][iname] = 'grey'
 
 
-def scatter_group(ax, name, imask, adata, Y, projection='2d', size=3):
+def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
     """Scatter of group using representation of data Y.
     """
-    if name + '_masks' in adata.add:
-        mask = adata.add[name + '_masks'][imask]
-    else:
-        if adata.add[name + '_order'][imask] in adata.smp[name]:
-            mask = adata.add[name + '_order'][imask] == adata.smp[name]
-        else:
-            mask = str(imask) == adata.smp[name]
-    color = adata.add[name + '_colors'][imask]
+    mask = adata.smp[key].cat.categories[imask] == adata.smp[key].values
+    color = adata.uns[key + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
-        color = rgb2hex(adata.add[name + '_colors'][imask])
+        color = rgb2hex(adata.uns[key + '_colors'][imask])
     if not is_color_like(color):
         raise ValueError('"{}" is not a valid matplotlib color.'.format(color))
     data = [Y[mask, 0], Y[mask, 1]]
     if projection == '3d': data.append(Y[mask, 2])
     ax.scatter(*data,
                marker='.',
+               alpha=alpha,
                c=color,
                edgecolors='none',
                s=size,
-               label=adata.add[name + '_order'][imask])
+               label=adata.smp[key].cat.categories[imask])
     return mask
+
+
+def setup_axes(
+        ax=None,
+        colors='blue',
+        colorbars=[False],
+        right_margin=None,
+        left_margin=None,
+        projection='2d',
+        show_ticks=False):
+    """Grid of axes for plotting, legends and colorbars.
+    """
+    if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
+    avail_projections = {'2d', '3d'}
+    if projection not in avail_projections:
+        raise ValueError('choose projection from', avail_projections)
+    if left_margin is not None:
+        raise ValueError('Currently not supporting to pass `left_margin`.')
+    if np.any(colorbars) and right_margin is None:
+        right_margin = 1 - rcParams['figure.subplot.right'] + 0.21  # 0.25
+    elif right_margin is None:
+        right_margin = 1 - rcParams['figure.subplot.right'] + 0.06  # 0.10
+    # make a list of right margins for each panel
+    if not isinstance(right_margin, list):
+        right_margin_list = [right_margin for i in range(len(colors))]
+    else:
+        right_margin_list = right_margin
+
+    # make a figure with len(colors) panels in a row side by side
+    top_offset = 1 - rcParams['figure.subplot.top']
+    bottom_offset = 0.15 if show_ticks else 0.08
+    left_offset = 1 if show_ticks else 0.3  # in units of base_height
+    base_height = rcParams['figure.figsize'][1]
+    height = base_height
+    base_width = rcParams['figure.figsize'][0]
+    if show_ticks: base_width *= 1.1
+
+    draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
+
+    right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
+    width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
+
+    right_offset = (len(colors) - 1) * left_offset
+    figure_width = width_without_offsets + left_offset + right_offset
+    draw_region_width_frac = draw_region_width / figure_width
+    left_offset_frac = left_offset / figure_width
+    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
+
+    if ax is None:
+        pl.figure(figsize=(figure_width, height),
+                  subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
+    left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
+    for i in range(1, len(colors)):
+        right_margin = right_margin_list[i-1]
+        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
+        left_positions.append(left_positions[-1] + draw_region_width_frac)
+    panel_pos = [[bottom_offset], [1-top_offset], left_positions]
+
+    axs = []
+    if ax is None:
+        for icolor, color in enumerate(colors):
+            left = panel_pos[2][2*icolor]
+            bottom = panel_pos[0][0]
+            width = draw_region_width / figure_width
+            height = panel_pos[1][0] - bottom
+            if projection == '2d': ax = pl.axes([left, bottom, width, height])
+            elif projection == '3d': ax = pl.axes([left, bottom, width, height], projection='3d')
+            axs.append(ax)
+    else:
+        axs = ax if isinstance(ax, list) else [ax]
+
+    return axs, panel_pos, draw_region_width, figure_width
 
 
 def scatter_base(Y,
                  colors='blue',
+                 alpha=None,
                  highlights=[],
                  right_margin=None,
+                 left_margin=None,
                  projection='2d',
                  title=None,
                  component_name='DC',
@@ -302,7 +390,6 @@ def scatter_base(Y,
         Depending on whether supplying a single array or a list of arrays,
         return a single axis or a list of axes.
     """
-    if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
@@ -310,68 +397,26 @@ def scatter_base(Y,
         highlights_indices = highlights
         highlights_labels = []
     # if we have a single array, transform it into a list with a single array
-    avail_projections = {'2d', '3d'}
-    if projection not in avail_projections:
-        raise ValueError('choose projection from', avail_projections)
     if type(colors) == str: colors = [colors]
-    if len(sizes) != len(colors):
-        if len(sizes) == 1:
-            sizes = [sizes[0] for i in range(len(colors))]
-    # grid of axes for plotting and legends/colorbars
-    if np.any(colorbars) and right_margin is None: right_margin = 0.25
-    elif right_margin is None: right_margin = 0.10
-    # make a list of right margins for each panel
-    if not isinstance(right_margin, list):
-        right_margin_list = [right_margin for i in range(len(colors))]
-    else:
-        right_margin_list = right_margin
-    # make a figure with len(colors) panels in a row side by side
-    top_offset = 1 - rcParams['figure.subplot.top']
-    bottom_offset = 0.15 if show_ticks else 0.08
-    left_offset = 1 if show_ticks else 0.3  # in units of base_height
-    base_height = rcParams['figure.figsize'][1]
-    height = base_height
-    base_width = rcParams['figure.figsize'][0]
-    if show_ticks: base_width *= 1.1
-    draw_region_width = base_width - left_offset - top_offset - 0.5  # this is kept constant throughout
-
-    right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
-    width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
-
-    right_offset = (len(colors) - 1) * left_offset
-    figure_width = width_without_offsets + left_offset + right_offset
-    draw_region_width_frac = draw_region_width / figure_width
-    left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
-
-    if ax is None:
-        fig = pl.figure(figsize=(figure_width, height),
-                        subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
-    left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
-    for i in range(1, len(colors)):
-        right_margin = right_margin_list[i-1]
-        left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
-        left_positions.append(left_positions[-1] + draw_region_width_frac)
-    panel_pos = [[bottom_offset], [1-top_offset], left_positions]
-    axs_passed = []
-    if ax is not None: axs_passed = ax if isinstance(ax, list) else [ax]
-    axs = []
+    if len(sizes) != len(colors) and len(sizes) == 1:
+        sizes = [sizes[0] for i in range(len(colors))]
+    axs, panel_pos, draw_region_width, figure_width = setup_axes(
+        ax=ax, colors=colors, colorbars=colorbars, projection=projection,
+        right_margin=right_margin, left_margin=left_margin,
+        show_ticks=show_ticks)
     for icolor, color in enumerate(colors):
+        ax = axs[icolor]
         left = panel_pos[2][2*icolor]
         bottom = panel_pos[0][0]
         width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
-        if projection == '2d':
-            if axs_passed: ax = axs_passed[icolor]
-            else: ax = pl.axes([left, bottom, width, height])
-            data = Y[:, 0], Y[:, 1]
-        elif projection == '3d':
-            ax = pl.axes([left, bottom, width, height], projection='3d')
-            data = Y[:, 0], Y[:, 1], Y[:, 2]
+        if projection == '2d': data = Y[:, 0], Y[:, 1]
+        elif projection == '3d': data = Y[:, 0], Y[:, 1], Y[:, 2]
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(*data,
                              marker='.',
                              c=color,
+                             alpha=alpha,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
                              cmap=color_map)
@@ -379,6 +424,7 @@ def scatter_base(Y,
             width = 0.006 * draw_region_width
             left = panel_pos[2][2*icolor+1] + (1.2 if projection == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
+            fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
             cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
                              cax=ax_cb)
