@@ -1,33 +1,34 @@
+import sys
 from setuptools import setup, find_packages
 from distutils.extension import Extension
 from pathlib import Path
 import versioneer
-try:
-    import numpy
-except ImportError:
-    raise ImportError('You need to install numpy manually, e.g., by running `pip install numpy` or `conda install numpy`.')
 
-use_cython = False
-if use_cython:
+# Pip calls setup.py egg_info to get static dependency information,
+# then installs them, and finally it calls setup.py develop/bdist.
+# We only need numpy when really installing/building the package,
+# and we only rebuild the .pyx extension when cython is installed.
+cmd_class = {}
+ext_modules = []
+include_dirs = []
+if 'egg_info' not in sys.argv:
+    import numpy
+
+    include_dirs.append(numpy.get_include())
+
     try:
         from Cython.Distutils import build_ext
     except ImportError:
-        raise ImportError('You need to install Cython manually if you want to install using Cython, e.g., by running `pip install cython`.')
+        suffix = 'c'
+    else:
+        cmd_class['build_ext'] = build_ext
+        suffix = 'pyx'
 
-cmdclass = {}
-ext_modules = []
-if use_cython:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.pyx"]),
-    ]
-    cmdclass.update({'build_ext': build_ext})
-else:
-    ext_modules += [
-        Extension("scanpy.cython.utils_cy",
-                  ["scanpy/cython/utils_cy.c"],
-                  include_dirs=[numpy.get_include()]),
-]
+    ext_modules.append(Extension(
+        "scanpy.cython.utils_cy",
+        ["scanpy/cython/utils_cy." + suffix],
+        include_dirs=include_dirs,
+    ))
 
 package_name = 'scanpy'
 
@@ -57,7 +58,7 @@ setup(
     },
     install_requires=requires,
     packages=find_packages(),  # + ['scanpy.sim_models'], might need to include sim_models
-    include_dirs=[numpy.get_include()],
+    include_dirs=include_dirs,
     package_data={'': '*.txt'},
     include_package_data=True,
     ext_modules=ext_modules,
