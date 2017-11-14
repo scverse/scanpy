@@ -13,6 +13,11 @@
 
 Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_. Learn more about conceptual ideas in our `preprint <https://doi.org/10.1101/174029>`_.
 
+.. include:: release_notes.rst
+
+
+**Contents**
+
 .. toctree::
    :maxdepth: 1
 
