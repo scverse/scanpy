@@ -29,8 +29,9 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     ---------
     Weinreb et al., bioRxiv doi:10.1101/090332 (2016).
     """
-    from .. import logging as logg
-    logg.warn('``pp.recipe_weinreb16`` is a deprecated preprocessing recipe but remains for backwards compatibility.')
+    from scipy.sparse import issparse
+    if issparse(adata.X):
+        raise ValueError('recipe_weinreb16() does not support sparse matrices.')
     if copy: adata = adata.copy()
     adata.X = pp.normalize_per_cell_weinreb16_deprecated(adata.X,
                                                          max_fraction=0.05,
@@ -39,14 +40,14 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     # cv_threshold
     gene_subset = pp.filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
     # three alternative ways of slicing
-    adata.inplace_subset_var(gene_subset)  # this modifies the object itself
+    adata._inplace_subset_var(gene_subset)  # this modifies the object itself
     # adata = adata[:, gene_subset]  # this does a copy
     # adata[:, ~gene_subset] = None  # this doesn't work yet
     # compute zscore of filtered matrix and compute PCA
     X_pca = pp.pca(pp.zscore_deprecated(adata.X),
                    n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
-    adata.smp['X_pca'] = X_pca
+    adata.smpm['X_pca'] = X_pca
     return adata if copy else None
 
 
@@ -91,7 +92,7 @@ def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=F
         pl.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter.gene_subset]
-    adata.inplace_subset_var(filter_result.gene_subset)  # filter genes
+    adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
     pp.normalize_per_cell(adata)  # need to redo normalization after filtering
     pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata, zero_center=zero_center)

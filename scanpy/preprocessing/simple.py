@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Simple Preprocessing Functions
 
 Compositions of these functions are found in sc.preprocess.recipes.
@@ -9,10 +9,9 @@ import scipy as sp
 import warnings
 from joblib import Parallel, delayed
 from scipy.sparse import issparse
-import statsmodels.api as sm
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from sklearn.utils import sparsefuncs
-from ..data_structs import AnnData
+from pandas.api.types import is_categorical_dtype
+from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
 
@@ -36,7 +35,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         Minimum number of counts required for a cell to pass filtering.
     min_genes : int, optional (default: None)
         Minimum number of genes expressed required for a cell to pass filtering.
-    min_counts : int, optional (default: None)
+    max_counts : int, optional (default: None)
         Maximum number of counts required for a cell to pass filtering.
     max_genes : int, optional (default: None)
         Maximum number of genes expressed required for a cell to pass filtering.
@@ -67,7 +66,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         cell_subset, number = filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
         if min_genes is None and max_genes is None: adata.smp['n_counts'] = number
         else: adata.smp['n_genes'] = number
-        adata.inplace_subset_smp(cell_subset)
+        adata._inplace_subset_smp(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
@@ -114,7 +113,7 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
             adata.var['n_counts'] = number
         else:
             adata.var['n_cells'] = number
-        adata.inplace_subset_var(gene_subset)
+        adata._inplace_subset_var(gene_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     number_per_gene = np.sum(X if min_cells is None else X > 0, axis=0)
@@ -183,10 +182,10 @@ def filter_genes_dispersion(data,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata.inplace_subset_var(result['gene_subset'])
+        adata._inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    logg.m('filter highly varying genes by dispersion and mean',
-           r=True, end=' ')
+    logg.info('filter highly variable genes by dispersion and mean',
+              r=True, end=' ')
     X = data  # proceed with data matrix
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
@@ -285,7 +284,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 def log1p(data, copy=False):
     """Logarithmize the data matrix.
 
-    Computes `X = log(X + 1)`.
+    Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
 
     Parameters
     ----------
@@ -293,6 +292,10 @@ def log1p(data, copy=False):
         The data matrix.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
+
+    Returns
+    -------
+    Returns or updates data, depending on `copy`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -348,14 +351,14 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
          PCA representation of the data with shape n_variables × n_comps.
     components / PC1, PC2, PC3, ... : np.ndarray (adata.var)
          The PCs containing the loadings as shape n_comps × n_vars.
-    variance_ratio : np.ndarray (adata.add)
+    variance_ratio : np.ndarray (adata.uns)
          Ratio of explained variance.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
         if ('X_pca' in adata.smp
-            and adata.smp['X_pca'].shape[1] >= n_comps
+            and adata.smpm['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
             logg.m('    not recomputing PCA, using "X_pca" contained '
@@ -367,15 +370,14 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio = result
-            adata.smp['X_pca'] = X_pca  # this is multicolumn-sample annotation
-            for icomp, comp in enumerate(components):
-                adata.var['PC' + str(icomp+1)] = comp
-            adata.add['pca_variance_ratio'] = pca_variance_ratio
+            adata.smpm['X_pca'] = X_pca
+            adata.varm['PCs'] = components.T
+            adata.uns['pca_variance_ratio'] = pca_variance_ratio
             logg.m('    finished', t=True, end=' ', v=4)
             logg.m('and added\n'
                       '    "X_pca", the PCA coordinates (adata.smp)\n'
                       '    "PC1", "PC2", ..., the loadings (adata.var)\n'
-                      '    "pca_variance_ratio", the variance ratio (adata.add)', v=4)
+                      '    "pca_variance_ratio", the variance ratio (adata.uns)', v=4)
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
@@ -437,16 +439,16 @@ def normalize_per_cell(data, counts_per_cell_after=None, copy=False,
     """
     if field_name_counts is None: field_name_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.m('normalizing by total count per cell', r=True)
+        logg.info('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.smp[field_name_counts] = counts_per_cell
-        adata.inplace_subset_smp(cell_subset)
+        adata._inplace_subset_smp(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after, copy,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.m('    finished', t=True, end=' ')
-        logg.m('normalized adata.X and added', no_indent=True)
-        logg.m('    "{}", counts per cell before normalization (adata.smp)'
+        logg.info('    finished', t=True, end=': ')
+        logg.info('normalized adata.X and added', no_indent=True)
+        logg.info('    \'{}\', counts per cell before normalization (adata.smp)'
                .format(field_name_counts),
                no_indent=True)
         return adata if copy else None
@@ -530,7 +532,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     -------
     Depening on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    logg.m('regressing out', keys, r=True, v=4)
+    logg.msg('regressing out', keys, r=True, v=4)
     if issparse(adata.X):
         logg.m('... sparse input is densified and may '
                   'lead to huge memory consumption', v=4)
@@ -541,46 +543,77 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
         adata.X = adata.X.toarray()
+    if n_jobs is not None:
+        logg.warn('Is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
-    # regress on categorical variable
-    if adata.smp[keys[0]].dtype.char == np.dtype('U').char:
+    # regress on a single categorical variable
+    if keys[0] in adata.smp_keys() and is_categorical_dtype(adata.smp[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
         logg.m('... regressing on per-gene means within categories', v=4)
-        unique_categories = np.unique(adata.smp[keys[0]])
+        unique_categories = np.unique(adata.smp[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
-            mask = category == adata.smp[keys[0]]
+            mask = category == adata.smp[keys[0]].values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
     else:
-        regressors = np.array([adata.smp[key] for key in keys]).T
+        regressors = np.array(
+            [adata.smp[key].values if key in adata.smp_keys()
+             else adata[:, key].X for key in keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
     chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
               for start in range(0, n_chunks * len_chunk, len_chunk)]
+
     if sett.is_run_from_ipython:
         from tqdm import tqdm_notebook as tqdm
         # does not work in Rodeo, should be solved sometime soon
         # tqdm = lambda x: x
         # from tqdm import tqdm
-        # sett.m(1, 'TODO: get nice waitbars also in interactive mode')
-        # logg.m('... nicer progress bars as on command line come soon')
     else:
         from tqdm import tqdm
+
+    import statsmodels.api as sm
+    from statsmodels.tools.sm_exceptions import PerfectSeparationError
+
+    def _regress_out(col_index, responses, regressors):
+        try:
+            if regressors.shape[1] - 1 == responses.shape[1]:
+                regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
+            else:
+                regressors_view = regressors
+            result = sm.GLM(responses[:, col_index],
+                            regressors_view, family=sm.families.Gaussian()).fit()
+            new_column = result.resid_response
+        except PerfectSeparationError:  # this emulates R's behavior
+            logg.warn('Encountered PerfectSeparationError, setting to 0 as in R.')
+            new_column = np.zeros(responses.shape[0])
+        return new_column
+
+    def _regress_out_chunk(chunk, responses, regressors):
+        chunk_array = np.zeros((responses.shape[0], chunk.size),
+                               dtype=responses.dtype)
+        for i, col_index in enumerate(chunk):
+            chunk_array[:, i] = _regress_out(col_index, responses, regressors)
+        return chunk_array
+
     for chunk in tqdm(chunks):
-        result_lst = Parallel(n_jobs=n_jobs)(
-            delayed(_regress_out)(
-                col_index, adata.X, regressors) for col_index in chunk)
+        # why did this break after migrating to dataframes?
+        # result_lst = Parallel(n_jobs=n_jobs)(
+        #     delayed(_regress_out)(
+        #         col_index, adata.X, regressors) for col_index in chunk)
+        result_lst = [_regress_out(
+            col_index, adata.X, regressors) for col_index in chunk]
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.m('finished', t=True, v=4)
-    logg.m('--> after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`', v=4)
+    logg.msg('finished', t=True, v=4)
+    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
     return adata if copy else None
 
 
@@ -662,7 +695,7 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.inplace_subset_smp(smp_indices)
+        adata._inplace_subset_smp(smp_indices)
         return adata if copy else None
     else:
         X = data
@@ -694,29 +727,6 @@ def zscore_deprecated(X):
 # --------------------------------------------------------------------------------
 # Helper Functions
 # --------------------------------------------------------------------------------
-
-
-def _regress_out(col_index, responses, regressors):
-    try:
-        if regressors.shape[1] - 1 == responses.shape[1]:
-            regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
-        else:
-            regressors_view = regressors
-        result = sm.GLM(responses[:, col_index],
-                        regressors_view, family=sm.families.Gaussian()).fit()
-        new_column = result.resid_response
-    except PerfectSeparationError:  # this emulates R's behavior
-        logg.warn('Encountered PerfectSeparationError, setting to zero as in R.')
-        new_column = np.zeros(responses.shape[0])
-    return new_column
-
-
-def _regress_out_chunk(chunk, responses, regressors):
-    chunk_array = np.zeros((responses.shape[0], chunk.size),
-                           dtype=responses.dtype)
-    for i, col_index in enumerate(chunk):
-        chunk_array[:, i] = _regress_out(col_index, responses, regressors)
-    return chunk_array
 
 
 def _pca_fallback(data, n_comps=2):

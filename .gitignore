@@ -1,7 +1,8 @@
 # Scanpy
 .scanpy
+test.h5
 docs/_build
-docs/generated
+docs/api/scanpy.api.*
 archive/
 data/
 figs/

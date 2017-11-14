@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Logging and Profiling
 """
 
@@ -133,14 +133,15 @@ def print_memory_usage(msg='', newline=False):
 
 def print_version_and_date():
     from . import __version__
-    settings.mi('Running Scanpy version', __version__, 'on {}.'.format(get_date()))
+    settings.mi('Running Scanpy', __version__, 'on {}.'.format(get_date()))
 
 
-def print_imported_modules():
+def print_versions_imported_modules():
     import types
     for _, var in sorted(globals().items()):
         if isinstance(var, types.ModuleType):
-            print(var.__name__, var.__version__, end=' | ')
+            if hasattr(var, '__version__'):
+                print(var.__name__, var.__version__, end=', ')
 
 
 def get_date():

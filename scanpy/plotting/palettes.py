@@ -1,8 +1,16 @@
 """Color palettes in addition to matplotlib's palettes."""
 
-# color palette (is default in matplotlib 2.0 anyway)
+# default matplotlib 2.0 palette
 # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
+# or matplotlib/_cm.py
 vega_20 = [
+    '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728',
+    '#ff9896', '#9467bd', '#c5b0d5', '#8c564b', '#c49c94', '#e377c2', '#f7b6d2',
+    '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5',
+]
+
+# reorderd, some removed, some added
+vega_20_scanpy = [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
     '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
     '#bcbd22', '#17becf',
@@ -11,7 +19,7 @@ vega_20 = [
     '#dbdb8d', '#9edae5',
     '#ad494a', '#8c6d31']  # manual additions
 
-default_20 = vega_20
+default_20 = vega_20_scanpy
 
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 # update 1

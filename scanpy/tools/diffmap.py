@@ -1,9 +1,9 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 
 from ..tools import dpt
 from .. import logging as logg
 
-def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jobs=None,
+def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_jobs=None,
             flavor='haghverdi16', copy=False):
     """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
@@ -57,22 +57,23 @@ def diffmap(adata, n_comps=15, n_neighbors=30, knn=True, n_pcs=50, sigma=0, n_jo
             Array of shape n_samples × n_comps. DiffMap representation of data,
             which is the right eigen basis of transition matrix with eigenvectors as
             columns.
-    The following is added to adata.add
+    The following is added to adata.uns
         diffmap_evals : np.ndarray
             Eigenvalues of the transition matrix.
     """
+    logg.info('running Diffusion Maps', r=True)
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
                    n_dcs=n_comps, n_jobs=n_jobs, recompute_graph=True,
                    flavor=flavor)
     dmap.update_diffmap()
-    adata.add['data_graph_distance_local'] = dmap.Dsq
-    adata.add['data_graph_norm_weights'] = dmap.Ktilde
-    adata.smp['X_diffmap'] = dmap.rbasis[:, 1:]
+    adata.uns['data_graph_distance_local'] = dmap.Dsq
+    adata.uns['data_graph_norm_weights'] = dmap.Ktilde
+    adata.smpm['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
-    adata.add['diffmap_evals'] = dmap.evals[1:]
-    logg.m('    finished', t=True, end=' ')
-    logg.m('and added\n'
-           '    "X_diffmap", the diffmap coordinates (adata.smp),\n'
-           '    "diffmap_evals", the eigenvalues of the transition matrix (adata.add)')
+    adata.uns['diffmap_evals'] = dmap.evals[1:]
+    logg.info('    finished', t=True, end=' ')
+    logg.info('and added\n'
+              '    "X_diffmap", the diffmap coordinates (adata.smpm),\n'
+              '    "diffmap_evals", the eigenvalues of the transition matrix (adata.uns)')
     return adata if copy else None

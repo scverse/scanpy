@@ -1,20 +1,23 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Cluster cells using Louvain community detection algorithm.
 
 Uses the pip package "louvain" by V. Traag.
 """
 
 import numpy as np
+import pandas as pd
+from natsort import natsorted
 from .. import utils
 from .. import logging as logg
 from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
 def louvain(adata,
-            n_neighbors=30,
+            n_neighbors=None,
             resolution=None,
             n_pcs=50,
             random_state=0,
+            restrict_to=None,
             flavor='vtraag',
             directed=True,
             recompute_pca=False,
@@ -25,17 +28,14 @@ def louvain(adata,
             copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
-    `[source] <tl.louvain_>`__ Cluster cells using the Louvain algorithm
-    [Blondel08]_ in the implementation of [Traag17]_. The Louvain algorithm has
-    been proposed for single-cell analysis by [Levine15]_.
+    Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
+    of [Traag17]_. The Louvain algorithm has been proposed for single-cell
+    analysis by [Levine15]_.
 
-    *Examples:* See this `use case <17-05-05_>`__.
-
-    .. _tl.louvain: https://github.com/theislab/scanpy/tree/master/scanpy/tools/louvain.py
     Parameters
     ----------
     adata : AnnData
-        The annotated data matrix. 
+        The annotated data matrix.
     n_neighbors : int, optional (default: 30)
         Number of neighbors to use for construction of knn graph.
     resolution : float or None, optional
@@ -46,6 +46,9 @@ def louvain(adata,
         Number of PCs to use for computation of data point graph.
     random_state : int, optional (default: 0)
         Change the initialization of the optimization.
+    restrict_to : (smp key, list of categories), optional (default: None)
+        Restrict the clustering to the categories within the key for sample
+        annotation.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
@@ -57,7 +60,6 @@ def louvain(adata,
     - Louvain algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
     - base graph package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
     - basic suggestion for single-cell: Levine et al., Cell 162, 184-197 (2015)
-    - combination with "attachedness" matrix: Wolf et al., bioRxiv (2017)
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
@@ -70,7 +72,12 @@ def louvain(adata,
         recompute_distances=recompute_distances,
         recompute_graph=recompute_graph,
         n_jobs=n_jobs)
-    adjacency = adata.add['data_graph_norm_weights']
+    adjacency = adata.uns['data_graph_norm_weights']
+    if restrict_to is not None:
+        restrict_key, restrict_categories = restrict_to
+        restrict_indices = adata.smp[restrict_key].isin(restrict_categories).values
+        adjacency = adjacency[restrict_indices, :]
+        adjacency = adjacency[:, restrict_indices]
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
@@ -86,7 +93,7 @@ def louvain(adata,
                 louvain.set_rng_seed(random_state)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)
-                adata.add['louvain_quality'] = part.quality()
+                adata.uns['louvain_quality'] = part.quality()
             except AttributeError:
                 logg.warn('Did not find package louvain>=0.6, '
                           'the clustering result will therefore not be 100% reproducible, '
@@ -101,25 +108,38 @@ def louvain(adata,
                                               resolution_parameter=resolution)
         elif flavor == 'igraph':
             part = g.community_multilevel()
-        groups = np.array(part.membership, dtype='U')
+        groups = np.array(part.membership)
     elif flavor == 'taynaud':
         # this is deprecated
         import networkx as nx
         import community
-        g = nx.Graph(adata.add['data_graph_distance_local'])
+        g = nx.Graph(adata.uns['data_graph_distance_local'])
         partition = community.best_partition(g)
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v
-        groups = groups.astype('U')
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
-    adata.smp['louvain_groups'] = groups
-    from natsort import natsorted
-    adata.add['louvain_groups_order'] = np.array(natsorted(np.unique(groups)))
-    adata.add['louvain_params'] = np.array((resolution,),
+    unique_groups = np.unique(groups)
+    n_clusters = len(unique_groups)
+    if restrict_to is None:
+        groups = groups.astype('U')
+        adata.smp['louvain_groups'] = pd.Categorical(
+            values=groups,
+            categories=natsorted(unique_groups.astype('U')))
+        key_added = 'louvain_groups'
+    else:
+        key_added = restrict_key + '_louvain'
+        groups += 1
+        adata.smp[key_added] = adata.smp[restrict_key].astype('U')
+        adata.smp[key_added] += ','
+        adata.smp[key_added].iloc[restrict_indices] += groups.astype('U')
+        adata.smp[key_added].iloc[~restrict_indices] += '0'
+        adata.smp[key_added] = adata.smp[key_added].astype(
+            'category', categories=natsorted(adata.smp[key_added].unique()))
+    adata.uns['louvain_params'] = np.array((resolution,),
                                            dtype=[('resolution', float)])
-    logg.m('    finished', t=True, end=' ')
-    logg.m('and found', len(adata.add['louvain_groups_order']), 'clusters, added\n'
-           '    "louvain_groups", the cluster labels (adata.smp)\n'
-           '    "louvain_groups_order", the unique cluster labels (adata.add)')
+    logg.info('    finished', t=True, end=': ')
+    logg.info('found {} clusters and added\n'
+              '    \'{}\', the cluster labels (adata.smp, dtype=category)'
+              .format(n_clusters, key_added))
     return adata if copy else None

@@ -1,74 +1,72 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Diffusion Pseudotime Analysis
 """
 
-import sys
 import numpy as np
+import pandas as pd
 import scipy as sp
 import networkx as nx
-import scipy.sparse
+from natsort import natsorted
 from .. import logging as logg
 from ..data_structs import data_graph
 
 
-def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
-        min_group_size=0.01, n_jobs=None, recompute_graph=False,
-        recompute_pca=False, allow_kendall_tau_shift=True, flavor='haghverdi16', copy=False):
+def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
+        min_group_size=0.01, recompute_graph=False, recompute_pca=False,
+        allow_kendall_tau_shift=True, flavor='haghverdi16', n_jobs=None,
+        copy=False):
     """Infer progression of cells, identify *branching* subgroups [Haghverdi16]_ [Wolf17]_.
 
-    `[source] <tl.dpt_>`__ Reconstruct the progression of a biological process
-    from snapshot data and detect branching subgroups. Diffusion Pseudotime
-    analysis has been introduced by [Haghverdi16]_. Here, we use a further
-    developed version, which is able to detect multiple branching events
-    [Wolf17]_.
+    Reconstruct the progression of a biological process from snapshot data and
+    detect branching subgroups. `Diffusion Pseudotime analysis` has been
+    introduced by [Haghverdi16]_. Here, we use a further developed,
+    `hierarchical` version, which is able to detect multiple branching events
+    [Wolf17]_ by setting the parameter `n_branchings`.
 
-    The possibilities of *diffmap* and *dpt* are similar to those of the R
-    package destiny_ of [Angerer16]_. The Scanpy tools though run faster and
-    scale to much higher cell numbers.
-
-    *Examples:* See this `use case <17-05-02_>`__.
-
-    .. _destiny: http://bioconductor.org/packages/destiny
-    .. _tl.dpt: https://github.com/theislab/scanpy/tree/master/scanpy/tools/dpt.py
-    .. _17-05-02: https://github.com/theislab/scanpy_usage/tree/master/170502_haghverdi16
-
-    References
-    ----------
-    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-      31, 2989 (2015).
-    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-      arXiv:0711.0189 (2007).
+    The tool is similar to the R package destiny_ of [Angerer16]_; the Scanpy
+    implementation though runs faster and scales to much higher cell numbers.
 
     Parameters
     ----------
     adata : AnnData
-        Annotated data matrix, optionally with ``adata.add['iroot']``, the index
-        of the root cell, ``adata.smp['X_pca']`` or ``adata.smp['X_diffmap']``.
-    n_branchings : int, optional (default: 1)
+        Annotated data matrix.
+    n_branchings : `int`, optional (default: 1)
         Number of branchings to detect.
-    n_neighbors : int, optional (default: 30)
-        Number of nearest neighbors on the knn graph. If knn == False, set the
-        Gaussian kernel width to the distance of the kth neighbor.
-    knn : bool, optional (default: True)
-        If True, use a hard threshold to restrict the number of neighbors to
-        n_neighbors, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
-        to assign low weights to neighbors more distant than the kth nearest
-        neighbor.
-    n_pcs : int, optional (default: 50)
+    n_neighbors : `int`, optional (default: 30)
+        Number of nearest neighbors in the k-nearest-neighbor graph. If `knn` is
+        `False`, this sets the Gaussian kernel width to the distance of the
+        `n_neighbors` neighbor.
+    knn : `bool`, optional (default: `True`)
+        If `True`, use a hard threshold to restrict the number of neighbors to
+        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
+        Kernel to assign low weights to neighbors more distant than the
+        `n_neighbors` nearest neighbor.
+    n_pcs : `int`, optional (default: 50)
         Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_dcs: int, optional (default: 10)
-        Use `n_dcs` to compute the dpt distance.
-    n_jobs : int or None (default: None)
-        Number of cpus to use for parallel processing (default: sett.n_jobs).
-    recompute_graph : bool, (default: False)
+        basis for generating the graph. Set to 0 if you don't want any
+        preprocessing with PCA.
+    n_dcs : `int`, optional (default: 10)
+        Use `n_dcs` diffusion components to compute the dpt distance.
+    min_group_size : [0, 1] or `float`, optional (default: 0.01)
+        During recursive splitting of branches ('dpt groups') for `n_branchings`
+        > 1, do not consider groups that contain less than `min_group_size` data
+        points. If a float, `min_group_size` refers to a fraction of the total
+        number of data points.
+    recompute_graph : `bool`, optional (default: `False`)
         Recompute diffusion maps.
-    recompute_pca : bool, (default: False)
+    recompute_pca : `bool`, optional (default: `False`)
         Recompute PCA.
-    copy : bool, optional (default: False)
+    allow_kendall_tau_shift : `bool`, optional (default: `True`)
+        If a very small branch is detected upon splitting, shift away from
+        maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
+        stabilize the splitting.
+    flavor : {'wolf17_bi', 'wolf17_tri', 'haghverdi16'}, optional (default: 'haghverdi16')
+        Parameter for development only. There is a lot of leeway in determining
+        how to split branches; this provides several alternatives to the Kendall
+        tau criterion of [Haghverdi16]_.
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
+        Number of cpus to use for parallel processing.
+    copy : `bool`, optional (default: `False`)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
 
@@ -76,29 +74,29 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    dpt_pseudotime : np.ndarray (adata.smp)
+    dpt_pseudotime : ``np.ndarray`` in ``adata.smp``
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    dpt_groups : np.ndarray of dtype string (adata.smp)
+    dpt_groups : ``np.ndarray`` of type string in ``adata.smp``
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
-    X_diffmap : np.ndarray (adata.smp)
+    X_diffmap : ``np.ndarray`` in ``adata.smp``
         Array of shape (number of samples) × (number of eigen
         vectors). DiffMap representation of data, which is the right eigen
         basis of the transition matrix with eigenvectors as columns.
-    dpt_evals : np.ndarray (adata.add)
+    dpt_evals : ``np.ndarray`` in ``adata.uns``
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
-    if ('iroot' not in adata.add
-        and 'xroot' not in adata.add
+    if ('iroot' not in adata.uns
+        and 'xroot' not in adata.uns
         and 'xroot' not in adata.var):
         logg.m('    no root cell found, no computation of pseudotime')
         msg = \
     '''To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
-        adata.add['iroot'] = root_cell_index
+        adata.uns['iroot'] = root_cell_index
     or (robust to subsampling)
         adata.var['xroot'] = adata.X[root_cell_index, :]
     where "root_cell_index" is the integer index of the root cell, or
@@ -114,35 +112,36 @@ def dpt(adata, n_branchings=0, n_neighbors=30, knn=True, n_pcs=50, n_dcs=10,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
-    adata.smp['X_diffmap'] = dpt.rbasis[:, 1:]
+    adata.smpm['X_diffmap'] = dpt.rbasis[:, 1:]
     adata.smp['X_diffmap0'] = dpt.rbasis[:, 0]
-    adata.add['diffmap_evals'] = dpt.evals[1:]
-    adata.add['data_graph_distance_local'] = dpt.Dsq
-    adata.add['data_graph_norm_weights'] = dpt.Ktilde
+    adata.uns['diffmap_evals'] = dpt.evals[1:]
+    adata.uns['data_graph_distance_local'] = dpt.Dsq
+    adata.uns['data_graph_norm_weights'] = dpt.Ktilde
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
         dpt.set_pseudotime()  # pseudotimes are distances from root point
-        adata.add['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
+        adata.uns['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
         adata.smp['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
     # vector of length n_groups
-    adata.add['dpt_groups_order'] = [str(n) for n in dpt.segs_names_unique]
     # for itips, tips in enumerate(dpt.segs_tips):
-    #     # if tips[0] == -1: adata.add['dpt_groups_order'][itips] = '?'
-    #     if dpt.segs_undecided[itips]: adata.add['dpt_groups_order'][itips] += '?'
+    #     # if tips[0] == -1: adata.uns['dpt_groups_order'][itips] = '?'
+    #     if dpt.segs_undecided[itips]: adata.uns['dpt_groups_order'][itips] += '?'
     # vector of length n_samples of groupnames
-    adata.smp['dpt_groups'] = dpt.segs_names.astype('U')
+    adata.smp['dpt_groups'] = pd.Categorical(
+        values=dpt.segs_names.astype('U'),
+        categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
     # the ordering according to segments and pseudotime
     ordering_id = np.zeros(adata.n_smps, dtype=int)
     for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
     adata.smp['dpt_order'] = ordering_id
     adata.smp['dpt_order_indices'] = dpt.indices
     # the "change points" separate segments in the ordering above
-    adata.add['dpt_changepoints'] = dpt.changepoints
+    adata.uns['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
-    adata.add['dpt_grouptips'] = dpt.segs_tips
+    adata.uns['dpt_grouptips'] = dpt.segs_tips
     logg.m('finished', t=True, end=' ')
     logg.m('and added\n'
            + ('    "dpt_pseudotime", the pseudotime (adata.smp),\n' if dpt.iroot is not None else '')
@@ -156,7 +155,7 @@ class DPT(data_graph.DataGraph):
     """
 
     def __init__(self, adata, n_neighbors=30, knn=True, n_jobs=1, n_pcs=50, n_dcs=10,
-                 min_group_size=20, recompute_pca=None, recompute_graph=None,
+                 min_group_size=0.01, recompute_pca=None, recompute_graph=None,
                  n_branchings=0, allow_kendall_tau_shift=False,
                  flavor='haghverdi16'):
         super(DPT, self).__init__(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs,
@@ -652,19 +651,6 @@ class DPT(data_graph.DataGraph):
             ssegs_tips.append([tip_0, tip_1])
             ssegs_adjacency = [[3], [3], [3], [0, 1, 2]]
             trunk = 3
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(len(ssegs_connects[iseg_new])):
-            #         pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 0], self.passed_adata.smp['X_diffmap'][seg_reference][ssegs_connects[iseg_new][i], 1], marker='o', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
         elif len(ssegs) == 3:
             reference_point = np.zeros(3, dtype=int)
             reference_point[0] = ssegs_tips[0][0]
@@ -691,26 +677,6 @@ class DPT(data_graph.DataGraph):
             ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
                               [closest_points[trunk, j] for j in range(3) if j != trunk]
                               for i in range(3)]
-            # print(ssegs_connects)
-            # print(ssegs_adjacency)
-            # import matplotlib.pyplot as pl
-            # for iseg_new, seg_new in enumerate(ssegs):
-            #     pl.figure()
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][:, 0], self.passed_adata.smp['X_diffmap'][:, 1], s=1, c='grey')
-            #     pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 0], self.passed_adata.smp['X_diffmap'][seg_reference][seg_new, 1], marker='x', s=2, c='blue')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][tips[iseg_new], 1], marker='x', c='black')
-            #     # pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 0], self.passed_adata.smp['X_diffmap'][seg_reference][second_tip[iseg_new], 1], marker='o', c='black')
-            #     for i in range(3):
-            #         if i != iseg_new:
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[iseg_new, i], 1], marker='o', c='black')
-            #             pl.scatter(self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 0],
-            #                        self.passed_adata.smp['X_diffmap'][seg_reference][closest_points[i, iseg_new], 1], marker='x', c='black')
-            #     pl.xticks([])
-            #     pl.yticks([])
-            #     # pl.savefig('./figs/cutting_off_tip={}.png'.format(iseg_new))
-            # pl.show()
-            # print('trunk', trunk)
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]

@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Data Graph
 
 Represent a data matrix as a weighted graph of nearest neighbor relations
@@ -39,11 +39,11 @@ def add_or_update_graph_in_adata(
                       n_jobs=n_jobs)
     if graph.fresh_compute:
         graph.update_diffmap()
-        adata.add['data_graph_distance_local'] = graph.Dsq
-        adata.add['data_graph_norm_weights'] = graph.Ktilde
-        adata.smp['X_diffmap'] = graph.rbasis[:, 1:]
+        adata.uns['data_graph_distance_local'] = graph.Dsq
+        adata.uns['data_graph_norm_weights'] = graph.Ktilde
+        adata.smpm['X_diffmap'] = graph.rbasis[:, 1:]
         adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
-        adata.add['diffmap_evals'] = graph.evals[1:]
+        adata.uns['diffmap_evals'] = graph.evals[1:]
     return graph
 
 
@@ -59,15 +59,16 @@ def no_recompute_of_graph_necessary(
             and not recompute_distances
             and not recompute_graph
             # make sure X_diffmap is there
-            and 'X_diffmap' in adata.smp
+            and 'X_diffmap' in adata.smpm_keys()
             # make sure enough DCs are there
-            and (adata.smp['X_diffmap'].shape[1] >= n_dcs-1
+            and (adata.smpm['X_diffmap'].shape[1] >= n_dcs-1
                  if n_dcs is not None else True)
             # make sure that it's sparse
-            and (issparse(adata.add['data_graph_norm_weights']) == knn
+            and (issparse(adata.uns['data_graph_norm_weights']) == knn
                  if knn is not None else True)
             # make sure n_neighbors matches
-            and n_neighbors == adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1)
+            and n_neighbors is not None and n_neighbors == adata.uns[
+                'data_graph_distance_local'][0].nonzero()[0].size + 1)
 
 
 def get_neighbors(X, Y, k):
@@ -228,18 +229,18 @@ class DataGraph():
                 knn=knn,
                 n_dcs=n_dcs):
             self.fresh_compute = False
-            self.knn = issparse(adata.add['data_graph_norm_weights'])
-            self.Ktilde = adata.add['data_graph_norm_weights']
-            self.Dsq = adata.add['data_graph_distance_local']
+            self.knn = issparse(adata.uns['data_graph_norm_weights'])
+            self.Ktilde = adata.uns['data_graph_norm_weights']
+            self.Dsq = adata.uns['data_graph_distance_local']
             if self.knn:
-                self.k = adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1
+                self.k = adata.uns['data_graph_distance_local'][0].nonzero()[0].size + 1
             else:
                 self.k = None  # currently do not store this, is unknown
             # for output of spectrum
-            self.X_diffmap = adata.smp['X_diffmap'][:, :n_dcs-1]
-            self.evals = np.r_[1, adata.add['diffmap_evals'][:n_dcs-1]]
-            self.rbasis = np.c_[adata.smp['X_diffmap0'][:, None],
-                                adata.smp['X_diffmap'][:, :n_dcs-1]]
+            self.X_diffmap = adata.smpm['X_diffmap'][:, :n_dcs-1]
+            self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
+            self.rbasis = np.c_[adata.smp['X_diffmap0'].values[:, None],
+                                adata.smpm('X_diffmap')[:, :n_dcs-1]]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
@@ -264,29 +265,29 @@ class DataGraph():
             self.Dchosen = None
             if False:  # TODO
                 # in case we already computed distance relations
-                if not recompute_distances and 'data_graph_distance_local' in adata.add:
-                    n_neighbors = adata.add['data_graph_distance_local'][0].nonzero()[0].size + 1
-                    if (knn and issparse(adata.add['data_graph_distance_local'])
+                if not recompute_distances and 'data_graph_distance_local' in adata.uns:
+                    n_neighbors = adata.uns['data_graph_distance_local'][0].nonzero()[0].size + 1
+                    if (knn and issparse(adata.uns['data_graph_distance_local'])
                         and n_neighbors == self.k):
                         logg.info('    using stored distances with `n_neighbors={}`'
                                   .format(self.k))
-                        self.Dsq = adata.add['data_graph_distance_local']
+                        self.Dsq = adata.uns['data_graph_distance_local']
 
     def init_iroot_directly(self, adata):
         self.iroot = None
-        if 'iroot' in adata.add:
-            if adata.add['iroot'] >= adata.n_smps:
+        if 'iroot' in adata.uns:
+            if adata.uns['iroot'] >= adata.n_smps:
                 logg.warn('Root cell index {} does not exist for {} samples. '
                           'Is ignored.'
-                          .format(adata.add['iroot'], adata.n_smps))
+                          .format(adata.uns['iroot'], adata.n_smps))
             else:
-                self.iroot = adata.add['iroot']
+                self.iroot = adata.uns['iroot']
 
     def init_iroot_and_X(self, adata, recompute_pca, n_pcs):
         self.X = adata.X  # might be overwritten with X_pca in the next line
         # retrieve xroot
         xroot = None
-        if 'xroot' in adata.add: xroot = adata.add['xroot']
+        if 'xroot' in adata.uns: xroot = adata.uns['xroot']
         elif 'xroot' in adata.var: xroot = adata.var['xroot']
         # set iroot directly
         self.init_iroot_directly(adata)
@@ -300,8 +301,8 @@ class DataGraph():
         else:
             # use a precomputed X_pca
             if (not recompute_pca
-                and 'X_pca' in adata.smp
-                and adata.smp['X_pca'].shape[1] >= self.n_pcs):
+                and 'X_pca' in adata.smpm_keys()
+                and adata.smpm['X_pca'].shape[1] >= self.n_pcs):
                 logg.info('    using "X_pca" for building graph')
             # compute X_pca
             else:
@@ -309,7 +310,7 @@ class DataGraph():
                 from ..preprocessing import pca
                 pca(adata, n_comps=self.n_pcs)
             # set the data matrix
-            self.X = adata.smp['X_pca'][:, :n_pcs]
+            self.X = adata.smpm['X_pca'][:, :n_pcs]
             # see whether we can find xroot using X_pca
             if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
                 self.set_root(xroot[:n_pcs])
@@ -685,9 +686,10 @@ class DataGraph():
                              'Computation needs to be adjusted if sym=False.')
         row = sum([(self.evals[l]/(1-self.evals[l])
                      * (self.rbasis[i, l] - self.lbasis[:, l]))**2
-                    for l in range(0, self.evals.size) if self.evals[l] < 1])
+                   # account for float32 precision
+                    for l in range(0, self.evals.size) if self.evals[l] < 0.999999])
         row += sum([(self.rbasis[i, l] - self.lbasis[:, l])**2
-                    for l in range(0, self.evals.size) if self.evals[l] == 1.0])
+                    for l in range(0, self.evals.size) if self.evals[l] >= 0.999999])
         return np.sqrt(row)
 
     def get_Ddiff_row_deprecated(self, i):
