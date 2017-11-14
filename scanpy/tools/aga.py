@@ -21,6 +21,12 @@ doc_string_base = dedent("""\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
+    Note: In order to compute distances along the graph (pseudotimes), you need 
+    to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
+    <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
+
+        adata.add['iroot'] = np.flatnonzero(adata.smp['exp_groups'] == 'Stem')[0]
+
     Approximate graph abstraction (AGA) quantifies the connectivity of partitions of a
     neighborhood graph of single cells, thereby generating a much simpler
     abstracted graph whose nodes label the partitions. Together with a random
@@ -32,11 +38,16 @@ doc_string_base = dedent("""\
     single-cell paths through data and to infer abstracted trees that best
     explain the global topology of data.
 
-    Most of the following parameters appear similarly in other tools.
+    The Louvain partitioning has been suggested by [Levine15]_ for analyzing
+    single cells. The random-walk based distance measure within AGA is an
+    extension of DPT [Haghverdi16]_.
+
+    Most of the following parameters appear similarly in other tools and are
+    used to generate the graph.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix, optionally with `adata.uns['iroot']`, the index
         of root cell for computing a pseudotime.
     n_neighbors : int or None, optional (default: None)
@@ -90,10 +101,6 @@ doc_string_base = dedent("""\
     -------
     Returns or updates adata depending on `copy` with
     {returns}
-
-    Reference
-    ---------
-    Wolf et al., bioRxiv (2017)
     """)
 
 
