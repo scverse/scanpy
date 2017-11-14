@@ -44,10 +44,10 @@ with open('README.rst') as readme_f:
 setup(
     name=package_name,
     version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(cmdclass),
+    cmdclass=versioneer.get_cmdclass(cmd_class),
     description='Single-Cell Analysis in Python.',
     long_description=readme,
-    url='http://github.com/theislab/anndata',
+    url='http://github.com/theislab/scanpy',
     author='Alex Wolf, Philipp Angerer',
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD-3-Clause',
