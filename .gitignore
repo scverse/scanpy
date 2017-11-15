@@ -1,5 +1,7 @@
 # Scanpy
 .scanpy
+.coverage
+coverage.xml
 test.h5
 test_compr.h5
 test_no_compr.h5
