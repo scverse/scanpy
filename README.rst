@@ -1,10 +1,12 @@
-|Build Status| |Docs|
+|Docs| |Build Status| |Coverage|
 
-.. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
-   :target: https://travis-ci.org/theislab/scanpy
 .. |Docs| image:: https://readthedocs.org/projects/scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
-           
+.. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
+   :target: https://travis-ci.org/theislab/scanpy
+.. |Coverage| image:: https://codecov.io/gh/theislab/scanpy/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/theislab/scanpy
+
 Scanpy – Single-Cell Analysis in Python
 =======================================
 
