@@ -1,5 +1,5 @@
 .. include:: ../README.rst
-   :end-line: 9
+   :end-line: 11
 
 .. would be nice to have the following image also on GitHub, but it's much too wide there; GitHub doesn't plan to resolve scaling images: https://github.com/github/markup/issues/295
 .. raw:: html
