@@ -18,13 +18,21 @@ where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are opt
 AnnData objects
 ^^^^^^^^^^^^^^^
 
-An :class:`~scanpy.api.AnnData` object ``adata`` stores an array-like data matrix (``adata.data``), dataframe-like sample (``adata.smp``) and variable (``adata.var``) annotation and unstructured dict-like annotation (``adata.uns``).
+An :class:`~scanpy.api.AnnData` object ``adata`` stores a data matrix
+(``adata.data``), dataframe-like sample (``adata.smp``) and variable
+(``adata.var``) annotation and unstructured dict-like annotation
+(``adata.uns``).
 
 .. raw:: html
 
     <img src="http://falexwolf.de/img/scanpy/anndata.svg" style="width: 300px">
 
-Values can be retrieved and appended via ``adata.smp['key1']`` and ``adata.var['key2']``. Sample and variable names can be accessed via ``adata.smp_names`` and ``adata.var_names``, respectively. :class:`~scanpy.api.AnnData` objects can be sliced like Pandas dataframes, for example, ``adata = adata[:, list_of_gene_names]``. The AnnData class is similar to R's ExpressionSet [Huber15]_.
+Values can be retrieved and appended via ``adata.smp['key1']`` and
+``adata.var['key2']``. Sample and variable names can be accessed via
+``adata.smp_names`` and ``adata.var_names``,
+respectively. :class:`~scanpy.api.AnnData` objects can be sliced like
+dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``. The AnnData
+class is similar to R's ExpressionSet [Huber15]_. For more, see :class:`~scanpy.api.AnnData`.
     
 
 Reading and writing data files and AnnData objects
