@@ -7,11 +7,9 @@ import sys
 import h5py
 import numpy as np
 import pandas as pd
-import psutil
 import time
 from anndata import AnnData
 
-from .utils import merge_dicts
 from . import settings as sett
 from . import logging as logg
 
@@ -796,6 +794,8 @@ def read_file_to_dict(filename, ext='h5', cache_warning=False):
 
 
 def postprocess_reading(key, value):
+    if value.ndim == 1 and len(value) == 1:
+        value = value[0]
     if value.dtype.kind == 'S':
         value = value.astype(str)
         # recover a dictionary that has been stored as a string
@@ -811,7 +811,13 @@ def postprocess_reading(key, value):
 
 
 def preprocess_writing(key, value):
-    value = np.array(value)
+    if isinstance(value, dict):
+        # hack for storing dicts
+        value = np.array([str(value)])
+    else:
+        value = np.array(value)
+        if value.ndim == 0:
+            value = np.array([value])
     # some output about the data to write
     logg.m(key, type(value),
            value.dtype, value.dtype.kind, value.shape,
@@ -1010,6 +1016,7 @@ def convert_string(string):
 
 def get_used_files():
     """Get files used by processes with name scanpy."""
+    import psutil
     loop_over_scanpy_processes = (proc for proc in psutil.process_iter()
                                   if proc.name() == 'scanpy')
     filenames = []

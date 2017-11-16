@@ -157,7 +157,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
          If True or a str, save the figure. A string is appended to the
          default filename.
     """
-    ranking(adata, 'add', 'pca_variance_ratio', labels='PC', log=log)
+    ranking(adata, 'uns', 'pca_variance_ratio', labels='PC', log=log)
     utils.savefig_or_show('pca_ranking_variance', show=show, save=save)
 
 
@@ -315,7 +315,7 @@ def draw_graph(
     -------
     matplotlib.Axes object
     """
-    if layout is None: layout = adata.uns['draw_graph_layout'][-1]
+    if layout is None: layout = adata.uns['draw_graph_params']['layout']
     if 'X_draw_graph_' + layout not in adata.smpm_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
@@ -653,6 +653,13 @@ def aga_graph(
     If `return_pos` is ``True``, in addition, the positions of the nodes are
     returned.
     """
+
+    import matplotlib as mpl
+    from distutils.version import LooseVersion
+    if mpl.__version__ > LooseVersion('2.0.0'):
+        logg.warn('Currently, `aga_graph` sometimes crashes with matplotlib version > 2.0, you have {}.\n'
+                  'Run `pip install matplotlib==2.0` if this hits you.'
+                  .format(mpl.__version__))
 
     # colors is a list that contains no lists
     if isinstance(color, list) and True not in [isinstance(c, list) for c in color]: color = [color]
@@ -1029,7 +1036,7 @@ def aga_path(
     groups = []
     # todo: allow plotting more annotations
     annotations_x = {}
-    annotatations_x['pseudotimes'] = []
+    annotations_x['pseudotimes'] = []
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
@@ -1040,12 +1047,12 @@ def aga_path(
             if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0: groups += [group for i in range(len(idcs))]
-            if ikey == 0: annotatations_x['pseudotimes'] += list(adata.smp['aga_pseudotime'].values[idcs])
+            if ikey == 0: annotations_x['pseudotimes'] += list(adata.smp['aga_pseudotime'].values[idcs])
             if ikey == 0: x_tick_locs.append(len(x))
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
-            if ikey == 0: annotatations_x['pseudotimes'] = moving_average(annotatations_x['pseudotimes'])
+            if ikey == 0: annotations_x['pseudotimes'] = moving_average(annotations_x['pseudotimes'])
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
@@ -1117,10 +1124,10 @@ def aga_path(
                                    ax_bounds[1] - ax_bounds[3] / len(keys),
                                    ax_bounds[2],
                                    - ax_bounds[3] / len(keys)])
-        annotatations_x['pseudotimes'] = np.array(annotatations_x['pseudotimes'])[None, :]
+        annotations_x['pseudotimes'] = np.array(annotations_x['pseudotimes'])[None, :]
         if color_map_pseudotime is None:
             color_map_pseudotime = 'Greys'
-        img = pseudotime_axis.imshow(annotatations_x['pseudotimes'], aspect='auto',
+        img = pseudotime_axis.imshow(annotations_x['pseudotimes'], aspect='auto',
                                      interpolation='nearest',
                                      cmap=color_map_pseudotime)
         if show_yticks:
@@ -1157,7 +1164,7 @@ def aga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = annotatations_x['pseudotimes'].T
+        df['distance'] = annotations_x['pseudotimes'].T
         return ax, df if ax_was_none else df
     else:
         return ax if ax_was_none else None

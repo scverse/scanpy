@@ -18,6 +18,7 @@ def louvain(adata,
             n_pcs=50,
             random_state=0,
             restrict_to=None,
+            key_added=None,
             flavor='vtraag',
             directed=True,
             recompute_pca=False,
@@ -34,11 +35,11 @@ def louvain(adata,
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         The annotated data matrix.
-    n_neighbors : int, optional (default: 30)
+    n_neighbors : `int`, optional (default: 30)
         Number of neighbors to use for construction of knn graph.
-    resolution : float or None, optional
+    resolution : `float` or `None`, optional (default: 1)
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
         1.0.
@@ -46,18 +47,24 @@ def louvain(adata,
         Number of PCs to use for computation of data point graph.
     random_state : int, optional (default: 0)
         Change the initialization of the optimization.
-    restrict_to : (smp key, list of categories), optional (default: None)
+    key_added : str, optional (default: `None`)
+        Key under which to add the cluster labels.
+    restrict_to : tuple, optional (default: None)
         Restrict the clustering to the categories within the key for sample
-        annotation.
+        annotation, tuple needs to contain (smp key, list of categories).
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
-    copy : bool (default: False)
+    copy : `bool` (default: False)
+        Copy adata or modify it inplace.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
+    louvain_groups : `pd.Series` (``adata.smp``, dtype `category`)
+        Array of dim (number of samples) that stores the subgroup id ('0',
+        '1', ...) for each cell.
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
@@ -91,7 +98,7 @@ def louvain(adata,
                 louvain.set_rng_seed(random_state)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
                                               resolution_parameter=resolution)
-                adata.uns['louvain_quality'] = part.quality()
+                # adata.uns['louvain_quality'] = part.quality()
             except AttributeError:
                 logg.warn('Did not find package louvain>=0.6, '
                           'the clustering result will therefore not be 100% reproducible, '
@@ -124,9 +131,9 @@ def louvain(adata,
         adata.smp['louvain_groups'] = pd.Categorical(
             values=groups,
             categories=natsorted(unique_groups.astype('U')))
-        key_added = 'louvain_groups'
+        key_added = 'louvain_groups' if key_added is None else key_added
     else:
-        key_added = restrict_key + '_louvain'
+        key_added = restrict_key + '_R' if key_added is None else key_added
         groups += 1
         adata.smp[key_added] = adata.smp[restrict_key].astype('U')
         adata.smp[key_added] += ','
@@ -134,8 +141,8 @@ def louvain(adata,
         adata.smp[key_added].iloc[~restrict_indices] += '0'
         adata.smp[key_added] = adata.smp[key_added].astype(
             'category', categories=natsorted(adata.smp[key_added].unique()))
-    adata.uns['louvain_params'] = np.array((resolution,),
-                                           dtype=[('resolution', float)])
+    adata.uns['louvain_params'] = np.array((resolution, random_state,),
+                                           dtype=[('resolution', float), ('random_state', int)])
     logg.info('    finished', t=True, end=': ')
     logg.info('found {} clusters and added\n'
               '    \'{}\', the cluster labels (adata.smp, dtype=category)'

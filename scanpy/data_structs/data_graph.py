@@ -240,7 +240,7 @@ class DataGraph():
             self.X_diffmap = adata.smpm['X_diffmap'][:, :n_dcs-1]
             self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
             self.rbasis = np.c_[adata.smp['X_diffmap0'].values[:, None],
-                                adata.smpm('X_diffmap')[:, :n_dcs-1]]
+                                adata.smpm['X_diffmap'][:, :n_dcs-1]]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
