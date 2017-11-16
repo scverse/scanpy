@@ -15,20 +15,20 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
         min_group_size=0.01, recompute_graph=False, recompute_pca=False,
         allow_kendall_tau_shift=True, flavor='haghverdi16', n_jobs=None,
         copy=False):
-    """Infer progression of cells, identify *branching* subgroups [Haghverdi16]_ [Wolf17]_.
+    """Infer progression of cells and branching subgroups [Haghverdi16]_ [Wolf17]_.
 
     Reconstruct the progression of a biological process from snapshot data and
     detect branching subgroups. `Diffusion Pseudotime analysis` has been
-    introduced by [Haghverdi16]_. Here, we use a further developed,
-    `hierarchical` version, which is able to detect multiple branching events
-    [Wolf17]_ by setting the parameter `n_branchings`.
+    introduced by [Haghverdi16]_. Here, we use a further developed, faster and
+    `hierarchical` version, which is able to detect multiple branching events by
+    setting the parameter `n_branchings` [Wolf17]_.
 
-    The tool is similar to the R package destiny_ of [Angerer16]_; the Scanpy
+    The tool is similar to the R package destiny of [Angerer16]_; the Scanpy
     implementation though runs faster and scales to much higher cell numbers.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     n_branchings : `int`, optional (default: 1)
         Number of branchings to detect.
@@ -74,18 +74,18 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    dpt_pseudotime : ``np.ndarray`` in ``adata.smp``
+    dpt_pseudotime : `pd.Series` (`adata.smp`, dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    dpt_groups : ``np.ndarray`` of type string in ``adata.smp``
+    dpt_groups : `pd.Series` (``adata.smp``, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
-    X_diffmap : ``np.ndarray`` in ``adata.smp``
-        Array of shape (number of samples) × (number of eigen
-        vectors). DiffMap representation of data, which is the right eigen
-        basis of the transition matrix with eigenvectors as columns.
-    dpt_evals : ``np.ndarray`` in ``adata.uns``
+    X_diffmap : `np.ndarray` (`adata.smpm`, dtype `float`)
+        Array of shape (#samples) × (#eigen vectors). DiffMap representation of
+        data, which is the right eigen basis of the transition matrix with
+        eigenvectors as columns.
+    diffmap_evals : `np.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata

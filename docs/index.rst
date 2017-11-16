@@ -7,22 +7,20 @@
     <center><a href="https://doi.org/10.1101/174029"><img src="http://falexwolf.de/img/scanpy_figure_1.png" title="Overview of Scanpy's analysis features." style="width: 500px"></a></center>
 
 .. include:: ../README.rst
-   :start-line: 10
-   :end-line: 12
+   :start-line: 12
+   :end-line: 14
 
 
-Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_. Learn more about conceptual ideas in our `preprint <https://doi.org/10.1101/174029>`_.
+Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_. If Scanpy has been useful for your research, please consider citing our preprint: `Wolf, Angerer & Theis, bioRxiv 174029 (2017) <https://doi.org/10.1101/174029>`_.
 
 .. include:: release_notes.rst
 
-
-**Contents**
-
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    examples
-   api/index
    basic_usage
    installation
+   api/index
    references

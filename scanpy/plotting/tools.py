@@ -1223,7 +1223,7 @@ def dpt(
     ----------
     adata : AnnData
         Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'draw_graph_...'}
+    basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
     color : string or list of strings, optional (default: None)
         Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
@@ -1422,7 +1422,7 @@ def louvain(
     ----------
     adata : AnnData
         Annotated data matrix.
-    basis : {'diffmap', 'pca', 'tsne', 'draw_graph_...'}
+    basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
