@@ -1,4 +1,4 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Reading and Writing
 """
 
@@ -59,21 +59,23 @@ def read(filename, sheet=None, ext=None, delimiter=None,
 
     Returns
     -------
-    data : sc.AnnData object or dict if return_dict == True
+    adata : :class:`~sc.api.AnnData` object, dict
+        Returns dict if `return_dict` was `True`.
 
     If a dict, the dict contains
-        X : array-like or sparse matrix, optional
-            Data array for further processing, columns correspond to genes,
-            rows correspond to samples.
-        row_names : np.ndarray, optional
-            Array storing the names of rows (experimental labels of samples).
-        col_names : np.ndarray, optional
-            Array storing the names of columns (gene names).
+
+    X : array-like or sparse matrix, optional
+        Data array for further processing, columns correspond to genes,
+        rows correspond to samples.
+    row_names : np.ndarray, optional
+        Array storing the names of rows (experimental labels of samples).
+    col_names : np.ndarray, optional
+        Array storing the names of columns (gene names).
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if is_filename(filename):
         data = read_file(filename, sheet, ext, delimiter,
-                      first_column_names, backup_url, cache)
+                         first_column_names, backup_url, cache)
         if isinstance(data, dict):
             return data if return_dict else AnnData(data)
         elif isinstance(data, AnnData):
@@ -95,16 +97,24 @@ def read(filename, sheet=None, ext=None, delimiter=None,
     return data if return_dict else AnnData(data)
 
 
-def read_10x_h5(filename, genome):
+def read_10x_h5(filename, genome='mm10'):
     """Get annotated 10X expression matrix from hdf5 file.
 
     Uses the naming conventions of 10x hdf5 files.
 
+    Parameters
+    ----------
+    filename : str
+        Filename.
+    genome : str, optional (default: 'mm10')
+        Genome group in hdf5 file.
+
     Returns
     -------
-    adata : AnnData object where samples/cells are named by their barcode and
-            variables/genes by gene name. The data is stored in adata.X, cell
-            names in adata.smp_names and gene names in adata.var_names.
+    adata : :class:`~sc.api.AnnData`
+        Annotated data matrix, where samples/cells are named by their barcode
+        and variables/genes by gene name. The data is stored in adata.X, cell
+        names in adata.smp_names and gene names in adata.var_names.
     """
     logg.info('reading', filename, r=True, end=' ')
     import tables
@@ -203,7 +213,7 @@ def write(filename, adata, ext=None, compression=None, compression_opts=None):
     $ ls -lh test_compr.h5
     -rw-r--r--  1 alexwolf  staff   161K Nov 14 15:15 test_compr.h5
 
-    Writing an :class:`~scanpy.api.AnnData` that contains sparse data.
+    Writing a :class:`~scanpy.api.AnnData` that contains sparse data.
 
     >>> from scipy.sparse import csr_matrix
     >>> adata = AnnData(

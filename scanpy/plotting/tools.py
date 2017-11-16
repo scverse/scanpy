@@ -315,7 +315,7 @@ def draw_graph(
     -------
     matplotlib.Axes object
     """
-    if layout is None: layout = adata.uns['draw_graph_params']['layout']
+    if layout is None: layout = str(adata.uns['draw_graph_params']['layout'])
     if 'X_draw_graph_' + layout not in adata.smpm_keys():
         raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
@@ -563,6 +563,7 @@ def aga_graph(
         adata,
         solid_edges='aga_adjacency_tree_confidence',
         dashed_edges='aga_adjacency_full_confidence',
+        threshold_dashed=1e-6,
         root=0,
         rootlevel=None,
         layout=None,
@@ -590,68 +591,71 @@ def aga_graph(
 
     Parameters
     ----------
-    groups : str, list, dict, key for `adata.uns`
+    groups : `str`, `list`, `dict`
        The node groups labels.
     color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
         Besides cluster colors, lists and uniform colors this also acceppts
-        {'degree_dashed', 'degree_solid'}.
-    solid_edges : str, optional (default: 'aga_adjacency_tree_confidence')
+        {'degree_dashed', 'degree_solid'} which are plotted using continuous
+        color map.
+    solid_edges : `str`, optional (default: 'aga_adjacency_tree_confidence')
         Key for ``adata.uns`` that specifies the matrix that stores the edges
         to be drawn solid black.
-    dashed_edges : str or None, optional (default: 'aga_adjacency_full_confidence')
+    dashed_edges : `str` or `None`, optional (default: 'aga_adjacency_full_confidence')
         Key for ``adata.uns`` that specifies the matrix that stores the edges
         to be drawn dashed grey. If ``None``, no dashed edges are drawn.
-    edge_width_scale : float, optional (default: 1.5)
+    threshold_dashed : `float`, optional (default: 1e-6)
+        Do not draw edges for weights below this threshold. Set to `None` if you
+        want all edges.
+    edge_width_scale : `float`, optional (default: 1.5)
         Edge with scale in units of ``rcParams['lines.linewidth']``.
-    min_edge_width : float, optional (default: ``None``)
+    min_edge_width : `float`, optional (default: ``None``)
         Min width of solid edges.
-    max_edge_width : float, optional (default: ``None``)
+    max_edge_width : `float`, optional (default: ``None``)
         Max width of solid and dashed edges.
-    layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}
+    layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
         Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
         'eq_tree' use the igraph layout function. All other igraph layouts are
         also permitted. See also parameter `pos`.
-    pos : filename, array-like, optional (default: None)
+    pos : filename of `.gdf` file, array-like, optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
-        Otherwise, path to ``.gdf`` file that has been exported from Gephi or a
-        similar graph visualization software.
-    export_to_gexf : boolean, optional (default: None)
+        Otherwise, path to a `.gdf` file that has been exported from Gephi or
+        a similar graph visualization software.
+    export_to_gexf : `bool`, optional (default: `None`)
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
-    return_pos : bool, optional (default: False)
+    return_pos : `bool`, optional (default: `False`)
         Return the positions.
     root : int, str or list of int, optional (default: 0)
-        The index of the root node or root nodes. if this is a non-empty vector
+        The index of the root node or root nodes. If this is a non-empty vector
         then the supplied node IDs are used as the roots of the trees (or a
-        single tree if the graph is connected. If this is None or an empty list,
+        single tree if the graph is connected. If this is `None` or an empty list,
         the root vertices are automatically calculated based on topological
         sorting, performed with the opposite of the mode argument.
-    rootlevel : list of int, optional (default: None)
+    rootlevel : list of `int`, optional (default: `None`)
         The index of the root node or root vertices. If this is a non-empty
         vector then the supplied node IDs are used as the roots of the trees
         (or a single tree if the graph is connected. If this is None or an empty
         list, the root vertices are automatically calculated based on
         topological sorting, performed with the opposite of the mode argument.
-    title : str, optional (default: None)
+    title : `str`, optional (default: `None`)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
-    frameon : bool, optional (default: True)
+    frameon : `bool`, optional (default: `True`)
          Draw a frame around the abstracted graph.
-    show : bool, optional (default: None)
+    show : `bool`, optional (default: `None`)
          Show the plot.
-    save : bool or str, optional (default: None)
+    save : `bool` or `str`, optional (default: `None`)
          If True or a str, save the figure. A string is appended to the
          default filename.
-    ax : matplotlib.Axes
+    ax : `matplotlib.Axes`
          A matplotlib axes object.
 
     Returns
     -------
-    A matplotlib.Axes or an array of matplotlib.Axes if ax is ``None``.
+    If `ax` is `None`, a matplotlib.Axes or an array of matplotlib.Axes.
 
-    If `return_pos` is ``True``, in addition, the positions of the nodes are
-    returned.
+    If `return_pos` is `True`, in addition, the positions of the nodes.
     """
 
     import matplotlib as mpl
@@ -683,6 +687,7 @@ def aga_graph(
             axs[icolor],
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
+            threshold_dashed=threshold_dashed,
             layout=layout,
             root=root,
             rootlevel=rootlevel,
@@ -715,6 +720,7 @@ def _aga_graph(
         ax,
         solid_edges=None,
         dashed_edges=None,
+        threshold_dashed=1e-6,
         root=0,
         rootlevel=None,
         color=None,
@@ -761,6 +767,8 @@ def _aga_graph(
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.uns[dashed_edges]
+        if threshold_dashed is not None:
+            adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
     # degree of the graph for coloring
