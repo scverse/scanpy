@@ -54,12 +54,10 @@ def louvain(adata,
         much more powerful.
     copy : bool (default: False)
 
-    References
-    ----------
-    - implementation of Louvain algorithm: Traag, doi:10.5281/zenodo.35117 (2017)
-    - Louvain algorithm: Blondel et al., J. Stat. Mech., P10008 (2008)
-    - base graph package: Csardi et al., InterJournal Complex Systems, 1695 (2006)
-    - basic suggestion for single-cell: Levine et al., Cell 162, 184-197 (2015)
+    Returns
+    -------
+    Depending on `copy`, returns or updates `adata` with the following fields.
+
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata

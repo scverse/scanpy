@@ -3,57 +3,49 @@
 from ..tools import dpt
 from .. import logging as logg
 
-def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0, n_jobs=None,
-            flavor='haghverdi16', copy=False):
+
+def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
+            n_jobs=None, flavor='haghverdi16', copy=False):
     """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
     Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
     data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
-    by [Haghverdi16]_. Uses the implementation of [Wolf17]_.
+    by [Haghverdi16]_ in the implementation of [Wolf17]_.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_comps : int, optional (default: 10)
+    n_comps : `int`, optional (default: 10)
         The number of dimensions of the representation.
-    n_neighbors : int, optional (default: 30)
+    n_neighbors : `int`, optional (default: 30)
         Specify the number of nearest neighbors in the knn graph. If knn ==
         False, set the Gaussian kernel width to the distance of the kth
         neighbor (method 'local').
-    knn : bool, optional (default: True)
+    knn : `bool`, optional (default: True)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
-    n_pcs : int, optional (default: 50)
+    n_pcs : `int`, optional (default: 50)
         Use n_pcs PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
-    n_jobs : int or None
-        Number of CPUs to use (default: sett.n_cpus).
-    copy : bool (default: False)
+    n_jobs : `int` or `None`
+        Number of CPUs to use (default: `sc.settings.n_jobs`).
+    copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
     Returns
     -------
-    The following is added to adata.smp
-        X_diffmap : np.ndarray
-            Array of shape n_samples × n_comps. DiffMap representation of data,
-            which is the right eigen basis of transition matrix with eigenvectors as
-            columns.
-    The following is added to adata.uns
-        diffmap_evals : np.ndarray
-            Eigenvalues of the transition matrix.
+    Depending on `copy`, returns or updates `adata` with the following fields.
 
-    References
-    ----------
-    - Diffusion Maps: Coifman et al., PNAS 102, 7426 (2005).
-    - Diffusion Maps applied to single-cell data: Haghverdi et al., Bioinformatics
-      31, 2989 (2015).
-    - Diffusion Pseudotime: Haghverdi et al., Nature Methods 13, 3971 (2016).
-    - Diffusion Maps as a flavour of spectral clustering: von Luxburg,
-      arXiv:0711.0189 (2007).
+    X_diffmap : `np.ndarray` (`adata.smpm`, dtype `float`)
+        Array of shape (#samples) × (#eigen vectors). DiffMap representation of
+        data, which is the right eigen basis of the transition matrix with
+        eigenvectors as columns.
+    diffmap_evals : `np.ndarray` (`adata.uns`)
+        Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     logg.info('running Diffusion Maps', r=True)
     adata = adata.copy() if copy else adata
