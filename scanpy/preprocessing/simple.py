@@ -184,9 +184,10 @@ def filter_genes_dispersion(data,
         return adata if copy else None
     logg.info('filter highly variable genes by dispersion and mean',
               r=True, end=' ')
-    X = data  # proceed with data matrix
+    X = data  # no copy necessary, X remains unchanged in the following
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
+    mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
     if log:  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan

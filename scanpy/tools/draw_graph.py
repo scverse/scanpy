@@ -30,20 +30,17 @@ def draw_graph(adata,
 
     Often a good alternative to tSNE, but runs considerably slower.
 
-    `[source] <tl.draw_graph_>`__ `Force-directed graph drawing`_ describes a
+    `Force-directed graph drawing`_ describes a
     class of long-established algorithms for visualizing graphs. It has been
     suggested for visualizing single-cell data by [Weinreb17]_. Here, by
     default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many
     other layouts are available. Uses the igraph implementation [Csardi06]_.
 
     .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
-    .. _tl.draw_graph: https://github.com/theislab/scanpy/tree/master/scanpy/tools/draw_graph.py
-
-
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     layout : str, optional (default: 'fr')
         Any valid igraph layout: http://igraph.org/c/doc/igraph-Layout.html. Of
@@ -61,15 +58,10 @@ def draw_graph(adata,
 
     Returns
     -------
-    Returns or updates adata depending on `copy` with
-         `"X_draw_graph_" + layout`, the graph-drawing coordinates (adata.smp)
+    Depending on `copy`, returns or updates `adata` with the following fields.
 
-    References
-    ----------
-    - The package "igraph", which provides the drawing implementations used
-      here: Csardi & Nepusz, InterJournal Complex Systems, 1695 (2006)
-    - Suggestion to use the "spring" graph-drawing algorithm of the package D3js
-      for single-cell data: Weinreb et al., bioRxiv doi:10.1101/090332 (2016)
+    X_draw_graph_`layout` : `np.ndarray` (`adata.smpm`, dtype `float`)
+        Array of shape #samples × 2. Coordinates of graph layout.
     """
     from .. import logging as logg
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
@@ -98,15 +90,14 @@ def draw_graph(adata,
         ig_layout = g.layout(layout, root=root, **kwargs)
     else:
         ig_layout = g.layout(layout, **kwargs)
-    if 'draw_graph_layout' in adata.uns:
-        adata.uns['draw_graph_layout'] = list(adata.uns['draw_graph_layout']) + [layout]
-    else:
-        adata.uns['draw_graph_layout'] = [layout]
+    adata.uns['draw_graph_params'] = np.array(
+        (layout, random_state,),
+        dtype=[('layout', 'U20'), ('random_state', int)])
     smp_key = 'X_draw_graph_' + layout
     adata.smpm[smp_key] = np.array(ig_layout.coords)
     logg.m('    finished', t=True, end=' ')
     logg.m('and added\n'
            '    "{}", graph_drawing coordinates (adata.smp)\n'
-           '    "draw_graph_layout", the chosen layout (adata.uns)'
+           '    "draw_graph_params", the parameters (adata.uns)'
            .format(smp_key))
     return adata if copy else None
