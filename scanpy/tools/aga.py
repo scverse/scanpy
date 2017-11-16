@@ -21,7 +21,7 @@ doc_string_base = dedent("""\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Note: In order to compute distances along the graph (pseudotimes), you need 
+    Note: In order to compute distances along the graph (pseudotimes), you need
     to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
     <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
 
@@ -105,18 +105,18 @@ doc_string_base = dedent("""\
 
 
 doc_string_returns = dedent("""\
-        aga_adjacency_full_attachedness : np.ndarray in adata.uns
+        aga_adjacency_full_attachedness : np.ndarray (adata.uns)
             The full adjacency matrix of the abstracted graph, weights
             correspond to connectedness.
-        aga_adjacency_full_confidence : np.ndarray in adata.uns
+        aga_adjacency_full_confidence : np.ndarray (adata.uns)
             The full adjacency matrix of the abstracted graph, weights
             correspond to confidence in the presence of an edge.
-        aga_adjacency_tree_confidence : sparse csr matrix in adata.uns
+        aga_adjacency_tree_confidence : sparse csr matrix (adata.uns)
             The adjacency matrix of the tree-like subgraph that best explains
             the topology
-        aga_groups : np.ndarray of dtype string in adata.smp
+        aga_groups : pd.Series (adata.smp, dtype category)
             Group labels for each sample.
-        aga_pseudotime : np.ndarray of dtype float in adata.smp
+        aga_pseudotime : pd.Series (adata.smp, dtype float)
             Pseudotime labels, that is, distance a long the manifold for each
             cell.
     """)
@@ -147,7 +147,8 @@ def aga(adata,
     fresh_compute_louvain = False
     if (node_groups == 'louvain'
         and ('louvain_groups' not in adata.smp_keys()
-             or ('louvain_params' in adata.uns and adata.uns['louvain_params']['resolution'] != resolution)
+             or ('louvain_params' in adata.uns
+                 and adata.uns['louvain_params']['resolution'] != resolution)
              or recompute_louvain
              or not data_graph.no_recompute_of_graph_necessary(
             adata,
@@ -224,7 +225,7 @@ def aga(adata,
     xsorted = np.argsort(x)
     ypos = np.searchsorted(x[xsorted], y)
     indices = xsorted[ypos]
-        
+
     adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness[indices, :][:, indices]
     adata.uns['aga_adjacency_full_confidence'] = full_confidence[indices, :][:, indices]
     adata.uns['aga_adjacency_tree_confidence'] = tree_confidence[indices, :][:, indices]
@@ -626,7 +627,8 @@ class AGA(data_graph.DataGraph):
         """Translates the attachedness measure into a confidence measure.
         """
         if sp.sparse.issparse(tree_adjacency):
-            tree_adjacency = [tree_adjacency[i].nonzero()[1] for i in range(tree_adjacency.shape[0])]
+            tree_adjacency = [tree_adjacency[i].nonzero()[1]
+                              for i in range(tree_adjacency.shape[0])]
         segs_distances = 1/full_attachedness
         if not tree_based_confidence:  # inter- and intra-cluster based confidence
             from scipy.stats import norm
@@ -644,12 +646,14 @@ class AGA(data_graph.DataGraph):
                     elif actual < 1e-12:
                         confidence[i, j] = 0
                     else:
-                        confidence[i, j] = 2 * norm.cdf(actual, expected, np.sqrt(variance))
+                        confidence[i, j] = 2 * norm.cdf(
+                            actual, expected, np.sqrt(variance))
                     # i_name = self.segs_names_original[i]
                     # j_name = self.segs_names_original[j]
                     # print(i_name, j_name, expected, actual, variance, confidence[i, j])
             full_confidence = confidence + confidence.T
-            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency)
+            tree_confidence = self.compute_tree_confidence(
+                full_confidence, tree_adjacency)
         else:
             # compute the average tree distances
             tree_distances = []
@@ -662,7 +666,9 @@ class AGA(data_graph.DataGraph):
                 np.exp(-(segs_distances-median_tree_distances)/median_tree_distances)
                 [segs_distances > median_tree_distances])
             np.fill_diagonal(full_confidence, 0)
-            tree_confidence = self.compute_tree_confidence(full_confidence, tree_adjacency, minimal_tree_attachedness=MINIMAL_TREE_ATTACHEDNESS)
+            tree_confidence = self.compute_tree_confidence(
+                full_confidence, tree_adjacency,
+                minimal_tree_attachedness=MINIMAL_TREE_ATTACHEDNESS)
         return full_confidence, tree_confidence
 
     def compute_tree_confidence(self, full_confidence, tree_adjacency, minimal_tree_attachedness=1e-14):
