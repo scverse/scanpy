@@ -24,7 +24,7 @@ def louvain(adata,
             recompute_pca=False,
             recompute_distances=False,
             recompute_graph=False,
-            n_dcs=15,
+            n_dcs=None,
             n_jobs=None,
             copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.

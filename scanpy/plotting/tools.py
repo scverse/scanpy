@@ -441,7 +441,7 @@ def aga(
         show=None,
         save=None,
         ext=None,
-        title_graph=None,
+        title_graph='abstracted graph',
         groups_graph=None,
         color_graph=None,
         **aga_graph_params):
