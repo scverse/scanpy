@@ -27,20 +27,21 @@ doc_string_base = dedent("""\
 
         adata.add['iroot'] = np.flatnonzero(adata.smp['exp_groups'] == 'Stem')[0]
 
-    Approximate graph abstraction (AGA) quantifies the connectivity of partitions of a
-    neighborhood graph of single cells, thereby generating a much simpler
-    abstracted graph whose nodes label the partitions. Together with a random
-    walk-based distance measure, this generates a topology preserving map of
-    single cells --- a partial coordinatization of data useful for exploring and
-    explaining its variation. We use the abstracted graph to assess which
-    subsets of data are better explained by discrete clusters than by a
-    continuous variable, to trace gene expression changes along aggregated
-    single-cell paths through data and to infer abstracted trees that best
-    explain the global topology of data.
+    Approximate graph abstraction (AGA) quantifies the connectivity of
+    partitions of a neighborhood graph of single cells, thereby generating a
+    much simpler abstracted graph whose nodes label the partitions. Together
+    with a random walk-based distance measure, this generates a partial
+    coordinatization of data useful for exploring and explaining its
+    variation. The abstracted graph can be used to assess which subsets of data
+    are better explained by discrete clusters than by a continuous variable, to
+    trace gene expression changes along aggregated single-cell paths through
+    data and to infer abstracted trees that best explain the global topology of
+    data.
 
-    The Louvain partitioning has been suggested by [Levine15]_ for analyzing
-    single cells. The random-walk based distance measure within AGA is an
-    extension of DPT [Haghverdi16]_.
+    AGA starts off from two main computational approaches for analyzing single
+    cell data. The Louvain algorithm, which has been suggested for clustering
+    single-cell data by [Levine15]_ for analyzing single cells. The random-walk
+    based distance measure within AGA is an extension of DPT [Haghverdi16]_.
 
     Most of the following parameters appear similarly in other tools and are
     used to generate the graph.
@@ -61,12 +62,12 @@ doc_string_base = dedent("""\
     n_dcs : int, optional (default: 10)
         Number of diffusion components (very similar to eigen vectors of
         adjacency matrix) to use for distance computations.
-    node_groups : any categorical sample annotation or {{'louvain', 'segments'}}, optional (default: 'louvain')
-        Criterion to determine the resoluting partitions of the
-        graph/data. 'louvain' uses the louvain algorithm and optimizes
-        modularity of the graph, 'segments' uses a bipartioning
-        criterium that is loosely inspired by hierarchical clustering. You can
-        also pass your predefined groups by choosing any sample annotation.
+    groups : any categorical smp/cell annotation or {{'louvain_groups', 'segments'}}, optional (default: 'louvain_groups')
+        Criterion to determine the resulting partitions of the single-cell
+        graph. 'louvain_groups' uses the louvain algorithm and optimizes
+        modularity of the graph, 'segments' uses a bipartioning criterium that
+        is loosely inspired by hierarchical clustering. You can also pass your
+        predefined groups by choosing any sample annotation.
     resolution : float, optional (default: 1.0)
         See tool `louvain`.
     random_state : int, optional (default: 0)
@@ -81,9 +82,9 @@ doc_string_base = dedent("""\
         How to measure connectedness between groups.
     n_nodes : int or None, optional (default: None)
         Number of nodes in the abstracted graph. Except when choosing
-        'segments' for `node_groups`, for which `n_nodes` defaults to
+        'segments' for `groups`, for which `n_nodes` defaults to
         `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
-        choice of `node_groups`.
+        choice of `groups`.
     recompute_graph : bool, optional (default: False)
         Recompute single-cell graph. Only then `n_neighbors` has an effect if
         there is already a cached `distance` or `X_diffmap` in adata.
@@ -126,8 +127,8 @@ def aga(adata,
         n_neighbors=None,
         n_pcs=50,
         n_dcs=10,
-        node_groups='louvain',
-        resolution=1,
+        groups='louvain_groups',
+        resolution=None,
         random_state=0,
         attachedness_measure='connectedness',
         tree_detection='min_span_tree',
@@ -145,9 +146,11 @@ def aga(adata,
         raise ValueError('`tree_detection` needs to be one of {}'
                          .format({'iterative_matching', 'min_span_tree'}))
     fresh_compute_louvain = False
-    if (node_groups == 'louvain'
+    if (groups == 'louvain_groups'
         and ('louvain_groups' not in adata.smp_keys()
+             # resolution does not match
              or ('louvain_params' in adata.uns
+                 and resolution is not None
                  and adata.uns['louvain_params']['resolution'] != resolution)
              or recompute_louvain
              or not data_graph.no_recompute_of_graph_necessary(
@@ -167,8 +170,7 @@ def aga(adata,
                 n_dcs=n_dcs,
                 random_state=random_state)
         fresh_compute_louvain = True
-    clusters = node_groups
-    if node_groups == 'louvain': clusters = 'louvain_groups'
+    clusters = groups
     logg.info('running Approximate Graph Abstraction (AGA)', reset=True)
     if ('iroot' not in adata.uns
         and 'xroot' not in adata.uns
@@ -271,7 +273,8 @@ def aga_expression_entropies(adata):
         Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
-    groups_order, groups_masks = utils.select_groups(adata, smp='aga_groups')
+    groups_order, groups_masks = utils.select_groups(adata,
+                                                     key=adata.uns['aga_groups_key'])
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask]
@@ -473,6 +476,8 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
 
 class AGA(data_graph.DataGraph):
     """Approximate Graph Abstraction
+
+    This needs to be rewritten in a cleaner way.
     """
 
     def __init__(self,

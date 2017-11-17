@@ -1,8 +1,7 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Preprocessing recipes from the literature
 """
 
-from .. import settings as sett
 from . import simple as pp
 
 
@@ -10,7 +9,7 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
                      n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
     """Normalization and filtering as of [Weinreb17]_.
 
-    This is deprecated but remains for backwards compatibility.
+    Expects logarithmized data.
 
     Parameters
     ----------
@@ -24,10 +23,6 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
         Change to use different intial states for the optimization.
     copy : bool (default: False)
         Return a copy if true.
-
-    Reference
-    ---------
-    Weinreb et al., bioRxiv doi:10.1101/090332 (2016).
     """
     from scipy.sparse import issparse
     if issparse(adata.X):
@@ -54,6 +49,8 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
 def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=False):
     """Normalization and filtering as of [Zheng17]_.
 
+    Expects non-logarithmized data.
+
     This reproduces the preprocessing of the reference below, at the time, the
     Cell Ranger R Kit preprocessing of 10X Genomics.
 
@@ -68,16 +65,6 @@ def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=F
         Show a plot of the gene dispersion vs. mean relation.
     copy : bool, optional (default: False)
         Return a copy of adata instead of updating the passed object.
-
-    Returns
-    -------
-    Returns or updates adata depending on `copy` with
-         adata.X, storing the preprocessed data matrix
-
-    Reference
-    ---------
-    Zheng et al., Nature Communications 8, 14049 (2017)
-        https://doi.org/10.1038/ncomms14049.
     """
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
