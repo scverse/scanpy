@@ -59,6 +59,9 @@ setup(
     install_requires=requires,
     packages=find_packages(),  # + ['scanpy.sim_models'], might need to include sim_models
     include_dirs=include_dirs,
+    # `package_data` does NOT work for source distributions!!!
+    # you also need MANIFTEST.in
+    # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     package_data={'': '*.txt'},
     include_package_data=True,
     ext_modules=ext_modules,
