@@ -9,7 +9,7 @@
 
 Consistency updates in the design of :class:`~scanpy.api.AnnData` and the code base. Everything is backwards compatible.
 
-- `AnnData can now be concatenated <https://scanpy.readthedocs.io/en/stable/api/scanpy.api.AnnData.html>`_
+- `AnnData can now be concatenated <https://scanpy.readthedocs.io/en/latest/api/scanpy.api.AnnData.html>`_
 - `AnnData is also available as a separate package <https://pypi.python.org/pypi/anndata/>`_
 - `results of approximate graph abstraction (AGA) are simplified <https://github.com/theislab/graph_abstraction>`_
 - stability fixes
