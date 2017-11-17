@@ -1,2 +1,3 @@
 include versioneer.py
 include scanpy/_version.py
+include scanpy/*/*.txt
