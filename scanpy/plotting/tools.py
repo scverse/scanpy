@@ -563,25 +563,25 @@ def aga_graph(
         adata,
         solid_edges='aga_adjacency_tree_confidence',
         dashed_edges='aga_adjacency_full_confidence',
-        threshold_dashed=1e-6,
-        root=0,
-        rootlevel=None,
         layout=None,
-        color=None,
+        root=0,
         groups=None,
+        color=None,
+        threshold_dashed=1e-6,
         fontsize=None,
         node_size_scale=1,
         node_size_power=0.5,
-        title='abstracted graph',
-        ext='png',
-        left_margin=0.01,
         edge_width_scale=1,
         min_edge_width=None,
         max_edge_width=None,
+        title='abstracted graph',
+        ext='png',
+        left_margin=0.01,
         random_state=0,
         pos=None,
         cmap=None,
         frameon=True,
+        rootlevel=None,
         return_pos=False,
         export_to_gexf=False,
         show=None,
@@ -589,34 +589,54 @@ def aga_graph(
         ax=None):
     """Plot the abstracted graph.
 
+    This uses igraph's layout algorithms for most layouts [Csardi06]_.
+
     Parameters
     ----------
-    groups : `str`, `list`, `dict`
-       The node groups labels.
-    color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
-        Besides cluster colors, lists and uniform colors this also acceppts
-        {'degree_dashed', 'degree_solid'} which are plotted using continuous
-        color map.
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
     solid_edges : `str`, optional (default: 'aga_adjacency_tree_confidence')
-        Key for ``adata.uns`` that specifies the matrix that stores the edges
+        Key for `adata.uns` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: 'aga_adjacency_full_confidence')
-        Key for ``adata.uns`` that specifies the matrix that stores the edges
-        to be drawn dashed grey. If ``None``, no dashed edges are drawn.
+        Key for `adata.uns` that specifies the matrix that stores the edges
+        to be drawn dashed grey. If `None`, no dashed edges are drawn.
+    layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
+        Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
+        Reingold Tilford. 'eq_tree' stands for 'eqally spaced tree'. All but
+        'eq_tree' use the igraph layout function. All other igraph layouts are
+        also permitted. See also parameter `pos`.
+    random_state : `int` or `None`, optional (default: 0)
+        For layouts with random initialization like 'fr', change this to use
+        different intial states for the optimization. If `None`, the initial
+        state is not reproducible.
+    root : int, str or list of int, optional (default: 0)
+        If choosing a tree layout, this is the index of the root node or root
+        nodes. If this is a non-empty vector then the supplied node IDs are used
+        as the roots of the trees (or a single tree if the graph is
+        connected. If this is `None` or an empty list, the root vertices are
+        automatically calculated based on topological sorting.
+    groups : `str`, `list`, `dict`
+        The node (groups) labels.
+    color : color string or iterable, {'degree_dashed', 'degree_solid'}, optional (default: None)
+        The node colors.  Besides cluster colors, lists and uniform colors this
+        also acceppts {'degree_dashed', 'degree_solid'} which are plotted using
+        continuous color map.
     threshold_dashed : `float`, optional (default: 1e-6)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
+    fontsize : int (default: None)
+        Font size for node labels.
+    node_size_scale : float (default: 1.0)
+        Increase or decrease the size of the nodes.
+    node_size_power : float (default: 0.5)
+        The power with which groups sizes influence the radius of the nodes.
     edge_width_scale : `float`, optional (default: 1.5)
-        Edge with scale in units of ``rcParams['lines.linewidth']``.
-    min_edge_width : `float`, optional (default: ``None``)
+        Edge with scale in units of `rcParams['lines.linewidth']`.
+    min_edge_width : `float`, optional (default: `None`)
         Min width of solid edges.
-    max_edge_width : `float`, optional (default: ``None``)
+    max_edge_width : `float`, optional (default: `None`)
         Max width of solid and dashed edges.
-    layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
-        Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
-        Reingold Tilford. 'eq_tree' stands for "eqally spaced tree". All but
-        'eq_tree' use the igraph layout function. All other igraph layouts are
-        also permitted. See also parameter `pos`.
     pos : filename of `.gdf` file, array-like, optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
@@ -626,21 +646,9 @@ def aga_graph(
         Gephi.
     return_pos : `bool`, optional (default: `False`)
         Return the positions.
-    root : int, str or list of int, optional (default: 0)
-        The index of the root node or root nodes. If this is a non-empty vector
-        then the supplied node IDs are used as the roots of the trees (or a
-        single tree if the graph is connected. If this is `None` or an empty list,
-        the root vertices are automatically calculated based on topological
-        sorting, performed with the opposite of the mode argument.
-    rootlevel : list of `int`, optional (default: `None`)
-        The index of the root node or root vertices. If this is a non-empty
-        vector then the supplied node IDs are used as the roots of the trees
-        (or a single tree if the graph is connected. If this is None or an empty
-        list, the root vertices are automatically calculated based on
-        topological sorting, performed with the opposite of the mode argument.
     title : `str`, optional (default: `None`)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
+         Provide title for panels either as `['title1', 'title2', ...]` or
+         `'title1,title2,...'`.
     frameon : `bool`, optional (default: `True`)
          Draw a frame around the abstracted graph.
     show : `bool`, optional (default: `None`)
@@ -938,8 +946,8 @@ def _aga_graph(
                        horizontalalignment='center',
                        transform=a.transAxes,
                        size=fontsize)
-        # TODO: this is a terrible hack, but if we use the solution above (``not
-        # force_labels_to_front``), labels get hidden behind pies
+        # TODO: this is a terrible hack, but if we use the solution above (`not
+        # force_labels_to_front`), labels get hidden behind pies
         if force_labels_to_front and node_labels is not None:
             for count, n in enumerate(nx_g_solid.nodes()):
                 pie_size = groups_sizes[count] / base_scale_scatter
@@ -970,14 +978,14 @@ def _aga_graph(
 
 def aga_path(
         adata,
-        groups=None,
         nodes=[0],
+        n_avg=1,
+        groups=None,
         keys=[0],
         normalize_to_zero_one=False,
         as_heatmap=True,
         color_map=None,
         xlim=[None, None],
-        n_avg=1,
         title=None,
         left_margin=None,
         show_left_y_ticks=None,
@@ -998,18 +1006,27 @@ def aga_path(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    groups : str, optional (default: None)
-        Key of the grouping used to run AGA. If None, defaults to
+    nodes : list of indices
+        A path through nodes of the abstracted graph, that is, indices of groups
+        that have been used to run AGA.
+    n_avg : `int`, optional (default: 1)
+        Number of data points to include in computation of running average.
+    groups : `str`, optional (default: `None`)
+        Key of the grouping used to run AGA. If `None`, defaults to
         `adata.uns['aga_groups_key']`.
-    palette_groups : list of colors or None, optional (default: None)
+    palette_groups : list of colors or `None`, optional (default: `None`)
         Ususally, use the same `sc.pl.palettes...` as used for coloring the
         abstracted graph.
-    as_heatmap : bool, optional (default: False)
+    as_heatmap : `bool`, optional (default: `True`)
         Plot the timeseries as heatmap.
-    normalize_to_zero_one : bool, optional (default: True)
+    normalize_to_zero_one : `bool`, optional (default: `True`)
         Shift and scale the running average to [0, 1] per gene.
+
+    Returns
+    -------
+    A `matplotlib.Axes`, if `ax` is `None`, else `None`.
     """
     ax_was_none = ax is None
     if show_left_y_ticks is None:
