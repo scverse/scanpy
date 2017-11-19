@@ -22,13 +22,13 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
         Specify the number of nearest neighbors in the knn graph. If knn ==
         False, set the Gaussian kernel width to the distance of the kth
         neighbor (method 'local').
-    knn : `bool`, optional (default: True)
+    knn : `bool`, optional (default: `True`)
         If True, use a hard threshold to restrict the number of neighbors to
         k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
         to assign low weights to neighbors more distant than the kth nearest
         neighbor.
     n_pcs : `int`, optional (default: 50)
-        Use n_pcs PCs to compute the Euclidian distance matrix, which is the
+        Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
         with PCA.
     n_jobs : `int` or `None`

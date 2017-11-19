@@ -45,7 +45,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         optimization, the early exaggeration factor or the learning rate
         might be too high. If the cost function gets stuck in a bad local
         minimum increasing the learning rate helps sometimes.
-    random_state : int or None, optional (default: 0)
+    random_state : `int` or `None`, optional (default: 0)
         Change this to use different intial states for the optimization. If `None`,
         the initial state is not reproducible.
     use_fast_tsne : bool, optional (default: True)

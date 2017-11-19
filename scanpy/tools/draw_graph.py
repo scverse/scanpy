@@ -30,28 +30,32 @@ def draw_graph(adata,
 
     Often a good alternative to tSNE, but runs considerably slower.
 
-    `Force-directed graph drawing`_ describes a
+    `Force-directed graph drawing
+    <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a
     class of long-established algorithms for visualizing graphs. It has been
     suggested for visualizing single-cell data by [Weinreb17]_. Here, by
     default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many
     other layouts are available. Uses the igraph implementation [Csardi06]_.
 
-    .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
-
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    layout : str, optional (default: 'fr')
-        Any valid igraph layout: http://igraph.org/c/doc/igraph-Layout.html. Of
-        particular interest are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid
-        Fruchterman Reingold, faster than 'fr'), 'kk' (Kamadi Kawai', slower
-        than 'fr'), 'lgl' (Large Graph, very fast), 'drl' (Distributed Recursive
-        Layout, pretty fast) and 'rt' (Reingold Tilford tree layout).
-    n_neighbors : int
+    layout : `str`, optional (default: 'fr')
+        Any valid `igraph layout
+        <http://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
+        are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
+        faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
+        Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and
+        'rt' (Reingold Tilford tree layout).
+    n_neighbors : `int`
         Number of nearest neighbors in graph.
-    n_pcs : int
+    n_pcs : `int`
         Number of PCs used to compute distances.
+    random_state : `int` or `None`, optional (default: 0)
+        For layouts with random initialization like 'fr', change this to use
+        different intial states for the optimization. If `None`, the initial
+        state is not reproducible.
     **kwargs : further parameters
         Parameters of chosen igraph algorithm. See, e.g.,
         http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold.
