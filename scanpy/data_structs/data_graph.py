@@ -237,6 +237,7 @@ class DataGraph():
             else:
                 self.k = None  # currently do not store this, is unknown
             # for output of spectrum
+            if n_dcs is None: n_dcs = adata.smpm['X_diffmap'].shape[1] + 1
             self.X_diffmap = adata.smpm['X_diffmap'][:, :n_dcs-1]
             self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
             self.rbasis = np.c_[adata.smp['X_diffmap0'].values[:, None],
