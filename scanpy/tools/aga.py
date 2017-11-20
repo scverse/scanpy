@@ -114,8 +114,6 @@ doc_string_returns = dedent("""\
         aga_adjacency_tree_confidence : sc.sparse csr matrix (adata.uns)
             The adjacency matrix of the tree-like subgraph that best explains
             the topology.
-        aga_groups : pd.Series (adata.smp, dtype category)
-            Group labels for each sample.
         aga_pseudotime : pd.Series (adata.smp, dtype float)
             Pseudotime labels, that is, distance a long the manifold for each
             cell.
