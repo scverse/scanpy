@@ -48,6 +48,10 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     logg.info('running Diffusion Maps', r=True)
+    if n_comps <= 2:
+        raise ValueError('Provide any value greater than 2. '
+                         'Mind that the 0th component of diffusion maps '
+                         'is not used for visualization.')
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
                    n_dcs=n_comps, n_jobs=n_jobs, recompute_graph=True,
