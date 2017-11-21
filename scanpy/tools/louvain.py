@@ -80,6 +80,9 @@ def louvain(adata,
     adjacency = adata.uns['data_graph_norm_weights']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
+        if not isinstance(restrict_categories[0], str):
+            raise ValueError('You need to use strings to label categories, '
+                             'e.g. \'1\' instead of 1.')
         restrict_indices = adata.smp[restrict_key].isin(restrict_categories).values
         adjacency = adjacency[restrict_indices, :]
         adjacency = adjacency[:, restrict_indices]
