@@ -128,8 +128,8 @@ def filter_genes(data, min_cells=None, min_counts=None, copy=False):
 
 def filter_genes_dispersion(data,
                             flavor='seurat',
-                            min_disp=0.5, max_disp=None,
-                            min_mean=0.0125, max_mean=3,
+                            min_disp=None, max_disp=None,
+                            min_mean=None, max_mean=None,
                             n_top_genes=None,
                             log=True,
                             copy=False):
@@ -142,34 +142,43 @@ def filter_genes_dispersion(data,
 
     Parameters
     ----------
-    X : AnnData or array-like
+    data : AnnData, np.ndarray, sp.sparse
         Data matrix storing unlogarithmized data.
     flavor : {'seurat', 'cell_ranger'}
         Choose method for computing normalized dispersion. Note that Seurat
         passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=None : float
-        Cutoffs for the gene expression, used if n_top_genes is None.
-    n_top_genes : int or None (default: None)
+        If `n_top_genes` is not `None`, these cutoffs for the normalized gene
+        expression are ignored.
+    n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
-    log : bool
+    log : `bool`
         Use the logarithm of mean and variance.
-    copy : bool (default: False)
+    copy : `bool` (default: `False`)
         If an AnnData is passed, determines whether a copy is returned.
 
     Returns
     -------
     If an AnnData `adata` is passed, returns or updates `adata` depending on
     `copy`. It filters the adata object and adds the annotations
-        "means" : field in adata.var
-             Means per gene.
-        "dispersions" : field in adata.var
-             Dispersions per gene.
-        "dispersions_norm" : field in adata.var
-             Normalized dispersions per gene.
+
+    means : pd.Series (adata.var)
+        Means per gene.
+    dispersions : pd.Series (adata.var)
+        Dispersions per gene.
+    dispersions_norm : pd.Series (adata.var)
+        Normalized dispersions per gene.
+
     If a data matrix `X` is passed, the annotation is returned as np.recarray
     with the columns:
         gene_subset, means, dispersions, dispersion_norm
     """
+    if n_top_genes is not None and not all([
+            min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
+        logg.warn('If you pass `n_top_genes`, all cutoffs are ignored.')
+    if min_disp is None: min_disp = 0.5
+    if min_mean is None: min_mean = 0.0125
+    if max_mean is None: max_mean = 3
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         result = filter_genes_dispersion(adata.X, log=log,
