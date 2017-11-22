@@ -8,14 +8,13 @@ Sets global variables like verbosity, manages logging and timing.
 # The very first version (tracking cpu time) of this was based on
 # http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
 
-import os
 import atexit
 import time
 from functools import reduce
 
 # directory for configuration files etc.
-if not os.path.exists('.scanpy/'):
-    os.makedirs('.scanpy/')
+# if not os.path.exists('.scanpy/'):
+#     os.makedirs('.scanpy/')
 
 # --------------------------------------------------------------------------------
 # Global Settings Attributes
@@ -239,7 +238,7 @@ def add_args(p):
        type=int, default=1, metavar='i',
        help='Pass integer i > 1 if you want to use a fraction of 1/i '
             'of the data (default: %(default)d).')
-    aa = p.add_argument_group('General settings (all saved in .scanpy/config)').add_argument
+    aa = p.add_argument_group('General settings').add_argument
     aa('-v', '--verbosity',
        type=int, default=verbosity, metavar='v',
        help='Pass v = 2 (no hints "-->", only info, warnings, errors) for less output, '
