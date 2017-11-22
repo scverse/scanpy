@@ -64,7 +64,7 @@ def read(filename, sheet=None, ext=None, delimiter=None,
 
     If a dict, the dict contains
 
-    X : array-like or sparse matrix, optional
+    X : array-like or sparse matrix
         Data array for further processing, columns correspond to genes,
         rows correspond to samples.
     row_names : np.ndarray, optional
