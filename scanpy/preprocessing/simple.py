@@ -24,34 +24,37 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
     "unreliable" samples.
 
-    Only provide one of the optional arguments per call.
+    Only provide one of the optional arguments (`min_counts`, `min_genes`,
+    `max_counts`, `max_genes`) per call.
 
     Parameters
     ----------
-    data : AnnData, np.ndarray, sp.spmatrix
-        Data matrix of shape n_smps × n_vars. Rows correspond to cells and
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
+        Data matrix of shape `n_smps` × `n_vars`. Rows correspond to cells and
         columns to genes.
-    min_counts : int, optional (default: None)
+    min_counts : `int`, optional (default: `None`)
         Minimum number of counts required for a cell to pass filtering.
-    min_genes : int, optional (default: None)
+    min_genes : `int`, optional (default: `None`)
         Minimum number of genes expressed required for a cell to pass filtering.
-    max_counts : int, optional (default: None)
+    max_counts : `int`, optional (default: `None`)
         Maximum number of counts required for a cell to pass filtering.
-    max_genes : int, optional (default: None)
+    max_genes : `int`, optional (default: `None`)
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy : bool, optional (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
-    If data is an AnnData, the filtered data matrix is returned, if it is an
-    array, the following to arrays are returned
-        cell_subset : np.ndarray
-            Boolean index mask that does filtering. True means that the cell is
-            kept. False means the cell is removed.
-        number_per_cell: np.ndarray
-            Either n_counts or n_genes per cell.
+    If `data` is an :class:`~scanpy.api.AnnData`, the filtered data matrix.
 
+    Otherwise a tuple with the following entries is returned
+
+    cell_subset : `np.ndarray`
+        Boolean index mask that does filtering. `True` means that the cell is
+        kept. `False` means the cell is removed.
+    number_per_cell: `np.ndarray`
+        Either `n_counts` or `n_genes` per cell.
     """
     if min_genes is not None and min_counts is not None:
         raise ValueError('Either provide min_counts or min_genes, but not both.')

@@ -10,7 +10,7 @@ of the form::
 
     sc.tl.louvain(adata, **params)
 
-where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n* *d*-dimensional gene expression measurements. To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None``. If you want to copy the :class:`~scanpy.api.AnnData` object, pass the ``copy`` argument::
+where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n* *d*-dimensional gene expression measurements. To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None``. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass the ``copy`` argument::
 
     adata_copy = sc.tl.louvain(adata, copy=True, **params)
 
@@ -62,11 +62,11 @@ to save the :class:`~scanpy.api.AnnData` as a collection of data arrays to a fil
 Plotting
 ^^^^^^^^
 
-For each tool, there is an associated plotting function::
+For each tool, there is an associated plotting function, for instance::
 
-    sc.pl.tool(adata)
+    sc.pl.louvain(adata)
 
-that retrieves and plots annotation in ``adata`` that has been added by ``sc.tl.tool(adata)``. Scanpy's plotting module can be viewed similar to Seaborn_: an extension of matplotlib_ that allows visualizing operations on AnnData objects with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions accept and return a ``Matplotlib.Axes`` object.
+This retrieves and plots annotation in ``adata`` that has been added by ``sc.tl.louvain(adata)``. Scanpy's plotting module is similar to Seaborn_: an extension of matplotlib_ that allows visualizing operations on AnnData objects with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions accept and return a ``Matplotlib.Axes`` object.
 
 .. _Seaborn: http://seaborn.pydata.org/
 .. _matplotlib: http://matplotlib.org/
