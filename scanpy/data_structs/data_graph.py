@@ -17,7 +17,7 @@ from .. import utils
 
 
 N_DCS = 15  # default number of diffusion components
-
+N_PCS = 50
 
 def add_or_update_graph_in_adata(
         adata,
@@ -55,20 +55,23 @@ def no_recompute_of_graph_necessary(
         n_neighbors=None,
         knn=None,
         n_dcs=None):
-    return (not recompute_pca
-            and not recompute_distances
-            and not recompute_graph
-            # make sure X_diffmap is there
-            and 'X_diffmap' in adata.smpm_keys()
-            # make sure enough DCs are there
-            and (adata.smpm['X_diffmap'].shape[1] >= n_dcs-1
-                 if n_dcs is not None else True)
-            # make sure that it's sparse
-            and (issparse(adata.uns['data_graph_norm_weights']) == knn
-                 if knn is not None else True)
-            # make sure n_neighbors matches
-            and n_neighbors is not None and n_neighbors == adata.uns[
-                'data_graph_distance_local'][0].nonzero()[0].size + 1)
+    conditions = [
+        not recompute_pca,
+        not recompute_distances,
+        not recompute_graph,
+        # make sure X_diffmap is there
+        'X_diffmap' in adata.smpm_keys(),
+        # make sure enough DCs are there
+        (adata.smpm['X_diffmap'].shape[1] >= n_dcs-1
+             if n_dcs is not None else True),
+        # make sure that it's sparse
+        (issparse(adata.uns['data_graph_norm_weights']) == knn
+             if knn is not None else True),
+        # make sure n_neighbors matches
+        (n_neighbors == adata.uns[
+            'data_graph_distance_local'][0].nonzero()[0].size + 1
+            if n_neighbors is not None else True)]
+    return all(conditions)
 
 
 def get_neighbors(X, Y, k):
@@ -145,8 +148,12 @@ def get_indices_distances_from_sparse_matrix(Dsq, k):
     distances = np.zeros((Dsq.shape[0], k), dtype=Dsq.dtype)
     for i in range(indices.shape[0]):
         neighbors = Dsq[i].nonzero()
-        indices[i] = neighbors[1]
-        distances[i] = Dsq[neighbors]
+        # account for the fact that the first neighbor is the data point
+        # itself...
+        indices[i][0] = i
+        indices[i][1:] = neighbors[1]
+        distances[i][0] = 0
+        distances[i][1:] = Dsq[neighbors]
     return indices, distances
 
 
@@ -208,7 +215,7 @@ class DataGraph():
                  k=None,
                  knn=True,
                  n_jobs=None,
-                 n_pcs=50,
+                 n_pcs=None,
                  n_dcs=None,
                  recompute_pca=False,
                  recompute_distances=False,
@@ -216,8 +223,7 @@ class DataGraph():
                  flavor='haghverdi16'):
         self.sym = True  # we do not allow asymetric cases
         self.flavor = flavor  # this is to experiment around
-        self.n_pcs = n_pcs
-        self.n_dcs = n_dcs if n_dcs is not None else N_DCS
+        self.n_pcs = n_pcs if n_pcs is not None else N_PCS
         self.init_iroot_and_X(adata, recompute_pca, n_pcs)
         # use the graph in adata
         if no_recompute_of_graph_necessary(
@@ -240,6 +246,7 @@ class DataGraph():
             if n_dcs is None: n_dcs = adata.smpm['X_diffmap'].shape[1] + 1
             self.X_diffmap = adata.smpm['X_diffmap'][:, :n_dcs-1]
             self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
+            self.n_dcs = len(self.evals)
             self.rbasis = np.c_[adata.smp['X_diffmap0'].values[:, None],
                                 adata.smpm['X_diffmap'][:, :n_dcs-1]]
             self.lbasis = self.rbasis
@@ -253,6 +260,7 @@ class DataGraph():
         # recompute the graph
         else:
             self.fresh_compute = True
+            self.n_dcs = n_dcs if n_dcs is not None else N_DCS
             self.k = k if k is not None else 30
             logg.info('    computing data graph with n_neighbors = {} '
                       .format(self.k))
