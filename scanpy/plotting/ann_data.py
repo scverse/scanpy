@@ -22,6 +22,7 @@ def scatter(
         x=None,
         y=None,
         color='grey',
+        sort_order=True,
         alpha=None,
         basis=None,
         groups=None,
@@ -55,6 +56,9 @@ def scatter(
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
     basis : {'pca', 'tsne', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
     groups : str, optional (default: all groups in color)

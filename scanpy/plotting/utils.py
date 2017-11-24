@@ -362,6 +362,7 @@ def setup_axes(
 
 def scatter_base(Y,
                  colors='blue',
+                 sort_order=True,
                  alpha=None,
                  highlights=[],
                  right_margin=None,
@@ -410,8 +411,13 @@ def scatter_base(Y,
         bottom = panel_pos[0][0]
         width = draw_region_width / figure_width
         height = panel_pos[1][0] - bottom
-        if projection == '2d': data = Y[:, 0], Y[:, 1]
-        elif projection == '3d': data = Y[:, 0], Y[:, 1], Y[:, 2]
+        Y_sort = Y
+        if not is_color_like(color) and sort_order:
+            sort = np.argsort(color)
+            color = color[sort]
+            Y_sort = Y[sort]
+        if projection == '2d': data = Y_sort[:, 0], Y_sort[:, 1]
+        elif projection == '3d': data = Y_sort[:, 0], Y_sort[:, 1], Y_sort[:, 2]
         if not isinstance(color, str) or color != 'white':
             sct = ax.scatter(*data,
                              marker='.',
