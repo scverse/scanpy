@@ -104,14 +104,11 @@ def louvain(adata,
                 # adata.uns['louvain_quality'] = part.quality()
             except AttributeError:
                 logg.warn('Did not find package louvain>=0.6, '
-                          'the clustering result will therefore not be 100% reproducible, '
-                          'but still meaningful! '
-                          'If you want 100% reproducible results, but louvain 0.6 is not yet '
-                          'available via "pip install louvain", '
-                          'either get the latest (development) version from '
-                          'https://github.com/vtraag/louvain-igraph or use the option '
-                          '`flavor=igraph` in sc.tl.louvain(). '
-                          'The latter does not provide a `resolution` parameter, though.')
+                          'the clustering result will therefore not '
+                          'be 100% reproducible, '
+                          'but still meaningful. '
+                          'If you want 100% reproducible results, '
+                          'update via "pip install louvain --upgrade".')
                 part = louvain.find_partition(g, method='RBConfiguration',
                                               resolution_parameter=resolution)
         elif flavor == 'igraph':
