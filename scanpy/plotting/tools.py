@@ -6,6 +6,7 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_categorical_dtype
 import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
@@ -447,9 +448,9 @@ def aga(
         **aga_graph_params):
     """Summary figure for approximate graph abstraction.
 
-    See `sc.pl.aga_scatter` and `sc.pl.aga_graph` for the parameters.
+    See :func:`~sanpy.api.pl.aga_scatter` and :func:`~scanpy.api.pl.aga_graph` for the parameters.
 
-    See `sc.pl.aga_path` for visualizing gene changes along paths through the
+    See :func:`~scanpy.api.pl.aga_path` for visualizing gene changes along paths through the
     abstracted graph.
     """
     axs, _, _, _ = utils.setup_axes(colors=[0, 1],
@@ -978,13 +979,13 @@ def _aga_graph(
 
 def aga_path(
         adata,
-        nodes=[0],
+        nodes,
+        variables=None,
+        annotations=['aga_pseudotime'],
         n_avg=1,
-        groups=None,
-        keys=[0],
-        normalize_to_zero_one=False,
-        as_heatmap=True,
         color_map=None,
+        color_maps_annotations={'aga_pseudotime': 'Greys'},
+        groups_key=None,
         xlim=[None, None],
         title=None,
         left_margin=None,
@@ -995,14 +996,16 @@ def aga_path(
         palette_groups=None,
         show_yticks=True,
         show_colorbar=True,
-        color_map_pseudotime=None,
         legend_fontsize=None,
         legend_fontweight=None,
+        normalize_to_zero_one=False,
+        as_heatmap=True,
         return_data=False,
+        keys=None,
         save=None,
         show=None,
         ax=None):
-    """Gene expression changes along paths in the abstracted graph.
+    """Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
@@ -1011,9 +1014,17 @@ def aga_path(
     nodes : list of indices
         A path through nodes of the abstracted graph, that is, indices of groups
         that have been used to run AGA.
+    variables : list of variables
+        These have to be present in `adata.var`.
+    annotations : list of annotations, optional (default: ['aga_pseudotime'])
+        Keys for `adata.smp`.
+    color_map : color map for plotting variables, optional
+        Matplotlib colormap.
+    color_maps_annotations : dict storing color maps, optional
+        Color maps for plotting the annotations.
     n_avg : `int`, optional (default: 1)
         Number of data points to include in computation of running average.
-    groups : `str`, optional (default: `None`)
+    groups_key : `str`, optional (default: `None`)
         Key of the grouping used to run AGA. If `None`, defaults to
         `adata.uns['aga_groups_key']`.
     palette_groups : list of colors or `None`, optional (default: `None`)
@@ -1032,14 +1043,12 @@ def aga_path(
     if show_left_y_ticks is None:
         show_left_y_ticks = False if show_nodes_twin else True
 
-    if groups is None:
+    if groups_key is None:
         if 'aga_groups_key' not in adata.uns:
             raise KeyError(
                 'Pass the key of the grouping with which you ran AGA, '
                 'using the parameter `groups`.')
         groups_key = adata.uns['aga_groups_key']
-    else:
-        groups_key = groups
     groups_names = adata.smp[groups_key].cat.categories
 
     if palette_groups is None:
@@ -1059,9 +1068,8 @@ def aga_path(
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
-    # todo: allow plotting more annotations
-    annotations_x = {}
-    annotations_x['pseudotimes'] = []
+    anno_dict = {anno: [] for anno in annotations}
+    keys = variables if keys is None else keys
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
@@ -1071,13 +1079,21 @@ def aga_path(
             idcs = idcs[idcs_group]
             if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
-            if ikey == 0: groups += [group for i in range(len(idcs))]
-            if ikey == 0: annotations_x['pseudotimes'] += list(adata.smp['aga_pseudotime'].values[idcs])
-            if ikey == 0: x_tick_locs.append(len(x))
+            if ikey == 0:
+                groups += [group for i in range(len(idcs))]
+                x_tick_locs.append(len(x))
+                for anno in annotations:
+                    series = adata.smp[anno]
+                    if is_categorical_dtype(series):
+                        series = series.cat.codes
+                    anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
             old_len_x = len(x)
             x = moving_average(x)
-            if ikey == 0: annotations_x['pseudotimes'] = moving_average(annotations_x['pseudotimes'])
+            if ikey == 0:
+                for key in annotations:
+                    if not isinstance(anno_dict[key][0], str):
+                        anno_dict[key] = moving_average(anno_dict[key])
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
@@ -1103,6 +1119,7 @@ def aga_path(
             ax.set_yticks([])
         ax.set_frame_on(False)
         ax.set_xticks([])
+        ax.tick_params(axis='both', which='both', length=0)
         ax.grid(False)
         if show_colorbar:
             pl.colorbar(img, ax=ax)
@@ -1144,25 +1161,35 @@ def aga_path(
                                        'verticalalignment': 'center'})
         groups_axis.set_xticks([])
         groups_axis.grid(False)
-        # pseudotime bar
-        pseudotime_axis = pl.axes([ax_bounds[0],
-                                   ax_bounds[1] - ax_bounds[3] / len(keys),
-                                   ax_bounds[2],
-                                   - ax_bounds[3] / len(keys)])
-        annotations_x['pseudotimes'] = np.array(annotations_x['pseudotimes'])[None, :]
-        if color_map_pseudotime is None:
-            color_map_pseudotime = 'Greys'
-        img = pseudotime_axis.imshow(annotations_x['pseudotimes'], aspect='auto',
-                                     interpolation='nearest',
-                                     cmap=color_map_pseudotime)
-        if show_yticks:
-            pseudotime_axis.set_yticklabels(['', 'distance $d$', ''],
-                                            fontsize=ytick_fontsize)
-        else:
-            pseudotime_axis.set_yticks([])
-        pseudotime_axis.set_frame_on(False)
-        pseudotime_axis.set_xticks([])
-        pseudotime_axis.grid(False)
+        groups_axis.tick_params(axis='both', which='both', length=0)
+        # further annotations
+        y_shift = ax_bounds[3] / len(keys)
+        for ianno, anno in enumerate(annotations):
+            if ianno > 0: y_shift = ax_bounds[3] / len(keys) / 2
+            anno_axis = pl.axes([ax_bounds[0],
+                                 ax_bounds[1] - (ianno+1) * y_shift,
+                                 ax_bounds[2],
+                                 - (ianno+1) * y_shift])
+            arr = np.array(anno_dict[anno])[None, :]
+            if anno not in color_maps_annotations:
+                color_map_anno = ('Vega10' if is_categorical_dtype(adata.smp[anno])
+                                  else 'Greys')
+            else:
+                color_map_anno = color_maps_annotations[anno]
+            img = anno_axis.imshow(arr, aspect='auto',
+                                   interpolation='nearest',
+                                   cmap=color_map_anno)
+            if show_yticks:
+                # rename the label for 'aga_pseudotime'
+                label = anno.replace('aga_pseudotime', 'distance $d$')
+                anno_axis.set_yticklabels(['', label, ''],
+                                          fontsize=ytick_fontsize)
+                anno_axis.tick_params(axis='both', which='both', length=0)
+            else:
+                anno_axis.set_yticks([])
+            anno_axis.set_frame_on(False)
+            anno_axis.set_xticks([])
+            anno_axis.grid(False)
     else:
         ax.set_xlabel(xlabel)
     if show_left_y_ticks:
@@ -1189,7 +1216,7 @@ def aga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = annotations_x['pseudotimes'].T
+        df['distance'] = anno_dict['aga_pseudotime'].T
         return ax, df if ax_was_none else df
     else:
         return ax if ax_was_none else None
