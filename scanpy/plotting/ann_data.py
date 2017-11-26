@@ -381,7 +381,7 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         if group_by is None:
             smp_df = pd.DataFrame()
         else:
-            smp_df = adata.smp
+            smp_df = adata.smp.copy()
         for key in keys:
             X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
