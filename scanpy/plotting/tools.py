@@ -230,13 +230,13 @@ def diffmap(
             adata,
             basis='diffmap',
             color=color,
-        alpha=alpha,
+            alpha=alpha,
             groups=groups,
             components=components,
             projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
+            legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
             right_margin=right_margin,
@@ -246,9 +246,12 @@ def diffmap(
             save=False,
             ax=ax)
         writekey = 'diffmap'
-        if isinstance(components, list): components = ','.join([str(comp) for comp in components])
-        writekey += '_components' + components.replace(',', '')
-        if settings.savefigs or (save is not None): utils.savefig(writekey)  # TODO: cleaner
+        if isinstance(components, list): components = ','.join(
+            [str(comp) for comp in components])
+        writekey += ('_components' + components.replace(',', '')
+                     + (save if isinstance(save, str) else ''))
+        if settings.savefigs or (save is not None):
+            utils.savefig(writekey)
     show = settings.autoshow if show is None else show
     if not settings.savefigs and show: pl.show()
     return axs
@@ -1635,13 +1638,16 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=Non
     for group_name in group_loop:
         keys = []
         gene_names = []
-        gene_loop = (gene_item for gene_item in enumerate(adata.uns['rank_genes_groups_gene_names'][group_name][:n_genes]))
+        gene_loop = (gene_item for gene_item in
+                     enumerate(adata.uns[
+                         'rank_genes_groups_gene_names'][group_name][:n_genes]))
         for gene_counter, gene_name in gene_loop:
             identifier = rank_genes_groups._build_identifier(
                 groups_key, group_name, gene_counter, gene_name)
             if check_is_computed and identifier not in set(adata.smp_keys()):
-                raise ValueError('You need to set `compute_distribution=True` in `sc.tl.rank_genes_groups()` if you want to use this visualiztion. '
-                                 'You might consider simply using `sc.pl.rank_genes_groups_means()` and `sc.pl.violin(adata_raw, gene_name, group_by=grouping)` instead.')
+                raise ValueError(
+                    'You need to set `compute_distribution=True` in `sc.tl.rank_genes_groups()` if you want to use this visualiztion. '
+                    'You might consider simply using `sc.pl.rank_genes_groups()` and `sc.pl.violin(adata_raw, gene_name, group_by=grouping)` instead.')
                 check_is_computed = False
             keys.append(identifier)
             gene_names.append(gene_name)
