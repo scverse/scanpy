@@ -334,54 +334,57 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
            order=None, multi_panel=False, show=None, save=None, ax=None):
     """Violin plot.
 
-    Wraps seaborn.violinplot for AnnData.
+    Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     keys : str
-        Keys for accessing fields of adata.smp.
+        Keys for accessing variables of adata.X or fields of adata.smp.
     group_by : str, optional
-        Key that denotes grouping (categorical annotation) to index adata.smp.
+        The key of the sample grouping to consider.
     multi_panel : bool, optional
         Show fields in multiple panels. Returns a seaborn FacetGrid in that case.
-    jitter : float or bool, optional (default: True)
-        See sns.stripplot.
-    order : list of str, optional (default: True)
+    jitter : `float` or `bool`, optional (default: `True`)
+        See `seaborn.stripplot`.
+    size : int, optional (default: 1)
+        Size of the jitter points.
+    order : list of str, optional (default: `True`)
         Order in which to show the categories.
-    scale : str (default: 'width')
-        See sns.violinplot.
-    show : bool, optional (default: None)
+    scale : {'area', 'count', 'width'}, optional (default: 'width')
+        The method used to scale the width of each violin. If 'area', each
+        violin will have the same area. If 'count', the width of the violins
+        will be scaled by the number of observations in that bin. If 'width',
+        each violin will have the same width.
+    show : bool, optional (default: `None`)
          Show the plot.
-    save : bool or str, optional (default: None)
+    save : bool or str, optional (default: `None`)
          If True or a str, save the figure. A string is appended to the
          default filename.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
+    ax : `matplotlib.Axes`
+         A `matplotlib.Axes` object.
 
     Returns
     -------
-    A matplotlib.Axes object.
+    A `matplotlib.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
     if group_by is not None and isinstance(keys, list):
         raise ValueError('Pass a single key as string if using `group_by`.')
-    if not isinstance(keys, list): keys = [keys]
+    if isinstance(keys, str): keys = [keys]
     smp_keys = False
     for key in keys:
-        if key in adata.smp_keys():
-            smp_keys = True
+        if key in adata.smp_keys(): smp_keys = True
         if smp_keys and key not in set(adata.smp_keys()):
-            raise ValueError('Either use sample keys or variable names, but do not mix. '
-                             'Did not find {} in adata.smp_keys().'.format(key))
+            raise ValueError(
+                'Either use sample keys or variable names, but do not mix. '
+                'Did not find {} in adata.smp_keys().'.format(key))
     if smp_keys:
         smp_df = adata.smp
     else:
-        if group_by is None:
-            smp_df = pd.DataFrame()
-        else:
-            smp_df = adata.smp.copy()
+        if group_by is None: smp_df = pd.DataFrame()
+        else: smp_df = adata.smp.copy()
         for key in keys:
             X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
