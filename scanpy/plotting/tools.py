@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
 import networkx as nx
+from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars
 from matplotlib import rcParams
 
 from . import utils
@@ -451,10 +451,11 @@ def aga(
         **aga_graph_params):
     """Summary figure for approximate graph abstraction.
 
-    See :func:`~sanpy.api.pl.aga_scatter` and :func:`~scanpy.api.pl.aga_graph` for the parameters.
+    See :func:`~sanpy.api.pl.aga_scatter` and :func:`~scanpy.api.pl.aga_graph`
+    for the parameters.
 
-    See :func:`~scanpy.api.pl.aga_path` for visualizing gene changes along paths through the
-    abstracted graph.
+    See :func:`~scanpy.api.pl.aga_path` for visualizing gene changes along paths
+    through the abstracted graph.
     """
     axs, _, _, _ = utils.setup_axes(colors=[0, 1],
                                     right_margin=right_margin)  # dummy colors
@@ -480,6 +481,7 @@ def aga(
               groups=groups_graph, color=color_graph, **aga_graph_params)
     utils.savefig_or_show('aga', show=show, save=save, ext=ext)
     return axs
+
 
 def aga_scatter(
         adata,
@@ -1547,24 +1549,26 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    groups : str or list of str
+    groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
-    n_genes : int, optional (default: 20)
+    n_genes : `int`, optional (default: 20)
         Number of genes to show.
-    fontsize : int, optional (default: 8)
+    fontsize : `int`, optional (default: 8)
         Fontsize for gene names.
-    show : bool, optional (default: None)
-         Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
+    show : `bool`, optional (default: `None`)
+        Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename.
+    ax : `matplotlib.Axes`, optional (default: `None`)
+        A `matplotlib.Axes` object.
     """
-    groups_key = adata.uns['rank_genes_groups']
-    group_names = adata.uns['rank_genes_groups_order'] if groups is None else groups
+    groups_key = str(adata.uns['rank_genes_groups_params']['group_by'])
+    reference = str(adata.uns['rank_genes_groups_params']['reference'])
+    group_names = (adata.uns['rank_genes_groups_gene_names'].dtype.names
+                   if groups is None else groups)
     # one panel for each group
     n_panels = len(group_names)
     # set up the figure
@@ -1595,67 +1599,111 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
             pl.text(ig, scores[ig], gene_names[ig],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
-        pl.title(group_name)
-        if n_panels <= 5 or count >= n_panels_x:
-            pl.xlabel('ranking')
-        if count == 0 or count == n_panels_x:
-            pl.ylabel('mean of z-score w.r.t. to bulk mean')
+        pl.title('{} vs. {}'.format(group_name, reference))
+        if n_panels <= 5 or count >= n_panels_x: pl.xlabel('ranking')
+        if count == 0 or count == n_panels_x: pl.ylabel('score')
         ymin = np.min(scores)
         ymax = np.max(scores)
         ymax += 0.3*(ymax-ymin)
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
-    writekey = 'rank_genes_groups_' + adata.uns['rank_genes_groups']
+    writekey = ('rank_genes_groups_'
+                + str(adata.uns['rank_genes_groups_params']['group_by'])
+                + '_' + group_name)
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def rank_genes_groups_violin(adata, groups=None, n_genes=20, show=None, save=None):
+def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
+                             scale='width',
+                             strip=True, jitter=True, size=1,
+                             computed_distribution=False,
+                             ax=None, show=None, save=None):
     """Plot ranking of genes for all tested comparisons.
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    genes : list of str
-        List of valid gene names.
-    groups : list of str
-        List of valid group names.
-    n_genes : int
+    groups : list of `str`, optional (default: `None`)
+        List of group names.
+    n_genes : `int`, optional (default: 20)
         Number of genes to show.
-    show : bool, optional (default: None)
-         Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
+    split : `bool`, optional (default: `True`)
+        Whether to split the violins or not.
+    scale : `str` (default: 'width')
+        See `seaborn.violinplot`.
+    strip : `bool` (default: `True`)
+        Show a strip plot on top of the violin plot.
+    jitter : `int`, `float`, `bool`, optional (default: `True`)
+        If set to 0, no points are drawn. See `seaborn.stripplot`.
+    size : `int`, optional (default: 1)
+        Size of the jitter points.
+    computed_distribution : `bool`, optional (default: `False`)
+        Set to `True` if you want to use the scaled and shifted distribution
+        previously computed with the `compute_distribution` in
+        :func:`scanpy.api.tl.rank_genes_groups`
+    show : `bool`, optional (default: `None`)
+        Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename.
+    ax : `matplotlib.Axes`, optional (default: `None`)
+        A `matplotlib.Axes` object.
     """
     from ..tools import rank_genes_groups
-    groups_key = adata.uns['rank_genes_groups']
-    group_names = adata.uns['rank_genes_groups_order'] if groups is None else groups
-    group_loop = (group_name for group_name in group_names)
-    check_is_computed = True
-    for group_name in group_loop:
+    groups_key = str(adata.uns['rank_genes_groups_params']['group_by'])
+    reference = str(adata.uns['rank_genes_groups_params']['reference'])
+    groups_names = (adata.uns['rank_genes_groups_gene_names'].dtype.names
+                    if groups is None else groups)
+    if isinstance(groups_names, str): groups_names = [groups_names]
+    for group_name in groups_names:
         keys = []
-        gene_names = []
-        gene_loop = (gene_item for gene_item in
-                     enumerate(adata.uns[
-                         'rank_genes_groups_gene_names'][group_name][:n_genes]))
-        for gene_counter, gene_name in gene_loop:
-            identifier = rank_genes_groups._build_identifier(
-                groups_key, group_name, gene_counter, gene_name)
-            if check_is_computed and identifier not in set(adata.smp_keys()):
-                raise ValueError(
-                    'You need to set `compute_distribution=True` in `sc.tl.rank_genes_groups()` if you want to use this visualiztion. '
-                    'You might consider simply using `sc.pl.rank_genes_groups()` and `sc.pl.violin(adata_raw, gene_name, group_by=grouping)` instead.')
-                check_is_computed = False
-            keys.append(identifier)
-            gene_names.append(gene_name)
-        ax = violin(adata, keys, show=False)
-        ax.set_title(group_name)
-        ax.set_ylabel('z-score w.r.t. to bulk mean')
+        gene_names = adata.uns[
+            'rank_genes_groups_gene_names'][group_name][:n_genes]
+        if computed_distribution:
+            for gene_counter, gene_name in enumerate(gene_names):
+                identifier = rank_genes_groups._build_identifier(
+                    groups_key, group_name, gene_counter, gene_name)
+                if compute_distribution and identifier not in set(adata.smp_keys()):
+                    raise ValueError(
+                        'You need to set `compute_distribution=True` in '
+                        '`sc.tl.rank_genes_groups()`.')
+                keys.append(identifier)
+        else:
+            keys = gene_names
+        # make a "hue" option!
+        df = pd.DataFrame()
+        for key in keys:
+            X_col = adata[:, key].X
+            if issparse(X_col): X_col = X_col.toarray().flatten()
+            df[key] = X_col
+        df['hue'] = adata.smp[groups_key].astype(str).values
+        if reference == 'rest':
+            df['hue'][df['hue'] != group_name] = 'rest'
+        else:
+            df['hue'][~df['hue'].isin([group_name, reference])] = np.nan
+        df['hue'] = df['hue'].astype('category')
+        df_tidy = pd.melt(df, id_vars='hue', value_vars=keys)
+        x = 'variable'
+        y = 'value'
+        hue_order = [group_name, reference]
+        import seaborn as sns
+        ax = sns.violinplot(x=x, y=y, data=df_tidy, inner=None,
+                            hue_order=hue_order, hue='hue', split=split,
+                            scale=scale, orient='vertical', ax=ax)
+        if strip:
+            ax = sns.stripplot(x=x, y=y, data=df_tidy,
+                               hue='hue', dodge=True, hue_order=hue_order,
+                               jitter=jitter, color='black', size=size, ax=ax)
+        ax.set_xlabel('genes')
+        ax.set_title('{} vs. {}'.format(group_name, reference))
+        ax.legend_.remove()
+        if computed_distribution: ax.set_ylabel('z-score w.r.t. to bulk mean')
+        else: ax.set_ylabel('expression')
         ax.set_xticklabels(gene_names, rotation='vertical')
-        writekey = 'rank_genes_groups_' + adata.uns['rank_genes_groups'] + '_' + group_name
+        writekey = ('rank_genes_groups_'
+                    + str(adata.uns['rank_genes_groups_params']['group_by'])
+                    + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
 
 
