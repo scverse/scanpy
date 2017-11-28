@@ -259,9 +259,9 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
         raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
                          .format(len(adata.uns[key + '_colors']), key))
     for iname, name in enumerate(adata.smp[key].cat.categories):
-        if name in settings._ignore_categories:
+        if name in settings.categories_to_ignore:
             logg.info('Setting color of group {} in {} to grey as it appears in'
-                      '`sc.settings._ignore_categories`.'
+                      '`sc.settings.categories_to_ignore`.'
                       .format(name, key))
             adata.uns[key + '_colors'][iname] = 'grey'
 
@@ -590,7 +590,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
         if currentLevel not in levels:
             levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
         levels[currentLevel][TOTAL] += 1
-        neighbors = G.neighbors(node)
+        neighbors = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
@@ -603,7 +603,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
         pos[node] = ((left + dx*levels[currentLevel][CURRENT])*width,
                      vert_loc)
         levels[currentLevel][CURRENT] += 1
-        neighbors = G.neighbors(node)
+        neighbors = list(G.neighbors(node))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
