@@ -16,6 +16,10 @@ Two further packages, needed for some of Scanpy's features, have not been automa
 - `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` 
 - `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain>=0.6``
 
+If you're using `Docker <https://en.wikipedia.org/wiki/Docker_(software)>`_, you
+can setup your environment `here
+<https://gist.github.com/flying-sheep/0e003ae3398dd543638955a55c031c8d>`_.
+
   
 Trouble shooting
 ~~~~~~~~~~~~~~~~
