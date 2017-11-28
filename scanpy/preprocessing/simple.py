@@ -140,24 +140,26 @@ def filter_genes_dispersion(data,
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
-    Similar functions are used, for example, by Cell Ranger (Zheng et al., 2017)
-    and Seurat (Macosko et al., 2015).
+    Similar functions are used, for example, by Cell Ranger [Zheng17]_
+    and Seurat [Satija15]_.
 
     Parameters
     ----------
-    data : AnnData, np.ndarray, sp.sparse
-        Data matrix storing unlogarithmized data.
-    flavor : {'seurat', 'cell_ranger'}
-        Choose method for computing normalized dispersion. Note that Seurat
-        passes the cutoffs whereas Cell Ranger passes `n_top_genes`.
-    min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=None : float
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        Data matrix.
+    flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
+        Choose method for computing normalized dispersion. If choosing 'Seurat',
+        this expects non-logarithmized data, you can change this by setting
+        `log` to `False`. Note that Seurat passes the cutoffs whereas Cell
+        Ranger passes `n_top_genes`.
+    min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
         If `n_top_genes` is not `None`, these cutoffs for the normalized gene
         expression are ignored.
     n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
-    log : `bool`
+    log : `bool`, optional (default: True)
         Use the logarithm of mean and variance.
-    copy : `bool` (default: `False`)
+    copy : `bool`, optional (default: `False`)
         If an AnnData is passed, determines whether a copy is returned.
 
     Returns
@@ -172,7 +174,7 @@ def filter_genes_dispersion(data,
     dispersions_norm : pd.Series (adata.var)
         Normalized dispersions per gene.
 
-    If a data matrix `X` is passed, the annotation is returned as np.recarray
+    If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the columns:
         gene_subset, means, dispersions, dispersion_norm
     """
