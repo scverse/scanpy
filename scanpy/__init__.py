@@ -21,8 +21,8 @@ if pd.__version__ < LooseVersion('0.21'):
                       .format(pd.__version__))
 
 import anndata
-if anndata.__version__ < LooseVersion('0.3.0.3'):
-    raise ImportError('Scanpy needs anndata version >=0.3.0.3, not {}.\n'
+if anndata.__version__ < LooseVersion('0.3.2'):
+    raise ImportError('Scanpy needs anndata version >=0.3.2, not {}.\n'
                       'Run `pip install anndata --upgrade`.'
                       .format(anndata.__version__))
 

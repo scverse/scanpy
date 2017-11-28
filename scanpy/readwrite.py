@@ -136,9 +136,9 @@ def read_10x_h5(filename, genome='mm10'):
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
             adata = AnnData(matrix,
-                            {'smp_names': dsets['barcodes']},
-                            {'var_names': dsets['gene_names'],
-                             'gene_ids': dsets['genes']})
+                            {'smp_names': dsets['barcodes'].astype(str)},
+                            {'var_names': dsets['gene_names'].astype(str),
+                             'gene_ids': dsets['genes'].astype(str)})
             logg.info(t=True)
             return adata
         except tables.NoSuchNodeError:
