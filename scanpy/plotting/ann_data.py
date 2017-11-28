@@ -227,7 +227,7 @@ def scatter(
         centroids = {}
         if groups is None:
             for iname, name in enumerate(adata.smp[key].cat.categories):
-                if name not in settings._ignore_categories:
+                if name not in settings.categories_to_ignore:
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     mask_remaining[mask] = False

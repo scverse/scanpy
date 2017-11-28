@@ -136,7 +136,7 @@ _dpi = 400
 We need this global variable as, for example, Seaborn resets rcParams['savefig.dpi'].
 """
 
-_ignore_categories = ['N/A', 'dontknow', 'no_gate', '?']
+categories_to_ignore = ['N/A', 'dontknow', 'no_gate', '?']
 """Categories that are omitted in plotting etc.
 """
 

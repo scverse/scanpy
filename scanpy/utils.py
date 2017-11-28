@@ -98,9 +98,9 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     sanitize_anndata(adata)
     cats = adata.smp[reference].cat.categories
     for cat in cats:
-        if cat in settings._ignore_categories:
+        if cat in settings.categories_to_ignore:
             logg.info('Ignoring category \'{}\' '
-                      'as it\'s in `settings._ignore_categories`.'
+                      'as it\'s in `settings.categories_to_ignore`.'
                       .format(cat))
     asso_names = []
     asso_matrix = []
@@ -128,7 +128,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
                 ratio_contained = (np.sum(mask_ref) -
                     np.sum(mask_ref_or_pred - mask_pred_int)) / np.sum(mask_ref)
             asso_matrix[-1] += [ratio_contained]
-        name_list_pred = [cats[i] if cats[i] not in settings._ignore_categories else ''
+        name_list_pred = [cats[i] if cats[i] not in settings.categories_to_ignore else ''
                           for i in np.argsort(asso_matrix[-1])[::-1]
                           if asso_matrix[-1][i] > threshold]
         asso_names += ['\n'.join(name_list_pred[:max_n_names])]
@@ -222,7 +222,7 @@ def plot_category_association(adata, prediction, reference, asso_matrix):
 def unique_categories(categories):
     """Pass array-like categories, return sorted cleaned unique categories."""
     categories = np.unique(categories)
-    categories = np.setdiff1d(categories, np.array(settings._ignore_categories))
+    categories = np.setdiff1d(categories, np.array(settings.categories_to_ignore))
     categories = np.array(natsorted(categories, key=lambda v: v.upper()))
     return categories
 

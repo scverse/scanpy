@@ -769,7 +769,7 @@ def _aga_graph(
             utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         color = adata.uns[groups_key + '_colors']
         for iname, name in enumerate(adata.smp[groups_key].cat.categories):
-            if name in settings._ignore_categories: color[iname] = 'grey'
+            if name in settings.categories_to_ignore: color[iname] = 'grey'
 
     if isinstance(root, str) and root in node_labels:
         root = list(node_labels).index(root)
@@ -1052,7 +1052,7 @@ def aga_path(
         if 'aga_groups_key' not in adata.uns:
             raise KeyError(
                 'Pass the key of the grouping with which you ran AGA, '
-                'using the parameter `groups`.')
+                'using the parameter `groups_key`.')
         groups_key = adata.uns['aga_groups_key']
     groups_names = adata.smp[groups_key].cat.categories
 
