@@ -10,18 +10,19 @@ def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
 
     Parameters
     ----------
-    n_centers : int, optional (default: 5)
+    n_centers : `int`, optional (default: 5)
         Number of cluster centers.
-    cluster_std : float, optional (default: 1.0)
+    cluster_std : `float`, optional (default: 1.0)
         Standard deviation of clusters.
-    n_samples : int, optional (default: 640)
+    n_samples : `int`, optional (default: 640)
         Number of samples. By default, this is the same sample number as in
         ``sc.examples.krumsiek11()``.
 
     Returns
     -------
-    The resulting ``AnnData`` contains a sample annotation 'blobs' that indicates
-    cluster identity.
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix containing a sample annotation 'blobs' that
+        indicates cluster identity.
     """
     import sklearn.datasets
     X, y = sklearn.datasets.make_blobs(n_samples=n_samples,
@@ -53,19 +54,18 @@ def burczynski06():
 
 
 def krumsiek11():
-    """Simulated myeloid progenitor data.
+    """Simulated myeloid progenitor data [Krumsiek11]_.
 
-    A literature-curated boolean network from the reference below was
-    used to simulate this data with four cell fates.
+    The literature-curated boolean network from [Krumsiek11]_ was used to
+    simulate the data. It describes development to four cell fates: 'monocyte',
+    'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
-    Simulate the data by running "scanpy krumsiek11 sim" on the command line
-    or running `sc.tl.sim('krumsiek11')`.
+    Simulate via :func:`~scanpy.api.sim`.
 
-    Reference
-    ---------
-    Krumsiek et al., "Hierarchical Differentiation of Myeloid Progenitors Is
-    Encoded in the Transcription Factor Network"
-    PLoS ONE 6, e22649 (2011).
+    Returns
+    -------
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix.
     """
     import os
     from .. import logging as logg
@@ -94,17 +94,12 @@ krumsiek11_dpt_params = {'n_neighbors': 5, 'knn': False, 'n_branchings': 2}
 
 
 def moignard15():
-    """Hematopoiesis in early mouse embryos.
+    """Hematopoiesis in early mouse embryos [Moignard15]_.
 
-    1. Filter out a few genes.
-    2. Choose 'root cell'.
-    3. Define experimental groups by cropping cell names.
-
-    Reference
-    ---------
-    Moignard et al., "Decoding the regulatory network of early blood development
-    from single-cell gene expression measurements"
-    Nature Biotechnology 33, 269 (2015)
+    Returns
+    -------
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix.
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
@@ -142,18 +137,16 @@ def moignard15_dpt(adata):
 
 
 def paul15():
-    """Get logarithmized data for development of Myeloid Progenitors.
+    """Get logarithmized raw data for development of Myeloid Progenitors [Paul15]_.
 
-    The data has been sent out by Email from the Amit Lab.
-
-    An R version for loading the data can be found here
+    The data has been sent out by Email from the Amit Lab. An R version for
+    loading the data can be found here
     https://github.com/theislab/scAnalysisTutorial
 
-    Reference
-    ---------
-    Paul et al., "Transcriptional Heterogeneity and Lineage Commitment in
-    Myeloid Progenitors",
-    Cell 163, 1663 (2015)
+    Returns
+    -------
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix.
     """
     adata = paul15_raw()
     sc.pp.log1p(adata)
@@ -164,18 +157,16 @@ paul15_dpt_params = {'n_neighbors': 20, 'n_pcs': 0}
 
 
 def paul15_raw():
-    """Get raw data for development of Myeloid Progenitors.
+    """Get raw data for development of Myeloid Progenitors [Paul15]_.
 
-    The data has been sent out by Email from the Amit Lab.
-
-    An R version for loading the data can be found here
+    The data has been sent out by Email from the Amit Lab. An R version for
+    loading the data can be found here
     https://github.com/theislab/scAnalysisTutorial
 
-    Reference
-    ---------
-    Paul et al., "Transcriptional Heterogeneity and Lineage Commitment in
-    Myeloid Progenitors",
-    Cell 163, 1663 (2015)
+    Returns
+    -------
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix.
     """
     filename = 'data/paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
@@ -225,8 +216,15 @@ def paul15_dpt(adata):
 def toggleswitch():
     """Simple toggleswitch from simulated data.
 
-    Simulate the data by running "scanpy sim toggleswitch" on the command line
-    or `sc.tl.sim("toggleswitch")`.
+    Data obtained simulating a simple toggleswitch [Gardner *et al.*, Nature
+    (2000)](https://doi.org/10.1038/35002131).
+
+    Simulate via :func:`~scanpy.api.sim`.
+
+    Returns
+    -------
+    adata : :class:`scanpy.api.AnnData`
+        Annotated data matrix.
     """
     import os
     from .. import logging as logg
