@@ -87,9 +87,9 @@ def scatter(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -359,9 +359,9 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         each violin will have the same width.
     show : bool, optional (default: `None`)
          Show the plot.
-    save : bool or str, optional (default: `None`)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
          A `matplotlib.Axes` object.
 

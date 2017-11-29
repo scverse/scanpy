@@ -249,19 +249,22 @@ def fill_in_datakeys(example_parameters, dexdata):
 def sanitize_anndata(adata, verbosity=-3):
     """Do sanity checks on adata object.
 
-    Transform string arrays to categorical data types.
+    Transform string arrays to categorical data types, if they store less
+    categories than the total number of samples.
     """
     from pandas.api.types import is_string_dtype
     for ann in ['smp', 'var']:
         for key in getattr(adata, ann).columns:
             df = getattr(adata, ann)
             if is_string_dtype(df[key]):
-                df[key] = df[key].astype(
+                c = df[key].astype(
                     'category', categories=natsorted(np.unique(df[key])))
-                df[key].cat.categories = df[key].cat.categories.astype('U')
-                logg.info('... storing {} as categorical type'.format(key))
-                logg.hint('access categories as adata.{}.{}.cat.categories'
-                          .format(ann, key))
+                if len(c.cat.categories) < len(c):
+                    df[key] = c
+                    df[key].cat.categories = df[key].cat.categories.astype('U')
+                    logg.info('... storing {} as categorical type'.format(key))
+                    logg.hint('access categories as adata.{}.{}.cat.categories'
+                              .format(ann, key))
 
 
 def moving_average(a, n):
@@ -604,6 +607,16 @@ def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
     if X is Y:
         distances.flat[::distances.shape[0] + 1] = 0.
     return distances
+
+
+def check_presence_download(filename, backup_url):
+    """Check if file is present otherwise download."""
+    import os
+    if not os.path.exists(filename):
+        from ..readwrite import download_progress
+        os.makedirs(filename)
+        from urllib.request import urlretrieve
+        urlretrieve(backup_url, filename, reporthook=download_progress)
 
 
 def hierarch_cluster(M):

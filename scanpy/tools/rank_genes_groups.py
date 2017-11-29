@@ -281,10 +281,10 @@ def rank_genes_groups(
     adata.uns['rank_genes_groups_gene_names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
-    logg.m('    finished', t=True, end=': ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-           '    "rank_genes_groups_gene_names", np.recarray to be indexed by group ids (adata.uns)\n'
-           '    "rank_genes_groups_gene_scores", np.recarray to be indexed by group ids (adata.uns)')
+           '    \'rank_genes_groups_gene_names\', np.recarray to be indexed by group ids (adata.uns)\n'
+           '    \'rank_genes_groups_gene_scores\', np.recarray to be indexed by group ids (adata.uns)')
     return adata if copy else None
 
 

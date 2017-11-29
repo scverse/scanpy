@@ -17,7 +17,7 @@ from .. import utils
 
 
 N_DCS = 15  # default number of diffusion components
-N_PCS = 50
+N_PCS = 50  # default number of PCs
 
 def add_or_update_graph_in_adata(
         adata,
@@ -319,10 +319,12 @@ class DataGraph():
             if (not recompute_pca
                 and 'X_pca' in adata.smpm_keys()
                 and adata.smpm['X_pca'].shape[1] >= self.n_pcs):
-                logg.info('    using "X_pca" for building graph')
+                logg.info('    using \'X_pca\' with n_pcs = {} for building graph'
+                          .format(self.n_pcs))
             # compute X_pca
             else:
-                logg.info('    compute "X_pca" for building graph')
+                logg.info('    compute \'X_pca\' with n_pcs = {} for building graph'
+                          .format(self.n_pcs))
                 from ..preprocessing import pca
                 pca(adata, n_comps=self.n_pcs)
             # set the data matrix

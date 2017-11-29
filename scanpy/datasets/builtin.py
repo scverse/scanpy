@@ -1,3 +1,4 @@
+# Author: Alex Wolf (http://falexwolf.de)
 """Builtin Datasets.
 """
 
@@ -6,7 +7,7 @@ from . import api_without_examples as sc
 
 
 def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
-    """Make Gaussian Blobs.
+    """Gaussian Blobs.
 
     Parameters
     ----------
@@ -20,7 +21,7 @@ def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix containing a sample annotation 'blobs' that
         indicates cluster identity.
     """
@@ -54,7 +55,7 @@ def burczynski06():
 
 
 def krumsiek11():
-    """Simulated myeloid progenitor data [Krumsiek11]_.
+    """Simulated myeloid progenitors [Krumsiek11]_.
 
     The literature-curated boolean network from [Krumsiek11]_ was used to
     simulate the data. It describes development to four cell fates: 'monocyte',
@@ -64,7 +65,7 @@ def krumsiek11():
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     """
     import os
@@ -98,7 +99,7 @@ def moignard15():
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
@@ -137,7 +138,9 @@ def moignard15_dpt(adata):
 
 
 def paul15():
-    """Get logarithmized raw data for development of Myeloid Progenitors [Paul15]_.
+    """Development of Myeloid Progenitors [Paul15]_.
+
+    Logarithmized raw data.
 
     The data has been sent out by Email from the Amit Lab. An R version for
     loading the data can be found here
@@ -145,7 +148,7 @@ def paul15():
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     """
     adata = paul15_raw()
@@ -157,7 +160,9 @@ paul15_dpt_params = {'n_neighbors': 20, 'n_pcs': 0}
 
 
 def paul15_raw():
-    """Get raw data for development of Myeloid Progenitors [Paul15]_.
+    """Development of Myeloid Progenitors [Paul15]_.
+
+    Non-logarithmized raw data.
 
     The data has been sent out by Email from the Amit Lab. An R version for
     loading the data can be found here
@@ -165,46 +170,42 @@ def paul15_raw():
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     """
+    import h5py
     filename = 'data/paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
-    adata = sc.read(filename, 'data.debatched', backup_url=backup_url)
+    sc.utils.check_presence_download(filename, backup_url)
+    with h5py.File(filename, 'r') as f:
+        X = f['data.debatched'][()]
+        gene_names = f['data.debatched_rownames'][()].astype(str)
+        cell_names = f['data.debatched_colnames'][()].astype(str)
+        clusters = f['cluster.id'][()].flatten()
+        infogenes_names = f['info.genes_strings'][()].astype(str)
     # each row has to correspond to a sample, therefore transpose
-    adata = adata.transpose()
-    # clusters identified by Paul et al.
-    clusters = sc.read(filename, 'cluster.id', return_dict=True)['X'].flatten()
+    adata = sc.AnnData(X.transpose())
+    adata.var_names = gene_names
+    adata.row_names = cell_names
     # names reflecting the cell type identifications from the paper
-    cell_type = {i: 'Ery' for i in range(1, 7)}
-    cell_type[7] = 'MEP'
-    cell_type[8] = 'Mk'
-    cell_type[9] = 'GMP'
-    cell_type[10] = 'GMP'
-    cell_type[11] = 'DC'
-    cell_type[12] = 'Baso'
-    cell_type[13] = 'Baso'
-    cell_type[14] = 'Mo'
-    cell_type[15] = 'Mo'
-    cell_type[16] = 'Neu'
-    cell_type[17] = 'Neu'
-    cell_type[18] = 'Eos'
-    cell_type[19] = 'Lymph'
-    adata.smp['paul15_clusters'] = [str(i) + cell_type[i]
-                                    for i in clusters.astype(int)]
-    # make all string annotations categorical (not needed)
+    cell_type = {7: 'MEP', 8: 'Mk', 9: 'GMP', 10: 'GMP', 11: 'DC',
+                 12: 'Baso', 13: 'Baso', 14: 'Mo', 15: 'Mo',
+                 16: 'Neu', 17: 'Neu', 18: 'Eos', 19: 'Lymph'}
+    cell_type.update({i: 'Ery' for i in range(1, 7)})
+    adata.smp['paul15_clusters'] = [
+        str(i) + cell_type[i] for i in clusters.astype(int)]
+    # make string annotations categorical (optional)
     sc.utils.sanitize_anndata(adata)
-    infogenes_names = sc.read(filename, 'info.genes_strings', return_dict=True)['X']
     # just keep the first of the two equivalent names per gene
-    adata.var_names = np.array([gn.split(';')[0] for gn in adata.var_names])
+    adata.var_names = [gn.split(';')[0] for gn in adata.var_names]
     # remove 10 corrupted gene names
     infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
     # restrict data array to the 3461 informative genes
     adata = adata[:, infogenes_names]
     # usually we'd set the root cell to an arbitrary cell in the MEP cluster
-    # adata.uns['iroot'] = np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
+    # adata.uns['iroot': np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
-    adata.uns['iroot'] = iroot = 840  # note that other than in Matlab/R, counting starts at 1
+    adata.uns['iroot'] = 840  # note that other than in Matlab/R, counting starts at 1
     return adata
 
 
@@ -214,16 +215,16 @@ def paul15_dpt(adata):
 
 
 def toggleswitch():
-    """Simple toggleswitch from simulated data.
+    """Simulated toggleswitch.
 
-    Data obtained simulating a simple toggleswitch [Gardner *et al.*, Nature
-    (2000)](https://doi.org/10.1038/35002131).
+    Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
+    (2000) <https://doi.org/10.1038/35002131>`_.
 
     Simulate via :func:`~scanpy.api.sim`.
 
     Returns
     -------
-    adata : :class:`scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     """
     import os

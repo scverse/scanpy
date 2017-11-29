@@ -26,18 +26,12 @@ doc_string_base = dedent("""\
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
     coordinatization of data useful for exploring and explaining its
-    variation. The abstracted graph can be used to assess which subsets of data
-    are better explained by discrete clusters than by a continuous variable, to
-    trace gene expression changes along aggregated single-cell paths through
-    data and to infer abstracted trees that best explain the global topology of
-    data.
+    variation. By default, AGA uses the Louvain algorithm to partition the data,
+    which has been suggested for clustering single-cell data by
+    [Levine15]_. Also, it extends the random-walk based distance measure
+    suggested by [Haghverdi16]_.
 
-    AGA starts off from two main computational approaches for analyzing single
-    cell data. The Louvain algorithm, which has been suggested for clustering
-    single-cell data by [Levine15]_ for analyzing single cells. The random-walk
-    based distance measure within AGA is an extension of DPT [Haghverdi16]_.
-
-    Note: In order to compute distances along the graph (pseudotimes), you need
+    **Note**: In order to compute distances along the graph (pseudotimes), you need
     to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
     <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
 
@@ -69,9 +63,9 @@ doc_string_base = dedent("""\
         Number of diffusion components (very similar to eigen vectors of
         adjacency matrix) to use for distance computations.
     resolution : `float`, optional (default: 1.0)
-        See tool `louvain`.
+        See :func:`~scanpy.api.louvain`.
     random_state : `int`, optional (default: 0)
-        See tool `louvain`.
+        See :func:`~scanpy.api.louvain`.
     tree_detection : {{'iterative_matching', 'min_span_tree'}}, optional (default: 'min_span_tree')
         How to detect a tree structure in the abstracted graph. If choosing
         'min_span_tree', he minimum spanning tree is computed for the abstracted
@@ -230,7 +224,7 @@ def aga(adata,
     adata.uns['aga_adjacency_tree_confidence'] = tree_confidence[indices, :][:, indices]
     adata.uns['aga_groups_key'] = clusters
     adata.uns[clusters + '_sizes'] = np.array(aga.segs_sizes)[indices]
-    logg.info('    finished', time=True, end=': ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n' + indent(doc_string_returns, '    '))
     return adata if copy else None
 
@@ -252,7 +246,7 @@ def aga_degrees(adata):
     """
     import networkx as nx
     g = nx.Graph(adata.uns['aga_adjacency_full_confidence'])
-    degrees = [d for _, d in g.degree_iter(weight='weight')]
+    degrees = [d for _, d in g.degree(weight='weight')]
     return degrees
 
 
@@ -638,6 +632,9 @@ class AGA(data_graph.DataGraph):
             total_n = self.k * np.array(self.segs_sizes)  # total number of connections
             a = full_attachedness
             confidence = np.zeros_like(full_attachedness)
+            logg.msg('computing confidence', v=5)
+            logg.msg('i_name, j_name, connectivity, total_n[i], total_n[j], '
+                     'actual, expected, variance, confidence', v=5)
             for i in range(a.shape[0]):
                 for j in range(i+1, a.shape[1]):
                     expected = total_n[i] * total_n[j] / np.sum(total_n)**2
@@ -650,9 +647,10 @@ class AGA(data_graph.DataGraph):
                     else:
                         confidence[i, j] = 2 * norm.cdf(
                             actual, expected, np.sqrt(variance))
-                    # i_name = self.segs_names_original[i]
-                    # j_name = self.segs_names_original[j]
-                    # print(i_name, j_name, expected, actual, variance, confidence[i, j])
+                    i_name = self.segs_names_original[i]
+                    j_name = self.segs_names_original[j]
+                    logg.msg(i_name, j_name, a[i, j], total_n[i], total_n[j],
+                             actual, expected, variance, confidence[i, j], v=5)
             full_confidence = confidence + confidence.T
             tree_confidence = self.compute_tree_confidence(
                 full_confidence, tree_adjacency)

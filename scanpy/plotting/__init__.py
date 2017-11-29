@@ -13,11 +13,11 @@ from .tools import louvain
 from .tools import rank_genes_groups, rank_genes_groups_violin
 from .tools import sim
 
-from .rcmod import reset_rcParams
+from .rcmod import reset_rcParams, set_rcParams_Scanpy, set_rcParams_Defaults
 from . import palettes
 
 from .utils import matrix
 from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
-# reset matplotlib.rcParams
-reset_rcParams()
+# set Scanpy defaults
+set_rcParams_Scanpy()
