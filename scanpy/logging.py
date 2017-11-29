@@ -140,6 +140,7 @@ _dependencies_numerics = [
     'numpy',
     'pandas',
     ('sklearn', 'scikit-learn'),
+    'statsmodels',
     ('igraph', 'python-igraph'),
     'louvain']
 
@@ -153,10 +154,14 @@ def _print_versions_dependencies(dependencies):
     for mod in dependencies:
         mod_name = mod[0] if isinstance(mod, tuple) else mod
         mod_install = mod[1] if isinstance(mod, tuple) else mod
-        imp = __import__(mod_name)
-        print('{}=={}'.format(mod_install, imp.__version__), end=' ')
+        try:
+            imp = __import__(mod_name)
+            print('{}=={}'.format(mod_install, imp.__version__), end=' ')
+        except (ImportError, AttributeError):
+            pass
     print()
 
+    
 def print_versions_dependencies_numerics():
     """Dependencies that might influence numerical results (computed data).
     """
