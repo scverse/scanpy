@@ -1,5 +1,5 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
-"""Simulate Artificial Data
+# Author: Alex Wolf (http://falexwolf.de)
+"""Simulate Data
 
 Simulate stochastic dynamic systems to model gene expression dynamics and
 cause-effect data.
@@ -15,73 +15,70 @@ import collections
 from collections import OrderedDict as odict
 import numpy as np
 import scipy as sp
-import scipy.stats
 from .. import utils
 from .. import readwrite
-from .. import settings as sett
+from .. import settings
 from .. import logging as logg
 
+
 def sim(model,
-        tmax=0,
-        branching=True,
-        nrRealizations=2,
-        noiseObs=0.01,
-        noiseDyn=0.001,
-        step=1,
-        seed=0,
-        writedir='',
-        read_params_from_file=True):
+        params_file=True,
+        tmax=None,
+        branching=None,
+        nrRealizations=None,
+        noiseObs=None,
+        noiseDyn=None,
+        step=None,
+        seed=None,
+        writedir=None):
     """Simulate dynamic gene expression data [Wittmann09]_ [Wolf17]_.
 
-    `[source] <scanpy/tools/sim.py>`__ Sample from a stochastic differential
-    equation model built from literature-curated boolean gene regulatory
-    networks, as suggested by [Wittmann09]_. The Scanpy implementation is due to
-    [Wolf17]_.
-
-    The tool is similar to the Matlab tool *Odefy* of [Krumsiek10]_.
-
-    *Examples:* See this `use case <17-04-30_>`__.
-
-    .. _tl.diffmap: https://github.com/theislab/scanpy/tree/master/scanpy/tools/diffmap.py
-    .. _17-04-30: https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11
-
+    Sample from a stochastic differential equation model built from
+    literature-curated boolean gene regulatory networks, as suggested by
+    [Wittmann09]_. The Scanpy implementation is due to [Wolf17]_.
 
     Parameters
     ----------
-    model : str
-        Model file in "sim_models" directory.
-    tmax : int, optional
+    model : {'krumsiek11', 'toggleswitch'}
+        Model file in 'sim_models' directory.
+    params_file : `bool`, (default: `True`)
+        Read default params from file.
+    tmax : `int`, optional (default: `None`)
         Number of time steps per realization of time series.
-    branching : bool, optional
-        Only write realizations that constitute new branches.
-    nrRealizations : int, optional
+    branching : `bool`, optional (default: `None`)
+        Only write realizations that contain new branches.
+    nrRealizations : int, optional (default: `None`)
         Number of realizations.
-    noiseObs : float, optional
+    noiseObs : float, optional (default: `None`)
         Observatory/Measurement noise.
-    noiseDyn : float, optional
+    noiseDyn : float, optional (default: `None`)
         Dynamic noise.
-    step : int, optional
+    step : int, optional (default: `None`)
         Interval for saving state of system.
-    seed : int, optional
+    seed : int, optional (default: `None`)
         Seed for generation of random numbers.
-    writedir: str, optional
+    writedir: str, optional (default: `None`)
         Path to directory for writing output files.
 
     Returns
     -------
-    adata : AnnData
-        An annotated data object.
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+
+    Examples
+    --------
+    See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11>`_
     """
-    if read_params_from_file:
+    params = locals()
+    if params_file:
         model_key = os.path.basename(model).replace('.txt', '')
         from .. import sim_models
-        pfile_sim = os.path.dirname(sim_models.__file__) + '/' + model_key + '_params.txt'
-        add_params = readwrite.read_params(pfile_sim)
-        params = utils.update_params(locals(), add_params)
-    else:
-        params = locals()
+        pfile_sim = (os.path.dirname(sim_models.__file__)
+                     + '/' + model_key + '_params.txt')
+        default_params = readwrite.read_params(pfile_sim)
+        params = utils.update_params(default_params, params)
     adata = sample_dynamic_data(params)
-    adata.uns['xroot'] = adata.X[0]
+    adata.uns['iroot'] = 0
     return adata
 
 
@@ -108,15 +105,12 @@ def sample_dynamic_data(params):
     Helper function.
     """
     model_key = os.path.basename(params['model']).replace('.txt', '')
-    sett.run_name = model_key
-    logg.info('setting `settings.run_name = {}`'.format(model_key))
-    if params['writedir'] == '':
-        params['writedir'] = (sett.writedir + sett.run_name + '_sim')
-    sett.m(0, 'writing to directory', params['writedir'])
+    if 'writedir' not in params or params['writedir'] is None:
+        params['writedir'] = settings.writedir + model_key + '_sim'
     if not os.path.exists(params['writedir']): os.makedirs(params['writedir'])
     readwrite.write_params(params['writedir'] + '/params.txt', params)
     # init variables
-    dir = params['writedir']
+    writedir = params['writedir']
     tmax = params['tmax']
     branching = params['branching']
     noiseObs = params['noiseObs']
@@ -171,14 +165,14 @@ def sample_dynamic_data(params):
                     check, Xsamples = _check_branching(X, Xsamples, restart)
                 if check:
                     real += 1
-                    grnsim.write_data(X[::step], dir=dir,
+                    grnsim.write_data(X[::step], dir=writedir,
                                       noiseObs=noiseObs,
                                       append=(False if restart==0 else True),
                                       branching=branching,
                                       nrRealizations=nrRealizations)
                 # append some zeros
-                if 'zeros' in dir and real == 2:
-                    grnsim.write_data(noiseDyn*np.random.randn(500,3), dir=dir,
+                if 'zeros' in writedir and real == 2:
+                    grnsim.write_data(noiseDyn*np.random.randn(500,3), dir=writedir,
                                       noiseObs=noiseObs,
                                       append=(False if restart==0 else True),
                                       branching=branching,
@@ -239,19 +233,23 @@ def sample_dynamic_data(params):
                     check, Xsamples = _check_branching(X,Xsamples,restart)
                 if check:
                     real += 1
-                    grnsim.write_data(X[::step],dir=dir,noiseObs=noiseObs,
+                    grnsim.write_data(X[::step],dir=writedir,noiseObs=noiseObs,
                                      append=(False if restart==0 else True),
                                      branching=branching,
                                      nrRealizations=nrRealizations)
                 if real >= nrRealizations:
                     break
-
-    filename = dir+'/sim_000000.txt'
-    ddata = readwrite.read_file(filename, first_column_names=True)
+    import glob
+    # load the last simulation file
+    filename = glob.glob(writedir + '/sim*.txt')[-1]
+    logg.info('reading simulation results', filename)
+    ddata = readwrite.read_file(filename, first_column_names=True,
+                                suppress_cache_warning=True)
     ddata['tmax_write'] = tmax/step
     from anndata import AnnData
     adata = AnnData(ddata)
     return adata
+
 
 def write_data(X, dir='sim/test', append=False, header='',
                varNames={}, Adj=np.array([]), Coupl=np.array([]),
@@ -448,7 +446,7 @@ class GRNsim:
             if verbosity > 0:
                 Xdiff_str = (child+'_{+1}-' + child + ' = ' + str(self.invTimeStep)
                              + '*('+Xdiff_syn_str+'-'+child+')' )
-                sett.m(0,Xdiff_str)
+                settings.m(0,Xdiff_str)
         return Xdiff
 
     def Xdiff_var(self,Xt,verbosity=0):
@@ -494,7 +492,7 @@ class GRNsim:
         """ Read the model and the couplings from the model file.
         """
         if self.verbosity > 0:
-            sett.m(0,'reading model',self.model)
+            settings.m(0,'reading model',self.model)
         # read model
         boolRules = []
         for line in open(self.model):
@@ -514,20 +512,20 @@ class GRNsim:
                 break
         self.dim = len(boolRules)
         self.boolRules = collections.OrderedDict(boolRules)
-        self.varNames = collections.OrderedDict([(s,i)
-                          for i,s in enumerate(self.boolRules.keys())])
+        self.varNames = collections.OrderedDict([(s, i)
+            for i, s in enumerate(self.boolRules.keys())])
         names = self.varNames
         # read couplings via names
-        self.Coupl = np.zeros((self.dim,self.dim))
+        self.Coupl = np.zeros((self.dim, self.dim))
         boolContinue = True
-        for line in open(self.model): #open(self.model.replace('/model','/couplList')):
+        for line in open(self.model):  # open(self.model.replace('/model','/couplList')):
             if line.startswith('# coupling list:'):
                 boolContinue = False
             if boolContinue:
                 continue
             if not line.startswith('#'):
                 gps, gs, val = line.strip().split()
-                self.Coupl[int(names[gps]),int(names[gs])] = float(val)
+                self.Coupl[int(names[gps]), int(names[gs])] = float(val)
         # adjancecy matrices
         self.Adj_signed = np.sign(self.Coupl)
         self.Adj = np.abs(np.array(self.Adj_signed))
@@ -535,11 +533,11 @@ class GRNsim:
         # version of the discrete model)
         self.build_boolCoeff()
 
-    def set_coupl(self,Coupl=None):
+    def set_coupl(self, Coupl=None):
         """ Construct the coupling matrix (and adjacancy matrix) from predefined models
             or via sampling.
         """
-        self.varNames = collections.OrderedDict([(str(i),i) for i in range(self.dim)])
+        self.varNames = collections.OrderedDict([(str(i), i) for i in range(self.dim)])
         if (self.model not in self.availModels.keys()
             and Coupl is None):
             self.read_model()
@@ -547,7 +545,7 @@ class GRNsim:
             # vector auto regressive process
             self.Coupl = Coupl
             self.boolRules = collections.OrderedDict(
-                              [(s,'') for s in self.varNames.keys()])
+                              [(s, '') for s in self.varNames.keys()])
             names = list(self.varNames.keys())
             for gp in range(self.dim):
                 pas = []
@@ -572,7 +570,7 @@ class GRNsim:
 #                 self.Adj_signed[sinknodes,sinknodes] = plus_minus
             leafnodes = np.array(sinknodes)
             availnodes = np.array([i for i in range(self.dim) if i not in sinknodes])
-#             sett.m(0,leafnodes,availnodes)
+#             settings.m(0,leafnodes,availnodes)
             while len(availnodes) != 0:
                 # parent
                 parent_idx = np.random.choice(np.arange(0,len(leafnodes)),
@@ -582,7 +580,7 @@ class GRNsim:
                 children_ids = np.random.choice(np.arange(0,len(availnodes)),
                                                        size=2,replace=False)
                 children = availnodes[children_ids]
-                sett.m(0,parent,children)
+                settings.m(0,parent,children)
                 self.Adj_signed[children,parent] = np.ones(2)
                 if self.model == 8:
                     self.Adj_signed[children[0],children[1]] = -1
@@ -594,10 +592,10 @@ class GRNsim:
                 leafnodes = np.append(leafnodes,children)
                 # update availnodes
                 availnodes = np.delete(availnodes,children_ids)
-#                 sett.m(0,availnodes)
-#                 sett.m(0,leafnodes)
-#                 sett.m(0,self.Adj)
-#                 sett.m(0,'-')
+#                 settings.m(0,availnodes)
+#                 settings.m(0,leafnodes)
+#                 settings.m(0,self.Adj)
+#                 settings.m(0,'-')
         else:
             self.Adj = np.zeros((self.dim,self.dim))
             for i in range(self.dim):
@@ -614,7 +612,7 @@ class GRNsim:
                     self.Adj[i,i] = 1
         #
         self.Adj = np.abs(np.array(self.Adj_signed))
-        #sett.m(0,self.Adj)
+        #settings.m(0,self.Adj)
 
     def set_coupl_old(self):
         """ Using the adjacency matrix, sample a coupling matrix.
@@ -647,7 +645,7 @@ class GRNsim:
             self.coupl_model8()
         # output
         if self.verbosity > 1:
-           sett.m(0,self.Coupl)
+           settings.m(0,self.Coupl)
 
     def coupl_model1(self):
         """ In model 1, we want enforce the following signs
@@ -709,7 +707,7 @@ class GRNsim:
         # check whether we can define trajectories
         Xfix = np.array([self.Coupl[0,1]/self.Coupl[0,0],1])
         if Xfix[0] > 0.97 or Xfix[0] < 0.03:
-            sett.m(0,'... either no fixed point in [0,1]^2! \n' +
+            settings.m(0,'... either no fixed point in [0,1]^2! \n' +
                   '    or fixed point is too close to bounds' )
             return None
         #
@@ -722,7 +720,7 @@ class GRNsim:
         X0mean = 0.5*(Xup[0] + Xdo[0])
         #
         if np.min(X0mean) < 0.025 or np.max(X0mean) > 0.975:
-            sett.m(0,'... initial point is too close to bounds' )
+            settings.m(0,'... initial point is too close to bounds' )
             return None
         #
         if self.show and self.verbosity > 1:
@@ -748,8 +746,8 @@ class GRNsim:
         pa_delete = []
         for pa in rule_pa:
             if pa not in self.varNames.keys():
-                sett.m(0,'list of available variables:')
-                sett.m(0,list(self.varNames.keys()))
+                settings.m(0,'list of available variables:')
+                settings.m(0,list(self.varNames.keys()))
                 message = ('processing of rule "' + rule
                              + ' yields an invalid parent: ' + pa
                              + ' | check whether the syntax is correct: \n'
@@ -784,16 +782,16 @@ class GRNsim:
                     if np.abs(self.Coupl[self.varNames[key],g]) > 1e-10:
                         raise ValueError('there should be no coupling value for '+str(key)+' <- '+str(g))
             if self.verbosity > 1:
-                sett.m(0,'...'+key)
-                sett.m(0,rule)
-                sett.m(0,rule_pa)
+                settings.m(0,'...'+key)
+                settings.m(0,rule)
+                settings.m(0,rule_pa)
             # now evaluate coefficients
             for tuple in list(itertools.product([False,True],repeat=len(self.pas[key]))):
                 if self.process_rule(rule,self.pas[key],tuple):
                     self.boolCoeff[key].append(tuple)
             #
             if self.verbosity > 1:
-                sett.m(0,self.boolCoeff[key])
+                settings.m(0,self.boolCoeff[key])
 
     def process_rule(self,rule,pa,tuple):
         ''' Process a string that denotes a boolean rule.
@@ -873,8 +871,8 @@ def check_nocycles(Adj, verbosity=2):
             v = Adj.dot(v)
             if v[g] > 1e-10:
                 if verbosity > 2:
-                    sett.m(0,Adj)
-                    sett.m(0,'contains a cycle of length',i+1,
+                    settings.m(0,Adj)
+                    settings.m(0,'contains a cycle of length',i+1,
                           'starting from node',g,
                           '-> reject')
                 return False
@@ -1081,13 +1079,13 @@ def sample_static_data(model,dir,verbosity=0):
         for icoupl in range(n_Coupls):
             Coupl, Adj, Adj_signed, n_e = sample_coupling_matrix(dim,connectivity)
             if verbosity > 1:
-                sett.m(0,icoupl)
-                sett.m(0,Adj)
+                settings.m(0,icoupl)
+                settings.m(0,Adj)
             n_edges[icoupl] = n_e
             # sample data
             X = StaticCauseEffect().sim_givenAdj(Adj,model)
             write_data(X,dir,Adj=Adj)
-        sett.m(0,'mean edge number:',n_edges.mean())
+        settings.m(0,'mean edge number:',n_edges.mean())
 
     else:
         X = StaticCauseEffect().sim_combi()
@@ -1141,19 +1139,19 @@ if __name__ == '__main__':
                       + '"..." being an arbitrary string')
     else:
         model = dir.split('/')[1].split('_')[0]
-        sett.m(0,'...model is: "'+model+'"')
+        settings.m(0,'...model is: "'+model+'"')
     if os.path.exists(dir) and 'test' not in dir:
         message = ('directory ' + dir +
                    ' already exists, remove it and continue? [y/n, press enter]')
         if str(input(message)) != 'y':
-            sett.m(0,'    ...quit program execution')
+            settings.m(0,'    ...quit program execution')
             quit()
         else:
-            sett.m(0,'   ...removing directory and continuing...')
+            settings.m(0,'   ...removing directory and continuing...')
             os.system('rm -r ' + dir)
 
-    sett.m(0,model)
-    sett.m(0,dir)
+    settings.m(0,model)
+    settings.m(0,dir)
 
     # sample data
     if 'static' in model:
