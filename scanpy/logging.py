@@ -133,16 +133,48 @@ def print_memory_usage(msg='', newline=False):
 
 def print_version_and_date():
     from . import __version__
-    settings.mi('Running Scanpy', __version__, 'on {}.'.format(get_date()))
+    settings.mi('Running Scanpy', __version__, 'on {}.'.format(get_date_string()))
 
 
-def print_versions_imported_modules():
-    import types
-    for _, var in sorted(globals().items()):
-        if isinstance(var, types.ModuleType):
-            if hasattr(var, '__version__'):
-                print(var.__name__, var.__version__, end=', ')
+_dependencies_numerics = [
+    'numpy',
+    'pandas',
+    ('sklearn', 'scikit-learn'),
+    ('igraph', 'python-igraph'),
+    'louvain']
 
 
-def get_date():
+_dependencies_plotting = ['matplotlib', 'seaborn']
+
+
+def _print_versions_dependencies(dependencies):
+    # this is not the same as the requirements!
+    print('Dependencies:', end=' ')
+    for mod in dependencies:
+        mod_name = mod[0] if isinstance(mod, tuple) else mod
+        mod_install = mod[1] if isinstance(mod, tuple) else mod
+        imp = __import__(mod_name)
+        print('{}=={}'.format(mod_install, imp.__version__), end=' ')
+    print()
+
+def print_versions_dependencies_numerics():
+    """Dependencies that might influence numerical results (computed data).
+    """
+    _print_versions_dependencies(_dependencies_numerics)
+
+
+def print_versions_dependencies_plotting():
+    """Dependencies that might influence plots (but not computed data).
+    """
+    _print_versions_dependencies(_dependencies_plotting)
+
+
+def print_versions_dependencies_all():
+    """All relevant dependencies.
+    """
+    _print_versions_dependencies(
+        _dependencies_numerics + _dependencies_plotting)
+
+
+def get_date_string():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
