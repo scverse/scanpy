@@ -343,7 +343,7 @@ def get_params_from_list(params_list):
 
 
 def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names=None,
-              backup_url=None, cache=None):
+              backup_url=None, cache=None, suppress_cache_warning=False):
     """Read file and return data dictionary.
 
     To speed up reading and save storage space, this creates an hdf5 file if
@@ -416,7 +416,7 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
                 'Cannot read original data file {}, is not present.'
                 .format(filename))
         logg.msg('reading', filename, v=4)
-        if not cache:
+        if not cache and not suppress_cache_warning:
             logg.warn('This might be very slow. Consider passing `cache=True`, '
                       'which enables much faster reading from a cache file.')
         # do the actual reading
@@ -432,8 +432,8 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
                              first_column_names=first_column_names)
         elif ext in {'txt', 'tab', 'data'}:
             if ext == 'data':
-                logg.info('... assuming ".data" means tab or white-space separated text file')
-                logg.info('--> change this by passing `ext` to sc.read')
+                logg.msg('... assuming ".data" means tab or white-space separated text file', v=3)
+                logg.hint('--> change this by passing `ext` to sc.read')
             ddata = read_txt(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             ddata = _read_softgz(filename)
@@ -513,7 +513,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
             line_list = line.split(delimiter)
             if not is_float(line_list[0]):
                 col_names = line_list
-                logg.info('    assuming first line in file stores column names')
+                logg.msg('    assuming first line in file stores column names', v=4)
             else:
                 if not is_float(line_list[0]) or first_column_names:
                     first_column_names = True
@@ -525,11 +525,11 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
     if not col_names:
         # try reading col_names from the last comment line
         if len(header) > 0:
-            logg.info('    assuming last comment line stores variable names')
+            logg.msg('    assuming last comment line stores variable names', v=4)
             col_names = np.array(header.split('\n')[-2].strip('#').split())
         # just numbers as col_names
         else:
-            logg.info('    did not find column names in file')
+            logg.msg('    did not find column names in file', v=4)
             col_names = np.arange(len(data[0])).astype(str)
     col_names = np.array(col_names, dtype=str)
     # read another line to check if first column contains row names or not
@@ -537,7 +537,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
     for line in f:
         line_list = line.split(delimiter)
         if first_column_names or not is_float(line_list[0]):
-            logg.info('    assuming first column in file stores row names')
+            logg.msg('    assuming first column in file stores row names', v=4)
             first_column_names = True
             row_names.append(line_list[0])
             data.append(np.array(line_list[1:], dtype=dtype))
@@ -546,7 +546,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
         break
     # if row names are just integers
     if len(data) > 1 and data[0].size != data[1].size:
-        logg.info('    assuming first row stores column names and first column row names')
+        logg.msg('    assuming first row stores column names and first column row names', v=4)
         first_column_names = True
         col_names = np.array(data[0]).astype(int).astype(str)
         row_names.append(data[1][0].astype(int).astype(str))
@@ -559,7 +559,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
             data.append(np.array(line_list[1:], dtype=dtype))
         else:
             data.append(np.array(line_list, dtype=dtype))
-    logg.info('    read data into list of lists', t=True)
+    logg.msg('    read data into list of lists', t=True, v=4)
     # transfrom to array, this takes a long time and a lot of memory
     # but it's actually the same thing as np.genfromtext does
     # - we don't use the latter as it would involve another slicing step
@@ -569,11 +569,11 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
         raise ValueError('length of first line {} is different from length of last line {}'
                          .format(data[0].size, data[-1].size))
     data = np.array(data, dtype=dtype)
-    logg.info('    constructed array from list of list', t=True)
+    logg.msg('    constructed array from list of list', t=True, v=4)
     # transform row_names
     if not row_names:
         row_names = np.arange(len(data)).astype(str)
-        logg.info('    did not find row names in file')
+        logg.msg('    did not find row names in file', v=4)
     else:
         row_names = np.array(row_names)
         for iname, name in enumerate(row_names):
