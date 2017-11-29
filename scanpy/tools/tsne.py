@@ -20,25 +20,24 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
 
     Parameters
     ----------
-    adata : AnnData
-        Annotated data matrix, optionally with adata.smp['X_pca'], which is
-        written when running sc.pca(adata). Is directly used for tSNE if `n_pcs` > 0.
-    n_pcs : int, optional (default: 50)
+    adata : `~scanpy.api.AnnData`
+        Annotated data matrix.
+    n_pcs : `int`, optional (default: 50)
         Number of principal components in preprocessing PCA.
-    perplexity : float, optional (default: 30)
+    perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
         usually require a larger perplexity. Consider selecting a value
         between 5 and 50. The choice is not extremely critical since t-SNE
         is quite insensitive to this parameter.
-    early_exaggeration : float, optional (default: 12.0)
+    early_exaggeration : `float`, optional (default: 12.0)
         Controls how tight natural clusters in the original space are in the
         embedded space and how much space will be between them. For larger
         values, the space between natural clusters will be larger in the
         embedded space. Again, the choice of this parameter is not very
         critical. If the cost function increases during initial optimization,
         the early exaggeration factor or the learning rate might be too high.
-    learning_rate : float, optional (default: 1000)
+    learning_rate : `float`, optional (default: 1000)
         Note that the R-package "Rtsne" uses a default of 200.
         The learning rate can be a critical parameter. It should be
         between 100 and 1000. If the cost function increases during initial
@@ -48,17 +47,19 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     random_state : `int` or `None`, optional (default: 0)
         Change this to use different intial states for the optimization. If `None`,
         the initial state is not reproducible.
-    use_fast_tsne : bool, optional (default: True)
+    use_fast_tsne : `bool`, optional (default: `True`)
         Use the MulticoreTSNE package by D. Ulyanov if it is installed.
-    n_jobs : int or None (default: sc.settings.n_jobs)
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of jobs.
-    copy : bool (default: False)
+    copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
     Returns
     -------
-    Returns or updates adata depending on `copy` with the multicolumn field
-    "X_tsne", tSNE coordinates of data (adata.smp).
+    Depending on `copy`, returns or updates `adata` with the following fields.
+
+    X_tsne : `np.ndarray` (adata.smp, dtype `float`)
+        tSNE coordinates of data.
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
@@ -67,15 +68,14 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         and adata.smpm['X_pca'].shape[1] >= n_pcs
         and not recompute_pca):
         X = adata.smpm['X_pca'][:, :n_pcs]
-        logg.info('    using X_pca for tSNE')
-        logg.info('    using', n_pcs, 'principal components')
+        logg.info('    using \'X_pca\' with n_pcs = {} for tSNE'
+                  .format(n_pcs))
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            logg.info('    preprocess using PCA with', n_pcs, 'PCs')
+            logg.info('    compute \'X_pca\' with n_pcs = {}'.format(n_pcs))
             logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.smpm['X_pca'] = X
-            logg.info('    using', n_pcs, 'principal components')
         else:
             X = adata.X
             logg.info('    using data matrix X directly (no PCA)')
@@ -111,7 +111,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.smpm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
-    logg.info('    finished', t=True, end=': ')
-    logg.info(' added\n'
-              '    "X_tsne", tSNE coordinates (adata.smp)')
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+              '    \'X_tsne\', tSNE coordinates (adata.smp)')
     return adata if copy else None

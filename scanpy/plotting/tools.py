@@ -65,9 +65,9 @@ def pca(adata, **params):
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
@@ -92,13 +92,17 @@ def pca_scatter(
         size=None,
         title=None,
         show=None,
-        save=None, ax=None):
+        save=None,
+        ax=None):
     """Scatter plot in PCA coordinates.
 
     See parameters of sc.pl.pca(). In addition.
 
     Parameters
     ----------
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
@@ -136,9 +140,9 @@ def pca_loadings(adata, components=None, show=None, save=None):
         principal component.
     show : bool, optional (default: None)
         Show the plot.
-    save : bool or str, optional (default: None)
-        If True or a str, save the figure. A string is appended to the
-        default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -154,9 +158,9 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
     ----------
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     """
     ranking(adata, 'uns', 'pca_variance_ratio', labels='PC', log=log)
     utils.savefig_or_show('pca_ranking_variance', show=show, save=save)
@@ -212,9 +216,9 @@ def diffmap(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
     """
@@ -309,9 +313,9 @@ def draw_graph(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -389,9 +393,9 @@ def tsne(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -531,9 +535,9 @@ def aga_scatter(
          Adjust the width of the space right of each plotting panel.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -660,8 +664,8 @@ def aga_graph(
     show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
@@ -789,9 +793,9 @@ def _aga_graph(
     if isinstance(color, str) and color.startswith('degree'):
         # see also tools.aga.aga_degrees
         if color == 'degree_dashed':
-            color = [d for _, d in nx_g_dashed.degree_iter(weight='weight')]
+            color = [d for _, d in nx_g_dashed.degree(weight='weight')]
         elif color == 'degree_solid':
-            color = [d for _, d in nx_g_solid.degree_iter(weight='weight')]
+            color = [d for _, d in nx_g_solid.degree(weight='weight')]
         else:
             raise ValueError('`degree` either "degree_dashed" or "degree_solid".')
         color = (np.array(color) - np.min(color)) / (np.max(color) - np.min(color))
@@ -1039,6 +1043,9 @@ def aga_path(
         Plot the timeseries as heatmap.
     normalize_to_zero_one : `bool`, optional (default: `True`)
         Shift and scale the running average to [0, 1] per gene.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
 
     Returns
     -------
@@ -1079,6 +1086,11 @@ def aga_path(
         x = []
         for igroup, group in enumerate(nodes):
             idcs = np.arange(adata.n_smps)[adata.smp[groups_key].values == str(group)]
+            if len(idcs) == 0:
+                raise ValueError('Did not find data points that match '
+                                 '`adata.smp[{}].values == str({})`.'
+                                 'Check whether adata.smp[{}] actually contains what you expect.'
+                                 .format(groups_key, group, groups_key))
             idcs_group = np.argsort(adata.smp['aga_pseudotime'].values[
                 adata.smp[groups_key].values == str(group)])
             idcs = idcs[idcs_group]
@@ -1089,8 +1101,7 @@ def aga_path(
                 x_tick_locs.append(len(x))
                 for anno in annotations:
                     series = adata.smp[anno]
-                    if is_categorical_dtype(series):
-                        series = series.cat.codes
+                    if is_categorical_dtype(series): series = series.cat.codes
                     anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
             old_len_x = len(x)
@@ -1317,9 +1328,9 @@ def dpt(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     show_tree : bool, optional (default: False)
@@ -1513,9 +1524,9 @@ def louvain(
          `"title1,title2,..."`.
     show : bool, optional (default: None)
          Show the plot.
-    save : bool or str, optional (default: None)
-         If True or a str, save the figure. A string is appended to the
-         default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
@@ -1544,7 +1555,7 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, save=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, save=None, ext=None):
     """Plot ranking of genes.
 
     Parameters
@@ -1561,7 +1572,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename.
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -1608,8 +1619,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
     writekey = ('rank_genes_groups_'
-                + str(adata.uns['rank_genes_groups_params']['group_by'])
-                + '_' + group_name)
+                + str(adata.uns['rank_genes_groups_params']['group_by']))
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
@@ -1646,7 +1656,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
         Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename.
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -1720,9 +1730,9 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         adata.X consists in concatenated realizations.
     shuffle : bool, optional (default: False)
         Shuffle the data.
-    save : bool or str, optional (default: None)
-        If True or a str, save the figure. A string is appended to the
-        default filename.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     show : bool, optional (default: None)
         Show the plot.
     """

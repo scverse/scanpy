@@ -9,20 +9,21 @@ References
 """
 
 import numpy as np
+from .. import settings
 from .. import utils
+from .. import logging as logg
 from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
 def draw_graph(adata,
                layout='fr',
                root=None,
-               n_neighbors=30,
-               n_pcs=50,
+               n_neighbors=None,
+               n_pcs=None,
                random_state=0,
                recompute_pca=False,
                recompute_distances=False,
                recompute_graph=False,
-               adjacency=None,
                n_jobs=None,
                copy=False,
                **kwargs):
@@ -48,26 +49,28 @@ def draw_graph(adata,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
         Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and
         'rt' (Reingold Tilford tree layout).
-    n_neighbors : `int`
+    n_neighbors : `int` or `None` (default: `None`)
         Number of nearest neighbors in graph.
-    n_pcs : `int`
+    n_pcs : `int` or `None` (default: `None`)
         Number of PCs used to compute distances.
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
-        different intial states for the optimization. If `None`, the initial
-        state is not reproducible.
+        different intial states for the optimization. If `None`, no seed is set.
     **kwargs : further parameters
         Parameters of chosen igraph algorithm. See, e.g.,
         http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold.
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
+        Number of jobs.
+    copy : `bool` (default: `False`)
+        Return a copy instead of writing to adata.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
     X_draw_graph_`layout` : `np.ndarray` (`adata.smpm`, dtype `float`)
-        Array of shape #samples × 2. Coordinates of graph layout.
+        Coordinates of graph layout.
     """
-    from .. import logging as logg
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
               r=True)
     avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular'}
@@ -99,9 +102,9 @@ def draw_graph(adata,
         dtype=[('layout', 'U20'), ('random_state', int)])
     smp_key = 'X_draw_graph_' + layout
     adata.smpm[smp_key] = np.array(ig_layout.coords)
-    logg.m('    finished', t=True, end=' ')
-    logg.m('and added\n'
-           '    "{}", graph_drawing coordinates (adata.smp)\n'
-           '    "draw_graph_params", the parameters (adata.uns)'
-           .format(smp_key))
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+              '    \'{}\', graph_drawing coordinates (adata.smp)\n'
+              '    \'draw_graph_params\', the parameters (adata.uns)'
+              .format(smp_key))
     return adata if copy else None

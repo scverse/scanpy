@@ -208,6 +208,14 @@ def savefig(writekey, dpi=None, ext=None):
 
 def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if isinstance(save, str):
+        # check whether `save` contains a figure extension
+        if ext is None:
+            for try_ext in ['.svg', '.pdf', '.png']:
+                if save.endswith(try_ext):
+                    ext = try_ext[1:]
+                    save = save.replace(try_ext, '')
+                    break
+        # append it
         writekey += save
         save = True
     save = settings.savefigs if save is None else save
@@ -260,8 +268,8 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
                          .format(len(adata.uns[key + '_colors']), key))
     for iname, name in enumerate(adata.smp[key].cat.categories):
         if name in settings.categories_to_ignore:
-            logg.info('Setting color of group {} in {} to grey as it appears in'
-                      '`sc.settings.categories_to_ignore`.'
+            logg.info('... setting color of group \'{}\' in \'{}\' to \'grey\' '
+                      '(`sc.settings.categories_to_ignore`)'
                       .format(name, key))
             adata.uns[key + '_colors'][iname] = 'grey'
 

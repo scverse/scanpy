@@ -12,7 +12,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Basic Preprocessing</h4>
+   <h5>Basic Preprocessing</h5>
 
 .. autosummary::
    :toctree: .
@@ -30,7 +30,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Recipes</h4>
+   <h5>Recipes</h5>
 
 .. autosummary::
    :toctree: .
@@ -45,7 +45,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Visualization</h4>
+   <h5>Visualization</h5>
 
 .. autosummary::
    :toctree: .
@@ -57,7 +57,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Branching trajectories and pseudotime, clustering, differential expression</h4>
+   <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
 
 .. autosummary::
    :toctree: .
@@ -69,7 +69,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Simulations</h4>
+   <h5>Simulations</h5>
 
 .. autosummary::
    :toctree: .
@@ -79,22 +79,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h3>Generic methods</h3>
-
-.. raw:: html
-
-   <h4>Reading and Writing</h4>
-
-.. autosummary::
-   :toctree: .
-
-   read
-   write
-   read_10x_h5
-
-.. raw:: html
-
-   <h4>Data Structures</h4>
+   <h3>Data Structures</h3>
 
 .. autosummary::
    :toctree: .
@@ -104,11 +89,29 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h3>Plotting</h3>
+   <h3>Reading and Writing</h3>
+
+.. autosummary::
+   :toctree: .
+
+   read
+   write
+   read_10x_h5
+
 
 .. raw:: html
 
-   <h4>Generic plotting with AnnData</h4>
+   <h3>Plotting</h3>
+
+.. autosummary::
+   :toctree: .
+
+   pl.set_rcParams_Scanpy
+   pl.set_rcParams_Defaults
+
+.. raw:: html
+
+   <h5>Generic plotting with AnnData</h5>
 
 .. autosummary::
    :toctree: .
@@ -119,7 +122,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 .. raw:: html
 
-   <h4>Plotting tool results</h4>
+   <h5>Plotting tool results</h5>
 
 Methods that extract and visualize tool-specific annotation in an AnnData object.
 
@@ -168,7 +171,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
 
 .. raw:: html
 
-   <h4>Builtin datasets</h4>
+   <h3>Datasets</h3>
 
 Simple functions that provide annotated datasets for benchmarking. See
 `here <https://scanpy.readthedocs.io/en/latest/examples.html>`_ for extensive
@@ -179,11 +182,12 @@ All of these functions return an Annotated Data object.
 .. autosummary::
    :toctree: .
 
-   datasets.paul15
-   datasets.toggleswitch
-   datasets.krumsiek11
    datasets.blobs
+   datasets.krumsiek11
    datasets.moignard15
+   datasets.paul15
+   datasets.paul15_raw
+   datasets.toggleswitch
 
 """
 

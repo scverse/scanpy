@@ -1,12 +1,10 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
+# Author: Alex Wolf (http://falexwolf.de)
 """Just a namespace to be used within examples.
 """
 
 from .. import settings
-sett = settings  # abbreviation
 """Settings"""
 from .. import logging
-logg = logging   # abbreviation
 """Logging"""
 from .. import tools
 tl = tools       # abbreviation

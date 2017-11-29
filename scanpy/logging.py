@@ -138,6 +138,7 @@ def print_version_and_date():
 
 _dependencies_numerics = [
     'numpy',
+    'scipy',
     'pandas',
     ('sklearn', 'scikit-learn'),
     'statsmodels',

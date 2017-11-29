@@ -98,9 +98,7 @@ def read(filename, sheet=None, ext=None, delimiter=None,
 
 
 def read_10x_h5(filename, genome='mm10'):
-    """Get annotated 10X expression matrix from hdf5 file.
-
-    Uses the naming conventions of 10x hdf5 files.
+    """Read hdf5 file with naming conventions of 10X Genomics.
 
     Parameters
     ----------
@@ -1065,7 +1063,7 @@ def ddata_from_df(df):
 
 def download_progress(count, blockSize, totalSize):
     percent = int(count*blockSize*100/totalSize)
-    sys.stdout.write("\r" + "... %d%%" % percent)
+    sys.stdout.write('\r' + '... %d%%' % percent)
     sys.stdout.flush()
 
 
