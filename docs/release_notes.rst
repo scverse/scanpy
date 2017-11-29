@@ -5,6 +5,13 @@
 - partial loading of data into memory
 
 
+**November 29, 2017**: version 0.3.2
+
+- consistency updates, better logging, docs and bug fixes throughout
+- logging of dependencies :func:`~scanpy.api.logging.print_versions_dependencies_numerics`
+- :func:`~scanpy.api.pl.rank_genes_groups` `improved <https://github.com/theislab/scanpy/issues/51>`_
+
+
 **November 16, 2017**: version 0.3
 
 Consistency updates in the design of :class:`~scanpy.api.AnnData` and the code base. Everything is backwards compatible.
