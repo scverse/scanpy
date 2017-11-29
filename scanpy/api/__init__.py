@@ -188,8 +188,18 @@ All of these functions return an Annotated Data object.
    datasets.paul15
    datasets.paul15_raw
    datasets.toggleswitch
-
 """
+
+# .. raw:: html
+
+#    <h3>Logging</h3>
+
+# .. autosummary::
+#    :toctree: .
+
+#    logging.print_version_and_date
+#    logging.print_versions_dependencies_numerics
+
 
 from anndata import AnnData
 
