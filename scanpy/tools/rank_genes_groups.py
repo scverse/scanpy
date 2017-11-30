@@ -86,6 +86,10 @@ def rank_genes_groups(
         dtype=[('group_by', 'U50'), ('reference', 'U50'), ('test_type', 'U50')])
     X = adata.X
 
+    # Make sure indices are not OoB in case there are less genes than n_genes
+    if n_genes > X.shape[1]:
+        n_genes=X.shape[1]
+
     rankings_gene_zscores = []
     rankings_gene_names = []
     n_groups = groups_masks.shape[0]
