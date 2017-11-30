@@ -11,6 +11,7 @@ from math import inf
 from .data_structs.data_graph import add_or_update_graph_in_adata
 from scipy.sparse import issparse
 import logging as logg
+import pandas as pd
 
 def save_spring_dir(adata, project_directory,k=30, D=None,
                     custom_color_tracks=None, cell_groupings=None, use_genes=[]):
@@ -50,6 +51,24 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
     # gene_list: list, np.ndarry - like
     # An ordered list of gene names with length X.shape[1].
     gene_list=adata.var_names
+
+    # We allow to include rank_genes annotation.
+    use_genes_list=list()
+    if type(use_genes) is str:
+        if use_genes in adata.uns:
+            for rank in adata.uns[use_genes]:
+                for groups in rank:
+                    use_genes_list.append(groups)
+            use_genes=use_genes_list
+        else:
+            if use_genes not in adata.var_names:
+                logg.warn('Data annotation not found. Call rank_gene_groups or make sure gene name is in Data.')
+            else:
+                # if a single gene contained in AnnData object
+                use_genes=[use_genes]
+    else:
+        # Assuming it is a list, do nothing
+        pass
 
 
     # File can be safed anywhere. However, for easy access via SPRING, safe it somewhere in the spring directory
@@ -92,17 +111,22 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
     right=II
     for j in range(50):
         fname = project_directory + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
+        if issparse(X):
+            X_writeable_chunk=np.zeros((X.shape[0],(right-left)))
+            X_writeable_chunk[X[:,left:right].nonzero()]=X[:,left:right].data
+        else:
+            X_writeable_chunk=X[:,left:right]
         if len(use_genes) > 0:
             all_gene_colors = {
                 # Adapted slicing, so that it won't be OOB
-                g: X[:, i + left] for i, g in enumerate(gene_list[left: right]) if g in use_genes}
+                g: X_writeable_chunk[:, i] for i, g in enumerate(gene_list[left: right]) if g in use_genes}
         else:
             all_gene_colors = {
                 # Here, the original control mechansim to included genes in Color if average expression across all cells is above 0.05
                 # This doesn't translate to anything meaningful here. Actually, no genes are then selected
-                g: X[:, i + left] for i, g in enumerate(
+                g: X_writeable_chunk[:, i] for i, g in enumerate(
                 gene_list[left: right]) }
-        write_color_tracks(all_gene_colors, fname)
+        write_color_tracks(all_gene_colors, fname, X.shape[0])
         left+=II
         right+=II
         # Avoid OOB:
@@ -112,13 +136,9 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
 
     # Create and save a dictionary of color profiles to be used by the visualizer
     # Cast: numpy datatypes as input not json serializable
-    color_stats = {}
-    for i in range(X.shape[1]):
-        mean = float(np.mean(X[:, i]))
-        std = float(np.std(X[:, i]))
-        max = float(np.max(X[:, i]))
-        centile = float(np.percentile(X[:, i], 99.6))
-        color_stats[gene_list[i]] = (mean, std, 0, max, centile)
+    # Pre-calculate statistics before writing to speed up calculations
+    color_stats = {g: (float(np.mean(X[:, i])), float(np.std(X[:, i].todense()  )), float(np.max(X[:, i])),
+                       float(np.percentile(X[:, i].todense(), 99))) for i, g in enumerate(gene_list) if g in use_genes}
     json.dump(color_stats,
               open(project_directory + '/color_stats.json', 'w'), indent=4, sort_keys=True)
 
@@ -135,13 +155,25 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
         pass
     else:
         for j, i in enumerate(cell_groupings):
-            if (cell_groupings[j]+'_order' not in adata.uns) or (cell_groupings[j]+'_colors' not in adata.uns) :
-                # TODO: Change to logging
-                logg.warn('Adata annotation does not exist. Check input' )
+            if cell_groupings[j]  not in adata.smp:
+                logg.warn('Adata annotation key for cell grouping does not exist. Inspect sample annotation ')
             else:
-                groups=adata.smp[cell_groupings[j]]
-                group_names=adata.uns[cell_groupings[j]+'_order']
-                group_colors=adata.uns[cell_groupings[j]+'_colors']
+                group_names = []
+                groups = adata.smp[cell_groupings[j]]
+                if cell_groupings[j] + '_order' not in adata.uns:
+                    group_names = list(pd.unique(adata.smp[cell_groupings[j]]))
+                    group_names.sort()
+                else:
+                    group_names = adata.uns[cell_groupings[j] + '_order']
+                if cell_groupings[j] + '_colors' not in adata.uns:
+                    n = len(group_names)
+                    from random import randint
+                    group_colors = []
+                    for i in range(n):
+                        group_colors.append('#' + '%06X' % randint(0, 0xFFFFFF))
+                else:
+                    group_colors = adata.uns[cell_groupings[j] + '_colors']
+
                 label_colors = {l: group_colors[i] for i, l in enumerate(group_names)}
                 labels = list(groups)
                 # SPRING expects a Dictionary for label_colors, but a list for labels !
@@ -205,7 +237,7 @@ def get_knn_edges_sparse(dmat, k):
                 dmat[i, j] = saved_values[j]
     return edge_dict.keys()
 
-def write_color_tracks(ctracks, fname):
+def write_color_tracks(ctracks, fname, n_cells=0):
     out = []
     for name, score in ctracks.items():
         line = ','.join([name] + [repr(round(x, 1)) for x in score])
