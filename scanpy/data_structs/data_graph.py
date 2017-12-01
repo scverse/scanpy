@@ -21,8 +21,8 @@ N_PCS = 50  # default number of PCs
 
 def add_or_update_graph_in_adata(
         adata,
-        n_neighbors=30,
-        n_pcs=50,
+        n_neighbors=None,
+        n_pcs=None,
         n_dcs=None,
         knn=None,
         recompute_pca=False,

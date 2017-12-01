@@ -1,146 +1,132 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
-#         T. Callies
+# Author: T. Callies
+#         F. Alex Wolf (http://falexwolf.de)
 """Exporting to formats for other software.
 """
 
 import numpy as np
 import os
 import json
-import pdb
 from math import inf
-from .data_structs.data_graph import add_or_update_graph_in_adata
 from scipy.sparse import issparse
 import logging as logg
-import pandas as pd
+from pandas.api.types import is_string_dtype, is_categorical
+from .plotting.utils import add_colors_for_categorical_sample_annotation
 
-def save_spring_dir(adata, project_directory,k=30, D=None,
-                    custom_color_tracks=None, cell_groupings=None, use_genes=[]):
-    """Builds a SPRING project directory.
-    This is based on a preprocessing function by Caleb Weinreb:
-    https://github.com/AllonKleinLab/SPRING/
+
+def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
+                   custom_color_tracks=None):
+    """Exports to a SPRING project directory [Weinreb17]_
+
+    See https://github.com/AllonKleinLab/SPRING or Weinreb17_ for details.
+
     Parameters
     ----------
-    adata : AnnData() object
-        Matrix of gene expression. Rows correspond to cells and columns
-        correspond to genes.
-    project_directory : str
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix: `adata.uns['data_graph_distance_local']` needs to
+        be present.
+    project_dir : `str`
         Path to a directory where SPRING readable files will be written. The
         directory does not have to exist before running this function.
-    k : int , optional (default: 30)
-        K used in knn-graph (so k-1 edges in the graph)
-    D : np.ndarray , optional (default: None)
-        Distance matrix for construction of knn graph. Any distance matrix can
-        be used as long as higher values correspond to greater distances.
-        If nothing is given, local_graph_distance is used as computed by
-        add_or_update_graph_in_adata
-    custom_color_tracks : str, list of str, optional (default: None)
-        Dictionary with one key-value pair for each custom color.  The key is
-        the name of the color track and the value is a list of scalar values
-        (i.e. color intensities). If there are N cells total (i.e. X.shape[0] ==
-        N), then the list of labels should have N entries.
-        Currently not used
-    cell_groupings : str, list of str , optional (default: None)
-        Optional list of strings containing adata.uns key to grouping. Adata.uns should contain cell_groupings+'_order'
-        and cell_groupings+'colors' as keys with names / colors for groupings and for each cell the corresponding group
-        Furthermore. adata.smp[cell_groupings] should return an array of adata.X.shape[0] elements
-    use_genes : list, default: []
-        Selects certain genes that are written into the coloring files. Default ([]) selects all genes
+    use_genes : `str` or `list`, optional (default: `None`)
+        Select a subset of genes. If a `str`, looks for annotation in
+        `adata.uns` useful to plot marker genes found with
+        :func:`~scanpy.api.tl.rank_gene_groups`.
+    cell_groupings : `str`, `list` of `str`, optional (default: `None`)
+        Optional list of strings containing `adata.smp` key to grouping.
+    custom_color_tracks : `str`, `list` of `str`, optional (default: `None`)
+        Optional list of strings containing `adata.smp` key for continuous
+        coloring.
     """
 
-    X= adata.X
-    # gene_list: list, np.ndarry - like
-    # An ordered list of gene names with length X.shape[1].
-    gene_list=adata.var_names
-
+    gene_list = adata.var_names
     # We allow to include rank_genes annotation.
-    use_genes_list=list()
-    if type(use_genes) is str:
+    if isinstance(use_genes, str):
+        use_genes_list = []
         if use_genes in adata.uns:
             for rank in adata.uns[use_genes]:
                 for groups in rank:
                     use_genes_list.append(groups)
-            use_genes=use_genes_list
+            use_genes = use_genes_list
         else:
+            # TODO: the following check seems fishy
             if use_genes not in adata.var_names:
-                logg.warn('Data annotation not found. Call rank_gene_groups or make sure gene name is in Data.')
+                logg.warn(
+                    '{} annotation not found. Call `rank_gene_groups` '
+                    'or make sure gene names are in `adata.var_names`.'
+                    .format(use_genes))
             else:
                 # if a single gene contained in AnnData object
-                use_genes=[use_genes]
-    else:
-        # Assuming it is a list, do nothing
-        pass
+                use_genes_list = [use_genes]
+        gene_list = use_genes_list
+    elif isinstance(use_genes, (list, np.ndarray)):
+        gene_list = list(use_genes)
 
+    # File can be safed anywhere. However, for easy access via SPRING, safe it
+    # somewhere in the spring directory
+    os.system('mkdir ' + project_dir)
+    if not project_dir[-1] == '/': project_dir += '/'
 
-    # File can be safed anywhere. However, for easy access via SPRING, safe it somewhere in the spring directory
-    os.system('mkdir ' + project_directory)
-    if not project_directory[-1] == '/': project_directory += '/'
-
-    if D==None:
-            add_or_update_graph_in_adata(
-            adata,
-            n_neighbors=k,
-            n_pcs=50,
-            n_dcs=15,
-            knn=None,
-            recompute_pca=True,
-            recompute_distances=True,
-            recompute_graph=True,
-            n_jobs=None)
-            # Note that output here will always be sparse
-            D = adata.uns['data_graph_distance_local']
-            edges = get_knn_edges_sparse(D, k)
-    else:
-        edges = get_knn_edges_sparse(D, k)
+    if 'data_graph_distance_local' not in adata.uns:
+        raise ValueError(
+            'Run any tool that produces a data graph first, '
+            'e.g. sc.tl.diffmap or sc.tl.louvain')
+    # Note that output here will always be sparse
+    D = adata.uns['data_graph_distance_local']
+    k = adata.uns['data_graph_distance_local'][0].nonzero()[0].size
+    edges = get_knn_edges_sparse(D, k)
 
     # write custom color tracks
     if isinstance(custom_color_tracks, str):
         custom_color_tracks = [custom_color_tracks]
-    if custom_color_tracks is None:
-        pass
+    if custom_color_tracks is not None:
+        custom_colors = {g: adata.smp[g] for g in custom_color_tracks}
     else:
-        custom_colors = {g: adata.smp[g] for i, g in enumerate(custom_color_tracks)}
-        write_color_tracks(custom_colors, project_directory + 'color_data_gene_sets.csv')
+        # write all annotation that's neither categorical or string
+        custom_colors = {k: adata.smp[k] for k in adata.smp_keys()
+                         if not (is_categorical(adata.smp[k])
+                                 or is_string_dtype(adata.smp[k]))}
+    if len(custom_colors) > 0:
+        write_color_tracks(custom_colors, project_dir + 'color_data_gene_sets.csv')
 
     all = []
 
     # save gene colortracks
-    os.system('mkdir ' + project_directory + 'gene_colors')
-    # The following Split into left right (+ casting) makes sure that every gene is included, no out of bounds
+    os.system('mkdir ' + project_dir + 'gene_colors')
+    # The following Split into left right (+ casting) makes sure that every gene
+    # is included, no out of bounds
     II = int(len(gene_list) / 50) + 1
-    left=0
-    right=II
+    left = 0
+    right = II
     for j in range(50):
-        fname = project_directory + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
-        if issparse(X):
-            X_writeable_chunk=np.zeros((X.shape[0],(right-left)))
-            X_writeable_chunk[X[:,left:right].nonzero()]=X[:,left:right].data
-        else:
-            X_writeable_chunk=X[:,left:right]
-        if len(use_genes) > 0:
-            all_gene_colors = {
-                # Adapted slicing, so that it won't be OOB
-                g: X_writeable_chunk[:, i] for i, g in enumerate(gene_list[left: right]) if g in use_genes}
-        else:
-            all_gene_colors = {
-                # Here, the original control mechansim to included genes in Color if average expression across all cells is above 0.05
-                # This doesn't translate to anything meaningful here. Actually, no genes are then selected
-                g: X_writeable_chunk[:, i] for i, g in enumerate(
-                gene_list[left: right]) }
-        write_color_tracks(all_gene_colors, fname, X.shape[0])
-        left+=II
-        right+=II
-        # Avoid OOB:
-        if right >=len(gene_list):
-            right=len(gene_list)
+        fname = project_dir + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
+        X_writeable_chunk = adata[:, gene_list[left:right]].X
+        if issparse(X_writeable_chunk):
+            X_writeable_chunk = X_writeable_chunk.toarray()
+        if X_writeable_chunk.ndim == 1:
+            X_writeable_chunk = X_writeable_chunk[:, None]
+        all_gene_colors = {
+            g: X_writeable_chunk[:, i]
+            for i, g in enumerate(gene_list[left:right])}
+        write_color_tracks(all_gene_colors, fname, adata.X.shape[0])
+        left += II
+        right += II
+        if right >= len(gene_list): right = len(gene_list)
+        if right <= left: break
         all += all_gene_colors.keys()
 
     # Create and save a dictionary of color profiles to be used by the visualizer
     # Cast: numpy datatypes as input not json serializable
     # Pre-calculate statistics before writing to speed up calculations
-    color_stats = {g: (float(np.mean(X[:, i])), float(np.std(X[:, i].todense()  )), float(np.max(X[:, i])),
-                       float(np.percentile(X[:, i].todense(), 99))) for i, g in enumerate(gene_list) if g in use_genes}
+    X = adata.X
+    color_stats = {g: (float(np.mean(X[:, i])),
+                       float(np.std(X[:, i].todense() if issparse(X) else X[:, i])),
+                       float(np.max(X[:, i])),
+                       float(np.percentile(
+                           X[:, i].todense() if issparse(X) else X[:, i],
+                           99)))
+                   for i, g in enumerate(gene_list)}
     json.dump(color_stats,
-              open(project_directory + '/color_stats.json', 'w'), indent=4, sort_keys=True)
+              open(project_dir + '/color_stats.json', 'w'), indent=4, sort_keys=True)
 
     # save cell labels
 
@@ -151,40 +137,32 @@ def save_spring_dir(adata, project_directory,k=30, D=None,
         cell_groupings = [cell_groupings]
 
     if cell_groupings is None:
-        # In this case, do nothing
-        pass
-    else:
-        for j, i in enumerate(cell_groupings):
-            if cell_groupings[j]  not in adata.smp:
-                logg.warn('Adata annotation key for cell grouping does not exist. Inspect sample annotation ')
-            else:
-                group_names = []
-                groups = adata.smp[cell_groupings[j]]
-                if cell_groupings[j] + '_order' not in adata.uns:
-                    group_names = list(pd.unique(adata.smp[cell_groupings[j]]))
-                    group_names.sort()
-                else:
-                    group_names = adata.uns[cell_groupings[j] + '_order']
-                if cell_groupings[j] + '_colors' not in adata.uns:
-                    n = len(group_names)
-                    from random import randint
-                    group_colors = []
-                    for i in range(n):
-                        group_colors.append('#' + '%06X' % randint(0, 0xFFFFFF))
-                else:
-                    group_colors = adata.uns[cell_groupings[j] + '_colors']
-
-                label_colors = {l: group_colors[i] for i, l in enumerate(group_names)}
-                labels = list(groups)
-                # SPRING expects a Dictionary for label_colors, but a list for labels !
-                categorical_coloring_data[cell_groupings[j]] = {'label_colors': label_colors, 'label_list': labels}
-        json.dump(categorical_coloring_data, open(
-                project_directory + '/categorical_coloring_data.json', 'w'), indent=4)
+        cell_groupings = [k for k in adata.smp_keys() if
+                          is_categorical(adata.smp[k])]
+    for j, i in enumerate(cell_groupings):
+        if cell_groupings[j] not in adata.smp:
+            logg.warn('adata annotation key for cell grouping does not exist. '
+                      'Inspect observation annotation.')
+        else:
+            group_names = []
+            groups = adata.smp[cell_groupings[j]]
+            group_names = adata.smp[cell_groupings[j]].cat.categories
+            add_colors_for_categorical_sample_annotation(adata,
+                                                         cell_groupings[j],
+                                                         palette=None)
+            group_colors = adata.uns[i + '_colors']
+            label_colors = {l: group_colors[i] for i, l in enumerate(group_names)}
+            labels = list(groups)
+            # SPRING expects a Dictionary for label_colors, but a list for labels !
+            categorical_coloring_data[cell_groupings[j]] = {
+                'label_colors': label_colors, 'label_list': labels}
+    json.dump(categorical_coloring_data, open(
+              project_dir + '/categorical_coloring_data.json', 'w'), indent=4)
 
     nodes = [{'name': i, 'number': i} for i in range(X.shape[0])]
     edges = [{'source': int(i), 'target': int(j)} for i, j in edges]
     out = {'nodes': nodes, 'links': edges}
-    open(project_directory + 'graph_data.json', 'w').write(
+    open(project_dir + 'graph_data.json', 'w').write(
         json.dumps(out, indent=4, separators=(',', ': ')))
 
 
@@ -209,6 +187,7 @@ def get_knn_edges(dmat, k):
             dmat[i,j]=val
 
     return edge_dict.keys()
+
 
 # This is a (preliminary) alternative to get_knn_edges
 # We assume that D is a distance matrix containing only non-zero entries for the (k-1)nn
@@ -236,6 +215,7 @@ def get_knn_edges_sparse(dmat, k):
             for j in saved_values:
                 dmat[i, j] = saved_values[j]
     return edge_dict.keys()
+
 
 def write_color_tracks(ctracks, fname, n_cells=0):
     out = []
