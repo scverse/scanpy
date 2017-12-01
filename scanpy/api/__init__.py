@@ -87,6 +87,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    AnnData
    DataGraph
 
+
 .. raw:: html
 
    <h3>Reading and Writing</h3>
@@ -97,6 +98,16 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    read
    write
    read_10x_h5
+
+
+.. raw:: html
+
+   <h3>Exporting</h3>
+
+.. autosummary::
+   :toctree: .
+
+   export_to.spring_project
 
 
 .. raw:: html
@@ -128,7 +139,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
 
 .. raw:: html
 
-   <h5>Visualization</h5>
+   <h6>Visualization</h6>
 
 .. autosummary::
    :toctree: .
@@ -143,7 +154,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
 
 .. raw:: html
 
-   <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
+   <h6>Branching trajectories and pseudotime, clustering, differential expression</h6>
 
 .. autosummary::
    :toctree: .
@@ -161,7 +172,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
 
 .. raw:: html
 
-   <h5>Simulations</h5>
+   <h6>Simulations</h6>
 
 .. autosummary::
    :toctree: .
@@ -217,3 +228,4 @@ from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
 from ..data_structs import DataGraph
 from .. import utils
+from . import export_to

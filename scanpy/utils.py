@@ -263,7 +263,7 @@ def sanitize_anndata(adata, verbosity=-3):
                     df[key] = c
                     df[key].cat.categories = df[key].cat.categories.astype('U')
                     logg.info('... storing {} as categorical type'.format(key))
-                    logg.hint('access categories as adata.{}.{}.cat.categories'
+                    logg.hint('access categories as adata.{}[\'{}\'].cat.categories'
                               .format(ann, key))
 
 
