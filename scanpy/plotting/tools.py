@@ -577,6 +577,7 @@ def aga_graph(
         root=0,
         groups=None,
         color=None,
+        threshold_solid=None,
         threshold_dashed=1e-6,
         fontsize=None,
         node_size_scale=1,
@@ -632,7 +633,10 @@ def aga_graph(
         The node colors.  Besides cluster colors, lists and uniform colors this
         also acceppts {'degree_dashed', 'degree_solid'} which are plotted using
         continuous color map.
-    threshold_dashed : `float`, optional (default: 1e-6)
+    threshold_solid : `float` or `None`, optional (default: `None`)
+        Do not draw edges for weights below this threshold. Set to `None` if you
+        want all edges.
+    threshold_dashed : `float` or `None`, optional (default: 1e-6)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
     fontsize : int (default: None)
@@ -705,6 +709,7 @@ def aga_graph(
             axs[icolor],
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
+            threshold_solid=threshold_solid,
             threshold_dashed=threshold_dashed,
             layout=layout,
             root=root,
@@ -738,6 +743,7 @@ def _aga_graph(
         ax,
         solid_edges=None,
         dashed_edges=None,
+        threshold_solid=None,
         threshold_dashed=1e-6,
         root=0,
         rootlevel=None,
@@ -781,10 +787,12 @@ def _aga_graph(
         root = [list(node_labels).index(r) for r in root]
 
     # define the objects
-    adjacency_solid = adata.uns[solid_edges]
+    adjacency_solid = adata.uns[solid_edges].copy()
+    if threshold_solid is not None:
+        adjacency_solid[adjacency_solid < threshold_solid] = 0
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
-        adjacency_dashed = adata.uns[dashed_edges]
+        adjacency_dashed = adata.uns[dashed_edges].copy()
         if threshold_dashed is not None:
             adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
         nx_g_dashed = nx.Graph(adjacency_dashed)
