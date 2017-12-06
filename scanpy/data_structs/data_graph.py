@@ -269,6 +269,8 @@ class DataGraph():
             self.fresh_compute = True
             self.n_dcs = n_dcs if n_dcs is not None else N_DCS
             self.k = k if k is not None else 30
+            if self.k > adata.n_smps:
+                self.k = 1 + int(0.5*adata.n_smps)
             logg.info('    computing data graph with n_neighbors = {} '
                       .format(self.k))
             self.evals = None
@@ -487,7 +489,7 @@ class DataGraph():
                 Den = np.outer(q, q)
                 self.K = W / Den
             else:
-                q = np.array(np.sum(W, axis=0)).flatten()
+                q = np.array(W.sum(axis=0)).flatten()
                 self.K = W
                 for i in range(len(W.indptr[:-1])):
                     row = W.indices[W.indptr[i]: W.indptr[i+1]]
@@ -508,7 +510,7 @@ class DataGraph():
             szszT = np.outer(self.sqrtz, self.sqrtz)
             self.Ktilde = self.K / szszT
         else:
-            self.z = np.array(np.sum(self.K, axis=0)).flatten()
+            self.z = np.array(self.K.sum(axis=0)).flatten()
             # now we need the square root of the density
             self.sqrtz = np.array(np.sqrt(self.z))
             # now compute the density-normalized Kernel
