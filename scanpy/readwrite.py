@@ -420,7 +420,8 @@ def read_file(filename, sheet=None, ext=None, delimiter=None, first_column_names
         # do the actual reading
         if ext == 'xlsx' or ext == 'xls':
             if sheet is None:
-                ddata = read_file_to_dict(filename, ext=ext)
+                raise ValueError(
+                    'Provide `sheet` parameter when reading \'.xlsx\' files.')
             else:
                 ddata = _read_excel(filename, sheet)
         elif ext == 'mtx':
