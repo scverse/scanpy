@@ -40,7 +40,7 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_diffmap : `np.ndarray` (`adata.smpm`, dtype `float`)
+    X_diffmap : `np.ndarray` (`adata.obsm`, dtype `float`)
         Array of shape (#samples) × (#eigen vectors). DiffMap representation of
         data, which is the right eigen basis of the transition matrix with
         eigenvectors as columns.
@@ -59,11 +59,11 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     dmap.update_diffmap()
     adata.uns['data_graph_distance_local'] = dmap.Dsq
     adata.uns['data_graph_norm_weights'] = dmap.Ktilde
-    adata.smpm['X_diffmap'] = dmap.rbasis[:, 1:]
-    adata.smp['X_diffmap0'] = dmap.rbasis[:, 0]
+    adata.obsm['X_diffmap'] = dmap.rbasis[:, 1:]
+    adata.obs['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.uns['diffmap_evals'] = dmap.evals[1:]
     logg.info('    finished', t=True, end=' ')
     logg.info('and added\n'
-              '    "X_diffmap", the diffmap coordinates (adata.smpm),\n'
+              '    "X_diffmap", the diffmap coordinates (adata.obsm),\n'
               '    "diffmap_evals", the eigenvalues of the transition matrix (adata.uns)')
     return adata if copy else None

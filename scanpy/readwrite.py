@@ -112,7 +112,7 @@ def read_10x_h5(filename, genome='mm10'):
     adata : :class:`~sc.api.AnnData`
         Annotated data matrix, where samples/cells are named by their barcode
         and variables/genes by gene name. The data is stored in adata.X, cell
-        names in adata.smp_names and gene names in adata.var_names.
+        names in adata.obs_names and gene names in adata.var_names.
     """
     logg.info('reading', filename, r=True, end=' ')
     import tables
@@ -134,7 +134,7 @@ def read_10x_h5(filename, genome='mm10'):
             # the csc matrix is automatically the transposed csr matrix
             # as scanpy expects it, so, no need for a further transpostion
             adata = AnnData(matrix,
-                            {'smp_names': dsets['barcodes'].astype(str)},
+                            {'obs_names': dsets['barcodes'].astype(str)},
                             {'var_names': dsets['gene_names'].astype(str),
                              'gene_ids': dsets['genes'].astype(str)})
             logg.info(t=True)
@@ -173,24 +173,24 @@ def write(filename, adata, ext=None, compression=None, compression_opts=None):
 
     >>> adata = AnnData(
     >>>     data=np.array([[1, 0], [3, 0], [5, 6]]),
-    >>>     smp={'row_names': ['name1', 'name2', 'name3'],
+    >>>     obs={'row_names': ['name1', 'name2', 'name3'],
     >>>          'sanno1': ['cat1', 'cat2', 'cat2'],
     >>>          'sanno2': [2.1, 2.2, 2.3]},
     >>>     var={'vanno1': [3.1, 3.2]},
     >>>     uns={'sanno1_colors': ['#000000', '#FFFFFF'],
     >>>          'uns2': ['some annotation']})
-    >>> assert pd.api.types.is_string_dtype(adata.smp['sanno1'])
+    >>> assert pd.api.types.is_string_dtype(adata.obs['sanno1'])
     >>> write('./test.h5', adata)
     $ h5ls test.h5
     _data                    Dataset {3, 2}
-    _smp                     Dataset {3}
+    _obs                     Dataset {3}
     _var                     Dataset {2}
     sanno1_categories        Dataset {2}
     sanno1_colors            Dataset {2}
     uns2                     Dataset {1}
     $ h5ls -d test.h5
     ...
-    _smp                     Dataset {3/3}
+    _obs                     Dataset {3/3}
         Location:  1:1400
         Links:     1
         Storage:   42 logical bytes, 42 allocated bytes, 100.00% utilization
@@ -216,7 +216,7 @@ def write(filename, adata, ext=None, compression=None, compression_opts=None):
     >>> from scipy.sparse import csr_matrix
     >>> adata = AnnData(
     >>>     data=csr_matrix([[1, 0], [3, 0], [5, 6]]),
-    >>>     smp={'row_names': ['name1', 'name2', 'name3'],
+    >>>     obs={'row_names': ['name1', 'name2', 'name3'],
     >>>          'sanno1': ['cat1', 'cat2', 'cat2'],
     >>>          'sanno2': [2.1, 2.2, 2.3]},
     >>>     var={'vanno1': [3.1, 3.2]},
@@ -227,7 +227,7 @@ def write(filename, adata, ext=None, compression=None, compression_opts=None):
     _data_csr_indices        Dataset {4}
     _data_csr_indptr         Dataset {4}
     _data_csr_shape          Dataset {2}
-    _smp                     Dataset {3}
+    _obs                     Dataset {3}
     _var                     Dataset {2}
     sanno1_categories        Dataset {2}
     sanno1_colors            Dataset {2}
@@ -585,7 +585,7 @@ def read_txt(filename, delimiter=None, first_column_names=None, dtype='float32',
     if return_dict:
         return {'X': data, 'col_names': col_names, 'row_names': row_names}
     else:
-        return AnnData(data, smp={'smp_names': row_names}, var={'var_names': col_names})
+        return AnnData(data, obs={'obs_names': row_names}, var={'var_names': col_names})
 
 
 def _read_hdf5_single(filename, key=''):
@@ -745,12 +745,12 @@ def _read_softgz(filename):
     X = np.array(X).T
     row_names = sample_names
     col_names = gene_names
-    smp = np.zeros((len(row_names),), dtype=[('smp_names', 'S21'), ('groups', 'S21')])
-    smp['smp_names'] = sample_names
-    smp['groups'] = groups
+    obs = np.zeros((len(row_names),), dtype=[('obs_names', 'S21'), ('groups', 'S21')])
+    obs['obs_names'] = sample_names
+    obs['groups'] = groups
     var = np.zeros((len(gene_names),), dtype=[('var_names', 'S21')])
     var['var_names'] = gene_names
-    ddata = {'X': X, 'smp': smp, 'var': var}
+    ddata = {'X': X, 'obs': obs, 'var': var}
     return ddata
 
 
@@ -810,7 +810,7 @@ def postprocess_reading(key, value):
         # recover a dictionary that has been stored as a string
         if len(value) > 0:
             if value[0] == '{' and value[-1] == '}': value = eval(value)
-    if (key != 'smp' and key != 'var' and key != '_smp' and key != '_var'
+    if (key != 'obs' and key != 'var' and key != '_obs' and key != '_var'
         and not isinstance(value, dict) and value.dtype.names is not None):
         # TODO: come up with a better way of solving this, see also below
         new_dtype = [((dt[0], 'U{}'.format(int(int(dt[1][2:])/4)))
@@ -923,7 +923,7 @@ def write_anndata_to_file(filename, adata, ext='h5',
                     not_yet_raised_data_graph_warning = False
                 continue
             filename = dirname
-            if key not in {'data', 'var', 'smp', 'smpm', 'varm'}:
+            if key not in {'data', 'var', 'obs', 'obsm', 'varm'}:
                 filename += 'uns/'
             filename += key + '.' + ext
             df = value
@@ -936,7 +936,7 @@ def write_anndata_to_file(filename, adata, ext='h5',
                     continue
             df.to_csv(filename, sep=(' ' if ext == 'txt' else ','),
                       header=True if key != 'data' else False,
-                      index=True if key in {'smp', 'var'} else False)
+                      index=True if key in {'obs', 'var'} else False)
 
 
 # -------------------------------------------------------------------------------

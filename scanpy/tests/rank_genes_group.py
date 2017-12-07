@@ -24,12 +24,12 @@ def test_results_dense():
     # adata.X[0:10, 0:5] = np.multiply(binomial(1, 0.9, (10, 5)), negative_binomial(1, 0.5, (10, 5)))
 
     # # Create cluster according to groups
-    # smp = 'true_groups'
+    # obs = 'true_groups'
     # true_groups = np.zeros((2, 100), dtype=bool)
     # true_groups[0, 0:10] = 1
     # true_groups[1, 10:100] = 1
-    # adata.uns[smp + '_masks'] = true_groups
-    # adata.uns[smp + '_order'] = np.asarray(['0', '1'])
+    # adata.uns[obs + '_masks'] = true_groups
+    # adata.uns[obs + '_order'] = np.asarray(['0', '1'])
     # # Now run the rank_genes_groups, test functioning.
     # # Note: Default value is on copying = true.
     # with open('objs_t_test.pkl', 'rb') as f:  # Python 3: open(..., 'rb')
@@ -57,12 +57,12 @@ def test_results_sparse():
     # adata_sparse = AnnData(sp.csr_matrix(adata.X))
 
     # # Create cluster according to groups
-    # smp = 'true_groups'
+    # obs = 'true_groups'
     # true_groups = np.zeros((2, 100), dtype=bool)
     # true_groups[0, 0:10] = 1
     # true_groups[1, 10:100] = 1
-    # adata_sparse.uns[smp + '_masks'] = true_groups
-    # adata_sparse.uns[smp + '_order'] = np.asarray(['0', '1'])
+    # adata_sparse.uns[obs + '_masks'] = true_groups
+    # adata_sparse.uns[obs + '_order'] = np.asarray(['0', '1'])
 
     # # Here, we have saved the true results
     # # Now run the rank_genes_groups, test functioning.
@@ -97,12 +97,12 @@ def test_compute_distribution():
     # adata.X[0:10, 0:5] = np.multiply(binomial(1, 0.9, (10, 5)), negative_binomial(1, 0.5, (10, 5)))
 
     # # Create cluster according to groups
-    # smp = 'true_groups'
+    # obs = 'true_groups'
     # true_groups = np.zeros((2, 100), dtype=bool)
     # true_groups[0, 0:10] = 1
     # true_groups[1, 10:100] = 1
-    # adata.uns[smp + '_masks'] = true_groups
-    # adata.uns[smp + '_order'] = np.asarray(['0', '1'])
+    # adata.uns[obs + '_masks'] = true_groups
+    # adata.uns[obs + '_order'] = np.asarray(['0', '1'])
     # # Now run the rank_genes_groups, test functioning.
     # # Note: Default value is on copying = true.
     # with open('objs_t_test.pkl', 'rb') as f:  # Python 3: open(..., 'rb')

@@ -224,7 +224,7 @@ def diffmap(
     """
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
-            for i in range(1, adata.smpm['X_diffmap'].shape[1])]
+            for i in range(1, adata.obsm['X_diffmap'].shape[1])]
     else:
         if components is None: components = '1,2' if '2d' in projection else '1,2,3'
         if not isinstance(components, list): components_list = [components]
@@ -324,8 +324,8 @@ def draw_graph(
     matplotlib.Axes object
     """
     if layout is None: layout = str(adata.uns['draw_graph_params']['layout'])
-    if 'X_draw_graph_' + layout not in adata.smpm_keys():
-        raise ValueError('Did not find {} in adata.smp. Did you compute layout {}?'
+    if 'X_draw_graph_' + layout not in adata.obsm_keys():
+        raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
     axs = scatter(
         adata,
@@ -770,15 +770,15 @@ def _aga_graph(
                          .format(adata.uns['aga_groups_key'], node_labels))
     groups_key = adata.uns['aga_groups_key']
     if node_labels is None:
-        node_labels = adata.smp[groups_key].cat.categories
+        node_labels = adata.obs[groups_key].cat.categories
 
     if color is None and groups_key is not None:
         if (groups_key + '_colors' not in adata.uns
-            or len(adata.smp[groups_key].cat.categories)
+            or len(adata.obs[groups_key].cat.categories)
                != len(adata.uns[groups_key + '_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         color = adata.uns[groups_key + '_colors']
-        for iname, name in enumerate(adata.smp[groups_key].cat.categories):
+        for iname, name in enumerate(adata.obs[groups_key].cat.categories):
             if name in settings.categories_to_ignore: color[iname] = 'grey'
 
     if isinstance(root, str) and root in node_labels:
@@ -1034,7 +1034,7 @@ def aga_path(
     variables : list of variables
         These have to be present in `adata.var`.
     annotations : list of annotations, optional (default: ['aga_pseudotime'])
-        Keys for `adata.smp`.
+        Keys for `adata.obs`.
     color_map : color map for plotting variables, optional
         Matplotlib colormap.
     color_maps_annotations : dict storing color maps, optional
@@ -1069,12 +1069,12 @@ def aga_path(
                 'Pass the key of the grouping with which you ran AGA, '
                 'using the parameter `groups_key`.')
         groups_key = adata.uns['aga_groups_key']
-    groups_names = adata.smp[groups_key].cat.categories
+    groups_names = adata.obs[groups_key].cat.categories
 
     if palette_groups is None:
         palette_groups = palettes.default_20
         palette_groups = utils.adjust_palette(
-            palette_groups, len(adata.smp[groups_key].cat.categories))
+            palette_groups, len(adata.obs[groups_key].cat.categories))
 
     def moving_average(a):
         return sc_utils.moving_average(a, n_avg)
@@ -1093,22 +1093,22 @@ def aga_path(
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes):
-            idcs = np.arange(adata.n_smps)[adata.smp[groups_key].values == str(group)]
+            idcs = np.arange(adata.n_obs)[adata.obs[groups_key].values == str(group)]
             if len(idcs) == 0:
                 raise ValueError('Did not find data points that match '
-                                 '`adata.smp[{}].values == str({})`.'
-                                 'Check whether adata.smp[{}] actually contains what you expect.'
+                                 '`adata.obs[{}].values == str({})`.'
+                                 'Check whether adata.obs[{}] actually contains what you expect.'
                                  .format(groups_key, group, groups_key))
-            idcs_group = np.argsort(adata.smp['aga_pseudotime'].values[
-                adata.smp[groups_key].values == str(group)])
+            idcs_group = np.argsort(adata.obs['aga_pseudotime'].values[
+                adata.obs[groups_key].values == str(group)])
             idcs = idcs[idcs_group]
-            if key in adata.smp_keys(): x += list(adata.smp[key].values[idcs])
+            if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
             if ikey == 0:
                 groups += [group for i in range(len(idcs))]
                 x_tick_locs.append(len(x))
                 for anno in annotations:
-                    series = adata.smp[anno]
+                    series = adata.obs[anno]
                     if is_categorical_dtype(series): series = series.cat.codes
                     anno_dict[anno] += list(series.values[idcs])
         if n_avg > 1:
@@ -1196,7 +1196,7 @@ def aga_path(
                                  - (ianno+1) * y_shift])
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
-                color_map_anno = ('Vega10' if is_categorical_dtype(adata.smp[anno])
+                color_map_anno = ('Vega10' if is_categorical_dtype(adata.obs[anno])
                                   else 'Greys')
             else:
                 color_map_anno = color_maps_annotations[anno]
@@ -1227,7 +1227,7 @@ def aga_path(
         pl.twinx()
         x = []
         for g in nodes:
-            x += list(adata.smp[groups_key].values[adata.smp[groups_key].values == str(g)].astype(int))
+            x += list(adata.obs[groups_key].values[adata.obs[groups_key].values == str(g)].astype(int))
         if n_avg > 1: x = moving_average(x)
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
         label = 'aga groups' + (' / original groups' if len(groups_names) > 0 else '')
@@ -1347,7 +1347,7 @@ def dpt(
          Abstraction) instead.
     """
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.obs['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None: colors = color
     dpt_scatter(
         adata,
@@ -1395,7 +1395,7 @@ def dpt_scatter(
     """
 
     colors = ['dpt_pseudotime']
-    if len(np.unique(adata.smp['dpt_groups'].values)) > 1: colors += ['dpt_groups']
+    if len(np.unique(adata.obs['dpt_groups'].values)) > 1: colors += ['dpt_groups']
     if color is not None:
         if not isinstance(color, list): colors = color.split(',')
         else: colors = color
@@ -1443,13 +1443,13 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.smp['dpt_order_indices'].values],
+        timeseries_as_heatmap(adata.X[adata.obs['dpt_order_indices'].values],
                               var_names=adata.var_names,
                               highlightsX=adata.uns['dpt_changepoints'],
                               color_map=color_map)
     else:
         # plot time series as gene expression vs time
-        timeseries(adata.X[adata.smp['dpt_order_indices'].values],
+        timeseries(adata.X[adata.obs['dpt_order_indices'].values],
                    var_names=adata.var_names,
                    highlightsX=adata.uns['dpt_changepoints'],
                    xlim=[0, 1.3*adata.X.shape[0]])
@@ -1461,18 +1461,18 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(np.asarray(adata.smp['dpt_groups']),
-                       time=adata.smp['dpt_order'].values,
-                       color=np.asarray(adata.smp['dpt_groups']),
+    timeseries_subplot(np.asarray(adata.obs['dpt_groups']),
+                       time=adata.obs['dpt_order'].values,
+                       color=np.asarray(adata.obs['dpt_groups']),
                        highlightsX=adata.uns['dpt_changepoints'],
                        ylabel='dpt groups',
-                       yticks=(np.arange(len(adata.smp['dpt_groups'].cat.categories), dtype=int)
-                                     if len(adata.smp['dpt_groups'].cat.categories) < 5 else None),
+                       yticks=(np.arange(len(adata.obs['dpt_groups'].cat.categories), dtype=int)
+                                     if len(adata.obs['dpt_groups'].cat.categories) < 5 else None),
                        palette=palette)
     pl.subplot(212)
-    timeseries_subplot(adata.smp['dpt_pseudotime'].values,
-                       time=adata.smp['dpt_order'].values,
-                       color=adata.smp['dpt_pseudotime'].values,
+    timeseries_subplot(adata.obs['dpt_pseudotime'].values,
+                       time=adata.obs['dpt_order'].values,
+                       color=adata.obs['dpt_pseudotime'].values,
                        xlabel='dpt order',
                        highlightsX=adata.uns['dpt_changepoints'],
                        ylabel='pseudotime',
@@ -1682,7 +1682,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
             for gene_counter, gene_name in enumerate(gene_names):
                 identifier = rank_genes_groups._build_identifier(
                     groups_key, group_name, gene_counter, gene_name)
-                if compute_distribution and identifier not in set(adata.smp_keys()):
+                if compute_distribution and identifier not in set(adata.obs_keys()):
                     raise ValueError(
                         'You need to set `compute_distribution=True` in '
                         '`sc.tl.rank_genes_groups()`.')
@@ -1695,7 +1695,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
             X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
             df[key] = X_col
-        df['hue'] = adata.smp[groups_key].astype(str).values
+        df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df['hue'][df['hue'] != group_name] = 'rest'
         else:
@@ -1747,13 +1747,13 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     from .. import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
     elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
-    else: tmax = adata.n_smps
-    n_realizations = adata.n_smps/tmax
+    else: tmax = adata.n_obs
+    n_realizations = adata.n_obs/tmax
     if not shuffle:
         if not as_heatmap:
             timeseries(adata.X,
                        var_names=adata.var_names,
-                       xlim=[0, 1.25*adata.n_smps],
+                       xlim=[0, 1.25*adata.n_obs],
                        highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
                        xlabel='realizations')
         else:
@@ -1770,7 +1770,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         X, rows = sc_utils.subsample(X, seed=1)
         timeseries(X,
                    var_names=adata.var_names,
-                   xlim=[0, 1.25*adata.n_smps],
+                   xlim=[0, 1.25*adata.n_obs],
                    highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
                    xlabel='index (arbitrary order)')
         utils.savefig_or_show('sim_shuffled', save=save, show=show)

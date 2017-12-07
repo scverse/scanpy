@@ -51,7 +51,7 @@ def louvain(adata,
         Key under which to add the cluster labels.
     restrict_to : tuple, optional (default: None)
         Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain (smp key, list of categories).
+        annotation, tuple needs to contain (obs key, list of categories).
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
@@ -62,7 +62,7 @@ def louvain(adata,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    louvain_groups : `pd.Series` (``adata.smp``, dtype `category`)
+    louvain_groups : `pd.Series` (``adata.obs``, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell.
     """
@@ -83,7 +83,7 @@ def louvain(adata,
         if not isinstance(restrict_categories[0], str):
             raise ValueError('You need to use strings to label categories, '
                              'e.g. \'1\' instead of 1.')
-        restrict_indices = adata.smp[restrict_key].isin(restrict_categories).values
+        restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
         adjacency = adjacency[restrict_indices, :]
         adjacency = adjacency[:, restrict_indices]
     if flavor in {'vtraag', 'igraph'}:
@@ -128,23 +128,23 @@ def louvain(adata,
     n_clusters = len(unique_groups)
     if restrict_to is None:
         groups = groups.astype('U')
-        adata.smp['louvain_groups'] = pd.Categorical(
+        adata.obs['louvain_groups'] = pd.Categorical(
             values=groups,
             categories=natsorted(unique_groups.astype('U')))
         key_added = 'louvain_groups' if key_added is None else key_added
     else:
         key_added = restrict_key + '_R' if key_added is None else key_added
         groups += 1
-        adata.smp[key_added] = adata.smp[restrict_key].astype('U')
-        adata.smp[key_added] += ','
-        adata.smp[key_added].iloc[restrict_indices] += groups.astype('U')
-        adata.smp[key_added].iloc[~restrict_indices] += '0'
-        adata.smp[key_added] = adata.smp[key_added].astype(
-            'category', categories=natsorted(adata.smp[key_added].unique()))
+        adata.obs[key_added] = adata.obs[restrict_key].astype('U')
+        adata.obs[key_added] += ','
+        adata.obs[key_added].iloc[restrict_indices] += groups.astype('U')
+        adata.obs[key_added].iloc[~restrict_indices] += '0'
+        adata.obs[key_added] = adata.obs[key_added].astype(
+            'category', categories=natsorted(adata.obs[key_added].unique()))
     adata.uns['louvain_params'] = np.array((resolution, random_state,),
                                            dtype=[('resolution', float), ('random_state', int)])
     logg.info('    finished', t=True, end=': ')
     logg.info('found {} clusters and added\n'
-              '    \'{}\', the cluster labels (adata.smp, dtype=category)'
+              '    \'{}\', the cluster labels (adata.obs, dtype=category)'
               .format(n_clusters, key_added))
     return adata if copy else None

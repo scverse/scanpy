@@ -19,7 +19,7 @@ AnnData objects
 ^^^^^^^^^^^^^^^
 
 An :class:`~scanpy.api.AnnData` object ``adata`` stores a data matrix
-(``adata.data``), dataframe-like sample (``adata.smp``) and variable
+(``adata.data``), dataframe-like sample (``adata.obs``) and variable
 (``adata.var``) annotation and unstructured dict-like annotation
 (``adata.uns``).
 
@@ -27,9 +27,9 @@ An :class:`~scanpy.api.AnnData` object ``adata`` stores a data matrix
 
     <img src="http://falexwolf.de/img/scanpy/anndata.svg" style="width: 300px">
 
-Values can be retrieved and appended via ``adata.smp['key1']`` and
+Values can be retrieved and appended via ``adata.obs['key1']`` and
 ``adata.var['key2']``. Sample and variable names can be accessed via
-``adata.smp_names`` and ``adata.var_names``,
+``adata.obs_names`` and ``adata.var_names``,
 respectively. :class:`~scanpy.api.AnnData` objects can be sliced like
 dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``. The AnnData
 class is similar to R's ExpressionSet [Huber15]_. For more, see :class:`~scanpy.api.AnnData`.
@@ -46,12 +46,12 @@ to initialize an :class:`~scanpy.api.AnnData` object. Possibly add further annot
 
     import pandas as pd 
     anno = pd.read_csv(filename_sample_annotation)
-    adata.smp['cell_groups'] = anno['cell_groups']  # categorical annotation of type str or int
-    adata.smp['time'] = anno['time']                # numerical annotation of type float
+    adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type str or int
+    adata.obs['time'] = anno['time']                # numerical annotation of type float
 
 or set a whole dataframe::
 
-    adata.smp = pd.read_csv(filename_sample_annotation)
+    adata.obs = pd.read_csv(filename_sample_annotation)
 
 To write, use::
 

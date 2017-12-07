@@ -42,7 +42,7 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     X_pca = pp.pca(pp.zscore_deprecated(adata.X),
                    n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
     # update adata
-    adata.smpm['X_pca'] = X_pca
+    adata.obsm['X_pca'] = X_pca
     return adata if copy else None
 
 

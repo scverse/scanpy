@@ -68,7 +68,7 @@ def draw_graph(adata,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_draw_graph_`layout` : `np.ndarray` (`adata.smpm`, dtype `float`)
+    X_draw_graph_`layout` : `np.ndarray` (`adata.obsm`, dtype `float`)
         Coordinates of graph layout.
     """
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
@@ -100,11 +100,11 @@ def draw_graph(adata,
     adata.uns['draw_graph_params'] = np.array(
         (layout, random_state,),
         dtype=[('layout', 'U20'), ('random_state', int)])
-    smp_key = 'X_draw_graph_' + layout
-    adata.smpm[smp_key] = np.array(ig_layout.coords)
+    obs_key = 'X_draw_graph_' + layout
+    adata.obsm[obs_key] = np.array(ig_layout.coords)
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'{}\', graph_drawing coordinates (adata.smp)\n'
+              '    \'{}\', graph_drawing coordinates (adata.obs)\n'
               '    \'draw_graph_params\', the parameters (adata.uns)'
-              .format(smp_key))
+              .format(obs_key))
     return adata if copy else None
