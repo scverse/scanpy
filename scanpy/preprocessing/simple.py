@@ -20,9 +20,9 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
                  max_genes=None, copy=False):
     """Filter cell outliers based on counts and numbers of genes expressed.
 
-    For instance, only keep cells with at least `min_counts` UMI counts or
+    For instance, only keep cells with at least `min_counts` counts or
     `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
-    "unreliable" samples.
+    "unreliable" observations.
 
     Only provide one of the optional arguments (`min_counts`, `min_genes`,
     `max_counts`, `max_genes`) per call.
@@ -46,15 +46,44 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
 
     Returns
     -------
-    If `data` is an :class:`~scanpy.api.AnnData`, the filtered data matrix.
-
-    Otherwise a tuple with the following entries is returned
+    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds
+    either `n_genes` or `n_counts` to `adata.obs`. Otherwise a tuple
 
     cell_subset : `np.ndarray`
         Boolean index mask that does filtering. `True` means that the cell is
         kept. `False` means the cell is removed.
     number_per_cell: `np.ndarray`
         Either `n_counts` or `n_genes` per cell.
+
+    Examples
+    --------
+    >>> adata = sc.datasets.krumsiek11()
+    >>> adata.n_obs
+    640
+    >>> adata.var_names
+    ['Gata2' 'Gata1' 'Fog1' 'EKLF' 'Fli1' 'SCL' 'Cebpa'
+     'Pu.1' 'cJun' 'EgrNab' 'Gfi1']
+    >>> # add some true zeros
+    >>> adata.X[adata.X < 0.3] = 0
+    >>> # simply compute the number of genes per cell
+    >>> sc.pp.filter_cells(adata, min_genes=0)
+    >>> adata.n_obs
+    640
+    >>> adata.obs['n_genes'].min()
+    1
+    >>> # filter manually
+    >>> adata_copy = adata[adata.obs['n_genes'] >= 3]
+    >>> adata_copy.obs['n_genes'].min()
+    >>> adata.n_obs
+    554
+    >>> adata.obs['n_genes'].min()
+    3
+    >>> # actually do some filtering
+    >>> sc.pp.filter_cells(adata, min_genes=3)
+    >>> adata.n_obs
+    554
+    >>> adata.obs['n_genes'].min()
+    3
     """
     if min_genes is not None and min_counts is not None:
         raise ValueError('Either provide min_counts or min_genes, but not both.')
