@@ -31,7 +31,7 @@ def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
                                        centers=n_centers,
                                        cluster_std=cluster_std,
                                        random_state=0)
-    return sc.AnnData(X, smp={'blobs': y.astype(str)})
+    return sc.AnnData(X, obs={'blobs': y.astype(str)})
 
 
 def burczynski06():
@@ -81,12 +81,12 @@ def krumsiek11():
     fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
                    459: 'megakaryocyte', 619: 'neutrophil'}
     adata.uns['highlights'] = fate_labels
-    cell_type = np.array(['progenitor' for i in range(adata.n_smps)])
+    cell_type = np.array(['progenitor' for i in range(adata.n_obs)])
     cell_type[80:160] = 'monocyte'
     cell_type[240:320] = 'erythrocyte'
     cell_type[400:480] = 'megakaryocyte'
     cell_type[560:640] = 'neutrophil'
-    adata.smp['cell_type'] = cell_type
+    adata.obs['cell_type'] = cell_type
     return adata
 
 
@@ -113,9 +113,9 @@ def moignard15():
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_order = ['HF', 'NP', 'PS', '4SG', '4SFG']
     # annotate each sample/cell
-    adata.smp['exp_groups'] = [
+    adata.obs['exp_groups'] = [
         next(gname for gname in groups_order if sname.startswith(gname))
-        for sname in adata.smp_names]
+        for sname in adata.obs_names]
     # fix the order and colors of names in "groups"
     adata.uns['exp_groups_order'] = groups_order
     adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
@@ -192,7 +192,7 @@ def paul15_raw():
                  12: 'Baso', 13: 'Baso', 14: 'Mo', 15: 'Mo',
                  16: 'Neu', 17: 'Neu', 18: 'Eos', 19: 'Lymph'}
     cell_type.update({i: 'Ery' for i in range(1, 7)})
-    adata.smp['paul15_clusters'] = [
+    adata.obs['paul15_clusters'] = [
         str(i) + cell_type[i] for i in clusters.astype(int)]
     # make string annotations categorical (optional)
     sc.utils.sanitize_anndata(adata)
@@ -203,7 +203,7 @@ def paul15_raw():
     # restrict data array to the 3461 informative genes
     adata = adata[:, infogenes_names]
     # usually we'd set the root cell to an arbitrary cell in the MEP cluster
-    # adata.uns['iroot': np.flatnonzero(adata.smp['paul15_clusters']  == '7MEP')[0]
+    # adata.uns['iroot': np.flatnonzero(adata.obs['paul15_clusters']  == '7MEP')[0]
     # here, set the root cell as in Haghverdi et al. (2016)
     adata.uns['iroot'] = 840  # note that other than in Matlab/R, counting starts at 1
     return adata

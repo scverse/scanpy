@@ -41,8 +41,8 @@ def add_or_update_graph_in_adata(
         graph.update_diffmap()
         adata.uns['data_graph_distance_local'] = graph.Dsq
         adata.uns['data_graph_norm_weights'] = graph.Ktilde
-        adata.smpm['X_diffmap'] = graph.rbasis[:, 1:]
-        adata.smp['X_diffmap0'] = graph.rbasis[:, 0]
+        adata.obsm['X_diffmap'] = graph.rbasis[:, 1:]
+        adata.obs['X_diffmap0'] = graph.rbasis[:, 0]
         adata.uns['diffmap_evals'] = graph.evals[1:]
     return graph
 
@@ -60,7 +60,7 @@ def no_recompute_of_graph_necessary(
         not recompute_distances,
         not recompute_graph,
         # make sure X_diffmap is there
-        'X_diffmap' in adata.smpm_keys(),
+        'X_diffmap' in adata.obsm_keys(),
         # make sure data_graph is there
         'data_graph_norm_weights' in adata.uns
         ]
@@ -69,7 +69,7 @@ def no_recompute_of_graph_necessary(
     else:
         conditions = [
             # make sure enough DCs are there
-            (adata.smpm['X_diffmap'].shape[1] >= n_dcs-1
+            (adata.obsm['X_diffmap'].shape[1] >= n_dcs-1
                  if n_dcs is not None else True),
             # make sure that it's sparse
             (issparse(adata.uns['data_graph_norm_weights']) == knn
@@ -250,12 +250,12 @@ class DataGraph():
             else:
                 self.k = None  # currently do not store this, is unknown
             # for output of spectrum
-            if n_dcs is None: n_dcs = adata.smpm['X_diffmap'].shape[1] + 1
-            self.X_diffmap = adata.smpm['X_diffmap'][:, :n_dcs-1]
+            if n_dcs is None: n_dcs = adata.obsm['X_diffmap'].shape[1] + 1
+            self.X_diffmap = adata.obsm['X_diffmap'][:, :n_dcs-1]
             self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
             self.n_dcs = len(self.evals)
-            self.rbasis = np.c_[adata.smp['X_diffmap0'].values[:, None],
-                                adata.smpm['X_diffmap'][:, :n_dcs-1]]
+            self.rbasis = np.c_[adata.obs['X_diffmap0'].values[:, None],
+                                adata.obsm['X_diffmap'][:, :n_dcs-1]]
             self.lbasis = self.rbasis
             self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
                                           shape=(self.X.shape[0], self.X.shape[0]))
@@ -269,8 +269,8 @@ class DataGraph():
             self.fresh_compute = True
             self.n_dcs = n_dcs if n_dcs is not None else N_DCS
             self.k = k if k is not None else 30
-            if self.k > adata.n_smps:
-                self.k = 1 + int(0.5*adata.n_smps)
+            if self.k > adata.n_obs:
+                self.k = 1 + int(0.5*adata.n_obs)
             logg.info('    computing data graph with n_neighbors = {} '
                       .format(self.k))
             self.evals = None
@@ -294,10 +294,10 @@ class DataGraph():
     def init_iroot_directly(self, adata):
         self.iroot = None
         if 'iroot' in adata.uns:
-            if adata.uns['iroot'] >= adata.n_smps:
+            if adata.uns['iroot'] >= adata.n_obs:
                 logg.warn('Root cell index {} does not exist for {} samples. '
                           'Is ignored.'
-                          .format(adata.uns['iroot'], adata.n_smps))
+                          .format(adata.uns['iroot'], adata.n_obs))
             else:
                 self.iroot = adata.uns['iroot']
 
@@ -319,8 +319,8 @@ class DataGraph():
         else:
             # use a precomputed X_pca
             if (not recompute_pca
-                and 'X_pca' in adata.smpm_keys()
-                and adata.smpm['X_pca'].shape[1] >= self.n_pcs):
+                and 'X_pca' in adata.obsm_keys()
+                and adata.obsm['X_pca'].shape[1] >= self.n_pcs):
                 logg.info('    using \'X_pca\' with n_pcs = {} for building graph'
                           .format(self.n_pcs))
             # compute X_pca
@@ -330,9 +330,9 @@ class DataGraph():
                 from ..preprocessing import pca
                 pca(adata, n_comps=self.n_pcs)
             # set the data matrix
-            self.X = adata.smpm['X_pca'][:, :n_pcs]
+            self.X = adata.obsm['X_pca'][:, :n_pcs]
             # see whether we can find xroot using X_pca
-            if xroot is not None and xroot.size == adata.smp['X_pca'].shape[1]:
+            if xroot is not None and xroot.size == adata.obs['X_pca'].shape[1]:
                 self.set_root(xroot[:n_pcs])
 
     def update_diffmap(self, n_comps=None):

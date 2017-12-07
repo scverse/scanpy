@@ -32,9 +32,9 @@ def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
         `adata.uns` useful to plot marker genes found with
         :func:`~scanpy.api.tl.rank_gene_groups`.
     cell_groupings : `str`, `list` of `str`, optional (default: `None`)
-        Optional list of strings containing `adata.smp` key to grouping.
+        Optional list of strings containing `adata.obs` key to grouping.
     custom_color_tracks : `str`, `list` of `str`, optional (default: `None`)
-        Optional list of strings containing `adata.smp` key for continuous
+        Optional list of strings containing `adata.obs` key for continuous
         coloring.
     """
 
@@ -79,12 +79,12 @@ def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
     if isinstance(custom_color_tracks, str):
         custom_color_tracks = [custom_color_tracks]
     if custom_color_tracks is not None:
-        custom_colors = {g: adata.smp[g] for g in custom_color_tracks}
+        custom_colors = {g: adata.obs[g] for g in custom_color_tracks}
     else:
         # write all annotation that's neither categorical or string
-        custom_colors = {k: adata.smp[k] for k in adata.smp_keys()
-                         if not (is_categorical(adata.smp[k])
-                                 or is_string_dtype(adata.smp[k]))}
+        custom_colors = {k: adata.obs[k] for k in adata.obs_keys()
+                         if not (is_categorical(adata.obs[k])
+                                 or is_string_dtype(adata.obs[k]))}
     if len(custom_colors) > 0:
         write_color_tracks(custom_colors, project_dir + 'color_data_gene_sets.csv')
 
@@ -137,16 +137,16 @@ def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
         cell_groupings = [cell_groupings]
 
     if cell_groupings is None:
-        cell_groupings = [k for k in adata.smp_keys() if
-                          is_categorical(adata.smp[k])]
+        cell_groupings = [k for k in adata.obs_keys() if
+                          is_categorical(adata.obs[k])]
     for j, i in enumerate(cell_groupings):
-        if cell_groupings[j] not in adata.smp:
+        if cell_groupings[j] not in adata.obs:
             logg.warn('adata annotation key for cell grouping does not exist. '
                       'Inspect observation annotation.')
         else:
             group_names = []
-            groups = adata.smp[cell_groupings[j]]
-            group_names = adata.smp[cell_groupings[j]].cat.categories
+            groups = adata.obs[cell_groupings[j]]
+            group_names = adata.obs[cell_groupings[j]].cat.categories
             add_colors_for_categorical_sample_annotation(adata,
                                                          cell_groupings[j],
                                                          palette=None)

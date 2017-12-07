@@ -58,16 +58,16 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_tsne : `np.ndarray` (adata.smp, dtype `float`)
+    X_tsne : `np.ndarray` (adata.obs, dtype `float`)
         tSNE coordinates of data.
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
-    if ('X_pca' in adata.smpm_keys()
-        and adata.smpm['X_pca'].shape[1] >= n_pcs
+    if ('X_pca' in adata.obsm_keys()
+        and adata.obsm['X_pca'].shape[1] >= n_pcs
         and not recompute_pca):
-        X = adata.smpm['X_pca'][:, :n_pcs]
+        X = adata.obsm['X_pca'][:, :n_pcs]
         logg.info('    using \'X_pca\' with n_pcs = {} for tSNE'
                   .format(n_pcs))
     else:
@@ -75,7 +75,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
             logg.info('    compute \'X_pca\' with n_pcs = {}'.format(n_pcs))
             logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
-            adata.smpm['X_pca'] = X
+            adata.obsm['X_pca'] = X
         else:
             X = adata.X
             logg.info('    using data matrix X directly (no PCA)')
@@ -110,8 +110,8 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
         logg.info('    using sklearn.manifold.TSNE with a fix by D. DeTomaso')
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
-    adata.smpm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
+    adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'X_tsne\', tSNE coordinates (adata.smp)')
+              '    \'X_tsne\', tSNE coordinates (adata.obs)')
     return adata if copy else None

@@ -30,7 +30,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
-        Data matrix of shape `n_smps` × `n_vars`. Rows correspond to cells and
+        Data matrix of shape `n_obs` × `n_vars`. Rows correspond to cells and
         columns to genes.
     min_counts : `int`, optional (default: `None`)
         Minimum number of counts required for a cell to pass filtering.
@@ -67,9 +67,9 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         cell_subset, number = filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
-        if min_genes is None and max_genes is None: adata.smp['n_counts'] = number
-        else: adata.smp['n_genes'] = number
-        adata._inplace_subset_smp(cell_subset)
+        if min_genes is None and max_genes is None: adata.obs['n_counts'] = number
+        else: adata.obs['n_genes'] = number
+        adata._inplace_subset_obs(cell_subset)
         return adata if copy else None
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_genes is None else min_genes
@@ -332,7 +332,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     Parameters
     ----------
     data : AnnData, array-like
-        Data matrix of shape n_smps × n_vars.
+        Data matrix of shape n_obs × n_vars.
     n_comps : int, optional (default: 10)
         Number of principal components to compute.
     zero_center : bool or None, optional (default: None)
@@ -360,7 +360,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     Returns
     -------
     If X is array-like and ``return_info == True``, only returns ``X_pca``, otherwise adds to ``adata``:
-    X_pca : np.ndarray (adata.smp)
+    X_pca : np.ndarray (adata.obs)
          PCA representation of the data with shape n_variables × n_comps.
     components / PC1, PC2, PC3, ... : np.ndarray (adata.var)
          The PCs containing the loadings as shape n_comps × n_vars.
@@ -370,12 +370,12 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
-        if ('X_pca' in adata.smp
-            and adata.smpm['X_pca'].shape[1] >= n_comps
+        if ('X_pca' in adata.obs
+            and adata.obsm['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
             logg.m('    not recomputing PCA, using "X_pca" contained '
-                   'in `adata.smp` (set `recompute=True` to avoid this)', v=4)
+                   'in `adata.obs` (set `recompute=True` to avoid this)', v=4)
             return adata
         else:
             logg.m('compute PCA with n_comps =', n_comps, r=True, v=4)
@@ -383,12 +383,12 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio = result
-            adata.smpm['X_pca'] = X_pca
+            adata.obsm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
             adata.uns['pca_variance_ratio'] = pca_variance_ratio
             logg.m('    finished', t=True, end=' ', v=4)
             logg.m('and added\n'
-                      '    "X_pca", the PCA coordinates (adata.smp)\n'
+                      '    "X_pca", the PCA coordinates (adata.obs)\n'
                       '    "PC1", "PC2", ..., the loadings (adata.var)\n'
                       '    "pca_variance_ratio", the variance ratio (adata.uns)', v=4)
         return adata if copy else None
@@ -442,7 +442,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     counts_per_cell : `np.array`, optional (default: `None`)
         Precomputed counts per cell.
     key_n_counts : str, optional (default: `'n_counts'`)
-        Name of the field in `adata.smp` where the total counts per cell are
+        Name of the field in `adata.obs` where the total counts per cell are
         stored.
     copy : `bool` (default: `False`)
         Determines whether function operates inplace (default) or a copy is
@@ -460,7 +460,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     >>> print(adata.X.sum(axis=1))
     [  1.   3.  11.]
     >>> sc.pp.normalize_per_cell(adata)
-    >>> print(adata.smp)
+    >>> print(adata.obs)
     >>> print(adata.X.sum(axis=1))
        n_counts
     0       1.0
@@ -469,7 +469,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     [ 3.  3.  3.]
     >>> sc.pp.normalize_per_cell(adata, counts_per_cell_after=1,
     >>>                          key_n_counts='n_counts2')
-    >>> print(adata.smp)
+    >>> print(adata.obs)
     >>> print(adata.X.sum(axis=1))
        n_counts  n_counts2
     0       1.0        3.0
@@ -482,13 +482,13 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         logg.info('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
-        adata.smp[key_n_counts] = counts_per_cell
-        adata._inplace_subset_smp(cell_subset)
+        adata.obs[key_n_counts] = counts_per_cell
+        adata._inplace_subset_obs(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after,
                            counts_per_cell=counts_per_cell[cell_subset])
         logg.info('    finished', t=True, end=': ')
         logg.info('normalized adata.X and added', no_indent=True)
-        logg.info('    \'{}\', counts per cell before normalization (adata.smp)'
+        logg.info('    \'{}\', counts per cell before normalization (adata.obs)'
                .format(key_n_counts),
                no_indent=True)
         return adata if copy else None
@@ -587,23 +587,23 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         logg.warn('Is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on a single categorical variable
-    if keys[0] in adata.smp_keys() and is_categorical_dtype(adata.smp[keys[0]]):
+    if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
         logg.m('... regressing on per-gene means within categories', v=4)
-        unique_categories = np.unique(adata.smp[keys[0]].values)
+        unique_categories = np.unique(adata.obs[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
-            mask = category == adata.smp[keys[0]].values
+            mask = category == adata.obs[keys[0]].values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
     else:
         regressors = np.array(
-            [adata.smp[key].values if key in adata.smp_keys()
+            [adata.obs[key].values if key in adata.obs_keys()
              else adata[:, key].X for key in keys]).T
     regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
@@ -719,27 +719,27 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     Returns
     -------
     Updates or returns the subsampled data, depending on `copy`. Returns
-    ``X, smp_indices`` if data is array-like, otherwise subsamples the passed
+    ``X, obs_indices`` if data is array-like, otherwise subsamples the passed
     `AnnData` (``copy == False``) or a copy of it (``copy == True``).
     """
     if fraction > 1 or fraction < 0:
         raise ValueError('`fraction` needs to be within [0, 1], not {}'
                          .format(fraction))
     np.random.seed(seed)
-    n_smps = data.n_smps if isinstance(data, AnnData) else data.shape[0]
-    new_n_smps = int(fraction * n_smps)
+    n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
+    new_n_obs = int(fraction * n_obs)
     if simply_skip_samples:
-        smp_indices = np.arange(0, n_smps, int(1./fraction), dtype=int)
+        obs_indices = np.arange(0, n_obs, int(1./fraction), dtype=int)
     else:
-        smp_indices = np.random.choice(n_smps, size=new_n_smps, replace=False)
-    logg.m('... subsampled to {} data points'.format(new_n_smps), v=4)
+        obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
+    logg.m('... subsampled to {} data points'.format(new_n_obs), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata._inplace_subset_smp(smp_indices)
+        adata._inplace_subset_obs(obs_indices)
         return adata if copy else None
     else:
         X = data
-        return X[smp_indices], smp_indices
+        return X[obs_indices], obs_indices
 
 
 def zscore_deprecated(X):

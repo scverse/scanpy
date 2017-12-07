@@ -42,7 +42,7 @@ def scatter(
         ax=None):
     """Scatter plot.
 
-    Color with sample annotation (`color in adata.smp_keys()`) or gene
+    Color with sample annotation (`color in adata.obs_keys()`) or gene
     expression (`color in adata.var_names`).
 
     Parameters
@@ -107,13 +107,13 @@ def scatter(
     highlights = adata.uns['highlights'] if 'highlights' in adata.uns else []
     if basis is not None:
         try:
-            Y = adata.smpm['X_' + basis][:, components]
+            Y = adata.obsm['X_' + basis][:, components]
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_smp_array(x)
-        y_arr = adata._get_smp_array(y)
+        x_arr = adata._get_obs_array(x)
+        y_arr = adata._get_obs_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide keys for a `basis` or for `x` and `y`.')
@@ -167,12 +167,12 @@ def scatter(
             categorical = False
             continuous = False
             # test whether we have categorial or continuous annotation
-            if key in adata.smp_keys():
-                if is_categorical_dtype(adata.smp[key]):
+            if key in adata.obs_keys():
+                if is_categorical_dtype(adata.obs[key]):
                     categorical = True
                 else:
                     continuous = True
-                    c = adata.smp[key]
+                    c = adata.obs[key]
             # coloring according to gene expression
             elif key in set(adata.var_names):
                 c = adata[:, key].X
@@ -180,7 +180,7 @@ def scatter(
             else:
                 raise ValueError('"' + key + '" is invalid!'
                                  + ' specify valid sample annotation, one of '
-                                 + str(adata.smp_keys()) + ' or a gene name '
+                                 + str(adata.obs_keys()) + ' or a gene name '
                                  + str(adata.var_names))
             colorbars.append(True if continuous else False)
         if categorical: categoricals.append(ikey)
@@ -220,13 +220,13 @@ def scatter(
         key = keys[ikey]
         if (not key + '_colors' in adata.uns
             or not palette_was_none
-            or len(adata.smp[key].cat.categories) != len(adata.uns[key + '_colors'])):
+            or len(adata.obs[key].cat.categories) != len(adata.uns[key + '_colors'])):
             utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
-            for iname, name in enumerate(adata.smp[key].cat.categories):
+            for iname, name in enumerate(adata.obs[key].cat.categories):
                 if name not in settings.categories_to_ignore:
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
@@ -234,12 +234,12 @@ def scatter(
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
         else:
             for name in groups:
-                if name not in set(adata.smp[key].cat.categories):
+                if name not in set(adata.obs[key].cat.categories):
                     raise ValueError('"' + name + '" is invalid!'
                                      + ' specify valid name, one of '
-                                     + str(adata.smp[key].cat.categories))
+                                     + str(adata.obs[key].cat.categories))
                 else:
-                    iname = np.flatnonzero(adata.smp[key].cat.categories.values == name)[0]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories.values == name)[0]
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
@@ -260,8 +260,8 @@ def scatter(
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
-                                            ncol=(1 if len(adata.smp[key].cat.categories) <= 14
-                                                  else 2 if len(adata.smp[key].cat.categories) <= 30 else 3),
+                                            ncol=(1 if len(adata.obs[key].cat.categories) <= 14
+                                                  else 2 if len(adata.obs[key].cat.categories) <= 30 else 3),
                                             fontsize=legend_fontsize)
         elif legend_loc != 'none':
             legend = axs[ikey].legend(frameon=False, loc=legend_loc,
@@ -283,7 +283,7 @@ def ranking(adata, attr, keys, indices=None,
     ----------
     adata : AnnData
         The data.
-    attr : {'var', 'smp', 'add', 'varm', 'smpm'}
+    attr : {'var', 'obs', 'add', 'varm', 'obsm'}
         The attribute of AnnData that contains the score.
     keys : str or list of str
         The scores to look up an array from the attribute of adata.
@@ -341,7 +341,7 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     keys : str
-        Keys for accessing variables of adata.X or fields of adata.smp.
+        Keys for accessing variables of adata.X or fields of adata.obs.
     group_by : str, optional
         The key of the sample grouping to consider.
     multi_panel : bool, optional
@@ -373,42 +373,42 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
     if group_by is not None and isinstance(keys, list):
         raise ValueError('Pass a single key as string if using `group_by`.')
     if isinstance(keys, str): keys = [keys]
-    smp_keys = False
+    obs_keys = False
     for key in keys:
-        if key in adata.smp_keys(): smp_keys = True
-        if smp_keys and key not in set(adata.smp_keys()):
+        if key in adata.obs_keys(): obs_keys = True
+        if obs_keys and key not in set(adata.obs_keys()):
             raise ValueError(
                 'Either use sample keys or variable names, but do not mix. '
-                'Did not find {} in adata.smp_keys().'.format(key))
-    if smp_keys:
-        smp_df = adata.smp
+                'Did not find {} in adata.obs_keys().'.format(key))
+    if obs_keys:
+        obs_df = adata.obs
     else:
-        if group_by is None: smp_df = pd.DataFrame()
-        else: smp_df = adata.smp.copy()
+        if group_by is None: obs_df = pd.DataFrame()
+        else: obs_df = adata.obs.copy()
         for key in keys:
             X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
-            smp_df[key] = X_col
+            obs_df[key] = X_col
     if group_by is None:
-        smp_tidy = pd.melt(smp_df, value_vars=keys)
+        obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
         y = 'value'
     else:
-        smp_tidy = smp_df
+        obs_tidy = obs_df
         x = group_by
         y = keys[0]
     if multi_panel:
         sns.set_style('whitegrid')
-        g = sns.FacetGrid(smp_tidy, col=x, sharey=False)
+        g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
         g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale)
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
         ax = g
     else:
-        ax = sns.violinplot(x=x, y=y, data=smp_tidy, inner=None, order=order,
+        ax = sns.violinplot(x=x, y=y, data=obs_tidy, inner=None, order=order,
                             orient='vertical', scale=scale, ax=ax)
-        ax = sns.stripplot(x=x, y=y, data=smp_tidy, order=order,
+        ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
     utils.savefig_or_show('violin', show=show, save=save)

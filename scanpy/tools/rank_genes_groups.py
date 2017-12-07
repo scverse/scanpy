@@ -75,10 +75,10 @@ def rank_genes_groups(
     if reference != 'rest' and reference not in set(groups_order):
         groups_order += [reference]
     if (reference != 'rest'
-        and reference not in set(adata.smp[group_by].cat.categories)):
+        and reference not in set(adata.obs[group_by].cat.categories)):
         raise ValueError('reference = {} needs to be one of group_by = {}.'
                          .format(reference,
-                                 adata.smp[group_by].cat.categories.tolist()))
+                                 adata.obs[group_by].cat.categories.tolist()))
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, group_by)
     adata.uns['rank_genes_groups_params'] = np.array(
@@ -146,10 +146,10 @@ def rank_genes_groups(
                     if issparse(X): X_col = X_col.toarray()[:, 0]
                     identifier = _build_identifier(group_by, groups_order[igroup],
                                                    gene_counter, adata.var_names[gene_idx])
-                    full_col = np.empty(adata.n_smps)
+                    full_col = np.empty(adata.n_obs)
                     full_col[:] = np.nan
                     full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
-                    adata.smp[identifier] = full_col
+                    adata.obs[identifier] = full_col
     elif test_type == 'wilcoxon':
         # Wilcoxon-rank-sum test is usually more powerful in detecting marker genes
         # Limit maximal RAM that is required by the calculation. Currently set fixed to roughly 100 MByte
@@ -218,10 +218,10 @@ def rank_genes_groups(
                         if issparse(X): X_col = X_col.toarray()[:, 0]
                         identifier = _build_identifier(group_by, groups_order[imask],
                                                        gene_counter, adata.var_names[gene_idx])
-                        full_col = np.empty(adata.n_smps)
+                        full_col = np.empty(adata.n_obs)
                         full_col[:] = np.nan
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
-                        adata.smp[identifier] = full_col
+                        adata.obs[identifier] = full_col
 
         # If no reference group exists, ranking needs only to be done once (full mask)
         else:
@@ -271,10 +271,10 @@ def rank_genes_groups(
                         if issparse(X): X_col = X_col.toarray()[:, 0]
                         identifier = _build_identifier(group_by, groups_order[imask],
                                                        gene_counter, adata.var_names[gene_idx])
-                        full_col = np.empty(adata.n_smps)
+                        full_col = np.empty(adata.n_obs)
                         full_col[:] = np.nan
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
-                        adata.smp[identifier] = full_col
+                        adata.obs[identifier] = full_col
 
     groups_order_save = groups_order
     if reference != 'rest':

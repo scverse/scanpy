@@ -35,7 +35,7 @@ doc_string_base = dedent("""\
     to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
     <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
 
-        adata.uns['iroot'] = np.flatnonzero(adata.smp['exp_groups'] == 'Stem')[0]
+        adata.uns['iroot'] = np.flatnonzero(adata.obs['exp_groups'] == 'Stem')[0]
 
     You should get good results with the default parameters. Most the parameters
     appear similarly in other tools and are used to generate the graph.
@@ -45,7 +45,7 @@ doc_string_base = dedent("""\
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix, optionally with `adata.uns['iroot']`, the index
         of root cell for computing a pseudotime.
-    groups : categorical smp/cell annotation or {{'louvain_groups', 'segments'}}, optional (default: 'louvain_groups')
+    groups : categorical obs/cell annotation or {{'louvain_groups', 'segments'}}, optional (default: 'louvain_groups')
         Criterion to determine the resulting partitions of the single-cell
         graph. 'louvain_groups' uses the louvain algorithm and optimizes
         modularity of the graph, 'segments' uses a bipartioning criterium that
@@ -108,7 +108,7 @@ doc_string_returns = dedent("""\
         aga_adjacency_tree_confidence : sc.sparse csr matrix (adata.uns)
             The adjacency matrix of the tree-like subgraph that best explains
             the topology.
-        aga_pseudotime : pd.Series (adata.smp, dtype float)
+        aga_pseudotime : pd.Series (adata.obs, dtype float)
             Pseudotime labels, that is, distance a long the manifold for each
             cell.
     """)
@@ -138,7 +138,7 @@ def aga(adata,
                          .format({'iterative_matching', 'min_span_tree'}))
     fresh_compute_louvain = False
     if (groups == 'louvain_groups'
-        and ('louvain_groups' not in adata.smp_keys()
+        and ('louvain_groups' not in adata.obs_keys()
              # resolution does not match
              or ('louvain_params' in adata.uns
                  and resolution is not None
@@ -192,15 +192,15 @@ def aga(adata,
               n_nodes=n_nodes,
               attachedness_measure=attachedness_measure)
     updated_diffmap = aga.update_diffmap()
-    adata.smpm['X_diffmap'] = aga.rbasis[:, 1:]
-    adata.smp['X_diffmap0'] = aga.rbasis[:, 0]
+    adata.obsm['X_diffmap'] = aga.rbasis[:, 1:]
+    adata.obs['X_diffmap0'] = aga.rbasis[:, 0]
     adata.uns['diffmap_evals'] = aga.evals[1:]
     adata.uns['data_graph_distance_local'] = aga.Dsq
     adata.uns['data_graph_norm_weights'] = aga.Ktilde
     if aga.iroot is not None:
         aga.set_pseudotime()  # pseudotimes are random walk distances from root point
         adata.uns['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
-        adata.smp['aga_pseudotime'] = aga.pseudotime
+        adata.obs['aga_pseudotime'] = aga.pseudotime
     # detect splits and partition the data into segments
     aga.splits_segments()
 
@@ -213,7 +213,7 @@ def aga(adata,
     else:
         full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
-    y = adata.smp[clusters].cat.categories
+    y = adata.obs[clusters].cat.categories
     x = np.array(aga.segs_names_original)
     xsorted = np.argsort(x)
     ypos = np.searchsorted(x[xsorted], y)
@@ -303,10 +303,10 @@ def aga_compare_paths(adata1, adata2,
     g2 = nx.Graph(adata2.uns[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
-    asso_groups1 = utils.identify_groups(adata1.smp['aga_groups'].values,
-                                         adata2.smp['aga_groups'].values)
-    asso_groups2 = utils.identify_groups(adata2.smp['aga_groups'].values,
-                                         adata1.smp['aga_groups'].values)
+    asso_groups1 = utils.identify_groups(adata1.obs['aga_groups'].values,
+                                         adata2.obs['aga_groups'].values)
+    asso_groups2 = utils.identify_groups(adata2.obs['aga_groups'].values,
+                                         adata1.obs['aga_groups'].values)
     orig_names1 = adata1.uns['aga_groups_order_original']
     orig_names2 = adata2.uns['aga_groups_order_original']
 
@@ -411,7 +411,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
     """
     adata = adata.copy() if copy else adata
     if 'aga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool aga first!')
-    min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_smps)
+    min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_obs)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
 
     def propose_nodes_to_contract(adjacency_tree_confidence, node_groups):
@@ -453,9 +453,9 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
         return adjacency_tree_confidence, node_groups
 
     size_before = adata.uns['aga_adjacency_tree_confidence'].shape[0]
-    adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'] = contract_nodes(
-        adata.uns['aga_adjacency_tree_confidence'], adata.smp['aga_groups'].values)
-    adata.uns['aga_groups_order'] = np.unique(adata.smp['aga_groups'].values)
+    adata.uns['aga_adjacency_tree_confidence'], adata.obs['aga_groups'] = contract_nodes(
+        adata.uns['aga_adjacency_tree_confidence'], adata.obs['aga_groups'].values)
+    adata.uns['aga_groups_order'] = np.unique(adata.obs['aga_groups'].values)
     for key in ['aga_adjacency_full_confidence', 'aga_groups_original',
                 'aga_groups_order_original', 'aga_groups_colors_original']:
         if key in adata.uns: del adata.uns[key]
@@ -508,14 +508,14 @@ class AGA(data_graph.DataGraph):
         self.clusters_precomputed_names = None
         self.flavor_develop = 'bi'  # bipartitioning
         if clusters not in {'segments', 'unconstrained_segments'}:
-            if clusters not in adata.smp_keys():
-                raise ValueError('Did not find {} in adata.smp_keys()! '
+            if clusters not in adata.obs_keys():
+                raise ValueError('Did not find {} in adata.obs_keys()! '
                                  'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
                                  .format(clusters))
-            clusters_array = adata.smp[clusters].values
+            clusters_array = adata.obs[clusters].values
             # transform to a list of index arrays
             self.clusters_precomputed = []
-            self.clusters_precomputed_names = list(adata.smp[clusters].cat.categories)
+            self.clusters_precomputed_names = list(adata.obs[clusters].cat.categories)
             for cluster_name in self.clusters_precomputed_names:
                 self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
             n_nodes = len(self.clusters_precomputed)

@@ -72,9 +72,9 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     ----------
     adata : AnnData
     prediction : str
-        Field name of adata.smp.
+        Field name of adata.obs.
     reference : str
-        Field name of adata.smp.
+        Field name of adata.obs.
     normalization : {'prediction', 'reference'}
         Whether to normalize with respect to the predicted groups or the
         reference groups.
@@ -96,7 +96,7 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
     sanitize_anndata(adata)
-    cats = adata.smp[reference].cat.categories
+    cats = adata.obs[reference].cat.categories
     for cat in cats:
         if cat in settings.categories_to_ignore:
             logg.info('Ignoring category \'{}\' '
@@ -105,14 +105,14 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(
-            adata.smp[prediction].cat.categories):
+            adata.obs[prediction].cat.categories):
         if '?' in pred_group: pred_group = str(ipred_group)
         # starting from numpy version 1.13, subtractions of boolean arrays are deprecated
-        mask_pred = adata.smp[prediction].values == pred_group
+        mask_pred = adata.obs[prediction].values == pred_group
         mask_pred_int = mask_pred.astype(np.int8)
         asso_matrix += [[]]
-        for ref_group in adata.smp[reference].cat.categories:
-            mask_ref = (adata.smp[reference].values == ref_group).astype(np.int8)
+        for ref_group in adata.obs[reference].cat.categories:
+            mask_ref = (adata.obs[reference].values == ref_group).astype(np.int8)
             mask_ref_or_pred = mask_ref.copy()
             mask_ref_or_pred[mask_pred] = 1
             # e.g. if the pred group is contained in mask_ref, mask_ref and
@@ -253,7 +253,7 @@ def sanitize_anndata(adata, verbosity=-3):
     categories than the total number of samples.
     """
     from pandas.api.types import is_string_dtype
-    for ann in ['smp', 'var']:
+    for ann in ['obs', 'var']:
         for key in getattr(adata, ann).columns:
             df = getattr(adata, ann)
             if is_string_dtype(df[key]):
@@ -363,40 +363,40 @@ def default_tool_argparser(description, example_parameters):
 
 
 def select_groups(adata, groups_order_subset='all', key='groups'):
-    """Get subset of groups in adata.smp[key].
+    """Get subset of groups in adata.obs[key].
     """
-    groups_order = adata.smp[key].cat.categories
+    groups_order = adata.obs[key].cat.categories
     if key + '_masks' in adata.uns:
         groups_masks = adata.uns[key + '_masks']
     else:
-        groups_masks = np.zeros((len(adata.smp[key].cat.categories),
-                                 adata.smp[key].values.size), dtype=bool)
-        for iname, name in enumerate(adata.smp[key].cat.categories):
+        groups_masks = np.zeros((len(adata.obs[key].cat.categories),
+                                 adata.obs[key].values.size), dtype=bool)
+        for iname, name in enumerate(adata.obs[key].cat.categories):
             # if the name is not found, fallback to index retrieval
-            if adata.smp[key].cat.categories[iname] in adata.smp[key].values:
-                mask = adata.smp[key].cat.categories[iname] == adata.smp[key].values
+            if adata.obs[key].cat.categories[iname] in adata.obs[key].values:
+                mask = adata.obs[key].cat.categories[iname] == adata.obs[key].values
             else:
-                mask = str(iname) == adata.smp[key].values
+                mask = str(iname) == adata.obs[key].values
             groups_masks[iname] = mask
     groups_ids = list(range(len(groups_order)))
     if groups_order_subset != 'all':
         groups_ids = []
         for name in groups_order_subset:
             groups_ids.append(
-                np.where(adata.smp[key].cat.categories.values == name)[0][0])
+                np.where(adata.obs[key].cat.categories.values == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(
-                np.in1d(np.arange(len(adata.smp[key].cat.categories)).astype(str),
+                np.in1d(np.arange(len(adata.obs[key].cat.categories)).astype(str),
                                           np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
             logg.m(np.array(groups_order_subset),
                    'invalid! specify valid groups_order (or indices) one of',
-                   adata.smp[key].cat.categories)
+                   adata.obs[key].cat.categories)
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
-        groups_order_subset = adata.smp[key].cat.categories[groups_ids].values
+        groups_order_subset = adata.obs[key].cat.categories[groups_ids].values
     else:
         groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks
