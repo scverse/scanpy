@@ -1,10 +1,8 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
-#         P. Angerer
 """Scanpy - Single-Cell Analysis in Python
 
 Reference
 ---------
-Wolf, Angerer & Theis, bioRxiv doi:... (2017)
+Wolf, Angerer & Theis, bioRxiv 174029 (2017)
 """
 
 import sys
