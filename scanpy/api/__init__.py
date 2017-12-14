@@ -1,4 +1,8 @@
-"""Scanpy's high-level API provides an overview of all features relevant to pratical use::
+"""\
+Features/API
+------------
+
+Scanpy's high-level API provides an overview of all features relevant to pratical use::
 
    import scanpy.api as sc
 

@@ -1,10 +1,9 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Logging and Profiling
 """
 
-import os
 import time as time_module
 import datetime
+from anndata import logging
 from . import settings
 
 
@@ -95,40 +94,14 @@ def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
                         msg='' if time else msg, end=end)
 
 m = msg
-
+print_memory_usage = logging.print_memory_usage
+get_memory_usage = logging.get_memory_usage
 
 def get_passed_time():
     now = time_module.time()
     elapsed = now - settings._previous_time
     settings._previous_time = now
     return elapsed
-
-
-def get_memory_usage():
-    import psutil
-    process = psutil.Process(os.getpid())
-    meminfo_attr = ('memory_info' if hasattr(process, 'memory_info')
-                    else 'get_memory_info')
-    mem = getattr(process, meminfo_attr)()[0] / 2**30  # output in GB
-    mem_diff = mem
-    if settings._previous_memory_usage != -1:
-        mem_diff = mem - settings._previous_memory_usage
-    settings._previous_memory_usage = mem
-    return mem, mem_diff
-
-
-def format_memory_usage(mem_usage, msg='', newline=False):
-    mem, diff = mem_usage
-    string = (('\n' if newline else '')
-              + msg + (' \n... ' if msg != '' else '')
-              + 'Memory usage: current {:.2f} GB, difference {:+.2f} GB'
-              .format(mem, diff))
-    return string
-
-
-def print_memory_usage(msg='', newline=False):
-    string = format_memory_usage(get_memory_usage(), msg, newline)
-    settings.mi(string)
 
 
 def print_version_and_date():
