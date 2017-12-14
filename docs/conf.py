@@ -63,8 +63,8 @@ copyright = '{}, Alex Wolf, Philipp Angerer'.format(time.strftime("%Y"))
 author = 'Alex Wolf, Philipp Angerer'
 
 import scanpy
-version = scanpy.__version__
-release = scanpy.__version__
+version = scanpy.__version__.replace('.dirty', '')
+release = version
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 todo_include_todos = False

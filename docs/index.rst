@@ -11,7 +11,7 @@
    :end-line: 14
 
 
-Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_. If Scanpy has been useful for your research, please consider citing our preprint: `Wolf, Angerer & Theis, bioRxiv 174029 (2017) <https://doi.org/10.1101/174029>`_.
+Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_. If Scanpy is useful for your research, please consider citing `Wolf, Angerer & Theis, bioRxiv 174029 (2017) <https://doi.org/10.1101/174029>`_.
 
 .. include:: release_notes.rst
 
