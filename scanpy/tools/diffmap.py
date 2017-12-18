@@ -16,7 +16,7 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_comps : `int`, optional (default: 10)
+    n_comps : `int`, optional (default: 15)
         The number of dimensions of the representation.
     n_neighbors : `int`, optional (default: 30)
         Specify the number of nearest neighbors in the knn graph. If knn ==
