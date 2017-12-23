@@ -225,8 +225,13 @@ def aga(adata,
     adata.uns['aga_groups_key'] = clusters
     adata.uns[clusters + '_sizes'] = np.array(aga.segs_sizes)[indices]
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.hint('added\n' + indent(doc_string_returns, '    '))
+    logg.hint('added\n'
+           + ('    \'aga_pseudotime\', pseudotime (adata.obs),\n' if aga.iroot is not None else '')
+           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstracted graph  (adata.obs)\n'
+           + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph  (adata.obs)\n'
+           + '    \'aga_adjacency_tree_confidence\', adjacency matrix of subtree (adata.obs)')
     return adata if copy else None
+
 
 aga.__doc__ = doc_string_base.format(returns=doc_string_returns)
 

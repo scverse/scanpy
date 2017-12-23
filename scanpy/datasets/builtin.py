@@ -1,4 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Builtin Datasets.
 """
 
@@ -90,10 +89,6 @@ def krumsiek11():
     return adata
 
 
-krumsiek11_diffmap_params = {'n_neighbors': 5, 'knn': False}
-krumsiek11_dpt_params = {'n_neighbors': 5, 'knn': False, 'n_branchings': 2}
-
-
 def moignard15():
     """Hematopoiesis in early mouse embryos [Moignard15]_.
 
@@ -117,23 +112,9 @@ def moignard15():
         next(gname for gname in groups_order if sname.startswith(gname))
         for sname in adata.obs_names]
     # fix the order and colors of names in "groups"
-    adata.uns['exp_groups_order'] = groups_order
+    adata.obs['exp_groups'] = pd.Categorical(adata.obs['exp_groups'],
+                                             categories=groups_names)
     adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
-    return adata
-
-
-moignard15_diffmap_params = {'n_neighbors': 5, 'knn': False}
-moignard15_dpt_params = {'n_neighbors': 5, 'knn': False}
-
-
-def moignard15_dpt(adata):
-    """Add some labeling information to DPT result.
-    """
-    sc.logg.m('... adding annotation for DPT groups')
-    if len(adata.uns['dpt_groups_order']) > 1:
-        groups_order = ['undecided', 'endothelial',
-                        'erythrocytes', 'trunk']
-        adata.uns['dpt_groups_order'] = ['{}: {}'.format(i, n) for i, n in enumerate(groups_order)]
     return adata
 
 
@@ -154,9 +135,6 @@ def paul15():
     adata = paul15_raw()
     sc.pp.log1p(adata)
     return adata
-
-paul15_diffmap_params = {'n_neighbors': 20, 'n_pcs': 0}
-paul15_dpt_params = {'n_neighbors': 20, 'n_pcs': 0}
 
 
 def paul15_raw():
@@ -209,11 +187,6 @@ def paul15_raw():
     return adata
 
 
-def paul15_dpt(adata):
-    """Post-processing for DPT."""
-    adata.uns['dpt_groups_order'] = ['', 'GMP', '', 'MEP']
-
-
 def toggleswitch():
     """Simulated toggleswitch.
 
@@ -238,7 +211,3 @@ def toggleswitch():
     adata = sc.read(filename, first_column_names=True, cache=True)
     adata.uns['iroot'] = 0
     return adata
-
-
-toggleswitch_diffmap_params = {'n_neighbors': 5, 'knn': False}
-toggleswitch_dpt_params = {'n_neighbors': 5, 'knn': False}

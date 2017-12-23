@@ -1,6 +1,3 @@
-# Authors: Alex Wolf (http://falexwolf.de)
-#          P. Angerer
-
 import os
 import numpy as np
 import networkx as nx
@@ -446,6 +443,7 @@ def scatter_base(Y,
         if title is not None: ax.set_title(title[icolor])
         # output highlighted data points
         for iihighlight, ihighlight in enumerate(highlights_indices):
+            ihighlight = ihighlight if isinstance(ihighlight, int) else int(ihighlight)
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
             if '3d' in projection:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]

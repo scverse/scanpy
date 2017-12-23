@@ -1,4 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Plotting
 
 Plotting functions for each tool and toplevel plotting functions for AnnData.
@@ -1028,11 +1027,11 @@ def aga_path(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    nodes : list of indices
-        A path through nodes of the abstracted graph, that is, indices of groups
-        that have been used to run AGA.
+    nodes : list of group names or indices
+        A path through nodes of the abstracted graph, that is, names or indices
+        (within `.categories`) of groups that have been used to run AGA.
     variables : list of variables
-        These have to be present in `adata.var`.
+        These have to be present in `adata.var_names`.
     annotations : list of annotations, optional (default: ['aga_pseudotime'])
         Keys for `adata.obs`.
     color_map : color map for plotting variables, optional
@@ -1090,17 +1089,26 @@ def aga_path(
     groups = []
     anno_dict = {anno: [] for anno in annotations}
     keys = variables if keys is None else keys
+    if keys is None:
+        raise ValueError('Pass the `variables` parameter.')
+    if isinstance(nodes[0], str):
+        nodes_ints = [groups_names.get_loc(node) for node in nodes]
+        nodes_strs = nodes
+    else:
+        nodes_ints = nodes
+        nodes_strs = [groups_names[node] for node in nodes]
     for ikey, key in enumerate(keys):
         x = []
-        for igroup, group in enumerate(nodes):
-            idcs = np.arange(adata.n_obs)[adata.obs[groups_key].values == str(group)]
+        for igroup, group in enumerate(nodes_ints):
+            idcs = np.arange(adata.n_obs)[
+                adata.obs[groups_key].values == nodes_strs[igroup]]
             if len(idcs) == 0:
                 raise ValueError('Did not find data points that match '
                                  '`adata.obs[{}].values == str({})`.'
                                  'Check whether adata.obs[{}] actually contains what you expect.'
                                  .format(groups_key, group, groups_key))
             idcs_group = np.argsort(adata.obs['aga_pseudotime'].values[
-                adata.obs[groups_key].values == str(group)])
+                adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
             if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
             else: x += list(adata[:, key].X[idcs])
@@ -1128,7 +1136,7 @@ def aga_path(
         if ikey == 0:
             for igroup, group in enumerate(nodes):
                 if len(groups_names) > 0 and group not in groups_names:
-                    label = groups_names[int(group)]
+                    label = groups_names[group]
                 else:
                     label = group
                 x_tick_labels.append(label)
@@ -1155,7 +1163,7 @@ def aga_path(
             pl.legend(frameon=False, loc='center left',
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
-    xlabel = groups_key if groups_key != 'louvain_groups' else 'groups $i$'
+    xlabel = 'groups $i$'
     if as_heatmap:
         import matplotlib.colors
         # groups bar
@@ -1226,8 +1234,8 @@ def aga_path(
     if show_nodes_twin and not as_heatmap:
         pl.twinx()
         x = []
-        for g in nodes:
-            x += list(adata.obs[groups_key].values[adata.obs[groups_key].values == str(g)].astype(int))
+        for g in nodes_strs:
+            x += list(adata.obs[groups_key].values[adata.obs[groups_key].values == g].astype(int))
         if n_avg > 1: x = moving_average(x)
         pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
         label = 'aga groups' + (' / original groups' if len(groups_names) > 0 else '')

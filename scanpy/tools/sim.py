@@ -243,11 +243,9 @@ def sample_dynamic_data(params):
     # load the last simulation file
     filename = glob.glob(writedir + '/sim*.txt')[-1]
     logg.info('reading simulation results', filename)
-    ddata = readwrite.read_file(filename, first_column_names=True,
-                                suppress_cache_warning=True)
-    ddata['tmax_write'] = tmax/step
-    from anndata import AnnData
-    adata = AnnData(ddata)
+    adata = readwrite._read(filename, first_column_names=True,
+                            suppress_cache_warning=True)
+    adata.uns['tmax_write'] = tmax/step
     return adata
 
 

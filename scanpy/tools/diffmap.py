@@ -1,6 +1,5 @@
-# Author: Alex Wolf (http://falexwolf.de)
-
 from ..tools import dpt
+from .. import settings
 from .. import logging as logg
 
 
@@ -62,8 +61,8 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     adata.obsm['X_diffmap'] = dmap.rbasis[:, 1:]
     adata.obs['X_diffmap0'] = dmap.rbasis[:, 0]
     adata.uns['diffmap_evals'] = dmap.evals[1:]
-    logg.info('    finished', t=True, end=' ')
-    logg.info('and added\n'
-              '    "X_diffmap", the diffmap coordinates (adata.obsm),\n'
-              '    "diffmap_evals", the eigenvalues of the transition matrix (adata.uns)')
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+              '    \'X_diffmap\', tSNE coordinates (adata.obsm)\n'
+              '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
     return adata if copy else None

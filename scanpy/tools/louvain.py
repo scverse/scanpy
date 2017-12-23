@@ -1,4 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Cluster cells using Louvain community detection algorithm.
 
 Uses the pip package "louvain" by V. Traag.
@@ -8,6 +7,7 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 from .. import utils
+from .. import settings
 from .. import logging as logg
 from ..data_structs.data_graph import add_or_update_graph_in_adata
 
@@ -143,8 +143,8 @@ def louvain(adata,
             'category', categories=natsorted(adata.obs[key_added].unique()))
     adata.uns['louvain_params'] = np.array((resolution, random_state,),
                                            dtype=[('resolution', float), ('random_state', int)])
-    logg.info('    finished', t=True, end=': ')
-    logg.info('found {} clusters and added\n'
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('found {} clusters and added\n'
               '    \'{}\', the cluster labels (adata.obs, dtype=category)'
               .format(n_clusters, key_added))
     return adata if copy else None
