@@ -1,4 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Diffusion Pseudotime Analysis
 """
 
@@ -7,6 +6,7 @@ import pandas as pd
 import scipy as sp
 import networkx as nx
 from natsort import natsorted
+from .. import settings
 from .. import logging as logg
 from ..data_structs import data_graph
 
@@ -105,7 +105,7 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
         logg.hint(msg)
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
-    logg.m('perform Diffusion Pseudotime analysis', r=True)
+    logg.info('performing Diffusion Pseudotime analysis', r=True)
     dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
               min_group_size=min_group_size, n_jobs=n_jobs,
               recompute_graph=recompute_graph, recompute_pca=recompute_pca,
@@ -142,11 +142,11 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
     adata.uns['dpt_changepoints'] = dpt.changepoints
     # the tip points of segments
     adata.uns['dpt_grouptips'] = dpt.segs_tips
-    logg.m('finished', t=True, end=' ')
-    logg.m('and added\n'
-           + ('    "dpt_pseudotime", the pseudotime (adata.obs),\n' if dpt.iroot is not None else '')
-           + '    "dpt_groups", the branching subgroups of dpt (adata.obs)\n'
-           + '    "dpt_order", order according to groups and increasing pseudtime (adata.obs)')
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+           + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)\n' if dpt.iroot is not None else '')
+           + '    \'dpt_groups\', the branching subgroups of dpt (adata.obs)\n'
+           + '    \'dpt_order\', cell order (adata.obs)')
     return adata if copy else None
 
 

@@ -1,9 +1,9 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Utility functions and classes
 """
 
 from collections import namedtuple
 import numpy as np
+import pandas as pd
 from natsort import natsorted
 from . import settings
 from . import logging as logg
@@ -257,9 +257,8 @@ def sanitize_anndata(adata, verbosity=-3):
         for key in getattr(adata, ann).columns:
             df = getattr(adata, ann)
             if is_string_dtype(df[key]):
-                c = df[key].astype(
-                    'category', categories=natsorted(np.unique(df[key])))
-                if len(c.cat.categories) < len(c):
+                c = pd.Categorical(df[key], categories=natsorted(np.unique(df[key])))
+                if len(c.categories) < len(c):
                     df[key] = c
                     df[key].cat.categories = df[key].cat.categories.astype('U')
                     logg.info('... storing {} as categorical type'.format(key))

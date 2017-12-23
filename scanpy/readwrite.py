@@ -7,12 +7,12 @@ import numpy as np
 import time
 from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
-from anndata import read as read_anndata
+from anndata import read as read_h5ad
 
 from . import settings
 from . import logging as logg
 
-avail_exts = {'anndata', 'csv', 'xlsx', 'txt', 'h5',
+avail_exts = {'anndata', 'csv', 'xlsx', 'txt', 'h5', 'h5ad',
               'soft.gz', 'txt.gz', 'mtx', 'tab', 'data'}
 """Available file formats for reading data. """
 
@@ -22,7 +22,7 @@ avail_exts = {'anndata', 'csv', 'xlsx', 'txt', 'h5',
 # --------------------------------------------------------------------------------
 
 
-def read(filename, sheet=None, ext=None, delimiter=None,
+def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
          first_column_names=False, backup_url=None, cache=None):
     """Read file and return :class:`~scanpy.api.AnnData` object.
 
@@ -36,6 +36,11 @@ def read(filename, sheet=None, ext=None, delimiter=None,
         generating a filename via `sc.settings.writedir + filename +
         sc.settings.file_format_data`.  This is the same behavior as in
         `sc.read(filename, ...)`.
+    backed : {`False`, `True`, 'r', 'r+'}, optional (default: `False`)
+        Load :class:`~scanpy.api.AnnData` in `backed` mode instead of fully
+        loading it into memory (`memory` mode). Only applies to `.h5ad` files.
+        `True` and 'r' are equivalent. If you want to modify backed attributes
+        of the AnnData object, you need to choose 'r+'.
     sheet : `str`, optional (default: `None`)
         Name of sheet/table in hdf5 or Excel file.
     cache : `bool` or `None`, optional (default: `False`)
@@ -60,8 +65,9 @@ def read(filename, sheet=None, ext=None, delimiter=None,
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if is_valid_filename(filename):
-        return _read(filename, sheet, ext, delimiter,
-                     first_column_names, backup_url, cache)
+        return _read(filename, backed=backed, sheet=sheet, ext=ext,
+                     delimiter=delimiter, first_column_names=first_column_names,
+                     backup_url=backup_url, cache=cache)
     # generate filename and read to dict
     filekey = filename
     filename = settings.writedir + filekey + '.' + settings.file_format_data
@@ -72,7 +78,7 @@ def read(filename, sheet=None, ext=None, delimiter=None,
                          'use a filename ending on one of the available extensions {} '
                          'or pass the parameter `ext`.'
                          .format(filekey, filename, avail_exts))
-    return read_anndata(filename)
+    return read_h5ad(filename, backed=backed)
 
 
 def read_10x_h5(filename, genome='mm10'):
@@ -319,8 +325,9 @@ def get_params_from_list(params_list):
 # -------------------------------------------------------------------------------
 
 
-def _read(filename, sheet=None, ext=None, delimiter=None, first_column_names=None,
-          backup_url=None, cache=None, suppress_cache_warning=False):
+def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
+          first_column_names=None, backup_url=None, cache=None,
+          suppress_cache_warning=False):
     if ext is not None and ext not in avail_exts:
         raise ValueError('Please provide one of the available extensions.\n'
                          + avail_exts)
@@ -330,9 +337,9 @@ def _read(filename, sheet=None, ext=None, delimiter=None, first_column_names=Non
                                                      backup_url=backup_url)
     if not is_present: logg.msg('... did not find original file', filename)
     # read hdf5 files
-    if ext == 'h5':
+    if ext in {'h5', 'h5ad'}:
         if sheet is None:
-            return read_anndata(filename)
+            return read_h5ad(filename, backed=backed)
         else:
             logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return read_hdf(filename, sheet)
@@ -346,7 +353,7 @@ def _read(filename, sheet=None, ext=None, delimiter=None, first_column_names=Non
                       + filename_stripped.replace('.' + ext, '.' + fast_ext))
     cache = not settings.recompute == 'read' if cache is None else cache
     if cache and os.path.exists(filename_cache):
-        adata = read_anndata(filename_cache)
+        adata = read_h5ad(filename_cache, backed=False)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
@@ -370,7 +377,7 @@ def _read(filename, sheet=None, ext=None, delimiter=None, first_column_names=Non
                 logg.msg('... assuming \'.data\' means tab or white-space '
                          'separated text file', v=3)
                 logg.hint('--> change this by passing `ext` to sc.read')
-            adata = read_txt(filename, delimiter, first_column_names)
+            adata = read_text(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             adata = _read_softgz(filename)
         elif ext == 'txt.gz':
