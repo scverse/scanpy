@@ -10,21 +10,21 @@ from anndata import AnnData
 
 def test_normalize_per_cell():
     adata = AnnData(
-        data=np.array([[1, 0], [3, 0], [5, 6]]))
+        np.array([[1, 0], [3, 0], [5, 6]]))
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1,
                              key_n_counts='n_counts2')
     assert adata.X.sum(axis=1).tolist() == [1., 1., 1.]
     # now with copy option
     adata = AnnData(
-        data=np.array([[1, 0], [3, 0], [5, 6]]))
+        np.array([[1, 0], [3, 0], [5, 6]]))
     adata_copy = sc.pp.normalize_per_cell(
         adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1., 1., 1.]
     # now sparse
     adata = AnnData(
-        data=np.array([[1, 0], [3, 0], [5, 6]]))
+        np.array([[1, 0], [3, 0], [5, 6]]))
     adata_sparse = AnnData(
-        data=sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
+        sp.csr_matrix([[1, 0], [3, 0], [5, 6]]))
     sc.pp.normalize_per_cell(adata)
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(
