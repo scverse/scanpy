@@ -1,5 +1,3 @@
-# Authors: Alex Wolf (http://falexwolf.de)
-#          P. Angerer
 """Plotting functions for AnnData.
 """
 
@@ -22,6 +20,7 @@ def scatter(
         x=None,
         y=None,
         color='grey',
+        use_raw=True,
         sort_order=True,
         alpha=None,
         basis=None,
@@ -47,7 +46,7 @@ def scatter(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     x : str or None
         x coordinate.
@@ -56,6 +55,8 @@ def scatter(
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -174,7 +175,12 @@ def scatter(
                     continuous = True
                     c = adata.obs[key]
             # coloring according to gene expression
-            elif key in set(adata.var_names):
+            elif (use_raw
+                  and adata.raw is not None
+                  and key in adata.raw.var_names):
+                c = adata.raw[:, key].X
+                continuous = True
+            elif key in adata.var_names:
                 c = adata[:, key].X
                 continuous = True
             else:
@@ -330,7 +336,7 @@ def ranking(adata, attr, keys, indices=None,
     return gs
 
 
-def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
+def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale='width',
            order=None, multi_panel=False, show=None, save=None, ax=None):
     """Violin plot.
 
@@ -344,6 +350,8 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         Keys for accessing variables of adata.X or fields of adata.obs.
     group_by : str, optional
         The key of the sample grouping to consider.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
     multi_panel : bool, optional
         Show fields in multiple panels. Returns a seaborn FacetGrid in that case.
     jitter : `float` or `bool`, optional (default: `True`)
@@ -386,8 +394,10 @@ def violin(adata, keys, group_by=None, jitter=True, size=1, scale='width',
         if group_by is None: obs_df = pd.DataFrame()
         else: obs_df = adata.obs.copy()
         for key in keys:
-            X_col = adata[:, key].X
-            if issparse(X_col): X_col = X_col.toarray().flatten()
+            if adata.raw is not None and use_raw:
+                X_col = adata.raw[:, key].X
+            else:
+                X_col = adata[:, key].X
             obs_df[key] = X_col
     if group_by is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)

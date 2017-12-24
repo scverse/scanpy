@@ -17,6 +17,7 @@ from ..preprocessing import simple
 def rank_genes_groups(
         adata,
         group_by,
+        use_raw=True,
         groups='all',
         reference='rest',
         n_genes=100,
@@ -35,6 +36,8 @@ def rank_genes_groups(
         Annotated data matrix.
     group_by : `str`
         The key of the sample grouping to consider.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
     groups : `str`, `list`, optional (default: `'all'`)
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted. If not passed, a ranking will be generated for all
@@ -82,13 +85,16 @@ def rank_genes_groups(
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, group_by)
     adata.uns['rank_genes_groups_params'] = np.array(
-        (group_by, reference, test_type),
-        dtype=[('group_by', 'U50'), ('reference', 'U50'), ('test_type', 'U50')])
-    X = adata.X
+        (group_by, reference, test_type, use_raw),
+        dtype=[('group_by', 'U50'), ('reference', 'U50'), ('test_type', 'U50'), ('use_raw', np.bool_)])
+    
+    if adata.raw is not None and use_raw:
+        adata_comp = adata.raw
+    X = adata_comp.X
 
     # Make sure indices are not OoB in case there are less genes than n_genes
     if n_genes > X.shape[1]:
-        n_genes=X.shape[1]
+        n_genes = X.shape[1]
 
     rankings_gene_zscores = []
     rankings_gene_names = []
@@ -101,7 +107,7 @@ def rank_genes_groups(
               'with sample numbers', ns)
     if reference != 'rest':
         ireference = np.where(groups_order == reference)[0][0]
-    reference_indices = np.arange(adata.n_vars, dtype=int)
+    reference_indices = np.arange(adata_comp.n_vars, dtype=int)
 
     avail_tests = {'t-test', 't-test_overestim_var', 'wilcoxon'}
     if test_type not in avail_tests:
@@ -137,7 +143,7 @@ def rank_genes_groups(
             partial_indices = np.argsort(zscores[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_zscores.append(zscores[global_indices])
-            rankings_gene_names.append(adata.var_names[global_indices])
+            rankings_gene_names.append(adata_comp.var_names[global_indices])
             if compute_distribution:
                 mask = groups_masks[igroup]
                 for gene_counter in range(n_genes_user):
@@ -145,7 +151,7 @@ def rank_genes_groups(
                     X_col = X[mask, gene_idx]
                     if issparse(X): X_col = X_col.toarray()[:, 0]
                     identifier = _build_identifier(group_by, groups_order[igroup],
-                                                   gene_counter, adata.var_names[gene_idx])
+                                                   gene_counter, adata_comp.var_names[gene_idx])
                     full_col = np.empty(adata.n_obs)
                     full_col[:] = np.nan
                     full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
@@ -205,7 +211,7 @@ def rank_genes_groups(
                 partial_indices = np.argsort(zscores[partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_zscores.append(zscores[global_indices])
-                rankings_gene_names.append(adata.var_names[global_indices])
+                rankings_gene_names.append(adata_comp.var_names[global_indices])
                 if compute_distribution:
                     # Add calculation of means, var: (Unnecessary for wilcoxon if compute distribution=False)
                     mean, vars = simple._get_mean_var(X[mask])
@@ -217,7 +223,7 @@ def rank_genes_groups(
                         X_col = X[mask, gene_idx]
                         if issparse(X): X_col = X_col.toarray()[:, 0]
                         identifier = _build_identifier(group_by, groups_order[imask],
-                                                       gene_counter, adata.var_names[gene_idx])
+                                                       gene_counter, adata_comp.var_names[gene_idx])
                         full_col = np.empty(adata.n_obs)
                         full_col[:] = np.nan
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
@@ -259,7 +265,7 @@ def rank_genes_groups(
                 partial_indices = np.argsort(zscores[imask, partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_zscores.append(zscores[imask, global_indices])
-                rankings_gene_names.append(adata.var_names[global_indices])
+                rankings_gene_names.append(adata_comp.var_names[global_indices])
                 if compute_distribution:
                     mean, vars = simple._get_mean_var(X[mask])
                     mean_rest, var_rest = simple._get_mean_var(X[~mask])
@@ -270,7 +276,7 @@ def rank_genes_groups(
                         X_col = X[mask, gene_idx]
                         if issparse(X): X_col = X_col.toarray()[:, 0]
                         identifier = _build_identifier(group_by, groups_order[imask],
-                                                       gene_counter, adata.var_names[gene_idx])
+                                                       gene_counter, adata_comp.var_names[gene_idx])
                         full_col = np.empty(adata.n_obs)
                         full_col[:] = np.nan
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]

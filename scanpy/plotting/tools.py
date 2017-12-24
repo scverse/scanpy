@@ -41,6 +41,11 @@ def pca(adata, **params):
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
     groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
     components : str or list of str, optional (default: '1,2')
@@ -78,6 +83,8 @@ def pca(adata, **params):
 def pca_scatter(
         adata,
         color=None,
+        use_raw=True,
+        sort_order=True,
         alpha=None,
         groups=None,
         components=None,
@@ -109,6 +116,8 @@ def pca_scatter(
         adata,
         basis='pca',
         color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
         alpha=alpha,
         groups=groups,
         components=components,
@@ -168,6 +177,8 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
 def diffmap(
         adata,
         color=None,
+        use_raw=True,
+        sort_order=True,
         alpha=None,
         groups=None,
         components=None,
@@ -191,6 +202,11 @@ def diffmap(
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
     groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
     components : str or list of str, optional (default: '1,2')
@@ -233,6 +249,8 @@ def diffmap(
             adata,
             basis='diffmap',
             color=color,
+            use_raw=use_raw,
+            sort_order=sort_order,
             alpha=alpha,
             groups=groups,
             components=components,
@@ -264,6 +282,8 @@ def draw_graph(
         adata,
         layout=None,
         color=None,
+        use_raw=True,
+        sort_order=True,
         alpha=None,
         groups=None,
         components=None,
@@ -290,6 +310,11 @@ def draw_graph(
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
     groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
     components : str or list of str, optional (default: '1,2')
@@ -330,6 +355,8 @@ def draw_graph(
         adata,
         basis='draw_graph_' + layout,
         color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
         alpha=alpha,
         groups=groups,
         components=components,
@@ -351,6 +378,8 @@ def draw_graph(
 def tsne(
         adata,
         color=None,
+        use_raw=True,
+        sort_order=True,
         alpha=None,
         groups=None,
         legend_loc='right margin',
@@ -372,6 +401,11 @@ def tsne(
     color : string or list of strings, optional (default: None)
         Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
     groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
     legend_loc : str, optional (default: 'right margin')
@@ -406,6 +440,8 @@ def tsne(
         adata,
         basis='tsne',
         color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
         alpha=alpha,
         groups=groups,
         legend_loc=legend_loc,
@@ -1639,7 +1675,9 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
+def rank_genes_groups_violin(adata, groups=None, n_genes=20,
+                             use_raw=None,
+                             split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
                              computed_distribution=False,
@@ -1654,6 +1692,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
         List of group names.
     n_genes : `int`, optional (default: 20)
         Number of genes to show.
+    use_raw : `bool`, optional (default: `None`)
+        Use `raw` attribute of `adata` if present. Defaults to the value that
+        was used in :func:`~scanpy.api.tl.rank_genes_groups`.
     split : `bool`, optional (default: `True`)
         Whether to split the violins or not.
     scale : `str` (default: 'width')
@@ -1678,6 +1719,8 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
     """
     from ..tools import rank_genes_groups
     groups_key = str(adata.uns['rank_genes_groups_params']['group_by'])
+    if use_raw is None:
+        use_raw = bool(adata.uns['rank_genes_groups_params']['use_raw'])
     reference = str(adata.uns['rank_genes_groups_params']['reference'])
     groups_names = (adata.uns['rank_genes_groups_gene_names'].dtype.names
                     if groups is None else groups)
@@ -1700,7 +1743,10 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20, split=True,
         # make a "hue" option!
         df = pd.DataFrame()
         for key in keys:
-            X_col = adata[:, key].X
+            if adata.raw is not None and use_raw:
+                X_col = adata.raw[:, key].X
+            else:
+                X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
             df[key] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
