@@ -1,4 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
 """Preprocessing recipes from the literature
 """
 
