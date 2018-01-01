@@ -87,7 +87,10 @@ def rank_genes_groups(
     adata.uns['rank_genes_groups_params'] = np.array(
         (group_by, reference, test_type, use_raw),
         dtype=[('group_by', 'U50'), ('reference', 'U50'), ('test_type', 'U50'), ('use_raw', np.bool_)])
-    
+
+    # adata_comp mocks an AnnData object if use_raw is True
+    # otherwise it's just the AnnData object
+    adata_comp = adata
     if adata.raw is not None and use_raw:
         adata_comp = adata.raw
     X = adata_comp.X
