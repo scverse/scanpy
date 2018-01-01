@@ -46,6 +46,11 @@ References
    *Exploring Network Structure, Dynamics, and Function using NetworkX*,
    `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
 
+.. [Hastie09]
+   Hastie *et al.* (2009),
+   *The Elements of Statistical Learning*,
+   `Springer <https://web.stanford.edu/~hastie/ElemStatLearn/>`_.   
+
 .. [Haghverdi15] Haghverdi *et al.* (2015),
    *Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
    `Bioinformatics <https://doi.org/10.1093/bioinformatics/btv325>`__.
@@ -81,6 +86,11 @@ References
 .. [Moignard15] Moignard *et al.* (2015),
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3154>`__.
+
+.. [Murphy12]
+   Murphy (2012,
+   *Machine Learning: A Probabilisitc Perspective*,
+   `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`_.   
 
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
