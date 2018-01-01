@@ -19,7 +19,7 @@ AnnData objects
 ^^^^^^^^^^^^^^^
 
 An :class:`~scanpy.api.AnnData` object ``adata`` stores a data matrix
-(``adata.data``), dataframe-like sample (``adata.obs``) and variable
+(``adata.X``), dataframe-like sample (``adata.obs``) and variable
 (``adata.var``) annotation and unstructured dict-like annotation
 (``adata.uns``).
 
