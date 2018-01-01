@@ -1,16 +1,16 @@
 
 **December 23, 2017**: version 0.4
 
-1. :class:`~scanpy.api.AnnData` now has a `.raw` attribute that simplifies
+1. :class:`~scanpy.api.AnnData` has a `.raw` attribute that simplifies
    interacting with the "raw" data: see the `clustering tutorial
    <https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`_
-2. partial loading of data into memory, the :class:`~scanpy.api.AnnData` object
-   provides full scalability beyond dataset sizes that fit into memory: See this
+2. :class:`~scanpy.api.AnnData` 
+   provides scalability beyond dataset sizes that fit into memory: see this
    `blog post
    <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_ for
    more details
 3. common file format for exchanging :class:`~scanpy.api.AnnData` with packages
-   such as Seurat and SCDE via `.loom <http://loompy.org>`_ export and import
+   such as Seurat and SCDE by reading and writing `.loom <http://loompy.org>`_ files
 4. consistency updates, bug fixes, better logging
 5. export to `SPRING <https://github.com/AllonKleinLab/SPRING/>`_ [Weinreb17]_
    for interactive visualization of data: `tutorial
@@ -27,8 +27,8 @@
 **November 16, 2017**: version 0.3
 
 1. consistency updates, stability improvements
-2. :func:`~scanpy.api.AnnData` can be `concatenated <https://scanpy.readthedocs.io/en/latest/api/scanpy.api.AnnData.html>`_
-3. :func:`~scanpy.api.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
+2. :class:`~scanpy.api.AnnData` can be `concatenated <https://scanpy.readthedocs.io/en/latest/api/scanpy.api.AnnData.html>`_
+3. :class:`~scanpy.api.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
 4. results of approximate graph abstraction (AGA) are `simplified <https://github.com/theislab/graph_abstraction>`_
 
   
