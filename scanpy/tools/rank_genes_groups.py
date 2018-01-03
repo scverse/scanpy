@@ -285,7 +285,7 @@ def rank_genes_groups(
                         full_col[mask] = (X_col - mean_rest[gene_idx]) / denominator[gene_idx]
                         adata.obs[identifier] = full_col
 
-    groups_order_save = groups_order
+    groups_order_save = [str(g) for g in groups_order]
     if reference != 'rest':
         groups_order_save = [g for g in groups_order if g != reference]
     adata.uns['rank_genes_groups_gene_scores'] = np.rec.fromarrays(
