@@ -1,6 +1,6 @@
 """\
-Features/API
-------------
+API
+---
 
 Scanpy's high-level API provides an overview of all features relevant to pratical use::
 
@@ -96,13 +96,31 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
    <h3>Reading and Writing</h3>
 
+A powerful multi-format file-reader for common file formats. The format is
+inferred from the extension of the filename.
+
 .. autosummary::
    :toctree: .
 
    read
-   write
-   read_10x_h5
 
+Reading a variety of other formats, borrowed from `anndata
+<http://anndata.readthedocs.io>`_.
+
+.. autosummary::
+   :toctree: .
+
+   read_h5ad
+   read_10x_h5
+   read_csv
+   read_excel
+   read_hdf
+   read_loom
+   read_mtx
+   read_text
+   read_umi_tools
+
+For writing, use `AnnData.write_...` as described `here <http://anndata.readthedocs.io/en/latest/api.html>`_.
 
 .. raw:: html
 
@@ -217,6 +235,8 @@ All of these functions return an Annotated Data object.
 
 
 from anndata import AnnData
+from anndata import read as read_h5ad
+from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
 
 from .. import __version__
 
