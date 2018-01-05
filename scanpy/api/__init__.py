@@ -96,6 +96,11 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
    <h3>Reading and Writing</h3>
 
+Note: For reading annotation use
+`pandas.read_... <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
+it to your `AnnData` object. The following read functions are intended for
+numeric data.
+
 A powerful multi-format file-reader for common file formats. The format is
 inferred from the extension of the filename.
 
