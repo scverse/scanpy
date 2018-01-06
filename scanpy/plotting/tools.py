@@ -816,8 +816,13 @@ def _aga_graph(
         for iname, name in enumerate(adata.obs[groups_key].cat.categories):
             if name in settings.categories_to_ignore: color[iname] = 'grey'
 
-    if isinstance(root, str) and root in node_labels:
-        root = list(node_labels).index(root)
+    if isinstance(root, str):
+        if root in node_labels:
+            root = list(node_labels).index(root)
+        else:
+            raise ValueError(
+                'If `root` is a string, it needs to be one of {} not \'{}\'.'
+                .format(node_labels.tolist(), root))
     if isinstance(root, list) and root[0] in node_labels:
         root = [list(node_labels).index(r) for r in root]
 
