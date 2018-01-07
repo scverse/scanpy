@@ -1,11 +1,11 @@
-See all releases `here <https://github.com/theislab/scanpy/releases>`_. Here, we list selected improvements.
+See all releases `here <https://github.com/theislab/scanpy/releases>`_. In what follows, we list selected improvements.
 
 
 **January 7, 2017**: version 0.4.2
 
-1. amendments in (AGA) `AGA <https://github.com/theislab/graph_abstraction>`_
+1. amendments in `AGA <https://github.com/theislab/graph_abstraction>`_
    and its plotting functions
-2. bug fixes, consistency updates
+2. bug fixes
    
 
 **December 23, 2017**: version 0.4
