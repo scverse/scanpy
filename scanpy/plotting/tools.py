@@ -1037,20 +1037,19 @@ def _aga_graph(
 def aga_path(
         adata,
         nodes,
-        variables=None,
+        keys,
         annotations=['aga_pseudotime'],
-        n_avg=1,
         color_map=None,
         color_maps_annotations={'aga_pseudotime': 'Greys'},
+        palette_groups=None,
+        n_avg=1,
         groups_key=None,
         xlim=[None, None],
         title=None,
         left_margin=None,
-        show_left_y_ticks=None,
         ytick_fontsize=None,
         title_fontsize=None,
-        show_nodes_twin=True,
-        palette_groups=None,
+        show_node_names=True,
         show_yticks=True,
         show_colorbar=True,
         legend_fontsize=None,
@@ -1058,50 +1057,64 @@ def aga_path(
         normalize_to_zero_one=False,
         as_heatmap=True,
         return_data=False,
-        keys=None,
-        save=None,
         show=None,
+        save=None,
         ax=None):
     """Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    nodes : list of group names or indices
+        An annotated data matrix.
+    nodes : list of group names or their category indices
         A path through nodes of the abstracted graph, that is, names or indices
         (within `.categories`) of groups that have been used to run AGA.
-    variables : list of variables
-        These have to be present in `adata.var_names`.
+    keys : list of str
+        Either variables in `adata.var_names` or annotations in
+        `adata.obs`. They are plotted using `color_map`.
     annotations : list of annotations, optional (default: ['aga_pseudotime'])
-        Keys for `adata.obs`.
-    color_map : color map for plotting variables, optional
+        Plot these keys with `color_maps_annotations`. Need to be keys for
+        `adata.obs`.
+    color_map : color map for plotting keys or `None`, optional (default: `None`)
         Matplotlib colormap.
-    color_maps_annotations : dict storing color maps, optional
-        Color maps for plotting the annotations.
+    color_maps_annotations : dict storing color maps or `None`, optional (default: {'aga_pseudotime': 'Greys'})
+        Color maps for plotting the annotations. Keys of the dictionary must
+        appear in `annotations`.
+    palette_groups : list of colors or `None`, optional (default: `None`)
+        Ususally, use the same `sc.pl.palettes...` as used for coloring the
+        abstracted graph.
     n_avg : `int`, optional (default: 1)
         Number of data points to include in computation of running average.
     groups_key : `str`, optional (default: `None`)
         Key of the grouping used to run AGA. If `None`, defaults to
         `adata.uns['aga_groups_key']`.
-    palette_groups : list of colors or `None`, optional (default: `None`)
-        Ususally, use the same `sc.pl.palettes...` as used for coloring the
-        abstracted graph.
     as_heatmap : `bool`, optional (default: `True`)
-        Plot the timeseries as heatmap.
+        Plot the timeseries as heatmap. If not plotting as heatmap,
+        `annotations` have no effect.
+    show_node_names : `bool`, optional (default: `True`)
+        Plot the node names on the nodes bar.
+    show_colorbar : `bool`, optional (default: `True`)
+        Show the colorbar.
+    show_yticks : `bool`, optional (default: `True`)
+        Show the y ticks.
     normalize_to_zero_one : `bool`, optional (default: `True`)
         Shift and scale the running average to [0, 1] per gene.
+    return_data : `bool`, optional (default: `False`)
+        Return the timeseries data in addition to the axes if `True`.
+    show : `bool`, optional (default: `None`)
+         Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    ax : `matplotlib.Axes`
+         A matplotlib axes object.
 
     Returns
     -------
-    A `matplotlib.Axes`, if `ax` is `None`, else `None`.
+    A `matplotlib.Axes`, if `ax` is `None`, else `None`. If `return_data`,
+    return the timeseries data in addition to an axes.
     """
     ax_was_none = ax is None
-    if show_left_y_ticks is None:
-        show_left_y_ticks = False if show_nodes_twin else True
 
     if groups_key is None:
         if 'aga_groups_key' not in adata.uns:
@@ -1123,17 +1136,20 @@ def aga_path(
     from matplotlib import transforms
     trans = transforms.blended_transform_factory(
         ax.transData, ax.transAxes)
-    if as_heatmap:
-        X = []
+    X = []
     x_tick_locs = [0]
     x_tick_labels = []
     groups = []
     anno_dict = {anno: [] for anno in annotations}
-    keys = variables if keys is None else keys
-    if keys is None:
-        raise ValueError('Pass the `variables` parameter.')
     if isinstance(nodes[0], str):
-        nodes_ints = [groups_names.get_loc(node) for node in nodes]
+        nodes_ints = []
+        groups_names_set = set(groups_names)
+        for node in nodes:
+            if node not in groups_names_set:
+                raise ValueError(
+                    'Each node/group needs to be one of {} (`groups_key`=\'{}\') not \'{}\'.'
+                    .format(groups_names.tolist(), groups_key, node))
+            nodes_ints.append(groups_names.get_loc(node))
         nodes_strs = nodes
     else:
         nodes_ints = nodes
@@ -1144,10 +1160,11 @@ def aga_path(
             idcs = np.arange(adata.n_obs)[
                 adata.obs[groups_key].values == nodes_strs[igroup]]
             if len(idcs) == 0:
-                raise ValueError('Did not find data points that match '
-                                 '`adata.obs[{}].values == str({})`.'
-                                 'Check whether adata.obs[{}] actually contains what you expect.'
-                                 .format(groups_key, group, groups_key))
+                raise ValueError(
+                    'Did not find data points that match '
+                    '`adata.obs[{}].values == str({})`.'
+                    'Check whether adata.obs[{}] actually contains what you expect.'
+                    .format(groups_key, group, groups_key))
             idcs_group = np.argsort(adata.obs['aga_pseudotime'].values[
                 adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
@@ -1170,10 +1187,9 @@ def aga_path(
         if normalize_to_zero_one:
             x -= np.min(x)
             x /= np.max(x)
+        X.append(x)
         if not as_heatmap:
             ax.plot(x[xlim[0]:xlim[1]], label=key)
-        else:
-            X.append(x)
         if ikey == 0:
             for igroup, group in enumerate(nodes):
                 if len(groups_names) > 0 and group not in groups_names:
@@ -1205,7 +1221,11 @@ def aga_path(
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
     xlabel = 'groups $i$'
-    if as_heatmap:
+    if not as_heatmap:
+        ax.set_xlabel(xlabel)
+        pl.yticks([])
+        if len(keys) == 1: pl.ylabel(keys[0] + ' (a.u.)')
+    else:
         import matplotlib.colors
         # groups bar
         ax_bounds = ax.get_position().bounds
@@ -1226,12 +1246,13 @@ def aga_path(
         else:
             groups_axis.set_yticks([])
         groups_axis.set_frame_on(False)
-        ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0])/2
-        x_tick_locs = sc_utils.moving_average(x_tick_locs, n=2)
-        for ilabel, label in enumerate(x_tick_labels):
-            groups_axis.text(x_tick_locs[ilabel], ypos, x_tick_labels[ilabel],
-                             fontdict={'horizontalalignment': 'center',
-                                       'verticalalignment': 'center'})
+        if show_node_names:
+            ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0])/2
+            x_tick_locs = sc_utils.moving_average(x_tick_locs, n=2)
+            for ilabel, label in enumerate(x_tick_labels):
+                groups_axis.text(x_tick_locs[ilabel], ypos, x_tick_labels[ilabel],
+                                 fontdict={'horizontalalignment': 'center',
+                                           'verticalalignment': 'center'})
         groups_axis.set_xticks([])
         groups_axis.grid(False)
         groups_axis.tick_params(axis='both', which='both', length=0)
@@ -1263,25 +1284,6 @@ def aga_path(
             anno_axis.set_frame_on(False)
             anno_axis.set_xticks([])
             anno_axis.grid(False)
-    else:
-        ax.set_xlabel(xlabel)
-    if show_left_y_ticks:
-        utils.pimp_axis(pl.gca().get_yaxis())
-        if len(keys) > 1: pl.ylabel('as indicated on legend')
-        else: pl.ylabel(keys[0])
-    elif not as_heatmap:
-        pl.yticks([])
-        pl.ylabel('as indicated on legend (a.u.)')
-    if show_nodes_twin and not as_heatmap:
-        pl.twinx()
-        x = []
-        for g in nodes_strs:
-            x += list(adata.obs[groups_key].values[adata.obs[groups_key].values == g].astype(int))
-        if n_avg > 1: x = moving_average(x)
-        pl.plot(x[xlim[0]:xlim[1]], '--', color='black')
-        label = 'aga groups' + (' / original groups' if len(groups_names) > 0 else '')
-        pl.ylabel(label)
-        utils.pimp_axis(pl.gca().get_yaxis())
     if title is not None: ax.set_title(title, fontsize=title_fontsize)
     if show is None and not ax_was_none: show = False
     else: show = settings.autoshow if show is None else show
@@ -1488,7 +1490,7 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     """
     if adata.n_vars > 100:
         logg.warn('Plotting more than 100 genes might take some while,'
-                  'consider selecting only highly variables genes, for example.')
+                  'consider selecting only highly variable genes, for example.')
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
