@@ -1,5 +1,5 @@
-Basic Usage Principles
-----------------------
+Basic Usage
+-----------
 
 Import the Scanpy API as::
 
@@ -10,7 +10,7 @@ of the form::
 
     sc.tl.louvain(adata, **params)
 
-where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n* *d*-dimensional gene expression measurements. To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None``. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass the ``copy`` argument::
+where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* gene expression measurements of dimension *n_vars*. To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass the ``copy`` argument::
 
     adata_copy = sc.tl.louvain(adata, copy=True, **params)
 
@@ -18,27 +18,24 @@ where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are opt
 AnnData objects
 ^^^^^^^^^^^^^^^
 
-An :class:`~scanpy.api.AnnData` object ``adata`` stores a data matrix
-(``adata.X``), dataframe-like sample (``adata.obs``) and variable
-(``adata.var``) annotation and unstructured dict-like annotation
-(``adata.uns``).
+Scanpy is based on `anndata <http://anndata.readthedocs.io>`_, which provides
+the :class:`~scanpy.api.AnnData` class.
 
 .. raw:: html
 
     <img src="http://falexwolf.de/img/scanpy/anndata.svg" style="width: 300px">
 
-Values can be retrieved and appended via ``adata.obs['key1']`` and
-``adata.var['key2']``. Sample and variable names can be accessed via
-``adata.obs_names`` and ``adata.var_names``,
+At the most basic level, an :class:`~scanpy.api.AnnData` object ``adata`` stores
+a data matrix (``adata.X``), dataframe-like annotation of observations
+(``adata.obs``) and variables (``adata.var``) and unstructured dict-like
+annotation (``adata.uns``). Values can be retrieved and appended via
+``adata.obs['key1']`` and ``adata.var['key2']``. Names of observations and
+variables can be accessed via ``adata.obs_names`` and ``adata.var_names``,
 respectively. :class:`~scanpy.api.AnnData` objects can be sliced like
-dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``. The AnnData
-class is similar to R's ExpressionSet [Huber15]_. For more, see :class:`~scanpy.api.AnnData`.
-    
-
-Reading and writing data files and AnnData objects
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To read, call::
+dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``.
+For more, see this `blog post <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_.
+         
+To read a data file to an :class:`~scanpy.api.AnnData` object, call::
 
     adata = sc.read(filename)
 
@@ -46,18 +43,19 @@ to initialize an :class:`~scanpy.api.AnnData` object. Possibly add further annot
 
     import pandas as pd 
     anno = pd.read_csv(filename_sample_annotation)
-    adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type str or int
+    adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type pandas.Categorical
     adata.obs['time'] = anno['time']                # numerical annotation of type float
-
-or set a whole dataframe::
-
-    adata.obs = pd.read_csv(filename_sample_annotation)
+    # alternatively, you could also set the whole dataframe
+    # adata.obs = anno
 
 To write, use::
 
-    sc.write(filename, adata)
+    adata.write(filename)
+    adata.write_csvs(filename)
+    adata.write_loom(filename)    
 
-to save the :class:`~scanpy.api.AnnData` as a collection of data arrays to a file in a platform and language-independent way. Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others. Writing foresees writing *h5*, *csv* and *txt*. For more, see :func:`~scanpy.api.write` and :func:`~scanpy.api.read`.
+Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others.
+
 
 Plotting
 ^^^^^^^^
