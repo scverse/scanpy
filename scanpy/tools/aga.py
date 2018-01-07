@@ -1,5 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
-
 from collections import namedtuple
 import numpy as np
 import scipy as sp
@@ -227,8 +225,8 @@ def aga(adata,
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
            + ('    \'aga_pseudotime\', pseudotime (adata.obs),\n' if aga.iroot is not None else '')
-           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstracted graph  (adata.obs)\n'
-           + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph  (adata.obs)\n'
+           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstracted graph (adata.obs)\n'
+           + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph (adata.obs)\n'
            + '    \'aga_adjacency_tree_confidence\', adjacency matrix of subtree (adata.obs)')
     return adata if copy else None
 
