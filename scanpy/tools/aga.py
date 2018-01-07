@@ -25,58 +25,53 @@ doc_string_base = dedent("""\
     with a random walk-based distance measure, this generates a partial
     coordinatization of data useful for exploring and explaining its
     variation. By default, AGA uses the Louvain algorithm to partition the data,
-    which has been suggested for clustering single-cell data by
-    [Levine15]_. Also, it extends the random-walk based distance measure
+    which has been suggested for clustering single-cell data by [Levine15]_
+    ('Phenograph'). Also, it extends DPT, the random-walk based distance measure
     suggested by [Haghverdi16]_.
 
-    **Note**: In order to compute distances along the graph (pseudotimes), you need
+    You should get good results with the default parameters. Most of the
+    parameters appear similarly in other tools and are used to generate the
+    graph and its partitioning.
+
+    **Note 1**: In order to compute distances along the graph (pseudotimes), you need
     to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
     <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['exp_groups'] == 'Stem')[0]
 
-    You should get good results with the default parameters. Most the parameters
-    appear similarly in other tools and are used to generate the graph.
+    **Note 2**: The former parameters `attachedness_measure`, `tree_detection`
+    and `n_nodes` remain for backwards compatibility but have been removed from
+    the documentation and will be removed in a future version.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix, optionally with `adata.uns['iroot']`, the index
-        of root cell for computing a pseudotime.
-    groups : categorical obs/cell annotation or {{'louvain_groups', 'segments'}}, optional (default: 'louvain_groups')
+        of a root cell for computing a pseudotime.
+    groups : categorical annotation of observations or 'louvain_groups', optional (default: 'louvain_groups')
         Criterion to determine the resulting partitions of the single-cell
-        graph. 'louvain_groups' uses the louvain algorithm and optimizes
-        modularity of the graph, 'segments' uses a bipartioning criterium that
-        similar to hierarchical clustering on the graph. You can also pass your
-        predefined groups by choosing any sample annotation.
-    n_pcs : `int`, optional (default: 50)
-        Use n_pcs PCs to compute the euclidean distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_neighbors : `int` or `None`, optional (default: `None`)
-        Number of nearest neighbors on the knn graph. Often this can be reduced
-        down to a value of 4. Defaults to the number of neighbors in a
-        precomputed graph. If there is none, defaults to 30.
-    n_dcs : `int`, optional (default: 10)
-        Number of diffusion components (very similar to eigen vectors of
-        adjacency matrix) to use for distance computations.
+        graph. 'louvain_groups' uses the Louvain algorithm and optimizes
+        modularity of the graph. You can also pass your predefined groups by
+        choosing any categorical annotation of observations (`adata.obs`).
+    tree_based_confidence : `bool`, optional (default: `True`)
+        Have high confidence in a connection if its connectivity is
+        significantly higher than the median connectivity of the global spanning
+        tree of the abstracted graph.
     resolution : `float`, optional (default: 1.0)
         See :func:`~scanpy.api.louvain`.
     random_state : `int`, optional (default: 0)
         See :func:`~scanpy.api.louvain`.
-    tree_detection : {{'iterative_matching', 'min_span_tree'}}, optional (default: 'min_span_tree')
-        How to detect a tree structure in the abstracted graph. If choosing
-        'min_span_tree', he minimum spanning tree is computed for the abstracted
-        graph with inverted weights. If choosing 'iterative_matching', this runs
-        a recursive algorithm that greedily attaches partitions (groups) that
-        maximize the random-walk based distance measure.
-    attachedness_measure : {{'connectedness', 'random_walk'}}, optional (default: 'connectedness')
-        How to measure connectedness between groups.
-    n_nodes : `int` or `None`, optional (default: `None`)
-        Number of nodes in the abstracted graph. Except when choosing
-        'segments' for `groups`, for which `n_nodes` defaults to
-        `n_nodes=1`, `n_nodes` defaults to the number of groups implied by the
-        choice of `groups`.
+    n_neighbors : `int` or `None`, optional (default: `None`)
+        Number of nearest neighbors on the knn graph. Often this can be reduced
+        down to a value of 4. Defaults to the number of neighbors in a
+        precomputed graph. If there is none, defaults to 30.
+    n_pcs : `int`, optional (default: 50)
+        Use `n_pcs` PCs to compute the euclidean distance matrix, which is the
+        basis for generating the graph. Set to 0 if you don't want preprocessing
+        with PCA.
+    n_dcs : `int`, optional (default: 10)
+        Number of diffusion components (very similar to eigen vectors of
+        adjacency matrix) to use for distance computations.
     recompute_graph : `bool`, optional (default: `False`)
         Recompute single-cell graph.
     recompute_pca : `bool`, optional (default: `False`)
@@ -114,19 +109,19 @@ doc_string_returns = dedent("""\
 
 def aga(adata,
         groups='louvain_groups',
-        n_pcs=50,
-        n_neighbors=None,
-        n_dcs=None,
+        tree_based_confidence=True,
         resolution=None,
         random_state=0,
-        attachedness_measure='connectedness',
-        tree_detection='min_span_tree',
-        tree_based_confidence=True,
-        n_nodes=None,
+        n_neighbors=None,
+        n_pcs=50,
+        n_dcs=None,
         recompute_pca=False,
         recompute_distances=False,
         recompute_graph=False,
         recompute_louvain=False,
+        attachedness_measure='connectedness',
+        tree_detection='min_span_tree',
+        n_nodes=None,
         n_jobs=None,
         copy=False):
     adata = adata.copy() if copy else adata
@@ -225,9 +220,9 @@ def aga(adata,
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
            + ('    \'aga_pseudotime\', pseudotime (adata.obs),\n' if aga.iroot is not None else '')
-           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstracted graph (adata.obs)\n'
-           + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph (adata.obs)\n'
-           + '    \'aga_adjacency_tree_confidence\', adjacency matrix of subtree (adata.obs)')
+           + '    \'aga_adjacency_full_attachedness\', adj. matrix of abs. graph weighted by connectivity/attachedness (adata.obs)\n'
+           + '    \'aga_adjacency_full_confidence\', adj. matrix of abs. graph weighted by confidence (adata.obs)\n'
+           + '    \'aga_adjacency_tree_confidence\', adj. matrix of subtree in abs. graph weighted by confidence (adata.obs)')
     return adata if copy else None
 
 

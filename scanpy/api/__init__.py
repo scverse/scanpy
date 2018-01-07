@@ -66,9 +66,9 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 .. autosummary::
    :toctree: .
 
+   tl.aga
    tl.louvain
    tl.dpt
-   tl.aga
    tl.rank_genes_groups
 
 .. raw:: html
