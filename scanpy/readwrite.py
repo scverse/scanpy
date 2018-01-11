@@ -12,8 +12,10 @@ from anndata import read as read_h5ad
 from . import settings
 from . import logging as logg
 
-avail_exts = {'anndata', 'csv', 'xlsx', 'txt', 'h5', 'h5ad',
-              'soft.gz', 'txt.gz', 'mtx', 'tab', 'data'}
+avail_exts = {'anndata', 'csv', 'xlsx',
+              'txt', 'tsv', 'tab', 'data',  # these four are all equivalent
+              'h5', 'h5ad',
+              'soft.gz', 'txt.gz', 'mtx'}
 """Available file formats for reading data. """
 
 
@@ -149,75 +151,6 @@ def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
         See http://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts : `int`, optional (default: `None`)
         See http://docs.h5py.org/en/latest/high/dataset.html.
-
-    Examples
-    --------
-    Writing an annotated numpy array.
-
-    >>> adata = AnnData(
-    >>>     data=np.array([[1, 0], [3, 0], [5, 6]]),
-    >>>     obs={'row_names': ['name1', 'name2', 'name3'],
-    >>>          'oanno1': ['cat1', 'cat2', 'cat2'],
-    >>>          'oanno2': [2.1, 2.2, 2.3]},
-    >>>     var={'vanno1': [3.1, 3.2]},
-    >>>     uns={'oanno1_colors': ['#000000', '#FFFFFF'],
-    >>>          'uns2': ['some annotation']})
-    >>> assert pd.api.types.is_string_dtype(adata.obs['sanno1'])
-    >>> write('./test.h5', adata)
-    $ h5ls test.h5
-    _obs                     Dataset {3}
-    _var                     Dataset {2}
-    _X                       Dataset {3, 2}
-    oanno1_categories        Dataset {2}
-    oanno1_colors            Dataset {2}
-    uns2                     Dataset {1}
-    $ h5ls -d test.h5
-    ...
-    _obs                     Dataset {3/3}
-        Location:  1:1400
-        Links:     1
-        Storage:   42 logical bytes, 42 allocated bytes, 100.00% utilization
-        Type:      struct {
-                       "index"            +0    5-byte null-padded ASCII string
-                       "oanno2"           +5    native double
-                       "oanno1"           +13   native signed char
-                   } 14 bytes
-    ...
-
-    Using compression
-
-    >>> adata = AnnData(np.ones((10000, 1000)))
-    >>> write('./test_compr.h5', adata, compression='gzip')
-    >>> write('./test_no_compr.h5', adata)
-    $ ls -lh test_no_compr.h5
-    -rw-r--r--  1 alexwolf  staff    38M Nov 14 14:38 test_no_compr.h5
-    $ ls -lh test_compr.h5
-    -rw-r--r--  1 alexwolf  staff   161K Nov 14 15:15 test_compr.h5
-
-    Writing a :class:`~scanpy.api.AnnData` that contains sparse data.
-
-    >>> from scipy.sparse import csr_matrix
-    >>> adata = AnnData(
-    >>>     data=csr_matrix([[1, 0], [3, 0], [5, 6]]),
-    >>>     obs={'row_names': ['name1', 'name2', 'name3'],
-    >>>          'oanno1': ['cat1', 'cat2', 'cat2'],
-    >>>          'oanno2': [2.1, 2.2, 2.3]},
-    >>>     var={'vanno1': [3.1, 3.2]},
-    >>>     uns={'oanno1_colors': ['#000000', '#FFFFFF'],
-    >>>          'uns2_sparse': csr_matrix([[1, 0], [3, 0]])})
-    $ h5ls test.h5
-    _obs                     Dataset {3}
-    _var                     Dataset {2}
-    _X_csr_data              Dataset {4}
-    _X_csr_indices           Dataset {4}
-    _X_csr_indptr            Dataset {4}
-    _X_csr_shape             Dataset {2}
-    oanno1_categories        Dataset {2}
-    oanno1_colors            Dataset {2}
-    uns2_sparse_csr_data     Dataset {2}
-    uns2_sparse_csr_indices  Dataset {2}
-    uns2_sparse_csr_indptr   Dataset {3}
-    uns2_sparse_csr_shape    Dataset {2}
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if is_valid_filename(filename):
@@ -372,7 +305,7 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             adata = read_mtx(filename)
         elif ext == 'csv':
             adata = read_csv(filename, first_column_names=first_column_names)
-        elif ext in {'txt', 'tab', 'data'}:
+        elif ext in {'txt', 'tab', 'data', 'tsv'}:
             if ext == 'data':
                 logg.msg('... assuming \'.data\' means tab or white-space '
                          'separated text file', v=3)
