@@ -612,8 +612,13 @@ def check_presence_download(filename, backup_url):
     """Check if file is present otherwise download."""
     import os
     if not os.path.exists(filename):
-        from ..readwrite import download_progress
-        os.makedirs(filename)
+        from .readwrite import download_progress
+        dr = os.path.dirname(filename)
+        try:
+            os.makedirs(dr)
+        except FileExistsError:
+            pass # ignore if dir already exists
+
         from urllib.request import urlretrieve
         urlretrieve(backup_url, filename, reporthook=download_progress)
 
