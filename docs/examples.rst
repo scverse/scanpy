@@ -67,3 +67,10 @@ Good starting points are the following examples, which build on established resu
 .. _Cell Ranger: https://github.com/10XGenomics/single-cell-3prime-paper/tree/master/pbmc68k_analysis
 .. _favorably discussed: https://doi.org/10.1101/110668
 .. _Monocle: http://cole-trapnell-lab.github.io/monocle-release/articles/v2.0.0/
+
+
+
+User Examples
+~~~~~~~~~~~~~
+
+January 12, 2018: `Exploring the mouse cell atlas <https://github.com/dpcook/fun_analysis/blob/master/tabula_muris/mouse_atlas_scanpy.ipynb>`_ by `David P. Cook <https://twitter.com/DavidPCook>`_. Data by `Tabula Muris Consortium <https://www.biorxiv.org/content/early/2017/12/20/237446>`_.
