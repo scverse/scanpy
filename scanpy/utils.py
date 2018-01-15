@@ -43,6 +43,8 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     import igraph as ig
     sources, targets = adjacency.nonzero()
     weights = adjacency[sources, targets]
+    if isinstance(weights, np.matrix):
+        weights = weights.A1
     # if len(weights) > 0: weights = np.array(weights)
     # else:
     #     # hack for empty graph
