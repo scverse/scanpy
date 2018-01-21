@@ -116,6 +116,10 @@ References
    *Transforming Boolean models to continuous models: methodology and application to T-cell receptor signaling*,
    `BMC Systems Biology <https://doi.org/10.1186/1752-0509-3-98>`__.
 
+.. [Waskom16] Waskom *et al.* (2017),
+   *Seaborn*,
+   `Zenodo <https://doi.org/10.5281/zenodo.54844>`__.
+   
 .. [Wolf17] Wolf *et al.* (2017),
    *Scanpy for analysis of large-scale single-cell gene expression data*,
    `bioRxiv <https://doi.org/10.1101/174029>`__.
