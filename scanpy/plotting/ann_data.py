@@ -471,7 +471,7 @@ def clustermap(
     >>> adata = sc.datasets.krumsiek11()
     >>> sc.pl.clustermap(adata, obs_keys='cell_type')
     """
-    if not isinstance(obs_keys, str):
+    if not isinstance(obs_keys, (str, None)):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
     X = adata.raw.X if use_raw and adata.raw is not None else adata.X
