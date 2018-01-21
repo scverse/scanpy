@@ -1,7 +1,13 @@
 See all releases `here <https://github.com/theislab/scanpy/releases>`_. In what follows, we list selected improvements.
 
+**To come:** already on GitHub
 
-**January 7, 2017**: version 0.4.2
+1. :func:`~scanpy.api.pl.clustermap`: heatmap from hierarchical clustering,
+   based on `seaborn.clustermap
+   <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ [Waskom16]_
+
+
+**January 7, 2018**: version 0.4.2
 
 1. amendments in `AGA <https://github.com/theislab/graph_abstraction>`_
    and its plotting functions
