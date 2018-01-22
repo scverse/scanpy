@@ -68,7 +68,7 @@ def pca(adata, **params):
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -102,7 +102,7 @@ def pca_scatter(
         ax=None):
     """Scatter plot in PCA coordinates.
 
-    See parameters of sc.pl.pca(). In addition.
+    See parameters of :func:`~scanpy.api.pl.pca`.
 
     Parameters
     ----------
@@ -133,7 +133,7 @@ def pca_scatter(
         show=False,
         save=False, ax=ax)
     utils.savefig_or_show('pca_scatter', show=show, save=save)
-    return axs
+    if show == False: return axs
 
 
 def pca_loadings(adata, components=None, show=None, save=None):
@@ -147,7 +147,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
     show : bool, optional (default: None)
-        Show the plot.
+        Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -165,7 +165,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
     Parameters
     ----------
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -230,7 +230,7 @@ def diffmap(
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -275,7 +275,7 @@ def diffmap(
             utils.savefig(writekey)
     show = settings.autoshow if show is None else show
     if not settings.savefigs and show: pl.show()
-    return axs
+    if show == False: return axs
 
 
 def draw_graph(
@@ -336,7 +336,7 @@ def draw_graph(
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -372,7 +372,7 @@ def draw_graph(
         show=show,
         save=save,
         ax=ax)
-    return axs
+    if show == False: return axs
 
 
 def tsne(
@@ -425,7 +425,7 @@ def tsne(
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -455,7 +455,7 @@ def tsne(
         show=show,
         save=save,
         ax=ax)
-    return axs
+    if show == False: return axs
 
 
 # ------------------------------------------------------------------------------
@@ -519,7 +519,7 @@ def aga(
     aga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
     utils.savefig_or_show('aga', show=show, save=save, ext=ext)
-    return axs
+    if show == False: return axs
 
 
 def aga_scatter(
@@ -569,7 +569,7 @@ def aga_scatter(
     right_margin : float or list of floats (default: None)
          Adjust the width of the space right of each plotting panel.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -601,7 +601,7 @@ def aga_scatter(
                  ax=ax,
                  show=False)
     utils.savefig_or_show('aga_' + basis, show=show, save=save)
-    return ax
+    if show == False: return ax
 
 
 def aga_graph(
@@ -701,7 +701,7 @@ def aga_graph(
     frameon : `bool`, optional (default: `True`)
          Draw a frame around the abstracted graph.
     show : `bool`, optional (default: `None`)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -768,9 +768,9 @@ def aga_graph(
     utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
-        return axs, pos if ax is None else pos
+        return axs, pos if ax is None and show == False else pos
     else:
-        return axs if ax is None else None
+        return axs if ax is None and show == False else None
 
 
 def _aga_graph(
@@ -1102,7 +1102,7 @@ def aga_path(
     return_data : `bool`, optional (default: `False`)
         Return the timeseries data in addition to the axes if `True`.
     show : `bool`, optional (default: `None`)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -1292,9 +1292,9 @@ def aga_path(
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
         df['distance'] = anno_dict['aga_pseudotime'].T
-        return ax, df if ax_was_none else df
+        return ax, df if ax_was_none and show == False else df
     else:
-        return ax if ax_was_none else None
+        return ax if ax_was_none and show == False else None
 
 
 def aga_attachedness(
@@ -1386,7 +1386,7 @@ def dpt(
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -1582,7 +1582,7 @@ def louvain(
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
     show : bool, optional (default: None)
-         Show the plot.
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -1628,7 +1628,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
     fontsize : `int`, optional (default: 8)
         Fontsize for gene names.
     show : `bool`, optional (default: `None`)
-        Show the plot.
+        Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -1717,7 +1717,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         previously computed with the `compute_distribution` in
         :func:`scanpy.api.tl.rank_genes_groups`
     show : `bool`, optional (default: `None`)
-        Show the plot.
+        Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
@@ -1803,7 +1803,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     show : bool, optional (default: None)
-        Show the plot.
+        Show the plot, do not return axis.
     """
     from .. import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
