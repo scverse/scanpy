@@ -286,13 +286,14 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
                       + filename_stripped.replace('.' + ext, '.' + fast_ext))
     cache = not settings.recompute == 'read' if cache is None else cache
     if cache and os.path.exists(filename_cache):
+        logg.info('... reading from cache file', filename_cache)
         adata = read_h5ad(filename_cache, backed=False)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
         logg.msg('reading', filename, v=4)
         if not cache and not suppress_cache_warning:
-            logg.warn('This might be very slow. Consider passing `cache=True`, '
+            logg.hint('This might be very slow. Consider passing `cache=True`, '
                       'which enables much faster reading from a cache file.')
         # do the actual reading
         if ext == 'xlsx' or ext == 'xls':
@@ -309,7 +310,7 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             if ext == 'data':
                 logg.msg('... assuming \'.data\' means tab or white-space '
                          'separated text file', v=3)
-                logg.hint('--> change this by passing `ext` to sc.read')
+                logg.hint('change this by passing `ext` to sc.read')
             adata = read_text(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             adata = _read_softgz(filename)
