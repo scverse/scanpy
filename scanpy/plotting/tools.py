@@ -484,20 +484,39 @@ def aga(
         show=None,
         save=None,
         ext=None,
-        title_graph='abstracted graph',
+        title_graph=None,
         groups_graph=None,
         color_graph=None,
         **aga_graph_params):
     """Summary figure for approximate graph abstraction.
 
-    See :func:`~sanpy.api.pl.aga_scatter` and :func:`~scanpy.api.pl.aga_graph`
-    for the parameters.
+    Consists in a scatter plot and the abstracted graph. See
+    :func:`~sanpy.api.pl.aga_scatter` and :func:`~scanpy.api.pl.aga_graph` for
+    most of the parameters.
 
     See :func:`~scanpy.api.pl.aga_path` for visualizing gene changes along paths
     through the abstracted graph.
+
+    Additional parameters are as follows.
+
+    Parameters
+    ----------
+    title : `str` or `None`, optional (default: `None`)
+        Title for the scatter panel, or, if `title_graph is None`, title for the
+        whole figure.
+    title_graph : `str` or `None`, optional (default: `None`)
+        Separate title for the abstracted graph.
     """
     axs, _, _, _ = utils.setup_axes(colors=[0, 1],
                                     right_margin=right_margin)  # dummy colors
+    # set a common title for the figure
+    suptitle = None
+    if title is not None and title_graph is None:
+        suptitle = title
+        title = ''
+        title_graph = ''
+    elif title_graph is None:
+        title_graph = 'abstracted graph'
     aga_scatter(adata,
                 basis=basis,
                 color=color,
@@ -518,6 +537,7 @@ def aga(
                 save=False)
     aga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
+    if suptitle is not None: pl.suptitle(suptitle)
     utils.savefig_or_show('aga', show=show, save=save, ext=ext)
     if show == False: return axs
 
