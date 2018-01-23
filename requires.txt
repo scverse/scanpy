@@ -10,7 +10,7 @@ psutil
 h5py
 xlrd
 # standard machine-learning algorithms, a version supporting PCA(svd_solver=...)
-scikit-learn>=0.17.1
+scikit-learn>=0.19.1
 # standard statistical models
 statsmodels
 # complex systems and graphs
