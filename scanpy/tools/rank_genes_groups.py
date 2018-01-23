@@ -46,7 +46,7 @@ def rank_genes_groups(
         If `'rest'`, compare each group to the union of the rest of the group.  If
         a group identifier, compare with respect to this group.
     n_genes : `int`, optional (default: 100)
-        How many genes to rank.
+        The number of genes that appear in the returned tables.
     test_type : {'t-test_overestim_var', 't-test', 'wilcoxon'}, optional (default: 't-test_overestim_var')
         If 't-test', use t-test to calculate test statistics. If 'wilcoxon', use
         Wilcoxon-Rank-Sum to calculate test statistic. If
@@ -70,8 +70,6 @@ def rank_genes_groups(
                   'a shifted and rescaled disribution for each gene'
                   'You can now run `sc.pl.rank_genes_groups_violin` without it, '
                   'which will show the original distribution of the gene.')
-    # for clarity, rename variable
-    n_genes_user = n_genes
     groups_order = groups
     if isinstance(groups_order, list) and isinstance(groups_order[0], int):
         groups_order = [str(n) for n in groups_order]
@@ -94,15 +92,18 @@ def rank_genes_groups(
     if adata.raw is not None and use_raw:
         adata_comp = adata.raw
     X = adata_comp.X
-
-    # Make sure indices are not OoB in case there are less genes than n_genes
-    if n_genes > X.shape[1]:
-        n_genes = X.shape[1]
+    
+    # for clarity, rename variable
+    n_genes_user = n_genes
+    # make sure indices are not OoB in case there are less genes than n_genes
+    if n_genes_user > X.shape[1]:
+        n_genes_user = X.shape[1]
+    # in the following, n_genes is simply another name for the total number of genes
+    n_genes = X.shape[1]
 
     rankings_gene_zscores = []
     rankings_gene_names = []
     n_groups = groups_masks.shape[0]
-    n_genes = X.shape[1]
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
