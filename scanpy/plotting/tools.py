@@ -1143,11 +1143,10 @@ def aga_path(
                 'using the parameter `groups_key`.')
         groups_key = adata.uns['aga_groups_key']
     groups_names = adata.obs[groups_key].cat.categories
-
+    
     if palette_groups is None:
-        palette_groups = palettes.default_20
-        palette_groups = utils.adjust_palette(
-            palette_groups, len(adata.obs[groups_key].cat.categories))
+        utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
+        palette_groups = adata.uns[groups_key + '_colors']
 
     def moving_average(a):
         return sc_utils.moving_average(a, n_avg)
