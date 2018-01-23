@@ -1239,7 +1239,7 @@ def aga_path(
             pl.legend(frameon=False, loc='center left',
                       bbox_to_anchor=(-left_margin, 0.5),
                       fontsize=legend_fontsize)
-    xlabel = 'groups $i$'
+    xlabel = groups_key
     if not as_heatmap:
         ax.set_xlabel(xlabel)
         pl.yticks([])
@@ -1294,7 +1294,7 @@ def aga_path(
                                    cmap=color_map_anno)
             if show_yticks:
                 # rename the label for 'aga_pseudotime'
-                label = anno.replace('aga_pseudotime', 'distance $d$')
+                label = anno.replace('aga_pseudotime', 'pseudotime')
                 anno_axis.set_yticklabels(['', label, ''],
                                           fontsize=ytick_fontsize)
                 anno_axis.tick_params(axis='both', which='both', length=0)

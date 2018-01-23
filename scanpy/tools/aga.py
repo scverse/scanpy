@@ -1,16 +1,12 @@
 from collections import namedtuple
 import numpy as np
 import scipy as sp
-import pandas as pd
 import networkx as nx
-import scipy.sparse
-from textwrap import indent, dedent
-from natsort import natsorted
+from textwrap import dedent
 from .. import logging as logg
 from ..data_structs import data_graph
 from .. import utils
 from .. import settings
-from ..plotting import utils as pl_utils
 
 
 MINIMAL_TREE_ATTACHEDNESS = 0.05
@@ -24,14 +20,12 @@ doc_string_base = dedent("""\
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
     coordinatization of data useful for exploring and explaining its
-    variation. By default, AGA uses the Louvain algorithm to partition the data,
-    which has been suggested for clustering single-cell data by [Levine15]_
-    ('Phenograph'). Also, it extends DPT, the random-walk based distance measure
-    suggested by [Haghverdi16]_.
+    variation.
 
-    You should get good results with the default parameters. Most of the
-    parameters appear similarly in other tools and are used to generate the
-    graph and its partitioning.
+    By default, AGA uses the Louvain algorithm to partition the data, which has
+    been suggested for clustering single-cell data by [Levine15]_
+    ('Phenograph'). Also, it extends DPT, the random-walk based distance /
+    pseudotime measure suggested by [Haghverdi16]_.
 
     **Note 1**: In order to compute distances along the graph (pseudotimes), you need
     to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
@@ -40,8 +34,8 @@ doc_string_base = dedent("""\
         adata.uns['iroot'] = np.flatnonzero(adata.obs['exp_groups'] == 'Stem')[0]
 
     **Note 2**: The former parameters `attachedness_measure`, `tree_detection`
-    and `n_nodes` remain for backwards compatibility but have been removed from
-    the documentation and will be removed in a future version.
+    and `n_nodes` remain for backwards compatibility but will be removed in a
+    future version.
 
     Parameters
     ----------
@@ -103,7 +97,8 @@ doc_string_returns = dedent("""\
             the topology.
         aga_pseudotime : pd.Series (adata.obs, dtype float)
             Pseudotime labels, that is, distance a long the manifold for each
-            cell.
+            cell. Is only returned if computed, which requires passing a root
+            cell index `iroot` in `adata.uns`.
     """)
 
 
@@ -220,9 +215,9 @@ def aga(adata,
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
            + ('    \'aga_pseudotime\', pseudotime (adata.obs),\n' if aga.iroot is not None else '')
-           + '    \'aga_adjacency_full_attachedness\', adj. matrix of abs. graph weighted by connectivity/attachedness (adata.obs)\n'
-           + '    \'aga_adjacency_full_confidence\', adj. matrix of abs. graph weighted by confidence (adata.obs)\n'
-           + '    \'aga_adjacency_tree_confidence\', adj. matrix of subtree in abs. graph weighted by confidence (adata.obs)')
+           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstractd graph weighted by connectivity=attachedness (adata.uns)\n'
+           + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph weighted by confidence (adata.uns)\n'
+           + '    \'aga_adjacency_tree_confidence\', adjacency matrix of subtree in abstracted graph weighted by confidence (adata.uns)')
     return adata if copy else None
 
 
