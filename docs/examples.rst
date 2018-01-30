@@ -15,7 +15,7 @@ Example 1 (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/
 
 ------------
 
-Example 2 (`overview <17-05-02_>`_): The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_ for data of [Paul15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`_) and [Moignard15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`_).
+Example 2 (`overview <17-05-02_>`_): The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_ for data of [Paul15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`_) and [Moignard15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`_).
 
 .. raw:: html
 
