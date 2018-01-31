@@ -1,6 +1,6 @@
 anndata>=0.4
 matplotlib==2.0.0  # >= 2.0.2 sometimes crashes in sc.pl.aga_graph, need to resolve
-pandas
+pandas>=0.21       # As enforced by the __init__.py
 scipy
 # neat visualizations
 seaborn
@@ -9,8 +9,8 @@ psutil
 # hdf5/xls file IO
 h5py
 xlrd
-# standard machine-learning algorithms
-scikit-learn
+# standard machine-learning algorithms, a version supporting PCA(svd_solver=...)
+scikit-learn>=0.19.1
 # standard statistical models
 statsmodels
 # complex systems and graphs

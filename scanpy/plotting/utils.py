@@ -249,10 +249,13 @@ def adjust_palette(palette, length):
 
 
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
-    if (key + '_colors' in adata.uns
-        and len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors'])):
-        logg.info('    number of defined colors does not match number of categories,'
-                  ' using palette')
+    if key + '_colors' in adata.uns:
+        if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
+            logg.info('    number of defined colors does not match number of categories,'
+                      ' using palette')
+        else:
+            # do nothing
+            return
     else:
         logg.m('generating colors for {} using palette'.format(key), v=4)
     palette = default_palette(palette)

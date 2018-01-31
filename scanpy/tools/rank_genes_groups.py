@@ -112,6 +112,7 @@ def rank_genes_groups(
     rankings_gene_zscores = []
     rankings_gene_names = []
     n_groups = groups_masks.shape[0]
+    n_genes = X.shape[1]
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size

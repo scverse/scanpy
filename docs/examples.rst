@@ -7,7 +7,7 @@ Good starting points are the following examples, which build on established resu
 
 ------------
 
-`Example 1: <17-05-05_>`__ `Seurat's <Seurat_>`__ [Satija15]_ guided clustering `tutorial <http://satijalab.org/seurat/pbmc3k_tutorial.html>`_.
+Example 1 (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb>`_, `benchmark <17-05-05_>`_): `Seurat's <Seurat_>`__ [Satija15]_ guided clustering `tutorial <http://satijalab.org/seurat/pbmc3k_tutorial.html>`_.
 
 .. raw:: html
 
@@ -15,7 +15,7 @@ Good starting points are the following examples, which build on established resu
 
 ------------
 
-`Example 2: <17-05-02_>`__ The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_ for data of [Paul15]_ and [Moignard15]_. Note that DPT has recently been very `favorably discussed`_ by the authors of Monocle_.
+Example 2 (`overview <17-05-02_>`_): The Diffusion Pseudotime (DPT) analyses of [Haghverdi16]_ for data of [Paul15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`_) and [Moignard15]_ (`notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`_).
 
 .. raw:: html
 
