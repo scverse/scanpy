@@ -24,7 +24,8 @@ def rank_genes_groups(
         compute_distribution=False,
         only_positive=True,
         copy=False,
-        test_type='t-test_overestim_var'):
+        test_type='t-test_overestim_var',
+        correction_factors=None):
     """Rank genes according to differential expression [Wolf17]_.
 
     Rank genes by differential expression. By default, a t-test-like ranking is
@@ -47,12 +48,18 @@ def rank_genes_groups(
         a group identifier, compare with respect to this group.
     n_genes : `int`, optional (default: 100)
         How many genes to rank.
-    test_type : {'t-test_overestim_var', 't-test', 'wilcoxon'}, optional (default: 't-test_overestim_var')
+    test_type : {'t-test_overestim_var', 't-test', 'wilcoxon', , 't-test_double_overestim_var',
+                   't-test_correction_factors'}, optional (default: 't-test_overestim_var')
         If 't-test', use t-test to calculate test statistics. If 'wilcoxon', use
         Wilcoxon-Rank-Sum to calculate test statistic. If
         't-test_overestim_var', overestimate variance.
+        't-test_double_overestim_var', additionally, underestimate variance of the rest
+        't-test_correction_factors', define correction factors manually
     only_positive : bool, optional (default: `True`)
         Only consider positive differences.
+    correction_factors: [a,b], optional (default: None)
+        Only for the test-type 't-test_correction_factors'. Then, a determines correction factor for group variance,
+        b determines correction factor for variance of the comparison group
 
     Returns
     -------
@@ -96,8 +103,8 @@ def rank_genes_groups(
     X = adata_comp.X
 
     # Make sure indices are not OoB in case there are less genes than n_genes
-    if n_genes > X.shape[1]:
-        n_genes = X.shape[1]
+    if n_genes_user > X.shape[1]:
+        n_genes_user = X.shape[1]
 
     rankings_gene_zscores = []
     rankings_gene_names = []
@@ -112,13 +119,23 @@ def rank_genes_groups(
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)
 
-    avail_tests = {'t-test', 't-test_overestim_var', 'wilcoxon'}
+    avail_tests = {'t-test', 't-test_overestim_var', 'wilcoxon', 't-test_double_overestim_var',
+                   't-test_correction_factors'}
     if test_type not in avail_tests:
         raise ValueError('test_type should be one of {}.'
                          '"t-test_overestim_var" is being used as default.'
                          .format(avail_tests))
 
-    if test_type in {'t-test', 't-test_overestim_var'}:
+    if test_type is 't-test_correction_factors':
+        if correction_factors is None:
+            raise ValueError('For this test type, you need to enter correction factors manually.')
+        if len(correction_factors) != 2:
+            raise ValueError('We need exactly 2 correction factors, accessible via correction_factors[i], i=0,1')
+        if correction_factors[0]<0 or correction_factors[1]<0:
+            raise ValueError('Correction factors need to be positive numbers!')
+
+    if test_type in {'t-test', 't-test_overestim_var', 't-test_double_overestim_var',
+                   't-test_correction_factors'}:
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
@@ -135,9 +152,22 @@ def rank_genes_groups(
             mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
             if test_type == 't-test':
                 ns_rest = np.where(mask_rest)[0].size
+            elif test_type == 't-test_correction_factors':
+                # The tendency is as follows: For the comparison group (rest), overesimate variance --> smaller ns_rest
+                ns_rest = np.where(mask_rest)[0].size/correction_factors[1]
             else:  # hack for overestimating the variance
                 ns_rest = ns[igroup]
-            denominator = np.sqrt(vars[igroup]/ns[igroup] + var_rest/ns_rest)
+
+            if test_type in {'t-test', 't-test_overestim_var'}:
+                ns_group=ns[igroup]
+            elif test_type == 't-test_correction_factors':
+                # We underestimate group variance by increasing denominator, i.e. ns_group
+                ns_group=ns[igroup]*correction_factors[0]
+            else :
+                # We do the opposite of t-test_overestim_var
+                ns_group=np.where(mask_rest)[0].size
+
+            denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
             denominator[np.flatnonzero(denominator == 0)] = np.nan
             zscores = (means[igroup] - mean_rest) / denominator
             zscores[np.isnan(zscores)] = 0

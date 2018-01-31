@@ -8,3 +8,4 @@ from ..tools.rank_genes_groups import rank_genes_groups
 from ..tools.dpt import dpt
 from ..tools.louvain import louvain
 from ..tools.sim import sim
+from ..tools.top_genes import correlation_matrix, ROC_AUC_analysis
