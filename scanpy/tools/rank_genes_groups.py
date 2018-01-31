@@ -60,7 +60,6 @@ def rank_genes_groups(
     correction_factors: [a,b], optional (default: None)
         Only for the test-type 't-test_correction_factors'. Then, a determines correction factor for group variance,
         b determines correction factor for variance of the comparison group
-
     Returns
     -------
     rank_genes_groups_gene_scores : structured `np.ndarray` (adata.uns)
@@ -112,7 +111,6 @@ def rank_genes_groups(
     rankings_gene_zscores = []
     rankings_gene_names = []
     n_groups = groups_masks.shape[0]
-    n_genes = X.shape[1]
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
