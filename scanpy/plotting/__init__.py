@@ -1,5 +1,4 @@
-from .ann_data import scatter, violin
-from .ann_data import ranking
+from .ann_data import scatter, violin, ranking, clustermap
 
 from .preprocessing import filter_genes_dispersion
 

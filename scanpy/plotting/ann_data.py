@@ -423,3 +423,70 @@ def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale=
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
     utils.savefig_or_show('violin', show=show, save=save)
     return ax
+
+
+def clustermap(
+        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
+    """Hierarchically-clustered heatmap [Waskom16]_.
+
+    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ for :class:`~scanpy.api.AnnData`.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    obs_keys : `str`
+        Categorical annotation to plot with a different color map.
+        Currently, only a single key is supported.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    show : bool, optional (default: `None`)
+         Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    **kwargs : keyword arguments
+        Keyword arguments passed to `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_.
+
+    Returns
+    -------
+    If `not show`, a `seaborn.ClusterGrid` object.
+
+    Notes
+    -----
+    The returned object has a savefig() method that should be used if you want
+    to save the figure object without clipping the dendrograms.
+
+    To access the reordered row indices, use:
+    clustergrid.dendrogram_row.reordered_ind
+
+    Column indices, use: clustergrid.dendrogram_col.reordered_ind
+
+    Examples
+    --------
+    Soon to come with figures. In the meanwile, see
+    https://seaborn.pydata.org/generated/seaborn.clustermap.html.
+
+    >>> import scanpy.api as sc
+    >>> adata = sc.datasets.krumsiek11()
+    >>> sc.pl.clustermap(adata, obs_keys='cell_type')
+    """
+    if not isinstance(obs_keys, (str, None)):
+        raise ValueError('Currently, only a single key is supported.')
+    sanitize_anndata(adata)
+    X = adata.raw.X if use_raw and adata.raw is not None else adata.X
+    df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
+    if obs_keys is not None:
+        row_colors = adata.obs[obs_keys]
+        utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
+        # do this more efficiently... just a quick solution
+        lut = dict(zip(
+            row_colors.cat.categories,
+            adata.uns[obs_keys + '_colors']))
+        row_colors = adata.obs[obs_keys].map(lut)
+        g = sns.clustermap(df, row_colors=row_colors, **kwargs)
+    else:
+        g = sns.clustermap(df, **kwargs)
+    show = settings.autoshow if show is None else show
+    if show: pl.show()
+    else: return g

@@ -1,5 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
-
 import numpy as np
 from ..tools.pca import pca
 from .. import settings
@@ -23,7 +21,8 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     adata : `~scanpy.api.AnnData`
         Annotated data matrix.
     n_pcs : `int`, optional (default: 50)
-        Number of principal components in preprocessing PCA.
+        Number of principal components in preprocessing PCA. Set to 0 if you
+        do not want preprocessing with PCA.
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -58,13 +57,14 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_tsne : `np.ndarray` (adata.obs, dtype `float`)
+    X_tsne : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     # preprocessing by PCA
-    if ('X_pca' in adata.obsm_keys()
+    if (n_pcs > 0
+        and 'X_pca' in adata.obsm_keys()
         and adata.obsm['X_pca'].shape[1] >= n_pcs
         and not recompute_pca):
         X = adata.obsm['X_pca'][:, :n_pcs]

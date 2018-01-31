@@ -155,8 +155,15 @@ For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api
    :toctree: .
 
    pl.scatter
-   pl.violin
    pl.ranking
+
+Thin wrappers for Seaborn functions.
+
+.. autosummary::
+   :toctree: .
+
+   pl.violin
+   pl.clustermap
 
 .. raw:: html
 
