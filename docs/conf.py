@@ -59,8 +59,8 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-copyright = '{}, Alex Wolf, Philipp Angerer'.format(time.strftime("%Y"))
-author = 'Alex Wolf, Philipp Angerer'
+author = 'Alex Wolf, Philipp Angerer, Tobias Callies'
+copyright = '{}, {}'.format(time.strftime("%Y"), author)
 
 import scanpy
 version = scanpy.__version__.replace('.dirty', '')

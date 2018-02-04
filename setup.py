@@ -48,7 +48,7 @@ setup(
     description='Single-Cell Analysis in Python.',
     long_description=readme,
     url='http://github.com/theislab/scanpy',
-    author='Alex Wolf, Philipp Angerer',
+    author='Alex Wolf, Philipp Angerer, Tobias Callies',
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD-3-Clause',
     entry_points={
