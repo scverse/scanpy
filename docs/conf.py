@@ -17,12 +17,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+
+import ast
 import os
 import sys
 import time
 import inspect
 from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.pardir))
+
+from sphinx.ext import autosummary, autodoc
+from sphinx.ext.autosummary import limited_join
 
 # -- General configuration ------------------------------------------------
 
@@ -213,3 +218,71 @@ def modurl(qualname):
 from jinja2.defaults import DEFAULT_FILTERS
 
 DEFAULT_FILTERS['modurl'] = modurl
+
+
+# -- Prettier Autodoc -----------------------------------------------------
+
+
+def f(string):
+    frame = sys._getframe(1)
+    return string.format_map(frame.f_locals)
+
+
+def unparse(ast_node: ast.expr, plain: bool=False) -> str:
+    if isinstance(ast_node, ast.Attribute):
+        if plain:
+            return ast_node.attr
+        else:
+            v = unparse(ast_node.value, plain)
+            return f('{v}.{ast_node.attr}')
+    elif isinstance(ast_node, ast.Index):
+        return unparse(ast_node.value)
+    elif isinstance(ast_node, ast.Name):
+        return ast_node.id
+    elif isinstance(ast_node, ast.Subscript):
+        v = unparse(ast_node.value, plain)
+        s = unparse(ast_node.slice, plain)
+        return f('{v}[{s}]')
+    elif isinstance(ast_node, ast.Tuple):
+        return ', '.join(unparse(e) for e in ast_node.elts)
+    else:
+        t = type(ast_node)
+        raise NotImplementedError(f('can’t unparse {t}'))
+
+
+def mangle_signature(sig: str, max_chars: int=30) -> str:
+    fn = ast.parse(f('def f{sig}: pass')).body[0]
+
+    args_all = [a.arg for a in fn.args.args]
+    n_a = len(args_all) - len(fn.args.defaults)
+    args = args_all[:n_a]  # type: List[str]
+    opts = args_all[n_a:]  # type: List[str]
+
+    # Produce a more compact signature
+    s = limited_join(', ', args, max_chars=max_chars - 2)
+    if opts:
+        if not s:
+            opts_str = limited_join(', ', opts, max_chars=max_chars - 4)
+            s = f('[{opts_str}]')
+        elif len(s) < max_chars - 4 - 2 - 3:
+            opts_str = limited_join(', ', opts, max_chars=max_chars - len(sig) - 4 - 2)
+            s += f('[, {opts_str}]')
+
+    if False:  # fn.returns:  # do not show return type in docs
+        ret = unparse(fn.returns, plain=True)
+        return f('({s}) -> {ret}')
+    return f('({s})')
+
+
+autosummary.mangle_signature = mangle_signature
+
+# TODO: also replace those for individual function pages:
+# autodoc.formatargspec
+# autodoc.format_annotation
+
+
+if __name__ == '__main__':
+    print(mangle_signature('(filename: typing.Union[str, pathlib.Path], delim: int=0) -> anndata.base.AnnData'))
+    print(mangle_signature('(a, *, b=1) -> int'))
+    print(mangle_signature('(a, b=1, *c) -> Union[str, pathlib.Path]'))
+    print(mangle_signature('(a, b=1, *c, d=1)'))

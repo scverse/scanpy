@@ -7,7 +7,7 @@ Import Scanpy's high-level API as::
    import scanpy.api as sc
 
 
-PP - Preprocessing
+Preprocessing: PP
 ------------------
 
 Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
@@ -37,7 +37,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.recipe_weinreb16
 
 
-TL - Tools
+Tools: TL
 ----------
 
 **Embeddings**
@@ -131,7 +131,7 @@ Datasets
    datasets.toggleswitch
 
 
-PL - Plotting
+Plotting: PL
 -------------
 
 .. autosummary::
