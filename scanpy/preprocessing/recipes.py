@@ -12,7 +12,7 @@ def recipe_weinreb17(adata, mean_threshold=0.01, cv_threshold=2,
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     svd_solver : str, optional (default: 'randomized')
         SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
@@ -48,41 +48,53 @@ def recipe_weinreb17(adata, mean_threshold=0.01, cv_threshold=2,
 recipe_weinreb16 = recipe_weinreb17  # backwards compat
 
 
-def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=False):
+def recipe_zheng17(adata, n_top_genes=1000, plot=False, copy=False):
     """Normalization and filtering as of [Zheng17]_.
 
-    Expects non-logarithmized data.
-
-    This reproduces the preprocessing of the reference below - the Cell Ranger R
+    Expects non-logarithmized data and reproduces the preprocessing of [Zheng17]_ - the Cell Ranger R
     Kit preprocessing of 10x Genomics.
+
+    The recipe runs the following steps::
+
+        pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
+        pp.normalize_per_cell(                # normalize with total UMI count per cell
+             adata, key_n_counts='n_counts_all')
+        filter_result = pp.filter_genes_dispersion(  # select highly-variable genes
+            adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
+        adata = adata[:, filter_result.gene_subset]  # subset the genes
+        pp.normalize_per_cell(adata)          # renormalize after filtering
+        pp.log1p(adata)                       # log transform: adata.X = log(adata.X + 1)
+        pp.scale(adata)                       # scale to unit variance and shift to zero mean
+        
 
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
     n_top_genes : `int`, optional (default: 1000)
         Number of genes to keep.
-    zero_center : `bool`, optional (default: `True`)
-        Zero center the data matrix. Only switch this to False if you have
-        serious memory problems.
     plot : `bool`, optional (default: `True`)
         Show a plot of the gene dispersion vs. mean relation.
     copy : `bool`, optional (default: `False`)
-        Return a copy of adata instead of updating the passed object.
+        Return a copy of `adata` instead of updating it.
+
+    Returns
+    -------
+    Returns or updates `adata` depending on `copy`.
     """
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
     pp.normalize_per_cell(adata,  # normalize with total UMI count per cell
                           key_n_counts='n_counts_all')
-    filter_result = pp.filter_genes_dispersion(adata.X,
-                                               flavor='cell_ranger',
-                                               n_top_genes=n_top_genes,
-                                               log=False)
+    filter_result = pp.filter_genes_dispersion(
+        adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
     if plot:
         from .. import plotting as pl  # should not import at the top of the file
         pl.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
-    #     adata = adata[:, filter.gene_subset]
+    #     adata = adata[:, filter_result.gene_subset]
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
-    pp.normalize_per_cell(adata)  # need to redo normalization after filtering
+    pp.normalize_per_cell(adata)  # renormalize after filtering
     pp.log1p(adata)  # log transform: X = log(X + 1)
-    pp.scale(adata, zero_center=zero_center)
+    pp.scale(adata)
     return adata if copy else None
