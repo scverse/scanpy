@@ -1,4 +1,4 @@
-See all releases `here <https://github.com/theislab/scanpy/releases>`_. In what follows, we list selected improvements.
+See all releases `here <https://github.com/theislab/scanpy/releases>`_. The following lists selected improvements.
 
 **To come:** already on GitHub
 
