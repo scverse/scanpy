@@ -1,22 +1,18 @@
 """\
 API
----
+===
 
-Scanpy's high-level API provides an overview of all features relevant to pratical use::
+Import Scanpy's high-level API as::
 
    import scanpy.api as sc
 
 
-
-.. raw:: html
-
-   <h3>Preprocessing tools</h3>
+PP - Preprocessing
+------------------
 
 Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
 
-.. raw:: html
-
-   <h5>Basic Preprocessing</h5>
+**Basic Preprocessing**
 
 .. autosummary::
    :toctree: .
@@ -32,9 +28,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.scale
    pp.subsample
 
-.. raw:: html
-
-   <h5>Recipes</h5>
+**Recipes**
 
 .. autosummary::
    :toctree: .
@@ -43,13 +37,10 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.recipe_weinreb16
 
 
-.. raw:: html
+TL - Tools
+----------
 
-   <h3>Machine Learning and Statistics tools<h3>
-
-.. raw:: html
-
-   <h5>Visualization</h5>
+**Embeddings**
 
 .. autosummary::
    :toctree: .
@@ -59,9 +50,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    tl.diffmap
    tl.draw_graph
 
-.. raw:: html
-
-   <h5>Branching trajectories and pseudotime, clustering, differential expression</h5>
+**Branching trajectories and pseudotime, clustering, differential expression**
 
 .. autosummary::
    :toctree: .
@@ -71,9 +60,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    tl.dpt
    tl.rank_genes_groups
 
-.. raw:: html
-
-   <h5>Simulations</h5>
+**Simulations**
 
 .. autosummary::
    :toctree: .
@@ -81,42 +68,35 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    tl.sim
 
 
-.. raw:: html
+Reading and Writing
+-------------------
 
-   <h3>Data Structures</h3>
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
-   DataGraph
-
-
-.. raw:: html
-
-   <h3>Reading and Writing</h3>
-
-Note: For reading annotation use
+*Note:* For reading annotation use
 `pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
 it to your `AnnData` object. The following read functions are intended for
-numeric data.
+the numeric data in the data matrix `X`.
 
-A powerful multi-format file-reader for common file formats. The format is
-inferred from the extension of the filename.
+Read common file formats using
 
 .. autosummary::
    :toctree: .
 
    read
 
-Reading a variety of other formats, borrowed from `anndata
-<http://anndata.readthedocs.io>`_.
+Read 10x formatted hdf5 files using
+
+.. autosummary::
+   :toctree: .
+
+   read_10x_h5
+
+Read other formats using functions borrowed from `anndata
+<http://anndata.readthedocs.io>`_
 
 .. autosummary::
    :toctree: .
 
    read_h5ad
-   read_10x_h5
    read_csv
    read_excel
    read_hdf
@@ -127,9 +107,9 @@ Reading a variety of other formats, borrowed from `anndata
 
 For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api.html>`_.
 
-.. raw:: html
 
-   <h3>Exporting</h3>
+Exporting
+---------
 
 .. autosummary::
    :toctree: .
@@ -137,9 +117,22 @@ For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api
    export_to.spring_project
 
 
-.. raw:: html
+Datasets
+--------
 
-   <h3>Plotting</h3>
+.. autosummary::
+   :toctree: .
+
+   datasets.blobs
+   datasets.krumsiek11
+   datasets.moignard15
+   datasets.paul15
+   datasets.paul15_raw
+   datasets.toggleswitch
+
+
+PL - Plotting
+-------------
 
 .. autosummary::
    :toctree: .
@@ -149,7 +142,7 @@ For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api
 
 .. raw:: html
 
-   <h5>Generic plotting with AnnData</h5>
+**Generic plotting with AnnData**
 
 .. autosummary::
    :toctree: .
@@ -165,15 +158,12 @@ Thin wrappers for Seaborn functions.
    pl.violin
    pl.clustermap
 
-.. raw:: html
-
-   <h5>Plotting tool results</h5>
+**Plotting tool results**
 
 Methods that extract and visualize tool-specific annotation in an AnnData object.
+For any method in module `tl`, there is a method with the same name in `pl`.
 
-.. raw:: html
-
-   <h6>Visualization</h6>
+*Embeddings*
 
 .. autosummary::
    :toctree: .
@@ -186,9 +176,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    pl.diffmap
    pl.draw_graph
 
-.. raw:: html
-
-   <h6>Branching trajectories and pseudotime, clustering, differential expression</h6>
+*Branching trajectories and pseudotime, clustering, differential expression*
 
 .. autosummary::
    :toctree: .
@@ -204,9 +192,7 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
 
-.. raw:: html
-
-   <h6>Simulations</h6>
+*Simulations*
 
 .. autosummary::
    :toctree: .
@@ -214,36 +200,37 @@ Methods that extract and visualize tool-specific annotation in an AnnData object
    pl.sim
 
 
-.. raw:: html
+Settings
+--------
 
-   <h3>Datasets</h3>
+Global settings.
 
-Simple functions that provide annotated datasets for benchmarking. See
-`here <https://scanpy.readthedocs.io/en/latest/examples.html>`_ for extensive
-documented tutorials and use cases.
+==============================================  ===================================
+`settings.verbosity`                            Verbosity level (default: 1).
+`settings.file_format_figs`                     Format for saving figures (default: 'png').
+`settings.figdir`                               Default directory for saving figures (default: './figures').
+==============================================  ===================================
 
-All of these functions return an Annotated Data object.
+The verbosity levels have the following meaning:
 
-.. autosummary::
-   :toctree: .
+===  ======================================
+ 0   Only show 'error' messages.
+ 1   Also show 'warning' messages.
+ 2   Also show 'info' messages.
+ 3   Also show 'hint' messages.
+ 4   Show very detailed progress.
+...  Show even more detailed progress.
+===  ======================================
 
-   datasets.blobs
-   datasets.krumsiek11
-   datasets.moignard15
-   datasets.paul15
-   datasets.paul15_raw
-   datasets.toggleswitch
+
+Logging
+-------
+
+================================================  ===================================
+`logging.print_version_and_date()`                Print the version and the date.
+`logging.print_versions_dependencies_numerics()`  Print the versions of dependencies.
+================================================  ===================================
 """
-
-# .. raw:: html
-
-#    <h3>Logging</h3>
-
-# .. autosummary::
-#    :toctree: .
-
-#    logging.print_version_and_date
-#    logging.print_versions_dependencies_numerics
 
 
 from anndata import AnnData
