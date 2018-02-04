@@ -4,7 +4,7 @@
 from . import simple as pp
 
 
-def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
+def recipe_weinreb17(adata, mean_threshold=0.01, cv_threshold=2,
                      n_pcs=50, svd_solver='randomized', random_state=0, copy=False):
     """Normalization and filtering as of [Weinreb17]_.
 
@@ -45,24 +45,27 @@ def recipe_weinreb16(adata, mean_threshold=0.01, cv_threshold=2,
     return adata if copy else None
 
 
+recipe_weinreb16 = recipe_weinreb17  # backwards compat
+
+
 def recipe_zheng17(adata, n_top_genes=1000, zero_center=True, plot=False, copy=False):
     """Normalization and filtering as of [Zheng17]_.
 
     Expects non-logarithmized data.
 
-    This reproduces the preprocessing of the reference below, at the time, the
-    Cell Ranger R Kit preprocessing of 10X Genomics.
+    This reproduces the preprocessing of the reference below - the Cell Ranger R
+    Kit preprocessing of 10x Genomics.
 
     Parameters
     ----------
-    n_top_genes : int, optional (default: 1000)
+    n_top_genes : `int`, optional (default: 1000)
         Number of genes to keep.
-    zero_center : bool, optional (default: True)
+    zero_center : `bool`, optional (default: `True`)
         Zero center the data matrix. Only switch this to False if you have
         serious memory problems.
-    plot : bool, optional (default: True)
+    plot : `bool`, optional (default: `True`)
         Show a plot of the gene dispersion vs. mean relation.
-    copy : bool, optional (default: False)
+    copy : `bool`, optional (default: `False`)
         Return a copy of adata instead of updating the passed object.
     """
     if copy: adata = adata.copy()

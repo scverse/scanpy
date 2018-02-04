@@ -72,7 +72,7 @@ def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
                   .format(n_pcs))
     else:
         if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            logg.info('    compute \'X_pca\' with n_pcs = {}'.format(n_pcs))
+            logg.info('    computing \'X_pca\' with n_pcs = {}'.format(n_pcs))
             logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
             adata.obsm['X_pca'] = X
