@@ -50,13 +50,13 @@ def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
     Log output defaults to standard output but can be set to a file
     by setting `sc.settings.log_file = 'mylogfile.txt'`.
 
-    verbosity : {'error', 'warn', 'info', 'hint'} or int, (default: 'info')
+    verbosity, v : {'error', 'warn', 'info', 'hint'} or int, (default: 'info')
         0/'error', 1/'warn', 2/'info', 3/'hint' or integer 4.
-    time : bool, optional (default: False)
+    time, t : bool, optional (default: False)
         Print timing information; restart the clock.
-    memory : bool, optional (default: Faulse)
+    memory, m : bool, optional (default: Faulse)
         Print memory information.
-    reset : bool, optional (default: False)
+    reset, r : bool, optional (default: False)
         Reset timing and memory measurement. Is automatically reset
         when passing one of ``time`` or ``memory``.
     end : str (default: '\n')
@@ -64,7 +64,7 @@ def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
     no_indent : bool (default: False)
         Do not indent for ``verbosity >= 4``.
     """
-    # all deprecated variable namings
+    # variable shortcuts
     if v is not None: verbosity = v
     if t is not None: time = t
     if m is not None: memory = m
