@@ -690,37 +690,40 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
-    zero_center : bool or None, optional (default: None)
-        If False, omit zero-centering variables, which allows to handle sparse
-        input efficiently. If None, for dense input, defaults to True, for
-        sparse input, defaults to False.
-    max_value : None or float, optional (default: None)
-        Clip to this value after scaling. If None, do not clip.
-    copy : bool (default: False)
-        Perfrom operation inplace if False.
+    zero_center : `bool`, optional (default: `True`)
+        If `False`, omit zero-centering variables, which allows to handle sparse
+        input efficiently.
+    max_value : `float` or `None`, optional (default: `None`)
+        Clip (truncate) to this value after scaling. If `None`, do not clip.
+    copy : `bool` (default: `False`)
+        Perfrom operation inplace if `False`.
 
     Returns
     -------
-    Depending on `copy` returns or updates ``adata`` with a scaled ``adata.X``.
+    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         # need to add the following here to make inplace logic work
         if zero_center and issparse(adata.X):
-            logg.m('... scale_data: as `zero_center=True`, sparse input is '
-                   'densified and may lead to large memory consumption', v=4)
+            logg.msg(
+                '... scale_data: as `zero_center=True`, sparse input is '
+                'densified and may lead to large memory consumption', v=4)
             adata.X = adata.X.toarray()
         scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if not zero_center and max_value is not None:
-        logg.m('... scale_data: be very careful to use `max_value` without `zero_center`', v=4)
+        logg.msg(
+            '... scale_data: be careful when using `max_value` without `zero_center`',
+            v=4)
     if max_value is not None:
-        logg.m('... clipping at max_value', max_value, v=4)
+        logg.msg('... clipping at max_value', max_value, v=4)
     if zero_center and issparse(X):
-        logg.m('... scale_data: as `zero_center=True`, sparse input is '
-               'densified and may lead to large memory consumption, returning copy', v=4)
+        logg.msg('... scale_data: as `zero_center=True`, sparse input is '
+                 'densified and may lead to large memory consumption, returning copy',
+                 v=4)
         X = X.toarray()
         copy = True
     _scale(X, zero_center)
