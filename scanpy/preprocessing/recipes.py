@@ -56,15 +56,15 @@ def recipe_zheng17(adata, n_top_genes=1000, plot=False, copy=False):
 
     The recipe runs the following steps::
 
-        pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
-        pp.normalize_per_cell(                # normalize with total UMI count per cell
+        sc.pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
+        sc.pp.normalize_per_cell(                # normalize with total UMI count per cell
              adata, key_n_counts='n_counts_all')
-        filter_result = pp.filter_genes_dispersion(  # select highly-variable genes
+        filter_result = sc.pp.filter_genes_dispersion(  # select highly-variable genes
             adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
-        adata = adata[:, filter_result.gene_subset]  # subset the genes
-        pp.normalize_per_cell(adata)          # renormalize after filtering
-        pp.log1p(adata)                       # log transform: adata.X = log(adata.X + 1)
-        pp.scale(adata)                       # scale to unit variance and shift to zero mean
+        adata = adata[:, filter_result.gene_subset]     # subset the genes
+        sc.pp.normalize_per_cell(adata)          # renormalize after filtering
+        sc.pp.log1p(adata)                       # log transform: adata.X = log(adata.X + 1)
+        sc.pp.scale(adata)                       # scale to unit variance and shift to zero mean
         
 
     Parameters
