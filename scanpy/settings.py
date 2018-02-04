@@ -57,7 +57,7 @@ Is needed when the computation parameters remain unchanged, but only plotting
 parameters are changed.
 """
 
-file_format_data = 'h5'
+file_format_data = 'h5ad'
 """File format for saving AnnData objects.
 
 Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5'
