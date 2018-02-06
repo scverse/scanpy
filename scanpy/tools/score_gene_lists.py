@@ -47,8 +47,8 @@ def score_gene_list(
     """
     logg.info('Adding score', r=True)
 
-    if seed:
-        np.random.seed(seed)
+    if random_state:
+        np.random.seed(random_state)
 
     adata = adata.copy() if copy else adata
 
