@@ -29,6 +29,7 @@ dtools = odict([
     ('dpt', 'perform Diffusion Pseudotime analysis'),
     ('louvain', 'cluster cells using the louvain algorithm'),
     ('rank_genes_groups', ' test groups for differential expression'),
+    ('score', ' calculates cell scores according to given genes'),
     ('sim', 'simulate stochastic gene expression models'),
 ])
 

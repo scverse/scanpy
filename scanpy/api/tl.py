@@ -9,3 +9,5 @@ from ..tools.dpt import dpt
 from ..tools.louvain import louvain
 from ..tools.sim import sim
 from ..tools.top_genes import correlation_matrix, ROC_AUC_analysis
+
+from ..tools.score import add_score, cell_cycle_score

@@ -4,8 +4,7 @@ This module calculates a score based on the expression of given gene list
 
 import numpy as np
 import pandas as pd
-from .. import utils
-from .. import settings
+import scipy.sparse
 from .. import logging as logg
 
 
@@ -59,7 +58,7 @@ def add_score(adata,
     gene_list = set([x for x in gene_list if x in adata.var_names])
 
     if not gene_list:
-        logging.error('A gene list must be passed', r = True)
+        logg.error('A gene list must be passed', r = True)
 
     if not gene_pool:
         gene_pool = list(adata.var_names)
