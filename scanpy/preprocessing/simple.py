@@ -710,7 +710,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
                 '... scale_data: as `zero_center=True`, sparse input is '
                 'densified and may lead to large memory consumption', v=4)
             adata.X = adata.X.toarray()
-        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=copy)
+        scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
