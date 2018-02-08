@@ -2,7 +2,7 @@
    :end-line: 24
 
 Report issues and see the code on `GitHub <https://github.com/theislab/scanpy>`_.
-If Scanpy is useful for your research, please consider citing `bioRxiv 174029 (2017) <https://doi.org/10.1101/174029>`_, soon in Genome Biology.
+If Scanpy is useful for your research, consider citing `Genome Biology (2018) <https://doi.org/10.1186/s13059-017-1382-0>`_.
 
 .. include:: release_notes.rst
 
