@@ -24,4 +24,4 @@ Scanpy – Single-Cell Analysis in Python
    </p>
 
 Read the `documentation <https://scanpy.readthedocs.io>`_.
-If Scanpy is useful for your research, please consider citing `bioRxiv 174029 (2017) <https://doi.org/10.1101/174029>`_, soon in Genome Biology.
+If Scanpy is useful for your research, consider citing `Genome Biology (2018) <https://doi.org/10.1186/s13059-017-1382-0>`_.
