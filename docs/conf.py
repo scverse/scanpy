@@ -25,7 +25,9 @@ import time
 import inspect
 from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.pardir))
+import logging
 
+logger = logging.getLogger(__name__)
 from sphinx.ext import autosummary, autodoc
 from sphinx.ext.autosummary import limited_join
 
@@ -59,6 +61,28 @@ autodoc_mock_imports = ['_tkinter']
 # autodoc_default_flags = ['members']
 numpydoc_show_class_members = True
 numpydoc_class_members_toctree = False
+
+def process_generate_options(app):
+    # type: (Sphinx) -> None
+    genfiles = app.config.autosummary_generate
+    if genfiles and not hasattr(genfiles, '__len__'):
+        env = app.builder.env
+        genfiles = [env.doc2path(x, base=None) for x in env.found_docs
+                    if os.path.isfile(env.doc2path(x))]
+    if not genfiles:
+        return
+    from sphinx.ext.autosummary.generate import generate_autosummary_docs
+    ext = app.config.source_suffix
+    genfiles = [genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
+                for genfile in genfiles]
+    suffix = autosummary.get_rst_suffix(app)
+    if suffix is None:
+        return
+    generate_autosummary_docs(genfiles, builder=app.builder,
+                              warn=logger.warning, info=logger.info,
+                              suffix=suffix, base_path=app.srcdir, imported_members=True)
+
+autosummary.process_generate_options = process_generate_options
 
 templates_path = ['_templates']
 source_suffix = '.rst'

@@ -77,7 +77,7 @@ recompute = 'read'
 Recompute and overwrite previous result and preprocessing files.
 """
 
-savefigs = False
+savefigs = False  # This should be renamed "autosave"
 """Save plots/figures as files in directory 'figs'.
 
 Do not show plots/figures interactively.

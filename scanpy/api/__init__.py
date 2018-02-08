@@ -6,7 +6,6 @@ Import Scanpy's high-level API as::
 
    import scanpy.api as sc
 
-
 Preprocessing: PP
 ------------------
 
@@ -217,6 +216,8 @@ Global settings.
 `settings.verbosity`                            Verbosity level (default: 1).
 `settings.file_format_figs`                     Format for saving figures (default: 'png').
 `settings.figdir`                               Default directory for saving figures (default: './figures').
+`settings.autoshow`                             Automatically show figures (default: `True`).
+`settings.autoshow`                             Automatically show figures (default: `True`).
 ==============================================  ===================================
 
 The verbosity levels have the following meaning:
@@ -238,8 +239,20 @@ Logging
 `logging.print_version_and_date()`                Print the version and the date.
 `logging.print_versions_dependencies_numerics()`  Print the versions of dependencies.
 ================================================  ===================================
-"""
 
+AnnData
+-------
+
+This only temporarily replicates the docs of `anndata
+<http://anndata.readthedocs.io>`_. Occurances of :class:`~scanpy.api.AnnData`
+will directly link to `anndata
+<http://anndata.readthedocs.io>`_ in the future.
+
+.. autosummary::
+   :toctree: .
+
+   AnnData
+"""
 
 from anndata import AnnData
 from anndata import read as read_h5ad

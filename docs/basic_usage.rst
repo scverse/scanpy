@@ -54,8 +54,6 @@ To write, use::
     adata.write_csvs(filename)
     adata.write_loom(filename)    
 
-Reading foresees filenames with extensions *h5*, *xlsx*, *mtx*, *txt*, *csv* and others.
-
 
 Plotting
 ^^^^^^^^
