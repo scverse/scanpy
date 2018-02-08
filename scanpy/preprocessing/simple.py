@@ -136,24 +136,11 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
 
     See :func:`~scanpy.api.pp.filter_cells`.
     """
-    multi_option_error = False
-    
-    if min_cells is not None:
-        if min_counts is not None or max_cells is not None or max_counts is not None:
-            multi_option_error = True
-    if min_counts is not None:
-        if min_cells is not None or max_cells is not None or max_counts is not None:
-            multi_option_error = True
-    if max_cells is not None:
-        if min_cells is not None or min_counts is not None or max_counts is not None:
-            multi_option_error = True
-    if max_counts is not None:
-        if min_cells is not None or min_counts is not None or max_cells is not None:
-            multi_option_error = True
-    if multi_option_error:
-        raise ValueError("Only provide one of the optional arguments (`min_counts`," +
+    n_given_options = sum(option is not None for option in [min_cells, min_counts, max_cells, max_counts])
+    if n_given_options != 1:
+         raise ValueError("Only provide one of the optional arguments (`min_counts`," +
                          "`min_cells`, `max_counts`, `max_cells`) per call.")
-        
+
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         gene_subset, number = filter_genes(adata.X, min_cells=min_cells,
