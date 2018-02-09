@@ -45,7 +45,7 @@ def score_gene_list(
     Depending on `copy`, returns or updates `adata` with an additional field
     `score_name`.
     """
-    logg.info('Adding score', r=True)
+    logg.info('Adding score %s' %score_name, r=True)
 
     if random_state:
         np.random.seed(random_state)
