@@ -133,10 +133,10 @@ def score_cell_cycle_genes(
 
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
-    add_score(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size)
+    score_gene_list(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size)
 
     # add g2m-score
-    add_score(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size)
+    score_gene_list(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size)
 
     scores = adata.obs[['S_score', 'G2M_score']]
 
