@@ -75,7 +75,10 @@ def krumsiek11():
         logg.hint('you can reproduce the data file {} '
                   'by running `sc.tl.sim("krumsiek11")`'
                   .format(filename))
-    adata = sc.read(filename, first_column_names=True, cache=True)
+    verbosity_save = sc.settings.verbosity
+    sc.settings.verbosity = 0  # suppress output...
+    adata = sc.read(filename, first_column_names=True)
+    sc.settings.verbosity = verbosity_save
     adata.uns['iroot'] = 0
     fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
                    459: 'megakaryocyte', 619: 'neutrophil'}
