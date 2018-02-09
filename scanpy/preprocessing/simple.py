@@ -600,19 +600,16 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     -------
     Depening on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    logg.msg('regressing out', keys, r=True, v=4)
+    logg.info('regressing out', keys, r=True)
     if issparse(adata.X):
-        logg.m('... sparse input is densified and may '
-                  'lead to huge memory consumption', v=4)
-    if not copy:
-        logg.m('--> note that this is an inplace computation '
-               'and will return None: set `copy=True` if you want a copy', v=4)
+        logg.info('... sparse input is densified and may '
+                  'lead to huge memory consumption')
     adata = adata.copy() if copy else adata
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
         adata.X = adata.X.toarray()
     if n_jobs is not None:
-        logg.warn('Is currently broke, will be restored soon. Running on 1 core.')
+        logg.warn('Parallelization is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on a single categorical variable
     if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
@@ -672,7 +669,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
             col_index, adata.X, regressors) for col_index in chunk]
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.msg('finished', t=True, v=4)
+    logg.info('finished', t=True)
     logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
     return adata if copy else None
 
