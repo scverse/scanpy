@@ -248,24 +248,9 @@ def fill_in_datakeys(example_parameters, dexdata):
     return example_parameters
 
 
-def sanitize_anndata(adata, verbosity=-3):
-    """Do sanity checks on adata object.
-
-    Transform string arrays to categorical data types, if they store less
-    categories than the total number of samples.
-    """
-    from pandas.api.types import is_string_dtype
-    for ann in ['obs', 'var']:
-        for key in getattr(adata, ann).columns:
-            df = getattr(adata, ann)
-            if is_string_dtype(df[key]):
-                c = pd.Categorical(df[key], categories=natsorted(np.unique(df[key])))
-                if len(c.categories) < len(c):
-                    df[key] = c
-                    df[key].cat.categories = df[key].cat.categories.astype('U')
-                    logg.info('... storing {} as categorical type'.format(key))
-                    logg.hint('access categories as adata.{}[\'{}\'].cat.categories'
-                              .format(ann, key))
+# backwards compat... remove this in the future
+def sanitize_anndata(adata):
+    adata._sanitize()
 
 
 def moving_average(a, n):
