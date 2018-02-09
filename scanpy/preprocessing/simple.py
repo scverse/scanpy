@@ -639,14 +639,6 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
               for start in range(0, n_chunks * len_chunk, len_chunk)]
 
-    if sett.is_run_from_ipython:
-        from tqdm import tqdm_notebook as tqdm
-        # does not work in Rodeo, should be solved sometime soon
-        # tqdm = lambda x: x
-        # from tqdm import tqdm
-    else:
-        from tqdm import tqdm
-
     import statsmodels.api as sm
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
@@ -671,7 +663,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
             chunk_array[:, i] = _regress_out(col_index, responses, regressors)
         return chunk_array
 
-    for chunk in tqdm(chunks):
+    for chunk in chunks:
         # why did this break after migrating to dataframes?
         # result_lst = Parallel(n_jobs=n_jobs)(
         #     delayed(_regress_out)(

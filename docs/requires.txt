@@ -15,4 +15,3 @@ networkx
 natsort
 joblib
 profilehooks
-tqdm
