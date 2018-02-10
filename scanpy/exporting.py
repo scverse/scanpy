@@ -1,5 +1,3 @@
-# Author: T. Callies
-#         F. Alex Wolf (http://falexwolf.de)
 """Exporting to formats for other software.
 """
 
@@ -13,11 +11,15 @@ from pandas.api.types import is_string_dtype, is_categorical
 from .plotting.utils import add_colors_for_categorical_sample_annotation
 
 
-def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
-                   custom_color_tracks=None):
-    """Exports to a SPRING project directory [Weinreb17]_
+def spring_project(
+        adata, project_dir, use_genes=None, cell_groupings=None,
+        custom_color_tracks=None):
+    """Exports to a SPRING project directory [Weinreb17]_.
 
-    See https://github.com/AllonKleinLab/SPRING or Weinreb17_ for details.
+    Visualize annotation present in `adata`. By default, export all categorical
+    annotation present in `adata.obs`.
+
+    See `SPRING <https://github.com/AllonKleinLab/SPRING>`_ or [Weinreb17]_ for details.
 
     Parameters
     ----------
@@ -25,17 +27,20 @@ def spring_project(adata, project_dir, use_genes=None, cell_groupings=None,
         Annotated data matrix: `adata.uns['data_graph_distance_local']` needs to
         be present.
     project_dir : `str`
-        Path to a directory where SPRING readable files will be written. The
-        directory does not have to exist before running this function.
+        Path to SPRING directory.
     use_genes : `str` or `list`, optional (default: `None`)
         Select a subset of genes. If a `str`, looks for annotation in
         `adata.uns` useful to plot marker genes found with
         :func:`~scanpy.api.tl.rank_gene_groups`.
     cell_groupings : `str`, `list` of `str`, optional (default: `None`)
-        Optional list of strings containing `adata.obs` key to grouping.
+        Instead of importing all categorical annotation, pass a list of keys for
+        `adata.obs`.
     custom_color_tracks : `str`, `list` of `str`, optional (default: `None`)
-        Optional list of strings containing `adata.obs` key for continuous
-        coloring.
+        Specify specific `adata.obs` keys for continuous coloring.
+
+    Examples
+    --------
+    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_.
     """
 
     gene_list = adata.var_names
