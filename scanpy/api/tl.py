@@ -10,4 +10,4 @@ from ..tools.louvain import louvain
 from ..tools.sim import sim
 from ..tools.top_genes import correlation_matrix, ROC_AUC_analysis
 
-from ..tools.score_gene_lists import score_gene_list, score_cell_cycle_genes
+from ..tools.score_genes import score_genes, score_genes_cell_cycle
