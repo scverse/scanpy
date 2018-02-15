@@ -129,6 +129,10 @@ def score_genes_cell_cycle(
         The score for G2M phase for each cell.
     phase : `adata.obs`, dtype `object`
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
+
+    Examples
+    --------
+    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
     logg.info('calculating cell cycle phase')
 
