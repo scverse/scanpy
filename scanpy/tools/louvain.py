@@ -12,21 +12,22 @@ from .. import logging as logg
 from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
-def louvain(adata,
-            n_neighbors=None,
-            resolution=None,
-            n_pcs=50,
-            random_state=0,
-            restrict_to=None,
-            key_added=None,
-            flavor='vtraag',
-            directed=True,
-            recompute_pca=False,
-            recompute_distances=False,
-            recompute_graph=False,
-            n_dcs=None,
-            n_jobs=None,
-            copy=False):
+def louvain(
+        adata,
+        n_neighbors=None,
+        resolution=None,
+        n_pcs=50,
+        random_state=0,
+        restrict_to=None,
+        key_added=None,
+        flavor='vtraag',
+        directed=True,
+        recompute_pca=False,
+        recompute_distances=False,
+        recompute_graph=False,
+        n_dcs=None,
+        n_jobs=None,
+        copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
     Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
@@ -128,10 +129,10 @@ def louvain(adata,
     n_clusters = len(unique_groups)
     if restrict_to is None:
         groups = groups.astype('U')
-        adata.obs['louvain_groups'] = pd.Categorical(
+        key_added = 'louvain_groups' if key_added is None else key_added
+        adata.obs[key_added] = pd.Categorical(
             values=groups,
             categories=natsorted(unique_groups.astype('U')))
-        key_added = 'louvain_groups' if key_added is None else key_added
     else:
         key_added = restrict_key + '_R' if key_added is None else key_added
         groups += 1
