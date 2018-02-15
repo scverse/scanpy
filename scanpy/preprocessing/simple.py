@@ -408,8 +408,8 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
         else:
             logg.m('compute PCA with n_comps =', n_comps, r=True, v=4)
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
-                     svd_solver=svd_solver, random_state=random_state,
-                     recompute=recompute, mute=mute, return_info=True)
+                         svd_solver=svd_solver, random_state=random_state,
+                         recompute=recompute, mute=mute, return_info=True)
             X_pca, components, pca_variance_ratio, pca_eigenval = result
             adata.obsm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
