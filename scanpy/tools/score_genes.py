@@ -4,16 +4,17 @@
 import numpy as np
 import pandas as pd
 import scipy.sparse
+from .. import settings
 from .. import logging as logg
 
 
-def score_gene_list(
+def score_genes(
         adata,
         gene_list,
         gene_pool=None,
         n_bins=25,
         ctrl_size=50,
-        score_name='Score',
+        score_name='score',
         random_state=0,
         copy=False):  # we use the scikit-learn convention of calling the seed "random_state"
     """Score a set of genes.
@@ -33,7 +34,7 @@ def score_gene_list(
         Number of expression level cuts for sampling.
     ctrl_size : `int`, optional (default: 100)
         Number of genes to be sampled for each bin of expression.
-    score_name : `str`, optional (default: `Score`)
+    score_name : `str`, optional (default: `'score'`)
         Name of the slot to be added in obs.
     random_state : `int`, optional (default: 0)
         Change random seed.
@@ -44,18 +45,18 @@ def score_gene_list(
     -------
     Depending on `copy`, returns or updates `adata` with an additional field
     `score_name`.
+
+    Examples
+    --------
+    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
-    logg.info('Adding score %s' %score_name, r=True)
+    logg.info('computing score \'{}\''.format(score_name), r=True)
+    adata = adata.copy() if copy else adata
 
     if random_state:
         np.random.seed(random_state)
 
-    adata = adata.copy() if copy else adata
-
     gene_list = set([x for x in gene_list if x in adata.var_names])
-
-    if not gene_list:
-        logg.error('A gene list must be passed', r=True)
 
     if not gene_pool:
         gene_pool = list(adata.var_names)
@@ -91,10 +92,13 @@ def score_gene_list(
     score = np.mean(adata[:, gene_list].X, axis=1) - np.mean(adata[:, control_genes].X, axis=1)
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+              '    \'{}\', score of gene set (adata.obs)'.format(score_name))
     return adata if copy else None
 
 
-def score_cell_cycle_genes(
+def score_genes_cell_cycle(
         adata,
         s_genes,
         g2m_genes,
@@ -109,35 +113,31 @@ def score_cell_cycle_genes(
     adata : :class:`~scanpy.api.AnnData`
         The annotated data matrix.
     s_genes : `list`
-        List of genes associated to S phase
+        List of genes associated with S phase.
     g2m_genes : `list`
-        List of genes associated to G2M phase
+        List of genes associated with G2M phase.
     copy : `bool`, optional (default: `False`)
-        Copy adata or modify it inplace.
+        Copy `adata` or modify it inplace.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    S_score : `pd.Series` (``adata.obs``, dtype `object`)
-        Array of dim (number of samples) that stores the score for S phase for each cell.
-    G2M_score : `pd.Series` (``adata.obs``, dtype `object`)
-        Array of dim (number of samples) that stores the score for G2M phase for each cell.
-    Phase : `pd.Series` (``adata.obs``, dtype `object`)
-        Array of dim (number of samples) that stores the phase (`S`, `G2M` or `G1`)
-        for each cell.
+    S_score : `adata.obs`, dtype `object`
+        The score for S phase for each cell.
+    G2M_score : `adata.obs`, dtype `object`
+        The score for G2M phase for each cell.
+    phase : `adata.obs`, dtype `object`
+        The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
     """
-    logg.info('Calculating cell cycle scores', r=True)
+    logg.info('calculating cell cycle phase')
 
     adata = adata.copy() if copy else adata
-
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
-    score_gene_list(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size)
-
+    score_genes(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size)
     # add g2m-score
-    score_gene_list(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size)
-
+    score_genes(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size)
     scores = adata.obs[['S_score', 'G2M_score']]
 
     # default phase is S
@@ -149,6 +149,6 @@ def score_cell_cycle_genes(
     # if all scores are negative, it's G1...
     phase[np.all(scores < 0, axis=1)] = 'G1'
 
-    adata.obs['Phase'] = phase
-
+    adata.obs['phase'] = phase
+    logg.hint('    \'phase\', cell cycle phase (adata.obs)')
     return adata if copy else None

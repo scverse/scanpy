@@ -59,6 +59,14 @@ Tools: TL
    tl.dpt
    tl.rank_genes_groups
 
+**Gene scores, gene correlation**
+
+.. autosummary::
+   :toctree: .
+
+   tl.score_genes
+   tl.score_genes_cell_cycle
+
 **Simulations**
 
 .. autosummary::
