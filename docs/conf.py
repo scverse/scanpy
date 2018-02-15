@@ -88,7 +88,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Tobias Callies'
+author = 'Alex Wolf, Philipp Angerer, Tobias Callies, Davide Cittaro'
 copyright = '{}, {}'.format(time.strftime("%Y"), author)
 
 import scanpy
