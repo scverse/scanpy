@@ -15,6 +15,12 @@ from . import utils
 from .utils import scatter_base, scatter_group
 from ..utils import sanitize_anndata
 
+VALID_LEGENDLOCS = {
+    'right margin', 'on data', 'best', 'upper right', 'upper left',
+    'lower left', 'lower right', 'right', 'center left', 'center right',
+    'lower center', 'upper center', 'center'
+}
+
 def scatter(
         adata,
         x=None,
@@ -99,6 +105,9 @@ def scatter(
     A list of matplotlib.Axis objects.
     """
     sanitize_anndata(adata)
+    if legend_loc not in VALID_LEGENDLOCS:
+        raise ValueError(
+            'Invalid `legend_loc`, need to be one of: {}.'.format(VALID_LEGENDLOCS))
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
