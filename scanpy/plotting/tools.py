@@ -18,8 +18,8 @@ from .. import utils as sc_utils
 from .. import settings
 from .. import logging as logg
 
-from .ann_data import scatter, violin
-from .ann_data import ranking
+from .anndata import scatter, violin
+from .anndata import ranking
 from .utils import matrix
 from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
