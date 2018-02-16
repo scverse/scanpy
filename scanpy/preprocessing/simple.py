@@ -410,9 +410,10 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
-            X_pca, components, pca_variance_ratio = result
+            X_pca, components, pca_variance_ratio, pca_eigenval = result
             adata.obsm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
+            adata.uns['pca_eigenvalues']=pca_eigenval
             adata.uns['pca_variance_ratio'] = pca_variance_ratio
             logg.m('    finished', t=True, end=' ', v=4)
             logg.m('and added\n'
@@ -445,10 +446,9 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     X_pca = pca_.fit_transform(X)
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
     if False if return_info is None else return_info:
-        return X_pca, pca_.components_, pca_.explained_variance_ratio_
+        return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
     else:
         return X_pca
-
 
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
                        key_n_counts=None, copy=False):
