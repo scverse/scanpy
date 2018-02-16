@@ -359,41 +359,44 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : AnnData, array-like
-        Data matrix of shape n_obs × n_vars.
-    n_comps : int, optional (default: 10)
+    data : :class:`~scanpy.api.AnnData`, array-like
+        Data matrix of shape `n_obs` × `n_vars`.
+    n_comps : `int`, optional (default: 10)
         Number of principal components to compute.
-    zero_center : bool or None, optional (default: None)
+    zero_center : `bool` or `None`, optional (default: `True`)
         If True, compute standard PCA from Covariance matrix. If False, omit
         zero-centering variables, which allows to handle sparse input
         efficiently. If None, defaults to True for dense and to False for sparse
         input.
-    svd_solver : str, optional (default: 'auto')
+    svd_solver : `str`, optional (default: 'auto')
         SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
         (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
         due to Halko (2009). "auto" chooses automatically depending on the size
         of the problem.
-    random_state : int, optional (default: 0)
+    random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
-    recompute : bool, optional (default: True)
+    recompute : `bool`, optional (default: `True`)
         Use the result of previous calculation, if possible.
-    return_info : bool or None, optional (default: None)
-        If providing an array, this defaults to False, if providing an AnnData,
-        defaults to true.
-    copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+    return_info : `bool` or `None`, optional (default: `None`)
+        If providing an array, this defaults to False, if providing an `AnnData`,
+        defaults to `True`.
+    copy : `bool` (default: `False`)
+        If an `AnnData` is passed, determines whether a copy is returned.
     dtype : str (default: 'float32')
         Numpy data type string to which to convert the result.
 
     Returns
     -------
-    If X is array-like and ``return_info == True``, only returns ``X_pca``, otherwise adds to ``adata``:
-    X_pca : np.ndarray (adata.obs)
-         PCA representation of the data with shape n_variables × n_comps.
-    components / PC1, PC2, PC3, ... : np.ndarray (adata.var)
-         The PCs containing the loadings as shape n_comps × n_vars.
-    variance_ratio : np.ndarray (adata.uns)
+    If `data` is array-like and `return_info == True`, only returns `X_pca`,
+    otherwise returns or adds to `adata`:
+    X_pca : `.obsm`
+         PCA representation of data.
+    PCs : `.varm`
+         The principal components containing the loadings.
+    pca_variance_ratio : `.uns`
          Ratio of explained variance.
+    pca_variance : `.uns`
+         Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -402,24 +405,25 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
             and adata.obsm['X_pca'].shape[1] >= n_comps
             and not recompute
             and (sett.recompute == 'none' or sett.recompute == 'pp')):
-            logg.m('    not recomputing PCA, using "X_pca" contained '
-                   'in `adata.obs` (set `recompute=True` to avoid this)', v=4)
+            logg.msg('    not recomputing PCA, using "X_pca" contained '
+                     'in `adata.obs` (set `recompute=True` to avoid this)', v=4)
             return adata
         else:
-            logg.m('compute PCA with n_comps =', n_comps, r=True, v=4)
+            logg.msg('compute PCA with n_comps =', n_comps, r=True, v=4)
             result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
                          svd_solver=svd_solver, random_state=random_state,
                          recompute=recompute, mute=mute, return_info=True)
-            X_pca, components, pca_variance_ratio, pca_eigenval = result
+            X_pca, components, pca_variance_ratio, pca_variance = result
             adata.obsm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
-            adata.uns['pca_eigenvalues']=pca_eigenval
+            adata.uns['pca_variance'] = pca_variance
             adata.uns['pca_variance_ratio'] = pca_variance_ratio
-            logg.m('    finished', t=True, end=' ', v=4)
-            logg.m('and added\n'
-                      '    "X_pca", the PCA coordinates (adata.obs)\n'
-                      '    "PC1", "PC2", ..., the loadings (adata.var)\n'
-                      '    "pca_variance_ratio", the variance ratio (adata.uns)', v=4)
+            logg.msg('    finished', t=True, end=' ', v=4)
+            logg.msg('and added\n'
+                     '    \'X_pca\', the PCA coordinates (adata.obs)\n'
+                     '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
+                     '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
+                     '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
         return adata if copy else None
     X = data  # proceed with data matrix
     from .. import settings as sett
