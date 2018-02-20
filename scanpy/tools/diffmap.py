@@ -22,10 +22,10 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
         False, set the Gaussian kernel width to the distance of the kth
         neighbor (method 'local').
     knn : `bool`, optional (default: `True`)
-        If True, use a hard threshold to restrict the number of neighbors to
-        k, that is, consider a knn graph. Otherwise, use a Gaussian Kernel
-        to assign low weights to neighbors more distant than the kth nearest
-        neighbor.
+        If `True`, use a hard threshold to restrict the number of neighbors to
+        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
+        Kernel to assign low weights to neighbors more distant than the
+        `n_neighbors` nearest neighbor.
     n_pcs : `int`, optional (default: 50)
         Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
         basis for generating the graph. Set to 0 if you don't want preprocessing
@@ -39,14 +39,14 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_diffmap : `np.ndarray` (`adata.obsm`, dtype `float`)
-        Array of shape (#samples) × (#eigen vectors). DiffMap representation of
-        data, which is the right eigen basis of the transition matrix with
-        eigenvectors as columns.
+    X_diffmap : `adata.obsm`
+        Array of shape (#samples) × (#eigen vectors). Diffusion map
+        representation of data, which is the right eigen basis of the transition
+        matrix with eigenvectors as columns.
     diffmap_evals : `np.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
-    logg.info('running Diffusion Maps', r=True)
+    logg.info('computing Diffusion Maps', r=True)
     if n_comps <= 2:
         raise ValueError('Provide any value greater than 2. '
                          'Mind that the 0th component of diffusion maps '
