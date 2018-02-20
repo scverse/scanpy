@@ -13,8 +13,8 @@ To work with the latest version on `GitHub <https://github.com/theislab/scanpy>`
 
 Two further packages, needed for some of Scanpy's features, have not been automatically installed. Manually install them in this order
 
-- `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` 
-- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain>=0.6``
+- `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` or ``conda install -c conda-forge python-igraph``
+- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain``
 
 If you're using `Docker <https://en.wikipedia.org/wiki/Docker_(software)>`_, you
 can setup your environment `here
@@ -28,7 +28,7 @@ If you do not have sudo rights (you get a ``Permission denied`` error)::
 
     pip install --user scanpy
 
-**On MacOS**, you probably need to install the C core of igraph via homebrew first
+**On MacOS**, you might need to install the C core of igraph via homebrew first
 
 - ``brew install igraph``
 - If python-igraph still fails to install, see `here <https://stackoverflow.com/questions/29589696/problems-compiling-c-core-of-igraph-with-python-2-7-9-anaconda-2-2-0-on-mac-osx>`__ or consider installing gcc via ``brew install gcc --without-multilib`` and exporting ``export CC="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"; export CXX="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"``, where ``X`` and ``x`` refers to the version of ``gcc``; in my case, the path reads ``/usr/local/Cellar/gcc/6.3.0_1/bin/gcc-6``.
