@@ -376,7 +376,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
     recompute : `bool`, optional (default: `True`)
-        Use the result of previous calculation, if possible.
+        Recompute PC coordinates. If False, use the result of previous calculation.
     return_info : `bool` or `None`, optional (default: `None`)
         If providing an array, this defaults to False, if providing an `AnnData`,
         defaults to `True`.
