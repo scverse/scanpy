@@ -458,6 +458,89 @@ def tsne(
     if show == False: return axs
 
 
+def umap(
+        adata,
+        color=None,
+        use_raw=True,
+        sort_order=True,
+        alpha=None,
+        groups=None,
+        legend_loc='right margin',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        color_map=None,
+        palette=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None, ax=None):
+    """Scatter plot in UMAP basis.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical sample annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
+
+    Returns
+    -------
+    matplotlib.Axes object
+    """
+    axs = scatter(
+        adata,
+        basis='umap',
+        color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
+        alpha=alpha,
+        groups=groups,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=show,
+        save=save,
+        ax=ax)
+    if show == False: return axs
+
+
 # ------------------------------------------------------------------------------
 # Subgroup identification and ordering - clustering, pseudotime, branching
 # and tree inference tools

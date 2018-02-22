@@ -66,7 +66,7 @@ def scatter(
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
-    basis : {'pca', 'tsne', 'diffmap', 'draw_graph_fr', etc.}
+    basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
     groups : str, optional (default: all groups in color)
         Allows to restrict categories in sample annotation to a subset.
@@ -153,6 +153,7 @@ def scatter(
         component_name = ('DC' if basis == 'diffmap'
                           else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
                           else 'tSNE' if basis == 'tsne'
+                          else 'UMAP' if basis == 'umap'
                           else 'PC' if basis == 'pca'
                           else 'Spring' if basis == 'spring'
                           else None)
