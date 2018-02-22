@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+import pandas as pd
 from . import api_without_examples as sc
 
 
@@ -116,7 +117,7 @@ def moignard15():
         for sname in adata.obs_names]
     # fix the order and colors of names in "groups"
     adata.obs['exp_groups'] = pd.Categorical(adata.obs['exp_groups'],
-                                             categories=groups_names)
+                                             categories=groups_order)
     adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
