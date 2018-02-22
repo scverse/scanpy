@@ -3,7 +3,7 @@
 
        <style type="text/css">
        .label {
-       }    
+       }
        </style>
 
 References
@@ -19,7 +19,7 @@ References
 
 .. [Blondel08] Blondel *et al.* (2008),
    *Fast unfolding of communities in large networks*,
-   `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`__.   
+   `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`__.
 
 .. [Coifman05] Coifman *et al.* (2005),
    *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
@@ -28,7 +28,7 @@ References
 .. [Csardi06] Csardi *et al.* (2006),
    *The igraph software package for complex network researc*,
    `InterJournal Complex Systems <http://igraph.org>`__.
-   
+
 .. [Ester96] Ester *et al.* (1996),
    *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
    `Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining,
@@ -37,7 +37,7 @@ References
 .. [Eulenberg17] Eulenberg *et al.* (2017),
    *Reconstructing cell cycle and disease progression using deep learning*
    `Nat. Comms., accepted <https://doi.org/10.1101/081364>`__.
-             
+
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
    `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
@@ -49,7 +49,7 @@ References
 .. [Hastie09]
    Hastie *et al.* (2009),
    *The Elements of Statistical Learning*,
-   `Springer <https://web.stanford.edu/~hastie/ElemStatLearn/>`_.   
+   `Springer <https://web.stanford.edu/~hastie/ElemStatLearn/>`_.
 
 .. [Haghverdi15] Haghverdi *et al.* (2015),
    *Diffusion maps for high-dimensional single-cell analysis of differentiation data*,
@@ -74,7 +74,7 @@ References
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`__.
-   
+
 .. [Maaten08] Maaten & Hinton (2008),
    *Visualizing data using t-SNE*,
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`__.
@@ -83,6 +83,10 @@ References
    *Spatial reconstruction of single-cell gene expression data*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`__.
 
+.. [McInnes18] McInnes & Healy (2018),
+   *UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction*,
+   `arXiv <https://arxiv.org/abs/1802.03426>`__.
+
 .. [Moignard15] Moignard *et al.* (2015),
    *Decoding the regulatory network of early blood development from single-cell gene expression measurements*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3154>`__.
@@ -90,7 +94,7 @@ References
 .. [Murphy12]
    Murphy (2012,
    *Machine Learning: A Probabilisitc Perspective*,
-   `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`_.   
+   `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`_.
 
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
@@ -103,7 +107,7 @@ References
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
-   
+
 .. [Ulyanov16] Ulyanov (2016),
    *Multicore t-SNE*,
    `GitHub <https://github.com/DmitryUlyanov/Multicore-TSNE>`__.
@@ -119,7 +123,7 @@ References
 .. [Waskom16] Waskom *et al.* (2017),
    *Seaborn*,
    `Zenodo <https://doi.org/10.5281/zenodo.54844>`__.
-   
+
 .. [Wolf17] Wolf *et al.* (2018),
    *Scanpy: large-scale single-cell gene expression data analysis*,
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`_.
@@ -127,7 +131,7 @@ References
 .. [Wolf17i] Wolf *et al.* (2017),
    *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
    `bioRxiv <https://doi.org/10.1101/208819>`__.
-   
+
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
    `Nature Communications <https://doi.org/10.1038/ncomms14049>`__.
