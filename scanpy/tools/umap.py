@@ -78,7 +78,7 @@ def umap(adata,
         appropriately; this will hopefully be fixed in the future.
     alpha: `float`, optional (default: 1.0)
         The initial learning rate for the embedding optimization.
-    init: string (optional, default 'spectral')
+    init: `string` or `np.array`, optional (default: 'spectral')
         How to initialize the low dimensional embedding. Options are:
             * 'spectral': use a spectral embedding of the fuzzy 1-skeleton
             * 'random': assign initial embedding positions at random.
