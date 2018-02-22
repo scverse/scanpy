@@ -25,3 +25,4 @@ joblib
 profilehooks
 # extensions (also needed if installing cython compiled .c files)
 # cython
+# umap-learn # optional dependency for umap visualization
