@@ -41,6 +41,9 @@ def filter_genes_dispersion(result, log=False, save=None, show=None):
             pl.ylim(y_min, 1.05*np.max(dispersions))
         pl.legend()
         pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expression of gene')
+
+        file_name = 'filter_genes_dispersion{}'.format('_normalized' if id == 0 else '')
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersion of gene'
                   + (' (normalized)' if id == 0 else ' (not normalized)'))
-    utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
+        utils.savefig_or_show(file_name, show=show, save=save)
+        
