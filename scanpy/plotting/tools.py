@@ -465,6 +465,8 @@ def umap(
         sort_order=True,
         alpha=None,
         groups=None,
+        components=None,
+        projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
         legend_fontweight=None,
@@ -491,6 +493,10 @@ def umap(
         with higher values on top of others.
     groups : str, optional (default: all groups)
         Restrict to a few categories in categorical sample annotation.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -527,6 +533,8 @@ def umap(
         sort_order=sort_order,
         alpha=alpha,
         groups=groups,
+        components=components,
+        projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         legend_fontweight=legend_fontweight,
