@@ -136,16 +136,19 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
 
     See :func:`~scanpy.api.pp.filter_cells`.
     """
-    n_given_options = sum(option is not None for option in [min_cells, min_counts, max_cells, max_counts])
+    n_given_options = sum(
+        option is not None for option in
+        [min_cells, min_counts, max_cells, max_counts])
     if n_given_options != 1:
-         raise ValueError("Only provide one of the optional arguments (`min_counts`," +
-                         "`min_cells`, `max_counts`, `max_cells`) per call.")
-
+        raise ValueError(
+            'Only provide one of the optional arguments (`min_counts`,'
+            '`min_cells`, `max_counts`, `max_cells`) per call.')
+ 
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         gene_subset, number = filter_genes(adata.X, min_cells=min_cells,
                                            min_counts=min_counts, max_cells=max_cells,
-                                           max_counts=max_counts )
+                                           max_counts=max_counts)
         if min_cells is None and max_cells is None:
             adata.var['n_counts'] = number
         else:
@@ -155,21 +158,18 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
 
     X = data  # proceed with processing the data matrix
     min_number = min_counts if min_cells is None else min_cells
-    max_number  = max_counts if max_cells is None else max_cells
+    max_number = max_counts if max_cells is None else max_cells
     number_per_gene = np.sum(X if min_cells is None and max_cells is None
-                             else X > 0, axis=1)
-
+                             else X > 0, axis=0)
     if issparse(X):
         number_per_gene = number_per_gene.A1
-
     if min_number is not None:
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
-
+        
     s = np.sum(~gene_subset)
-
-    logg.m('filtered out {} genes that are detected '.format(s), end=' ', v=4)
+    logg.m('filtered out {} genes that are detected'.format(s), end=' ', v=4)
     if min_cells is not None or min_counts is not None:
         logg.m('in less than',
                str(min_cells) + ' cells'
@@ -178,7 +178,6 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
         logg.m('in more than ',
                str(max_cells) + ' cells'
                if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
-
     return gene_subset, number_per_gene
 
 
