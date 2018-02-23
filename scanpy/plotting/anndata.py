@@ -47,8 +47,8 @@ def scatter(
         ax=None):
     """Scatter plot.
 
-    Color with sample annotation (`color in adata.obs_keys()`) or gene
-    expression (`color in adata.var_names`).
+    Color with annotation of observations (`.obs`) or expression of genes
+    (`.var_names`).
 
     Parameters
     ----------
@@ -89,10 +89,9 @@ def scatter(
          Adjust how far the plotting panel extends to the right.
     size : float (default: None)
          Point size. Sample-number dependent by default.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    title : `str` or list of `str`, optional (default: None)
+         Provide title for panels either as `[\'title1\', ...]`.
+    show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -102,7 +101,7 @@ def scatter(
 
     Returns
     -------
-    A list of matplotlib.Axis objects.
+    A list of `matplotlib.Axis` objects.
     """
     sanitize_anndata(adata)
     if legend_loc not in VALID_LEGENDLOCS:
@@ -346,8 +345,9 @@ def ranking(adata, attr, keys, indices=None,
     return gs
 
 
-def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale='width',
-           order=None, multi_panel=False, show=None, save=None, ax=None):
+def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
+           size=1, scale='width', order=None, multi_panel=False, show=None,
+           save=None, ax=None):
     """Violin plot.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
@@ -356,14 +356,16 @@ def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale=
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    keys : str
-        Keys for accessing variables of adata.X or fields of adata.obs.
-    group_by : str, optional
+    keys : `str` or list of `str`
+        Keys for accessing variables of `.var_names` or fields of `.obs`.
+    group_by : `str` or `None`, optional (default: `None`)
         The key of the sample grouping to consider.
+    log : `bool`, optional (default: `False`)
+        Plot on logarithmic axis.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     multi_panel : bool, optional
-        Show fields in multiple panels. Returns a seaborn FacetGrid in that case.
+        Show fields in multiple panels. Returns a `seaborn.FacetGrid` in that case.
     jitter : `float` or `bool`, optional (default: `True`)
         See `seaborn.stripplot`.
     size : int, optional (default: 1)
@@ -424,6 +426,7 @@ def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale=
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
+        if log: g.set(yscale='log')
         ax = g
     else:
         ax = sns.violinplot(x=x, y=y, data=obs_tidy, inner=None, order=order,
@@ -431,6 +434,7 @@ def violin(adata, keys, group_by=None, use_raw=True, jitter=True, size=1, scale=
         ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
+        if log: ax.set_yscale('log')
     utils.savefig_or_show('violin', show=show, save=save)
     return ax
 
