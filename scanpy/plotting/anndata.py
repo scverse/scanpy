@@ -284,12 +284,12 @@ def scatter(
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
-    return axs
+    if show == False: axs
 
 
 def ranking(adata, attr, keys, indices=None,
             labels=None, color='black', n_points=30,
-            log=False):
+            log=False, show=None):
     """Plot rankings.
 
     See, for example, how this is used in pl.pca_ranking.
@@ -342,13 +342,13 @@ def ranking(adata, attr, keys, indices=None,
         score_min, score_max = np.min(score[indices]), np.max(score[indices])
         pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
                 (1.05 if score_max > 0 else 0.95) * score_max)
-    return gs
+    if show == False: return gs
 
 
 def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=False, show=None,
            save=None, ax=None):
-    """Violin plot.
+    """Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
 
@@ -436,7 +436,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
         if log: ax.set_yscale('log')
     utils.savefig_or_show('violin', show=show, save=save)
-    return ax
+    if show == False: return ax
 
 
 def clustermap(
@@ -464,7 +464,7 @@ def clustermap(
 
     Returns
     -------
-    If `not show`, a `seaborn.ClusterGrid` object.
+    If `show == False`, a `seaborn.ClusterGrid` object.
 
     Notes
     -----
