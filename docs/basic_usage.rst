@@ -5,18 +5,25 @@ Import the Scanpy API as::
 
     import scanpy.api as sc
 
+Workflow
+^^^^^^^^
+
 The typical workflow consists of subsequent calls of data analysis tools
-of the form::
+in ``sc.tl``, e.g.::
 
-    sc.tl.louvain(adata, **params)
+    sc.tl.louvain(adata, **tool_params)  # cluster cells using Louvain clustering
 
-where ``adata`` is an :class:`~scanpy.api.AnnData` object and ``params`` are optional parameters. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* gene expression measurements of dimension *n_vars*. To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass the ``copy`` argument::
+where ``adata`` is an :class:`~scanpy.api.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations of *n_vars* gene expression variables. For each tool, there is at least one associated plotting function in ``sc.pl``, which retrieves and plots the added annotation::
 
-    adata_copy = sc.tl.louvain(adata, copy=True, **params)
+    sc.pl.louvain(adata, **plotting_params)
+
+If you pass ``show=False``, a `matplotlib.Axes <https://matplotlib.org/api/axes_api.html>`_ instance is returned and you have all of matplotlib's detailed configuration possibilities.
+
+To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass ``copy=True``.
 
     
-AnnData objects
-^^^^^^^^^^^^^^^
+AnnData
+^^^^^^^
 
 Scanpy is based on `anndata <http://anndata.readthedocs.io>`_, which provides
 the :class:`~scanpy.api.AnnData` class.
@@ -54,15 +61,6 @@ To write, use::
     adata.write_csvs(filename)
     adata.write_loom(filename)    
 
-
-Plotting
-^^^^^^^^
-
-For each tool, there is an associated plotting function, for instance::
-
-    sc.pl.louvain(adata)
-
-This retrieves and plots annotation in ``adata`` that has been added by ``sc.tl.louvain(adata)``. Scanpy's plotting module is similar to Seaborn_: an extension of matplotlib_ that allows visualizing operations on AnnData objects with one-line commands. Detailed configuration has to be done via matplotlib functions, which is easy as Scanpy's plotting functions accept and return a ``Matplotlib.Axes`` object.
 
 .. _Seaborn: http://seaborn.pydata.org/
 .. _matplotlib: http://matplotlib.org/
