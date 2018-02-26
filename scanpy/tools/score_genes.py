@@ -110,12 +110,11 @@ def score_genes_cell_cycle(
         g2m_genes,
         copy=False,
         **kwargs):
-    """Score cell cycle genes.
+    """Score cell cycle genes [Satija15]_.
 
-    Given two lists of genes associated to S phase and G2M phase, calculates scores
-    and assigns a cell cycle phase (G1, S or G2M).
-
-    See :func:`~scanpy.api.score_genes` for more explanation.
+    Given two lists of genes associated to S phase and G2M phase, calculates
+    scores and assigns a cell cycle phase (G1, S or G2M). See
+    :func:`~scanpy.api.score_genes` for more explanation.
 
     Parameters
     ----------
@@ -141,6 +140,10 @@ def score_genes_cell_cycle(
         The score for G2M phase for each cell.
     phase : `adata.obs`, dtype `object`
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
+
+    See also
+    --------
+    score_genes
 
     Examples
     --------
