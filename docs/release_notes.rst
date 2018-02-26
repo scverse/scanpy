@@ -3,8 +3,15 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
 
 **Very Soon**
 
-1. Canonical analyses steps like clustering genes, scoring cell cycle, computing correlations...
-2. Exporting to Gephi...
+1. Much better scalability for more than 100K cells; new graph class...
+2. Canonical analyses steps like clustering genes, computing correlations...
+3. Exporting to Gephi...
+
+
+**February 26, 2018**: version 0.4.4
+
+1. embed cells using :func:`~scanpy.api.tl.umap` [McInnes18]_: `examples <https://github.com/theislab/scanpy/pull/92>`_
+2. score sets of genes, e.g. for cell cycle, using :func:`~scanpy.api.tl.score_genes` [Satija15]_: `notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb>`_
 
 
 **February 9, 2018**: version 0.4.3
@@ -13,22 +20,19 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
    based on `seaborn.clustermap
    <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ [Waskom16]_
 2. only return `matplotlib.Axis` in plotting functions when `show=True`, otherwise `None`
-3. bug fixes, consistency updates
 
-And due to relying on `anndata <http://anndata.readthedocs.io>`_: version 0.5
+... and through `anndata v0.5 <http://anndata.readthedocs.io>`_
 
 1. inform about duplicates in :class:`~scanpy.api.AnnData.var_names` and resolve them using :func:`~scanpy.api.AnnData.var_names_make_unique`
 2. by default, generate unique observation names in :func:`~scanpy.api.AnnData.concatenate`
 3. automatically remove unused categories after slicing
 4. read/write `.loom` files using loompy 2
-5. some IDE-backed improvements
 
 
 **January 7, 2018**: version 0.4.2
 
 1. amendments in `AGA <https://github.com/theislab/graph_abstraction>`_
    and its plotting functions
-2. bug fixes
 
 
 **December 23, 2017**: version 0.4
@@ -37,9 +41,8 @@ And due to relying on `anndata <http://anndata.readthedocs.io>`_: version 0.5
    for interactive visualization of data: `tutorial
    <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_,
    `docs <https://scanpy.readthedocs.io/en/latest/api/index.html>`_
-2. consistency updates, bug fixes, better logging
 
-And due to relying on `anndata <http://anndata.readthedocs.io>`_: version 0.4
+... and through `anndata v0.4 <http://anndata.readthedocs.io>`_
 
 1. towards a common file format for exchanging :class:`~scanpy.api.AnnData` with
    packages such as Seurat and SCDE by reading and writing `.loom
@@ -57,7 +60,6 @@ And due to relying on `anndata <http://anndata.readthedocs.io>`_: version 0.4
 **November 29, 2017**: version 0.3.2
 
 1. finding marker genes via :func:`~scanpy.api.pl.rank_genes_groups_violin` improved: `example <https://github.com/theislab/scanpy/issues/51>`_
-2. consistency updates, better logging, docs and bug fixes throughout
 
 
 **November 16, 2017**: version 0.3
@@ -65,7 +67,6 @@ And due to relying on `anndata <http://anndata.readthedocs.io>`_: version 0.4
 1. :class:`~scanpy.api.AnnData` can be `concatenated <https://scanpy.readthedocs.io/en/latest/api/scanpy.api.AnnData.html>`_
 2. :class:`~scanpy.api.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
 3. results of approximate graph abstraction (AGA) are `simplified <https://github.com/theislab/graph_abstraction>`_
-4. consistency updates, stability improvements
 
 
 **October 25, 2017**: version 0.2.9
