@@ -46,6 +46,7 @@ Tools: TL
 
    tl.pca
    tl.tsne
+   tl.umap
    tl.diffmap
    tl.draw_graph
 
@@ -180,6 +181,7 @@ For any method in module `tl`, there is a method with the same name in `pl`.
    pl.pca_scatter
    pl.pca_variance_ratio
    pl.tsne
+   pl.umap
    pl.diffmap
    pl.draw_graph
 
