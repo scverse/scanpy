@@ -11,16 +11,20 @@ from .. import logging as logg
 def score_genes(
         adata,
         gene_list,
+        ctrl_size=50,
         gene_pool=None,
         n_bins=25,
-        ctrl_size=50,
         score_name='score',
         random_state=0,
         copy=False):  # we use the scikit-learn convention of calling the seed "random_state"
-    """Score a set of genes.
+    """Score a set of genes [Satija15]_.
 
-    This function calculates a score using a reference of control genes
-    sampled matching bins of expression
+    The score is the average expression of a set of genes subtracted with the
+    average expression of a reference set of genes. The reference set is
+    randomly sampled from the `gene_pool` for each binned expression value.
+
+    This reproduces the approach in Seurat [Satija15]_ and has been implemented
+    for Scanpy by Davide Cittaro.
 
     Parameters
     ----------
@@ -28,16 +32,17 @@ def score_genes(
         The annotated data matrix.
     gene_list : iterable
         The list of gene names used for score calculation.
+    ctrl_size : `int`, optional (default: 50)
+        Number of reference genes to be sampled. If `len(gene_list)` is not too
+        low, you can set `ctrl_size=len(gene_list)`.
     gene_pool : `list` or `None`, optional (default: `None`)
-        A list of genes to be sampled as control set.
+        Genes for sampling the reference set. Default is all genes.
     n_bins : `int`, optional (default: 25)
-        Number of expression level cuts for sampling.
-    ctrl_size : `int`, optional (default: 100)
-        Number of genes to be sampled for each bin of expression.
+        Number of expression level bins for sampling.
     score_name : `str`, optional (default: `'score'`)
-        Name of the slot to be added in obs.
+        Name of the field to be added in `.obs`.
     random_state : `int`, optional (default: 0)
-        Change random seed.
+        The random seed for sampling.
     copy : `bool`, optional (default: `False`)
         Copy `adata` or modify it inplace.
 
@@ -64,9 +69,10 @@ def score_genes(
         gene_pool = [x for x in gene_pool if x in adata.var_names]
 
     # Trying here to match the Seurat approach in scoring cells.
-    # Basically we need to compare genes in our cells against random genes in a
-    # matched interval of expression...
+    # Basically we need to compare genes against random genes in a matched
+    # interval of expression.
 
+    # TODO: this densifies the whole data matrix for `gene_pool`
     if scipy.sparse.issparse(adata.X):
         obs_avg = pd.Series(
             np.nanmean(
@@ -79,11 +85,11 @@ def score_genes(
     obs_cut = obs_avg.rank(method='min') // n_items
     control_genes = set()
 
-    # now pick 100 genes from every cut
+    # now pick `ctrl_size` genes from every cut
     for cut in np.unique(obs_cut.loc[gene_list]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
-        control_genes.update(set(r_genes[:ctrl_size]))  # if ctrl_size > len(r_genes) is not a problem for numpy...
+        control_genes.update(set(r_genes[:ctrl_size]))  # uses full r_genes if ctrl_size > len(r_genes)
 
     # To index, we need a list - indexing implies an order.
     control_genes = list(control_genes - gene_list)
@@ -102,11 +108,14 @@ def score_genes_cell_cycle(
         adata,
         s_genes,
         g2m_genes,
-        copy=False):
+        copy=False,
+        **kwargs):
     """Score cell cycle genes.
 
     Given two lists of genes associated to S phase and G2M phase, calculates scores
     and assigns a cell cycle phase (G1, S or G2M).
+
+    See :func:`~scanpy.api.score_genes` for more explanation.
 
     Parameters
     ----------
@@ -118,6 +127,9 @@ def score_genes_cell_cycle(
         List of genes associated with G2M phase.
     copy : `bool`, optional (default: `False`)
         Copy `adata` or modify it inplace.
+    **kwargs : optional keyword arguments
+        Are passed to :func:`~scanpy.api.score_genes`. `ctrl_size` is not
+        possible, as it's set as `min(len(s_genes), len(g2m_genes))`.
 
     Returns
     -------
@@ -139,9 +151,9 @@ def score_genes_cell_cycle(
     adata = adata.copy() if copy else adata
     ctrl_size = min(len(s_genes), len(g2m_genes))
     # add s-score
-    score_genes(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size)
+    score_genes(adata, gene_list=s_genes, score_name='S_score', ctrl_size=ctrl_size, **kwargs)
     # add g2m-score
-    score_genes(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size)
+    score_genes(adata, gene_list=g2m_genes, score_name='G2M_score', ctrl_size=ctrl_size, **kwargs)
     scores = adata.obs[['S_score', 'G2M_score']]
 
     # default phase is S
