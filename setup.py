@@ -41,7 +41,7 @@ with req_path.open() as requirements:
 with open('README.rst', encoding='utf-8') as readme_f:
     readme = readme_f.read()
 
-author = 'Alex Wolf, Philipp Angerer, Tobias Callies, Davide Cittaro'
+author = 'Alex Wolf, Philipp Angerer, Tobias Callies, Davide Cittaro, Gokcen Eraslan'
     
 setup(
     name=package_name,
