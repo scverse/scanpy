@@ -111,19 +111,19 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         cell_subset = number_per_cell <= max_number
 
     s = np.sum(~cell_subset)
-    logg.m('filtered out {} cells that have'.format(s), end=' ', v=4)
+    logg.msg('filtered out {} cells that have'.format(s), end=' ', v=4)
     if min_genes is not None or min_counts is not None:
-        logg.m('less than',
+        logg.msg('less than',
                str(min_genes) + ' genes expressed'
                if min_counts is None else str(min_counts) + ' counts', v=4, no_indent=True)
     if max_genes is not None or max_counts is not None:
-        logg.m('more than ',
+        logg.msg('more than ',
                str(max_genes) + ' genes expressed'
                if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
     return cell_subset, number_per_cell
 
 
-def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
+def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
                  max_cells=None, copy=False):
     """Filter genes based on number of cells or counts.
 
@@ -134,7 +134,22 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
     Only provide one of the optional arguments (`min_counts`, `min_cells`,
     `max_counts`, `max_cells`) per call.
 
-    See :func:`~scanpy.api.pp.filter_cells`.
+    Parameters
+    ----------
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
+        Data matrix of shape `n_obs` × `n_vars`. Rows correspond to cells and
+        columns to genes.
+    min_counts : `int`, optional (default: `None`)
+        Minimum number of counts required for a cell to pass filtering.
+    min_cells : `int`, optional (default: `None`)
+        Minimum number of cells expressed required for a cell to pass filtering.
+    max_counts : `int`, optional (default: `None`)
+        Maximum number of counts required for a cell to pass filtering.
+    max_cells : `int`, optional (default: `None`)
+        Maximum number of cells expressed required for a cell to pass filtering.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
     """
     n_given_options = sum(
         option is not None for option in
@@ -169,13 +184,13 @@ def filter_genes(data, min_cells=None, min_counts=None, max_counts=None,
         gene_subset = number_per_gene <= max_number
         
     s = np.sum(~gene_subset)
-    logg.m('filtered out {} genes that are detected'.format(s), end=' ', v=4)
+    logg.msg('filtered out {} genes that are detected'.format(s), end=' ', v=4)
     if min_cells is not None or min_counts is not None:
-        logg.m('in less than',
+        logg.msg('in less than',
                str(min_cells) + ' cells'
                if min_counts is None else str(min_counts) + ' counts', v=4, no_indent=True)
     if max_cells is not None or max_counts is not None:
-        logg.m('in more than ',
+        logg.msg('in more than ',
                str(max_cells) + ' cells'
                if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
     return gene_subset, number_per_gene
@@ -292,13 +307,13 @@ def filter_genes_dispersion(data,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.m(t=True)
-        logg.m('the', n_top_genes,
+        logg.msg(t=True)
+        logg.msg('the', n_top_genes,
                'top genes correspond to a normalized dispersion cutoff of',
                disp_cut_off, v=4)
     else:
-        logg.m(t=True, no_indent=True)
-        logg.m('using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
+        logg.msg(t=True, no_indent=True)
+        logg.msg('using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
                .format(min_disp, max_disp, min_mean, max_mean), v=4)
         logg.hint('set `n_top_genes` to simply select top-scoring genes instead')
         max_disp = np.inf if max_disp is None else max_disp
@@ -453,20 +468,20 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     from .. import settings as sett
     if X.shape[1] < n_comps:
         n_comps = X.shape[1] - 1
-        logg.m('reducing number of computed PCs to',
+        logg.msg('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', X.shape[1], v=4)
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     from sklearn.decomposition import PCA, TruncatedSVD
     verbosity_level = np.inf if mute else 0
     if zero_center:
         if issparse(X):
-            logg.m('    as `zero_center=True`, '
+            logg.msg('    as `zero_center=True`, '
                    'sparse input is densified and may '
                    'lead to huge memory consumption', v=4)
             X = X.toarray()
         pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
-        logg.m('    without zero-centering: \n'
+        logg.msg('    without zero-centering: \n'
                '    the explained variance does not correspond to the exact statistical defintion\n'
                '    the first component, e.g., might be heavily influenced by different means\n'
                '    the following components often resemble the exact PCA very closely', v=4)
@@ -646,7 +661,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
-        logg.m('... regressing on per-gene means within categories', v=4)
+        logg.msg('... regressing on per-gene means within categories', v=4)
         unique_categories = np.unique(adata.obs[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
@@ -780,7 +795,7 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
         obs_indices = np.arange(0, n_obs, int(1./fraction), dtype=int)
     else:
         obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
-    logg.m('... subsampled to {} data points'.format(new_n_obs), v=4)
+    logg.msg('... subsampled to {} data points'.format(new_n_obs), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         adata._inplace_subset_obs(obs_indices)
