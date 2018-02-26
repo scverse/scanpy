@@ -4,21 +4,29 @@ from .. import settings
 from .. import logging as logg
 
 
-def tsne(adata, n_pcs=50, perplexity=30, early_exaggeration=12,
-         learning_rate=1000, random_state=0, use_fast_tsne=True,
-         recompute_pca=False, n_jobs=None, copy=False):
+def tsne(
+        adata,
+        n_pcs=50,
+        perplexity=30,
+        early_exaggeration=12,
+        learning_rate=1000,
+        random_state=0,
+        use_fast_tsne=True,
+        recompute_pca=False,
+        n_jobs=None,
+        copy=False):
     """t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
     t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
     proposed for visualizating single-cell data by [Amir13]_. Here, by default,
     we use the implementation of *scikit-learn* [Pedregosa11]_. You can achieve
-    a huge speedup and better convergence if you install `*Multicore-tSNE*
+    a huge speedup and better convergence if you install `Multicore-tSNE
     <https://github.com/DmitryUlyanov/Multicore-TSNE>`__ by [Ulyanov16]_, which
     will be automatically detected by Scanpy.
 
     Parameters
     ----------
-    adata : `~scanpy.api.AnnData`
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     n_pcs : `int`, optional (default: 50)
         Number of principal components in preprocessing PCA. Set to 0 if you
