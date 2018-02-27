@@ -6,7 +6,6 @@ Compositions of these functions are found in sc.preprocess.recipes.
 import numpy as np
 import scipy as sp
 import warnings
-from joblib import Parallel, delayed
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
@@ -633,7 +632,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     adata : AnnData
         The annotated data matrix.
     keys : str or list of strings
-        Keys for sample annotation on which to regress on.
+        Keys for observation annotation on which to regress on.
     n_jobs : int
         Number of jobs for parallel computation.
     copy : bool (default: False)
@@ -771,11 +770,11 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     data : AnnData or array-like
         Annotated data matrix.
     fraction : float in [0, 1]
-        Subsample to this `fraction` of the number of samples.
+        Subsample to this `fraction` of the number of observations.
     seed : int, optional (default: 0)
         Random seed to change subsampling.
     simply_skip_samples : bool, optional (default: False)
-        Simply skip samples instead of true sampling.
+        Simply skip observations instead of true sampling.
     copy : bool (default: False)
         If an AnnData is passed, determines whether a copy is returned.
 

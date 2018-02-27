@@ -4,7 +4,6 @@
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
-from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.colors import is_color_like
@@ -54,13 +53,12 @@ def scatter(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    x : str or None
+    x : `str` or `None`
         x coordinate.
-    y : str or None
+    y : `str` or `None`
         y coordinate.
-    color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
+    color : string or list of strings, optional (default: `None`)
+        Keys for observation/cell annotation `[\'ann1\', \'ann2\']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     sort_order : `bool`, optional (default: `True`)
@@ -69,34 +67,35 @@ def scatter(
     basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
     groups : str, optional (default: all groups in color)
-        Allows to restrict categories in sample annotation to a subset.
-    components : str or list of str, optional (default: '1,2')
+        Allows to restrict categories in observation annotation to a subset.
+    components : `str` or list of `str`, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
          Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
+    legend_loc : `str`, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
+         for `matplotlib.pyplot.legend
+         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
+    legend_fontsize : `int` (default: `None`)
          Legend font size.
-    legend_fontweight : int (default: None)
+    legend_fontweight : `int` (default: `None`)
          Legend font weight.
-    color_map : str (default: 'viridis')
+    color_map : `str` (default: 'RdBu_r')
          String denoting matplotlib color map for continuous coloring.
-    palette : list of str (default: None)
+    palette : list of `str` (default: `None`)
          Colors to use for plotting groups (categorical annotation).
-    right_margin : float (default: None)
+    right_margin : `float` (default: 0.3)
          Adjust how far the plotting panel extends to the right.
     size : float (default: None)
-         Point size. Sample-number dependent by default.
-    title : `str` or list of `str`, optional (default: None)
+         Point size. Observation-number dependent by default.
+    title : `str` or list of `str`, optional (default: `None`)
          Provide title for panels either as `[\'title1\', ...]`.
     show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    ax : matplotlib.Axes
+    ax : `matplotlib.Axes`
          A matplotlib axes object.
 
     Returns
@@ -194,7 +193,7 @@ def scatter(
                 continuous = True
             else:
                 raise ValueError('"' + key + '" is invalid!'
-                                 + ' specify valid sample annotation, one of '
+                                 + ' specify valid observation annotation, one of '
                                  + str(adata.obs_keys()) + ' or a gene name '
                                  + str(adata.var_names))
             colorbars.append(True if continuous else False)
@@ -359,7 +358,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     keys : `str` or list of `str`
         Keys for accessing variables of `.var_names` or fields of `.obs`.
     group_by : `str` or `None`, optional (default: `None`)
-        The key of the sample grouping to consider.
+        The key of the observation grouping to consider.
     log : `bool`, optional (default: `False`)
         Plot on logarithmic axis.
     use_raw : `bool`, optional (default: `True`)
@@ -398,7 +397,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         if key in adata.obs_keys(): obs_keys = True
         if obs_keys and key not in set(adata.obs_keys()):
             raise ValueError(
-                'Either use sample keys or variable names, but do not mix. '
+                'Either use observation keys or variable names, but do not mix. '
                 'Did not find {} in adata.obs_keys().'.format(key))
     if obs_keys:
         obs_df = adata.obs

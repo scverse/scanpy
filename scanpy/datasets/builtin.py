@@ -6,7 +6,7 @@ import pandas as pd
 from . import api_without_examples as sc
 
 
-def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
+def blobs(n_centers=5, cluster_std=1.0, n_observations=640):
     """Gaussian Blobs.
 
     Parameters
@@ -15,18 +15,18 @@ def blobs(n_centers=5, cluster_std=1.0, n_samples=640):
         Number of cluster centers.
     cluster_std : `float`, optional (default: 1.0)
         Standard deviation of clusters.
-    n_samples : `int`, optional (default: 640)
-        Number of samples. By default, this is the same sample number as in
+    n_observations : `int`, optional (default: 640)
+        Number of observations. By default, this is the same observation number as in
         ``sc.examples.krumsiek11()``.
 
     Returns
     -------
     adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix containing a sample annotation 'blobs' that
+        Annotated data matrix containing a observation annotation 'blobs' that
         indicates cluster identity.
     """
     import sklearn.datasets
-    X, y = sklearn.datasets.make_blobs(n_samples=n_samples,
+    X, y = sklearn.datasets.make_blobs(n_samples=n_observations,
                                        n_features=11,
                                        centers=n_centers,
                                        cluster_std=cluster_std,
@@ -111,7 +111,7 @@ def moignard15():
     adata.uns['iroot'] = 532  # note that in Matlab/R, counting starts at 1
     # annotate with Moignard et al. (2015) experimental cell groups
     groups_order = ['HF', 'NP', 'PS', '4SG', '4SFG']
-    # annotate each sample/cell
+    # annotate each observation/cell
     adata.obs['exp_groups'] = [
         next(gname for gname in groups_order if sname.startswith(gname))
         for sname in adata.obs_names]
@@ -165,7 +165,7 @@ def paul15_raw():
         cell_names = f['data.debatched_colnames'][()].astype(str)
         clusters = f['cluster.id'][()].flatten()
         infogenes_names = f['info.genes_strings'][()].astype(str)
-    # each row has to correspond to a sample, therefore transpose
+    # each row has to correspond to a observation, therefore transpose
     adata = sc.AnnData(X.transpose())
     adata.var_names = gene_names
     adata.row_names = cell_names
