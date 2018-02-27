@@ -1,5 +1,3 @@
-# Authors: F. Alex Wolf (http://falexwolf.de)
-#          P. Angerer
 """Overwrite matplotlib's and seaborn's default rcParams.
 """
 

@@ -13,13 +13,11 @@ from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
 from . import utils
-from . import palettes
 from .. import utils as sc_utils
 from .. import settings
 from .. import logging as logg
 
-from .anndata import scatter, violin
-from .anndata import ranking
+from .anndata import scatter, ranking
 from .utils import matrix
 from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
@@ -39,7 +37,7 @@ def pca(adata, **params):
     adata : AnnData
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -47,7 +45,7 @@ def pca(adata, **params):
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -200,7 +198,7 @@ def diffmap(
     adata : AnnData
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -208,7 +206,7 @@ def diffmap(
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -308,7 +306,7 @@ def draw_graph(
         One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
         the last computed layout is taken.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -316,7 +314,7 @@ def draw_graph(
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     legend_loc : str, optional (default: 'right margin')
@@ -399,7 +397,7 @@ def tsne(
     adata : AnnData
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -407,7 +405,7 @@ def tsne(
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -484,7 +482,7 @@ def umap(
     adata : AnnData
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -492,7 +490,7 @@ def umap(
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -659,10 +657,10 @@ def aga_scatter(
     adata : AnnData
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
          for matplotlib.legend.
@@ -1470,11 +1468,11 @@ def dpt(
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
     color : string or list of strings, optional (default: None)
-        Sample/ cell annotation for coloring in the form "ann1,ann2,...". String
+        Observation/ cell annotation for coloring in the form "ann1,ann2,...". String
         annotation is plotted assuming categorical annotation, float and integer
         annotation is plotted assuming continuous annoation.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -1669,10 +1667,10 @@ def louvain(
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
     color : string or list of strings, optional (default: None)
-        Keys for sample/cell annotation either as list `["ann1", "ann2"]` or
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical sample annotation.
+        Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -1905,7 +1903,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     as_heatmap : bool (default: False)
         Plot the timeseries as heatmap.
     tmax_realization : int or None (default: False)
-        Number of samples in one realization of the time series. The data matrix
+        Number of observations in one realization of the time series. The data matrix
         adata.X consists in concatenated realizations.
     shuffle : bool, optional (default: False)
         Shuffle the data.
