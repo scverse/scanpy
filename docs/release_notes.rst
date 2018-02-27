@@ -3,9 +3,9 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
 
 **Very Soon**
 
-1. Much better scalability for more than 100K cells; new graph class...
-2. Canonical analyses steps like clustering genes, computing correlations...
-3. Exporting to Gephi...
+1. better scalability when analyzing data with more than 100K cells; new graph class...
+2. canonical analyses steps like clustering genes, computing correlations...
+3. exporting to Gephi...
 
 
 **February 26, 2018**: version 0.4.4
@@ -19,7 +19,7 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
 1. :func:`~scanpy.api.pl.clustermap`: heatmap from hierarchical clustering,
    based on `seaborn.clustermap
    <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ [Waskom16]_
-2. only return `matplotlib.Axis` in plotting functions when `show=True`, otherwise `None`
+2. only return `matplotlib.Axis` in plotting functions of ``sc.pl`` when `show=False`, otherwise `None`
 
 ... and through `anndata v0.5 <http://anndata.readthedocs.io>`_
 
