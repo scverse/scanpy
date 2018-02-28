@@ -277,9 +277,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return read_hdf(filename, sheet)
     # read other file types
-    filename_cache = (settings.cachedir +
-                      + filename.lstrip('./').replace(
-                          '/', '-').replace('.' + ext, '.' + 'h5ad'))
+    filename_cache = (settings.cachedir + filename.lstrip(
+        './').replace('/', '-').replace('.' + ext, '.h5ad'))
     cache = not settings.recompute == 'read' if cache is None else cache
     if cache and os.path.exists(filename_cache):
         logg.info('... reading from cache file', filename_cache)
