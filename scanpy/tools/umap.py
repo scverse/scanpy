@@ -1,9 +1,11 @@
+from ._utils import preprocess_with_pca
 from .. import settings
 from .. import logging as logg
 
 
 def umap(
         adata,
+        n_pcs=None,
         n_neighbors=15,
         n_components=2,
         min_dist=0.1,
@@ -30,6 +32,10 @@ def umap(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
+    n_pcs : `int`, optional (default: `None`)
+        Number of principal components in preprocessing PCA. Set to 0 if you do
+        not want preprocessing with PCA. Set to `None`, if you want use any
+        `X_pca` present in `adata.obsm`.
     n_neighbors : `float`, optional (default: 15)
         The size of local neighborhood (in terms of number of neighboring
         sample points) used for manifold approximation. Larger values
@@ -118,7 +124,8 @@ def umap(
 
     logg.info('computing UMAP', r=True)
     adata = adata.copy() if copy else adata
-
+    # preprocessing by PCA
+    X = preprocess_with_pca(adata, n_pcs=n_pcs)
     # params for umap-learn
     params_umap = {'n_neighbors': n_neighbors,
                    'n_components': n_components,
@@ -131,14 +138,11 @@ def umap(
                    'verbose': max(0, settings.verbosity-3),
                    **umap_kwargs
                    }
-
     um = umap.UMAP(**params_umap)
-    X_umap = um.fit_transform(adata.X)
-
+    X_umap = um.fit_transform(X)
     # update AnnData instance
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'X_umap\', UMAP coordinates (adata.obs)')
-
+              '    \'X_umap\', UMAP coordinates (adata.obsm)')
     return adata if copy else None
