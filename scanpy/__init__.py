@@ -1,8 +1,6 @@
 """Scanpy - Single-Cell Analysis in Python
 
-Reference
----------
-Wolf, Angerer & Theis, bioRxiv 174029 (2017)
+See scanpy.api for the API.
 """
 
 import sys
@@ -24,6 +22,9 @@ if pd.__version__ < LooseVersion('0.21'):
                       .format(pd.__version__))
 
 import anndata
+# NOTE: LooseVersion cannot deal with the versioneer format strings
+#       that involve something like 0.5.3+7g194938
+#       Hence, the following hack
 if anndata.__version__ < LooseVersion('0.5'):
     raise ImportError('Scanpy {} needs anndata version >=0.5, not {}.\n'
                       'Run `pip install anndata --upgrade`.'

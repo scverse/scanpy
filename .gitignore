@@ -1,4 +1,5 @@
 # Scanpy
+.pytest_cache/
 .scanpy
 .coverage
 coverage.xml
