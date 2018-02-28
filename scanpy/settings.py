@@ -93,6 +93,10 @@ writedir = './write/'
 """Directory where the function scanpy.write writes to by default.
 """
 
+cachedir = './cache/'
+"""Default cache directory.
+"""
+
 figdir = './figures/'
 """Directory where plots are saved.
 """
