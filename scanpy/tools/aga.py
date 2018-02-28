@@ -4,7 +4,7 @@ import scipy as sp
 import networkx as nx
 from textwrap import dedent
 from .. import logging as logg
-from ..data_structs import data_graph
+from ..neighbors import Neighbors
 from .. import utils
 from .. import settings
 
@@ -458,7 +458,7 @@ def aga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
     return adata if copy else None
 
 
-class AGA(data_graph.DataGraph):
+class AGA(Neighbors):
     """Approximate Graph Abstraction
 
     This needs to be rewritten in a cleaner way.

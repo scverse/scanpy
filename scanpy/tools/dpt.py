@@ -8,7 +8,7 @@ import networkx as nx
 from natsort import natsorted
 from .. import settings
 from .. import logging as logg
-from ..data_structs import data_graph
+from ..neighbors import Neighbors
 
 
 def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
@@ -112,11 +112,10 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
     dpt.update_diffmap()
-    adata.obsm['X_diffmap'] = dpt.rbasis[:, 1:]
-    adata.obs['X_diffmap0'] = dpt.rbasis[:, 0]
-    adata.uns['diffmap_evals'] = dpt.evals[1:]
-    adata.uns['data_graph_distance_local'] = dpt.Dsq
-    adata.uns['data_graph_norm_weights'] = dpt.Ktilde
+    adata.obsm['X_diffmap'] = dpt.rbasis
+    adata.uns['diffmap_evals'] = dpt.evals
+    adata.uns['neighbors_distances'] = dpt.distances
+    adata.uns['neighbors_similarities'] = dpt.similarities
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
@@ -150,7 +149,7 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
     return adata if copy else None
 
 
-class DPT(data_graph.DataGraph):
+class DPT(Neighbors):
     """Hierarchical Diffusion Pseudotime.
     """
 

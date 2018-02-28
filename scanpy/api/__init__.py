@@ -35,6 +35,15 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.recipe_zheng17
    pp.recipe_weinreb16
 
+**Neighbors**
+
+Compute a neighborhood-graph representation of the data, usually a knn-graph.
+
+.. autosummary::
+   :toctree: .
+
+   pp.neighbors
+
 
 Tools: TL
 ----------
@@ -74,69 +83,6 @@ Tools: TL
    :toctree: .
 
    tl.sim
-
-
-Reading and Writing
--------------------
-
-*Note:* For reading annotation use
-`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
-it to your `AnnData` object. The following read functions are intended for
-the numeric data in the data matrix `X`.
-
-Read common file formats using
-
-.. autosummary::
-   :toctree: .
-
-   read
-
-Read 10x formatted hdf5 files using
-
-.. autosummary::
-   :toctree: .
-
-   read_10x_h5
-
-Read other formats using functions borrowed from `anndata
-<http://anndata.readthedocs.io>`_
-
-.. autosummary::
-   :toctree: .
-
-   read_h5ad
-   read_csv
-   read_excel
-   read_hdf
-   read_loom
-   read_mtx
-   read_text
-   read_umi_tools
-
-For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api.html>`_.
-
-
-Exporting
----------
-
-.. autosummary::
-   :toctree: .
-
-   export_to.spring_project
-
-
-Datasets
---------
-
-.. autosummary::
-   :toctree: .
-
-   datasets.blobs
-   datasets.krumsiek11
-   datasets.moignard15
-   datasets.paul15
-   datasets.paul15_raw
-   datasets.toggleswitch
 
 
 Plotting: PL
@@ -209,8 +155,86 @@ For any method in module `tl`, there is a method with the same name in `pl`.
    pl.sim
 
 
-Settings
+Reading
+-------
+
+*Note:* For reading annotation use
+`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
+it to your `AnnData` object. The following read functions are intended for
+the numeric data in the data matrix `X`.
+
+Read common file formats using
+
+.. autosummary::
+   :toctree: .
+
+   read
+
+Read 10x formatted hdf5 files using
+
+.. autosummary::
+   :toctree: .
+
+   read_10x_h5
+
+Read other formats using functions borrowed from `anndata
+<http://anndata.readthedocs.io>`_
+
+.. autosummary::
+   :toctree: .
+
+   read_h5ad
+   read_csv
+   read_excel
+   read_hdf
+   read_loom
+   read_mtx
+   read_text
+   read_umi_tools
+
+Classes
+-------
+
+:class:`~scanpy.api.AnnData` is borrowed from `anndata <http://anndata.readthedocs.io>`_.
+
+.. autosummary::
+   :toctree: .
+
+   AnnData
+
+Represent data as a neighborhood structure, usually a knn graph.
+
+.. autosummary::
+   :toctree: .
+
+   Neighbors
+
+
+Exporting
+---------
+
+.. autosummary::
+   :toctree: .
+
+   export_to.spring_project
+
+
+Datasets
 --------
+
+.. autosummary::
+   :toctree: .
+
+   datasets.blobs
+   datasets.krumsiek11
+   datasets.moignard15
+   datasets.paul15
+   datasets.paul15_raw
+   datasets.toggleswitch
+
+
+Settings and Logging
+--------------------
 
 Global settings.
 
@@ -233,27 +257,13 @@ The verbosity levels have the following meaning:
 ...  Show even more detailed progress.
 ===  ======================================
 
-
-Logging
--------
+Logging.
 
 ================================================  ===================================
 `logging.print_version_and_date()`                Print the version and the date.
 `logging.print_versions_dependencies_numerics()`  Print the versions of dependencies.
 ================================================  ===================================
 
-AnnData
--------
-
-This only temporarily replicates the docs of `anndata
-<http://anndata.readthedocs.io>`_. Occurances of :class:`~scanpy.api.AnnData`
-will directly link to `anndata
-<http://anndata.readthedocs.io>`_ in the future.
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
 """
 
 from anndata import AnnData
@@ -262,6 +272,7 @@ from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_te
 
 from .. import __version__
 
+from ..neighbors import Neighbors
 from .. import settings
 from .. import logging
 from . import tl
@@ -272,6 +283,5 @@ from . import pp
 preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
-from ..data_structs import DataGraph
 from .. import utils
 from . import export_to

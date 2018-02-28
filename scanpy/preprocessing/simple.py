@@ -13,6 +13,8 @@ from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
 
+N_PCS = 50  # default number of PCs
+
 
 def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
                  max_genes=None, copy=False):
@@ -409,7 +411,7 @@ def log1p(data, copy=False):
         return X.log1p()
 
 
-def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
+def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         recompute=True, mute=False, return_info=None, copy=False,
         dtype='float32'):
     """Principal component analysis [Pedregosa11]_.
@@ -421,7 +423,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     ----------
     data : :class:`~scanpy.api.AnnData`, array-like
         Data matrix of shape `n_obs` × `n_vars`.
-    n_comps : `int`, optional (default: 10)
+    n_comps : `int`, optional (default: 50)
         Number of principal components to compute.
     zero_center : `bool` or `None`, optional (default: `True`)
         If True, compute standard PCA from Covariance matrix. If False, omit
@@ -458,6 +460,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     pca_variance : `.uns`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
+    if n_comps is None: n_comps = N_PCS
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?

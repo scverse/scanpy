@@ -23,3 +23,5 @@ from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
 # set Scanpy defaults
 set_rcParams_Scanpy()
+
+from matplotlib import rcParams
