@@ -16,10 +16,10 @@ Two further packages, needed for some of Scanpy's features, have not been automa
 - `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` or ``conda install -c conda-forge python-igraph``
 - `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain``
 
-If you're using `Docker <https://en.wikipedia.org/wiki/Docker_(software)>`_, you
-can setup your environment `here
-<https://gist.github.com/flying-sheep/0e003ae3398dd543638955a55c031c8d>`_.
+If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
 
+.. _Docker: https://en.wikipedia.org/wiki/Docker_(software)
+.. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
   
 Trouble shooting
 ~~~~~~~~~~~~~~~~
