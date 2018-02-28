@@ -1,32 +1,18 @@
-# Author: Alex Wolf (http://falexwolf.de)
-"""Graph drawing for the single-cell graph.
-
-References
-----------
-- General: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
-- Suggested for drawing knn-graphs in the context of single-cell
-  transcriptomics: Weinreb et al., bioRxiv doi:10.1101/090332 (2016)
-"""
-
 import numpy as np
 from .. import settings
 from .. import utils
 from .. import logging as logg
-from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
-def draw_graph(adata,
-               layout='fr',
-               root=None,
-               n_neighbors=None,
-               n_pcs=None,
-               random_state=0,
-               recompute_pca=False,
-               recompute_distances=False,
-               recompute_graph=False,
-               n_jobs=None,
-               copy=False,
-               **kwargs):
+def draw_graph(
+        adata,
+        layout='fr',
+        root=None,
+        random_state=0,
+        n_jobs=None,
+        key='neighbors_similarities',
+        copy=False,
+        **kwargs):
     """Force-directed graph drawing [Fruchterman91]_ [Weinreb17]_ [Csardi06]_.
 
     Often a good alternative to tSNE, but runs considerably slower.
@@ -44,31 +30,30 @@ def draw_graph(adata,
         Annotated data matrix.
     layout : `str`, optional (default: 'fr')
         Any valid `igraph layout
-        <http://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
+        <http://igraph.org/c/doc/igraph-Layout.html>`_. Of particular interest
         are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
         Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and
         'rt' (Reingold Tilford tree layout).
-    n_neighbors : `int` or `None` (default: `None`)
-        Number of nearest neighbors in graph.
-    n_pcs : `int` or `None` (default: `None`)
-        Number of PCs used to compute distances.
+    root : `int` or `None`, optional (default: `None`)
+        Root for tree layouts.
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    **kwargs : further parameters
-        Parameters of chosen igraph algorithm. See, e.g.,
-        http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold.
-    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
-        Number of jobs.
+    key : `str`, optional (default: 'neighbors_similarities')
+        Key for accessing the sparse adjacency matrix of the graph in
+        `adata.uns`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
+    **kwargs : further parameters
+        Parameters of chosen igraph layout. See, e.g.,
+        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`_.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_draw_graph_`layout` : `np.ndarray` (`adata.obsm`, dtype `float`)
+    X_draw_graph_`layout` : `adata.obsm`
         Coordinates of graph layout.
     """
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
@@ -77,15 +62,12 @@ def draw_graph(adata,
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
-    add_or_update_graph_in_adata(
-        adata,
-        n_neighbors=n_neighbors,
-        n_pcs=n_pcs,
-        recompute_pca=recompute_pca,
-        recompute_distances=recompute_distances,
-        recompute_graph=recompute_graph,
-        n_jobs=n_jobs)
-    adjacency = adata.uns['data_graph_norm_weights']
+    if key not in adata.uns:
+        raise ValueError(
+            '\'{key}\' is not present in `adata.uns`. '
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+            .format(key))
+    adjacency = adata.uns['neighbors_similarities']
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)

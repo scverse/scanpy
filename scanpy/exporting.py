@@ -24,7 +24,7 @@ def spring_project(
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix: `adata.uns['data_graph_distance_local']` needs to
+        Annotated data matrix: `adata.uns['neighbors_distances']` needs to
         be present.
     project_dir : `str`
         Path to SPRING directory.
@@ -71,13 +71,13 @@ def spring_project(
     os.system('mkdir ' + project_dir)
     if not project_dir[-1] == '/': project_dir += '/'
 
-    if 'data_graph_distance_local' not in adata.uns:
+    if 'neighbors_distances' not in adata.uns:
         raise ValueError(
             'Run any tool that produces a data graph first, '
             'e.g. sc.tl.diffmap or sc.tl.louvain')
     # Note that output here will always be sparse
-    D = adata.uns['data_graph_distance_local']
-    k = adata.uns['data_graph_distance_local'][0].nonzero()[0].size
+    D = adata.uns['neighbors_distances']
+    k = adata.uns['neighbors_distances'][0].nonzero()[0].size
     edges = get_knn_edges_sparse(D, k)
 
     # write custom color tracks

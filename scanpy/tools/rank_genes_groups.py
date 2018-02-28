@@ -1,5 +1,3 @@
-# Author: Alex Wolf (http://falexwolf.de)
-#         T. Callies
 """Rank genes according to differential expression.
 """
 
@@ -36,7 +34,7 @@ def rank_genes_groups(
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     group_by : `str`
-        The key of the sample grouping to consider.
+        The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     groups : `str`, `list`, optional (default: `'all'`)
@@ -115,7 +113,7 @@ def rank_genes_groups(
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
     logg.info('    consider \'{}\':'.format(group_by), groups_order,
-              'with sample numbers', ns)
+              'with observations numbers', ns)
     if reference != 'rest':
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)

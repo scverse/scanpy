@@ -1,31 +1,20 @@
-"""Cluster cells using Louvain community detection algorithm.
-
-Uses the pip package "louvain" by V. Traag.
-"""
-
 import numpy as np
 import pandas as pd
 from natsort import natsorted
 from .. import utils
 from .. import settings
 from .. import logging as logg
-from ..data_structs.data_graph import add_or_update_graph_in_adata
 
 
 def louvain(
         adata,
-        n_neighbors=None,
         resolution=None,
-        n_pcs=50,
         random_state=0,
         restrict_to=None,
         key_added=None,
-        flavor='vtraag',
+        key='neighbors_similarities',
+        flavor='vtraag',        
         directed=True,
-        recompute_pca=False,
-        recompute_distances=False,
-        recompute_graph=False,
-        n_dcs=None,
         n_jobs=None,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
@@ -44,15 +33,18 @@ def louvain(
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
         1.0.
-    n_pcs : int, optional (default: 50)
+    n_pcs : `int`, optional (default: 50)
         Number of PCs to use for computation of data point graph.
-    random_state : int, optional (default: 0)
+    random_state : `int`, optional (default: 0)
         Change the initialization of the optimization.
-    key_added : str, optional (default: `None`)
-        Key under which to add the cluster labels.
-    restrict_to : tuple, optional (default: None)
+    restrict_to : `tuple`, optional (default: None)
         Restrict the clustering to the categories within the key for sample
         annotation, tuple needs to contain (obs key, list of categories).
+    key_added : `str`, optional (default: `None`)
+        Key under which to add the cluster labels.
+    key : `str`, optional (default: 'neighbors_similarities')
+        Key for accessing the sparse adjacency matrix of the graph in
+        `adata.uns`.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
@@ -69,16 +61,12 @@ def louvain(
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
-    add_or_update_graph_in_adata(
-        adata,
-        n_neighbors=n_neighbors,
-        n_pcs=n_pcs,
-        n_dcs=n_dcs,
-        recompute_pca=recompute_pca,
-        recompute_distances=recompute_distances,
-        recompute_graph=recompute_graph,
-        n_jobs=n_jobs)
-    adjacency = adata.uns['data_graph_norm_weights']
+    if key not in adata.uns:
+        raise ValueError(
+            '\'{key}\' is not present in `adata.uns`. '
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+            .format(key))
+    adjacency = adata.uns[key]
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         if not isinstance(restrict_categories[0], str):

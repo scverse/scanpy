@@ -1,85 +1,77 @@
-# Author: Alex Wolf (http://falexwolf.de)
-"""Data Graph
-
-Represent a data matrix as a weighted graph of nearest neighbor relations
-(edges) among data points (nodes).
-"""
-
 import numpy as np
 import scipy as sp
 import scipy.spatial
-import scipy.sparse
 from scipy.sparse import issparse
 from joblib import Parallel, delayed
-from .. import settings as sett
+from .. import settings
 from .. import logging as logg
 from .. import utils
-
+from ..tools._utils import preprocess_with_pca
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
-def add_or_update_graph_in_adata(
+
+def neighbors(
         adata,
-        n_neighbors=None,
         n_pcs=None,
-        n_dcs=None,
-        knn=None,
-        recompute_pca=False,
-        recompute_distances=False,
-        recompute_graph=False,
-        n_jobs=None):
-    graph = DataGraph(adata,
-                      k=n_neighbors,
-                      n_pcs=n_pcs,
-                      n_dcs=n_dcs,
-                      recompute_pca=recompute_pca,
-                      recompute_distances=recompute_distances,
-                      recompute_graph=recompute_graph,
-                      n_jobs=n_jobs)
-    if graph.fresh_compute:
-        graph.update_diffmap()
-        adata.uns['data_graph_distance_local'] = graph.Dsq
-        adata.uns['data_graph_norm_weights'] = graph.Ktilde
-        adata.obsm['X_diffmap'] = graph.rbasis[:, 1:]
-        adata.obs['X_diffmap0'] = graph.rbasis[:, 0]
-        adata.uns['diffmap_evals'] = graph.evals[1:]
-    return graph
+        n_neighbors=30,
+        knn=True,
+        weights={'similarities'},
+        n_jobs=None,
+        copy=False):
+    """Compute a neighborhood graph of observations.
 
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    n_pcs : `int` or `None`, optional (default: `None`)
+        Number of principal components in preprocessing PCA. Set to 0 if you do
+        not want preprocessing with PCA. Set to `None`, if you want use any
+        `X_pca` present in `adata.obsm`.
+    n_neighbors : `int`, optional (default: 30)
+        Number of nearest neighbors in the knn graph. If `knn` is `False`, set
+        the Gaussian kernel width to the distance of the `n_neighbors` neighbor.
+    knn : `bool`, optional (default: `True`)
+        If `True`, use a hard threshold to restrict the number of neighbors to
+        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
+        Kernel to assign low weights to neighbors more distant than the
+        `n_neighbors` nearest neighbor.
+    weights : subset of {`'similarities'`, `'distances'`} (default: `'similarities'`)
+        Compute the neighborhood graph with different weights.
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
+        Number of jobs.
+    copy : `bool` (default: `False`)
+        Return a copy instead of writing to adata.
 
-def no_recompute_of_graph_necessary(
-        adata,
-        recompute_pca=False,
-        recompute_distances=False,
-        recompute_graph=False,
-        n_neighbors=None,
-        knn=None,
-        n_dcs=None):
-    conditions_base = [
-        not recompute_pca,
-        not recompute_distances,
-        not recompute_graph,
-        # make sure X_diffmap is there
-        'X_diffmap' in adata.obsm_keys(),
-        # make sure data_graph is there
-        'data_graph_norm_weights' in adata.uns
-        ]
-    if not all(conditions_base):
-        return False
-    else:
-        conditions = [
-            # make sure enough DCs are there
-            (adata.obsm['X_diffmap'].shape[1] >= n_dcs-1
-                 if n_dcs is not None else True),
-            # make sure that it's sparse
-            (issparse(adata.uns['data_graph_norm_weights']) == knn
-                 if knn is not None else True),
-            # make sure n_neighbors matches
-            (n_neighbors == adata.uns[
-                'data_graph_distance_local'][0].nonzero()[0].size + 1
-                if n_neighbors is not None else True)]
-        return all(conditions)
-
+    Returns
+    -------
+    Depending on `weights`, updates `adata` with the following:
+    neighbors_similarities : sparse matrix (`adata.uns`, dtype `float32`)
+        Weighted adjacency matrix of the neighborhood graph of data
+        points. Weights should be interpreted as similarities.
+    neighbors_distances : sparse matrix (`adata.uns`, dtype `float32`)
+        Instead of decaying weights, this stores distances for each pair of
+        neighbors.
+    """
+    logg.info('computing neighbors', r=True)
+    adata = adata.copy() if copy else adata
+    neighbors = Neighbors(adata, n_pcs=n_pcs)
+    neighbors.compute_distances(n_neighbors=n_neighbors)
+    if 'distances' in weights:
+        adata.uns['neighbors_distances'] = neighbors.distances
+    if 'similarities' in weights:
+        neighbors.compute_similarities()
+        adata.uns['neighbors_similarities'] = neighbors.similarities
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    hint = 'added\n'
+    if 'distances' in weights:
+        hint += '    \'neighbors_distances\', weighted adjacency matrix (adata.uns)'
+    if 'similarities' in weights:
+        hint += '    \'neighbors_similarities\', weighted adjacency matrix (adata.uns)'
+    logg.hint(hint)
+    return adata if copy else None
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
@@ -96,14 +88,11 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
     """Compute distance matrix in squared Euclidian norm.
     """
     if not sparse:
-        if False: Dsq = utils.comp_distance(X, metric='sqeuclidean')
-        else: Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
-        sample_range = np.arange(Dsq.shape[0])[:, None]
-        indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
-        indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
-        indices = indices[:, 1:]  # exclude first data point (point itself)
-        distances = Dsq[sample_range, indices]
-    elif X.shape[0] > 1e5:
+        Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
+        indices, distances = get_indices_distances_of_k_nearest_from_dense_matrix(Dsq, k)
+        return Dsq, indices, distances
+    # treat sparse case
+    if X.shape[0] > 1e5:
         # sklearn is slower, but for large sample numbers more stable
         from sklearn.neighbors import NearestNeighbors
         sklearn_neighbors = NearestNeighbors(n_neighbors=k-1, n_jobs=n_jobs)
@@ -125,8 +114,6 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
             # multiprocessing
             result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
                 delayed(get_neighbors)(X[chunk], X, k) for chunk in chunks)
-        else:
-            logg.info('--> can be sped up by setting `n_jobs` > 1')
         for i_chunk, chunk in enumerate(chunks):
             if n_jobs > 1:
                 indices_chunk, distances_chunk = result_lst[i_chunk]
@@ -134,8 +121,7 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
                 indices_chunk, distances_chunk = get_neighbors(X[chunk], X, k)
             indices[chunk] = indices_chunk
             distances[chunk] = distances_chunk
-    if sparse:
-        Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], k)
+    Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], k)
     return Dsq, indices, distances
 
 
@@ -162,6 +148,30 @@ def get_indices_distances_from_sparse_matrix(Dsq, k):
         distances[i][0] = 0
         distances[i][1:] = Dsq[neighbors]
     return indices, distances
+
+
+def get_indices_distances_of_k_nearest_from_dense_matrix(Dsq, k):
+    sample_range = np.arange(Dsq.shape[0])[:, None]
+    indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
+    indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
+    indices = indices[:, 1:]  # exclude first data point (point itself)
+    distances = Dsq[sample_range, indices]
+    return indices, distances
+
+
+def _backwards_compat_get_full_X_diffmap(adata):
+    if 'X_diffmap0' in adata.obs:
+        return np.c_[adata.obs['X_diffmap0'].values[:, None],
+                     adata.obsm['X_diffmap'][:, :n_dcs-1]]
+    else:
+        return adata.obsm['X_diffmap']
+
+
+def _backwards_compat_get_full_eval(adata):
+    if 'X_diffmap0' in adata.obs:
+        return np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
+    else:
+        return adata.uns['diffmap_evals']
 
 
 class OnFlySymMatrix():
@@ -208,184 +218,104 @@ class OnFlySymMatrix():
                               rows=self.rows, restrict_array=index_array)
 
 
-class DataGraph():
+class Neighbors():
     """Data represented as graph of nearest neighbors.
 
-    Represent a data matrix as a weighted graph of nearest neighbor relations
-    (edges) among data points (nodes).
+    Represent a data matrix as a graph of nearest neighbor relations (edges)
+    among data points (nodes).
 
-    This is much more efficient than, for example, the scikit-learn implementation.
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        An annotated data matrix.
+    n_pcs : `int` or `None`, optional (default: `None`)
+        Number of principal components in preprocessing PCA. Set to 0 if you do
+        not want preprocessing with PCA. Set to `None`, if you want use any
+        `X_pca` present in `adata.obsm`.
+    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
+        Number of jobs.
+
+    Methods
+    -------
+    compute_distances
+    compute_similarities
+    compute_eigen
     """
 
-    def __init__(self,
-                 adata,
-                 k=None,
-                 knn=True,
-                 n_jobs=None,
-                 n_pcs=None,
-                 n_dcs=None,
-                 recompute_pca=False,
-                 recompute_distances=False,
-                 recompute_graph=False,
-                 flavor='haghverdi16'):
+    def __init__(
+            self,
+            adata,
+            n_pcs=None,
+            n_jobs=None):
         self.sym = True  # we do not allow asymetric cases
-        self.flavor = flavor  # this is to experiment around
         self.n_pcs = n_pcs if n_pcs is not None else N_PCS
-        self.init_iroot_and_X(adata, recompute_pca, n_pcs)
+        self.init_iroot_and_X(adata, n_pcs=n_pcs)
+        self.flavor = 'haghverdi16'
         # use the graph in adata
-        if no_recompute_of_graph_necessary(
-                adata,
-                recompute_pca=recompute_pca,
-                recompute_distances=recompute_distances,
-                recompute_graph=recompute_graph,
-                n_neighbors=k,
-                knn=knn,
-                n_dcs=n_dcs):
-            self.fresh_compute = False
-            self.knn = issparse(adata.uns['data_graph_norm_weights'])
-            self.Ktilde = adata.uns['data_graph_norm_weights']
-            self.Dsq = adata.uns['data_graph_distance_local']
+        if 'neighbors_distances' in adata.uns:
+            self.knn = issparse(adata.uns['neighbors_distances'])
+            self.distances = adata.uns['neighbors_distances']
             if self.knn:
-                self.k = adata.uns['data_graph_distance_local'][0].nonzero()[0].size + 1
+                self.n_neighbors = adata.uns[
+                    'neighbors_distances'][0].nonzero()[0].size + 1
             else:
-                self.k = None  # currently do not store this, is unknown
-            # for output of spectrum
-            if n_dcs is None: n_dcs = adata.obsm['X_diffmap'].shape[1] + 1
-            self.X_diffmap = adata.obsm['X_diffmap'][:, :n_dcs-1]
-            self.evals = np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
-            self.n_dcs = len(self.evals)
-            self.rbasis = np.c_[adata.obs['X_diffmap0'].values[:, None],
-                                adata.obsm['X_diffmap'][:, :n_dcs-1]]
-            self.lbasis = self.rbasis
-            self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                          shape=(self.X.shape[0], self.X.shape[0]))
-            np.set_printoptions(precision=10)
-            logg.info('    using stored data graph with n_neighbors = {} and '
-                      'spectrum\n    {}'
-                      .format(self.k,
-                              str(self.evals).replace('\n', '\n    ')))
-        # recompute the graph
+                self.n_neighbors = None  # is unknown
         else:
-            self.fresh_compute = True
-            self.n_dcs = n_dcs if n_dcs is not None else N_DCS
-            self.k = k if k is not None else 30
-            if self.k > adata.n_obs:
-                self.k = 1 + int(0.5*adata.n_obs)
-            logg.info('    computing data graph with n_neighbors = {} '
-                      .format(self.k))
+            self.knn = None
+            self.distances = None
+            self.knn = None
+        if 'neighbors_similarities' in adata.uns:
+            self.similarities = adata.uns['neighbors_similarities']
+        else:
+            self.similarities = None
+        if 'X_diffmap' in adata.obsm_keys():
+            self.evals = _backwards_compat_get_full_eval(adata)
+            self.rbasis = _backwards_compat_get_full_X_diffmap(adata)
+            self.lbasis = self.rbasis
+            self.n_dcs = len(self.evals)
+            self.Dchosen = OnFlySymMatrix(
+                self.get_Ddiff_row, shape=(self.X.shape[0], self.X.shape[0]))
+            np.set_printoptions(precision=10)
+            logg.info('    using stored neighbors (n_neighbors = {}) and '
+                      'spectrum\n    {}'
+                      .format(self.n_neighbors_,
+                              str(self.evals_).replace('\n', '\n    ')))
+        else:
             self.evals = None
             self.rbasis = None
             self.lbasis = None
-            self.X_diffmap = None
-            self.Dsq = None
-            self.knn = knn
-            self.n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+            self.n_dcs = None
             self.Dchosen = None
-            if False:  # TODO
-                # in case we already computed distance relations
-                if not recompute_distances and 'data_graph_distance_local' in adata.uns:
-                    n_neighbors = adata.uns['data_graph_distance_local'][0].nonzero()[0].size + 1
-                    if (knn and issparse(adata.uns['data_graph_distance_local'])
-                        and n_neighbors == self.k):
-                        logg.info('    using stored distances with `n_neighbors={}`'
-                                  .format(self.k))
-                        self.Dsq = adata.uns['data_graph_distance_local']
 
-    def init_iroot_directly(self, adata):
-        self.iroot = None
-        if 'iroot' in adata.uns:
-            if adata.uns['iroot'] >= adata.n_obs:
-                logg.warn('Root cell index {} does not exist for {} samples. '
-                          'Is ignored.'
-                          .format(adata.uns['iroot'], adata.n_obs))
-            else:
-                self.iroot = adata.uns['iroot']
+    def compute_distances(self, n_neighbors=30, knn=True):
+        """Compute distances.
 
-    def init_iroot_and_X(self, adata, recompute_pca, n_pcs):
-        self.X = adata.X  # might be overwritten with X_pca in the next line
-        # retrieve xroot
-        xroot = None
-        if 'xroot' in adata.uns: xroot = adata.uns['xroot']
-        elif 'xroot' in adata.var: xroot = adata.var['xroot']
-        # set iroot directly
-        self.init_iroot_directly(adata)
-        # see whether we can set self.iroot using the full data matrix
-        if xroot is not None and xroot.size == self.X.shape[1]:
-            self.set_root(xroot)
-        # use the full data matrix X, nothing to be done
-        if self.n_pcs == 0 or self.X.shape[1] <= self.n_pcs:
-            logg.info('    using data matrix X directly for building graph (no PCA)')
-        # use X_pca
-        else:
-            # use a precomputed X_pca
-            if (not recompute_pca
-                and 'X_pca' in adata.obsm_keys()
-                and adata.obsm['X_pca'].shape[1] >= self.n_pcs):
-                logg.info('    using \'X_pca\' with n_pcs = {} for building graph'
-                          .format(self.n_pcs))
-            # compute X_pca
-            else:
-                logg.info('    compute \'X_pca\' with n_pcs = {} for building graph'
-                          .format(self.n_pcs))
-                from ..preprocessing import pca
-                pca(adata, n_comps=self.n_pcs)
-            # set the data matrix
-            self.X = adata.obsm['X_pca'][:, :n_pcs]
-            # see whether we can find xroot using X_pca
-            if xroot is not None and xroot.size == adata.obs['X_pca'].shape[1]:
-                self.set_root(xroot[:n_pcs])
+        Parameters
+        ----------
+        n_neighbors : `int`, optional (default: 30)
+             Use this number of nearest neighbors.
+        knn : `bool`, optional (default: `True`)
+             Restrict result to `n_neighbors` nearest neighbors.
 
-    def update_diffmap(self, n_comps=None):
-        """Diffusion Map as of Coifman et al. (2005) and Haghverdi et al. (2016).
+        Returns
+        -------
+        Writes attribute `.distances`.
         """
-        if n_comps is not None:
-            self.n_dcs = n_comps
-            logg.info('    updating number of DCs to', self.n_dcs)
-        if self.evals is None or self.evals.size < self.n_dcs:
-            logg.info('    computing spectral decomposition ("diffmap") with',
-                      self.n_dcs, 'components', r=True)
-            self.compute_transition_matrix()
-            self.embed(n_evals=self.n_dcs)
-            return True
-        return False
+        # very small datasets
+        if n_neighbors > self.X.shape[0]:
+            n_neighbors = 1 + int(0.5*self.X.shape[0])
+        self.n_neighbors = n_neighbors
+        self.knn = knn
+        self.distances, _, _ = get_distance_matrix_and_neighbors(
+            self.X, n_neighbors, sparse=self.knn)
 
-    def compute_Ddiff_all(self, n_evals=10):
-        raise RuntimeError('deprecated function')
-        self.embed(n_evals=n_evals)
-        self.compute_M_matrix()
-        self.compute_Ddiff_matrix()
+    def compute_similarities(self, alpha=1):
+        """Compute similarities.
 
-    def compute_C_all(self, n_evals=10):
-        self.compute_L_matrix()
-        self.embed(self.L, n_evals=n_evals, sort='increase')
-        evalsL = self.evals
-        self.compute_Lp_matrix()
-        self.compute_C_matrix()
-
-    def spec_layout(self):
-        self.compute_transition_matrix()
-        self.compute_L_matrix()
-        self.embed(self.L, sort='increase')
-        # write results to dictionary
-        ddmap = {}
-        # skip the first eigenvalue/eigenvector
-        ddmap['Y'] = self.rbasis[:, 1:]
-        ddmap['evals'] = self.evals[1:]
-        return ddmap
-
-    def compute_distance_matrix(self):
-        logg.m('computing distance matrix with n_neighbors = {}'
-               .format(self.k), v=4)
-        Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
-            X=self.X,
-            k=self.k,
-            sparse=self.knn,
-            n_jobs=self.n_jobs)
-        self.Dsq = Dsq
-        return Dsq, indices, distances_sq
-
-    def compute_transition_matrix(self, alpha=1, recompute_distance=False):
-        """Compute transition matrix.
+        As similarities are numbers between 0 and 1, this might be interpreted
+        as "transition matrix". Note, however, that if `.sym` is `True`, these
+        probabilities do not sum to one, and hence, this interpretation should
+        be used with care.
 
         Parameters
         ----------
@@ -393,18 +323,21 @@ class DataGraph():
             The density rescaling parameter of Coifman and Lafon (2006). Should
             in all practical applications equal 1: Then only the geometry of the
             data matters, not the sampled density.
-        neglect_selfloops : bool
-            Discard selfloops.
 
-        References
-        ----------
-        Haghverdi et al. (2016), Coifman and Lafon (2006), Coifman et al. (2005).
+        Returns
+        -------
+        Writes attribute `.similarities`.
         """
-        if self.Dsq is None or recompute_distance:
-            Dsq, indices, distances_sq = self.compute_distance_matrix()
+        if self.distances is None:
+            raise ValueError('You need to run `.compute_distances` first.')
+        # init distances
+        Dsq = self.distances
+        if self.knn:
+            indices, distances_sq = get_indices_distances_from_sparse_matrix(
+                Dsq, self.n_neighbors)
         else:
-            Dsq = self.Dsq
-            indices, distances_sq = get_indices_distances_from_sparse_matrix(Dsq, self.k)
+            indices, distances_sq = get_indices_distances_of_k_nearest_from_dense_matrix(
+                Dsq, self.n_neighbors)
         # choose sigma, the heuristic here often makes not much
         # of a difference, but is used to reproduce the figures
         # of Haghverdi et al. (2016)
@@ -419,16 +352,16 @@ class DataGraph():
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
         logg.m('determined n_neighbors =',
-               self.k, 'nearest neighbors of each point', t=True, v=4)
+               self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
 
         if self.flavor == 'unweighted':
             if not self.knn:
                 raise ValueError('`flavor="unweighted"` only with `knn=True`.')
-            self.Ktilde = self.Dsq.sign()
+            self.similarities = self.distances.sign()
             return
 
         # compute the symmetric weight matrix
-        if not sp.sparse.issparse(self.Dsq):
+        if not sp.sparse.issparse(self.distances):
             Num = 2 * np.multiply.outer(sigmas, sigmas)
             Den = np.add.outer(sigmas_sq, sigmas_sq)
             W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
@@ -508,43 +441,38 @@ class DataGraph():
             # now compute the density-normalized Kernel
             # it's still symmetric
             szszT = np.outer(self.sqrtz, self.sqrtz)
-            self.Ktilde = self.K / szszT
+            self.similarities = self.K / szszT  # Ktilde
         else:
             self.z = np.array(self.K.sum(axis=0)).flatten()
             # now we need the square root of the density
             self.sqrtz = np.array(np.sqrt(self.z))
             # now compute the density-normalized Kernel
             # it's still symmetric
-            self.Ktilde = self.K
+            self.similarities = self.K
             for i in range(len(self.K.indptr[:-1])):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
-                self.Ktilde.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
+                self.similarities.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
         logg.m('computed Ktilde (normalized anistropic kernel)', v=4)
 
-    def compute_L_matrix(self):
-        """Graph Laplacian for K.
-        """
-        self.L = np.diag(self.z) - self.K
-        logg.info('compute graph Laplacian')
-
-    def embed(self, matrix=None, n_evals=15, sym=None, sort='decrease'):
-        """Compute eigen decomposition of matrix.
+    def compute_eigen(self, n_evals=15, sym=None, sort='decrease', matrix=None):
+        """Compute eigen decomposition of similarity matrix.
 
         Parameters
         ----------
-        matrix : np.ndarray
-            Matrix to diagonalize.
-        n_evals : int
+        n_evals : `int`
             Number of eigenvalues/vectors to be computed, set n_evals = 0 if
             you need all eigenvectors.
-        sym : bool
+        sym : `bool`
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
+        matrix : sparse matrix, np.ndarray, optional (default: `.similarities`)
+            Matrix to diagonalize. Merely for testing and comparison purposes.
 
-        Writes attributes
-        -----------------
+        Returns
+        -------
+        Writes the following attributes.
         evals : np.ndarray
             Eigenvalues of transition matrix
         lbasis : np.ndarray
@@ -559,7 +487,9 @@ class DataGraph():
         np.set_printoptions(precision=10)
         if sym is None: sym = self.sym
         self.rbasisBool = True
-        if matrix is None: matrix = self.Ktilde
+        if matrix is None: matrix = self.similarities
+        if matrix is None:
+            raise ValueError('Run `.fit_similarities` first.')
         # compute the spectrum
         if n_evals == 0:
             evals, evecs = sp.linalg.eigh(matrix)
@@ -604,7 +534,88 @@ class DataGraph():
                 self.lbasis /= np.linalg.norm(self.lbasis, axis=0, ord=2)
         # init on-the-fly computed distance "matrix"
         self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                      shape=self.Dsq.shape)
+                                      shape=self.distances.shape)
+
+    def init_iroot_directly(self, adata):
+        self.iroot = None
+        if 'iroot' in adata.uns:
+            if adata.uns['iroot'] >= adata.n_obs:
+                logg.warn('Root cell index {} does not exist for {} samples. '
+                          'Is ignored.'
+                          .format(adata.uns['iroot'], adata.n_obs))
+            else:
+                self.iroot = adata.uns['iroot']
+
+    def init_iroot_and_X(self, adata, n_pcs):
+        self.X = adata.X  # might be overwritten with X_pca in the next line
+        # retrieve xroot
+        xroot = None
+        if 'xroot' in adata.uns: xroot = adata.uns['xroot']
+        elif 'xroot' in adata.var: xroot = adata.var['xroot']
+        # set iroot directly
+        self.init_iroot_directly(adata)
+        # see whether we can set self.iroot using the full data matrix
+        if xroot is not None and xroot.size == self.X.shape[1]:
+            self.set_root(xroot)
+        self.X = preprocess_with_pca(adata, n_pcs=n_pcs)
+        # see whether we can find xroot using X_pca
+        if xroot is not None and xroot.size == adata.obs['X_pca'].shape[1]:
+            self.set_root(xroot[:n_pcs])
+
+    def compute_L_matrix(self):
+        """Graph Laplacian for K.
+        """
+        self.L = np.diag(self.z) - self.K
+        logg.info('compute graph Laplacian')
+
+    def update_diffmap(self, n_comps=None):
+        """Diffusion Map as of Coifman et al. (2005) and Haghverdi et al. (2016).
+        """
+        if n_comps is not None:
+            self.n_dcs = n_comps
+            logg.info('    updating number of DCs to', self.n_dcs)
+        if self.evals is None or self.evals.size < self.n_dcs:
+            logg.info('    computing spectral decomposition ("diffmap") with',
+                      self.n_dcs, 'components', r=True)
+            self.compute_transition_matrix()
+            self.embed(n_evals=self.n_dcs)
+            return True
+        return False
+
+    def compute_Ddiff_all(self, n_evals=10):
+        raise RuntimeError('deprecated function')
+        self.embed(n_evals=n_evals)
+        self.compute_M_matrix()
+        self.compute_Ddiff_matrix()
+
+    def compute_C_all(self, n_evals=10):
+        self.compute_L_matrix()
+        self.embed(self.L, n_evals=n_evals, sort='increase')
+        evalsL = self.evals
+        self.compute_Lp_matrix()
+        self.compute_C_matrix()
+
+    def spec_layout(self):
+        self.compute_transition_matrix()
+        self.compute_L_matrix()
+        self.embed(self.L, sort='increase')
+        # write results to dictionary
+        ddmap = {}
+        # skip the first eigenvalue/eigenvector
+        ddmap['Y'] = self.rbasis[:, 1:]
+        ddmap['evals'] = self.evals[1:]
+        return ddmap
+
+    def compute_distance_matrix(self):
+        logg.m('computing distance matrix with n_neighbors = {}'
+               .format(self.n_neighbors), v=4)
+        Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
+            X=self.X,
+            k=self.n_neighbors,
+            sparse=self.knn,
+            n_jobs=self.n_jobs)
+        self.distances = Dsq
+        return Dsq, indices, distances_sq
 
     def _get_M_row_chunk(self, i_range):
         from ..cython import utils_cy
@@ -624,7 +635,7 @@ class DataGraph():
         """
         if self.n_jobs >= 4:  # if we have enough cores, skip this step
             return            # TODO: make sure that this is really the best strategy
-        logg.m('    try computing "M" matrix using up to 90% of `sett.max_memory`')
+        logg.m('    try computing "M" matrix using up to 90% of `settings.max_memory`')
         if True:  # Python version
             self.M = sum([self.evals[l]/(1-self.evals[l])
                           * np.outer(self.rbasis[:, l], self.lbasis[:, l])
@@ -633,10 +644,10 @@ class DataGraph():
         else:  # Cython version
             used_memory, _ = logg.get_memory_usage()
             memory_for_M = self.X.shape[0]**2 * 23 / 8 / 1e9  # in GB
-            logg.m('    max memory =', sett.max_memory,
+            logg.m('    max memory =', settings.max_memory,
                    ' / used memory = {:.1f}'.format(used_memory),
                    ' / memory_for_M = {:.1f}'.format(memory_for_M))
-            if used_memory + memory_for_M < 0.9 * sett.max_memory:
+            if used_memory + memory_for_M < 0.9 * settings.max_memory:
                 logg.m(0, '    allocate memory and compute M matrix')
                 len_chunk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
                 n_chunks = np.ceil(self.X.shape[0] / len_chunk).astype(int)
@@ -658,10 +669,10 @@ class DataGraph():
                         M_chunk = self._get_M_row_chunk(chunk)
                     self.M[chunk] = M_chunk
                 # the following did not work
-                # filename = sett.writedir + 'tmp.npy'
+                # filename = settings.writedir + 'tmp.npy'
                 # np.save(filename, self.M)
                 # self.M = filename
-                sett.mt(0, 'finished computation of M')
+                logg.m(0, 'finished computation of M')
             else:
                 logg.m('not enough memory to compute M, using "on-the-fly" computation')
 
@@ -744,7 +755,7 @@ class DataGraph():
         self.Lp = sum([1/self.evals[i]
                       * np.outer(self.rbasis[:, i], self.lbasis[:, i])
                       for i in range(1, self.evals.size)])
-        sett.mt(0, 'computed pseudoinverse of Laplacian')
+        settings.mt(0, 'computed pseudoinverse of Laplacian')
 
     def compute_C_matrix(self):
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
@@ -764,7 +775,7 @@ class DataGraph():
         #         self.C[i, j] = self.Lp[i, i] + self.Lp[j, j] - 2*self.Lp[i, j]
         volG = np.sum(self.z)
         self.C *= volG
-        sett.mt(0, 'computed commute distance matrix')
+        settings.mt(0, 'computed commute distance matrix')
         self.Dchosen = self.C
 
     def compute_MFP_matrix(self):
@@ -783,7 +794,7 @@ class DataGraph():
                 for j in range(self.Lp.shape[1]):
                     self.MFP[i, k] += (self.Lp[i, j] - self.Lp[i, k]
                                        - self.Lp[k, j] + self.Lp[k, k]) * self.z[j]
-        sett.mt(0, 'computed mean first passage time matrix')
+        settings.mt(0, 'computed mean first passage time matrix')
         self.Dchosen = self.MFP
 
     def set_pseudotime(self):
@@ -830,11 +841,11 @@ class DataGraph():
         """
         # pl.semilogy(w,'x',label=r'$ \widetilde K$')
         # pl.show()
-        if sett.verbosity > 2:
+        if settings.verbosity > 2:
             # output of spectrum of K for comparison
             w, v = np.linalg.eigh(self.K)
-            sett.mi('spectrum of K (kernel)')
-        if sett.verbosity > 3:
+            settings.mi('spectrum of K (kernel)')
+        if settings.verbosity > 3:
             # direct computation of spectrum of T
             w, vl, vr = sp.linalg.eig(self.T, left=True)
-            sett.mi('spectrum of transition matrix (should be same as of Ktilde)')
+            settings.mi('spectrum of transition matrix (should be same as of Ktilde)')

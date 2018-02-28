@@ -4,3 +4,4 @@
 # importing all ("*") is ok, as scanpy.preprocessing.__init__ is carefully maintained
 # to only contain the functions of the api
 from ..preprocessing import *
+from ..neighbors import neighbors

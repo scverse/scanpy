@@ -11,6 +11,7 @@ import seaborn as sns
 
 from .. import settings
 from . import utils
+from .rcmod import set_rcParams_Scanpy
 from .utils import scatter_base, scatter_group
 from ..utils import sanitize_anndata
 
@@ -24,7 +25,7 @@ def scatter(
         adata,
         x=None,
         y=None,
-        color='grey',
+        color=None,
         use_raw=True,
         sort_order=True,
         alpha=None,
@@ -66,7 +67,7 @@ def scatter(
         with higher values on top of others.
     basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
-    groups : str, optional (default: all groups in color)
+    groups : `str`, optional (default: all groups in color)
         Allows to restrict categories in observation annotation to a subset.
     components : `str` or list of `str`, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
@@ -109,13 +110,17 @@ def scatter(
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
-    title = None if title is None else title.split(',') if isinstance(title, str) else title
-    keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
-    groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
+    keys = ['grey'] if color is None else [color] if isinstance(color, str) else color
+    if title is not None and isinstance(title, str):
+        title = [title]
     highlights = adata.uns['highlights'] if 'highlights' in adata.uns else []
     if basis is not None:
         try:
+            # ignore the '0th' diffusion component
+            if basis == 'diffmap': components += 1
             Y = adata.obsm['X_' + basis][:, components]
+            # correct the component vector for use in labeling etc.
+            if basis == 'diffmap': components -= 1
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
@@ -124,7 +129,7 @@ def scatter(
         y_arr = adata._get_obs_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
-        raise ValueError('Either provide keys for a `basis` or for `x` and `y`.')
+        raise ValueError('Either provide a `basis` or `x` and `y`.')
 
     if size is None:
         n = Y.shape[0]
@@ -148,13 +153,13 @@ def scatter(
         palettes[i] = utils.default_palette(palette)
 
     if basis is not None:
-        component_name = ('DC' if basis == 'diffmap'
-                          else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-                          else 'tSNE' if basis == 'tsne'
-                          else 'UMAP' if basis == 'umap'
-                          else 'PC' if basis == 'pca'
-                          else 'Spring' if basis == 'spring'
-                          else None)
+        component_name = (
+            'DC' if basis == 'diffmap'
+            else 'tSNE' if basis == 'tsne'
+            else 'UMAP' if basis == 'umap'
+            else 'PC' if basis == 'pca'
+            else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+            else None)
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
@@ -192,10 +197,10 @@ def scatter(
                 c = adata[:, key].X
                 continuous = True
             else:
-                raise ValueError('"' + key + '" is invalid!'
-                                 + ' specify valid observation annotation, one of '
-                                 + str(adata.obs_keys()) + ' or a gene name '
-                                 + str(adata.var_names))
+                raise ValueError(
+                    'key \'{}\' is invalid! pass valid observation annotation, '
+                    'one of {} or a gene name {}'
+                    .format(key, adata.obs_keys(), adata.var_names))
             colorbars.append(True if continuous else False)
         if categorical: categoricals.append(ikey)
         color_ids[ikey] = c
@@ -436,6 +441,9 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
         if log: ax.set_yscale('log')
+    # TODO: I don't know why but we have to update the plotting parameters here
+    # Seaborn influences them even though it had already been imported...
+    set_rcParams_Scanpy()
     utils.savefig_or_show('violin', show=show, save=save)
     if show == False: return ax
 

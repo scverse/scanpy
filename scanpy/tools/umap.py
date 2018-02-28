@@ -32,7 +32,7 @@ def umap(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_pcs : `int`, optional (default: `None`)
+    n_pcs : `int` or `None`, optional (default: `None`)
         Number of principal components in preprocessing PCA. Set to 0 if you do
         not want preprocessing with PCA. Set to `None`, if you want use any
         `X_pca` present in `adata.obsm`.
