@@ -346,7 +346,7 @@ def ranking(adata, attr, keys, indices=None,
 
 def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=False, show=None,
-           save=None, ax=None):
+           save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
@@ -383,6 +383,8 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
          A `matplotlib.Axes` object.
+    **kwargs : keyword arguments
+        Are passed to `seaborn.violinplot`.
 
     Returns
     -------
@@ -421,7 +423,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     if multi_panel:
         sns.set_style('whitegrid')
         g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
-        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale)
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, **kwargs)
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
@@ -429,7 +431,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         ax = g
     else:
         ax = sns.violinplot(x=x, y=y, data=obs_tidy, inner=None, order=order,
-                            orient='vertical', scale=scale, ax=ax)
+                            orient='vertical', scale=scale, ax=ax, **kwargs)
         ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
