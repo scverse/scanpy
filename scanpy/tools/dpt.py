@@ -1,6 +1,3 @@
-"""Diffusion Pseudotime Analysis
-"""
-
 import numpy as np
 import pandas as pd
 import scipy as sp
@@ -8,14 +5,14 @@ import networkx as nx
 from natsort import natsorted
 from .. import settings
 from .. import logging as logg
-from ..neighbors import Neighbors
+from ..neighbors import Neighbors, OnFlySymMatrix
 
 
-def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
-        min_group_size=0.01, recompute_graph=False, recompute_pca=False,
-        allow_kendall_tau_shift=True, flavor='haghverdi16', n_jobs=None,
-        copy=False):
+def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
+        allow_kendall_tau_shift=True, n_jobs=None, copy=False):
     """Infer progression of cells and branching subgroups [Haghverdi16]_ [Wolf17]_.
+
+    This requires to run :func:`~scanpy.api.pp.neighbors`, first.
 
     Reconstruct the progression of a biological process from snapshot data and
     detect branching subgroups. `Diffusion Pseudotime analysis` has been
@@ -32,39 +29,18 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
         Annotated data matrix.
     n_branchings : `int`, optional (default: 1)
         Number of branchings to detect.
-    n_neighbors : `int`, optional (default: 30)
-        Number of nearest neighbors in the k-nearest-neighbor graph. If `knn` is
-        `False`, this sets the Gaussian kernel width to the distance of the
-        `n_neighbors` neighbor.
-    knn : `bool`, optional (default: `True`)
-        If `True`, use a hard threshold to restrict the number of neighbors to
-        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
-        Kernel to assign low weights to neighbors more distant than the
-        `n_neighbors` nearest neighbor.
-    n_pcs : `int`, optional (default: 50)
-        Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want any
-        preprocessing with PCA.
     n_dcs : `int`, optional (default: 10)
-        Use `n_dcs` diffusion components to compute the dpt distance.
+        Use `n_dcs` diffusion components to compute 'dpt' distance.
     min_group_size : [0, 1] or `float`, optional (default: 0.01)
         During recursive splitting of branches ('dpt groups') for `n_branchings`
         > 1, do not consider groups that contain less than `min_group_size` data
         points. If a float, `min_group_size` refers to a fraction of the total
         number of data points.
-    recompute_graph : `bool`, optional (default: `False`)
-        Recompute diffusion maps.
-    recompute_pca : `bool`, optional (default: `False`)
-        Recompute PCA.
     allow_kendall_tau_shift : `bool`, optional (default: `True`)
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    flavor : {'wolf17_bi', 'wolf17_tri', 'haghverdi16'}, optional (default: 'haghverdi16')
-        Parameter for development only. There is a lot of leeway in determining
-        how to split branches; this provides several alternatives to the Kendall
-        tau criterion of [Haghverdi16]_.
-    n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
+    n_jobs : `int` or `None` (default: `settings.n_jobs`)
         Number of cpus to use for parallel processing.
     copy : `bool`, optional (default: `False`)
         Copy instance before computation and return a copy. Otherwise, perform
@@ -106,12 +82,12 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
     if n_branchings == 0:
         logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     logg.info('performing Diffusion Pseudotime analysis', r=True)
-    dpt = DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, n_dcs=n_dcs,
-              min_group_size=min_group_size, n_jobs=n_jobs,
-              recompute_graph=recompute_graph, recompute_pca=recompute_pca,
+    dpt = DPT(adata, min_group_size=min_group_size, n_jobs=n_jobs,
               n_branchings=n_branchings,
-              allow_kendall_tau_shift=allow_kendall_tau_shift, flavor=flavor)
-    dpt.update_diffmap()
+              allow_kendall_tau_shift=allow_kendall_tau_shift)
+    # check whether we need to recompute
+    if dpt.evals is None or n_dcs is None or dpt.evals.size < n_dcs:
+        dpt.compute_eigen(n_comps=n_dcs)
     adata.obsm['X_diffmap'] = dpt.rbasis
     adata.uns['diffmap_evals'] = dpt.evals
     adata.uns['neighbors_distances'] = dpt.distances
@@ -119,16 +95,11 @@ def dpt(adata, n_branchings=0, n_neighbors=None, knn=True, n_pcs=50, n_dcs=10,
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
-        dpt.set_pseudotime()  # pseudotimes are distances from root point
+        dpt._set_pseudotime()  # pseudotimes are distances from root point
         adata.uns['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
         adata.obs['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    # vector of length n_groups
-    # for itips, tips in enumerate(dpt.segs_tips):
-    #     # if tips[0] == -1: adata.uns['dpt_groups_order'][itips] = '?'
-    #     if dpt.segs_undecided[itips]: adata.uns['dpt_groups_order'][itips] += '?'
-    # vector of length n_samples of groupnames
     adata.obs['dpt_groups'] = pd.Categorical(
         values=dpt.segs_names.astype('U'),
         categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
@@ -153,17 +124,11 @@ class DPT(Neighbors):
     """Hierarchical Diffusion Pseudotime.
     """
 
-    def __init__(self, adata, n_neighbors=30, knn=True, n_jobs=1, n_pcs=50, n_dcs=10,
-                 min_group_size=0.01, recompute_pca=None, recompute_graph=None,
-                 n_branchings=0, allow_kendall_tau_shift=False,
-                 flavor='haghverdi16'):
-        super(DPT, self).__init__(adata, k=n_neighbors, knn=knn, n_pcs=n_pcs,
-                                  n_dcs=n_dcs, n_jobs=n_jobs,
-                                  recompute_pca=recompute_pca,
-                                  recompute_graph=recompute_graph,
-                                  flavor=flavor)
+    def __init__(self, adata, n_jobs=1, min_group_size=0.01,
+                 n_branchings=0, allow_kendall_tau_shift=False):
+        super(DPT, self).__init__(adata, n_jobs=n_jobs)
         self.n_branchings = n_branchings
-        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
+        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = False
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
@@ -206,7 +171,7 @@ class DPT(Neighbors):
         # indices of the points in the segment)
         # initialize the search for branchings with a single segment,
         # that is, get the indices of the whole data set
-        indices_all = np.arange(self.X.shape[0], dtype=int)
+        indices_all = np.arange(self._adata.X.shape[0], dtype=int)
         # let's keep a list of segments, the first segment to add is the
         # whole data set
         segs = [indices_all]
@@ -312,12 +277,12 @@ class DPT(Neighbors):
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
-        allindices = np.arange(self.X.shape[0], dtype=int)
+        allindices = np.arange(self._adata.X.shape[0], dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider too small segments
             if segs_tips[iseg][0] == -1: continue
             # restrict distance matrix to points in segment
-            if not isinstance(self.Dchosen, data_graph.OnFlySymMatrix):
+            if not isinstance(self.Dchosen, OnFlySymMatrix):
                 Dseg = self.Dchosen[np.ix_(seg, seg)]
             else:
                 Dseg = self.Dchosen.restrict(seg)
@@ -377,7 +342,7 @@ class DPT(Neighbors):
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
         for iseg, seg in enumerate(self.segs):
-            mask = np.zeros(self.X.shape[0], dtype=bool)
+            mask = np.zeros(self._adata.X.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
         # convert to arrays
@@ -386,7 +351,7 @@ class DPT(Neighbors):
 
     def set_segs_names(self):
         """Return a single array that stores integer segment labels."""
-        segs_names = np.zeros(self.X.shape[0], dtype=np.int8)
+        segs_names = np.zeros(self._adata.X.shape[0], dtype=np.int8)
         self.segs_names_unique = []
         for iseg, seg in enumerate(self.segs):
             segs_names[seg] = iseg
@@ -454,7 +419,7 @@ class DPT(Neighbors):
         """
         seg = segs[iseg]
         # restrict distance matrix to points in segment
-        if not isinstance(self.Dchosen, data_graph.OnFlySymMatrix):
+        if not isinstance(self.Dchosen, OnFlySymMatrix):
             Dseg = self.Dchosen[np.ix_(seg, seg)]
         else:
             Dseg = self.Dchosen.restrict(seg)

@@ -32,6 +32,5 @@ def preprocess_with_pca(adata, n_pcs=None, random_state=0):
             adata.obsm['X_pca'] = X
             return X
         else:
-            logg.warn('Data matrix has lower dimension than passed number of PCs. '
-                      'Using data matrix X directly (no PCA).')
+            logg.info('    using data matrix X directly (no PCA)')
             return adata.X

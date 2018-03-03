@@ -7,6 +7,21 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
 2. canonical analyses steps like clustering genes, computing correlations...
 3. exporting to Gephi...
 
+**March..., 2018**: version 1.0
+
+Graph tools now require explicitly constructing the neighborhood graphs as a preprocessing step::
+
+    sc.pp.neighbors(adata, n_neighbors=5, knn=False)
+    sc.tl.draw_graph(adata)
+    sc.tl.dpt(adata, n_branchings=1)
+    sc.tl.louvain(adata, resolution=1.5)
+
+instead of previously::
+
+    sc.tl.draw_graph(adata, n_neighbors=5)
+    sc.tl.dpt(adata, n_branchings=1, n_neighbors=5, knn=False)  # n_neighbors not necessary
+    sc.tl.louvain(adata, resolution=1.5, n_neighbors=5)  # n_neighbors not necessary
+
 
 **February 26, 2018**: version 0.4.4
 
