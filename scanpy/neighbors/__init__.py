@@ -1,6 +1,5 @@
 import numpy as np
 import scipy as sp
-import scipy.spatial
 from scipy.sparse import issparse
 from joblib import Parallel, delayed
 from .. import settings
@@ -57,8 +56,8 @@ def neighbors(
     """
     logg.info('computing neighbors', r=True)
     adata = adata.copy() if copy else adata
-    neighbors = Neighbors(adata, n_pcs=n_pcs)
-    neighbors.compute_distances(n_neighbors=n_neighbors)
+    neighbors = Neighbors(adata)
+    neighbors.compute_distances(n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs)
     if 'distances' in weights:
         adata.uns['neighbors_distances'] = neighbors.distances
     if 'similarities' in weights:
@@ -72,6 +71,7 @@ def neighbors(
         hint += '    \'neighbors_similarities\', weighted adjacency matrix (adata.uns)'
     logg.hint(hint)
     return adata if copy else None
+
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
@@ -137,16 +137,12 @@ def get_sparse_distance_matrix(indices, distances, n_samples, k):
 
 
 def get_indices_distances_from_sparse_matrix(Dsq, k):
-    indices = np.zeros((Dsq.shape[0], k), dtype=int)
-    distances = np.zeros((Dsq.shape[0], k), dtype=Dsq.dtype)
+    indices = np.zeros((Dsq.shape[0], k-1), dtype=int)
+    distances = np.zeros((Dsq.shape[0], k-1), dtype=Dsq.dtype)
     for i in range(indices.shape[0]):
         neighbors = Dsq[i].nonzero()
-        # account for the fact that the first neighbor is the data point
-        # itself...
-        indices[i][0] = i
-        indices[i][1:] = neighbors[1]
-        distances[i][0] = 0
-        distances[i][1:] = Dsq[neighbors]
+        indices[i] = neighbors[1]
+        distances[i] = Dsq[i][neighbors]
     return indices, distances
 
 
@@ -245,11 +241,10 @@ class Neighbors():
     def __init__(
             self,
             adata,
-            n_pcs=None,
             n_jobs=None):
+        self._adata = adata
         self.sym = True  # we do not allow asymetric cases
-        self.n_pcs = n_pcs if n_pcs is not None else N_PCS
-        self.init_iroot_and_X(adata, n_pcs=n_pcs)
+        self._init_iroot()
         self.flavor = 'haghverdi16'
         # use the graph in adata
         if 'neighbors_distances' in adata.uns:
@@ -260,12 +255,14 @@ class Neighbors():
                     'neighbors_distances'][0].nonzero()[0].size + 1
             else:
                 self.n_neighbors = None  # is unknown
+            logg.info('    initialized `.distances`')
         else:
             self.knn = None
             self.distances = None
             self.knn = None
         if 'neighbors_similarities' in adata.uns:
             self.similarities = adata.uns['neighbors_similarities']
+            logg.info('    initialized `.similarities`')
         else:
             self.similarities = None
         if 'X_diffmap' in adata.obsm_keys():
@@ -274,12 +271,10 @@ class Neighbors():
             self.lbasis = self.rbasis
             self.n_dcs = len(self.evals)
             self.Dchosen = OnFlySymMatrix(
-                self.get_Ddiff_row, shape=(self.X.shape[0], self.X.shape[0]))
+                self._get_Ddiff_row, shape=(self._adata.shape[0], self._adata.shape[0]))
             np.set_printoptions(precision=10)
-            logg.info('    using stored neighbors (n_neighbors = {}) and '
-                      'spectrum\n    {}'
-                      .format(self.n_neighbors_,
-                              str(self.evals_).replace('\n', '\n    ')))
+            logg.info('    initialized `.evals`\n    {}'
+                      .format(str(self.evals_).replace('\n', '\n    ')))
         else:
             self.evals = None
             self.rbasis = None
@@ -287,7 +282,7 @@ class Neighbors():
             self.n_dcs = None
             self.Dchosen = None
 
-    def compute_distances(self, n_neighbors=30, knn=True):
+    def compute_distances(self, n_neighbors=30, knn=True, n_pcs=N_PCS):
         """Compute distances.
 
         Parameters
@@ -301,13 +296,15 @@ class Neighbors():
         -------
         Writes attribute `.distances`.
         """
-        # very small datasets
-        if n_neighbors > self.X.shape[0]:
-            n_neighbors = 1 + int(0.5*self.X.shape[0])
+        if n_neighbors > self._adata.shape[0]:  # very small datasets
+            n_neighbors = 1 + int(0.5*self._adata.shape[0])
         self.n_neighbors = n_neighbors
         self.knn = knn
+        X = preprocess_with_pca(self._adata, n_pcs=n_pcs)
         self.distances, _, _ = get_distance_matrix_and_neighbors(
-            self.X, n_neighbors, sparse=self.knn)
+            X, n_neighbors, sparse=self.knn)
+        logg.msg('determined n_neighbors =',
+               self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
 
     def compute_similarities(self, alpha=1):
         """Compute similarities.
@@ -338,27 +335,25 @@ class Neighbors():
         else:
             indices, distances_sq = get_indices_distances_of_k_nearest_from_dense_matrix(
                 Dsq, self.n_neighbors)
-        # choose sigma, the heuristic here often makes not much
-        # of a difference, but is used to reproduce the figures
-        # of Haghverdi et al. (2016)
-        if self.knn:
-            # as the distances are not sorted except for last element
-            # take median
-            sigmas_sq = np.median(distances_sq, axis=1)
-        else:
-            # the last item is already in its sorted position as
-            # argpartition puts the (k-1)th element - starting to count from
-            # zero - in its sorted position
-            sigmas_sq = distances_sq[:, -1]/4
-        sigmas = np.sqrt(sigmas_sq)
-        logg.m('determined n_neighbors =',
-               self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
 
         if self.flavor == 'unweighted':
             if not self.knn:
-                raise ValueError('`flavor="unweighted"` only with `knn=True`.')
+                raise ValueError('`flavor=\'unweighted\'` only with `knn=True`.')
             self.similarities = self.distances.sign()
             return
+
+        # choose sigma, the heuristic here doesn't seem to make much of a difference,
+        # but is used to reproduce the figures of Haghverdi et al. (2016)
+        if self.knn:
+            # as the distances are not sorted except for last element take
+            # median
+            sigmas_sq = np.median(distances_sq, axis=1)
+        else:
+            # the last item is already in its sorted position as argpartition
+            # puts the (k-1)th element - starting to count from zero - in its
+            # sorted position
+            sigmas_sq = distances_sq[:, -1]/4
+        sigmas = np.sqrt(sigmas_sq)
 
         # compute the symmetric weight matrix
         if not sp.sparse.issparse(self.distances):
@@ -396,14 +391,9 @@ class Neighbors():
                         W[j, i] = W[i, j]
             if False:
                 W.setdiag(1)  # set diagonal to one
-                logg.m('    note that now, we set the diagonal of the weight matrix to one!')
+                logg.msg('    note that now, we set the diagonal of the weight matrix to one!')
             W = W.tocsr()
-        logg.m('computed W (weight matrix) with "knn" =', self.knn, t=True, v=4)
-
-        if False:
-            pl.matshow(W)
-            pl.title('$ W$')
-            pl.colorbar()
+        logg.msg('computed weight matrix (W)', t=True, v=4)
 
         # density normalization
         # as discussed in Coifman et al. (2005)
@@ -428,7 +418,7 @@ class Neighbors():
                     row = W.indices[W.indptr[i]: W.indptr[i+1]]
                     num = q[i] * q[row]
                     W.data[W.indptr[i]: W.indptr[i+1]] = W.data[W.indptr[i]: W.indptr[i+1]] / num
-        logg.m('computed K (anisotropic kernel)', t=True, v=4)
+        logg.msg('computed anisotropic kernel (K)', t=True, v=4)
 
         if not sp.sparse.issparse(self.K):
             # now compute the row normalization to build the transition matrix T
@@ -453,15 +443,15 @@ class Neighbors():
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
                 self.similarities.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
-        logg.m('computed Ktilde (normalized anistropic kernel)', v=4)
+        logg.msg('computed similarities, the normalized anistropic kernel (Ktilde)', v=4)
 
-    def compute_eigen(self, n_evals=15, sym=None, sort='decrease', matrix=None):
+    def compute_eigen(self, n_comps=15, sym=None, sort='decrease', matrix=None):
         """Compute eigen decomposition of similarity matrix.
 
         Parameters
         ----------
-        n_evals : `int`
-            Number of eigenvalues/vectors to be computed, set n_evals = 0 if
+        n_comps : `int`
+            Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
         sym : `bool`
             Instead of computing the eigendecomposition of the assymetric
@@ -489,25 +479,25 @@ class Neighbors():
         self.rbasisBool = True
         if matrix is None: matrix = self.similarities
         if matrix is None:
-            raise ValueError('Run `.fit_similarities` first.')
+            raise ValueError('Run `.compute_similarities` first.')
         # compute the spectrum
-        if n_evals == 0:
+        if n_comps == 0:
             evals, evecs = sp.linalg.eigh(matrix)
         else:
-            n_evals = min(matrix.shape[0]-1, n_evals)
-            # ncv = max(2 * n_evals + 1, int(np.sqrt(matrix.shape[0])))
+            n_comps = min(matrix.shape[0]-1, n_comps)
+            # ncv = max(2 * n_comps + 1, int(np.sqrt(matrix.shape[0])))
             ncv = None
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
-            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=n_evals,
+            evals, evecs = sp.sparse.linalg.eigsh(matrix, k=n_comps,
                                                   which=which, ncv=ncv)
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
         if logg.verbosity_greater_or_equal_than(4):
-            logg.m('computed eigenvalues', t=True, v=4)
+            logg.msg('computed eigenvalues', t=True, v=4)
         else:
             logg.info('    eigenvalues of transition matrix')
         logg.info('   ', str(evals).replace('\n', '\n    '))
@@ -533,42 +523,34 @@ class Neighbors():
                 self.rbasis /= np.linalg.norm(self.rbasis, axis=0, ord=2)
                 self.lbasis /= np.linalg.norm(self.lbasis, axis=0, ord=2)
         # init on-the-fly computed distance "matrix"
-        self.Dchosen = OnFlySymMatrix(self.get_Ddiff_row,
-                                      shape=self.distances.shape)
+        self.Dchosen = OnFlySymMatrix(self._get_Ddiff_row, shape=matrix.shape)
 
-    def init_iroot_directly(self, adata):
+    def _init_iroot(self):
         self.iroot = None
-        if 'iroot' in adata.uns:
-            if adata.uns['iroot'] >= adata.n_obs:
+        # set iroot directly
+        if 'iroot' in self._adata.uns:
+            if self._adata.uns['iroot'] >= self._adata.n_obs:
                 logg.warn('Root cell index {} does not exist for {} samples. '
                           'Is ignored.'
-                          .format(adata.uns['iroot'], adata.n_obs))
+                          .format(self._adata.uns['iroot'], self._adata.n_obs))
             else:
-                self.iroot = adata.uns['iroot']
-
-    def init_iroot_and_X(self, adata, n_pcs):
-        self.X = adata.X  # might be overwritten with X_pca in the next line
-        # retrieve xroot
+                self.iroot = self._adata.uns['iroot']
+            return
+        # set iroot via xroot
         xroot = None
-        if 'xroot' in adata.uns: xroot = adata.uns['xroot']
-        elif 'xroot' in adata.var: xroot = adata.var['xroot']
-        # set iroot directly
-        self.init_iroot_directly(adata)
+        if 'xroot' in self._adata.uns: xroot = self._adata.uns['xroot']
+        elif 'xroot' in self._adata.var: xroot = self._adata.var['xroot']
         # see whether we can set self.iroot using the full data matrix
-        if xroot is not None and xroot.size == self.X.shape[1]:
-            self.set_root(xroot)
-        self.X = preprocess_with_pca(adata, n_pcs=n_pcs)
-        # see whether we can find xroot using X_pca
-        if xroot is not None and xroot.size == adata.obs['X_pca'].shape[1]:
-            self.set_root(xroot[:n_pcs])
+        if xroot is not None and xroot.size == self._adata.shape[1]:
+            self._set_iroot_via_xroot(xroot)
 
-    def compute_L_matrix(self):
+    def _compute_L_matrix(self):
         """Graph Laplacian for K.
         """
         self.L = np.diag(self.z) - self.K
         logg.info('compute graph Laplacian')
 
-    def update_diffmap(self, n_comps=None):
+    def _update_diffmap(self, n_neighbors=30, knn=False, n_comps=None):
         """Diffusion Map as of Coifman et al. (2005) and Haghverdi et al. (2016).
         """
         if n_comps is not None:
@@ -577,27 +559,28 @@ class Neighbors():
         if self.evals is None or self.evals.size < self.n_dcs:
             logg.info('    computing spectral decomposition ("diffmap") with',
                       self.n_dcs, 'components', r=True)
-            self.compute_transition_matrix()
-            self.embed(n_evals=self.n_dcs)
+            self.compute_distances(n_neighbors=n_neighbors, knn=knn)
+            self.compute_similarities()
+            self.compute_eigen(n_comps=self.n_dcs)
             return True
         return False
 
-    def compute_Ddiff_all(self, n_evals=10):
+    def _compute_Ddiff_all(self, n_comps=10):
         raise RuntimeError('deprecated function')
-        self.embed(n_evals=n_evals)
-        self.compute_M_matrix()
-        self.compute_Ddiff_matrix()
+        self.embed(n_comps=n_comps)
+        self._compute_M_matrix()
+        self._compute_Ddiff_matrix()
 
-    def compute_C_all(self, n_evals=10):
-        self.compute_L_matrix()
-        self.embed(self.L, n_evals=n_evals, sort='increase')
+    def _compute_C_all(self, n_comps=10):
+        self._compute_L_matrix()
+        self.embed(self.L, n_comps=n_comps, sort='increase')
         evalsL = self.evals
         self.compute_Lp_matrix()
         self.compute_C_matrix()
 
-    def spec_layout(self):
+    def _spec_layout(self):
         self.compute_transition_matrix()
-        self.compute_L_matrix()
+        self._compute_L_matrix()
         self.embed(self.L, sort='increase')
         # write results to dictionary
         ddmap = {}
@@ -606,11 +589,11 @@ class Neighbors():
         ddmap['evals'] = self.evals[1:]
         return ddmap
 
-    def compute_distance_matrix(self):
-        logg.m('computing distance matrix with n_neighbors = {}'
+    def _compute_distance_matrix(self):
+        logg.msg('computing distance matrix with n_neighbors = {}'
                .format(self.n_neighbors), v=4)
         Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
-            X=self.X,
+            X=self._adata.X,
             k=self.n_neighbors,
             sparse=self.knn,
             n_jobs=self.n_jobs)
@@ -619,7 +602,7 @@ class Neighbors():
 
     def _get_M_row_chunk(self, i_range):
         from ..cython import utils_cy
-        M_chunk = np.zeros((len(i_range), self.X.shape[0]), dtype=np.float32)
+        M_chunk = np.zeros((len(i_range), self._adata.shape[0]), dtype=np.float32)
         for i_cnt, i in enumerate(i_range):
             if False:  # not much slower, but slower
                 M_chunk[i_cnt] = self.get_M_row(j)
@@ -627,7 +610,7 @@ class Neighbors():
                 M_chunk[i_cnt] = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
         return M_chunk
 
-    def compute_M_matrix(self):
+    def _compute_M_matrix(self):
         """The M matrix is the matrix that results from summing over all powers of
         T in the subspace without the first eigenspace.
 
@@ -635,7 +618,7 @@ class Neighbors():
         """
         if self.n_jobs >= 4:  # if we have enough cores, skip this step
             return            # TODO: make sure that this is really the best strategy
-        logg.m('    try computing "M" matrix using up to 90% of `settings.max_memory`')
+        logg.msg('    try computing "M" matrix using up to 90% of `settings.max_memory`')
         if True:  # Python version
             self.M = sum([self.evals[l]/(1-self.evals[l])
                           * np.outer(self.rbasis[:, l], self.lbasis[:, l])
@@ -643,15 +626,15 @@ class Neighbors():
             self.M += np.outer(self.rbasis[:, 0], self.lbasis[:, 0])
         else:  # Cython version
             used_memory, _ = logg.get_memory_usage()
-            memory_for_M = self.X.shape[0]**2 * 23 / 8 / 1e9  # in GB
-            logg.m('    max memory =', settings.max_memory,
+            memory_for_M = self._adata.shape[0]**2 * 23 / 8 / 1e9  # in GB
+            logg.msg('    max memory =', settings.max_memory,
                    ' / used memory = {:.1f}'.format(used_memory),
                    ' / memory_for_M = {:.1f}'.format(memory_for_M))
             if used_memory + memory_for_M < 0.9 * settings.max_memory:
-                logg.m(0, '    allocate memory and compute M matrix')
-                len_chunk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
-                n_chunks = np.ceil(self.X.shape[0] / len_chunk).astype(int)
-                chunks = [np.arange(start, min(start + len_chunk, self.X.shape[0]))
+                logg.msg(0, '    allocate memory and compute M matrix')
+                len_chunk = np.ceil(self._adata.shape[0] / self.n_jobs).astype(int)
+                n_chunks = np.ceil(self._adata.shape[0] / len_chunk).astype(int)
+                chunks = [np.arange(start, min(start + len_chunk, self._adata.shape[0]))
                          for start in range(0, n_chunks * len_chunk, len_chunk)]
                 # parallel computing does not seem to help
                 if False:  # self.n_jobs > 1:
@@ -660,7 +643,7 @@ class Neighbors():
                     result_lst = Parallel(n_jobs=self.n_jobs, backend='threading')(
                         delayed(self._get_M_row_chunk)(chunk)
                         for chunk in chunks)
-                self.M = np.zeros((self.X.shape[0], self.X.shape[0]),
+                self.M = np.zeros((self._adata.shape[0], self._adata.shape[0]),
                                   dtype=np.float32)
                 for i_chunk, chunk in enumerate(chunks):
                     if False:  # self.n_jobs > 1:
@@ -672,11 +655,11 @@ class Neighbors():
                 # filename = settings.writedir + 'tmp.npy'
                 # np.save(filename, self.M)
                 # self.M = filename
-                logg.m(0, 'finished computation of M')
+                logg.msg(0, 'finished computation of M')
             else:
-                logg.m('not enough memory to compute M, using "on-the-fly" computation')
+                logg.msg('not enough memory to compute M, using "on-the-fly" computation')
 
-    def compute_Ddiff_matrix(self):
+    def _compute_Ddiff_matrix(self):
         """Returns the distance matrix in the Diffusion Pseudotime metric.
 
         See Haghverdi et al. (2016).
@@ -687,12 +670,12 @@ class Neighbors():
         - self.Ddiff[self.iroot,:] stores diffusion pseudotime as a vector.
         """
         if self.M.shape[0] > 1000:
-            logg.m('--> high number of dimensions for computing DPT distance matrix\n'
+            logg.msg('--> high number of dimensions for computing DPT distance matrix\n'
                    '    computing PCA with 50 components')
             from ..preprocessing import pca
             self.M = pca(self.M, n_comps=50, mute=True)
         self.Ddiff = sp.spatial.distance.squareform(sp.spatial.distance.pdist(self.M))
-        logg.m('computed Ddiff distance matrix', t=True)
+        logg.msg('computed diffusion pseudotime distance matrix', t=True)
         self.Dchosen = self.Ddiff
 
     def _get_Ddiff_row_chunk(self, m_i, j_range):
@@ -711,7 +694,7 @@ class Neighbors():
                 d_i[j_cnt] = utils_cy.c_dist(m_i, m_j)
         return d_i
 
-    def get_Ddiff_row(self, i):
+    def _get_Ddiff_row(self, i):
         if not self.sym:
             raise ValueError('Not bug-free implemented! '
                              'Computation needs to be adjusted if sym=False.')
@@ -723,15 +706,15 @@ class Neighbors():
                     for l in range(0, self.evals.size) if self.evals[l] >= 0.999999])
         return np.sqrt(row)
 
-    def get_Ddiff_row_deprecated(self, i):
+    def _get_Ddiff_row_deprecated(self, i):
         from ..cython import utils_cy
         if self.M is None:
             m_i = utils_cy.get_M_row(i, self.evals, self.rbasis, self.lbasis)
         else:
             m_i = self.M[i]
-        len_chunk = np.ceil(self.X.shape[0] / self.n_jobs).astype(int)
-        n_chunks = np.ceil(self.X.shape[0] / len_chunk).astype(int)
-        chunks = [np.arange(start, min(start + len_chunk, self.X.shape[0]))
+        len_chunk = np.ceil(self._adata.shape[0] / self.n_jobs).astype(int)
+        n_chunks = np.ceil(self._adata.shape[0] / len_chunk).astype(int)
+        chunks = [np.arange(start, min(start + len_chunk, self._adata.shape[0]))
                   for start in range(0, n_chunks * len_chunk, len_chunk)]
         if self.n_jobs >= 4:  # problems with high memory calculations, we skip computing M above
             # here backend threading is not necessary, and seems to slow
@@ -739,14 +722,14 @@ class Neighbors():
             result_lst = Parallel(n_jobs=self.n_jobs)(
                 delayed(self._get_Ddiff_row_chunk)(m_i, chunk)
                 for chunk in chunks)
-        d_i = np.zeros(self.X.shape[0])
+        d_i = np.zeros(self._adata.shape[0])
         for i_chunk, chunk in enumerate(chunks):
             if self.n_jobs >= 4: d_i_chunk = result_lst[i_chunk]
             else: d_i_chunk = self._get_Ddiff_row_chunk(m_i, chunk)
             d_i[chunk] = d_i_chunk
         return d_i
 
-    def compute_Lp_matrix(self):
+    def _compute_Lp_matrix(self):
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
 
         See Proposition 6 in von Luxburg (2007) and the inline equations
@@ -757,7 +740,7 @@ class Neighbors():
                       for i in range(1, self.evals.size)])
         settings.mt(0, 'computed pseudoinverse of Laplacian')
 
-    def compute_C_matrix(self):
+    def _compute_C_matrix(self):
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
 
         This is the commute-time matrix. It's a squared-euclidian distance
@@ -778,7 +761,7 @@ class Neighbors():
         settings.mt(0, 'computed commute distance matrix')
         self.Dchosen = self.C
 
-    def compute_MFP_matrix(self):
+    def _compute_MFP_matrix(self):
         """See Fouss et al. (2006).
 
         This is the mean-first passage time matrix. It's not a distance.
@@ -797,13 +780,13 @@ class Neighbors():
         settings.mt(0, 'computed mean first passage time matrix')
         self.Dchosen = self.MFP
 
-    def set_pseudotime(self):
+    def _set_pseudotime(self):
         """Return pseudotime with respect to root point.
         """
         self.pseudotime = self.Dchosen[self.iroot].copy()
         self.pseudotime /= np.max(self.pseudotime)
 
-    def set_root(self, xroot):
+    def _set_iroot_via_xroot(self, xroot):
         """Determine the index of the root cell.
 
         Given an expression vector, find the observation index that is closest
@@ -815,25 +798,24 @@ class Neighbors():
             Vector that marks the root cell, the vector storing the initial
             condition, only relevant for computing pseudotime.
         """
-        if self.X.shape[1] != xroot.size:
-            raise ValueError('The root vector you provided does not have the '
-                             'correct dimension. Make sure you provide the dimension-'
-                             'reduced version, if you provided X_pca.')
+        if self._adata.shape[1] != xroot.size:
+            raise ValueError(
+                'The root vector you provided does not have the '
+                'correct dimension.')
         # this is the squared distance
         dsqroot = 1e10
         iroot = 0
-        for i in range(self.X.shape[0]):
-            diff = self.X[i, :] - xroot
+        for i in range(self._adata.shape[0]):
+            diff = self._adata.X[i, :] - xroot
             dsq = diff.dot(diff)
             if dsq < dsqroot:
                 dsqroot = dsq
                 iroot = i
                 if np.sqrt(dsqroot) < 1e-10: break
-        logg.m('setting root index to', iroot, v=4)
+        logg.msg('setting root index to', iroot, v=4)
         if self.iroot is not None and iroot != self.iroot:
             logg.warn('Changing index of iroot from {} to {}.'.format(self.iroot, iroot))
         self.iroot = iroot
-        return self.iroot
 
     def _test_embed(self):
         """
@@ -844,8 +826,8 @@ class Neighbors():
         if settings.verbosity > 2:
             # output of spectrum of K for comparison
             w, v = np.linalg.eigh(self.K)
-            settings.mi('spectrum of K (kernel)')
+            logg.msg('spectrum of K (kernel)')
         if settings.verbosity > 3:
             # direct computation of spectrum of T
             w, vl, vr = sp.linalg.eig(self.T, left=True)
-            settings.mi('spectrum of transition matrix (should be same as of Ktilde)')
+            logg.msg('spectrum of transition matrix (should be same as of Ktilde)')
