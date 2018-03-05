@@ -97,11 +97,12 @@ def scatter(
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
-         A matplotlib axes object.
+         A `matplotlib.Axes` object.
 
     Returns
     -------
-    A list of `matplotlib.Axis` objects.
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     sanitize_anndata(adata)
     if legend_loc not in VALID_LEGENDLOCS:
@@ -288,7 +289,7 @@ def scatter(
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
-    if show == False: axs
+    if show == False: return axs
 
 
 def ranking(adata, attr, keys, indices=None,
