@@ -9,33 +9,18 @@ from .. import utils
 from .. import settings
 
 
-MINIMAL_TREE_ATTACHEDNESS = 0.05
+MINIMAL_TREE_CONNECTIVITY = 0.05
 
 doc_string_base = dedent("""\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Approximate graph abstraction (AGA) quantifies the connectivity of
+    Statistical graph abstraction (SGA) quantifies the connectivity of
     partitions of a neighborhood graph of single cells, thereby generating a
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
     coordinatization of data useful for exploring and explaining its
     variation.
-
-    By default, AGA uses the Louvain algorithm to partition the data, which has
-    been suggested for clustering single-cell data by [Levine15]_
-    ('Phenograph'). Also, it extends DPT, the random-walk based distance /
-    pseudotime measure suggested by [Haghverdi16]_.
-
-    **Note 1**: In order to compute distances along the graph (pseudotimes), you need
-    to provide a root cell, e.g., as in the `example of Nestorowa et al. (2016)
-    <https://github.com/theislab/graph_abstraction/blob/master/nestorowa16/nestorowa16.ipynb>`__::
-
-        adata.uns['iroot'] = np.flatnonzero(adata.obs['exp_groups'] == 'Stem')[0]
-
-    **Note 2**: The former parameters `attachedness_measure`, `tree_detection`
-    and `n_nodes` remain for backwards compatibility but will be removed in a
-    future version.
 
     Parameters
     ----------
@@ -51,27 +36,6 @@ doc_string_base = dedent("""\
         Have high confidence in a connection if its connectivity is
         significantly higher than the median connectivity of the global spanning
         tree of the abstracted graph.
-    resolution : `float`, optional (default: 1.0)
-        See :func:`~scanpy.api.louvain`.
-    random_state : `int`, optional (default: 0)
-        See :func:`~scanpy.api.louvain`.
-    n_neighbors : `int` or `None`, optional (default: `None`)
-        Number of nearest neighbors on the knn graph. Often this can be reduced
-        down to a value of 4. Defaults to the number of neighbors in a
-        precomputed graph. If there is none, defaults to 30.
-    n_pcs : `int`, optional (default: 50)
-        Use `n_pcs` PCs to compute the euclidean distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
-    n_dcs : `int`, optional (default: 10)
-        Number of diffusion components (very similar to eigen vectors of
-        adjacency matrix) to use for distance computations.
-    recompute_graph : `bool`, optional (default: `False`)
-        Recompute single-cell graph.
-    recompute_pca : `bool`, optional (default: `False`)
-        Recompute PCA.
-    recompute_louvain : `bool`, optional (default: `False`)
-        When changing the `resolution` parameter, you should set this to True.
     n_jobs : `int` or None (default: `sc.settings.n_jobs`)
         Number of CPUs to use for parallel processing.
     copy : `bool`, optional (default: `False`)
@@ -86,7 +50,7 @@ doc_string_base = dedent("""\
 
 
 doc_string_returns = dedent("""\
-        aga_adjacency_full_attachedness : np.ndarray (adata.uns)
+        aga_adjacency_full_connectivity : np.ndarray (adata.uns)
             The full adjacency matrix of the abstracted graph, weights
             correspond to connectedness.
         aga_adjacency_full_confidence : np.ndarray (adata.uns)
@@ -95,109 +59,29 @@ doc_string_returns = dedent("""\
         aga_adjacency_tree_confidence : sc.sparse csr matrix (adata.uns)
             The adjacency matrix of the tree-like subgraph that best explains
             the topology.
-        aga_pseudotime : pd.Series (adata.obs, dtype float)
-            Pseudotime labels, that is, distance a long the manifold for each
-            cell. Is only returned if computed, which requires passing a root
-            cell index `iroot` in `adata.uns`.
     """)
 
 
 def aga(adata,
         groups='louvain_groups',
         tree_based_confidence=True,
-        resolution=None,
-        random_state=0,
-        n_neighbors=None,
-        n_pcs=50,
-        n_dcs=None,
-        recompute_pca=False,
-        recompute_distances=False,
-        recompute_graph=False,
-        recompute_louvain=False,
-        attachedness_measure='connectedness',
         tree_detection='min_span_tree',
         n_nodes=None,
         n_jobs=None,
         copy=False):
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    if tree_detection not in {'iterative_matching', 'min_span_tree'}:
-        raise ValueError('`tree_detection` needs to be one of {}'
-                         .format({'iterative_matching', 'min_span_tree'}))
-    fresh_compute_louvain = False
-    if (groups == 'louvain_groups'
-        and ('louvain_groups' not in adata.obs_keys()
-             # resolution does not match
-             or ('louvain_params' in adata.uns
-                 and resolution is not None
-                 and adata.uns['louvain_params']['resolution'] != resolution)
-             or recompute_louvain
-             or not data_graph.no_recompute_of_graph_necessary(
-            adata,
-            recompute_pca=recompute_pca,
-            recompute_distances=recompute_distances,
-            recompute_graph=recompute_graph,
-            n_neighbors=n_neighbors,
-            n_dcs=n_dcs))):
-        from .louvain import louvain
-        louvain(adata,
-                resolution=resolution,
-                n_neighbors=n_neighbors,
-                recompute_pca=recompute_pca,
-                recompute_graph=recompute_graph,
-                n_pcs=n_pcs,
-                n_dcs=n_dcs,
-                random_state=random_state)
-        fresh_compute_louvain = True
     clusters = groups
     logg.info('running Approximate Graph Abstraction (AGA)', reset=True)
-    if ('iroot' not in adata.uns
-        and 'xroot' not in adata.uns
-        and 'xroot' not in adata.var):
-        logg.info('    no root cell found, no computation of pseudotime')
-        msg = \
-    """To enable computation of pseudotime, pass the index or expression vector
-    of a root cell. Either add
-        adata.uns['iroot'] = root_cell_index
-    or (robust to subsampling)
-        adata.var['xroot'] = adata.X[root_cell_index, :]
-    where "root_cell_index" is the integer index of the root cell, or
-        adata.var['xroot'] = adata[root_cell_name, :].X
-    where "root_cell_name" is the name (a string) of the root cell."""
-        logg.hint(msg)
-    aga = AGA(adata,
-              clusters=clusters,
-              n_neighbors=n_neighbors,
-              n_pcs=n_pcs,
-              n_dcs=n_dcs,
-              n_jobs=n_jobs,
-              tree_based_confidence=tree_based_confidence,
-              # we do not need to recompute things both in the louvain
-              # call above and here
-              recompute_graph=recompute_graph and not fresh_compute_louvain,
-              recompute_distances=recompute_distances and not fresh_compute_louvain,
-              recompute_pca=recompute_pca and not fresh_compute_louvain,
-              n_nodes=n_nodes,
-              attachedness_measure=attachedness_measure)
-    updated_diffmap = aga.update_diffmap()
-    adata.obsm['X_diffmap'] = aga.rbasis[:, 1:]
-    adata.obs['X_diffmap0'] = aga.rbasis[:, 0]
-    adata.uns['diffmap_evals'] = aga.evals[1:]
-    adata.uns['data_graph_distance_local'] = aga.Dsq
-    adata.uns['data_graph_norm_weights'] = aga.Ktilde
-    if aga.iroot is not None:
-        aga.set_pseudotime()  # pseudotimes are random walk distances from root point
-        adata.uns['iroot'] = aga.iroot  # update iroot, might have changed when subsampling, for example
-        adata.obs['aga_pseudotime'] = aga.pseudotime
-    # detect splits and partition the data into segments
+    aga = AGA(adata, clusters=clusters,
+              tree_based_confidence=tree_based_confidence, n_nodes=n_nodes)
     aga.splits_segments()
-
     if tree_detection == 'min_span_tree':
         min_span_tree = utils.compute_minimum_spanning_tree(
-            1./aga.segs_adjacency_full_attachedness)
+            1./aga.segs_adjacency_full_connectivity)
         min_span_tree.data = 1./min_span_tree.data
         full_confidence, tree_confidence = aga.compute_adjacency_confidence(
-            aga.segs_adjacency_full_attachedness, min_span_tree, tree_based_confidence)
+            aga.segs_adjacency_full_connectivity, min_span_tree, tree_based_confidence)
     else:
         full_confidence, tree_confidence = aga.segs_adjacency_full_confidence, aga.segs_adjacency_tree_confidence
 
@@ -207,15 +91,14 @@ def aga(adata,
     ypos = np.searchsorted(x[xsorted], y)
     indices = xsorted[ypos]
 
-    adata.uns['aga_adjacency_full_attachedness'] = aga.segs_adjacency_full_attachedness[indices, :][:, indices]
+    adata.uns['aga_adjacency_full_connectivity'] = aga.segs_adjacency_full_connectivity[indices, :][:, indices]
     adata.uns['aga_adjacency_full_confidence'] = full_confidence[indices, :][:, indices]
     adata.uns['aga_adjacency_tree_confidence'] = tree_confidence[indices, :][:, indices]
     adata.uns['aga_groups_key'] = clusters
     adata.uns[clusters + '_sizes'] = np.array(aga.segs_sizes)[indices]
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-           + ('    \'aga_pseudotime\', pseudotime (adata.obs),\n' if aga.iroot is not None else '')
-           + '    \'aga_adjacency_full_attachedness\', adjacency matrix of abstractd graph weighted by connectivity=attachedness (adata.uns)\n'
+           + '    \'aga_adjacency_full_connectivity\', adjacency matrix of abstractd graph weighted by connectivity=connectivity (adata.uns)\n'
            + '    \'aga_adjacency_full_confidence\', adjacency matrix of abstracted graph weighted by confidence (adata.uns)\n'
            + '    \'aga_adjacency_tree_confidence\', adjacency matrix of subtree in abstracted graph weighted by confidence (adata.uns)')
     return adata if copy else None
@@ -467,57 +350,34 @@ class AGA(Neighbors):
     def __init__(self,
                  adata,
                  n_nodes=None,
-                 n_neighbors=30,
-                 n_pcs=50,
-                 n_dcs=10,
                  min_group_size=1,
                  tree_based_confidence=True,
                  minimal_distance_evidence=0.95,
-                 recompute_pca=False,
-                 recompute_distances=False,
-                 recompute_graph=False,
-                 attachedness_measure='connectedness',
                  clusters=None,
                  n_jobs=1):
-        super(AGA, self).__init__(adata,
-                                  k=n_neighbors,
-                                  n_pcs=n_pcs,
-                                  n_dcs=n_dcs,
-                                  n_jobs=n_jobs,
-                                  recompute_pca=recompute_pca,
-                                  recompute_distances=recompute_distances,
-                                  recompute_graph=recompute_graph)
-        self.n_neighbors = n_neighbors
+        super(AGA, self).__init__(adata)
         self.minimal_distance_evidence = minimal_distance_evidence
         # the ratio of max(minimal_distances)/min(minimal_distances) has to be smaller than minimal_distance_evidence
         # in order to be considered convincing evidence, otherwise, consider median_distances
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self.X.shape[0])
-        self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = True
-        self.attachedness_measure = attachedness_measure
+        self.connectivity_measure = 'connectedness'
         self.tree_based_confidence = tree_based_confidence
         self.clusters = clusters
         self.clusters_precomputed = None
         self.clusters_precomputed_names = None
         self.flavor_develop = 'bi'  # bipartitioning
-        if clusters not in {'segments', 'unconstrained_segments'}:
-            if clusters not in adata.obs_keys():
-                raise ValueError('Did not find {} in adata.obs_keys()! '
-                                 'If you do not have any precomputed clusters, pass "segments" for "node_groups" instead'
-                                 .format(clusters))
-            clusters_array = adata.obs[clusters].values
-            # transform to a list of index arrays
-            self.clusters_precomputed = []
-            self.clusters_precomputed_names = list(adata.obs[clusters].cat.categories)
-            for cluster_name in self.clusters_precomputed_names:
-                self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
-            n_nodes = len(self.clusters_precomputed)
-        else:
-            if n_nodes is None:
-                n_nodes = 1
-                logg.hint(
-                    'by passing the parameter `n_nodes`, '
-                    'choose the number of subgroups to detect')
+        if clusters not in adata.obs_keys():
+            raise ValueError(
+                'Did not find {} in adata.obs_keys()! '
+                .format(clusters))
+        clusters_array = adata.obs[clusters].values
+        # transform to a list of index arrays
+        self.clusters_precomputed = []
+        self.clusters_precomputed_names = list(adata.obs[clusters].cat.categories)
+        for cluster_name in self.clusters_precomputed_names:
+            self.clusters_precomputed.append(np.where(cluster_name == clusters_array)[0])
+        n_nodes = len(self.clusters_precomputed)
         self.n_splits = n_nodes - 1
 
     def splits_segments(self):
@@ -553,16 +413,16 @@ class AGA(Neighbors):
             List of indices of the tips of segments.
         """
         logg.info('    abstracted graph will have {} nodes'.format(self.n_splits+1))
-        indices_all = np.arange(self.X.shape[0], dtype=int)
+        indices_all = np.arange(self._adata.shape[0], dtype=int)
         segs = [indices_all]
-        if False:  # this is safe, but not compatible with on-the-fly computation
-            tips_all = np.array(np.unravel_index(np.argmax(self.Dchosen), self.Dchosen.shape))
-        else:
+        if self.Dchosen is not None:
             if self.iroot is not None:
                 tip_0 = np.argmax(self.Dchosen[self.iroot])
             else:
                 tip_0 = np.argmax(self.Dchosen[0])  # just a random index, here fixed to "0"
             tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
+        else:
+            tips_all = [0, 1]  # just a dummy index
         # we keep a list of the tips of each segment
         segs_tips = [tips_all]
         if self.clusters_precomputed_names:
@@ -601,30 +461,30 @@ class AGA(Neighbors):
         for iseg, seg in enumerate(self.segs): self.segs_sizes.append(len(seg))
 
         # the full, unscaled adjacency matrix
-        self.segs_adjacency_full_attachedness = 1/segs_distances
-        # if self.attachedness_measure == 'connectedness':
+        self.segs_adjacency_full_connectivity = 1/segs_distances
+        # if self.connectivity_measure == 'connectedness':
         #     norm = np.sqrt(np.multiply.outer(self.segs_sizes, self.segs_sizes))
-        #     self.segs_adjacency_full_attachedness /= norm
+        #     self.segs_adjacency_full_connectivity /= norm
         self.segs_adjacency_full_confidence, self.segs_adjacency_tree_confidence \
             = self.compute_adjacency_confidence(
-                self.segs_adjacency_full_attachedness,
+                self.segs_adjacency_full_connectivity,
                 segs_adjacency,
                 self.tree_based_confidence)
-        np.fill_diagonal(self.segs_adjacency_full_attachedness, 0)
+        np.fill_diagonal(self.segs_adjacency_full_connectivity, 0)
 
-    def compute_adjacency_confidence(self, full_attachedness, tree_adjacency, tree_based_confidence):
-        """Translates the attachedness measure into a confidence measure.
+    def compute_adjacency_confidence(self, full_connectivity, tree_adjacency, tree_based_confidence):
+        """Translates the connectivity measure into a confidence measure.
         """
         if sp.sparse.issparse(tree_adjacency):
             tree_adjacency = [tree_adjacency[i].nonzero()[1]
                               for i in range(tree_adjacency.shape[0])]
-        segs_distances = 1/full_attachedness
+        segs_distances = 1/full_connectivity
         if not tree_based_confidence:  # inter- and intra-cluster based confidence
             from scipy.stats import norm
             # intra-cluster connections
-            total_n = self.k * np.array(self.segs_sizes)  # total number of connections
-            a = full_attachedness
-            confidence = np.zeros_like(full_attachedness)
+            total_n = self.n_neighbors * np.array(self.segs_sizes)  # total number of connections
+            a = full_connectivity
+            confidence = np.zeros_like(full_connectivity)
             logg.msg('computing confidence', v=5)
             logg.msg('i_name, j_name, connectivity, total_n[i], total_n[j], '
                      'actual, expected, variance, confidence', v=5)
@@ -661,17 +521,17 @@ class AGA(Neighbors):
             np.fill_diagonal(full_confidence, 0)
             tree_confidence = self.compute_tree_confidence(
                 full_confidence, tree_adjacency,
-                minimal_tree_attachedness=MINIMAL_TREE_ATTACHEDNESS)
+                minimal_tree_connectivity=MINIMAL_TREE_CONNECTIVITY)
         return full_confidence, tree_confidence
 
-    def compute_tree_confidence(self, full_confidence, tree_adjacency, minimal_tree_attachedness=1e-14):
+    def compute_tree_confidence(self, full_confidence, tree_adjacency, minimal_tree_connectivity=1e-14):
         n = full_confidence.shape[0]
         tree_confidence = sp.sparse.lil_matrix((n, n), dtype=float)
         for i, neighbors in enumerate(tree_adjacency):
-            clipped_attachedness = full_confidence[i][neighbors]
-            clipped_attachedness[clipped_attachedness < minimal_tree_attachedness] = minimal_tree_attachedness
-            tree_confidence[i, neighbors] = clipped_attachedness
-            full_confidence[i, neighbors] = clipped_attachedness
+            clipped_connectivity = full_confidence[i][neighbors]
+            clipped_connectivity[clipped_connectivity < minimal_tree_connectivity] = minimal_tree_connectivity
+            tree_confidence[i, neighbors] = clipped_connectivity
+            full_confidence[i, neighbors] = clipped_connectivity
         tree_confidence = tree_confidence.tocsr()
         return tree_confidence
 
@@ -860,12 +720,7 @@ class AGA(Neighbors):
                    .format(sizes[0], sizes[1]), v=4)
             return iseg, seg, ssegs, ssegs_tips, sizes, clus_name
 
-        if self.clusters_precomputed is None:
-            iseg, seg, ssegs, ssegs_tips, sizes = binary_split_largest()
-            # iseg, seg, ssegs, ssegs_tips, sizes = new_split(segs_tips)
-            # iseg, seg, ssegs, ssegs_tips, sizes = star_split(segs_tips)
-        else:
-            iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
+        iseg, seg, ssegs, ssegs_tips, sizes, clus_name = select_precomputed(segs_tips)
         trunk = 1
         segs.pop(iseg)
         segs_tips.pop(iseg)
@@ -914,7 +769,7 @@ class AGA(Neighbors):
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
-        allindices = np.arange(self.X.shape[0], dtype=int)
+        allindices = np.arange(self._adata.shape[0], dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider too small segments
             if segs_tips[iseg][0] == -1: continue
@@ -960,7 +815,7 @@ class AGA(Neighbors):
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
         for iseg, seg in enumerate(self.segs):
-            mask = np.zeros(self.X.shape[0], dtype=bool)
+            mask = np.zeros(self._adata.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
         # convert to arrays
@@ -969,7 +824,7 @@ class AGA(Neighbors):
 
     def set_segs_names(self):
         """Return a single array that stores integer segment labels."""
-        segs_names = np.zeros(self.X.shape[0], dtype=np.int8)
+        segs_names = np.zeros(self._adata.shape[0], dtype=np.int8)
         self.segs_names_unique = []
         for iseg, seg in enumerate(self.segs):
             segs_names[seg] = iseg
@@ -994,7 +849,7 @@ class AGA(Neighbors):
         segs_names = self.segs_names[indices]
         # find changepoints of segments
         changepoints = np.arange(indices.size-1)[np.diff(segs_names) == 1] + 1
-        if self.iroot is not None:
+        if hasattr(self, 'pseudotime'):
             pseudotime = self.pseudotime[indices]
             for iseg, seg in enumerate(self.segs):
                 # only consider one segment, it's already ordered by segment
@@ -1072,13 +927,13 @@ class AGA(Neighbors):
         # need to return segs_distances as inplace formulation doesn't work
         return segs_distances
 
-    def compute_attachedness(self, jseg, kseg_list, segs, segs_tips,
+    def compute_connectivity(self, jseg, kseg_list, segs, segs_tips,
                              segs_adjacency_nodes):
         distances = []
         median_distances = []
         measure_points_in_jseg = []
         measure_points_in_kseg = []
-        if self.attachedness_measure == 'random_walk_approx':
+        if self.connectivity_measure == 'random_walk_approx':
             for kseg in kseg_list:
                 reference_point_in_kseg = segs_tips[kseg][0]
                 measure_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_kseg, segs[jseg]])])
@@ -1089,7 +944,7 @@ class AGA(Neighbors):
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
-        elif self.attachedness_measure == 'random_walk':
+        elif self.connectivity_measure == 'random_walk':
             for kseg in kseg_list:
                 closest_distance = 1e12
                 measure_point_in_jseg = 0
@@ -1115,17 +970,17 @@ class AGA(Neighbors):
                        jseg, '({})'.format(measure_points_in_jseg[-1]),
                        kseg, '({})'.format(measure_points_in_kseg[-1]),
                        '->', distances[-1], median_distance, v=4)
-        elif self.attachedness_measure == 'euclidian_distance_full_pairwise':
+        elif self.connectivity_measure == 'euclidian_distance_full_pairwise':
             for kseg in kseg_list:
                 closest_similarity = 1e12
                 measure_point_in_jseg = 0
                 measure_point_in_kseg = 0
                 for reference_point_in_kseg in segs[kseg]:
-                    measure_point_in_jseg_test = segs[jseg][np.argmax(self.Ktilde[reference_point_in_kseg, segs[jseg]])]
-                    if self.Ktilde[reference_point_in_kseg, measure_point_in_jseg_test] > closest_similarity:
+                    measure_point_in_jseg_test = segs[jseg][np.argmax(self.similarities[reference_point_in_kseg, segs[jseg]])]
+                    if self.similarities[reference_point_in_kseg, measure_point_in_jseg_test] > closest_similarity:
                         measure_point_in_jseg = measure_point_in_jseg_test
                         measure_point_in_kseg = reference_point_in_kseg
-                        closest_similarity = self.Ktilde[reference_point_in_kseg, measure_point_in_jseg_test]
+                        closest_similarity = self.similarities[reference_point_in_kseg, measure_point_in_jseg_test]
                 measure_points_in_kseg.append(measure_point_in_kseg)
                 measure_points_in_jseg.append(measure_point_in_jseg)
                 closest_distance = 1/closest_similarity
@@ -1134,19 +989,19 @@ class AGA(Neighbors):
                        jseg, '(tip: {}, clos: {})'.format(segs_tips[jseg][0], measure_points_in_jseg[-1]),
                        kseg, '(tip: {}, clos: {})'.format(segs_tips[kseg][0], measure_points_in_kseg[-1]),
                        '->', distances[-1], v=4)
-        elif self.attachedness_measure == 'connectedness_brute_force':
+        elif self.connectivity_measure == 'connectedness_brute_force':
             segs_jseg = set(segs[jseg])
             for kseg in kseg_list:
                 connectedness = 0
                 for reference_point_in_kseg in segs[kseg]:
-                    for j in self.Ktilde[reference_point_in_kseg].nonzero()[1]:
+                    for j in self.similarities[reference_point_in_kseg].nonzero()[1]:
                         if j in segs_jseg:
                             connectedness += 1
                 # distances.append(1./(connectedness+1))
                 distances.append(1./connectedness if connectedness != 0 else np.inf)
             logg.msg(' ', jseg, '-', kseg_list, '->', distances, v=4)
         else:
-            raise ValueError('unknown attachedness measure')
+            raise ValueError('unknown connectivity measure')
         return distances, median_distances, measure_points_in_jseg, measure_points_in_kseg
 
     def trace_existing_connections(self, jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk):
@@ -1195,7 +1050,7 @@ class AGA(Neighbors):
         seg_test = set(segs[kseg_test])
         connections = 0
         for p in seg_loop:
-            p_neighbors = set(self.Ktilde[p].nonzero()[1])
+            p_neighbors = set(self.similarities[p].nonzero()[1])
             for q in p_neighbors:
                 if q in seg_test:
                     if p not in segs_adjacency_nodes[kseg_loop]:
@@ -1225,7 +1080,7 @@ class AGA(Neighbors):
         segs_adjacency_nodes += [{} for i in range(n_add)]
         kseg_list = list(range(len(segs) - n_add, len(segs))) + [iseg]
         trunk = len(kseg_list) - 1
-        if self.attachedness_measure == 'connectedness':
+        if self.connectivity_measure == 'connectedness':
             jseg_list = [jseg for jseg in range(len(segs)) if jseg not in kseg_list]
             for jseg in jseg_list:
                 distances = self.trace_existing_connections(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes, trunk=trunk)
@@ -1238,8 +1093,8 @@ class AGA(Neighbors):
         # logg.info('... treat existing connections')
         for jseg in prev_connecting_segments:
             median_distances = []
-            if self.attachedness_measure != 'connectedness':
-                result = self.compute_attachedness(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes)
+            if self.connectivity_measure != 'connectedness':
+                result = self.compute_connectivity(jseg, kseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, median_distances, measure_points_in_jseg, measure_points_in_kseg = result
                 segs_distances[jseg, kseg_list] = distances
                 segs_distances[kseg_list, jseg] = distances
@@ -1274,8 +1129,8 @@ class AGA(Neighbors):
         for kseg in kseg_list:
             jseg_list = [jseg for jseg in range(len(segs))
                          if jseg != kseg and jseg not in segs_adjacency[kseg]]  # prev_connecting_segments]  # if it's a cluster split, this is allowed?
-            if self.attachedness_measure != 'connectedness':
-                result = self.compute_attachedness(kseg, jseg_list, segs, segs_tips, segs_adjacency_nodes)
+            if self.connectivity_measure != 'connectedness':
+                result = self.compute_connectivity(kseg, jseg_list, segs, segs_tips, segs_adjacency_nodes)
                 distances, median_distances, measure_points_in_kseg, measure_points_in_jseg = result
                 segs_distances[kseg, jseg_list] = distances
                 segs_distances[jseg_list, kseg] = distances

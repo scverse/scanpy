@@ -247,6 +247,7 @@ class Neighbors():
         self._init_iroot()
         self.flavor = 'haghverdi16'
         # use the graph in adata
+        info_str = ''
         if 'neighbors_distances' in adata.uns:
             self.knn = issparse(adata.uns['neighbors_distances'])
             self.distances = adata.uns['neighbors_distances']
@@ -255,14 +256,22 @@ class Neighbors():
                     'neighbors_distances'][0].nonzero()[0].size + 1
             else:
                 self.n_neighbors = None  # is unknown
-            logg.info('    initialized `.distances`')
+            info_str += '`.distances` '
         else:
             self.knn = None
             self.distances = None
-            self.knn = None
+        # remove redundance with the previous checks...
         if 'neighbors_similarities' in adata.uns:
+            self.knn = issparse(adata.uns['neighbors_similarities'])
             self.similarities = adata.uns['neighbors_similarities']
-            logg.info('    initialized `.similarities`')
+            if self.knn:
+                # need to initialize again in case their were no
+                # neighbors_distances
+                self.n_neighbors = adata.uns[
+                    'neighbors_similarities'][0].nonzero()[0].size + 1
+            else:
+                self.n_neighbors = None  # is unknown
+            info_str += '`.similarities` '
         else:
             self.similarities = None
         if 'X_diffmap' in adata.obsm_keys():
@@ -273,14 +282,15 @@ class Neighbors():
             self.Dchosen = OnFlySymMatrix(
                 self._get_Ddiff_row, shape=(self._adata.shape[0], self._adata.shape[0]))
             np.set_printoptions(precision=10)
-            logg.info('    initialized `.evals`\n    {}'
-                      .format(str(self.evals_).replace('\n', '\n    ')))
+            info_str += '`.evals` '
         else:
             self.evals = None
             self.rbasis = None
             self.lbasis = None
             self.n_dcs = None
             self.Dchosen = None
+        if info_str != '':
+            logg.info('    initialized {}'.format(info_str))
 
     def compute_distances(self, n_neighbors=30, knn=True, n_pcs=N_PCS):
         """Compute distances.

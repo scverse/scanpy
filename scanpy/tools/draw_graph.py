@@ -64,7 +64,7 @@ def draw_graph(
     adata = adata.copy() if copy else adata
     if key not in adata.uns:
         raise ValueError(
-            '\'{key}\' is not present in `adata.uns`. '
+            '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
     adjacency = adata.uns['neighbors_similarities']

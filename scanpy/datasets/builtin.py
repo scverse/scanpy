@@ -6,11 +6,13 @@ import pandas as pd
 from . import api_without_examples as sc
 
 
-def blobs(n_centers=5, cluster_std=1.0, n_observations=640):
+def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
     """Gaussian Blobs.
 
     Parameters
     ----------
+    n_variables : `int`, optional (default: 11)
+        Dimension of feature space.
     n_centers : `int`, optional (default: 5)
         Number of cluster centers.
     cluster_std : `float`, optional (default: 1.0)
@@ -27,7 +29,7 @@ def blobs(n_centers=5, cluster_std=1.0, n_observations=640):
     """
     import sklearn.datasets
     X, y = sklearn.datasets.make_blobs(n_samples=n_observations,
-                                       n_features=11,
+                                       n_features=n_variables,
                                        centers=n_centers,
                                        cluster_std=cluster_std,
                                        random_state=0)

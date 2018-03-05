@@ -73,14 +73,8 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
     '''To enable computation of pseudotime, pass the index or expression vector
     of a root cell. Either add
         adata.uns['iroot'] = root_cell_index
-    or (robust to subsampling)
-        adata.var['xroot'] = adata.X[root_cell_index, :]
-    where "root_cell_index" is the integer index of the root cell, or
-        adata.var['xroot'] = adata[root_cell_name, :].X
-    where "root_cell_name" is the name (a string) of the root cell.'''
+        adata.var['xroot'] = adata[root_cell_name, :].X'''
         logg.hint(msg)
-    if n_branchings == 0:
-        logg.m('set parameter `n_branchings` > 0 to detect branchings', v='hint')
     logg.info('performing Diffusion Pseudotime analysis', r=True)
     dpt = DPT(adata, min_group_size=min_group_size, n_jobs=n_jobs,
               n_branchings=n_branchings,
@@ -100,23 +94,26 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         adata.obs['dpt_pseudotime'] = dpt.pseudotime
     # detect branchings and partition the data into segments
     dpt.branchings_segments()
-    adata.obs['dpt_groups'] = pd.Categorical(
-        values=dpt.segs_names.astype('U'),
-        categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
-    # the ordering according to segments and pseudotime
-    ordering_id = np.zeros(adata.n_obs, dtype=int)
-    for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
-    adata.obs['dpt_order'] = ordering_id
-    adata.obs['dpt_order_indices'] = dpt.indices
-    # the "change points" separate segments in the ordering above
-    adata.uns['dpt_changepoints'] = dpt.changepoints
-    # the tip points of segments
-    adata.uns['dpt_grouptips'] = dpt.segs_tips
+    if n_branchings > 0:
+        adata.obs['dpt_groups'] = pd.Categorical(
+            values=dpt.segs_names.astype('U'),
+            categories=natsorted(np.array(dpt.segs_names_unique).astype('U')))
+        # the "change points" separate segments in the ordering above
+        adata.uns['dpt_changepoints'] = dpt.changepoints
+        # the tip points of segments
+        adata.uns['dpt_grouptips'] = dpt.segs_tips
+        # the ordering according to segments and pseudotime
+        ordering_id = np.zeros(adata.n_obs, dtype=int)
+        for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
+        adata.obs['dpt_order'] = ordering_id
+        adata.obs['dpt_order_indices'] = dpt.indices
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-           + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)\n' if dpt.iroot is not None else '')
-           + '    \'dpt_groups\', the branching subgroups of dpt (adata.obs)\n'
-           + '    \'dpt_order\', cell order (adata.obs)')
+           + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)'
+              if dpt.iroot is not None else '')
+           + ('\n    \'dpt_groups\', the branching subgroups of dpt (adata.obs)\n'
+              + '    \'dpt_order\', cell order (adata.obs)'
+              if n_branchings > 0 else ''))
     return adata if copy else None
 
 
