@@ -17,19 +17,6 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
         Annotated data matrix.
     n_comps : `int`, optional (default: 15)
         The number of dimensions of the representation.
-    n_neighbors : `int`, optional (default: 30)
-        Specify the number of nearest neighbors in the knn graph. If knn ==
-        False, set the Gaussian kernel width to the distance of the kth
-        neighbor (method 'local').
-    knn : `bool`, optional (default: `True`)
-        If `True`, use a hard threshold to restrict the number of neighbors to
-        `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
-        Kernel to assign low weights to neighbors more distant than the
-        `n_neighbors` nearest neighbor.
-    n_pcs : `int`, optional (default: 50)
-        Use `n_pcs` PCs to compute the Euclidian distance matrix, which is the
-        basis for generating the graph. Set to 0 if you don't want preprocessing
-        with PCA.
     n_jobs : `int` or `None`
         Number of CPUs to use (default: `sc.settings.n_jobs`).
     copy : `bool` (default: `False`)
@@ -52,15 +39,14 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
                          'Mind that the 0th component of diffusion maps '
                          'is not used for visualization.')
     adata = adata.copy() if copy else adata
-    dmap = dpt.DPT(adata, n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs,
-                   n_dcs=n_comps, n_jobs=n_jobs, recompute_graph=True,
-                   flavor=flavor)
-    dmap.update_diffmap()
-    adata.uns['data_graph_distance_local'] = dmap.Dsq
-    adata.uns['data_graph_norm_weights'] = dmap.Ktilde
-    adata.obsm['X_diffmap'] = dmap.rbasis[:, 1:]
-    adata.obs['X_diffmap0'] = dmap.rbasis[:, 0]
-    adata.uns['diffmap_evals'] = dmap.evals[1:]
+    dmap = dpt.DPT(adata, n_jobs=n_jobs)
+    # check whether we need to recompute
+    if dmap.evals is None or n_dcs is None or dmap.evals.size < n_dcs:
+        dmap.compute_eigen(n_comps=n_comps)
+    adata.obsm['X_diffmap'] = dmap.rbasis
+    adata.uns['diffmap_evals'] = dmap.evals
+    adata.uns['neighbors_distances'] = dmap.distances
+    adata.uns['neighbors_similarities'] = dmap.similarities
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
               '    \'X_diffmap\', tSNE coordinates (adata.obsm)\n'

@@ -1147,9 +1147,9 @@ def aga_path(
         adata,
         nodes,
         keys,
-        annotations=['aga_pseudotime'],
+        annotations=['dpt_pseudotime'],
         color_map=None,
-        color_maps_annotations={'aga_pseudotime': 'Greys'},
+        color_maps_annotations={'dpt_pseudotime': 'Greys'},
         palette_groups=None,
         n_avg=1,
         groups_key=None,
@@ -1181,12 +1181,12 @@ def aga_path(
     keys : list of str
         Either variables in `adata.var_names` or annotations in
         `adata.obs`. They are plotted using `color_map`.
-    annotations : list of annotations, optional (default: ['aga_pseudotime'])
+    annotations : list of annotations, optional (default: ['dpt_pseudotime'])
         Plot these keys with `color_maps_annotations`. Need to be keys for
         `adata.obs`.
     color_map : color map for plotting keys or `None`, optional (default: `None`)
         Matplotlib colormap.
-    color_maps_annotations : dict storing color maps or `None`, optional (default: {'aga_pseudotime': 'Greys'})
+    color_maps_annotations : dict storing color maps or `None`, optional (default: {'dpt_pseudotime': 'Greys'})
         Color maps for plotting the annotations. Keys of the dictionary must
         appear in `annotations`.
     palette_groups : list of colors or `None`, optional (default: `None`)
@@ -1273,7 +1273,7 @@ def aga_path(
                     '`adata.obs[{}].values == str({})`.'
                     'Check whether adata.obs[{}] actually contains what you expect.'
                     .format(groups_key, group, groups_key))
-            idcs_group = np.argsort(adata.obs['aga_pseudotime'].values[
+            idcs_group = np.argsort(adata.obs['dpt_pseudotime'].values[
                 adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
             if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
@@ -1382,9 +1382,7 @@ def aga_path(
                                    interpolation='nearest',
                                    cmap=color_map_anno)
             if show_yticks:
-                # rename the label for 'aga_pseudotime'
-                label = anno.replace('aga_pseudotime', 'pseudotime')
-                anno_axis.set_yticklabels(['', label, ''],
+                anno_axis.set_yticklabels(['', anno, ''],
                                           fontsize=ytick_fontsize)
                 anno_axis.tick_params(axis='both', which='both', length=0)
             else:
@@ -1399,38 +1397,38 @@ def aga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = anno_dict['aga_pseudotime'].T
+        df['distance'] = anno_dict['dpt_pseudotime'].T
         return ax, df if ax_was_none and show == False else df
     else:
         return ax if ax_was_none and show == False else None
 
 
-def aga_attachedness(
+def aga_connectivity(
         adata,
-        attachedness_type='scaled',
+        connectivity_type='scaled',
         color_map=None,
         show=None,
         save=None):
-    """Attachedness of aga groups.
+    """Connectivity of aga groups.
     """
-    if attachedness_type == 'scaled':
-        attachedness = adata.uns['aga_attachedness']
-    elif attachedness_type == 'distance':
-        attachedness = adata.uns['aga_distances']
-    elif attachedness_type == 'absolute':
-        attachedness = adata.uns['aga_attachedness_absolute']
+    if connectivity_type == 'scaled':
+        connectivity = adata.uns['aga_connectivity']
+    elif connectivity_type == 'distance':
+        connectivity = adata.uns['aga_distances']
+    elif connectivity_type == 'absolute':
+        connectivity = adata.uns['aga_connectivity_absolute']
     else:
-        raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
+        raise ValueError('Unkown connectivity_type {}.'.format(connectivity_type))
     adjacency = adata.uns['aga_adjacency']
-    matrix(attachedness, color_map=color_map, show=False)
+    matrix(connectivity, color_map=color_map, show=False)
     for i in range(adjacency.shape[0]):
         neighbors = adjacency[i].nonzero()[1]
         pl.scatter([i for j in neighbors], neighbors, color='green')
-    utils.savefig_or_show('aga_attachedness', show=show, save=save)
+    utils.savefig_or_show('aga_connectivity', show=show, save=save)
     # as a stripplot
     if False:
         pl.figure()
-        for i, ds in enumerate(attachedness):
+        for i, ds in enumerate(connectivity):
             ds = np.log1p(ds)
             x = [i for j, d in enumerate(ds) if i != j]
             y = [d for j, d in enumerate(ds) if i != j]
