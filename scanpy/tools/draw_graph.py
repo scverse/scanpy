@@ -10,19 +10,21 @@ def draw_graph(
         root=None,
         random_state=0,
         n_jobs=None,
-        key='neighbors_similarities',
+        key='neighbors_distances',
         copy=False,
         **kwargs):
-    """Force-directed graph drawing [Fruchterman91]_ [Weinreb17]_ [Csardi06]_.
+    """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
 
     Often a good alternative to tSNE, but runs considerably slower.
 
     `Force-directed graph drawing
     <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a
     class of long-established algorithms for visualizing graphs. It has been
-    suggested for visualizing single-cell data by [Weinreb17]_. Here, by
+    suggested for visualizing single-cell data by [Islam11]_. Here, by
     default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many
     other layouts are available. Uses the igraph implementation [Csardi06]_.
+
+    Similar approaches have been used by [Zunder15]_ or [Weinreb17]_.
 
     Parameters
     ----------
@@ -67,13 +69,12 @@ def draw_graph(
             '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
-    adjacency = adata.uns['neighbors_similarities']
+    adjacency = adata.uns[key]
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
-        ig_layout = g.layout(layout,  # weights='weight',
-                             seed=init_coords, **kwargs)
+        ig_layout = g.layout(layout, seed=init_coords, weights='weight', **kwargs)
     elif 'rt' in layout:
         if root is not None: root = [root]
         ig_layout = g.layout(layout, root=root, **kwargs)

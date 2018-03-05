@@ -34,7 +34,7 @@ def pca(adata, **params):
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -100,15 +100,53 @@ def pca_scatter(
         ax=None):
     """Scatter plot in PCA coordinates.
 
-    See parameters of :func:`~scanpy.api.pl.pca`.
-
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    layout : {'fr', 'drl', ...}, optional (default: last computed)
+        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
+        the last computed layout is taken.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
+
+    Returns
+    -------
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -139,7 +177,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     components : str or list of integers, optional
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
@@ -195,7 +233,7 @@ def diffmap(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -278,6 +316,9 @@ def diffmap(
 
 def draw_graph(
         adata,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
         layout=None,
         color=None,
         use_raw=True,
@@ -300,8 +341,14 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
+    edges : `bool`, optional (default: `False`)
+        Show edges.
+    edges_width : `float`, optional (default: 0.1)
+        Width of edges.
+    edges_color : matplotlib color, optional (default: 'grey')
+        Color of edges.
     layout : {'fr', 'drl', ...}, optional (default: last computed)
         One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
         the last computed layout is taken.
@@ -343,15 +390,17 @@ def draw_graph(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if layout is None: layout = str(adata.uns['draw_graph_params']['layout'])
-    if 'X_draw_graph_' + layout not in adata.obsm_keys():
+    basis = 'draw_graph_' + layout
+    if 'X_' + basis not in adata.obsm_keys():
         raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
     axs = scatter(
         adata,
-        basis='draw_graph_' + layout,
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -367,9 +416,16 @@ def draw_graph(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges:
+        for ax in axs[::2]:
+            g = nx.Graph(adata.uns['neighbors_distances'])
+            edge_collection = nx.draw_networkx_edges(
+                g, adata.obsm['X_' + basis], ax=ax, width=edges_width, color=edges_color)
+            edge_collection.set_zorder(-2)
+    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs
 
 
@@ -394,7 +450,7 @@ def tsne(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -432,7 +488,8 @@ def tsne(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -479,7 +536,7 @@ def umap(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -521,7 +578,8 @@ def umap(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -572,7 +630,6 @@ def aga(
         left_margin=0.05,
         show=None,
         save=None,
-        ext=None,
         title_graph=None,
         groups_graph=None,
         color_graph=None,
@@ -627,7 +684,7 @@ def aga(
     aga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
-    utils.savefig_or_show('aga', show=show, save=save, ext=ext)
+    utils.savefig_or_show('aga', show=show, save=save)
     if show == False: return axs
 
 
@@ -654,7 +711,7 @@ def aga_scatter(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -687,7 +744,8 @@ def aga_scatter(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if color is None:
         color = [adata.uns['aga_groups_key']]
@@ -730,7 +788,6 @@ def aga_graph(
         min_edge_width=None,
         max_edge_width=None,
         title='abstracted graph',
-        ext='png',
         left_margin=0.01,
         random_state=0,
         pos=None,
@@ -819,7 +876,8 @@ def aga_graph(
 
     Returns
     -------
-    If `ax` is `None`, a matplotlib.Axes or an array of matplotlib.Axes.
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
 
     If `return_pos` is `True`, in addition, the positions of the nodes.
     """
@@ -872,9 +930,7 @@ def aga_graph(
             random_state=0,
             export_to_gexf=export_to_gexf,
             pos=pos)
-    if ext == 'pdf':
-        logg.warn('Be aware that saving as pdf exagerates thin lines, use "svg" instead.')
-    utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
+    utils.savefig_or_show('aga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
         return axs, pos if ax is None and show == False else pos
@@ -1232,7 +1288,7 @@ def aga_path(
                 'using the parameter `groups_key`.')
         groups_key = adata.uns['aga_groups_key']
     groups_names = adata.obs[groups_key].cat.categories
-    
+
     if palette_groups is None:
         utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         palette_groups = adata.uns[groups_key + '_colors']
@@ -1461,7 +1517,7 @@ def dpt(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
@@ -1660,7 +1716,7 @@ def louvain(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.

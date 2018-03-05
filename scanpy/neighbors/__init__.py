@@ -16,7 +16,7 @@ def neighbors(
         n_pcs=None,
         n_neighbors=30,
         knn=True,
-        weights={'similarities'},
+        weights={'distances', 'similarities'},
         n_jobs=None,
         copy=False):
     """Compute a neighborhood graph of observations.
@@ -37,7 +37,7 @@ def neighbors(
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    weights : subset of {`'similarities'`, `'distances'`} (default: `'similarities'`)
+    weights : subset of {`'distances'`, `'similarities'`} (default: {`'distances', 'similarities'`})
         Compute the neighborhood graph with different weights.
     n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of jobs.
@@ -67,6 +67,8 @@ def neighbors(
     hint = 'added\n'
     if 'distances' in weights:
         hint += '    \'neighbors_distances\', weighted adjacency matrix (adata.uns)'
+        if 'similarities' in weights:
+            hint += '\n'
     if 'similarities' in weights:
         hint += '    \'neighbors_similarities\', weighted adjacency matrix (adata.uns)'
     logg.hint(hint)
@@ -388,7 +390,7 @@ class Neighbors():
                 W[Mask == False] = 0
                 self.Mask = Mask
         else:
-            W = Dsq
+            W = Dsq.copy()  # need to copy the distance matrix here; what follows is inplace
             for i in range(len(Dsq.indptr[:-1])):
                 row = Dsq.indices[Dsq.indptr[i]:Dsq.indptr[i+1]]
                 num = 2 * sigmas[i] * sigmas[row]
@@ -598,17 +600,6 @@ class Neighbors():
         ddmap['Y'] = self.rbasis[:, 1:]
         ddmap['evals'] = self.evals[1:]
         return ddmap
-
-    def _compute_distance_matrix(self):
-        logg.msg('computing distance matrix with n_neighbors = {}'
-               .format(self.n_neighbors), v=4)
-        Dsq, indices, distances_sq = get_distance_matrix_and_neighbors(
-            X=self._adata.X,
-            k=self.n_neighbors,
-            sparse=self.knn,
-            n_jobs=self.n_jobs)
-        self.distances = Dsq
-        return Dsq, indices, distances_sq
 
     def _get_M_row_chunk(self, i_range):
         from ..cython import utils_cy
