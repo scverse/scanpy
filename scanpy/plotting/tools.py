@@ -423,7 +423,8 @@ def draw_graph(
         for ax in axs[::2]:
             g = nx.Graph(adata.uns['neighbors_distances'])
             edge_collection = nx.draw_networkx_edges(
-                g, adata.obsm['X_' + basis], ax=ax, width=edges_width, color=edges_color)
+                g, adata.obsm['X_' + basis],
+                ax=ax, width=edges_width, edge_color=edges_color)
             edge_collection.set_zorder(-2)
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs
@@ -859,7 +860,7 @@ def aga_graph(
         Min width of solid edges.
     max_edge_width : `float`, optional (default: `None`)
         Max width of solid and dashed edges.
-    pos : filename of `.gdf` file, array-like, optional (default: `None`)
+    pos : array-like, filename of `.gdf` file,  optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
@@ -940,9 +941,9 @@ def aga_graph(
     utils.savefig_or_show('aga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
-        return axs, pos if ax is None and show == False else pos
+        return (axs, pos) if show == False else pos
     else:
-        return axs if ax is None and show == False else None
+        return axs if show == False else None
 
 
 def _aga_graph(
