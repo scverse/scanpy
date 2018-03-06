@@ -226,18 +226,24 @@ class Neighbors():
     ----------
     adata : :class:`~scanpy.api.AnnData`
         An annotated data matrix.
-    n_pcs : `int` or `None`, optional (default: `None`)
-        Number of principal components in preprocessing PCA. Set to 0 if you do
-        not want preprocessing with PCA. Set to `None`, if you want use any
-        `X_pca` present in `adata.obsm`.
     n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of jobs.
+
+    Attributes
+    ----------
+    distances
+    similarities
+    eigen_values
+    eigen_basis
+    laplacian
 
     Methods
     -------
     compute_distances
     compute_similarities
     compute_eigen
+    compute_laplacian
+    to_igraph
     """
 
     def __init__(
@@ -252,7 +258,7 @@ class Neighbors():
         info_str = ''
         if 'neighbors_distances' in adata.uns:
             self.knn = issparse(adata.uns['neighbors_distances'])
-            self.distances = adata.uns['neighbors_distances']
+            self._distances = adata.uns['neighbors_distances']
             if self.knn:
                 self.n_neighbors = adata.uns[
                     'neighbors_distances'][0].nonzero()[0].size + 1
@@ -261,11 +267,11 @@ class Neighbors():
             info_str += '`.distances` '
         else:
             self.knn = None
-            self.distances = None
+            self._distances = None
         # remove redundance with the previous checks...
         if 'neighbors_similarities' in adata.uns:
             self.knn = issparse(adata.uns['neighbors_similarities'])
-            self.similarities = adata.uns['neighbors_similarities']
+            self._similarities = adata.uns['neighbors_similarities']
             if self.knn:
                 # need to initialize again in case their were no
                 # neighbors_distances
@@ -275,7 +281,7 @@ class Neighbors():
                 self.n_neighbors = None  # is unknown
             info_str += '`.similarities` '
         else:
-            self.similarities = None
+            self._similarities = None
         if 'X_diffmap' in adata.obsm_keys():
             self.evals = _backwards_compat_get_full_eval(adata)
             self.rbasis = _backwards_compat_get_full_X_diffmap(adata)
@@ -293,6 +299,45 @@ class Neighbors():
             self.Dchosen = None
         if info_str != '':
             logg.info('    initialized {}'.format(info_str))
+
+    @property
+    def distances():
+        """Distances between data points.
+
+        Is a sparse matrix.
+        """
+        return self._distances
+
+    @property
+    def similarities():
+        """Similarities between data points, closely related to a transition matrix.
+
+        Is a sparse matrix.
+        """
+        return self._similarities
+
+    @property
+    def eigen_values():
+        """Eigen values of similarity matrix.
+        """
+        return self._evals
+
+    @property
+    def eigen_basis():
+        """Eigen basis of similarity matrix.
+        """
+        return self._rbasis
+
+    @property
+    def laplacian():
+        """Graph laplacian.
+        """
+        return self._laplacian
+
+    def to_igraph(self):
+        """Generate igraph object.
+        """
+        return None
 
     def compute_distances(self, n_neighbors=30, knn=True, n_pcs=N_PCS):
         """Compute distances.
@@ -313,7 +358,7 @@ class Neighbors():
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = preprocess_with_pca(self._adata, n_pcs=n_pcs)
-        self.distances, _, _ = get_distance_matrix_and_neighbors(
+        self._distances, _, _ = get_distance_matrix_and_neighbors(
             X, n_neighbors, sparse=self.knn)
         logg.msg('determined n_neighbors =',
                self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
@@ -337,10 +382,10 @@ class Neighbors():
         -------
         Writes attribute `.similarities`.
         """
-        if self.distances is None:
+        if self._distances is None:
             raise ValueError('You need to run `.compute_distances` first.')
         # init distances
-        Dsq = self.distances
+        Dsq = self._distances
         if self.knn:
             indices, distances_sq = get_indices_distances_from_sparse_matrix(
                 Dsq, self.n_neighbors)
@@ -351,7 +396,7 @@ class Neighbors():
         if self.flavor == 'unweighted':
             if not self.knn:
                 raise ValueError('`flavor=\'unweighted\'` only with `knn=True`.')
-            self.similarities = self.distances.sign()
+            self._similarities = self._distances.sign()
             return
 
         # choose sigma, the heuristic here doesn't seem to make much of a difference,
@@ -368,7 +413,7 @@ class Neighbors():
         sigmas = np.sqrt(sigmas_sq)
 
         # compute the symmetric weight matrix
-        if not sp.sparse.issparse(self.distances):
+        if not sp.sparse.issparse(self._distances):
             Num = 2 * np.multiply.outer(sigmas, sigmas)
             Den = np.add.outer(sigmas_sq, sigmas_sq)
             W = np.sqrt(Num/Den) * np.exp(-Dsq/Den)
@@ -443,18 +488,18 @@ class Neighbors():
             # now compute the density-normalized Kernel
             # it's still symmetric
             szszT = np.outer(self.sqrtz, self.sqrtz)
-            self.similarities = self.K / szszT  # Ktilde
+            self._similarities = self.K / szszT  # Ktilde
         else:
             self.z = np.array(self.K.sum(axis=0)).flatten()
             # now we need the square root of the density
             self.sqrtz = np.array(np.sqrt(self.z))
             # now compute the density-normalized Kernel
             # it's still symmetric
-            self.similarities = self.K
+            self._similarities = self.K
             for i in range(len(self.K.indptr[:-1])):
                 row = self.K.indices[self.K.indptr[i]: self.K.indptr[i+1]]
                 num = self.sqrtz[i] * self.sqrtz[row]
-                self.similarities.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
+                self._similarities.data[self.K.indptr[i]: self.K.indptr[i+1]] = self.K.data[self.K.indptr[i]: self.K.indptr[i+1]] / num
         logg.msg('computed similarities, the normalized anistropic kernel (Ktilde)', v=4)
 
     def compute_eigen(self, n_comps=15, sym=None, sort='decrease', matrix=None):
@@ -489,7 +534,7 @@ class Neighbors():
         np.set_printoptions(precision=10)
         if sym is None: sym = self.sym
         self.rbasisBool = True
-        if matrix is None: matrix = self.similarities
+        if matrix is None: matrix = self._similarities
         if matrix is None:
             raise ValueError('Run `.compute_similarities` first.')
         # compute the spectrum
@@ -556,7 +601,7 @@ class Neighbors():
         if xroot is not None and xroot.size == self._adata.shape[1]:
             self._set_iroot_via_xroot(xroot)
 
-    def _compute_L_matrix(self):
+    def compute_laplacian(self):
         """Graph Laplacian for K.
         """
         self.L = np.diag(self.z) - self.K
