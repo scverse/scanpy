@@ -41,7 +41,7 @@ def diffmap(adata, n_comps=15, n_neighbors=None, knn=True, n_pcs=50, sigma=0,
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_jobs=n_jobs)
     # check whether we need to recompute
-    if dmap.evals is None or n_dcs is None or dmap.evals.size < n_dcs:
+    if dmap.evals is None or n_comps is None or dmap.evals.size < n_comps:
         dmap.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dmap.rbasis
     adata.uns['diffmap_evals'] = dmap.evals

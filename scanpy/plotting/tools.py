@@ -750,31 +750,38 @@ def aga_scatter(
     if color is None:
         color = [adata.uns['aga_groups_key']]
     if not isinstance(color, list): color = [color]
-    ax = scatter(adata,
-                 basis=basis,
-                 color=color,
-                 alpha=alpha,
-                 groups=groups,
-                 components=components,
-                 projection=projection,
-                 legend_loc=legend_loc,
-                 legend_fontsize=legend_fontsize,
-                 legend_fontweight=legend_fontweight,
-                 color_map=color_map,
-                 palette=palette,
-                 right_margin=right_margin,
-                 size=size,
-                 title=title,
-                 ax=ax,
-                 show=False)
+    kwds = {}
+    if 'draw_graph' in basis:
+        scatter_func = draw_graph
+        kwds['edges'] = True
+    else:
+        scatter_func = scatter
+        kwds['basis'] = basis
+    axs = scatter_func(
+        adata,
+        color=color,
+        alpha=alpha,
+        groups=groups,
+        components=components,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        ax=ax,
+        show=False,
+        **kwds)
     utils.savefig_or_show('aga_' + basis, show=show, save=save)
-    if show == False: return ax
+    if show == False: return axs
 
 
 def aga_graph(
         adata,
-        solid_edges='aga_adjacency_tree_confidence',
-        dashed_edges='aga_adjacency_full_confidence',
+        solid_edges='aga_adjacency_full_confidence',
+        dashed_edges=None,
         layout=None,
         root=0,
         groups=None,
@@ -1035,16 +1042,18 @@ def _aga_graph(
         # igraph layouts
         if layout != 'eq_tree':
             from .. import utils as sc_utils
-            g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
+            adj_solid_weights = adjacency_solid
+            g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
-                pos_list = g.layout(layout, root=root if isinstance(root, list) else [root],
-                                    rootlevel=rootlevel).coords
+                pos_list = g.layout(
+                    layout, root=root if isinstance(root, list) else [root],
+                    rootlevel=rootlevel).coords
             elif layout == 'circle':
                 pos_list = g.layout(layout).coords
             else:
                 np.random.seed(random_state)
                 init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
-                pos_list = g.layout(layout, seed=init_coords).coords
+                pos_list = g.layout(layout, seed=init_coords, weights='weight').coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         # equally-spaced tree
         else:
