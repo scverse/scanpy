@@ -11,6 +11,7 @@ def draw_graph(
         random_state=0,
         n_jobs=None,
         key='neighbors_distances',
+        key_ext='LAYOUT',
         copy=False,
         **kwargs):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
@@ -45,6 +46,8 @@ def draw_graph(
     key : `str`, optional (default: 'neighbors_similarities')
         Key for accessing the sparse adjacency matrix of the graph in
         `adata.uns`.
+    key_ext : `str`, optional (default: 'LAYOUT')
+        By default, append `layout`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
     **kwargs : further parameters
@@ -83,7 +86,7 @@ def draw_graph(
     adata.uns['draw_graph_params'] = np.array(
         (layout, random_state,),
         dtype=[('layout', 'U20'), ('random_state', int)])
-    obs_key = 'X_draw_graph_' + layout
+    obs_key = 'X_draw_graph_' + (layout if key_ext == 'LAYOUT' else key_ext)
     adata.obsm[obs_key] = np.array(ig_layout.coords)
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
