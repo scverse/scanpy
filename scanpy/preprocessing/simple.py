@@ -803,6 +803,64 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
         X = data
         return X[obs_indices], obs_indices
 
+def downsample(adata, target_counts=20000, copy=False):
+    """Downsample the counts so that no cell has more than 'target_counts' counts.
+
+    Cells with fewer counts than 'target_counts' are not downsampled and have the
+    same profile.
+
+    Note: This function is stochastic and will therefore give different results 
+          each time it is run.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing annotated data matrix.
+    target_counts : int, positive (default: 20,000)
+        Target number of counts for downsampling. Cells with more counts than 
+        'target_counts' will be downsampled to have 'target_counts' counts.
+    copy : bool (default: False)
+        Determines whether a copy is returned.
+
+    Returns
+    -------
+    Depending on 'copy' returns or updates an AnnData object with a downsampled `adata.X`.
+    """
+    if target_counts < 1:
+        raise ValueError('`target_counts` must be a positive integer'.format(target_counts))
+    
+    if not isinstance(adata, AnnData):
+        raise TypeError('`adata` must be an AnnData object'.format(adata)) #Ist das der richtige error fuer sowas?
+
+    logg.msg('Downsampling `AnnData.X` to {:d} counts...'.format(target_counts))
+
+    tmp = adata.copy()
+    tmp.obs['n_umi_init'] = tmp.X.sum(1)
+
+    for cell in adata.obs_names:
+        if tmp.obs['n_umi_init'][cell] > target_counts:
+            #Downsample to target_counts
+            idx_vec = []
+            sandpit = [idx_vec.extend([ix]*int(i)) for ix,i in enumerate(adata[cell,:].X)]
+            idx_vec = np.array(idx_vec)
+
+            downsamp = np.random.choice(idx_vec, target_counts)
+            cell_profile = np.zeros(adata.n_vars)
+
+            indices,values = np.unique(downsamp, return_counts=True)
+
+            for i in range(len(indices)):
+                cell_profile[indices[i]] = values[i]
+
+            tmp[cell,:].X = cell_profile
+        
+    if(copy):
+        return(tmp)
+    else:
+        adata.X = tmp.X
+
+
+
 
 def zscore_deprecated(X):
     """Z-score standardize each variable/gene in X.
