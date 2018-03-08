@@ -301,7 +301,7 @@ class Neighbors():
             logg.info('    initialized {}'.format(info_str))
 
     @property
-    def distances():
+    def distances(self):
         """Distances between data points.
 
         Is a sparse matrix.
@@ -309,7 +309,7 @@ class Neighbors():
         return self._distances
 
     @property
-    def similarities():
+    def similarities(self):
         """Similarities between data points, closely related to a transition matrix.
 
         Is a sparse matrix.
@@ -317,19 +317,19 @@ class Neighbors():
         return self._similarities
 
     @property
-    def eigen_values():
+    def eigen_values(self):
         """Eigen values of similarity matrix.
         """
         return self._evals
 
     @property
-    def eigen_basis():
+    def eigen_basis(self):
         """Eigen basis of similarity matrix.
         """
         return self._rbasis
 
     @property
-    def laplacian():
+    def laplacian(self):
         """Graph laplacian.
         """
         return self._laplacian
