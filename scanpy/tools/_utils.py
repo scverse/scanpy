@@ -11,8 +11,28 @@ doc_use_rep = dedent("""\
 """)
 
 
-def choose_representation(adata):
-    print('hello')
+def choose_representation(adata, use_rep=None):
+    if use_rep is None:
+        if adata.n_vars > N_PCS:
+            if 'X_pca' in adata.obsm.keys():
+                logg.info('    using \'X_pca\' with n_pcs = {}'
+                          .format(adata.obsm['X_pca'].shape[1]))
+                return adata.obsm['X_pca']
+            else:
+                raise ValueError(
+                    'You\`re trying to run the computation on `.n_vars` dimensions of `.X`.'
+                    'If you really want this set `use_rep=\'X\'`. '
+                    'Otherwise, for instance, perform preprocessing with PCA by calling `sc.pp.pca(adata)`')
+        else:
+            logg.info('    using data matrix X directly')
+            return adata.X
+    else:
+        if use_rep in adata.obsm.keys():
+            return adata.obsm[use_rep]
+        else:
+            raise ValueError(
+                'Did not find {} in `.obsm.keys()`. '
+                'You need to compute it first.'.format(use_rep))
 
 
 def preprocess_with_pca(adata, n_pcs=None, random_state=0):
