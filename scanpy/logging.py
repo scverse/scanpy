@@ -110,6 +110,7 @@ def print_version_and_date():
 
 
 _dependencies_numerics = [
+    'anndata',  # anndata actually shouldn't, but as long as it's in development
     'numpy',
     'scipy',
     'pandas',
@@ -124,7 +125,6 @@ _dependencies_plotting = ['matplotlib', 'seaborn']
 
 def _print_versions_dependencies(dependencies):
     # this is not the same as the requirements!
-    print('Dependencies:', end=' ')
     for mod in dependencies:
         mod_name = mod[0] if isinstance(mod, tuple) else mod
         mod_install = mod[1] if isinstance(mod, tuple) else mod
@@ -135,16 +135,25 @@ def _print_versions_dependencies(dependencies):
             pass
     print()
 
-    
+def print_versions():
+    """Versions that might influence the numerical results.
+
+    Matplotlib and Seaborn are excluded from this.
+    """
+    _print_versions_dependencies(['scanpy'] + _dependencies_numerics)
+
+
 def print_versions_dependencies_numerics():
     """Dependencies that might influence numerical results (computed data).
     """
+    print('Dependencies:', end=' ')
     _print_versions_dependencies(_dependencies_numerics)
 
 
 def print_versions_dependencies_plotting():
     """Dependencies that might influence plots (but not computed data).
     """
+    print('Dependencies:', end=' ')
     _print_versions_dependencies(_dependencies_plotting)
 
 
