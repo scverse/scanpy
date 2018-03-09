@@ -13,7 +13,7 @@ def louvain(
         restrict_to=None,
         key_added=None,
         key='neighbors_similarities',
-        flavor='vtraag',        
+        flavor='vtraag',
         directed=True,
         n_jobs=None,
         copy=False):
@@ -61,7 +61,7 @@ def louvain(
     adata = adata.copy() if copy else adata
     if key not in adata.uns:
         raise ValueError(
-            '\'{key}\' is not present in `adata.uns`. '
+            '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
     adjacency = adata.uns[key]
