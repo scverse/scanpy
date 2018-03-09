@@ -45,13 +45,6 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     weights = adjacency[sources, targets]
     if isinstance(weights, np.matrix):
         weights = weights.A1
-    # if len(weights) > 0: weights = np.array(weights)
-    # else:
-    #     # hack for empty graph
-    #     sources, targets = np.ones(adjacency.shape).nonzero()
-    #     weights = np.array([1e-12 for i in range(len(sources))])  # dummy edges
-    # if adjacency.shape[0] < 20:
-    #     print(list(zip(sources, targets)), weights)
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
     g.add_edges(list(zip(sources, targets)))
@@ -61,6 +54,19 @@ def get_igraph_from_adjacency(adjacency, directed=None):
                   'Your adjacency matrix contained redundant nodes.'
                   .format(g.vcount()))
     return g
+
+
+def get_sparse_from_igraph(graph, weight_attr=None):
+    from scipy.sparse import csr_matrix
+    edges = graph.get_edgelist()
+    if weight_attr is None:
+        weights = [1] * len(edges)
+    else:
+        weights = graph.es[weight_attr]
+    if not graph.is_directed():
+        edges.extend([(v, u) for u, v in edges])
+        weights.extend(weights)
+    return csr_matrix((weights, zip(*edges)))
 
 
 def compute_association_matrix_of_groups(adata, prediction, reference,

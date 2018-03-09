@@ -10,13 +10,15 @@ def draw_graph(
         root=None,
         random_state=0,
         n_jobs=None,
-        key='neighbors_distances',
-        key_ext='LAYOUT',
+        key_adjacency='neighbors_distances',
+        key_added_ext=None,
         copy=False,
         **kwargs):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
 
     Often a good alternative to tSNE, but runs considerably slower.
+
+    Consider passing `weights='weight'`.
 
     `Force-directed graph drawing
     <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a
@@ -43,10 +45,10 @@ def draw_graph(
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    key : `str`, optional (default: 'neighbors_similarities')
+    key_adjacency : `str`, optional (default: 'neighbors_distances')
         Key for accessing the sparse adjacency matrix of the graph in
         `adata.uns`.
-    key_ext : `str`, optional (default: 'LAYOUT')
+    key_ext : `str`, optional (default: `None`)
         By default, append `layout`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
@@ -67,17 +69,17 @@ def draw_graph(
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
-    if key not in adata.uns:
+    if key_adjacency not in adata.uns:
         raise ValueError(
             '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
-    adjacency = adata.uns[key]
+    adjacency = adata.uns[key_adjacency]
     g = utils.get_igraph_from_adjacency(adjacency)
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
-        ig_layout = g.layout(layout, seed=init_coords, weights='weight', **kwargs)
+        ig_layout = g.layout(layout, seed=init_coords, **kwargs)
     elif 'rt' in layout:
         if root is not None: root = [root]
         ig_layout = g.layout(layout, root=root, **kwargs)
@@ -86,7 +88,7 @@ def draw_graph(
     adata.uns['draw_graph_params'] = np.array(
         (layout, random_state,),
         dtype=[('layout', 'U20'), ('random_state', int)])
-    obs_key = 'X_draw_graph_' + (layout if key_ext == 'LAYOUT' else key_ext)
+    obs_key = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
     adata.obsm[obs_key] = np.array(ig_layout.coords)
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
