@@ -157,7 +157,7 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
         raise ValueError(
             'Only provide one of the optional arguments (`min_counts`,'
             '`min_cells`, `max_counts`, `max_cells`) per call.')
- 
+
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         gene_subset, number = filter_genes(adata.X, min_cells=min_cells,
@@ -181,7 +181,7 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
         gene_subset = number_per_gene >= min_number
     if max_number is not None:
         gene_subset = number_per_gene <= max_number
-        
+
     s = np.sum(~gene_subset)
     logg.msg('filtered out {} genes that are detected'.format(s), end=' ', v=4)
     if min_cells is not None or min_counts is not None:
@@ -629,7 +629,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         The annotated data matrix.
     keys : str or list of strings
         Keys for observation annotation on which to regress on.
@@ -721,6 +721,8 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
     zero_center : `bool`, optional (default: `True`)
         If `False`, omit zero-centering variables, which allows to handle sparse
         input efficiently.
@@ -762,16 +764,16 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     return X if copy else None
 
 
-def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
-    """Subsample to a fraction of the number of samples.
+def subsample(data, fraction, random_state=0, copy=False):
+    """Subsample to a fraction of the number of observations.
 
     Parameters
     ----------
-    data : AnnData or array-like
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     fraction : float in [0, 1]
         Subsample to this `fraction` of the number of observations.
-    seed : int, optional (default: 0)
+    random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     simply_skip_samples : bool, optional (default: False)
         Simply skip observations instead of true sampling.
@@ -787,13 +789,10 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
     if fraction > 1 or fraction < 0:
         raise ValueError('`fraction` needs to be within [0, 1], not {}'
                          .format(fraction))
-    np.random.seed(seed)
+    np.random.seed(random_state)
     n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
     new_n_obs = int(fraction * n_obs)
-    if simply_skip_samples:
-        obs_indices = np.arange(0, n_obs, int(1./fraction), dtype=int)
-    else:
-        obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
+    obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
     logg.msg('... subsampled to {} data points'.format(new_n_obs), v=4)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -803,63 +802,52 @@ def subsample(data, fraction, seed=0, simply_skip_samples=False, copy=False):
         X = data
         return X[obs_indices], obs_indices
 
-def downsample(adata, target_counts=20000, copy=False):
-    """Downsample the counts so that no cell has more than 'target_counts' counts.
+def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
+    """Downsample counts so that each cell has no more than `target_counts`.
 
-    Cells with fewer counts than 'target_counts' are not downsampled and have the
-    same profile.
-
-    Note: This function is stochastic and will therefore give different results 
-          each time it is run.
+    Cells with fewer counts than `target_counts` are unaffected by this. This
+    has been implemented by M. D. Luecken.
 
     Parameters
     ----------
-    adata : AnnData
-        AnnData object containing annotated data matrix.
-    target_counts : int, positive (default: 20,000)
-        Target number of counts for downsampling. Cells with more counts than 
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    target_counts : `int` (default: 20,000)
+        Target number of counts for downsampling. Cells with more counts than
         'target_counts' will be downsampled to have 'target_counts' counts.
-    copy : bool (default: False)
+    random_state : `int` or `None`, optional (default: 0)
+        Random seed to change subsampling.
+    copy : `bool` (default: `False`)
         Determines whether a copy is returned.
 
     Returns
     -------
-    Depending on 'copy' returns or updates an AnnData object with a downsampled `adata.X`.
+    Depending on `copy` returns or updates an `adata` with downsampled `.X`.
     """
     if target_counts < 1:
-        raise ValueError('`target_counts` must be a positive integer'.format(target_counts))
-    
+        raise ValueError('`target_counts` must be a positive integer'
+                         .format(target_counts))
     if not isinstance(adata, AnnData):
-        raise TypeError('`adata` must be an AnnData object'.format(adata)) #Ist das der richtige error fuer sowas?
-
-    logg.msg('Downsampling `AnnData.X` to {:d} counts...'.format(target_counts))
-
-    tmp = adata.copy()
-    tmp.obs['n_umi_init'] = tmp.X.sum(1)
-
-    for cell in adata.obs_names:
-        if tmp.obs['n_umi_init'][cell] > target_counts:
-            #Downsample to target_counts
+        raise ValueError('`adata` must be an `AnnData` object'.format(adata))
+    logg.msg('downsampling to {} counts'.format(target_counts), r=True, v=4)
+    adata = adata.copy() if copy else adata
+    np.random.seed(random_state)
+    counts = adata.X.sum(axis=1)
+    adata.obs['n_counts'] = counts
+    for icell, _ in enumerate(adata.obs_names):
+        if counts[icell] > target_counts:
             idx_vec = []
-            sandpit = [idx_vec.extend([ix]*int(i)) for ix,i in enumerate(adata[cell,:].X)]
-            idx_vec = np.array(idx_vec)
-
+            for ix, i in enumerate(adata.X[icell].astype(int)):
+                idx_vec.extend([ix]*i)
+            # idx_vec = np.array(idx_vec)
             downsamp = np.random.choice(idx_vec, target_counts)
             cell_profile = np.zeros(adata.n_vars)
-
-            indices,values = np.unique(downsamp, return_counts=True)
-
+            indices, values = np.unique(downsamp, return_counts=True)
             for i in range(len(indices)):
                 cell_profile[indices[i]] = values[i]
-
-            tmp[cell,:].X = cell_profile
-        
-    if(copy):
-        return(tmp)
-    else:
-        adata.X = tmp.X
-
-
+            adata.X[icell] = cell_profile
+    logg.msg('finished', t=True, v=4)
+    return adata if copy else None
 
 
 def zscore_deprecated(X):

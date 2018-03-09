@@ -19,13 +19,13 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.filter_cells
    pp.filter_genes
    pp.filter_genes_dispersion
-
    pp.log1p
    pp.pca
    pp.normalize_per_cell
    pp.regress_out
    pp.scale
    pp.subsample
+   pp.downsample_counts
 
 **Recipes**
 
