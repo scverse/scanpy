@@ -1,6 +1,19 @@
 from .. import logging as logg
 from .pca import pca
 from ..preprocessing.simple import N_PCS
+from textwrap import dedent
+
+doc_use_rep = dedent("""\
+    use_rep : \{`None`, 'X'\} or any key for `.obsm`, optional (default: `None`)
+        Use the indicated representation. If `None`, the representation is
+        chosen automatically: for `.n_vars` < 50, `.X` is used, otherwise and if
+        'X_pca' is present, 'X_pca' is used.
+""")
+
+
+def choose_representation(adata):
+    print('hello')
+
 
 def preprocess_with_pca(adata, n_pcs=None, random_state=0):
     """

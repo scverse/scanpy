@@ -2,42 +2,34 @@ import numpy as np
 import scipy as sp
 from scipy.sparse import issparse
 from joblib import Parallel, delayed
+from textwrap import dedent
 from .. import settings
 from .. import logging as logg
 from .. import utils
-from ..tools._utils import preprocess_with_pca
+from ..tools._utils import choose_representation, doc_use_rep
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-def neighbors(
-        adata,
-        n_pcs=None,
-        n_neighbors=30,
-        knn=True,
-        weights={'distances', 'similarities'},
-        n_jobs=None,
-        copy=False):
-    """Compute a neighborhood graph of observations.
+doc_neighbors = dedent("""\
+    Compute a neighborhood graph of observations.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_pcs : `int` or `None`, optional (default: `None`)
-        Number of principal components in preprocessing PCA. Set to 0 if you do
-        not want preprocessing with PCA. Set to `None`, if you want use any
-        `X_pca` present in `adata.obsm`.
+    {use_rep}
     n_neighbors : `int`, optional (default: 30)
-        Number of nearest neighbors in the knn graph. If `knn` is `False`, set
-        the Gaussian kernel width to the distance of the `n_neighbors` neighbor.
+        If `knn` is `True`, Number of nearest neighbors in the knn graph. If
+        `knn` is `False`, set the Gaussian kernel width to the distance of the
+        `n_neighbors` neighbor.
     knn : `bool`, optional (default: `True`)
         If `True`, use a hard threshold to restrict the number of neighbors to
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    weights : subset of {`'distances'`, `'similarities'`} (default: {`'distances', 'similarities'`})
+    weights : subset of {{`'distances'`, `'similarities'`}} (default: {{`'distances', 'similarities'`}})
         Compute the neighborhood graph with different weights.
     n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of jobs.
@@ -53,11 +45,21 @@ def neighbors(
     neighbors_distances : sparse matrix (`adata.uns`, dtype `float32`)
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
-    """
+    """).format(use_rep=doc_use_rep)
+
+
+def neighbors(
+        adata,
+        use_rep=None,
+        n_neighbors=30,
+        knn=True,
+        weights={'distances', 'similarities'},
+        n_jobs=None,
+        copy=False):
     logg.info('computing neighbors', r=True)
     adata = adata.copy() if copy else adata
     neighbors = Neighbors(adata)
-    neighbors.compute_distances(n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs)
+    neighbors.compute_distances(n_neighbors=n_neighbors, knn=knn, use_rep=use_rep)
     if 'distances' in weights:
         adata.uns['neighbors_distances'] = neighbors.distances
     if 'similarities' in weights:
@@ -73,6 +75,8 @@ def neighbors(
         hint += '    \'neighbors_similarities\', weighted adjacency matrix (adata.uns)'
     logg.hint(hint)
     return adata if copy else None
+
+neighbors.__doc__ = doc_neighbors
 
 
 def get_neighbors(X, Y, k):
@@ -339,7 +343,7 @@ class Neighbors():
         """
         return None
 
-    def compute_distances(self, n_neighbors=30, knn=True, n_pcs=N_PCS):
+    def compute_distances(self, n_neighbors=30, knn=True, use_rep=None):
         """Compute distances.
 
         Parameters
@@ -357,7 +361,7 @@ class Neighbors():
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
         self.n_neighbors = n_neighbors
         self.knn = knn
-        X = preprocess_with_pca(self._adata, n_pcs=n_pcs)
+        X = choose_representation(self._adata, use_rep=use_rep)
         self._distances, _, _ = get_distance_matrix_and_neighbors(
             X, n_neighbors, sparse=self.knn)
         logg.msg('determined n_neighbors =',

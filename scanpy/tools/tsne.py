@@ -1,19 +1,11 @@
-from ._utils import preprocess_with_pca
+from textwrap import dedent
+from ._utils import choose_representation, doc_use_rep
 from .. import settings
 from .. import logging as logg
 
 
-def tsne(
-        adata,
-        n_pcs=None,
-        perplexity=30,
-        early_exaggeration=12,
-        learning_rate=1000,
-        random_state=0,
-        use_fast_tsne=True,
-        n_jobs=None,
-        copy=False):
-    """t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+doc_tsne = dedent("""\
+    t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
     t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
     proposed for visualizating single-cell data by [Amir13]_. Here, by default,
@@ -26,10 +18,7 @@ def tsne(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_pcs : `int` or `None`, optional (default: `None`)
-        Number of principal components in preprocessing PCA. Set to 0 if you do
-        not want preprocessing with PCA. Set to `None`, if you want use any
-        `X_pca` present in `adata.obsm`.
+    {use_rep}
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -66,11 +55,22 @@ def tsne(
 
     X_tsne : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
-    """
+    """).format(use_rep=doc_use_rep)
+
+
+def tsne(
+        adata,
+        use_rep=None,
+        perplexity=30,
+        early_exaggeration=12,
+        learning_rate=1000,
+        random_state=0,
+        use_fast_tsne=True,
+        n_jobs=None,
+        copy=False):
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
-    # preprocessing by PCA
-    X = preprocess_with_pca(adata, n_pcs=n_pcs)
+    X = choose_representation(adata, use_rep=use_rep)
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': random_state,
@@ -108,3 +108,5 @@ def tsne(
     logg.hint('added\n'
               '    \'X_tsne\', tSNE coordinates (adata.obsm)')
     return adata if copy else None
+
+tsne.__doc__ = doc_tsne

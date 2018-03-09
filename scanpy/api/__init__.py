@@ -33,7 +33,7 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    :toctree: .
 
    pp.recipe_zheng17
-   pp.recipe_weinreb16
+   pp.recipe_weinreb17
 
 **Neighbors**
 

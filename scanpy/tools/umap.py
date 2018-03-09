@@ -1,22 +1,11 @@
-from ._utils import preprocess_with_pca
+from textwrap import dedent
+from ._utils import choose_representation, doc_use_rep
 from .. import settings
 from .. import logging as logg
 
 
-def umap(
-        adata,
-        n_pcs=None,
-        n_neighbors=15,
-        n_components=2,
-        min_dist=0.1,
-        metric='euclidean',
-        alpha=1.0,
-        init='spectral',
-        local_connectivity=1.0,
-        random_state=None,
-        copy=False,
-        umap_kwargs={}):
-    """UMAP [McInnes18]_.
+doc_umap = dedent("""\
+    UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique for dimension reduction which is suitable for visualization of
@@ -24,18 +13,12 @@ def umap(
     arguably preserves more of the global structure.  We use the implementation
     of `umap-learn <https://github.com/lmcinnes/umap>`_ [McInnes18]_.
 
-    *Note:* In contrast to other embeddings within Scanpy, UMAP does *not* use a
-    PCA-reduced version of the data. We might change this behavior in the
-    future.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_pcs : `int` or `None`, optional (default: `None`)
-        Number of principal components in preprocessing PCA. Set to 0 if you do
-        not want preprocessing with PCA. Set to `None`, if you want use any
-        `X_pca` present in `adata.obsm`.
+    {use_rep}
     n_neighbors : `float`, optional (default: 15)
         The size of local neighborhood (in terms of number of neighboring
         sample points) used for manifold approximation. Larger values
@@ -104,7 +87,7 @@ def umap(
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
         by `np.random`.
-    umap_kwargs : `dict`, optional (default: `{}`)
+    umap_kwargs : `dict`, optional (default: `{{}}`)
         Additional keyword arguments for UMAP class constructor from umap-learn
         package.
 
@@ -112,9 +95,24 @@ def umap(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_umap : `np.ndarray` (`adata.obs`, dtype `float`)
+    X_umap : `adata.obsm`
         UMAP coordinates of data.
-    """
+    """).format(use_rep=doc_use_rep)
+
+
+def umap(
+        adata,
+        use_rep=None,
+        n_neighbors=15,
+        n_components=2,
+        min_dist=0.1,
+        metric='euclidean',
+        alpha=1.0,
+        init='spectral',
+        local_connectivity=1.0,
+        random_state=None,
+        copy=False,
+        umap_kwargs={}):
     try:
         import umap
     except ImportError:
@@ -124,8 +122,7 @@ def umap(
 
     logg.info('computing UMAP', r=True)
     adata = adata.copy() if copy else adata
-    # preprocessing by PCA
-    X = preprocess_with_pca(adata, n_pcs=n_pcs)
+    X = choose_representation(adata, use_rep=use_rep)
     # params for umap-learn
     params_umap = {'n_neighbors': n_neighbors,
                    'n_components': n_components,
