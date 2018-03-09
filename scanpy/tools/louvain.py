@@ -33,8 +33,6 @@ def louvain(
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
         1.0.
-    n_pcs : `int`, optional (default: 50)
-        Number of PCs to use for computation of data point graph.
     random_state : `int`, optional (default: 0)
         Change the initialization of the optimization.
     restrict_to : `tuple`, optional (default: None)
