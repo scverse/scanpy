@@ -1,28 +1,11 @@
 anndata>=0.5
-matplotlib==2.0.0  # >= 2.0.2 sometimes crashes in sc.pl.aga_graph, need to resolve
-pandas>=0.21       # As enforced by the __init__.py
+matplotlib>2.0
+pandas>=0.21
 scipy
-# neat visualizations
 seaborn
-# use memory optimally
-psutil
-# hdf5/xls file IO
 h5py
-xlrd
-# standard machine-learning algorithms, a version supporting PCA(svd_solver=...)
 scikit-learn>=0.19.1
-# standard statistical models
 statsmodels
-# complex systems and graphs
 networkx
-# python-igraph  # added a note about manual install
-# louvain
-# natural human-readable sorting
 natsort
-# simple parallel computing
 joblib
-# profiling
-profilehooks
-# extensions (also needed if installing cython compiled .c files)
-# cython
-# umap-learn # optional dependency for umap visualization
