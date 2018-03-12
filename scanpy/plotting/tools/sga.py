@@ -449,7 +449,11 @@ def _sga_graph(
             adj_solid_weights = adjacency_solid
             g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
-                pos_list = g.layout(
+                g_tree = g
+                if solid_edges != 'sga_confidence_tree':
+                    adj_tree = adata.uns['sga_confidence_tree']
+                    g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
+                pos_list = g_tree.layout(
                     layout, root=root if isinstance(root, list) else [root],
                     rootlevel=rootlevel).coords
             elif layout == 'circle':
@@ -872,37 +876,31 @@ def sga_path(
         return ax if ax_was_none and show == False else None
 
 
-def sga_connectivity(
+def sga_adjacency(
         adata,
-        connectivity_type='scaled',
+        adjacency='sga_confidence',
+        adjacency_tree='sga_confidence_tree',
+        as_heatmap=True,
         color_map=None,
         show=None,
         save=None):
     """Connectivity of sga groups.
     """
-    if connectivity_type == 'scaled':
-        connectivity = adata.uns['sga_connectivity']
-    elif connectivity_type == 'distance':
-        connectivity = adata.uns['sga_distances']
-    elif connectivity_type == 'absolute':
-        connectivity = adata.uns['sga_connectivity_absolute']
-    else:
-        raise ValueError('Unkown connectivity_type {}.'.format(connectivity_type))
-    adjacency = adata.uns['sga_adjacency']
-    matrix(connectivity, color_map=color_map, show=False)
-    for i in range(adjacency.shape[0]):
-        neighbors = adjacency[i].nonzero()[1]
-        pl.scatter([i for j in neighbors], neighbors, color='green')
-    utils.savefig_or_show('sga_connectivity', show=show, save=save)
+    connectivity = adata.uns[adjacency].toarray()
+    connectivity_select = adata.uns[adjacency_tree]
+    if as_heatmap:
+        matrix(connectivity, color_map=color_map, show=False)
+        for i in range(connectivity_select.shape[0]):
+            neighbors = connectivity_select[i].nonzero()[1]
+            pl.scatter([i for j in neighbors], neighbors, color='black', s=1)
     # as a stripplot
-    if False:
+    else:
         pl.figure()
-        for i, ds in enumerate(connectivity):
-            ds = np.log1p(ds)
-            x = [i for j, d in enumerate(ds) if i != j]
-            y = [d for j, d in enumerate(ds) if i != j]
-            pl.scatter(x, y, color='gray')
-            neighbors = adjacency[i]
+        for i, cs in enumerate(connectivity):
+            x = [i for j, d in enumerate(cs) if i != j]
+            y = [c for j, c in enumerate(cs) if i != j]
+            pl.scatter(x, y, color='gray', s=1)
+            neighbors = connectivity_select[i].nonzero()[1]
             pl.scatter([i for j in neighbors],
-                       ds[neighbors], color='green')
-        pl.show()
+                       cs[neighbors], color='black', s=1)
+    utils.savefig_or_show('sga_connectivity', show=show, save=save)
