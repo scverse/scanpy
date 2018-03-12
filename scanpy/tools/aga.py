@@ -2,6 +2,7 @@ from collections import namedtuple
 import numpy as np
 import scipy as sp
 import networkx as nx
+from scipy.sparse.csgraph import minimum_spanning_tree
 from textwrap import dedent
 from .. import logging as logg
 from ..neighbors import Neighbors
@@ -77,7 +78,7 @@ def aga(adata,
               tree_based_confidence=tree_based_confidence, n_nodes=n_nodes)
     aga.splits_segments()
     if tree_detection == 'min_span_tree':
-        min_span_tree = utils.compute_minimum_spanning_tree(
+        min_span_tree = minimum_spanning_tree(
             1./aga.segs_adjacency_full_connectivity)
         min_span_tree.data = 1./min_span_tree.data
         full_confidence, tree_confidence = aga.compute_adjacency_confidence(
