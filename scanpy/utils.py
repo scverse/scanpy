@@ -3,7 +3,6 @@
 
 from collections import namedtuple
 import numpy as np
-import pandas as pd
 from natsort import natsorted
 from . import settings
 from . import logging as logg
@@ -12,11 +11,6 @@ from . import logging as logg
 # --------------------------------------------------------------------------------
 # Deal with stuff
 # --------------------------------------------------------------------------------
-
-
-def compute_minimum_spanning_tree(adjacency):
-    from scipy.sparse.csgraph import minimum_spanning_tree
-    return minimum_spanning_tree(adjacency)
 
 
 def get_graph_tool_from_adjacency(adjacency, directed=None):
@@ -48,7 +42,10 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
     g.add_edges(list(zip(sources, targets)))
-    g.es['weight'] = weights
+    try:
+        g.es['weight'] = weights
+    except:
+        pass
     if g.vcount() != adjacency.shape[0]:
         logg.warn('The constructed graph has only {} nodes. '
                   'Your adjacency matrix contained redundant nodes.'
@@ -66,7 +63,10 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     if not graph.is_directed():
         edges.extend([(v, u) for u, v in edges])
         weights.extend(weights)
-    return csr_matrix((weights, zip(*edges)))
+    if len(edges) > 0:
+        return csr_matrix((weights, zip(*edges)))
+    else:
+        return csr_matrix((graph.vcount(), graph.vcount()))
 
 
 def compute_association_matrix_of_groups(adata, prediction, reference,

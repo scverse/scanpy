@@ -12,14 +12,13 @@ from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
-from . import utils
-from .. import utils as sc_utils
-from .. import settings
-from .. import logging as logg
-
-from .anndata import scatter, ranking
-from .utils import matrix
-from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from .. import utils
+from ... import utils as sc_utils
+from ... import settings
+from ... import logging as logg
+from ..anndata import scatter, ranking
+from ..utils import matrix
+from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
 # ------------------------------------------------------------------------------
 # Visualization tools
@@ -1042,7 +1041,7 @@ def _aga_graph(
             layout = 'fr'
         # igraph layouts
         if layout != 'eq_tree':
-            from .. import utils as sc_utils
+            from ... import utils as sc_utils
             adj_solid_weights = adjacency_solid
             g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
@@ -1977,7 +1976,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     show : bool, optional (default: None)
         Show the plot, do not return axis.
     """
-    from .. import utils as sc_utils
+    from ... import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
     elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
     else: tmax = adata.n_obs
