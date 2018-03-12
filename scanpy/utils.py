@@ -6,10 +6,54 @@ import numpy as np
 from natsort import natsorted
 from . import settings
 from . import logging as logg
+from pandas.api.types import CategoricalDtype
+
+def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
+    """
+    Parameters
+    ----------
+    map_colors : `dict`
+        Dict with color specification for new groups that have no corresponding
+        old group.
+    """
+    if key_added is None:
+        key_added = key + '_merged'
+    adata.obs[key_added] = adata.obs[key].map(
+        map_groups).astype(CategoricalDtype())
+    old_categories = adata.obs[key].cat.categories
+    new_categories = adata.obs[key_added].cat.categories
+    # map_colors is passed
+    if map_colors is not None:
+        old_colors = None
+        if key + '_colors' in adata.uns:
+            old_colors = adata.uns[key + '_colors']
+        new_colors = []
+        for group in adata.obs[key_added].cat.categories:
+            if group in map_colors:
+                new_colors.append(map_colors[group])
+            elif group in old_categories and old_colors is not None:
+                new_colors.append(old_colors[old_categories.get_loc(group)])
+            else:
+                raise ValueError('You didn\'t specify a color for {}.'
+                                 .format(group))
+        adata.uns[key_added + '_colors'] = new_colors
+    # map_colors is not passed
+    elif key + '_colors' in adata.uns:
+        old_colors = adata.uns[key + '_colors']
+        inverse_map_groups = {g: [] for g in new_categories}
+        for old_group in old_categories:
+            inverse_map_groups[map_groups[old_group]].append(old_group)
+        new_colors = []
+        for group in new_categories:
+            # take the largest of the old groups
+            old_group = adata.obs[key][adata.obs[key].isin(
+                inverse_map_groups[group])].value_counts().index[0]
+            new_colors.append(old_colors[old_categories.get_loc(old_group)])
+        adata.uns[key_added + '_colors'] = new_colors
 
 
 # --------------------------------------------------------------------------------
-# Deal with stuff
+# Graph stuff
 # --------------------------------------------------------------------------------
 
 

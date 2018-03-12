@@ -9,9 +9,6 @@ from .. import utils
 from .. import settings
 
 
-MINIMAL_TREE_CONNECTIVITY = 0.05
-
-
 doc_string_base = dedent("""\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
@@ -126,36 +123,25 @@ class SGA(Neighbors):
             for i in range(connectivity_tree.shape[0])]
         # inter- and intra-cluster based confidence
         if not self._tree_based_confidence:
-            from scipy.stats import norm
             total_n = self.n_neighbors * np.array(self.vc.sizes())
             logg.msg('{:>2} {:>2} {:>4} {:>4} {:>4} '
                      '{:>7} {:>7} {:>7} {:>7}'
                      .format('i', 'j', 'conn', 'n[i]', 'n[j]',
                              'avg', 'thresh', 'var', 'conf'), v=5)
+            maximum = self.connectivity.max()
             confidence = self.connectivity.copy()  # initializing
             for i in range(self.connectivity.shape[0]):
                 for j in range(i+1, self.connectivity.shape[1]):
                     if self.connectivity[i, j] > 0:
-                        if False:
-                            expected = total_n[i] * total_n[j] / np.sum(total_n)**2
-                            actual = self.connectivity[i, j] / np.sum(total_n)
-                            variance = expected * (1 - expected) / np.sum(total_n)
-                            if actual > expected:
-                                confidence[i, j] = 1
-                            elif actual < 1e-12:
-                                confidence[i, j] = 0
-                            else:
-                                confidence[i, j] = 2 * norm.cdf(
-                                    actual, expected, np.sqrt(variance))
-                        else:
-                            minimum = min(total_n[i], total_n[j])
-                            average = self.connectivity[i, j] / minimum
-                            variance = self.threshold * (1-self.threshold)
-                            if average > self.threshold:
-                                confidence[i, j] = 1
-                            else:
-                                confidence[i, j] = norm.cdf(average,
-                                    self.threshold, variance)
+                        minimum = min(total_n[i], total_n[j])
+                        average = self.connectivity[i, j] / minimum
+                        confidence[i, j] = self.connectivity[i, j] / maximum
+                        variance = self.threshold * (1-self.threshold)
+                        # if average > self.threshold:
+                        #     confidence[i, j] = 1
+                        # else:
+                        #     confidence[i, j] = norm.cdf(average,
+                        #         self.threshold, variance)
                         logg.msg(
                             '{:2} {:2} {:4} {:4} {:4} '
                             '{:7.2} {:7.2} {:7.2} {:7.2}'
@@ -179,14 +165,11 @@ class SGA(Neighbors):
         self.confidence_tree = confidence_tree
 
     def compute_confidence_tree(
-            self, confidence, connectivity_tree_indices, minimum=1e-14):
+            self, confidence, connectivity_tree_indices):
         confidence_tree = sp.sparse.lil_matrix(confidence.shape, dtype=float)
         for i, neighbors in enumerate(connectivity_tree_indices):
             if len(neighbors) > 0:
-                clipped_confidence = confidence[i, neighbors]
-                clipped_confidence[clipped_confidence < minimum] = minimum
-                confidence_tree[i, neighbors] = clipped_confidence
-                confidence[i, neighbors] = clipped_confidence
+                confidence_tree[i, neighbors] = confidence[i, neighbors]
         return confidence_tree.tocsr()
 
 
