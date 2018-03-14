@@ -12,7 +12,16 @@ N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-doc_neighbors = dedent("""\
+def neighbors(
+        adata,
+        use_rep=None,
+        n_neighbors=30,
+        knn=True,
+        umap=False,
+        weights={'distances', 'similarities'},
+        n_jobs=None,
+        copy=False):
+    __doc__ = dedent("""\
     Compute a neighborhood graph of observations.
 
     Parameters
@@ -46,20 +55,10 @@ doc_neighbors = dedent("""\
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
     """).format(use_rep=doc_use_rep)
-
-
-def neighbors(
-        adata,
-        use_rep=None,
-        n_neighbors=30,
-        knn=True,
-        weights={'distances', 'similarities'},
-        n_jobs=None,
-        copy=False):
     logg.info('computing neighbors', r=True)
     adata = adata.copy() if copy else adata
     neighbors = Neighbors(adata)
-    neighbors.compute_distances(n_neighbors=n_neighbors, knn=knn, use_rep=use_rep)
+    neighbors.compute_distances(n_neighbors=n_neighbors, knn=knn, use_rep=use_rep, umap=umap)
     if 'distances' in weights:
         adata.uns['neighbors_distances'] = neighbors.distances
     if 'similarities' in weights:
@@ -76,8 +75,6 @@ def neighbors(
     logg.hint(hint)
     return adata if copy else None
 
-neighbors.__doc__ = doc_neighbors
-
 
 def get_neighbors(X, Y, k):
     Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, Y)
@@ -90,18 +87,18 @@ def get_neighbors(X, Y, k):
     return indices_chunk, distances_chunk
 
 
-def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
+def get_distance_matrix_and_neighbors(X, n_neighbors, sparse=True, n_jobs=1):
     """Compute distance matrix in squared Euclidian norm.
     """
     if not sparse:
         Dsq = utils.comp_sqeuclidean_distance_using_matrix_mult(X, X)
-        indices, distances = get_indices_distances_of_k_nearest_from_dense_matrix(Dsq, k)
+        indices, distances = get_indices_distances_of_k_nearest_from_dense_matrix(Dsq, n_neighbors)
         return Dsq, indices, distances
     # treat sparse case
     if X.shape[0] > 1e5:
         # sklearn is slower, but for large sample numbers more stable
         from sklearn.neighbors import NearestNeighbors
-        sklearn_neighbors = NearestNeighbors(n_neighbors=k-1, n_jobs=n_jobs)
+        sklearn_neighbors = NearestNeighbors(n_neighbors=n_neighbors-1, n_jobs=n_jobs)
         sklearn_neighbors.fit(X)
         distances, indices = sklearn_neighbors.kneighbors()
         distances = distances.astype('float32')**2
@@ -111,40 +108,200 @@ def get_distance_matrix_and_neighbors(X, k, sparse=True, n_jobs=1):
         n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
         chunks = [np.arange(start, min(start + len_chunk, X.shape[0]))
                  for start in range(0, n_chunks * len_chunk, len_chunk)]
-        indices = np.zeros((X.shape[0], k-1), dtype=int)
-        distances = np.zeros((X.shape[0], k-1), dtype=np.float32)
+        indices = np.zeros((X.shape[0], n_neighbors-1), dtype=int)
+        distances = np.zeros((X.shape[0], n_neighbors-1), dtype=np.float32)
         if n_jobs > 1:
             # set backend threading, said to be meaningful for computations
             # with compiled code. more important: avoids hangs
             # when using Parallel below, threading is much slower than
             # multiprocessing
             result_lst = Parallel(n_jobs=n_jobs, backend='threading')(
-                delayed(get_neighbors)(X[chunk], X, k) for chunk in chunks)
+                delayed(get_neighbors)(X[chunk], X, n_neighbors) for chunk in chunks)
         for i_chunk, chunk in enumerate(chunks):
             if n_jobs > 1:
                 indices_chunk, distances_chunk = result_lst[i_chunk]
             else:
-                indices_chunk, distances_chunk = get_neighbors(X[chunk], X, k)
+                indices_chunk, distances_chunk = get_neighbors(X[chunk], X, n_neighbors)
             indices[chunk] = indices_chunk
             distances[chunk] = distances_chunk
-    Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], k)
+    Dsq = get_sparse_distance_matrix(indices, distances, X.shape[0], n_neighbors)
     return Dsq, indices, distances
 
 
-def get_sparse_distance_matrix(indices, distances, n_samples, k):
-    n_neighbors = k - 1
-    n_nonzero = n_samples * n_neighbors
+def compute_knn_umap(X, n_neighbors, random_state=None,
+                     metric='seuclidean', metric_kwds={}, angular=False,
+                     verbose=False):
+    """This is from umap [McInnes18]_.
+
+    Given a set of data X, a neighborhood size, and a measure of distance
+    compute the fuzzy simplicial set (here represented as a fuzzy graph in
+    the form of a sparse matrix) associated to the data. This is done by
+    locally approximating geodesic distance at each point, creating a fuzzy
+    simplicial set for each such point, and then combining all the local
+    fuzzy simplicial sets into a global one via a fuzzy union.
+    Parameters
+    ----------
+    X: array of shape (n_samples, n_features)
+        The data to be modelled as a fuzzy simplicial set.
+    n_neighbors: int
+        The number of neighbors to use to approximate geodesic distance.
+        Larger numbers induce more global estimates of the manifold that can
+        miss finer detail, while smaller values will focus on fine manifold
+        structure to the detriment of the larger picture.
+    random_state: numpy RandomState or equivalent
+        A state capable being used as a numpy random state.
+    metric: string or function (optional, default 'euclidean')
+        The metric to use to compute distances in high dimensional space.
+        If a string is passed it must match a valid predefined metric. If
+        a general metric is required a function that takes two 1d arrays and
+        returns a float can be provided. For performance purposes it is
+        required that this be a numba jit'd function. Valid string metrics
+        include:
+            * euclidean
+            * manhattan
+            * chebyshev
+            * minkowski
+            * canberra
+            * braycurtis
+            * mahalanobis
+            * wminkowski
+            * seuclidean
+            * cosine
+            * correlation
+            * haversine
+            * hamming
+            * jaccard
+            * dice
+            * russelrao
+            * kulsinski
+            * rogerstanimoto
+            * sokalmichener
+            * sokalsneath
+            * yule
+        Metrics that take arguments (such as minkowski, mahalanobis etc.)
+        can have arguments passed via the metric_kwds dictionary. At this
+        time care must be taken and dictionary elements must be ordered
+        appropriately; this will hopefully be fixed in the future.
+    metric_kwds: dict (optional, default {})
+        Arguments to pass on to the metric, such as the ``p`` value for
+        Minkowski distance.
+    angular: bool (optional, default False)
+        Whether to use angular/cosine distance for the random projection
+        forest for seeding NN-descent to determine approximate nearest
+        neighbors.
+    verbose: bool (optional, default False)
+        Whether to report information on the current progress of the algorithm.
+
+    Returns
+    -------
+    knn_indices, knn_dists : np.arrays of shape (n_observations, n_neighbors)
+    """
+    from umap import sparse
+    from umap.umap_ import rptree_leaf_array, make_nn_descent
+    import umap.distances as dist
+    import umap.sparse as sparse
+    import scipy
+    from sklearn.utils import check_random_state
+
+    INT32_MIN = np.iinfo(np.int32).min + 1
+    INT32_MAX = np.iinfo(np.int32).max - 1
+
+    random_state = check_random_state(random_state)
+
+    rows = np.zeros((X.shape[0] * n_neighbors), dtype=np.int64)
+    cols = np.zeros((X.shape[0] * n_neighbors), dtype=np.int64)
+    vals = np.zeros((X.shape[0] * n_neighbors), dtype=np.float64)
+
+    if callable(metric):
+        distance_func = metric
+    elif metric in dist.named_distances:
+        distance_func = dist.named_distances[metric]
+    else:
+        raise ValueError('Metric is neither callable, ' +
+                         'nor a recognised string')
+
+    if metric in ('cosine', 'correlation', 'dice', 'jaccard'):
+        angular = True
+
+    rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
+
+    if scipy.sparse.isspmatrix_csr(X):
+        if metric in sparse.sparse_named_distances:
+            distance_func = sparse.sparse_named_distances[metric]
+            if metric in sparse.sparse_need_n_features:
+                metric_kwds['n_features'] = X.shape[1]
+        else:
+            raise ValueError('Metric {} not supported for sparse ' +
+                            'data'.format(metric))
+        metric_nn_descent = sparse.make_sparse_nn_descent(
+            distance_func, tuple(metric_kwds.values()))
+        leaf_array = rptree_leaf_array(X, n_neighbors,
+                                       rng_state, n_trees=10,
+                                       angular=angular)
+        knn_indices, knn_dists = metric_nn_descent(X.indices,
+                                                   X.indptr,
+                                                   X.data,
+                                                   X.shape[0],
+                                                   n_neighbors,
+                                                   rng_state,
+                                                   max_candidates=60,
+                                                   rp_tree_init=True,
+                                                   leaf_array=leaf_array,
+                                                   verbose=verbose)
+    else:
+        metric_nn_descent = make_nn_descent(distance_func,
+                                            tuple(metric_kwds.values()))
+        # TODO: Hacked values for now
+        n_trees = 5 + int(round((X.shape[0]) ** 0.5 / 20.0))
+        n_iters = max(5, int(round(np.log2(X.shape[0]))))
+
+        leaf_array = rptree_leaf_array(X, n_neighbors,
+                                       rng_state, n_trees=n_trees,
+                                       angular=angular)
+        knn_indices, knn_dists = metric_nn_descent(X,
+                                                   n_neighbors,
+                                                   rng_state,
+                                                   max_candidates=60,
+                                                   rp_tree_init=True,
+                                                   leaf_array=leaf_array,
+                                                   n_iters=n_iters,
+                                                   verbose=verbose)
+
+    if np.any(knn_indices < 0):
+        logg.warn('Failed to correctly find n_neighbors for some samples. '
+             'Results may be less than ideal. Try re-running with '
+             'different parameters.')
+
+    # add this to avoid that points are their own neighbors
+    knn_indices = knn_indices[:, 1:]
+    knn_dists = knn_dists[:, 1:]
+    return knn_indices, knn_dists
+
+
+def get_sparse_distance_matrix(indices, distances, n_obs, n_neighbors):
+    n_neighbors = n_neighbors - 1
+    n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
     Dsq = sp.sparse.csr_matrix((distances.ravel(),
                                 indices.ravel(),
                                 indptr),
-                                shape=(n_samples, n_samples))
+                                shape=(n_obs, n_obs))
     return Dsq
 
 
-def get_indices_distances_from_sparse_matrix(Dsq, k):
-    indices = np.zeros((Dsq.shape[0], k-1), dtype=int)
-    distances = np.zeros((Dsq.shape[0], k-1), dtype=Dsq.dtype)
+def get_sparse_distance_matrix_umap(indices, distances, n_obs, n_neighbors):
+    n_nonzero = n_obs * n_neighbors
+    indptr = np.arange(0, n_nonzero + 1, n_neighbors)
+    Dsq = sp.sparse.csr_matrix((distances.ravel(),
+                                indices.ravel(),
+                                indptr),
+                                shape=(n_obs, n_obs))
+    return Dsq
+
+
+def get_indices_distances_from_sparse_matrix(Dsq, n_neighbors):
+    indices = np.zeros((Dsq.shape[0], n_neighbors-1), dtype=int)
+    distances = np.zeros((Dsq.shape[0], n_neighbors-1), dtype=Dsq.dtype)
     for i in range(indices.shape[0]):
         neighbors = Dsq[i].nonzero()
         indices[i] = neighbors[1]
@@ -343,8 +500,9 @@ class Neighbors():
         """
         return None
 
-    def compute_distances(self, n_neighbors=30, knn=True, use_rep=None):
-        """Compute distances.
+    def compute_distances(self, n_neighbors=30, knn=True, use_rep=None, umap=False):
+        __doc__ = dedent("""\
+        Compute distances.
 
         Parameters
         ----------
@@ -352,20 +510,29 @@ class Neighbors():
              Use this number of nearest neighbors.
         knn : `bool`, optional (default: `True`)
              Restrict result to `n_neighbors` nearest neighbors.
+        {use_rep}
 
         Returns
         -------
         Writes attribute `.distances`.
-        """
+        """).format(use_rep=doc_use_rep)
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep)
-        self._distances, _, _ = get_distance_matrix_and_neighbors(
-            X, n_neighbors, sparse=self.knn)
+        if not umap:
+            self._distances, _, _ = get_distance_matrix_and_neighbors(
+                X, n_neighbors, sparse=self.knn)
+        else:
+            # strange zero-division error...
+            # doesn't appear when calling the umap tool itself
+            # need to look into this...
+            indices, distances = compute_knn_umap(X, n_neighbors)
+            self._distances = get_sparse_distance_matrix(
+                indices, distances, X.shape[0], n_neighbors)
         logg.msg('determined n_neighbors =',
-               self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
+            self.n_neighbors, 'nearest neighbors of each point', t=True, v=4)
 
     def compute_similarities(self, alpha=1):
         """Compute similarities.
