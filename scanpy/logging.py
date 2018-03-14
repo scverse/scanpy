@@ -15,22 +15,22 @@ verbosity_levels_from_strings = {
 }
 
 
-def info(*msg, **kwargs):
-    return m(*msg, v='info', **kwargs)
+def info(*args, **kwargs):
+    return msg(*args, v='info', **kwargs)
 
 
-def error(*msg, **kwargs):
-    msg = ('Error:',) + msg
-    return m(*msg, v='error', **kwargs)
+def error(*args, **kwargs):
+    args = ('Error:',) + args
+    return msg(*args, v='error', **kwargs)
 
 
-def warn(*msg, **kwargs):
-    msg = ('WARNING:',) + msg
-    return m(*msg, v='warn', **kwargs)
+def warn(*args, **kwargs):
+    args = ('WARNING:',) + args
+    return msg(*args, v='warn', **kwargs)
 
 
-def hint(*msg, **kwargs):
-    return m(*msg, v='hint', **kwargs)
+def hint(*args, **kwargs):
+    return msg(*args, v='hint', **kwargs)
 
 
 def verbosity_greater_or_equal_than(v):
