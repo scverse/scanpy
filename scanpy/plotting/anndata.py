@@ -350,7 +350,7 @@ def ranking(adata, attr, keys, indices=None,
     if show == False: return gs
 
 
-def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
+def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=False, show=None,
            save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
@@ -363,7 +363,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         Annotated data matrix.
     keys : `str` or list of `str`
         Keys for accessing variables of `.var_names` or fields of `.obs`.
-    group_by : `str` or `None`, optional (default: `None`)
+    groupby : `str` or `None`, optional (default: `None`)
         The key of the observation grouping to consider.
     log : `bool`, optional (default: `False`)
         Plot on logarithmic axis.
@@ -397,8 +397,8 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     A `matplotlib.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
-    if group_by is not None and isinstance(keys, list):
-        raise ValueError('Pass a single key as string if using `group_by`.')
+    if groupby is not None and isinstance(keys, list):
+        raise ValueError('Pass a single key as string if using `groupby`.')
     if isinstance(keys, str): keys = [keys]
     obs_keys = False
     for key in keys:
@@ -410,7 +410,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     if obs_keys:
         obs_df = adata.obs
     else:
-        if group_by is None: obs_df = pd.DataFrame()
+        if groupby is None: obs_df = pd.DataFrame()
         else: obs_df = adata.obs.copy()
         for key in keys:
             if adata.raw is not None and use_raw:
@@ -418,13 +418,13 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
             else:
                 X_col = adata[:, key].X
             obs_df[key] = X_col
-    if group_by is None:
+    if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
         y = 'value'
     else:
         obs_tidy = obs_df
-        x = group_by
+        x = groupby
         y = keys[0]
     if multi_panel:
         sns.set_style('whitegrid')
@@ -440,7 +440,7 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
                             orient='vertical', scale=scale, ax=ax, **kwargs)
         ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
-        ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
+        ax.set_xlabel('' if groupby is None else groupby.replace('_', ' '))
         if log: ax.set_yscale('log')
     # TODO: I don't know why but we have to update the plotting parameters here
     # Seaborn influences them even though it had already been imported...

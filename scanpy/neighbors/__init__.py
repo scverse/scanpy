@@ -71,8 +71,8 @@ def neighbors(
     adata = adata.copy() if copy else adata
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
-        n_neighbors=n_neighbors, knn=knn, use_rep=use_rep, method=method,
-        metric=metric, metric_kwds=metric_kwds)
+        n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, use_rep=use_rep,
+        method=method, metric=metric, metric_kwds=metric_kwds)
     adata.uns['neighbors'] = {}
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
     adata.uns['neighbors']['distances'] = neighbors.distances
@@ -604,11 +604,12 @@ class Neighbors():
         """
         return None
 
-    @doc_params(use_rep=doc_use_rep)
+    @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     def compute_neighbors(
             self,
             n_neighbors=30,
             knn=True,
+            n_pcs=None,
             use_rep=None,
             method=None,
             precompute_metric=None,
@@ -623,6 +624,7 @@ class Neighbors():
              Use this number of nearest neighbors.
         knn : `bool`, optional (default: `True`)
              Restrict result to `n_neighbors` nearest neighbors.
+        {n_pcs}
         {use_rep}
 
         Returns
@@ -633,7 +635,7 @@ class Neighbors():
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
         self.n_neighbors = n_neighbors
         self.knn = knn
-        X = choose_representation(self._adata, use_rep=use_rep)
+        X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         if method == 'umap':
             if precompute_metric is None:
                 precompute_metric = X.shape[0] < 4096

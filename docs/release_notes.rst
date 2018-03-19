@@ -22,6 +22,8 @@ instead of previously::
     sc.tl.dpt(adata, n_branchings=1, n_neighbors=5, knn=False)  # n_neighbors not necessary
     sc.tl.louvain(adata, resolution=1.5, n_neighbors=5)  # n_neighbors not necessary
 
+- replaced `group_by` with `groupby`
+- new cache directory is now './cache/'
 
 **February 26, 2018**: version 0.4.4
 

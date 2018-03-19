@@ -4,7 +4,7 @@ from .. import settings
 from .. import logging as logg
 
 
-@doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
         adata,
         n_pcs=None,
@@ -30,7 +30,7 @@ def tsne(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    {n_pcs}
+    {doc_n_pcs}
     {use_rep}
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
@@ -71,7 +71,7 @@ def tsne(
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
-    X = choose_representation(adata, use_rep=use_rep)
+    X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': random_state,
@@ -109,5 +109,3 @@ def tsne(
     logg.hint('added\n'
               '    \'X_tsne\', tSNE coordinates (adata.obsm)')
     return adata if copy else None
-
-tsne.__doc__ = doc_tsne
