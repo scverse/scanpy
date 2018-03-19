@@ -10,10 +10,12 @@ def draw_graph(
         root=None,
         random_state=0,
         n_jobs=None,
-        key_adjacency='neighbors_distances',
+        key_adjacency='neighbors/connectivities',
         key_added_ext=None,
+        proceed=False,
+        use_sga='global',
         copy=False,
-        **kwargs):
+        **kwds):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
 
     Often a good alternative to tSNE, but runs considerably slower.
@@ -45,20 +47,24 @@ def draw_graph(
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    key_adjacency : `str`, optional (default: 'neighbors_distances')
-        Key for accessing the sparse adjacency matrix of the graph in
-        `adata.uns`.
+    adjacency : sparse matrix, optional (default: `None`)
+        Sparse adjacency matrix of the graph, defaults to
+        `adata.uns['neighbors']['connectivities']`.
     key_ext : `str`, optional (default: `None`)
         By default, append `layout`.
+    proceed : `bool`, optional (default: `None`)
+        Continue computation, starting off with 'X_draw_graph_`layout`'.
+    use_sga : {'local', 'global', `False`}, optional (default: `False`)
+        Use the SGA coordinates.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
-    **kwargs : further parameters
+    **kwds : further parameters
         Parameters of chosen igraph layout. See, e.g.,
-        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`_.
+        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`_. One of the most important ones is `maxiter`.
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    Depending on `copy`, returns or updates `adata` with the following field.
 
     X_draw_graph_`layout` : `adata.obsm`
         Coordinates of graph layout.
@@ -69,30 +75,69 @@ def draw_graph(
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
-    if key_adjacency not in adata.uns:
+    if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
             '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
-    adjacency = adata.uns[key_adjacency]
-    g = utils.get_igraph_from_adjacency(adjacency)
+    if adjacency is None:
+        adjacency = adata.uns['neighbors']['connectivities']
+    key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
+    if not (use_sga == 'local' and 'sga_pos' in adata.uns):
+        g = utils.get_igraph_from_adjacency(adjacency)
+    np.random.seed(random_state)
+    all_coords = None
     if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
-        np.random.seed(random_state)
-        init_coords = np.random.random((adjacency.shape[0], 2)).tolist()
-        ig_layout = g.layout(layout, seed=init_coords, **kwargs)
+        if proceed:
+            init_coords = adata.obsm[key_added]
+            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+        elif 'sga_pos' in adata.uns:
+            groups = adata.obs[adata.uns['sga_groups']]
+            all_pos = adata.uns['sga_pos']
+            if use_sga == 'global':
+                init_coords = np.ones((adjacency.shape[0], 2))
+                for i, pos in enumerate(all_pos):
+                    subset = (groups == groups.cat.categories[i]).values
+                    init_coords[subset] = pos
+                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+            elif use_sga == 'local':
+                all_pos -= np.min(all_pos, axis=0)
+                all_pos /= np.max(all_pos, axis=0)
+                all_coords = np.zeros((adjacency.shape[0], 2))
+                from scipy.spatial.distance import euclidean
+                for i, pos in enumerate(all_pos):
+                    subset = (groups == groups.cat.categories[i]).values
+                    adjacency_sub = adjacency[subset][:, subset]
+                    if adjacency_sub.shape[0] == 0: continue
+                    g = utils.get_igraph_from_adjacency(adjacency_sub)
+                    init_coords = np.random.random((adjacency_sub.shape[0], 2))
+                    ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+                    coords = np.array(ig_layout.coords)
+                    coords -= np.min(coords, axis=0)
+                    coords /= np.max(coords, axis=0)
+                    dists = [euclidean(pos, p) for j, p in enumerate(all_pos) if i != j]
+                    min_dist = np.min(dists)
+                    coords -= np.array([0.5, 0.5])
+                    coords *= min_dist
+                    coords += pos
+                    all_coords[subset] = coords
+        else:
+            init_coords = np.random.random((adjacency.shape[0], 2))
+            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
     elif 'rt' in layout:
         if root is not None: root = [root]
-        ig_layout = g.layout(layout, root=root, **kwargs)
+        ig_layout = g.layout(layout, root=root, **kwds)
     else:
-        ig_layout = g.layout(layout, **kwargs)
+        ig_layout = g.layout(layout, **kwds)
     adata.uns['draw_graph_params'] = np.array(
         (layout, random_state,),
         dtype=[('layout', 'U20'), ('random_state', int)])
-    obs_key = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    adata.obsm[obs_key] = np.array(ig_layout.coords)
+    key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
+    adata.obsm[key_added] = (np.array(ig_layout.coords)
+                           if all_coords is None else all_coords)
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
               '    \'{}\', graph_drawing coordinates (adata.obs)\n'
               '    \'draw_graph_params\', the parameters (adata.uns)'
-              .format(obs_key))
+              .format(key_added))
     return adata if copy else None

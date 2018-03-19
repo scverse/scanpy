@@ -4,9 +4,22 @@
 from collections import namedtuple
 import numpy as np
 from natsort import natsorted
+from textwrap import dedent
+from pandas.api.types import CategoricalDtype
+
 from . import settings
 from . import logging as logg
-from pandas.api.types import CategoricalDtype
+
+
+def doc_params(**kwds):
+    """\
+    Docstrings should start with "\" in the first line for proper formatting.
+    """
+    def dec(obj):
+        obj.__doc__ = dedent(obj.__doc__).format(**kwds)
+        return obj
+    return dec
+
 
 def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
     """
@@ -594,57 +607,6 @@ def subsample_n(X, n=0, seed=0):
     return Xsampled, rows
 
 
-def comp_distance(X, metric='euclidean'):
-    """Compute distance matrix for data array X
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store samples, columns store variables).
-    metric : string
-        For example 'euclidean', 'sqeuclidean', see sp.spatial.distance.pdist.
-
-    Returns
-    -------
-    D : np.ndarray
-        Distance matrix.
-    """
-    from scipy.spatial import distance
-    return distance.squareform(distance.pdist(X, metric=metric))
-
-
-def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
-    """Compute distance matrix for data array X
-
-    Use matrix multiplication as in sklearn.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store samples, columns store variables).
-    metric : string
-        For example 'euclidean', 'sqeuclidean', see sp.spatial.distance.pdist.
-
-    Returns
-    -------
-    D : np.ndarray
-        Distance matrix.
-    """
-    XX = np.einsum('ij,ij->i', X, X)[:, np.newaxis]
-    if X is Y:
-        YY = XX
-    else:
-        YY = np.einsum('ij,ij->i', Y, Y)[:, np.newaxis]
-    distances = np.dot(X, Y.T)
-    distances *= -2
-    distances += XX
-    distances += YY.T
-    np.maximum(distances, 0, out=distances)
-    if X is Y:
-        distances.flat[::distances.shape[0] + 1] = 0.
-    return distances
-
-
 def check_presence_download(filename, backup_url):
     """Check if file is present otherwise download."""
     import os
@@ -654,8 +616,7 @@ def check_presence_download(filename, backup_url):
         try:
             os.makedirs(dr)
         except FileExistsError:
-            pass # ignore if dir already exists
-
+            pass  # ignore if dir already exists
         from urllib.request import urlretrieve
         urlretrieve(backup_url, filename, reporthook=download_progress)
 

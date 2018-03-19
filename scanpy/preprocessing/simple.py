@@ -737,7 +737,6 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
     logg.info('finished', t=True)
-    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
     return adata if copy else None
 
 

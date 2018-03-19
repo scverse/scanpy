@@ -977,11 +977,11 @@ class AGA(Neighbors):
                 measure_point_in_jseg = 0
                 measure_point_in_kseg = 0
                 for reference_point_in_kseg in segs[kseg]:
-                    measure_point_in_jseg_test = segs[jseg][np.argmax(self.similarities[reference_point_in_kseg, segs[jseg]])]
-                    if self.similarities[reference_point_in_kseg, measure_point_in_jseg_test] > closest_similarity:
+                    measure_point_in_jseg_test = segs[jseg][np.argmax(self.connectivities[reference_point_in_kseg, segs[jseg]])]
+                    if self.connectivities[reference_point_in_kseg, measure_point_in_jseg_test] > closest_similarity:
                         measure_point_in_jseg = measure_point_in_jseg_test
                         measure_point_in_kseg = reference_point_in_kseg
-                        closest_similarity = self.similarities[reference_point_in_kseg, measure_point_in_jseg_test]
+                        closest_similarity = self.connectivities[reference_point_in_kseg, measure_point_in_jseg_test]
                 measure_points_in_kseg.append(measure_point_in_kseg)
                 measure_points_in_jseg.append(measure_point_in_jseg)
                 closest_distance = 1/closest_similarity
@@ -995,7 +995,7 @@ class AGA(Neighbors):
             for kseg in kseg_list:
                 connectedness = 0
                 for reference_point_in_kseg in segs[kseg]:
-                    for j in self.similarities[reference_point_in_kseg].nonzero()[1]:
+                    for j in self.connectivities[reference_point_in_kseg].nonzero()[1]:
                         if j in segs_jseg:
                             connectedness += 1
                 # distances.append(1./(connectedness+1))
@@ -1051,7 +1051,7 @@ class AGA(Neighbors):
         seg_test = set(segs[kseg_test])
         connections = 0
         for p in seg_loop:
-            p_neighbors = set(self.similarities[p].nonzero()[1])
+            p_neighbors = set(self.connectivities[p].nonzero()[1])
             for q in p_neighbors:
                 if q in seg_test:
                     if p not in segs_adjacency_nodes[kseg_loop]:

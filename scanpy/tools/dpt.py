@@ -9,7 +9,7 @@ from ..neighbors import Neighbors, OnFlySymMatrix
 
 
 def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
-        allow_kendall_tau_shift=True, n_jobs=None, copy=False):
+        allow_kendall_tau_shift=True, copy=False):
     """Infer progression of cells and branching subgroups [Haghverdi16]_ [Wolf17]_.
 
     This requires to run :func:`~scanpy.api.pp.neighbors`, first.
@@ -40,8 +40,6 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    n_jobs : `int` or `None` (default: `settings.n_jobs`)
-        Number of cpus to use for parallel processing.
     copy : `bool`, optional (default: `False`)
         Copy instance before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -76,16 +74,15 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         adata.var['xroot'] = adata[root_cell_name, :].X'''
         logg.hint(msg)
     logg.info('performing Diffusion Pseudotime analysis', r=True)
-    dpt = DPT(adata, min_group_size=min_group_size, n_jobs=n_jobs,
+    dpt = DPT(adata, min_group_size=min_group_size,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift)
     # check whether we need to recompute
-    if dpt.evals is None or n_dcs is None or dpt.evals.size < n_dcs:
+    if dpt.eigen_values is None or n_dcs is None or dpt.eigen_values.size < n_dcs:
+        dpt.compute_transitions()
         dpt.compute_eigen(n_comps=n_dcs)
-    adata.obsm['X_diffmap'] = dpt.rbasis
-    adata.uns['diffmap_evals'] = dpt.evals
-    adata.uns['neighbors_distances'] = dpt.distances
-    adata.uns['neighbors_similarities'] = dpt.similarities
+    adata.obsm['X_diffmap'] = dpt.eigen_basis
+    adata.uns['diffmap_evals'] = dpt.eigen_values
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     # compute DPT distance matrix, which we refer to as 'Ddiff'
     if dpt.iroot is not None:
@@ -121,9 +118,10 @@ class DPT(Neighbors):
     """Hierarchical Diffusion Pseudotime.
     """
 
-    def __init__(self, adata, n_jobs=1, min_group_size=0.01,
+    def __init__(self, adata, min_group_size=0.01,
                  n_branchings=0, allow_kendall_tau_shift=False):
-        super(DPT, self).__init__(adata, n_jobs=n_jobs)
+        super(DPT, self).__init__(adata)
+        self.flavor = 'haghverdi16'
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.X.shape[0])
         self.passed_adata = adata  # just for debugging purposes
@@ -192,13 +190,13 @@ class DPT(Neighbors):
         #
         # let us define the tips of the whole data set
         if False:  # this is safe, but not compatible with on-the-fly computation
-            tips_all = np.array(np.unravel_index(np.argmax(self.Dchosen), self.Dchosen.shape))
+            tips_all = np.array(np.unravel_index(np.argmax(self.distances_dpt), self.distances_dpt.shape))
         else:
             if self.iroot is not None:
-                tip_0 = np.argmax(self.Dchosen[self.iroot])
+                tip_0 = np.argmax(self.distances_dpt[self.iroot])
             else:
-                tip_0 = np.argmax(self.Dchosen[0])
-            tips_all = np.array([tip_0, np.argmax(self.Dchosen[tip_0])])
+                tip_0 = np.argmax(self.distances_dpt[0])
+            tips_all = np.array([tip_0, np.argmax(self.distances_dpt[tip_0])])
         # we keep a list of the tips of each segment
         segs_tips = [tips_all]
         segs_connects = [[]]
@@ -229,7 +227,7 @@ class DPT(Neighbors):
             self.segs_connects[i, seg_adjacency] = segs_connects[i]
         for i in range(len(segs)):
             for j in range(len(segs)):
-                self.segs_adjacency[i, j] = self.Dchosen[self.segs_connects[i, j],
+                self.segs_adjacency[i, j] = self.distances_dpt[self.segs_connects[i, j],
                                                          self.segs_connects[j, i]]
         self.segs_adjacency = self.segs_adjacency.tocsr()
         self.segs_connects = self.segs_connects.tocsr()
@@ -240,12 +238,12 @@ class DPT(Neighbors):
             for iseg in range(self.segs_adjacency.shape[0]):
                 if n_edges_per_seg[iseg] == n_edges:
                     neighbor_segs = self.segs_adjacency[iseg].todense().A1
-                    closest_points_other_segs = [seg[np.argmin(self.Dchosen[self.segs_tips[iseg][0], seg])]
+                    closest_points_other_segs = [seg[np.argmin(self.distances_dpt[self.segs_tips[iseg][0], seg])]
                                                  for seg in self.segs]
                     seg = self.segs[iseg]
-                    closest_points_in_segs = [seg[np.argmin(self.Dchosen[tips[0], seg])]
+                    closest_points_in_segs = [seg[np.argmin(self.distances_dpt[tips[0], seg])]
                                               for tips in self.segs_tips]
-                    distance_segs = [self.Dchosen[closest_points_other_segs[ipoint], point]
+                    distance_segs = [self.distances_dpt[closest_points_other_segs[ipoint], point]
                                      for ipoint, point in enumerate(closest_points_in_segs)]
                     # exclude the first point, the segment itself
                     closest_segs = np.argsort(distance_segs)[1:n_edges+1]
@@ -279,10 +277,10 @@ class DPT(Neighbors):
             # do not consider too small segments
             if segs_tips[iseg][0] == -1: continue
             # restrict distance matrix to points in segment
-            if not isinstance(self.Dchosen, OnFlySymMatrix):
-                Dseg = self.Dchosen[np.ix_(seg, seg)]
+            if not isinstance(self.distances_dpt, OnFlySymMatrix):
+                Dseg = self.distances_dpt[np.ix_(seg, seg)]
             else:
-                Dseg = self.Dchosen.restrict(seg)
+                Dseg = self.distances_dpt.restrict(seg)
             third_maximizer = None
             if segs_undecided[iseg]:
                 # check that none of our tips "connects" with a tip of the
@@ -291,8 +289,8 @@ class DPT(Neighbors):
                     if jseg != iseg:
                         # take the inner tip, the "second tip" of the segment
                         for itip in range(2):
-                            if (self.Dchosen[segs_tips[jseg][1], segs_tips[iseg][itip]]
-                                < 0.5 * self.Dchosen[segs_tips[iseg][~itip], segs_tips[iseg][itip]]):
+                            if (self.distances_dpt[segs_tips[jseg][1], segs_tips[iseg][itip]]
+                                < 0.5 * self.distances_dpt[segs_tips[iseg][~itip], segs_tips[iseg][itip]]):
                                 # logg.m('    group', iseg, 'with tip', segs_tips[iseg][itip],
                                 #        'connects with', jseg, 'with tip', segs_tips[jseg][1], v=4)
                                 # logg.m('    do not use the tip for "triangulation"', v=4)
@@ -416,10 +414,10 @@ class DPT(Neighbors):
         """
         seg = segs[iseg]
         # restrict distance matrix to points in segment
-        if not isinstance(self.Dchosen, OnFlySymMatrix):
-            Dseg = self.Dchosen[np.ix_(seg, seg)]
+        if not isinstance(self.distances_dpt, OnFlySymMatrix):
+            Dseg = self.distances_dpt[np.ix_(seg, seg)]
         else:
-            Dseg = self.Dchosen.restrict(seg)
+            Dseg = self.distances_dpt.restrict(seg)
         # given the three tip points and the distance matrix detect the
         # branching on the segment, return the list ssegs of segments that
         # are defined by splitting this segment
@@ -479,11 +477,11 @@ class DPT(Neighbors):
                 closest_points_in_kseg = []
                 for kseg in kseg_list:
                     reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
+                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.distances_dpt[reference_point_in_k, segs[jseg]])])
                     # do not use the tip in the large segment j, instead, use the closest point
                     reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.distances_dpt[reference_point_in_j, segs[kseg]])])
+                    distances.append(self.distances_dpt[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
                     # print(jseg, '(', segs_tips[jseg][0], closest_points_in_jseg[-1], ')',
                     #       kseg, '(', segs_tips[kseg][0], closest_points_in_kseg[-1], ') :', distances[-1])
                 idx = np.argmin(distances)
@@ -508,11 +506,11 @@ class DPT(Neighbors):
                              if jseg != kseg and jseg not in prev_connecting_segments]
                 for jseg in jseg_list:
                     reference_point_in_k = segs_tips[kseg][0]
-                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.Dchosen[reference_point_in_k, segs[jseg]])])
+                    closest_points_in_jseg.append(segs[jseg][np.argmin(self.distances_dpt[reference_point_in_k, segs[jseg]])])
                     # do not use the tip in the large segment j, instead, use the closest point
                     reference_point_in_j = closest_points_in_jseg[-1]  # segs_tips[jseg][0]
-                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.Dchosen[reference_point_in_j, segs[kseg]])])
-                    distances.append(self.Dchosen[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
+                    closest_points_in_kseg.append(segs[kseg][np.argmin(self.distances_dpt[reference_point_in_j, segs[kseg]])])
+                    distances.append(self.distances_dpt[closest_points_in_jseg[-1], closest_points_in_kseg[-1]])
                 idx = np.argmin(distances)
                 jseg_min = jseg_list[idx]
                 if jseg_min not in kseg_list:
