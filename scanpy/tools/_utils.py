@@ -1,14 +1,13 @@
 from .. import logging as logg
 from .pca import pca
 from ..preprocessing.simple import N_PCS
-from textwrap import dedent
 
-doc_use_rep = dedent("""\
-    use_rep : \{`None`, 'X'\} or any key for `.obsm`, optional (default: `None`)
-        Use the indicated representation. If `None`, the representation is
-        chosen automatically: for `.n_vars` < 50, `.X` is used, otherwise and if
-        'X_pca' is present, 'X_pca' is used.
-""")
+doc_use_rep = """\
+use_rep : \{`None`, 'X'\} or any key for `.obsm`, optional (default: `None`)
+    Use the indicated representation. If `None`, the representation is
+    chosen automatically: for `.n_vars` < 50, `.X` is used, otherwise and if
+    'X_pca' is present, 'X_pca' is used.\
+"""
 
 
 def choose_representation(adata, use_rep=None):
@@ -19,16 +18,22 @@ def choose_representation(adata, use_rep=None):
                           .format(adata.obsm['X_pca'].shape[1]))
                 return adata.obsm['X_pca']
             else:
-                raise ValueError(
-                    'You\`re trying to run the computation on `.n_vars` dimensions of `.X`.'
-                    'If you really want this set `use_rep=\'X\'`. '
-                    'Otherwise, for instance, perform preprocessing with PCA by calling `sc.pp.pca(adata)`')
+                logg.warn(
+                    'You\'re trying to run this on {} dimensions of `.X`, '
+                    'if you really want this, set `use_rep=\'X\'`.\n         '
+                    'Falling back to preprocessing with `sc.pp.pca` and default params.'
+                    .format(adata.n_vars))
+                X = pca(adata.X)
+                adata.obsm['X_pca'] = X
+                return X
         else:
             logg.info('    using data matrix X directly')
             return adata.X
     else:
         if use_rep in adata.obsm.keys():
             return adata.obsm[use_rep]
+        elif use_rep == 'X':
+            return adata.X
         else:
             raise ValueError(
                 'Did not find {} in `.obsm.keys()`. '

@@ -420,7 +420,7 @@ def draw_graph(
         ax=ax)
     if edges:
         for ax in axs[::2]:
-            g = nx.Graph(adata.uns['neighbors_distances'])
+            g = nx.Graph(adata.uns['neighbors']['connectivities'])
             edge_collection = nx.draw_networkx_edges(
                 g, adata.obsm['X_' + basis],
                 ax=ax, width=edges_width, edge_color=edges_color)

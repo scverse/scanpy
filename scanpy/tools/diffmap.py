@@ -37,6 +37,7 @@ def diffmap(adata, n_comps=15, n_jobs=None, copy=False):
             'Provide any value greater than 2. ')
     adata = adata.copy() if copy else adata
     dmap = dpt.DPT(adata, n_jobs=n_jobs)
+    dmap.compute_transitions()
     dmap.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dmap.rbasis
     adata.uns['diffmap_evals'] = dmap.evals

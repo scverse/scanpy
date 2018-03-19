@@ -2,18 +2,23 @@ from collections import namedtuple
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
-from textwrap import dedent
 from .. import logging as logg
 from ..neighbors import Neighbors
 from .. import utils
 from .. import settings
 
 
-doc_string_base = dedent("""\
+def sga(adata,
+        groups='louvain_groups',
+        threshold=0.01,
+        tree_based_confidence=False,
+        n_jobs=None,
+        copy=False):
+    """\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Statistical graph abstraction (SGA) quantifies the connectivity of
+    Statistical graph abstraction (SGA) quantifies the connectivities of
     partitions of a neighborhood graph of single cells, thereby generating a
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
@@ -30,8 +35,8 @@ doc_string_base = dedent("""\
         modularity of the graph. You can also pass your predefined groups by
         choosing any categorical annotation of observations (`adata.obs`).
     tree_based_confidence : `bool`, optional (default: `True`)
-        Have high confidence in a connection if its connectivity is
-        significantly higher than the median connectivity of the global spanning
+        Have high confidence in a connection if its connectivities is
+        significantly higher than the median connectivities of the global spanning
         tree of the abstracted graph.
     n_jobs : `int` or None (default: `sc.settings.n_jobs`)
         Number of CPUs to use for parallel processing.
@@ -42,48 +47,34 @@ doc_string_base = dedent("""\
     Returns
     -------
     Returns or updates `adata` depending on `copy` with
-    {returns}
-    """)
-
-
-doc_string_returns = dedent("""\
-        sga_connectivity : np.ndarray (adata.uns)
-            The full adjacency matrix of the abstracted graph, weights
-            correspond to connectivity.
-        sga_confidence : np.ndarray (adata.uns)
-            The full adjacency matrix of the abstracted graph, weights
-            correspond to confidence in the presence of an edge.
-        sga_confidence_tree : sc.sparse csr matrix (adata.uns)
-            The adjacency matrix of the tree-like subgraph that best explains
-            the topology.
-    """)
-
-
-def sga(adata,
-        groups='louvain_groups',
-        threshold=0.01,
-        tree_based_confidence=False,
-        n_jobs=None,
-        copy=False):
+    sga/connectivities : np.ndarray (adata.uns)
+        The full adjacency matrix of the abstracted graph, weights
+        correspond to connectivities.
+    sga/confidence : np.ndarray (adata.uns)
+        The full adjacency matrix of the abstracted graph, weights
+        correspond to confidence in the presence of an edge.
+    sga/confidence_tree : sc.sparse csr matrix (adata.uns)
+        The adjacency matrix of the tree-like subgraph that best explains
+        the topology.
+    """
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running Statistical Graph Abstraction (SGA)', reset=True)
     sga = SGA(adata, groups, threshold=threshold, tree_based_confidence=tree_based_confidence)
     sga.compute()
-    adata.uns['sga_connectivity'] = sga.connectivity
-    adata.uns['sga_confidence'] = sga.confidence
-    adata.uns['sga_confidence_tree'] = sga.confidence_tree
-    adata.uns['sga_groups_key'] = groups
+    adata.uns['sga'] = {}
+    adata.uns['sga']['connectivities'] = sga.connectivities
+    adata.uns['sga']['confidence'] = sga.confidence
+    adata.uns['sga']['confidence_tree'] = sga.confidence_tree
+    adata.uns['sga']['groups'] = groups
     adata.uns[groups + '_sizes'] = np.array(sga.vc.sizes())
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
         'added\n'
-        '    \'sga_connectivity\', connectivity adjacency (adata.uns)\n'
-        '    \'sga_confidence\', confidence adjacency (adata.uns)\n'
-        '    \'sga_confidence_tree\', confidence subtree (adata.uns)')
+        '    \'sga/connectivities\', connectivities adjacency (adata.uns)\n'
+        '    \'sga/confidence\', confidence adjacency (adata.uns)\n'
+        '    \'sga/confidence_tree\', confidence subtree (adata.uns)')
     return adata if copy else None
-
-sga.__doc__ = doc_string_base.format(returns=doc_string_returns)
 
 
 class SGA(Neighbors):
@@ -97,30 +88,30 @@ class SGA(Neighbors):
         self._tree_based_confidence = tree_based_confidence
 
     def compute(self):
-        self.compute_connectivity()
+        self.compute_connectivities()
         self.compute_confidence()
 
-    def compute_connectivity(self):
+    def compute_connectivities(self):
         import igraph
-        ones = self._adata.uns['neighbors_similarities'].copy()
+        ones = self._adata.uns['neighbors']['connectivities'].copy()
         # graph where edges carry weight 1
         ones.data = np.ones(len(ones.data))
         g = utils.get_igraph_from_adjacency(ones)
         self.vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups].cat.codes.values)
         cg = self.vc.cluster_graph(combine_edges='sum')
-        self.connectivity = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+        self.connectivities = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
 
     def compute_confidence(self):
-        """Translates the connectivity measure into a confidence measure.
+        """Translates the connectivities measure into a confidence measure.
         """
-        pseudo_distance = self.connectivity.copy()
+        pseudo_distance = self.connectivities.copy()
         pseudo_distance.data = 1./pseudo_distance.data
-        connectivity_tree = minimum_spanning_tree(pseudo_distance)
-        connectivity_tree.data = 1./connectivity_tree.data
-        connectivity_tree_indices = [
-            connectivity_tree[i].nonzero()[1]
-            for i in range(connectivity_tree.shape[0])]
+        connectivities_tree = minimum_spanning_tree(pseudo_distance)
+        connectivities_tree.data = 1./connectivities_tree.data
+        connectivities_tree_indices = [
+            connectivities_tree[i].nonzero()[1]
+            for i in range(connectivities_tree.shape[0])]
         # inter- and intra-cluster based confidence
         if not self._tree_based_confidence:
             total_n = self.n_neighbors * np.array(self.vc.sizes())
@@ -128,14 +119,14 @@ class SGA(Neighbors):
                      '{:>7} {:>7} {:>7} {:>7}'
                      .format('i', 'j', 'conn', 'n[i]', 'n[j]',
                              'avg', 'thresh', 'var', 'conf'), v=5)
-            maximum = self.connectivity.max()
-            confidence = self.connectivity.copy()  # initializing
-            for i in range(self.connectivity.shape[0]):
-                for j in range(i+1, self.connectivity.shape[1]):
-                    if self.connectivity[i, j] > 0:
+            maximum = self.connectivities.max()
+            confidence = self.connectivities.copy()  # initializing
+            for i in range(self.connectivities.shape[0]):
+                for j in range(i+1, self.connectivities.shape[1]):
+                    if self.connectivities[i, j] > 0:
                         minimum = min(total_n[i], total_n[j])
-                        average = self.connectivity[i, j] / minimum
-                        confidence[i, j] = self.connectivity[i, j] / maximum
+                        average = self.connectivities[i, j] / minimum
+                        confidence[i, j] = self.connectivities[i, j] / maximum
                         variance = self.threshold * (1-self.threshold)
                         # if average > self.threshold:
                         #     confidence[i, j] = 1
@@ -145,29 +136,29 @@ class SGA(Neighbors):
                         logg.msg(
                             '{:2} {:2} {:4} {:4} {:4} '
                             '{:7.2} {:7.2} {:7.2} {:7.2}'
-                            .format(i, j, int(self.connectivity[i, j]),
+                            .format(i, j, int(self.connectivities[i, j]),
                                     total_n[i], total_n[j],
                                     average, self.threshold, variance, confidence[i, j]), v=5)
                         confidence[j, i] = confidence[i, j]
         # tree-based confidence
         else:
-            median_connectivity_tree = np.median(connectivity_tree.data)
-            confidence = self.connectivity.copy()
-            confidence.data[self.connectivity.data >= median_connectivity_tree] = 1
-            connectivity_adjusted = self.connectivity.copy()
-            connectivity_adjusted.data -= median_connectivity_tree
-            connectivity_adjusted.data = np.exp(connectivity_adjusted.data)
-            index = self.connectivity.data < median_connectivity_tree
-            confidence.data[index] = connectivity_adjusted.data[index]
+            median_connectivities_tree = np.median(connectivities_tree.data)
+            confidence = self.connectivities.copy()
+            confidence.data[self.connectivities.data >= median_connectivities_tree] = 1
+            connectivities_adjusted = self.connectivities.copy()
+            connectivities_adjusted.data -= median_connectivities_tree
+            connectivities_adjusted.data = np.exp(connectivities_adjusted.data)
+            index = self.connectivities.data < median_connectivities_tree
+            confidence.data[index] = connectivities_adjusted.data[index]
         confidence_tree = self.compute_confidence_tree(
-            confidence, connectivity_tree_indices)
+            confidence, connectivities_tree_indices)
         self.confidence = confidence
         self.confidence_tree = confidence_tree
 
     def compute_confidence_tree(
-            self, confidence, connectivity_tree_indices):
+            self, confidence, connectivities_tree_indices):
         confidence_tree = sp.sparse.lil_matrix(confidence.shape, dtype=float)
-        for i, neighbors in enumerate(connectivity_tree_indices):
+        for i, neighbors in enumerate(connectivities_tree_indices):
             if len(neighbors) > 0:
                 confidence_tree[i, neighbors] = confidence[i, neighbors]
         return confidence_tree.tocsr()
@@ -207,7 +198,7 @@ def sga_expression_entropies(adata):
     """
     from scipy.stats import entropy
     groups_order, groups_masks = utils.select_groups(adata,
-                                                     key=adata.uns['sga_groups_key'])
+                                                     key=adata.uns['sga_groups'])
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask]

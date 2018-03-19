@@ -12,7 +12,7 @@ def louvain(
         random_state=0,
         restrict_to=None,
         key_added=None,
-        key='neighbors_similarities',
+        adjacency=None,
         flavor='vtraag',
         directed=True,
         n_jobs=None,
@@ -40,9 +40,9 @@ def louvain(
         annotation, tuple needs to contain (obs key, list of categories).
     key_added : `str`, optional (default: `None`)
         Key under which to add the cluster labels.
-    key : `str`, optional (default: 'neighbors_similarities')
-        Key for accessing the sparse adjacency matrix of the graph in
-        `adata.uns`.
+    adjacency : sparse matrix, optional (default: `None`)
+        Sparse adjacency matrix of the graph, defaults to
+        `adata.uns['neighbors']['connectivities']`.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
@@ -59,12 +59,13 @@ def louvain(
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
-    if key not in adata.uns:
+    if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
             '\'{}\' is not present in `adata.uns`. '
             'You need to run `pp.neighbors` first to compute a neighborhood graph.'
             .format(key))
-    adjacency = adata.uns[key]
+    if adjacency is None:
+        adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
         if not isinstance(restrict_categories[0], str):

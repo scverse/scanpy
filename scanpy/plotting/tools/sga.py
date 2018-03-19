@@ -13,7 +13,7 @@ from ... import logging as logg
 from ..utils import matrix
 
 
-def sga(
+def sga_compare(
         adata,
         basis='tsne',
         color=None,
@@ -36,7 +36,7 @@ def sga(
         groups_graph=None,
         color_graph=None,
         **sga_graph_params):
-    """Summary figure for statisical graph abstraction.
+    """Statisical graph abstraction.
 
     Consists in a scatter plot and the abstracted graph. See
     :func:`~sanpy.api.pl.sga_scatter` and :func:`~scanpy.api.pl.sga_graph` for
@@ -150,7 +150,7 @@ def sga_scatter(
     corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if color is None:
-        color = [adata.uns['sga_groups_key']]
+        color = [adata.uns['sga_groups']]
     if not isinstance(color, list): color = [color]
     kwds = {}
     if 'draw_graph' in basis:
@@ -182,7 +182,7 @@ def sga_scatter(
     if show == False: return axs
 
 
-def sga_graph(
+def sga(
         adata,
         solid_edges='sga_confidence',
         dashed_edges=None,
@@ -287,6 +287,8 @@ def sga_graph(
 
     Returns
     -------
+    Adds `'sga_pos'` to `adata.uns`.
+  
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
 
@@ -341,6 +343,7 @@ def sga_graph(
             random_state=0,
             export_to_gexf=export_to_gexf,
             pos=pos)
+    adata.uns['sga_pos'] = pos
     utils.savefig_or_show('sga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
@@ -376,10 +379,10 @@ def _sga_graph(
     node_labels = groups
     if (node_labels is not None
         and isinstance(node_labels, str)
-        and node_labels != adata.uns['sga_groups_key']):
+        and node_labels != adata.uns['sga_groups']):
         raise ValueError('Provide a list of group labels for the SGA groups {}, not {}.'
-                         .format(adata.uns['sga_groups_key'], node_labels))
-    groups_key = adata.uns['sga_groups_key']
+                         .format(adata.uns['sga_groups'], node_labels))
+    groups_key = adata.uns['sga_groups']
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
 
@@ -669,7 +672,7 @@ def sga_path(
         Number of data points to include in computation of running average.
     groups_key : `str`, optional (default: `None`)
         Key of the grouping used to run SGA. If `None`, defaults to
-        `adata.uns['sga_groups_key']`.
+        `adata.uns['sga_groups']`.
     as_heatmap : `bool`, optional (default: `True`)
         Plot the timeseries as heatmap. If not plotting as heatmap,
         `annotations` have no effect.
@@ -699,11 +702,11 @@ def sga_path(
     ax_was_none = ax is None
 
     if groups_key is None:
-        if 'sga_groups_key' not in adata.uns:
+        if 'sga_groups' not in adata.uns:
             raise KeyError(
                 'Pass the key of the grouping with which you ran SGA, '
                 'using the parameter `groups_key`.')
-        groups_key = adata.uns['sga_groups_key']
+        groups_key = adata.uns['sga_groups']
     groups_names = adata.obs[groups_key].cat.categories
 
     if palette_groups is None:

@@ -2,9 +2,9 @@ import numpy as np
 from anndata import AnnData
 from scanpy.api import Neighbors
 
-def test_compute_similarities():
+def test_compute_connectivities():
     # the result
-    similarities = [
+    connectivities = [
         [0.0, 0.5146393179893494, 0.0, 0.36445462703704834],
         [0.5146393179893494, 0.0, 0.3581143319606781, 0.2239987552165985],
         [0.0, 0.3581143319606781, 0.0, 0.5245543718338013],
@@ -14,6 +14,6 @@ def test_compute_similarities():
     adata = AnnData(X)
     neighbors = Neighbors(adata)
     neighbors.compute_distances()
-    neighbors.compute_similarities()
+    neighbors.compute_connectivities()
     np.allclose(
-        neighbors.similarities.toarray(), similarities, np.finfo(np.float32).eps)
+        neighbors.connectivities.toarray(), connectivities, np.finfo(np.float32).eps)

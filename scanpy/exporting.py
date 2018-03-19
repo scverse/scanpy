@@ -71,13 +71,11 @@ def spring_project(
     os.system('mkdir ' + project_dir)
     if not project_dir[-1] == '/': project_dir += '/'
 
-    if 'neighbors_distances' not in adata.uns:
-        raise ValueError(
-            'Run any tool that produces a data graph first, '
-            'e.g. sc.tl.diffmap or sc.tl.louvain')
+    if 'neighbors' not in adata.uns:
+        raise ValueError('Run `sc.pp.neighbors` first.')
     # Note that output here will always be sparse
-    D = adata.uns['neighbors_distances']
-    k = adata.uns['neighbors_distances'][0].nonzero()[0].size
+    D = adata.uns['neighbors']['distances']
+    k = adata.uns['neighbors']['params']['n_neighbors']
     edges = get_knn_edges_sparse(D, k)
 
     # write custom color tracks
