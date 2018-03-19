@@ -4,19 +4,30 @@ from ..preprocessing.simple import N_PCS
 
 doc_use_rep = """\
 use_rep : \{`None`, 'X'\} or any key for `.obsm`, optional (default: `None`)
-    Use the indicated representation. If `None`, the representation is
-    chosen automatically: for `.n_vars` < 50, `.X` is used, otherwise and if
-    'X_pca' is present, 'X_pca' is used.\
+    Use the indicated representation. If `None`, the representation is chosen
+    automatically: for `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
+    If 'X_pca' is not present, it's computed with default parameters.\
+"""
+
+doc_n_pcs = """\
+n_pcs : `int` or `None`, optional (default: `None`)
+    Use this many PCs. If `n_pcs==0` use `.X` if `use_rep is None`.\
 """
 
 
-def choose_representation(adata, use_rep=None):
+def choose_representation(adata, use_rep=None, n_pcs=None):
+    if use_rep is None and n_pcs == 0:  # backwards compat for specifying `.X`
+        use_rep = 'X'
     if use_rep is None:
         if adata.n_vars > N_PCS:
             if 'X_pca' in adata.obsm.keys():
+                if n_pcs is not None and n_pcs > adata.obsm['X_pca'].shape[1]:
+                    raise ValueError(
+                        '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.')
+                X = adata.obsm['X_pca'][:n_pcs]
                 logg.info('    using \'X_pca\' with n_pcs = {}'
-                          .format(adata.obsm['X_pca'].shape[1]))
-                return adata.obsm['X_pca']
+                          .format(X.shape[1]))
+                return X
             else:
                 logg.warn(
                     'You\'re trying to run this on {} dimensions of `.X`, '
