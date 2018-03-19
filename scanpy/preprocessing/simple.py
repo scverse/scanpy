@@ -224,7 +224,7 @@ def filter_genes_dispersion(data,
     n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: True)
-        Use the logarithm of mean and variance.
+        Use the logarithm of the mean to variance ratio.
     copy : `bool`, optional (default: `False`)
         If an AnnData is passed, determines whether a copy is returned.
 
