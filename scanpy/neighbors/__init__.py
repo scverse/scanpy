@@ -6,16 +6,17 @@ from sklearn.metrics import pairwise_distances
 from .. import settings
 from .. import logging as logg
 from .. utils import doc_params
-from ..tools._utils import choose_representation, doc_use_rep
+from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-@doc_params(use_rep=doc_use_rep)
+@doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
         adata,
         n_neighbors=30,
+        n_pcs=None,
         use_rep=None,
         knn=True,
         method='umap',
@@ -43,6 +44,7 @@ def neighbors(
         If `knn` is `True`, number of nearest neighbors to be searched. If `knn`
         is `False`, a Gaussian kernel width is set to the distance of the
         `n_neighbors` neighbor.
+    {n_pcs}
     {use_rep}
     knn : `bool`, optional (default: `True`)
         If `True`, use a hard threshold to restrict the number of neighbors to

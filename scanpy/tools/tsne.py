@@ -1,10 +1,22 @@
-from textwrap import dedent
-from ._utils import choose_representation, doc_use_rep
+from .. utils import doc_params
+from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 from .. import logging as logg
 
 
-doc_tsne = dedent("""\
+@doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+def tsne(
+        adata,
+        n_pcs=None,
+        use_rep=None,
+        perplexity=30,
+        early_exaggeration=12,
+        learning_rate=1000,
+        random_state=0,
+        use_fast_tsne=True,
+        n_jobs=None,
+        copy=False):
+    """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
     t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
@@ -18,6 +30,7 @@ doc_tsne = dedent("""\
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
+    {n_pcs}
     {use_rep}
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
@@ -55,19 +68,7 @@ doc_tsne = dedent("""\
 
     X_tsne : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
-    """).format(use_rep=doc_use_rep)
-
-
-def tsne(
-        adata,
-        use_rep=None,
-        perplexity=30,
-        early_exaggeration=12,
-        learning_rate=1000,
-        random_state=0,
-        use_fast_tsne=True,
-        n_jobs=None,
-        copy=False):
+    """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
     X = choose_representation(adata, use_rep=use_rep)
