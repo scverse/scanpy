@@ -18,20 +18,30 @@ def neighbors(
         n_neighbors=30,
         use_rep=None,
         knn=True,
-        umap=True,
+        method='umap',
         metric='euclidean',
         metric_kwds={},
         copy=False):
     """\
-    Compute a neighborhood graph of data points.
+    Compute a neighborhood graph of data points [McInnes18]_.
+
+    The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
+    which also provides a method for estimating connectivities of data points -
+    the connectivity of the manifold (`method=='umap'`). If `method=='diffmap'`,
+    connectivities are computed according to [Coifman05]_, in the adaption of
+    [Haghverdi16]_.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     n_neighbors : `int`, optional (default: 30)
-        If `knn` is `True`, Number of nearest neighbors in the knn graph. If
-        `knn` is `False`, set the Gaussian kernel width to the distance of the
+        The size of local neighborhood (in terms of number of neighboring data
+        points) used for manifold approximation. Larger values result in more
+        global views of the manifold, while smaller values result in more local
+        data being preserved. In general values should be in the range 2 to 100.
+        If `knn` is `True`, number of nearest neighbors to be searched. If `knn`
+        is `False`, a Gaussian kernel width is set to the distance of the
         `n_neighbors` neighbor.
     {use_rep}
     knn : `bool`, optional (default: `True`)
@@ -39,8 +49,9 @@ def neighbors(
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    umap : `bool` or `None` (default: `None`)
-        Use umap [McInnes18]_ for computing distances and connectivities.
+    method : {{'umap', 'diffmap', `None`}}  (default: `None`)
+        Use 'umap' [McInnes18]_ or 'diffmap' [Coifman05]_ [Haghverdi16]_ for
+        computing connectivities.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
@@ -58,10 +69,10 @@ def neighbors(
     adata = adata.copy() if copy else adata
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
-        n_neighbors=n_neighbors, knn=knn, use_rep=use_rep, umap=umap,
+        n_neighbors=n_neighbors, knn=knn, use_rep=use_rep, method=method,
         metric=metric, metric_kwds=metric_kwds)
     adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'umap': umap}
+    adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
@@ -504,11 +515,7 @@ class Neighbors():
             self.knn = issparse(adata.uns['neighbors']['distances'])
             self._distances = adata.uns['neighbors']['distances']
             self._connectivities = adata.uns['neighbors']['connectivities']
-            if self.knn:
-                self.n_neighbors = adata.uns[
-                    'neighbors']['distances'][0].nonzero()[0].size + 1
-            else:
-                self.n_neighbors = None  # is unknown
+            self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
             info_str += '`.distances` `.connectivities` '
         else:
             self.knn = None
@@ -541,6 +548,8 @@ class Neighbors():
     @property
     def transitions(self):
         """Transition matrix (sparse matrix).
+
+        Note: this has not been tested, in contrast to `transitions_sym`.
 
         Is conjugate to the symmetrized transition matrix via::
 
@@ -599,7 +608,7 @@ class Neighbors():
             n_neighbors=30,
             knn=True,
             use_rep=None,
-            umap=False,
+            method=None,
             precompute_metric=None,
             metric='euclidean',
             metric_kwds={}):
@@ -622,9 +631,8 @@ class Neighbors():
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
         self.n_neighbors = n_neighbors
         self.knn = knn
-        self.umap = umap
         X = choose_representation(self._adata, use_rep=use_rep)
-        if umap:
+        if method == 'umap':
             if precompute_metric is None:
                 precompute_metric = X.shape[0] < 4096
             if precompute_metric:
