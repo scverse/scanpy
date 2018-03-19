@@ -92,6 +92,10 @@ References
    *Machine Learning: A Probabilisitc Perspective*,
    `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`_.
 
+.. [Ntranos18] Ntranos *et al.* (2018),
+   *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
+   `bioRxiv <https://doi.org/10.1101/258566>`__.
+
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.

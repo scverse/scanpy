@@ -24,7 +24,7 @@ def choose_representation(adata, use_rep=None, n_pcs=None):
                 if n_pcs is not None and n_pcs > adata.obsm['X_pca'].shape[1]:
                     raise ValueError(
                         '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.')
-                X = adata.obsm['X_pca'][:n_pcs]
+                X = adata.obsm['X_pca'][:, :n_pcs]
                 logg.info('    using \'X_pca\' with n_pcs = {}'
                           .format(X.shape[1]))
                 return X
