@@ -24,8 +24,11 @@ def filter_genes_dispersion(result, log=False, save=None, show=None):
     means = result.means
     dispersions = result.dispersions
     dispersions_norm = result.dispersions_norm
-    for id, d in enumerate([dispersions_norm, dispersions]):
-        pl.figure(figsize=rcParams['figure.figsize'])
+    size = rcParams['figure.figsize']
+    pl.figure(figsize=(2*size[0], size[1]))
+    pl.subplots_adjust(wspace=0.3)
+    for idx, d in enumerate([dispersions_norm, dispersions]):
+        pl.subplot(1, 2, idx + 1)
         for label, color, mask in zip(['highly variable genes', 'other genes'],
                                       ['black', 'grey'],
                                       [gene_subset, ~gene_subset]):
@@ -39,11 +42,8 @@ def filter_genes_dispersion(result, log=False, save=None, show=None):
             y_min = 0.95*min_dispersion if min_dispersion > 0 else 1e-1
             pl.xlim(0.95*np.min(means), 1.05*np.max(means))
             pl.ylim(y_min, 1.05*np.max(dispersions))
-        pl.legend()
-        pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expression of gene')
-
-        file_name = 'filter_genes_dispersion{}'.format('_normalized' if id == 0 else '')
-        pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersion of gene'
-                  + (' (normalized)' if id == 0 else ' (not normalized)'))
-        utils.savefig_or_show(file_name, show=show, save=save)
-        
+        if idx == 0: pl.legend()
+        pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expressions of genes')
+        pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersions of genes'
+                  + (' (normalized)' if idx == 0 else ' (not normalized)'))
+    utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)

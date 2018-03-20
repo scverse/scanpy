@@ -199,28 +199,34 @@ def filter_genes_dispersion(data,
                             flavor='seurat',
                             min_disp=None, max_disp=None,
                             min_mean=None, max_mean=None,
+                            n_bins=20,
                             n_top_genes=None,
                             log=True,
                             copy=False):
-    """Filter genes based on dispersion: extract highly variable genes.
+    """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
-    Similar functions are used, for example, by Cell Ranger [Zheng17]_
-    and Seurat [Satija15]_.
+    Depending on option `flavor`, this reproduces the R-implementations of
+    Seurat [Satija15]_ and Cell Ranger [Zheng17]_.
 
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
         Data matrix.
     flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
-        Choose method for computing normalized dispersion. If choosing 'Seurat',
-        this expects non-logarithmized data, you can change this by setting
-        `log` to `False`. Note that Seurat passes the cutoffs whereas Cell
-        Ranger passes `n_top_genes`.
+        Choose the flavor for computing normalized dispersion. If choosing
+        'seurat', this expects non-logarithmized data - the logarithm of mean
+        and dispersion is taken internally when `log` is at its default value
+        `True`. For 'cell_ranger', this is usually called for logarithmized data
+        - in this case you should set `log` to `False`. In their default
+        workflows, Seurat passes the cutoffs whereas Cell Ranger passes
+        `n_top_genes`.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
         If `n_top_genes` is not `None`, these cutoffs for the normalized gene
         expression are ignored.
+    n_bins : `int` (default: 20)
+        Number of bins for binning the mean gene expression.
     n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: True)
@@ -230,19 +236,18 @@ def filter_genes_dispersion(data,
 
     Returns
     -------
-    If an AnnData `adata` is passed, returns or updates `adata` depending on
-    `copy`. It filters the adata object and adds the annotations
+    If an AnnData `adata` is passed, returns or updates `adata` depending on \
+    `copy`. It filters the `adata` and adds the annotations
 
-    means : pd.Series (adata.var)
-        Means per gene.
-    dispersions : pd.Series (adata.var)
-        Dispersions per gene.
-    dispersions_norm : pd.Series (adata.var)
-        Normalized dispersions per gene.
+    means : adata.var
+        Means per gene. Logarithmized when `log` is `True`.
+    dispersions : adata.var
+        Dispersions per gene. Logarithmized when `log` is `True`.
+    dispersions_norm : adata.var
+        Normalized dispersions per gene. Logarithmized when `log` is `True`.
 
-    If a data matrix `X` is passed, the annotation is returned as `np.recarray`
-    with the columns:
-        gene_subset, means, dispersions, dispersion_norm
+    If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
+    with the columns: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
@@ -279,10 +284,26 @@ def filter_genes_dispersion(data,
     df['mean'] = mean
     df['dispersion'] = dispersion
     if flavor == 'seurat':
-        df['mean_bin'] = pd.cut(df['mean'], bins=20)
+        df['mean_bin'] = pd.cut(df['mean'], bins=n_bins)
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
+        # retrieve those genes that have nan std, these are the ones where
+        # only a single gene fell in the bin and implicitly set them to have
+        # a normalized disperion of 1
+        one_gene_per_bin = disp_std_bin.isnull()
+        gen_indices = np.where(one_gene_per_bin[df['mean_bin']])[0].tolist()
+        if len(gen_indices) > 0:
+            logg.warn(
+                'The genes with indices {} fell into a single bin and their '
+                'normalized dispersion is artificially set to 1. '
+                'Find their names using `.var_names[indices]`. '
+                'If you decrease the number of bins `n_bins`, '
+                'you\'ll likely avoid this effect.'
+                .format(gen_indices))
+        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin]
+        disp_mean_bin[one_gene_per_bin] = 0
+        # actually do the normalization
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
                                  - disp_mean_bin[df['mean_bin']].values) \
                                  / disp_std_bin[df['mean_bin']].values
@@ -296,6 +317,8 @@ def filter_genes_dispersion(data,
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
+        print(disp_mad_bin)
+        print(disp_median_bin)
         df['dispersion_norm'] = np.abs((df['dispersion'].values
                                  - disp_median_bin[df['mean_bin']].values)) \
                                 / disp_mad_bin[df['mean_bin']].values
