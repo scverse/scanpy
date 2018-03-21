@@ -38,7 +38,7 @@ def louvain(
     restrict_to : `tuple`, optional (default: None)
         Restrict the clustering to the categories within the key for sample
         annotation, tuple needs to contain (obs key, list of categories).
-    key_added : `str`, optional (default: `None`)
+    key_added : `str`, optional (default: 'louvain')
         Key under which to add the cluster labels.
     adjacency : sparse matrix, optional (default: `None`)
         Sparse adjacency matrix of the graph, defaults to
@@ -53,7 +53,7 @@ def louvain(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    louvain_groups : `pd.Series` (``adata.obs``, dtype `category`)
+    louvain : `pd.Series` (``adata.obs``, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell.
     """
@@ -116,7 +116,7 @@ def louvain(
     n_clusters = len(unique_groups)
     if restrict_to is None:
         groups = groups.astype('U')
-        key_added = 'louvain_groups' if key_added is None else key_added
+        key_added = 'louvain' if key_added is None else key_added
         adata.obs[key_added] = pd.Categorical(
             values=groups,
             categories=natsorted(unique_groups.astype('U')))
