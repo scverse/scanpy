@@ -4,14 +4,10 @@
 import matplotlib
 from matplotlib import rcParams
 from cycler import cycler
-# import seaborn so that it makes its changes to rcParams
-# see seaborn.rcmod
-import seaborn
 
 from . import palettes
-from .. import settings
 
-def set_rcParams_Scanpy(fontsize=14):
+def set_rcParams_scanpy(fontsize=14):
     """Set matplotlib.rcParams to Scanpy defaults."""
 
     # figure
@@ -43,9 +39,6 @@ def set_rcParams_Scanpy(fontsize=14):
     rcParams['legend.handlelength'] = 0.5
     rcParams['legend.handletextpad'] = 0.4
 
-    # resolution of png output
-    rcParams['savefig.dpi'] = settings._dpi
-
     # color cycle
     rcParams['axes.prop_cycle'] = cycler(color=palettes.default_20)
 
@@ -67,10 +60,7 @@ def set_rcParams_Scanpy(fontsize=14):
     # color map
     rcParams['image.cmap'] = 'RdBu_r'  # seaborn 0.8.0 now has 'rocket'
 
-# equivalent name for backwards compat
-reset_rcParams = set_rcParams_Scanpy
 
-
-def set_rcParams_Defaults():
-    """Reset matplotlib.rcParams to defaults."""
+def set_rcParams_defaults():
+    """Reset `matplotlib.rcParams` to defaults."""
     rcParams.update(matplotlib.rcParamsDefault)

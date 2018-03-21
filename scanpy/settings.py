@@ -151,13 +151,15 @@ _low_resolution_warning = True
 # --------------------------------------------------------------------------------
 
 
-def set_figure_params(dpi=None, figure_formats=['png2x']):
-    """Set resolution and format of figures.
+def set_figure_params(dpi=None, scanpy=True, figure_formats=['png2x']):
+    """Set resolution/size, styling and format of figures.
 
     Parameters
     ----------
-    dpi : int, optional
+    dpi : `int`, optional
         Resolution of png output in dots per inch.
+    scanpy : `bool`, optional (default: `True`)
+        Run :func:`scanpy.api.pl.set_rcParams_scanpy` to init Scanpy rcParams.
     figure_formats : list of strings
         Only concerns the IPython environment; see
         `IPython.core.display.set_matplotlib_formats` for more details. For
@@ -171,15 +173,14 @@ def set_figure_params(dpi=None, figure_formats=['png2x']):
         pass
     from matplotlib import rcParams
     global _dpi
-    if dpi is not None: _dpi = dpi
-    # need to set the following two lines as older Jupyter notebooks seem to use
-    # 'savefig.dpi' and more rescent ones 'figure.dpi'
-    rcParams['savefig.dpi'] = _dpi
-    rcParams['figure.dpi'] = _dpi
+    if dpi is not None:
+        _dpi = dpi
+        rcParams['savefig.dpi'] = _dpi
+        rcParams['figure.dpi'] = _dpi
+    if scanpy:
+        from .plotting.rcmod import set_rcParams_scanpy
+        set_rcParams_scanpy()
 
-
-set_dpi = set_figure_params
-"""Deprecated: merely for backwards compatibility. See `set_figure_params` instead."""
 
 # ------------------------------------------------------------------------------
 # Private global variables

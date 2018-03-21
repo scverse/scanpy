@@ -11,7 +11,6 @@ import seaborn as sns
 
 from .. import settings
 from . import utils
-from .rcmod import set_rcParams_Scanpy
 from .utils import scatter_base, scatter_group
 from ..utils import sanitize_anndata
 
@@ -427,7 +426,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         x = groupby
         y = keys[0]
     if multi_panel:
-        sns.set_style('whitegrid')
         g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
         g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, **kwargs)
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
@@ -442,9 +440,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
                            jitter=jitter, color='black', size=size, ax=ax)
         ax.set_xlabel('' if groupby is None else groupby.replace('_', ' '))
         if log: ax.set_yscale('log')
-    # TODO: I don't know why but we have to update the plotting parameters here
-    # Seaborn influences them even though it had already been imported...
-    set_rcParams_Scanpy()
     utils.savefig_or_show('violin', show=show, save=save)
     if show == False: return ax
 

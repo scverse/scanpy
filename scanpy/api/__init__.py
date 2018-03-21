@@ -88,14 +88,6 @@ Tools: TL
 Plotting: PL
 -------------
 
-.. autosummary::
-   :toctree: .
-
-   pl.set_rcParams_Scanpy
-   pl.set_rcParams_Defaults
-
-.. raw:: html
-
 **Generic plotting with AnnData**
 
 .. autosummary::
@@ -237,6 +229,12 @@ Settings and Logging
 --------------------
 
 Global settings.
+
+.. autosummary::
+   :toctree: .
+   
+   settings.set_figure_params
+
 
 ==============================================  ===================================
 `settings.verbosity`                            Verbosity level (default: 1).
