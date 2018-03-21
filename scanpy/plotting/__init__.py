@@ -16,13 +16,10 @@ from .tools import sim
 from .top_genes_visual import correlation_matrix, exploratory_rank_analysis, top_ranked_group_analysis, \
     ROC_AUC_analysis, comparison_table, comparison_v2
 
-from .rcmod import reset_rcParams, set_rcParams_Scanpy, set_rcParams_Defaults
+from .rcmod import set_rcParams_scanpy, set_rcParams_defaults
 from . import palettes
 
 from .utils import matrix
 from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-
-# set Scanpy defaults
-set_rcParams_Scanpy()
 
 from matplotlib import rcParams
