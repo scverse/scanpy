@@ -210,6 +210,9 @@ def filter_genes_dispersion(data,
     Depending on option `flavor`, this reproduces the R-implementations of
     Seurat [Satija15]_ and Cell Ranger [Zheng17]_.
 
+    Use `flavor='cell_ranger'` with care and in the same way as in
+    :func:`~scanpy.api.pp.recipe_zheng17`.
+
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
@@ -226,7 +229,10 @@ def filter_genes_dispersion(data,
         If `n_top_genes` is not `None`, these cutoffs for the normalized gene
         expression are ignored.
     n_bins : `int` (default: 20)
-        Number of bins for binning the mean gene expression.
+        Number of bins for binning the mean gene expression. Normalization is
+        done with respect to each bin. If just a single gene falls into a bin,
+        the normalized dispersion is artificially set to 1. You'll be informed
+        about this if you set `settings.verbosity = 4`.
     n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: True)
@@ -267,8 +273,8 @@ def filter_genes_dispersion(data,
         adata.var['dispersions_norm'] = result['dispersions_norm']
         adata._inplace_subset_var(result['gene_subset'])
         return adata if copy else None
-    logg.info('filter highly variable genes by dispersion and mean',
-              r=True, end=' ')
+    logg.msg('extracting highly variable genes',
+              r=True, v=4)
     X = data  # no copy necessary, X remains unchanged in the following
     mean, var = _get_mean_var(X)
     # now actually compute the dispersion
@@ -294,13 +300,11 @@ def filter_genes_dispersion(data,
         one_gene_per_bin = disp_std_bin.isnull()
         gen_indices = np.where(one_gene_per_bin[df['mean_bin']])[0].tolist()
         if len(gen_indices) > 0:
-            logg.warn(
-                'The genes with indices {} fell into a single bin and their '
-                'normalized dispersion is artificially set to 1. '
-                'Find their names using `.var_names[indices]`. '
-                'If you decrease the number of bins `n_bins`, '
-                'you\'ll likely avoid this effect.'
-                .format(gen_indices))
+            logg.msg(
+                'Gene indices {} fell into a single bin: their '
+                'normalized dispersion was set to 1.\n    '
+                'Decreasing `n_bins` will likely avoid this effect.'
+                .format(gen_indices), v=4)
         disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin]
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
@@ -329,20 +333,15 @@ def filter_genes_dispersion(data,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.msg(t=True)
-        logg.msg('the', n_top_genes,
-               'top genes correspond to a normalized dispersion cutoff of',
-               disp_cut_off, v=4)
+        logg.msg('the {} top genes correspond to a normalized dispersion cutoff of'
+                 .format(n_top_genes, disp_cut_off), v=5)
     else:
-        logg.msg(t=True, no_indent=True)
-        logg.msg('using `min_disp={}`, `max_disp={}`, `min_mean={}` and `max_mean={}`'
-               .format(min_disp, max_disp, min_mean, max_mean), v=4)
-        logg.hint('set `n_top_genes` to simply select top-scoring genes instead')
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
+    logg.msg('    finished', time=True, v=4)
     return np.rec.fromarrays((gene_subset,
                               df['mean'].values,
                               df['dispersion'].values,
