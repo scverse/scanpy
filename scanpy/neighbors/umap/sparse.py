@@ -6,7 +6,7 @@ from __future__ import print_function
 import numpy as np
 import numba
 
-from umap.utils import (tau_rand_int,
+from .utils import (tau_rand_int,
                         tau_rand,
                         norm,
                         make_heap,

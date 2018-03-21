@@ -15,11 +15,11 @@ import scipy.sparse
 import scipy.sparse.csgraph
 import numba
 
-import umap.distances as dist
+from . import distances as dist
 
-import umap.sparse as sparse
+from . import sparse
 
-from umap.utils import (tau_rand_int,
+from .utils import (tau_rand_int,
                         tau_rand,
                         norm,
                         make_heap,
