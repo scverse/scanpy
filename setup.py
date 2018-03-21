@@ -27,13 +27,11 @@ setup(
     license='BSD',
     install_requires=requires,
     packages=find_packages(),
-    include_dirs=include_dirs,
     # `package_data` does NOT work for source distributions!!!
     # you also need MANIFTEST.in
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     package_data={'': '*.txt'},
     include_package_data=True,
-    ext_modules=ext_modules,
     zip_safe=False,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
