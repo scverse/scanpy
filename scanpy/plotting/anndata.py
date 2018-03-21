@@ -20,6 +20,7 @@ VALID_LEGENDLOCS = {
     'lower center', 'upper center', 'center'
 }
 
+
 def scatter(
         adata,
         x=None,
@@ -351,7 +352,7 @@ def ranking(adata, attr, keys, indices=None,
 
 def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=False, show=None,
-           save=None, ax=None, **kwargs):
+           xlabel='', rotation=None, save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
@@ -381,7 +382,12 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
         each violin will have the same width.
-    show : bool, optional (default: `None`)
+    xlabel : `str`, optional (default: `''`)
+        Label of the x axis. Defaults to `groupby` if `rotation` is `None`,
+        otherwise, no label is shown.
+    rotation : `float`, optional (default: `None`)
+        Rotation of xtick labels.
+    show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -438,8 +444,12 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
                             orient='vertical', scale=scale, ax=ax, **kwargs)
         ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
                            jitter=jitter, color='black', size=size, ax=ax)
-        ax.set_xlabel('' if groupby is None else groupby.replace('_', ' '))
+        if xlabel == '' and groupby is not None and rotation is None:
+            xlabel = groupby.replace('_', ' ')
+        ax.set_xlabel(xlabel)
         if log: ax.set_yscale('log')
+        if rotation is not None:
+            ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
     if show == False: return ax
 
