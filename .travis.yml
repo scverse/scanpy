@@ -1,12 +1,7 @@
 language: python
 python:
-  - "3.5"
   - "3.6"
-install:
-  - "conda install numba"
-  - "pip install -r requires.txt"
-  - "pip install docutils"
-  - "python setup.py build_ext --inplace"
+install: source .travis_install.sh
 script:
   - pytest
   - python setup.py check --restructuredtext --strict
