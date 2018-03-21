@@ -22,11 +22,8 @@ def rank_genes_groups(
         only_positive=True,
         copy=False,
         method='t-test_overestim_var',
-        correction_factors=None):
-    """Rank genes according to differential expression [Wolf17]_.
-
-    Rank genes by differential expression. By default, a t-test-like ranking is
-    used, in which means are normalized with variances.
+        **kwds):
+    """Rank genes for characterizing groups.
 
     Parameters
     ----------
@@ -54,6 +51,13 @@ def rank_genes_groups(
         why this is meaningful.
     only_positive : bool, optional (default: `True`)
         Only consider positive differences.
+    **kwds : keyword parameters
+        Are passed to test methods. Currently this affects only parameters that
+        are passed to `sklearn.linear_model.LogisticRegression
+        <http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`_.
+        For instance, you can pass `penalty='l1'` to try to come up with a
+        minimal set of genes that are good predictors (sparse solution meaning
+        few non-zero fitted coefficients).
 
     Returns
     -------
@@ -65,7 +69,7 @@ def rank_genes_groups(
         Structured array to be indexed by group id storing the score for each
         gene for each group. Ordered according to scores.
     """
-    logg.info('rank differentially expressed genes', r=True)
+    logg.info('ranking genes', r=True)
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     # for clarity, rename variable
@@ -110,19 +114,17 @@ def rank_genes_groups(
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
-    logg.info('    consider \'{}\':'.format(groupby), groups_order,
-              'with observations numbers', ns)
+    logg.msg('consider \'{}\' groups:'.format(groupby), groups_order, v=4)
+    logg.msg('with sizes:', ns, v=4)
     if reference != 'rest':
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)
 
-    avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon',
-                     't-test_double_overestim_var', 't-test_correction_factors'}  # currently not recommended
+    avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
-        raise ValueError('method should be one of {}.'
-                         '"t-test_overestim_var" is being used as default.'
-                         .format(avail_methods))
+        raise ValueError('Method must be one of {}.'.format(avail_methods))
 
+    # TODO: all of this is probably going to be removed
     if method is 't-test_correction_factors':
         if correction_factors is None:
             raise ValueError('For this test type, you need to enter correction factors manually.')
@@ -175,9 +177,10 @@ def rank_genes_groups(
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_names.append(adata_comp.var_names[global_indices])
     elif method == 'logreg':
+        from sklearn.linear_model import LogisticRegression
         if reference != 'rest':
             raise ValueError('\'logreg\' is only implemented for `reference==\'rest\'`.')
-        clf = sklearn.linear_model.LogisticRegressionCV()
+        clf = LogisticRegression(**kwds)
         clf.fit(X, adata.obs[groupby])
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
