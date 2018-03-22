@@ -51,9 +51,9 @@ def neighbors(
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
-    method : {{'umap', 'diffmap', `None`}}  (default: `None`)
-        Use 'umap' [McInnes18]_ or 'diffmap' [Coifman05]_ [Haghverdi16]_ for
-        computing connectivities.
+    method : {{'umap', 'gauss', `None`}}  (default: `'umap'`)
+        Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
+        with adaptive width [Haghverdi16]_) for computing connectivities.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
@@ -85,8 +85,8 @@ def neighbors(
     return adata if copy else None
 
 
-def compute_sqeuclidean_distances_using_matrix_mult(X, Y):
-    """Compute distance matrix for data arrays X and Y.
+def compute_euclidean_distances_using_matrix_mult(X, Y):
+    """Compute euclidean distance matrix for data arrays X and Y.
 
     Parameters
     ----------
@@ -112,29 +112,30 @@ def compute_sqeuclidean_distances_using_matrix_mult(X, Y):
     np.maximum(distances, 0, out=distances)
     if X is Y:
         distances.flat[::distances.shape[0] + 1] = 0.
+    distances = np.sqrt(distances)
     return distances
 
 
 def compute_neighbors_numpy_chunk(X, Y, n_neighbors):
-    """Compute distance matrix in squared euclidean norm for chunk.
+    """Compute distance matrix in euclidean norm for chunk.
     """
-    Dsq = compute_sqeuclidean_distances_using_matrix_mult(X, Y)
-    chunk_range = np.arange(Dsq.shape[0])[:, None]
-    indices_chunk = np.argpartition(Dsq, n_neighbors-1, axis=1)[:, :n_neighbors]
+    D = compute_euclidean_distances_using_matrix_mult(X, Y)
+    chunk_range = np.arange(D.shape[0])[:, None]
+    indices_chunk = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
     indices_chunk = indices_chunk[chunk_range,
-                                  np.argsort(Dsq[chunk_range, indices_chunk])]
+                                  np.argsort(D[chunk_range, indices_chunk])]
     indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
-    distances_chunk = Dsq[chunk_range, indices_chunk]
+    distances_chunk = D[chunk_range, indices_chunk]
     return indices_chunk, distances_chunk
 
 
 def compute_neighbors_numpy(X, n_neighbors, knn=True):
-    """Compute distance matrix in squared euclidean norm.
+    """Compute distance matrix in uared euclidean norm.
     """
     if not knn:
-        Dsq = compute_sqeuclidean_distances_using_matrix_mult(X, X)
-        indices, distances = get_indices_distances_from_dense_matrix(Dsq, n_neighbors)
-        return Dsq, indices, distances
+        D = compute_euclidean_distances_using_matrix_mult(X, X)
+        indices, distances = get_indices_distances_from_dense_matrix(D, n_neighbors)
+        return D, indices, distances
     # assume we can fit at max 20000 data points into memory
     len_chunk = np.ceil(min(20000, X.shape[0])).astype(int)
     n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
@@ -147,9 +148,9 @@ def compute_neighbors_numpy(X, n_neighbors, knn=True):
             X[chunk], X, n_neighbors)
         indices[chunk] = indices_chunk
         distances[chunk] = distances_chunk
-    Dsq = get_sparse_matrix_from_indices_distances_numpy(
+    D = get_sparse_matrix_from_indices_distances_numpy(
         indices, distances, X.shape[0], n_neighbors)
-    return Dsq, indices, distances
+    return D, indices, distances
 
 
 def compute_neighbors_umap(
@@ -393,29 +394,29 @@ def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_
     n_neighbors = n_neighbors - 1
     n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-    Dsq = scipy.sparse.csr_matrix((distances.ravel(),
+    D = scipy.sparse.csr_matrix((distances.ravel(),
                                 indices.ravel(),
                                 indptr),
                                 shape=(n_obs, n_obs))
-    return Dsq
+    return D
 
 
-def get_indices_distances_from_sparse_matrix(Dsq, n_neighbors):
-    indices = np.zeros((Dsq.shape[0], n_neighbors-1), dtype=int)
-    distances = np.zeros((Dsq.shape[0], n_neighbors-1), dtype=Dsq.dtype)
+def get_indices_distances_from_sparse_matrix(D, n_neighbors):
+    indices = np.zeros((D.shape[0], n_neighbors-1), dtype=int)
+    distances = np.zeros((D.shape[0], n_neighbors-1), dtype=D.dtype)
     for i in range(indices.shape[0]):
-        neighbors = Dsq[i].nonzero()
+        neighbors = D[i].nonzero()
         indices[i] = neighbors[1]
-        distances[i] = Dsq[i][neighbors]
+        distances[i] = D[i][neighbors]
     return indices, distances
 
 
-def get_indices_distances_from_dense_matrix(Dsq, k):
-    sample_range = np.arange(Dsq.shape[0])[:, None]
-    indices = np.argpartition(Dsq, k-1, axis=1)[:, :k]
-    indices = indices[sample_range, np.argsort(Dsq[sample_range, indices])]
+def get_indices_distances_from_dense_matrix(D, k):
+    sample_range = np.arange(D.shape[0])[:, None]
+    indices = np.argpartition(D, k-1, axis=1)[:, :k]
+    indices = indices[sample_range, np.argsort(D[sample_range, indices])]
     indices = indices[:, 1:]  # exclude first data point (point itself)
-    distances = Dsq[sample_range, indices]
+    distances = D[sample_range, indices]
     return indices, distances
 
 
@@ -560,7 +561,11 @@ class Neighbors():
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
         """
-        return self.Z * self.transitions_sym / self.Z
+        if issparse(self.Z):
+            Zinv = self.Z.power(-1)
+        else:
+            Zinv = np.diag(1./np.diag(self.Z))
+        return self.Z.dot(self.transitions_sym).dot(Zinv)
 
     @property
     def transitions_sym(self):
@@ -611,7 +616,7 @@ class Neighbors():
             knn=True,
             n_pcs=None,
             use_rep=None,
-            method=None,
+            method='umap',
             precompute_metric=None,
             metric='euclidean',
             metric_kwds={}):
@@ -633,6 +638,10 @@ class Neighbors():
         """
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
+            logg.warn('n_obs too small: adjusting to `n_neighbors = {}`'
+                      .format(n_neighbors))
+        if method == 'umap' and not knn:
+            raise ValueError('`method = \'umap\' only with `knn = True`.')
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
@@ -644,23 +653,27 @@ class Neighbors():
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
                 X, n_neighbors, metric=metric, **metric_kwds)
+
         else:
-            self._distances, _, _ = compute_neighbors_numpy(X, n_neighbors, knn=knn)
+            self._distances, knn_indices, knn_distances = compute_neighbors_numpy(X, n_neighbors, knn=knn)
         logg.msg('computed neighbors', t=True, v=4)
-        if umap:
+        if method == 'umap':
             self._distances, self._connectivities = compute_connectivities_umap(
                 knn_indices, knn_distances, self._adata.shape[0], self.n_neighbors)
         else:
             self._compute_connectivities_diffmap()
         logg.msg('computed connectivities', t=True, v=4)
+        print(knn_indices)
+        print(knn_distances)
 
     def _compute_connectivities_diffmap(self, density_normalize=True):
         # init distances
-        Dsq = self._distances
         if self.knn:
+            Dsq = self._distances.power(2)
             indices, distances_sq = get_indices_distances_from_sparse_matrix(
                 Dsq, self.n_neighbors)
         else:
+            Dsq = np.power(self._distances, 2)
             indices, distances_sq = get_indices_distances_from_dense_matrix(
                 Dsq, self.n_neighbors)
 
