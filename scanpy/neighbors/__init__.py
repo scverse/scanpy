@@ -124,7 +124,7 @@ def compute_neighbors_numpy_chunk(X, Y, n_neighbors):
     indices_chunk = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
     indices_chunk = indices_chunk[chunk_range,
                                   np.argsort(D[chunk_range, indices_chunk])]
-    indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
+    # indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
     distances_chunk = D[chunk_range, indices_chunk]
     return indices_chunk, distances_chunk
 
@@ -141,8 +141,8 @@ def compute_neighbors_numpy(X, n_neighbors, knn=True):
     n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
     chunks = [np.arange(start, min(start + len_chunk, X.shape[0]))
              for start in range(0, n_chunks * len_chunk, len_chunk)]
-    indices = np.zeros((X.shape[0], n_neighbors-1), dtype=int)
-    distances = np.zeros((X.shape[0], n_neighbors-1), dtype=np.float32)
+    indices = np.zeros((X.shape[0], n_neighbors), dtype=int)
+    distances = np.zeros((X.shape[0], n_neighbors), dtype=np.float32)
     for i_chunk, chunk in enumerate(chunks):
         indices_chunk, distances_chunk = compute_neighbors_numpy_chunk(
             X[chunk], X, n_neighbors)
@@ -391,31 +391,36 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
 
 
 def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
-    n_neighbors = n_neighbors - 1
     n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
     D = scipy.sparse.csr_matrix((distances.ravel(),
                                 indices.ravel(),
                                 indptr),
                                 shape=(n_obs, n_obs))
+    D.eliminate_zeros()
     return D
 
 
 def get_indices_distances_from_sparse_matrix(D, n_neighbors):
-    indices = np.zeros((D.shape[0], n_neighbors-1), dtype=int)
-    distances = np.zeros((D.shape[0], n_neighbors-1), dtype=D.dtype)
+    indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
+    distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
     for i in range(indices.shape[0]):
-        neighbors = D[i].nonzero()
-        indices[i] = neighbors[1]
-        distances[i] = D[i][neighbors]
+        neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
+        if len(neighbors[1]) == n_neighbors:
+            indices[i] = neighbors[1]
+            distances[i] = D[i][neighbors]
+        else:
+            indices[i, 0] = i
+            indices[i, 1:] = neighbors[1]
+            distances[i, 0] = 0
+            distances[i, 1:] = D[i][neighbors]
     return indices, distances
 
 
-def get_indices_distances_from_dense_matrix(D, k):
+def get_indices_distances_from_dense_matrix(D, n_neighbors):
     sample_range = np.arange(D.shape[0])[:, None]
-    indices = np.argpartition(D, k-1, axis=1)[:, :k]
+    indices = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
     indices = indices[sample_range, np.argsort(D[sample_range, indices])]
-    indices = indices[:, 1:]  # exclude first data point (point itself)
     distances = D[sample_range, indices]
     return indices, distances
 
@@ -663,8 +668,6 @@ class Neighbors():
         else:
             self._compute_connectivities_diffmap()
         logg.msg('computed connectivities', t=True, v=4)
-        print(knn_indices)
-        print(knn_distances)
 
     def _compute_connectivities_diffmap(self, density_normalize=True):
         # init distances
@@ -676,6 +679,13 @@ class Neighbors():
             Dsq = np.power(self._distances, 2)
             indices, distances_sq = get_indices_distances_from_dense_matrix(
                 Dsq, self.n_neighbors)
+
+        # exclude the first point, the 0th neighbor
+        indices = indices[:, 1:]
+        distances_sq = distances_sq[:, 1:]
+
+        print(indices)
+        print(distances_sq)
 
         # choose sigma, the heuristic here doesn't seem to make much of a difference,
         # but is used to reproduce the figures of Haghverdi et al. (2016)
