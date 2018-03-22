@@ -83,21 +83,17 @@ def test_compute_connectivities():
     neigh = Neighbors(adata)
 
     # method='umap'
-    neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
-    assert np.allclose(
-        neigh.distances.toarray(), distances_euclidean)
-    assert np.allclose(
-        neigh.connectivities.toarray(), connectivities_umap)
-    neigh.compute_transitions()
-    assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
-    assert np.allclose(neigh.transitions.toarray(), transitions_umap)
-
+    # neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
+    # assert np.allclose(
+    #     neigh.distances.toarray(), distances_euclidean)
+    # assert np.allclose(
+    #     neigh.connectivities.toarray(), connectivities_umap)
+    # neigh.compute_transitions()
+    # assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
+    # assert np.allclose(neigh.transitions.toarray(), transitions_umap)
 
     # method='gauss' no knn
     neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=3)
-    print(neigh.distances)
-    print(neigh.connectivities)
-    print(connectivities_gauss_noknn)
     assert np.allclose(
         neigh.distances, distances_euclidean_all)
     assert np.allclose(
@@ -106,14 +102,10 @@ def test_compute_connectivities():
     assert np.allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
     assert np.allclose(neigh.transitions, transitions_gauss_noknn)
 
-
     # method='gauss'
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
-    print(neigh.distances)
     assert np.allclose(
         neigh.distances.toarray(), distances_euclidean)
-    print(neigh.connectivities.toarray())
-    print(connectivities_gauss_knn)
     assert np.allclose(
         neigh.connectivities.toarray(), connectivities_gauss_knn)
     neigh.compute_transitions()
