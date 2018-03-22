@@ -648,20 +648,24 @@ class Neighbors():
                       .format(n_neighbors))
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
+        if self._adata.shape[0] >= 10000 and not knn:
+            logg.warn(
+                'Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
-        if method == 'umap':
-            if precompute_metric is None:
-                precompute_metric = X.shape[0] < 4096
-            if precompute_metric:
+        # neighbor search
+        if metric == 'euclidean' and X.shape[0] < 8192:
+            # standard eulcidean case for relatively small matrices
+            self._distances, knn_indices, knn_distances = compute_neighbors_numpy(
+                X, n_neighbors, knn=knn)
+        else:
+            # non-euclidean case and approx nearest neighbors
+            if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
                 X, n_neighbors, metric=metric, **metric_kwds)
-
-        else:
-            self._distances, knn_indices, knn_distances = compute_neighbors_numpy(X, n_neighbors, knn=knn)
         logg.msg('computed neighbors', t=True, v=4)
         if method == 'umap':
             self._distances, self._connectivities = compute_connectivities_umap(
