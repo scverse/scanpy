@@ -1,13 +1,55 @@
 See all releases `here <https://github.com/theislab/scanpy/releases>`_. The following lists selected improvements.
 
 
-**Very Soon**
+**Soon**
 
-1. better scalability when analyzing data with more than 100K cells; new graph class...
-2. canonical analyses steps like clustering genes, computing correlations...
-3. exporting to Gephi...
+- more canonical analyses steps like clustering genes, computing correlations...
+
 
 **March..., 2018**: version 1.0
+
+.. warning::
+
+   Upgrading to 1.0 isn't fully backwards compat. First, you need to run ``conda
+   install numba`` as new dependency (others have disappeared).
+
+   - replace occurances of `group_by` with `groupby` (consistency with
+     `pandas`), of `flavor` with `method`
+
+   - cleaner nested structure of storing unstructered annotations as dicts
+     
+
+- basic graph now available as ``.uns['neighbors']['connectivities']`` after call of `pp.neighbors` or Neighbors.connectivities
+      
+- logistic regrssion for finding marker genes :func:`~scanpy.api.rank_genes_groups` with parameter `metfod='logreg'`
+      
+- scanpy no longer modifies rcParams upon import, simple call `sc.settings.set_figure_params(scanpy=True)` to set the `scanoy` style
+      
+- new cache directory is now ``./cache/``
+
+- show edges in scatter plots
+
+- neighbors class
+  * distances as .distances
+  * connectivities as .connectivities
+  * transition matrix as .transitions
+
+- changed connectivity measure (dpt will look different in default) set `method='gauss'` to use connectivities from gauss kernel
+
+- downsample_counts function
+
+- default 'louvain_groups' are now called 'louvain'
+
+- X_diffmap now contains the zero component, plotting unchanged
+  
+- paul15_raw is no longer available and now is called paul15
+   
+- seurat preprocessing recipe
+
+- removed cython stuff
+
+  
+3. exporting to Gephi...
 
 Graph tools now require explicitly constructing the neighborhood graphs as a preprocessing step::
 
@@ -22,8 +64,6 @@ instead of previously::
     sc.tl.dpt(adata, n_branchings=1, n_neighbors=5, knn=False)  # n_neighbors not necessary
     sc.tl.louvain(adata, resolution=1.5, n_neighbors=5)  # n_neighbors not necessary
 
-- replaced `group_by` with `groupby`
-- new cache directory is now './cache/'
 
 **February 26, 2018**: version 0.4.4
 
