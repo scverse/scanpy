@@ -124,8 +124,13 @@ def compute_neighbors_numpy_chunk(X, Y, n_neighbors):
     indices_chunk = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
     indices_chunk = indices_chunk[chunk_range,
                                   np.argsort(D[chunk_range, indices_chunk])]
-    # indices_chunk = indices_chunk[:, 1:]  # exclude first data point (point itself)
     distances_chunk = D[chunk_range, indices_chunk]
+    # we know that a point has zero-distance to itself:
+    #     set the first distance to zero
+    #     if we don't this, for large data (not treated by tests)
+    #     we might introduce spurious small non-zero values
+    #     which affects backwards compat
+    distances_chunk[:, 0] = 0
     return indices_chunk, distances_chunk
 
 
@@ -393,8 +398,8 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
 def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
     n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
-    D = scipy.sparse.csr_matrix((distances.ravel(),
-                                indices.ravel(),
+    D = scipy.sparse.csr_matrix((distances.copy().ravel(),  # copy the data, otherwise strange behavior here
+                                indices.copy().ravel(),
                                 indptr),
                                 shape=(n_obs, n_obs))
     D.eliminate_zeros()
@@ -406,14 +411,10 @@ def get_indices_distances_from_sparse_matrix(D, n_neighbors):
     distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
     for i in range(indices.shape[0]):
         neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
-        if len(neighbors[1]) == n_neighbors:
-            indices[i] = neighbors[1]
-            distances[i] = D[i][neighbors]
-        else:
-            indices[i, 0] = i
-            indices[i, 1:] = neighbors[1]
-            distances[i, 0] = 0
-            distances[i, 1:] = D[i][neighbors]
+        indices[i, 0] = i
+        indices[i, 1:] = neighbors[1]
+        distances[i, 0] = 0
+        distances[i, 1:] = D[i][neighbors]
     return indices, distances
 
 
@@ -684,19 +685,15 @@ class Neighbors():
         indices = indices[:, 1:]
         distances_sq = distances_sq[:, 1:]
 
-        print(indices)
-        print(distances_sq)
-
         # choose sigma, the heuristic here doesn't seem to make much of a difference,
         # but is used to reproduce the figures of Haghverdi et al. (2016)
         if self.knn:
-            # as the distances are not sorted except for last element take
-            # median
+            # as the distances are not sorted
+            # we have decay within the n_neighbors first neighbors
             sigmas_sq = np.median(distances_sq, axis=1)
         else:
-            # the last item is already in its sorted position as argpartition
-            # puts the (k-1)th element - starting to count from zero - in its
-            # sorted position
+            # the last item is already in its sorted position through argpartition
+            # we have decay beyond the n_neighbors neighbors
             sigmas_sq = distances_sq[:, -1]/4
         sigmas = np.sqrt(sigmas_sq)
 
