@@ -8,6 +8,10 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
 
 **March..., 2018**: version 1.0
 
+.. note::
+
+    Instead of tSNE, we recommend UMAP [McInnes18]_ as a first visualization of the data.
+
 .. warning::
 
    Upgrading to 1.0 isn't fully backwards compat. First, you need to run ``conda
@@ -16,10 +20,17 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
    - replace occurances of `group_by` with `groupby` (consistency with
      `pandas`), of `flavor` with `method`
 
+   - note that the default number of neighbors for constructing the single-cell
+     graph changed from `n_neighbors=30` to `n_neighbors=15`
+
    - cleaner nested structure of storing unstructered annotations as dicts
      
 
-- basic graph now available as ``.uns['neighbors']['connectivities']`` after call of `pp.neighbors` or Neighbors.connectivities
+- basic single-cell graph now available as
+  ``.uns['neighbors']['connectivities']`` after call of
+  :func:`~scanpy.api.pp.neighbors`. Alternatively, you can use :class:`~scanpy.api.Neighbors.connectivities` after
+  call of `Neighbors.compute_neighbors`. :class:`~scanpy.api.Neighbors` also provides access to
+  transition matrices, laplacians etc.
       
 - logistic regrssion for finding marker genes :func:`~scanpy.api.rank_genes_groups` with parameter `metfod='logreg'`
       

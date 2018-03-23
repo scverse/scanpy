@@ -43,15 +43,15 @@ def verbosity_greater_or_equal_than(v):
     return global_v >= v
 
 
-def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
-        no_indent=False, v=None, t=None, m=None, r=None):
+def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
+        no_indent=False, t=None, m=None, r=None):
     """Write message to logging output.
 
     Log output defaults to standard output but can be set to a file
     by setting `sc.settings.log_file = 'mylogfile.txt'`.
 
-    verbosity, v : {'error', 'warn', 'info', 'hint'} or int, (default: 'info')
-        0/'error', 1/'warn', 2/'info', 3/'hint' or integer 4.
+    v : {'error', 'warn', 'info', 'hint'} or int, (default: 4)
+        0/'error', 1/'warn', 2/'info', 3/'hint', 4, 5, 6...
     time, t : bool, optional (default: False)
         Print timing information; restart the clock.
     memory, m : bool, optional (default: Faulse)
@@ -62,24 +62,23 @@ def msg(*msg, verbosity='info', time=False, memory=False, reset=False, end='\n',
     end : str (default: '\n')
         Same meaning as in builtin ``print()`` function.
     no_indent : bool (default: False)
-        Do not indent for ``verbosity >= 4``.
+        Do not indent for ``v >= 4``.
     """
     # variable shortcuts
-    if v is not None: verbosity = v
     if t is not None: time = t
     if m is not None: memory = m
     if r is not None: reset = r
-    if isinstance(verbosity, str):
-        verbosity = verbosity_levels_from_strings[verbosity]
+    if isinstance(v, str):
+        v = verbosity_levels_from_strings[v]
     if isinstance(settings.verbosity, str):
         global_verbosity = verbosity_levels_from_strings[settings.verbosity]
     else:
         global_verbosity = settings.verbosity
-    if verbosity == 3:  # insert "--> " before hints
+    if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
-    if verbosity >= 4 and not no_indent:
+    if v >= 4 and not no_indent:
         msg = ('   ',) + msg
-    if global_verbosity >= verbosity:
+    if global_verbosity >= v:
         if not time and not m and len(msg) > 0:
             settings.mi(*msg, end=end)
         if reset:

@@ -205,8 +205,8 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     """
-    ranking(adata, 'uns', 'pca_variance_ratio', labels='PC', log=log)
-    utils.savefig_or_show('pca_ranking_variance', show=show, save=save)
+    ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
+    utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
 def diffmap(

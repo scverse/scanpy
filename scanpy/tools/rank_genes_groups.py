@@ -62,10 +62,10 @@ def rank_genes_groups(
     Returns
     -------
     Updates `adata` with the following fields.
-    rank_genes_groups/names : structured `np.ndarray` (`.uns`)
+    names : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the gene
         names. Ordered according to scores.
-    rank_genes_groups/scores : structured `np.ndarray` (`.uns`)
+    scores : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the score for each
         gene for each group. Ordered according to scores.
     """
@@ -294,7 +294,7 @@ def rank_genes_groups(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.hint('added\n'
-           '    \'rank_genes_groups/names\', np.recarray to be indexed by group ids (adata.uns)\n'
-           '    \'rank_genes_groups/scores\', np.recarray to be indexed by group ids (adata.uns)')
+    logg.hint('added to `.uns[\'rank_genes_groups\']`\n'
+           '    \'names\', sorted np.recarray to be indexed by group ids\n'
+           '    \'scores\', sorted np.recarray to be indexed by group ids')
     return adata if copy else None
