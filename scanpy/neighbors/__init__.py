@@ -15,7 +15,7 @@ N_PCS = 50  # default number of PCs
 @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
         adata,
-        n_neighbors=30,
+        n_neighbors=15,
         n_pcs=None,
         use_rep=None,
         knn=True,
@@ -60,10 +60,10 @@ def neighbors(
     Returns
     -------
     Depending on `copy`, updates or returns `adata` with the following:
-    neighbors/connectivities : sparse matrix (`adata.uns`, dtype `float32`)
+    connectivities : sparse matrix (`.uns['neighbors']`, dtype `float32`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    neighbors/distances : sparse matrix (`adata.uns`, dtype `float32`)
+    distances : sparse matrix (`.uns['neighbors']`, dtype `float32`)
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
     """
@@ -79,9 +79,9 @@ def neighbors(
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
-        'added\n'
-        '    \'neighbors/distances\', weighted adjacency matrix (adata.uns)\n'
-        '    \'neighbors/connectivities\', weighted adjacency matrix (adata.uns)')
+        'added to `.uns[\'neighbors\']`\n'
+        '    \'distances\', weighted adjacency matrix\n'
+        '    \'connectivities\', weighted adjacency matrix')
     return adata if copy else None
 
 

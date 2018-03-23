@@ -106,7 +106,7 @@ def louvain(
         # this is deprecated
         import networkx as nx
         import community
-        g = nx.Graph(adata.uns['data_graph_distance_local'])
+        g = nx.Graph(adjacency)
         partition = community.best_partition(g)
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v
@@ -129,10 +129,10 @@ def louvain(
         adata.obs[key_added].iloc[~restrict_indices] += '0'
         adata.obs[key_added] = adata.obs[key_added].astype(
             'category', categories=natsorted(adata.obs[key_added].unique()))
-    adata.uns['louvain_params'] = np.array((resolution, random_state,),
-                                           dtype=[('resolution', float), ('random_state', int)])
+    adata.uns['louvain'] = {}
+    adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('found {} clusters and added\n'
-              '    \'{}\', the cluster labels (adata.obs, dtype=category)'
+              '    \'{}\', the cluster labels (adata.obs, categorical)'
               .format(n_clusters, key_added))
     return adata if copy else None

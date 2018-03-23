@@ -11,7 +11,7 @@ import seaborn as sns
 
 from .. import settings
 from . import utils
-from .utils import scatter_base, scatter_group
+from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata
 
 VALID_LEGENDLOCS = {
@@ -79,8 +79,10 @@ def scatter(
          <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
-    legend_fontweight : `int` (default: `None`)
-         Legend font weight.
+    legend_fontweight : {'normal', 'bold', ...} (default: `None`)
+         Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
+         otherwise to 'normal'. Available are `['light', 'normal', 'medium',
+         'semibold', 'bold', 'heavy', 'black']`.
     color_map : `str` (default: 'RdBu_r')
          String denoting matplotlib color map for continuous coloring.
     palette : list of `str` (default: `None`)
@@ -271,12 +273,14 @@ def scatter(
                                     edgecolors='none', zorder=-1)
         legend = None
         if legend_loc == 'on data':
+            if legend_fontweight is None:
+                legend_fontweight = 'bold'
             for name, pos in centroids.items():
                 axs[ikey].text(pos[0], pos[1], name,
-                                     weight=legend_fontweight,
-                                     verticalalignment='center',
-                                     horizontalalignment='center',
-                                     fontsize=legend_fontsize)
+                               weight=legend_fontweight,
+                               verticalalignment='center',
+                               horizontalalignment='center',
+                               fontsize=legend_fontsize)
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
@@ -292,7 +296,7 @@ def scatter(
     if show == False: return axs
 
 
-def ranking(adata, attr, keys, indices=None,
+def ranking(adata, attr, keys, dictionary=None, indices=None,
             labels=None, color='black', n_points=30,
             log=False, show=None):
     """Plot rankings.
@@ -303,7 +307,7 @@ def ranking(adata, attr, keys, indices=None,
     ----------
     adata : AnnData
         The data.
-    attr : {'var', 'obs', 'add', 'varm', 'obsm'}
+    attr : {'var', 'obs', 'uns', 'varm', 'obsm'}
         The attribute of AnnData that contains the score.
     keys : str or list of str
         The scores to look up an array from the attribute of adata.
@@ -316,7 +320,10 @@ def ranking(adata, attr, keys, indices=None,
         scores = getattr(adata, attr)[keys][:, indices]
         keys = ['{}{}'.format(keys[:-1], i+1) for i in indices]
     else:
-        scores = getattr(adata, attr)[keys]
+        if dictionary is None:
+            scores = getattr(adata, attr)[keys]
+        else:
+            scores = getattr(adata, attr)[dictionary][keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
     if log: scores = np.log(scores)
@@ -351,7 +358,7 @@ def ranking(adata, attr, keys, indices=None,
 
 
 def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
-           size=1, scale='width', order=None, multi_panel=False, show=None,
+           size=1, scale='width', order=None, multi_panel=None, show=None,
            xlabel='', rotation=None, save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
 
@@ -369,8 +376,8 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         Plot on logarithmic axis.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    multi_panel : bool, optional
-        Show fields in multiple panels. Returns a `seaborn.FacetGrid` in that case.
+    multi_panel : `bool`, optional (default: `False`)
+        Display keys in multiple panels also when `groupby is not None`.
     jitter : `float` or `bool`, optional (default: `True`)
         See `seaborn.stripplot`.
     size : int, optional (default: 1)
@@ -402,8 +409,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
     A `matplotlib.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
-    if groupby is not None and isinstance(keys, list):
-        raise ValueError('Pass a single key as string if using `groupby`.')
     if isinstance(keys, str): keys = [keys]
     obs_keys = False
     for key in keys:
@@ -416,7 +421,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         obs_df = adata.obs
     else:
         if groupby is None: obs_df = pd.DataFrame()
-        else: obs_df = adata.obs.copy()
+        else: obs_df = pd.DataFrame(adata.obs[groupby])
         for key in keys:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, key].X
@@ -426,32 +431,41 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
-        y = 'value'
+        ys = ['value']
     else:
         obs_tidy = obs_df
         x = groupby
-        y = keys[0]
+        ys = keys
     if multi_panel:
+        if len(ys) == 1: y = ys[0]
+        else: raise ValueError('Cannot be combined with `groupby != None`.')
         g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
         g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, **kwargs)
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
         if log: g.set(yscale='log')
-        ax = g
-    else:
-        ax = sns.violinplot(x=x, y=y, data=obs_tidy, inner=None, order=order,
-                            orient='vertical', scale=scale, ax=ax, **kwargs)
-        ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
-                           jitter=jitter, color='black', size=size, ax=ax)
-        if xlabel == '' and groupby is not None and rotation is None:
-            xlabel = groupby.replace('_', ' ')
-        ax.set_xlabel(xlabel)
-        if log: ax.set_yscale('log')
         if rotation is not None:
-            ax.tick_params(labelrotation=rotation)
+            for ax in g.axes[0]:
+                ax.tick_params(labelrotation=rotation)
+        axs = [g]
+    else:
+        if ax is None:
+            axs, _, _, _ = setup_axes(
+                ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
+        for ax, y in zip(axs, ys):
+            ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
+                                orient='vertical', scale=scale, ax=ax, **kwargs)
+            ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
+                               jitter=jitter, color='black', size=size, ax=ax)
+            if xlabel == '' and groupby is not None and rotation is None:
+                xlabel = groupby.replace('_', ' ')
+            ax.set_xlabel(xlabel)
+            if log: ax.set_yscale('log')
+            if rotation is not None:
+                ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
-    if show == False: return ax
+    if show == False: return axs[0] if len(axs) == 1 else axs
 
 
 def clustermap(
