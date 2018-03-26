@@ -13,7 +13,7 @@ def draw_graph(
         key_adjacency='neighbors/connectivities',
         key_added_ext=None,
         proceed=False,
-        use_sga='global',
+        use_paga='global',
         copy=False,
         **kwds):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
@@ -54,8 +54,8 @@ def draw_graph(
         By default, append `layout`.
     proceed : `bool`, optional (default: `None`)
         Continue computation, starting off with 'X_draw_graph_`layout`'.
-    use_sga : {'local', 'global', `False`}, optional (default: `False`)
-        Use the SGA coordinates.
+    use_paga : {'local', 'global', `False`}, optional (default: `False`)
+        Use the PAGA coordinates.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
     **kwds : further parameters
@@ -83,7 +83,7 @@ def draw_graph(
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    if not (use_sga == 'local' and 'sga_pos' in adata.uns):
+    if not (use_paga == 'local' and 'paga_pos' in adata.uns):
         g = utils.get_igraph_from_adjacency(adjacency)
     np.random.seed(random_state)
     all_coords = None
@@ -91,16 +91,16 @@ def draw_graph(
         if proceed:
             init_coords = adata.obsm[key_added]
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif 'sga_pos' in adata.uns:
-            groups = adata.obs[adata.uns['sga_groups']]
-            all_pos = adata.uns['sga_pos']
-            if use_sga == 'global':
+        elif 'paga_pos' in adata.uns:
+            groups = adata.obs[adata.uns['paga_groups']]
+            all_pos = adata.uns['paga_pos']
+            if use_paga == 'global':
                 init_coords = np.ones((adjacency.shape[0], 2))
                 for i, pos in enumerate(all_pos):
                     subset = (groups == groups.cat.categories[i]).values
                     init_coords[subset] = pos
                 ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-            elif use_sga == 'local':
+            elif use_paga == 'local':
                 all_pos -= np.min(all_pos, axis=0)
                 all_pos /= np.max(all_pos, axis=0)
                 all_coords = np.zeros((adjacency.shape[0], 2))
