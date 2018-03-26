@@ -60,12 +60,16 @@ def test_results_dense():
 
     # Now run the rank_genes_groups, test functioning.
     rank_genes_groups(adata, 'true_groups', n_genes=20, test_type='t-test')
-    assert np.array_equal(true_scores_t_test, adata.uns['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups_gene_names'])
+    print(true_scores_t_test)
+    print(adata.uns['rank_genes_groups']['scores'])
+    print(true_names_t_test)
+    print(adata.uns['rank_genes_groups']['names'])
+    assert np.array_equal(true_scores_t_test, adata.uns['rank_genes_groups']['scores'])
+    assert np.array_equal(true_names_t_test, adata.uns['rank_genes_groups']['names'])
 
     rank_genes_groups(adata, 'true_groups', n_genes=20, test_type='wilcoxon')
-    assert np.array_equal(true_scores_wilcoxon, adata.uns['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_wilcoxon, adata.uns['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_wilcoxon, adata.uns['rank_genes_groups']['scores'])
+    assert np.array_equal(true_names_wilcoxon, adata.uns['rank_genes_groups']['names'])
 
 
 def test_results_sparse():
@@ -81,14 +85,14 @@ def test_results_sparse():
     # Here, we allow a minor error tolerance due to different multiplication for sparse/non-spars objects
     ERROR_TOLERANCE = 5e-7
     max_error = 0
-    for i, k in enumerate(adata_sparse.uns['rank_genes_groups_gene_scores']):
+    for i, k in enumerate(adata_sparse.uns['rank_genes_groups']['scores']):
         max_error = max(max_error, abs(
-            adata_sparse.uns['rank_genes_groups_gene_scores'][i][0] - true_scores_t_test[i][0]))
+            adata_sparse.uns['rank_genes_groups']['scores'][i][0] - true_scores_t_test[i][0]))
         max_error = max(max_error, abs(
-            adata_sparse.uns['rank_genes_groups_gene_scores'][i][1] - true_scores_t_test[i][1]))
+            adata_sparse.uns['rank_genes_groups']['scores'][i][1] - true_scores_t_test[i][1]))
 
-    # assert np.array_equal(true_scores_t_test,adata_sparse.uns['rank_genes_groups_gene_scores'])
+    # assert np.array_equal(true_scores_t_test,adata_sparse.uns['rank_genes_groups']['scores'])
     assert max_error < ERROR_TOLERANCE
     rank_genes_groups(adata_sparse, 'true_groups', n_genes=20, test_type='wilcoxon')
-    assert np.array_equal(true_scores_wilcoxon, adata_sparse.uns['rank_genes_groups_gene_scores'])
-    assert np.array_equal(true_names_wilcoxon, adata_sparse.uns['rank_genes_groups_gene_names'])
+    assert np.array_equal(true_scores_wilcoxon, adata_sparse.uns['rank_genes_groups']['scores'])
+    assert np.array_equal(true_names_wilcoxon, adata_sparse.uns['rank_genes_groups']['names'])

@@ -112,5 +112,3 @@ def test_compute_connectivities():
     assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_gauss_knn)
     assert np.allclose(neigh.transitions.toarray(), transitions_gauss_knn)
 
-
-    quit()
