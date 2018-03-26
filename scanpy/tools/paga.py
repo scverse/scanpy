@@ -8,8 +8,8 @@ from .. import utils
 from .. import settings
 
 
-def sga(adata,
-        groups='louvain_groups',
+def paga(adata,
+        groups='louvain',
         threshold=0.01,
         tree_based_confidence=False,
         n_jobs=None,
@@ -18,7 +18,7 @@ def sga(adata,
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Statistical graph abstraction (SGA) quantifies the connectivities of
+    Statistical graph abstraction (PAGA) quantifies the connectivities of
     partitions of a neighborhood graph of single cells, thereby generating a
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
@@ -47,42 +47,42 @@ def sga(adata,
     Returns
     -------
     Returns or updates `adata` depending on `copy` with
-    sga/connectivities : np.ndarray (adata.uns)
+    paga/connectivities : np.ndarray (adata.uns)
         The full adjacency matrix of the abstracted graph, weights
         correspond to connectivities.
-    sga/confidence : np.ndarray (adata.uns)
+    paga/confidence : np.ndarray (adata.uns)
         The full adjacency matrix of the abstracted graph, weights
         correspond to confidence in the presence of an edge.
-    sga/confidence_tree : sc.sparse csr matrix (adata.uns)
+    paga/confidence_tree : sc.sparse csr matrix (adata.uns)
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
     """
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    logg.info('running Statistical Graph Abstraction (SGA)', reset=True)
-    sga = SGA(adata, groups, threshold=threshold, tree_based_confidence=tree_based_confidence)
-    sga.compute()
-    adata.uns['sga'] = {}
-    adata.uns['sga']['connectivities'] = sga.connectivities
-    adata.uns['sga']['confidence'] = sga.confidence
-    adata.uns['sga']['confidence_tree'] = sga.confidence_tree
-    adata.uns['sga']['groups'] = groups
-    adata.uns[groups + '_sizes'] = np.array(sga.vc.sizes())
+    logg.info('running Statistical Graph Abstraction (PAGA)', reset=True)
+    paga = PAGA(adata, groups, threshold=threshold, tree_based_confidence=tree_based_confidence)
+    paga.compute()
+    adata.uns['paga'] = {}
+    adata.uns['paga']['connectivities'] = paga.connectivities
+    adata.uns['paga']['confidence'] = paga.confidence
+    adata.uns['paga']['confidence_tree'] = paga.confidence_tree
+    adata.uns['paga']['groups'] = groups
+    adata.uns[groups + '_sizes'] = np.array(paga.vc.sizes())
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
         'added\n'
-        '    \'sga/connectivities\', connectivities adjacency (adata.uns)\n'
-        '    \'sga/confidence\', confidence adjacency (adata.uns)\n'
-        '    \'sga/confidence_tree\', confidence subtree (adata.uns)')
+        '    \'paga/connectivities\', connectivities adjacency (adata.uns)\n'
+        '    \'paga/confidence\', confidence adjacency (adata.uns)\n'
+        '    \'paga/confidence_tree\', confidence subtree (adata.uns)')
     return adata if copy else None
 
 
-class SGA(Neighbors):
+class PAGA(Neighbors):
     """Statistical Graph Abstraction.
     """
 
     def __init__(self, adata, groups, threshold=0.05, tree_based_confidence=True):
-        super(SGA, self).__init__(adata)
+        super(PAGA, self).__init__(adata)
         self._groups = groups
         self.threshold = threshold
         self._tree_based_confidence = tree_based_confidence
@@ -164,7 +164,7 @@ class SGA(Neighbors):
         return confidence_tree.tocsr()
 
 
-def sga_degrees(adata):
+def paga_degrees(adata):
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
@@ -178,12 +178,12 @@ def sga_degrees(adata):
         List of degrees for each node.
     """
     import networkx as nx
-    g = nx.Graph(adata.uns['sga_adjacency_full_confidence'])
+    g = nx.Graph(adata.uns['paga_adjacency_full_confidence'])
     degrees = [d for _, d in g.degree(weight='weight')]
     return degrees
 
 
-def sga_expression_entropies(adata):
+def paga_expression_entropies(adata):
     """Compute the median expression entropy for each node-group.
 
     Parameters
@@ -198,7 +198,7 @@ def sga_expression_entropies(adata):
     """
     from scipy.stats import entropy
     groups_order, groups_masks = utils.select_groups(adata,
-                                                     key=adata.uns['sga_groups'])
+                                                     key=adata.uns['paga_groups'])
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask]
@@ -208,8 +208,8 @@ def sga_expression_entropies(adata):
     return entropies
 
 
-def sga_compare_paths(adata1, adata2,
-                      adjacency_key='sga_adjacency_full_confidence'):
+def paga_compare_paths(adata1, adata2,
+                      adjacency_key='paga_adjacency_full_confidence'):
     """Compare paths in abstracted graphs in two datasets.
 
     Compute the fraction of consistent paths between leafs, a measure for the
@@ -236,12 +236,12 @@ def sga_compare_paths(adata1, adata2,
     g2 = nx.Graph(adata2.uns[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
-    asso_groups1 = utils.identify_groups(adata1.obs['sga_groups'].values,
-                                         adata2.obs['sga_groups'].values)
-    asso_groups2 = utils.identify_groups(adata2.obs['sga_groups'].values,
-                                         adata1.obs['sga_groups'].values)
-    orig_names1 = adata1.uns['sga_groups_order_original']
-    orig_names2 = adata2.uns['sga_groups_order_original']
+    asso_groups1 = utils.identify_groups(adata1.obs['paga_groups'].values,
+                                         adata2.obs['paga_groups'].values)
+    asso_groups2 = utils.identify_groups(adata2.obs['paga_groups'].values,
+                                         adata1.obs['paga_groups'].values)
+    orig_names1 = adata1.uns['paga_groups_order_original']
+    orig_names2 = adata2.uns['paga_groups_order_original']
 
     import itertools
     n_steps = 0
@@ -331,7 +331,7 @@ def sga_compare_paths(adata1, adata2,
                        [list(p) for p in path_mapped_orig_names],
                        path2_orig_names,
                        n_agreeing_steps_path, n_steps_path), v=5, no_indent=True)
-    Result = namedtuple('sga_compare_paths_result',
+    Result = namedtuple('paga_compare_paths_result',
                         ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
     return Result(frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
                   n_steps=n_steps if n_steps > 0 else np.nan,
@@ -339,11 +339,11 @@ def sga_compare_paths(adata1, adata2,
                   n_paths=n_paths if n_steps > 0 else np.nan)
 
 
-def sga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
+def paga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
     """Contract the abstracted graph.
     """
     adata = adata.copy() if copy else adata
-    if 'sga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool sga first!')
+    if 'paga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool paga first!')
     min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_obs)
     logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
 
@@ -385,14 +385,14 @@ def sga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy
                 break
         return adjacency_tree_confidence, node_groups
 
-    size_before = adata.uns['sga_adjacency_tree_confidence'].shape[0]
-    adata.uns['sga_adjacency_tree_confidence'], adata.obs['sga_groups'] = contract_nodes(
-        adata.uns['sga_adjacency_tree_confidence'], adata.obs['sga_groups'].values)
-    adata.uns['sga_groups_order'] = np.unique(adata.obs['sga_groups'].values)
-    for key in ['sga_adjacency_full_confidence', 'sga_groups_original',
-                'sga_groups_order_original', 'sga_groups_colors_original']:
+    size_before = adata.uns['paga_adjacency_tree_confidence'].shape[0]
+    adata.uns['paga_adjacency_tree_confidence'], adata.obs['paga_groups'] = contract_nodes(
+        adata.uns['paga_adjacency_tree_confidence'], adata.obs['paga_groups'].values)
+    adata.uns['paga_groups_order'] = np.unique(adata.obs['paga_groups'].values)
+    for key in ['paga_adjacency_full_confidence', 'paga_groups_original',
+                'paga_groups_order_original', 'paga_groups_colors_original']:
         if key in adata.uns: del adata.uns[key]
     logg.info('    contracted graph from {} to {} nodes'
-              .format(size_before, adata.uns['sga_adjacency_tree_confidence'].shape[0]))
-    logg.msg('removed adata.uns["sga_adjacency_full_confidence"]', v=4)
+              .format(size_before, adata.uns['paga_adjacency_tree_confidence'].shape[0]))
+    logg.msg('removed adata.uns["paga_adjacency_full_confidence"]', v=4)
     return adata if copy else None

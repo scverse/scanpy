@@ -13,7 +13,7 @@ from ... import logging as logg
 from ..utils import matrix
 
 
-def sga_compare(
+def paga_compare(
         adata,
         basis='tsne',
         color=None,
@@ -35,14 +35,14 @@ def sga_compare(
         title_graph=None,
         groups_graph=None,
         color_graph=None,
-        **sga_graph_params):
+        **paga_graph_params):
     """Statisical graph abstraction.
 
     Consists in a scatter plot and the abstracted graph. See
-    :func:`~sanpy.api.pl.sga_scatter` and :func:`~scanpy.api.pl.sga_graph` for
+    :func:`~sanpy.api.pl.paga_scatter` and :func:`~scanpy.api.pl.paga_graph` for
     most of the parameters.
 
-    See :func:`~scanpy.api.pl.sga_path` for visualizing gene changes along paths
+    See :func:`~scanpy.api.pl.paga_path` for visualizing gene changes along paths
     through the abstracted graph.
 
     Additional parameters are as follows.
@@ -65,7 +65,7 @@ def sga_compare(
         title_graph = ''
     elif title_graph is None:
         title_graph = 'abstracted graph'
-    sga_scatter(adata,
+    paga_scatter(adata,
                 basis=basis,
                 color=color,
                 alpha=alpha,
@@ -83,14 +83,14 @@ def sga_compare(
                 ax=axs[0],
                 show=False,
                 save=False)
-    sga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
-              groups=groups_graph, color=color_graph, **sga_graph_params)
+    paga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
+              groups=groups_graph, color=color_graph, **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
-    utils.savefig_or_show('sga', show=show, save=save)
+    utils.savefig_or_show('paga', show=show, save=save)
     if show == False: return axs
 
 
-def sga_scatter(
+def paga_scatter(
         adata,
         basis='tsne',
         color=None,
@@ -109,7 +109,7 @@ def sga_scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot of sga groups.
+    """Scatter plot of paga groups.
 
     Parameters
     ----------
@@ -150,7 +150,7 @@ def sga_scatter(
     corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if color is None:
-        color = [adata.uns['sga_groups']]
+        color = [adata.uns['paga_groups']]
     if not isinstance(color, list): color = [color]
     kwds = {}
     if 'draw_graph' in basis:
@@ -178,13 +178,13 @@ def sga_scatter(
         ax=ax,
         show=False,
         **kwds)
-    utils.savefig_or_show('sga_' + basis, show=show, save=save)
+    utils.savefig_or_show('paga_' + basis, show=show, save=save)
     if show == False: return axs
 
 
-def sga(
+def paga(
         adata,
-        solid_edges='sga_confidence',
+        solid_edges='paga_confidence',
         dashed_edges=None,
         layout=None,
         root=0,
@@ -218,7 +218,7 @@ def sga(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    solid_edges : `str`, optional (default: 'sga_confidence')
+    solid_edges : `str`, optional (default: 'paga_confidence')
         Key for `adata.uns` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: `None`)
@@ -287,7 +287,7 @@ def sga(
 
     Returns
     -------
-    Adds `'sga_pos'` to `adata.uns`.
+    Adds `'paga_pos'` to `adata.uns`.
   
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
@@ -298,7 +298,7 @@ def sga(
     import matplotlib as mpl
     from distutils.version import LooseVersion
     if mpl.__version__ > LooseVersion('2.0.0'):
-        logg.warn('Currently, `sga_graph` sometimes crashes with matplotlib version > 2.0, you have {}.\n'
+        logg.warn('Currently, `paga_graph` sometimes crashes with matplotlib version > 2.0, you have {}.\n'
                   'Run `pip install matplotlib==2.0` if this hits you.'
                   .format(mpl.__version__))
 
@@ -319,7 +319,7 @@ def sga(
     if len(color) == 1 and not isinstance(axs, list): axs = [axs]
 
     for icolor, c in enumerate(color):
-        pos = _sga_graph(
+        pos = _paga_graph(
             adata,
             axs[icolor],
             solid_edges=solid_edges,
@@ -343,8 +343,8 @@ def sga(
             random_state=0,
             export_to_gexf=export_to_gexf,
             pos=pos)
-    adata.uns['sga_pos'] = pos
-    utils.savefig_or_show('sga_graph', show=show, save=save)
+    adata.uns['paga_pos'] = pos
+    utils.savefig_or_show('paga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
         return (axs, pos) if show == False else pos
@@ -352,7 +352,7 @@ def sga(
         return axs if show == False else None
 
 
-def _sga_graph(
+def _paga_graph(
         adata,
         ax,
         solid_edges=None,
@@ -379,10 +379,10 @@ def _sga_graph(
     node_labels = groups
     if (node_labels is not None
         and isinstance(node_labels, str)
-        and node_labels != adata.uns['sga_groups']):
-        raise ValueError('Provide a list of group labels for the SGA groups {}, not {}.'
-                         .format(adata.uns['sga_groups'], node_labels))
-    groups_key = adata.uns['sga_groups']
+        and node_labels != adata.uns['paga_groups']):
+        raise ValueError('Provide a list of group labels for the PAGA groups {}, not {}.'
+                         .format(adata.uns['paga_groups'], node_labels))
+    groups_key = adata.uns['paga_groups']
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
 
@@ -418,7 +418,7 @@ def _sga_graph(
 
     # degree of the graph for coloring
     if isinstance(color, str) and color.startswith('degree'):
-        # see also tools.sga.sga_degrees
+        # see also tools.paga.paga_degrees
         if color == 'degree_dashed':
             color = [d for _, d in nx_g_dashed.degree(weight='weight')]
         elif color == 'degree_solid':
@@ -453,8 +453,8 @@ def _sga_graph(
             g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
                 g_tree = g
-                if solid_edges != 'sga_confidence_tree':
-                    adj_tree = adata.uns['sga_confidence_tree']
+                if solid_edges != 'paga_confidence_tree':
+                    adj_tree = adata.uns['paga_confidence_tree']
                     g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
                 pos_list = g_tree.layout(
                     layout, root=root if isinstance(root, list) else [root],
@@ -521,8 +521,8 @@ def _sga_graph(
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
                              'z': 0}}
-        logg.msg('exporting to {}'.format(settings.writedir + 'sga_graph.gexf'), v=1)
-        nx.write_gexf(nx_g_dashed, settings.writedir + 'sga_graph.gexf')
+        logg.msg('exporting to {}'.format(settings.writedir + 'paga_graph.gexf'), v=1)
+        nx.write_gexf(nx_g_dashed, settings.writedir + 'paga_graph.gexf')
 
     # deal with empty graph
     # ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
@@ -619,7 +619,7 @@ def _sga_graph(
     return pos_array
 
 
-def sga_path(
+def paga_path(
         adata,
         nodes,
         keys,
@@ -653,7 +653,7 @@ def sga_path(
         An annotated data matrix.
     nodes : list of group names or their category indices
         A path through nodes of the abstracted graph, that is, names or indices
-        (within `.categories`) of groups that have been used to run SGA.
+        (within `.categories`) of groups that have been used to run PAGA.
     keys : list of str
         Either variables in `adata.var_names` or annotations in
         `adata.obs`. They are plotted using `color_map`.
@@ -671,8 +671,8 @@ def sga_path(
     n_avg : `int`, optional (default: 1)
         Number of data points to include in computation of running average.
     groups_key : `str`, optional (default: `None`)
-        Key of the grouping used to run SGA. If `None`, defaults to
-        `adata.uns['sga_groups']`.
+        Key of the grouping used to run PAGA. If `None`, defaults to
+        `adata.uns['paga_groups']`.
     as_heatmap : `bool`, optional (default: `True`)
         Plot the timeseries as heatmap. If not plotting as heatmap,
         `annotations` have no effect.
@@ -702,11 +702,11 @@ def sga_path(
     ax_was_none = ax is None
 
     if groups_key is None:
-        if 'sga_groups' not in adata.uns:
+        if 'paga_groups' not in adata.uns:
             raise KeyError(
-                'Pass the key of the grouping with which you ran SGA, '
+                'Pass the key of the grouping with which you ran PAGA, '
                 'using the parameter `groups_key`.')
-        groups_key = adata.uns['sga_groups']
+        groups_key = adata.uns['paga_groups']
     groups_names = adata.obs[groups_key].cat.categories
 
     if palette_groups is None:
@@ -822,7 +822,7 @@ def sga_path(
                            interpolation="nearest",
                            cmap=matplotlib.colors.ListedColormap(
                                # the following line doesn't work because of normalization
-                               # adata.uns['sga_groups_colors'])
+                               # adata.uns['paga_groups_colors'])
                                palette_groups[np.min(groups).astype(int):],
                                N=np.max(groups)+1-np.min(groups)))
         if show_yticks:
@@ -869,7 +869,7 @@ def sga_path(
     if title is not None: ax.set_title(title, fontsize=title_fontsize)
     if show is None and not ax_was_none: show = False
     else: show = settings.autoshow if show is None else show
-    utils.savefig_or_show('sga_path', show=show, save=save)
+    utils.savefig_or_show('paga_path', show=show, save=save)
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
@@ -879,15 +879,15 @@ def sga_path(
         return ax if ax_was_none and show == False else None
 
 
-def sga_adjacency(
+def paga_adjacency(
         adata,
-        adjacency='sga_confidence',
-        adjacency_tree='sga_confidence_tree',
+        adjacency='paga_confidence',
+        adjacency_tree='paga_confidence_tree',
         as_heatmap=True,
         color_map=None,
         show=None,
         save=None):
-    """Connectivity of sga groups.
+    """Connectivity of paga groups.
     """
     connectivity = adata.uns[adjacency].toarray()
     connectivity_select = adata.uns[adjacency_tree]
@@ -906,4 +906,4 @@ def sga_adjacency(
             neighbors = connectivity_select[i].nonzero()[1]
             pl.scatter([i for j in neighbors],
                        cs[neighbors], color='black', s=1)
-    utils.savefig_or_show('sga_connectivity', show=show, save=save)
+    utils.savefig_or_show('paga_connectivity', show=show, save=save)
