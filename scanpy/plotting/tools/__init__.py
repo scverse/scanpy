@@ -1638,7 +1638,7 @@ def dpt_scatter(
             projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
+            legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
             right_margin=right_margin,
@@ -1646,9 +1646,7 @@ def dpt_scatter(
             title=title,
             show=False)
         writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
-        save = False if save is None else save
-        if settings.savefigs or save: utils.savefig(writekey)
-    utils.savefig_or_show(writekey, show=show, save=False)
+        utils.savefig_or_show(writekey, show=show, save=save)
 
 
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
