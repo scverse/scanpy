@@ -429,14 +429,14 @@ def get_indices_distances_from_dense_matrix(D, n_neighbors):
 def _backwards_compat_get_full_X_diffmap(adata):
     if 'X_diffmap0' in adata.obs:
         return np.c_[adata.obs['X_diffmap0'].values[:, None],
-                     adata.obsm['X_diffmap'][:, :n_dcs-1]]
+                     adata.obsm['X_diffmap']]
     else:
         return adata.obsm['X_diffmap']
 
 
 def _backwards_compat_get_full_eval(adata):
     if 'X_diffmap0' in adata.obs:
-        return np.r_[1, adata.uns['diffmap_evals'][:n_dcs-1]]
+        return np.r_[1, adata.uns['diffmap_evals']]
     else:
         return adata.uns['diffmap_evals']
 
