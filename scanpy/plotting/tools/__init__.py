@@ -392,7 +392,7 @@ def draw_graph(
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
     """
-    if layout is None: layout = str(adata.uns['draw_graph_params']['layout'])
+    if layout is None: layout = str(adata.uns['draw_graph']['params']['layout'])
     basis = 'draw_graph_' + layout
     if 'X_' + basis not in adata.obsm_keys():
         raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
