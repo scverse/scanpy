@@ -63,6 +63,9 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     adata = adata.copy() if copy else adata
+    if 'neighbors' not in adata.uns:
+        raise ValueError(
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     if ('iroot' not in adata.uns
         and 'xroot' not in adata.uns
         and 'xroot' not in adata.var):
@@ -77,10 +80,8 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
     dpt = DPT(adata, min_group_size=min_group_size,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift)
-    # check whether we need to recompute
-    if dpt.eigen_values is None or n_dcs is None or dpt.eigen_values.size < n_dcs:
-        dpt.compute_transitions()
-        dpt.compute_eigen(n_comps=n_dcs)
+    dpt.compute_transitions()
+    dpt.compute_eigen(n_comps=n_dcs)
     adata.obsm['X_diffmap'] = dpt.eigen_basis
     adata.uns['diffmap_evals'] = dpt.eigen_values
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
