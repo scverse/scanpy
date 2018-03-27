@@ -221,7 +221,6 @@ Datasets
    datasets.krumsiek11
    datasets.moignard15
    datasets.paul15
-   datasets.paul15_raw
    datasets.toggleswitch
 
 
