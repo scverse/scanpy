@@ -1,17 +1,14 @@
 # stuff necessary for docs generation
 numpydoc
 # same as ../requires.txt, but omitting the c++ packages
-anndata>=0.5
-matplotlib  # 2.0.2 seems buggy
+anndata>=0.5.7
+matplotlib
 pandas
 scipy
 seaborn
-psutil
 h5py
-xlrd
 scikit-learn
 statsmodels
 networkx
 natsort
 joblib
-profilehooks
