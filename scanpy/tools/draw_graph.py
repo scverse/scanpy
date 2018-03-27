@@ -10,7 +10,7 @@ def draw_graph(
         root=None,
         random_state=0,
         n_jobs=None,
-        key_adjacency='neighbors/connectivities',
+        adjacency=None,
         key_added_ext=None,
         proceed=False,
         use_paga='global',
@@ -47,7 +47,7 @@ def draw_graph(
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    adjacency : sparse matrix, optional (default: `None`)
+    adjacency : sparse matrix or `None`, optional (default: `None`)
         Sparse adjacency matrix of the graph, defaults to
         `adata.uns['neighbors']['connectivities']`.
     key_ext : `str`, optional (default: `None`)
@@ -77,9 +77,7 @@ def draw_graph(
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
-            '\'{}\' is not present in `adata.uns`. '
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
-            .format(key))
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
@@ -129,15 +127,13 @@ def draw_graph(
         ig_layout = g.layout(layout, root=root, **kwds)
     else:
         ig_layout = g.layout(layout, **kwds)
-    adata.uns['draw_graph_params'] = np.array(
-        (layout, random_state,),
-        dtype=[('layout', 'U20'), ('random_state', int)])
+    adata.uns['draw_graph'] = {}
+    adata.uns['draw_graph']['params'] = {'layout': layout, 'random_state': random_state}
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
     adata.obsm[key_added] = (np.array(ig_layout.coords)
                            if all_coords is None else all_coords)
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'{}\', graph_drawing coordinates (adata.obs)\n'
-              '    \'draw_graph_params\', the parameters (adata.uns)'
+              '    \'{}\', graph_drawing coordinates (adata.obs)'
               .format(key_added))
     return adata if copy else None

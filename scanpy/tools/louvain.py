@@ -40,7 +40,7 @@ def louvain(
         annotation, tuple needs to contain (obs key, list of categories).
     key_added : `str`, optional (default: 'louvain')
         Key under which to add the cluster labels.
-    adjacency : sparse matrix, optional (default: `None`)
+    adjacency : sparse matrix or `None`, optional (default: `None`)
         Sparse adjacency matrix of the graph, defaults to
         `adata.uns['neighbors']['connectivities']`.
     flavor : {'vtraag', 'igraph'}
@@ -61,9 +61,7 @@ def louvain(
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
-            '\'{}\' is not present in `adata.uns`. '
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
-            .format(key))
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:

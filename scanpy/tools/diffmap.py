@@ -3,7 +3,7 @@ from .. import settings
 from .. import logging as logg
 
 
-def diffmap(adata, n_comps=15, n_jobs=None, copy=False):
+def diffmap(adata, n_comps=15, copy=False):
     """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
 
     Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
@@ -16,8 +16,6 @@ def diffmap(adata, n_comps=15, n_jobs=None, copy=False):
         Annotated data matrix.
     n_comps : `int`, optional (default: 15)
         The number of dimensions of the representation.
-    n_jobs : `int` or `None`
-        Number of CPUs to use (default: `sc.settings.n_jobs`).
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
@@ -32,11 +30,14 @@ def diffmap(adata, n_comps=15, n_jobs=None, copy=False):
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     logg.info('computing Diffusion Maps', r=True)
+    if 'neighbors' not in adata.uns:
+        raise ValueError(
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     if n_comps <= 2:
         raise ValueError(
-            'Provide any value greater than 2. ')
+            'Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
-    dmap = dpt.DPT(adata, n_jobs=n_jobs)
+    dmap = dpt.DPT(adata)
     dmap.compute_transitions()
     dmap.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dmap.rbasis
