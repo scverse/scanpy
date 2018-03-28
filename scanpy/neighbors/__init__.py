@@ -38,7 +38,7 @@ def neighbors(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_neighbors : `int`, optional (default: 30)
+    n_neighbors : `int`, optional (default: 15)
         The size of local neighborhood (in terms of number of neighboring data
         points) used for manifold approximation. Larger values result in more
         global views of the manifold, while smaller values result in more local
