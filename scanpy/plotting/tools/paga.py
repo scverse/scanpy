@@ -86,7 +86,7 @@ def paga_compare(
     paga(adata, ax=axs[1], show=False, save=False, title=title_graph,
          groups=groups_graph, color=color_graph, **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
-    utils.savefig_or_show('paga', show=show, save=save)
+    utils.savefig_or_show('paga_compare', show=show, save=save)
     if show == False: return axs
 
 
