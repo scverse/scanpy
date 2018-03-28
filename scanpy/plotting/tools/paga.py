@@ -333,7 +333,7 @@ def paga(
             frameon=frameon,
             cmap=cmap,
             title=title[icolor],
-            random_state=0,
+            random_state=random_state,
             export_to_gexf=export_to_gexf,
             pos=pos)
     adata.uns['paga']['pos'] = pos
