@@ -419,7 +419,7 @@ def draw_graph(
         save=False,
         ax=ax)
     if edges:
-        for ax in axs[::2]:
+        for ax in axs:
             g = nx.Graph(adata.uns['neighbors']['connectivities'])
             edge_collection = nx.draw_networkx_edges(
                 g, adata.obsm['X_' + basis],

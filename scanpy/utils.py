@@ -120,10 +120,12 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     if not graph.is_directed():
         edges.extend([(v, u) for u, v in edges])
         weights.extend(weights)
+    shape = graph.vcount()
+    shape = (shape, shape)
     if len(edges) > 0:
-        return csr_matrix((weights, zip(*edges)))
+        return csr_matrix((weights, zip(*edges)), shape=shape)
     else:
-        return csr_matrix((graph.vcount(), graph.vcount()))
+        return csr_matrix(shape)
 
 
 def compute_association_matrix_of_groups(adata, prediction, reference,

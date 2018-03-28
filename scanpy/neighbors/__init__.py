@@ -6,6 +6,7 @@ from sklearn.metrics import pairwise_distances
 from .. import settings
 from .. import logging as logg
 from .. utils import doc_params
+from .. import utils
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
@@ -611,9 +612,9 @@ class Neighbors():
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)
 
     def to_igraph(self):
-        """Generate igraph object.
+        """Generate igraph from connectiviies.
         """
-        return None
+        return utils.get_igraph_from_adjacency(self.connectivities)
 
     @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     def compute_neighbors(

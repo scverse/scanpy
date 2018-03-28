@@ -10,7 +10,7 @@ from .. import settings
 
 def paga(adata,
         groups='louvain',
-        threshold=0.01,
+        # threshold=0.01,
         tree_based_confidence=False,
         n_jobs=None,
         copy=False):
@@ -18,12 +18,11 @@ def paga(adata,
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Statistical graph abstraction (PAGA) quantifies the connectivities of
+    Partition-based graph abstraction (PAGA) quantifies the connectivities of
     partitions of a neighborhood graph of single cells, thereby generating a
     much simpler abstracted graph whose nodes label the partitions. Together
     with a random walk-based distance measure, this generates a partial
-    coordinatization of data useful for exploring and explaining its
-    variation.
+    coordinatization of data useful for exploring and explaining its variation.
 
     Parameters
     ----------
@@ -47,23 +46,23 @@ def paga(adata,
     Returns
     -------
     Returns or updates `adata` depending on `copy` with
-    paga/connectivities : np.ndarray (adata.uns)
+    connectivities : np.ndarray (adata.uns['connectivities'])
         The full adjacency matrix of the abstracted graph, weights
         correspond to connectivities.
-    paga/confidence : np.ndarray (adata.uns)
+    confidence : np.ndarray (adata.uns['confidence'])
         The full adjacency matrix of the abstracted graph, weights
         correspond to confidence in the presence of an edge.
-    paga/confidence_tree : sc.sparse csr matrix (adata.uns)
+    confidence_tree : sc.sparse csr matrix (adata.uns['confidence_tree'])
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
     """
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    logg.info('running Statistical Graph Abstraction (PAGA)', reset=True)
-    paga = PAGA(adata, groups, threshold=threshold, tree_based_confidence=tree_based_confidence)
+    logg.info('running partition-based graph abstraction (PAGA)', reset=True)
+    paga = PAGA(adata, groups, tree_based_confidence=tree_based_confidence)
     paga.compute()
     adata.uns['paga'] = {}
-    adata.uns['paga']['connectivities'] = paga.connectivities
+    adata.uns['paga']['connectivities'] = paga.connectivities_coarse
     adata.uns['paga']['confidence'] = paga.confidence
     adata.uns['paga']['confidence_tree'] = paga.confidence_tree
     adata.uns['paga']['groups'] = groups
@@ -88,30 +87,30 @@ class PAGA(Neighbors):
         self._tree_based_confidence = tree_based_confidence
 
     def compute(self):
-        self.compute_connectivities()
+        self.compute_connectivities_coarse()
         self.compute_confidence()
 
-    def compute_connectivities(self):
+    def compute_connectivities_coarse(self):
         import igraph
-        ones = self._adata.uns['neighbors']['connectivities'].copy()
+        ones = self.connectivities.copy()
         # graph where edges carry weight 1
         ones.data = np.ones(len(ones.data))
         g = utils.get_igraph_from_adjacency(ones)
         self.vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups].cat.codes.values)
         cg = self.vc.cluster_graph(combine_edges='sum')
-        self.connectivities = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+        self.connectivities_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
 
     def compute_confidence(self):
-        """Translates the connectivities measure into a confidence measure.
+        """Translates the connectivities_coarse measure into a confidence measure.
         """
-        pseudo_distance = self.connectivities.copy()
+        pseudo_distance = self.connectivities_coarse.copy()
         pseudo_distance.data = 1./pseudo_distance.data
-        connectivities_tree = minimum_spanning_tree(pseudo_distance)
-        connectivities_tree.data = 1./connectivities_tree.data
-        connectivities_tree_indices = [
-            connectivities_tree[i].nonzero()[1]
-            for i in range(connectivities_tree.shape[0])]
+        connectivities_coarse_tree = minimum_spanning_tree(pseudo_distance)
+        connectivities_coarse_tree.data = 1./connectivities_coarse_tree.data
+        connectivities_coarse_tree_indices = [
+            connectivities_coarse_tree[i].nonzero()[1]
+            for i in range(connectivities_coarse_tree.shape[0])]
         # inter- and intra-cluster based confidence
         if not self._tree_based_confidence:
             total_n = self.n_neighbors * np.array(self.vc.sizes())
@@ -119,15 +118,16 @@ class PAGA(Neighbors):
                      '{:>7} {:>7} {:>7} {:>7}'
                      .format('i', 'j', 'conn', 'n[i]', 'n[j]',
                              'avg', 'thresh', 'var', 'conf'), v=5)
-            maximum = self.connectivities.max()
-            confidence = self.connectivities.copy()  # initializing
-            for i in range(self.connectivities.shape[0]):
-                for j in range(i+1, self.connectivities.shape[1]):
-                    if self.connectivities[i, j] > 0:
+            maximum = self.connectivities_coarse.max()
+            confidence = self.connectivities_coarse.copy()  # initializing
+            for i in range(self.connectivities_coarse.shape[0]):
+                for j in range(i+1, self.connectivities_coarse.shape[1]):
+                    if self.connectivities_coarse[i, j] > 0:
                         minimum = min(total_n[i], total_n[j])
-                        average = self.connectivities[i, j] / minimum
-                        confidence[i, j] = self.connectivities[i, j] / maximum
-                        variance = self.threshold * (1-self.threshold)
+                        average = self.connectivities_coarse[i, j] / minimum
+                        confidence[i, j] = self.connectivities_coarse[i, j] / maximum
+                        variance = 0.0
+                        # variance = self.threshold * (1-self.threshold)
                         # if average > self.threshold:
                         #     confidence[i, j] = 1
                         # else:
@@ -136,29 +136,29 @@ class PAGA(Neighbors):
                         logg.msg(
                             '{:2} {:2} {:4} {:4} {:4} '
                             '{:7.2} {:7.2} {:7.2} {:7.2}'
-                            .format(i, j, int(self.connectivities[i, j]),
+                            .format(i, j, int(self.connectivities_coarse[i, j]),
                                     total_n[i], total_n[j],
                                     average, self.threshold, variance, confidence[i, j]), v=5)
                         confidence[j, i] = confidence[i, j]
         # tree-based confidence
         else:
-            median_connectivities_tree = np.median(connectivities_tree.data)
-            confidence = self.connectivities.copy()
-            confidence.data[self.connectivities.data >= median_connectivities_tree] = 1
-            connectivities_adjusted = self.connectivities.copy()
-            connectivities_adjusted.data -= median_connectivities_tree
-            connectivities_adjusted.data = np.exp(connectivities_adjusted.data)
-            index = self.connectivities.data < median_connectivities_tree
-            confidence.data[index] = connectivities_adjusted.data[index]
+            median_connectivities_coarse_tree = np.median(connectivities_coarse_tree.data)
+            confidence = self.connectivities_coarse.copy()
+            confidence.data[self.connectivities_coarse.data >= median_connectivities_coarse_tree] = 1
+            connectivities_coarse_adjusted = self.connectivities_coarse.copy()
+            connectivities_coarse_adjusted.data -= median_connectivities_coarse_tree
+            connectivities_coarse_adjusted.data = np.exp(connectivities_coarse_adjusted.data)
+            index = self.connectivities_coarse.data < median_connectivities_coarse_tree
+            confidence.data[index] = connectivities_coarse_adjusted.data[index]
         confidence_tree = self.compute_confidence_tree(
-            confidence, connectivities_tree_indices)
+            confidence, connectivities_coarse_tree_indices)
         self.confidence = confidence
         self.confidence_tree = confidence_tree
 
     def compute_confidence_tree(
-            self, confidence, connectivities_tree_indices):
+            self, confidence, connectivities_coarse_tree_indices):
         confidence_tree = sp.sparse.lil_matrix(confidence.shape, dtype=float)
-        for i, neighbors in enumerate(connectivities_tree_indices):
+        for i, neighbors in enumerate(connectivities_coarse_tree_indices):
             if len(neighbors) > 0:
                 confidence_tree[i, neighbors] = confidence[i, neighbors]
         return confidence_tree.tocsr()
