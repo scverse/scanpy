@@ -20,6 +20,7 @@ def neighbors(
         n_pcs=None,
         use_rep=None,
         knn=True,
+        random_state=0,
         method='umap',
         metric='euclidean',
         metric_kwds={},
@@ -73,7 +74,8 @@ def neighbors(
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
         n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, use_rep=use_rep,
-        method=method, metric=metric, metric_kwds=metric_kwds)
+        method=method, metric=metric, metric_kwds=metric_kwds,
+        random_state=random_state)
     adata.uns['neighbors'] = {}
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
     adata.uns['neighbors']['distances'] = neighbors.distances
@@ -624,6 +626,7 @@ class Neighbors():
             n_pcs=None,
             use_rep=None,
             method='umap',
+            random_state=0,
             precompute_metric=None,
             metric='euclidean',
             metric_kwds={}):
@@ -666,7 +669,7 @@ class Neighbors():
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
-                X, n_neighbors, metric=metric, **metric_kwds)
+                X, n_neighbors, random_state, metric, **metric_kwds)
         logg.msg('computed neighbors', t=True, v=4)
         if method == 'umap':
             self._distances, self._connectivities = compute_connectivities_umap(

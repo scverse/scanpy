@@ -56,6 +56,9 @@ def paga(adata,
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
     """
+    if 'neighbors' not in adata.uns:
+        raise ValueError(
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')    
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
