@@ -1681,7 +1681,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(np.asarray(adata.obs['dpt_groups']),
+    timeseries_subplot(adata.obs['dpt_groups'].cat.codes,
                        time=adata.obs['dpt_order'].values,
                        color=np.asarray(adata.obs['dpt_groups']),
                        highlightsX=adata.uns['dpt_changepoints'],
