@@ -55,7 +55,7 @@ def paga_compare(
     title_graph : `str` or `None`, optional (default: `None`)
         Separate title for the abstracted graph.
     """
-    axs, _, _, _ = utils.setup_axes(colors=[0, 1],
+    axs, _, _, _ = utils.setup_axes(panels=[0, 1],
                                     right_margin=right_margin)  # dummy colors
     # set a common title for the figure
     suptitle = None
@@ -83,8 +83,8 @@ def paga_compare(
                 ax=axs[0],
                 show=False,
                 save=False)
-    paga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
-              groups=groups_graph, color=color_graph, **paga_graph_params)
+    paga(adata, ax=axs[1], show=False, save=False, title=title_graph,
+         groups=groups_graph, color=color_graph, **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
     utils.savefig_or_show('paga', show=show, save=save)
     if show == False: return axs
@@ -150,7 +150,7 @@ def paga_scatter(
     corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if color is None:
-        color = [adata.uns['paga_groups']]
+        color = [adata.uns['paga']['groups']]
     if not isinstance(color, list): color = [color]
     kwds = {}
     if 'draw_graph' in basis:
@@ -184,7 +184,7 @@ def paga_scatter(
 
 def paga(
         adata,
-        solid_edges='paga_confidence',
+        solid_edges='confidence',
         dashed_edges=None,
         layout=None,
         root=0,
@@ -219,10 +219,10 @@ def paga(
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     solid_edges : `str`, optional (default: 'paga_confidence')
-        Key for `adata.uns` that specifies the matrix that stores the edges
+        Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: `None`)
-        Key for `adata.uns` that specifies the matrix that stores the edges
+        Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn dashed grey. If `None`, no dashed edges are drawn.
     layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
@@ -288,19 +288,12 @@ def paga(
     Returns
     -------
     Adds `'paga_pos'` to `adata.uns`.
-  
+
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
 
     If `return_pos` is `True`, in addition, the positions of the nodes.
     """
-
-    import matplotlib as mpl
-    from distutils.version import LooseVersion
-    if mpl.__version__ > LooseVersion('2.0.0'):
-        logg.warn('Currently, `paga_graph` sometimes crashes with matplotlib version > 2.0, you have {}.\n'
-                  'Run `pip install matplotlib==2.0` if this hits you.'
-                  .format(mpl.__version__))
 
     # colors is a list that contains no lists
     if isinstance(color, list) and True not in [isinstance(c, list) for c in color]: color = [color]
@@ -313,7 +306,7 @@ def paga(
     if title is None or isinstance(title, str): title = [title for name in groups]
 
     if ax is None:
-        axs, _, _, _ = utils.setup_axes(colors=color)
+        axs, _, _, _ = utils.setup_axes(panels=color)
     else:
         axs = ax
     if len(color) == 1 and not isinstance(axs, list): axs = [axs]
@@ -343,7 +336,7 @@ def paga(
             random_state=0,
             export_to_gexf=export_to_gexf,
             pos=pos)
-    adata.uns['paga_pos'] = pos
+    adata.uns['paga']['pos'] = pos
     utils.savefig_or_show('paga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
@@ -379,10 +372,10 @@ def _paga_graph(
     node_labels = groups
     if (node_labels is not None
         and isinstance(node_labels, str)
-        and node_labels != adata.uns['paga_groups']):
+        and node_labels != adata.uns['paga']['groups']):
         raise ValueError('Provide a list of group labels for the PAGA groups {}, not {}.'
-                         .format(adata.uns['paga_groups'], node_labels))
-    groups_key = adata.uns['paga_groups']
+                         .format(adata.uns['paga']['groups'], node_labels))
+    groups_key = adata.uns['paga']['groups']
     if node_labels is None:
         node_labels = adata.obs[groups_key].cat.categories
 
@@ -406,12 +399,12 @@ def _paga_graph(
         root = [list(node_labels).index(r) for r in root]
 
     # define the objects
-    adjacency_solid = adata.uns[solid_edges].copy()
+    adjacency_solid = adata.uns['paga'][solid_edges].copy()
     if threshold_solid is not None:
         adjacency_solid[adjacency_solid < threshold_solid] = 0
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
-        adjacency_dashed = adata.uns[dashed_edges].copy()
+        adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
         if threshold_dashed is not None:
             adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
         nx_g_dashed = nx.Graph(adjacency_dashed)
@@ -453,8 +446,8 @@ def _paga_graph(
             g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
                 g_tree = g
-                if solid_edges != 'paga_confidence_tree':
-                    adj_tree = adata.uns['paga_confidence_tree']
+                if solid_edges != 'confidence_tree':
+                    adj_tree = adata.uns['paga']['confidence_tree']
                     g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
                 pos_list = g_tree.layout(
                     layout, root=root if isinstance(root, list) else [root],
@@ -468,7 +461,11 @@ def _paga_graph(
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         # equally-spaced tree
         else:
-            pos = utils.hierarchy_pos(nx_g_solid, root)
+            nx_g_tree = nx_g_solid
+            if solid_edges != 'confidence_tree':
+                adj_tree = adata.uns['paga']['confidence_tree']
+                nx_g_tree = nx.Graph(adj_tree)
+            pos = utils.hierarchy_pos(nx_g_tree, root)
             if len(pos) < adjacency_solid.shape[0]:
                 raise ValueError('This is a forest and not a single tree. '
                                  'Try another `layout`, e.g., {\'fr\'}.')
@@ -514,15 +511,15 @@ def _paga_graph(
     nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
 
     if export_to_gexf:
-        for count, n in enumerate(nx_g_dashed.nodes()):
-            nx_g_dashed.node[count]['label'] = node_labels[count]
-            nx_g_dashed.node[count]['color'] = color[count]
-            nx_g_dashed.node[count]['viz'] = {
+        for count, n in enumerate(nx_g_solid.nodes()):
+            nx_g_solid.node[count]['label'] = node_labels[count]
+            nx_g_solid.node[count]['color'] = color[count]
+            nx_g_solid.node[count]['viz'] = {
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
                              'z': 0}}
         logg.msg('exporting to {}'.format(settings.writedir + 'paga_graph.gexf'), v=1)
-        nx.write_gexf(nx_g_dashed, settings.writedir + 'paga_graph.gexf')
+        nx.write_gexf(nx_g_solid, settings.writedir + 'paga_graph.gexf')
 
     # deal with empty graph
     # ax.plot(pos_array[:, 0], pos_array[:, 1], '.', c='white')
@@ -623,6 +620,7 @@ def paga_path(
         adata,
         nodes,
         keys,
+        use_raw=True,
         annotations=['dpt_pseudotime'],
         color_map=None,
         color_maps_annotations={'dpt_pseudotime': 'Greys'},
@@ -657,6 +655,8 @@ def paga_path(
     keys : list of str
         Either variables in `adata.var_names` or annotations in
         `adata.obs`. They are plotted using `color_map`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `adata.raw` for retrieving gene expressions if it has been set.
     annotations : list of annotations, optional (default: ['dpt_pseudotime'])
         Plot these keys with `color_maps_annotations`. Need to be keys for
         `adata.obs`.
@@ -672,7 +672,7 @@ def paga_path(
         Number of data points to include in computation of running average.
     groups_key : `str`, optional (default: `None`)
         Key of the grouping used to run PAGA. If `None`, defaults to
-        `adata.uns['paga_groups']`.
+        `adata.uns['paga']['groups']`.
     as_heatmap : `bool`, optional (default: `True`)
         Plot the timeseries as heatmap. If not plotting as heatmap,
         `annotations` have no effect.
@@ -702,11 +702,11 @@ def paga_path(
     ax_was_none = ax is None
 
     if groups_key is None:
-        if 'paga_groups' not in adata.uns:
+        if 'groups' not in adata.uns['paga']:
             raise KeyError(
                 'Pass the key of the grouping with which you ran PAGA, '
                 'using the parameter `groups_key`.')
-        groups_key = adata.uns['paga_groups']
+        groups_key = adata.uns['paga']['groups']
     groups_names = adata.obs[groups_key].cat.categories
 
     if palette_groups is None:
@@ -738,6 +738,11 @@ def paga_path(
     else:
         nodes_ints = nodes
         nodes_strs = [groups_names[node] for node in nodes]
+
+    adata_X = adata
+    if use_raw and adata.raw is not None:
+        adata_X = adata.raw
+    
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes_ints):
@@ -753,7 +758,7 @@ def paga_path(
                 adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
             if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
-            else: x += list(adata[:, key].X[idcs])
+            else: x += list(adata_X[:, key].X[idcs])
             if ikey == 0:
                 groups += [group for i in range(len(idcs))]
                 x_tick_locs.append(len(x))
@@ -814,9 +819,9 @@ def paga_path(
         # groups bar
         ax_bounds = ax.get_position().bounds
         groups_axis = pl.axes([ax_bounds[0],
-                               ax_bounds[1],
+                               ax_bounds[1] - ax_bounds[3] / len(keys),
                                ax_bounds[2],
-                               - ax_bounds[3] / len(keys)])
+                               ax_bounds[3] / len(keys)])
         groups = np.array(groups)[None, :]
         groups_axis.imshow(groups, aspect='auto',
                            interpolation="nearest",
@@ -824,7 +829,7 @@ def paga_path(
                                # the following line doesn't work because of normalization
                                # adata.uns['paga_groups_colors'])
                                palette_groups[np.min(groups).astype(int):],
-                               N=np.max(groups)+1-np.min(groups)))
+                               N=int(np.max(groups)+1-np.min(groups))))
         if show_yticks:
             groups_axis.set_yticklabels(['', xlabel, ''], fontsize=ytick_fontsize)
         else:
@@ -845,9 +850,9 @@ def paga_path(
         for ianno, anno in enumerate(annotations):
             if ianno > 0: y_shift = ax_bounds[3] / len(keys) / 2
             anno_axis = pl.axes([ax_bounds[0],
-                                 ax_bounds[1] - (ianno+1) * y_shift,
+                                 ax_bounds[1] - (ianno+2) * y_shift,
                                  ax_bounds[2],
-                                 - (ianno+1) * y_shift])
+                                 y_shift])
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
                 color_map_anno = ('Vega10' if is_categorical_dtype(adata.obs[anno])

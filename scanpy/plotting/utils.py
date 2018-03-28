@@ -465,7 +465,6 @@ def scatter_base(Y,
             ax.set_xticks([])
             ax.set_yticks([])
             if '3d' in projection: ax.set_zticks([])
-        axs.append(ax)
     # set default axis_labels
     if axis_labels is None:
         axis_labels = [[component_name + str(i) for i in idcs]

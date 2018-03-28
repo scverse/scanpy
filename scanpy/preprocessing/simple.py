@@ -743,7 +743,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
         Annotated data matrix.
     zero_center : `bool`, optional (default: `True`)
         If `False`, omit zero-centering variables, which allows to handle sparse
