@@ -13,7 +13,7 @@ def draw_graph(
         adjacency=None,
         key_added_ext=None,
         proceed=False,
-        use_paga='global',
+        use_paga=False,
         copy=False,
         **kwds):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
@@ -81,7 +81,7 @@ def draw_graph(
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    if not (use_paga == 'local' and 'paga_pos' in adata.uns):
+    if use_paga != 'local':
         g = utils.get_igraph_from_adjacency(adjacency)
     np.random.seed(random_state)
     all_coords = None
@@ -89,9 +89,9 @@ def draw_graph(
         if proceed:
             init_coords = adata.obsm[key_added]
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif 'paga_pos' in adata.uns:
-            groups = adata.obs[adata.uns['paga_groups']]
-            all_pos = adata.uns['paga_pos']
+        elif 'paga' in adata.uns and 'pos' in adata.uns['paga']:
+            groups = adata.obs[adata.uns['paga']['groups']]
+            all_pos = adata.uns['paga']['pos']
             if use_paga == 'global':
                 init_coords = np.ones((adjacency.shape[0], 2))
                 for i, pos in enumerate(all_pos):
