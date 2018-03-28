@@ -82,7 +82,10 @@ def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
         if not time and not m and len(msg) > 0:
             settings.mi(*msg, end=end)
         if reset:
-            settings._previous_memory_usage, _ = get_memory_usage()
+            try:
+                settings._previous_memory_usage, _ = get_memory_usage()
+            except:
+                pass
             settings._previous_time = time_module.time()
         if time:
             elapsed = get_passed_time()
