@@ -24,7 +24,8 @@ See all releases `here <https://github.com/theislab/scanpy/releases>`_. The foll
      graph changed from `n_neighbors=30` to `n_neighbors=15`
 
    - cleaner nested structure of storing unstructered annotations as dicts
-     
+
+- :func:`~scanpy.api.tl.louvain` now provides a better implementation for reclustering via `restrict_to`.
 
 - basic single-cell graph now available as
   ``.uns['neighbors']['connectivities']`` after call of

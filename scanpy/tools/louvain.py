@@ -122,9 +122,8 @@ def louvain(
         key_added = restrict_key + '_R' if key_added is None else key_added
         groups += 1
         adata.obs[key_added] = adata.obs[restrict_key].astype('U')
-        adata.obs[key_added] += ','
+        adata.obs[key_added].iloc[restrict_indices] = '-'.join(restrict_categories) + ','
         adata.obs[key_added].iloc[restrict_indices] += groups.astype('U')
-        adata.obs[key_added].iloc[~restrict_indices] += '0'
         adata.obs[key_added] = adata.obs[key_added].astype(
             'category', categories=natsorted(adata.obs[key_added].unique()))
     adata.uns['louvain'] = {}
