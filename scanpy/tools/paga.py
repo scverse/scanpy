@@ -58,7 +58,7 @@ def paga(adata,
     """
     if 'neighbors' not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.')    
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
@@ -128,7 +128,9 @@ class PAGA(Neighbors):
                     if self.connectivities_coarse[i, j] > 0:
                         minimum = min(total_n[i], total_n[j])
                         average = self.connectivities_coarse[i, j] / minimum
-                        confidence[i, j] = self.connectivities_coarse[i, j] / maximum
+                        geom_mean = np.sqrt(total_n[i] * total_n[j])
+                        confidence[i, j] = self.connectivities_coarse[i, j] / geom_mean
+                        # confidence[i, j] = self.connectivities_coarse[i, j] / maximum
                         variance = 0.0
                         # variance = self.threshold * (1-self.threshold)
                         # if average > self.threshold:
