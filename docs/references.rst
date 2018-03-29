@@ -1,11 +1,3 @@
-..
-   .. raw:: html
-
-       <style type="text/css">
-       .label {
-       }
-       </style>
-
 References
 ----------
 
@@ -63,6 +55,10 @@ References
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
    `Nature Methods <https://doi.org/10.1038/nmeth.3252>`__.
 
+.. [Islam11] Islam *et al.* (2011),
+   *Characterization of the single-cell transcriptional landscape by highly multiplex RNA-seq*,
+   `Genome Research <https://doi.org/10.1101/gr.110882.110>`__.
+
 .. [Krumsiek10] Krumsiek *et al.* (2010),
    *Odefy – From discrete to continuous models*,
    `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`__.
@@ -95,6 +91,10 @@ References
    Murphy (2012,
    *Machine Learning: A Probabilisitc Perspective*,
    `MIT Press <https://mitpress.mit.edu/books/machine-learning-0>`_.
+
+.. [Ntranos18] Ntranos *et al.* (2018),
+   *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
+   `bioRxiv <https://doi.org/10.1101/258566>`__.
 
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
@@ -135,3 +135,8 @@ References
 .. [Zheng17] Zheng *et al.* (2017),
    *Massively parallel digital transcriptional profiling of single cells*,
    `Nature Communications <https://doi.org/10.1038/ncomms14049>`__.
+
+.. [Zunder15] Zunder *et al.* (2015),
+   *A continuous molecular roadmap to iPSC reprogramming through progression analysis of single-cell mass cytometry*,
+   `Cell Stem Cell <https://doi.org/10.1016/j.stem.2015.01.015>`__.   
+

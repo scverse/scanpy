@@ -3,20 +3,71 @@
 
 from collections import namedtuple
 import numpy as np
-import pandas as pd
 from natsort import natsorted
+from textwrap import dedent
+from pandas.api.types import CategoricalDtype
+
 from . import settings
 from . import logging as logg
 
 
-# --------------------------------------------------------------------------------
-# Deal with stuff
-# --------------------------------------------------------------------------------
+def doc_params(**kwds):
+    """\
+    Docstrings should start with "\" in the first line for proper formatting.
+    """
+    def dec(obj):
+        obj.__doc__ = dedent(obj.__doc__).format(**kwds)
+        return obj
+    return dec
 
 
-def compute_minimum_spanning_tree(adjacency):
-    from scipy.sparse.csgraph import minimum_spanning_tree
-    return minimum_spanning_tree(adjacency)
+def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
+    """
+    Parameters
+    ----------
+    map_colors : `dict`
+        Dict with color specification for new groups that have no corresponding
+        old group.
+    """
+    if key_added is None:
+        key_added = key + '_merged'
+    adata.obs[key_added] = adata.obs[key].map(
+        map_groups).astype(CategoricalDtype())
+    old_categories = adata.obs[key].cat.categories
+    new_categories = adata.obs[key_added].cat.categories
+    # map_colors is passed
+    if map_colors is not None:
+        old_colors = None
+        if key + '_colors' in adata.uns:
+            old_colors = adata.uns[key + '_colors']
+        new_colors = []
+        for group in adata.obs[key_added].cat.categories:
+            if group in map_colors:
+                new_colors.append(map_colors[group])
+            elif group in old_categories and old_colors is not None:
+                new_colors.append(old_colors[old_categories.get_loc(group)])
+            else:
+                raise ValueError('You didn\'t specify a color for {}.'
+                                 .format(group))
+        adata.uns[key_added + '_colors'] = new_colors
+    # map_colors is not passed
+    elif key + '_colors' in adata.uns:
+        old_colors = adata.uns[key + '_colors']
+        inverse_map_groups = {g: [] for g in new_categories}
+        for old_group in old_categories:
+            inverse_map_groups[map_groups[old_group]].append(old_group)
+        new_colors = []
+        for group in new_categories:
+            # take the largest of the old groups
+            old_group = adata.obs[key][adata.obs[key].isin(
+                inverse_map_groups[group])].value_counts().index[0]
+            new_colors.append(old_colors[old_categories.get_loc(old_group)])
+        adata.uns[key_added + '_colors'] = new_colors
+
+
+# --------------------------------------------------------------------------------
+# Graph stuff
+# --------------------------------------------------------------------------------
 
 
 def get_graph_tool_from_adjacency(adjacency, directed=None):
@@ -45,22 +96,36 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     weights = adjacency[sources, targets]
     if isinstance(weights, np.matrix):
         weights = weights.A1
-    # if len(weights) > 0: weights = np.array(weights)
-    # else:
-    #     # hack for empty graph
-    #     sources, targets = np.ones(adjacency.shape).nonzero()
-    #     weights = np.array([1e-12 for i in range(len(sources))])  # dummy edges
-    # if adjacency.shape[0] < 20:
-    #     print(list(zip(sources, targets)), weights)
     g = ig.Graph(directed=directed)
     g.add_vertices(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
     g.add_edges(list(zip(sources, targets)))
-    g.es['weight'] = weights
+    try:
+        g.es['weight'] = weights
+    except:
+        pass
     if g.vcount() != adjacency.shape[0]:
         logg.warn('The constructed graph has only {} nodes. '
                   'Your adjacency matrix contained redundant nodes.'
                   .format(g.vcount()))
     return g
+
+
+def get_sparse_from_igraph(graph, weight_attr=None):
+    from scipy.sparse import csr_matrix
+    edges = graph.get_edgelist()
+    if weight_attr is None:
+        weights = [1] * len(edges)
+    else:
+        weights = graph.es[weight_attr]
+    if not graph.is_directed():
+        edges.extend([(v, u) for u, v in edges])
+        weights.extend(weights)
+    shape = graph.vcount()
+    shape = (shape, shape)
+    if len(edges) > 0:
+        return csr_matrix((weights, zip(*edges)), shape=shape)
+    else:
+        return csr_matrix(shape)
 
 
 def compute_association_matrix_of_groups(adata, prediction, reference,
@@ -544,57 +609,6 @@ def subsample_n(X, n=0, seed=0):
     return Xsampled, rows
 
 
-def comp_distance(X, metric='euclidean'):
-    """Compute distance matrix for data array X
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store samples, columns store variables).
-    metric : string
-        For example 'euclidean', 'sqeuclidean', see sp.spatial.distance.pdist.
-
-    Returns
-    -------
-    D : np.ndarray
-        Distance matrix.
-    """
-    from scipy.spatial import distance
-    return distance.squareform(distance.pdist(X, metric=metric))
-
-
-def comp_sqeuclidean_distance_using_matrix_mult(X, Y):
-    """Compute distance matrix for data array X
-
-    Use matrix multiplication as in sklearn.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store samples, columns store variables).
-    metric : string
-        For example 'euclidean', 'sqeuclidean', see sp.spatial.distance.pdist.
-
-    Returns
-    -------
-    D : np.ndarray
-        Distance matrix.
-    """
-    XX = np.einsum('ij,ij->i', X, X)[:, np.newaxis]
-    if X is Y:
-        YY = XX
-    else:
-        YY = np.einsum('ij,ij->i', Y, Y)[:, np.newaxis]
-    distances = np.dot(X, Y.T)
-    distances *= -2
-    distances += XX
-    distances += YY.T
-    np.maximum(distances, 0, out=distances)
-    if X is Y:
-        distances.flat[::distances.shape[0] + 1] = 0.
-    return distances
-
-
 def check_presence_download(filename, backup_url):
     """Check if file is present otherwise download."""
     import os
@@ -604,8 +618,7 @@ def check_presence_download(filename, backup_url):
         try:
             os.makedirs(dr)
         except FileExistsError:
-            pass # ignore if dir already exists
-
+            pass  # ignore if dir already exists
         from urllib.request import urlretrieve
         urlretrieve(backup_url, filename, reporthook=download_progress)
 

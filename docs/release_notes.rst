@@ -1,12 +1,90 @@
-See all releases `here <https://github.com/theislab/scanpy/releases>`_. The following lists selected improvements.
+See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.4.4/>`_. See a list of all releases `here <https://github.com/theislab/scanpy/releases>`_.
 
 
-**Very Soon**
+**Soon**
 
-1. better scalability when analyzing data with more than 100K cells; new graph class...
-2. canonical analyses steps like clustering genes, computing correlations...
-3. exporting to Gephi...
+- more canonical analyses steps like clustering genes, computing correlations...
 
+- exporting to Gephi from :class:`~scanpy.api.Neighbors`
+  
+
+**March 28, 2018**: version 1.0
+
+Scanpy is much faster. A standard analysis of 130k cells now takes about `14 min
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130k.txt>`_. A
+standard analysis of 1.3M cells takes about `6 h
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_1.3M.txt>`_.
+
+The API gained a preprocessing function :func:`~scanpy.api.pp.neighbors` and a
+class :func:`~scanpy.api.Neighbors` to which all basic graph computations are
+delegated. By that, the used data representation in pipelines is more
+transparent and tools are less bloated with parameters.
+
+.. warning::
+
+   Upgrading to 1.0 isn't fully backwards compatible.
+
+   - the graph-based tools :func:`~scanpy.api.tl.louvain`
+   :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
+   :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
+   :func:`~scanpy.api.tl.paga` now require a prior computtion of the graph::
+     
+         sc.pp.neighbors(adata, n_neighbors=5)
+         sc.tl.louvain(adata)
+     
+     instead of previously::
+     
+         sc.tl.louvain(adata, n_neighbors=5)
+         
+   - install `numba` via ``conda install numba``, which replaces cython
+      
+   - the default connectivity measure (dpt will look different using default
+     settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
+     gauss kernel connectivities and reproduces the previous behavior,
+     see, for instance this `example
+     <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`_
+
+   - namings of returned annotation have changed for less bloated AnnData
+     objects, which means that some of the unstructured annotation of old
+     AnnData files is not recognized anymore
+
+   - replace occurances of `group_by` with `groupby` (consistency with
+     `pandas`)     
+
+Further changes are as follows
+   
+- UMAP [McInnes18]_ can serve as a first visualization of the data just as
+  tSNE. In contrast to tSNE, UMAP directly embeds the single-cell graph and is
+  faster.
+
+- graph abstraction: AGA is renamed to PAGA :func:`~scanpy.api.tl.paga`. now, it
+  only measures connectivities between partitions of the single-cell graph,
+  pseudotime and clustering need to be computed separately via
+  :func:`~scanpy.api.tl.louvain` and :func:`~scanpy.api.tl.dpt`, the
+  connectivity measure has been improved  
+           
+- logistic regression for finding marker genes
+  :func:`~scanpy.api.tl.rank_genes_groups` with parameter `metfod='logreg'`
+
+- :func:`~scanpy.api.tl.louvain` now provides a better implementation for
+  reclustering via `restrict_to`        
+        
+- scanpy no longer modifies rcParams upon import, call
+  :func:`~scanpy.api.settings.set_figure_params` to set the 'scanpy style'
+      
+- new cache directory is now ``./cache/``
+
+- show edges in scatter plots based on graph visualization
+  :func:`~scanpy.api.tl.draw_graph` and :func:`~scanpy.api.umap` by passing
+  `edges=True`
+
+- :func:`~scanpy.api.pp.downsample_counts` function
+
+- default 'louvain_groups' are now called 'louvain'
+
+- 'X_diffmap' now contains the zero component, plotting remains unchanged
+     
+  
 
 **February 26, 2018**: version 0.4.4
 

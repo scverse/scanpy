@@ -2,6 +2,7 @@
 .pytest_cache/
 .scanpy
 .coverage
+cache/
 coverage.xml
 test.h5
 test_compr.h5
