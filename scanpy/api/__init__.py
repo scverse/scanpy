@@ -240,7 +240,7 @@ Global settings.
 `settings.file_format_figs`                     Format for saving figures (default: 'png').
 `settings.figdir`                               Default directory for saving figures (default: './figures').
 `settings.autoshow`                             Automatically show figures (default: `True`).
-`settings.autoshow`                             Automatically show figures (default: `True`).
+`settings.autosave`                             Automatically save figures, do not show them (default: `False`).
 ==============================================  ===================================
 
 The verbosity levels have the following meaning:

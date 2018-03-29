@@ -217,8 +217,8 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
         # append it
         writekey += save
         save = True
-    save = settings.savefigs if save is None else save
-    show = (settings.autoshow and not settings.savefigs) if show is None else show
+    save = settings.autosave if save is None else save
+    show = (settings.autoshow and not settings.autosave) if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
