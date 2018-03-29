@@ -274,6 +274,6 @@ def _sec_to_str(t):
     t : int
         Time in seconds.
     """
-    return "%d:%02d:%02d.%01d" % \
+    return "%d:%02d:%02d.%02d" % \
         reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-               [(t*10,), 10, 60, 60])
+               [(t*100,), 100, 60, 60])
