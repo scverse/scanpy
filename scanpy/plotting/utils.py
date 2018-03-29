@@ -186,7 +186,7 @@ def savefig(writekey, dpi=None, ext=None):
     ```
     """
     if dpi is None:
-        if rcParams['savefig.dpi'] < 300:
+        if isinstance(rcParams['savefig.dpi'], int) and rcParams['savefig.dpi'] < 300:
             dpi = 300
             if settings._low_resolution_warning:
                 logg.msg('... you are using a very low resolution for saving figures, adjusting to dpi=300', v=4)
