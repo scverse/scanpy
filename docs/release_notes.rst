@@ -1,81 +1,90 @@
-See all releases `here <https://github.com/theislab/scanpy/releases>`_. The following lists selected improvements.
+See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.4.4/>`_. See a list of all releases `here <https://github.com/theislab/scanpy/releases>`_.
 
 
 **Soon**
 
 - more canonical analyses steps like clustering genes, computing correlations...
 
+- exporting to Gephi from :class:`~scanpy.api.Neighbors`
+  
 
-**March..., 2018**: version 1.0
+**March 28, 2018**: version 1.0
 
-.. note::
+Scanpy is much faster. A standard analysis of 130k cells now takes about `14 min
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130k.txt>`_. A
+standard analysis of 1.3M cells takes about `6 h
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_1.3M.txt>`_.
 
-    Instead of tSNE, we recommend UMAP [McInnes18]_ as a first visualization of the data.
+The API gained a preprocessing function :func:`~scanpy.api.pp.neighbors` and a
+class :func:`~scanpy.api.Neighbors` to which all basic graph computations are
+delegated. By that, the used data representation in pipelines is more
+transparent and tools are less bloated with parameters.
 
 .. warning::
 
-   Upgrading to 1.0 isn't fully backwards compat. First, you need to run ``conda
-   install numba`` as new dependency (others have disappeared).
+   Upgrading to 1.0 isn't fully backwards compatible.
+
+   - the graph-based tools :func:`~scanpy.api.tl.louvain`
+   :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
+   :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
+   :func:`~scanpy.api.tl.paga` now require a prior computtion of the graph::
+     
+         sc.pp.neighbors(adata, n_neighbors=5)
+         sc.tl.louvain(adata)
+     
+     instead of previously::
+     
+         sc.tl.louvain(adata, n_neighbors=5)
+         
+   - install `numba` via ``conda install numba``, which replaces cython
+      
+   - the default connectivity measure (dpt will look different using default
+     settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
+     gauss kernel connectivities and reproduces the previous behavior,
+     see, for instance this `example
+     <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`_
+
+   - namings of returned annotation have changed for less bloated AnnData
+     objects, which means that some of the unstructured annotation of old
+     AnnData files is not recognized anymore
 
    - replace occurances of `group_by` with `groupby` (consistency with
-     `pandas`), of `flavor` with `method`
+     `pandas`)     
 
-   - note that the default number of neighbors for constructing the single-cell
-     graph changed from `n_neighbors=30` to `n_neighbors=15`
+Further changes are as follows
+   
+- UMAP [McInnes18]_ can serve as a first visualization of the data just as
+  tSNE. In contrast to tSNE, UMAP directly embeds the single-cell graph and is
+  faster.
 
-   - cleaner nested structure of storing unstructered annotations as dicts
+- graph abstraction: AGA is renamed to PAGA :func:`~scanpy.api.tl.paga`. now, it
+  only measures connectivities between partitions of the single-cell graph,
+  pseudotime and clustering need to be computed separately via
+  :func:`~scanpy.api.tl.louvain` and :func:`~scanpy.api.tl.dpt`, the
+  connectivity measure has been improved  
+           
+- logistic regression for finding marker genes
+  :func:`~scanpy.api.tl.rank_genes_groups` with parameter `metfod='logreg'`
 
-- :func:`~scanpy.api.tl.louvain` now provides a better implementation for reclustering via `restrict_to`.
-
-- basic single-cell graph now available as
-  ``.uns['neighbors']['connectivities']`` after call of
-  :func:`~scanpy.api.pp.neighbors`. Alternatively, you can use :class:`~scanpy.api.Neighbors.connectivities` after
-  call of `Neighbors.compute_neighbors`. :class:`~scanpy.api.Neighbors` also provides access to
-  transition matrices, laplacians etc.
-      
-- logistic regrssion for finding marker genes :func:`~scanpy.api.rank_genes_groups` with parameter `metfod='logreg'`
-      
-- scanpy no longer modifies rcParams upon import, simple call `sc.settings.set_figure_params(scanpy=True)` to set the `scanoy` style
+- :func:`~scanpy.api.tl.louvain` now provides a better implementation for
+  reclustering via `restrict_to`        
+        
+- scanpy no longer modifies rcParams upon import, call
+  :func:`~scanpy.api.settings.set_figure_params` to set the 'scanpy style'
       
 - new cache directory is now ``./cache/``
 
-- show edges in scatter plots
+- show edges in scatter plots based on graph visualization
+  :func:`~scanpy.api.tl.draw_graph` and :func:`~scanpy.api.umap` by passing
+  `edges=True`
 
-- neighbors class
-  * distances as .distances
-  * connectivities as .connectivities
-  * transition matrix as .transitions
-
-- changed connectivity measure (dpt will look different in default) set `method='gauss'` to use connectivities from gauss kernel
-
-- downsample_counts function
+- :func:`~scanpy.api.pp.downsample_counts` function
 
 - default 'louvain_groups' are now called 'louvain'
 
-- X_diffmap now contains the zero component, plotting unchanged
+- 'X_diffmap' now contains the zero component, plotting remains unchanged
+     
   
-- paul15_raw is no longer available and now is called paul15
-   
-- seurat preprocessing recipe
-
-- removed cython stuff
-
-  
-3. exporting to Gephi...
-
-Graph tools now require explicitly constructing the neighborhood graphs as a preprocessing step::
-
-    sc.pp.neighbors(adata, n_neighbors=5, knn=False)
-    sc.tl.draw_graph(adata)
-    sc.tl.dpt(adata, n_branchings=1)
-    sc.tl.louvain(adata, resolution=1.5)
-
-instead of previously::
-
-    sc.tl.draw_graph(adata, n_neighbors=5)
-    sc.tl.dpt(adata, n_branchings=1, n_neighbors=5, knn=False)  # n_neighbors not necessary
-    sc.tl.louvain(adata, resolution=1.5, n_neighbors=5)  # n_neighbors not necessary
-
 
 **February 26, 2018**: version 0.4.4
 

@@ -56,20 +56,26 @@ Tools: TL
    tl.pca
    tl.tsne
    tl.umap
-   tl.diffmap
    tl.draw_graph
+   tl.diffmap
 
-**Branching trajectories and pseudotime, clustering, differential expression**
+**Clustering, branching trajectories and pseudotime based on single-cell neighborhood graph**
 
 .. autosummary::
    :toctree: .
 
-   tl.aga
    tl.louvain
    tl.dpt
+   tl.paga
+
+**Marker genes**
+
+.. autosummary::
+   :toctree: .
+
    tl.rank_genes_groups
 
-**Gene scores, gene correlation**
+**Gene scores**
 
 .. autosummary::
    :toctree: .
