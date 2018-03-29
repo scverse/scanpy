@@ -115,6 +115,9 @@ def compute_euclidean_distances_using_matrix_mult(X, Y):
     np.maximum(distances, 0, out=distances)
     if X is Y:
         distances.flat[::distances.shape[0] + 1] = 0.
+    # print(distances)
+    # print(distances[distances < 0])
+    # distances[distances < 0] = 0  # set to 0
     distances = np.sqrt(distances)
     return distances
 
