@@ -10,3 +10,4 @@ statsmodels
 networkx
 natsort
 joblib
+numba
