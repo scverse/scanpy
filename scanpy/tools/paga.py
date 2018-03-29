@@ -8,10 +8,9 @@ from .. import utils
 from .. import settings
 
 
-def paga(adata,
+def paga(
+        adata,
         groups='louvain',
-        # threshold=0.01,
-        tree_based_confidence=False,
         n_jobs=None,
         copy=False):
     """\
@@ -33,12 +32,6 @@ def paga(adata,
         graph. 'louvain_groups' uses the Louvain algorithm and optimizes
         modularity of the graph. You can also pass your predefined groups by
         choosing any categorical annotation of observations (`adata.obs`).
-    tree_based_confidence : `bool`, optional (default: `True`)
-        Have high confidence in a connection if its connectivities is
-        significantly higher than the median connectivities of the global spanning
-        tree of the abstracted graph.
-    n_jobs : `int` or None (default: `sc.settings.n_jobs`)
-        Number of CPUs to use for parallel processing.
     copy : `bool`, optional (default: `False`)
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return None.
@@ -62,7 +55,7 @@ def paga(adata,
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
-    paga = PAGA(adata, groups, tree_based_confidence=tree_based_confidence)
+    paga = PAGA(adata, groups)
     paga.compute()
     adata.uns['paga'] = {}
     adata.uns['paga']['connectivities'] = paga.connectivities_coarse
@@ -80,10 +73,8 @@ def paga(adata,
 
 
 class PAGA(Neighbors):
-    """Statistical Graph Abstraction.
-    """
 
-    def __init__(self, adata, groups, threshold=0.05, tree_based_confidence=True):
+    def __init__(self, adata, groups, threshold=0.05, tree_based_confidence=False):
         super(PAGA, self).__init__(adata)
         self._groups = groups
         self.threshold = threshold

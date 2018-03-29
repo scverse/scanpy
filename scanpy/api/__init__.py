@@ -37,8 +37,6 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 
 **Neighbors**
 
-Compute a neighborhood-graph representation of the data, usually a knn-graph.
-
 .. autosummary::
    :toctree: .
 
@@ -59,7 +57,7 @@ Tools: TL
    tl.draw_graph
    tl.diffmap
 
-**Clustering, branching trajectories and pseudotime based on single-cell neighborhood graph**
+**Clustering, branching trajectories and pseudotime based on single-cell graph**
 
 .. autosummary::
    :toctree: .
@@ -134,14 +132,14 @@ For any method in module `tl`, there is a method with the same name in `pl`.
 .. autosummary::
    :toctree: .
 
-   pl.aga
-   pl.aga_graph
-   pl.aga_path
    pl.louvain
    pl.dpt
    pl.dpt_scatter
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
+   pl.paga
+   pl.paga_path
+   pl.paga_compare
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
 
@@ -233,9 +231,7 @@ Datasets
 Settings and Logging
 --------------------
 
-Global settings.
-
-One function `settings.set_figure_params`.
+Note the functions `settings.set_figure_params` and `logging.print_versions()`.
 
 ==============================================  ===================================
 `settings.verbosity`                            Verbosity level (default: 1).
@@ -255,13 +251,6 @@ The verbosity levels have the following meaning:
  4   Show very detailed progress.
 ...  Show even more detailed progress.
 ===  ======================================
-
-Logging.
-
-================================================  ===================================
-`logging.print_version_and_date()`                Print the version and the date.
-`logging.print_versions_dependencies_numerics()`  Print the versions of dependencies.
-================================================  ===================================
 
 """
 

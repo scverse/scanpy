@@ -10,24 +10,24 @@ See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.
 
 **March 28, 2018**: version 1.0
 
-Scanpy is much faster. A standard analysis of 130k cells now takes about `14 min
+Scanpy is much faster and memory efficient. A clustering analysis of 130k cells now takes about `14 min
 <https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130k.txt>`_. A
-standard analysis of 1.3M cells takes about `6 h
+clustering analysis of 1.3M cells takes about `6 h
 <https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_1.3M.txt>`_.
 
 The API gained a preprocessing function :func:`~scanpy.api.pp.neighbors` and a
 class :func:`~scanpy.api.Neighbors` to which all basic graph computations are
-delegated. By that, the used data representation in pipelines is more
-transparent and tools are less bloated with parameters.
+delegated. By that, the used data representation in pipelines became more
+transparent and tools less bloated with parameters.
 
 .. warning::
 
    Upgrading to 1.0 isn't fully backwards compatible.
 
    - the graph-based tools :func:`~scanpy.api.tl.louvain`
-   :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
-   :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
-   :func:`~scanpy.api.tl.paga` now require a prior computtion of the graph::
+     :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
+     :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
+     :func:`~scanpy.api.tl.paga` now require prior computation of the graph::
      
          sc.pp.neighbors(adata, n_neighbors=5)
          sc.tl.louvain(adata)
@@ -57,17 +57,18 @@ transparent and tools are less bloated with parameters.
    - upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
      some results might therefore look slightly different
 
-Further changes are as follows
+Further changes are
    
-- UMAP [McInnes18]_ can serve as a first visualization of the data just as
-  tSNE. In contrast to tSNE, UMAP directly embeds the single-cell graph and is
-  faster.
+- UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
+  in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
+  UMAP is now also used for measuring connectivities and computing neighbors,
+  see :func:`~scanpy.api.pp.neighbors`
 
-- graph abstraction: AGA is renamed to PAGA :func:`~scanpy.api.tl.paga`. now, it
-  only measures connectivities between partitions of the single-cell graph,
+- graph abstraction: AGA is renamed to PAGA: :func:`~scanpy.api.tl.paga`; now,
+  it only measures connectivities between partitions of the single-cell graph,
   pseudotime and clustering need to be computed separately via
   :func:`~scanpy.api.tl.louvain` and :func:`~scanpy.api.tl.dpt`, the
-  connectivity measure has been improved  
+  connectivity measure has been improved
            
 - logistic regression for finding marker genes
   :func:`~scanpy.api.tl.rank_genes_groups` with parameter `metfod='logreg'`
