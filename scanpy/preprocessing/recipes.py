@@ -2,6 +2,7 @@
 """
 
 from . import simple as pp
+from .. import logging as logg
 
 
 def recipe_weinreb17(adata, log=True, mean_threshold=0.01, cv_threshold=2,
