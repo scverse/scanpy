@@ -257,7 +257,7 @@ def paga(
         Increase or decrease the size of the nodes.
     node_size_power : float (default: 0.5)
         The power with which groups sizes influence the radius of the nodes.
-    edge_width_scale : `float`, optional (default: 1.5)
+    edge_width_scale : `float`, optional (default: 5)
         Edge with scale in units of `rcParams['lines.linewidth']`.
     min_edge_width : `float`, optional (default: `None`)
         Min width of solid edges.
@@ -492,7 +492,7 @@ def _paga_graph(
     if len(pos) == 1: pos[0] = (0.5, 0.5)
 
     # edge widths
-    base_edge_width = edge_width_scale * rcParams['lines.linewidth']
+    base_edge_width = edge_width_scale * 5 * rcParams['lines.linewidth']
 
     # draw dashed edges
     if dashed_edges is not None:
