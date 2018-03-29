@@ -1,7 +1,7 @@
 # stuff necessary for docs generation
 numpydoc
 # same as ../requires.txt, but omitting the c++ packages
-anndata>=0.5.7
+anndata>=0.5.8
 matplotlib
 pandas
 scipy
