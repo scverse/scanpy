@@ -235,11 +235,7 @@ Settings and Logging
 
 Global settings.
 
-.. autosummary::
-   :toctree: .
-   
-   settings.set_figure_params
-
+One function `settings.set_figure_params`.
 
 ==============================================  ===================================
 `settings.verbosity`                            Verbosity level (default: 1).

@@ -49,7 +49,13 @@ transparent and tools are less bloated with parameters.
      AnnData files is not recognized anymore
 
    - replace occurances of `group_by` with `groupby` (consistency with
-     `pandas`)     
+     `pandas`)
+
+   - it is worth checking out the notebook examples to see changes, e.g., `here
+     <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb>`_
+
+   - upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
+     some results might therefore look slightly different
 
 Further changes are as follows
    
@@ -70,7 +76,7 @@ Further changes are as follows
   reclustering via `restrict_to`        
         
 - scanpy no longer modifies rcParams upon import, call
-  :func:`~scanpy.api.settings.set_figure_params` to set the 'scanpy style'
+  `settings.set_figure_params` to set the 'scanpy style'
       
 - new cache directory is now ``./cache/``
 
