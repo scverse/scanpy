@@ -26,7 +26,7 @@ def neighbors(
         metric_kwds={},
         copy=False):
     """\
-    Compute a neighborhood graph of data points [McInnes18]_.
+    Compute a neighborhood graph of observations [McInnes18]_.
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
