@@ -1,21 +1,23 @@
-import numpy as np
-from ..tools.pca import pca
+from .. utils import doc_params
+from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 from .. import logging as logg
 
 
+@doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
         adata,
-        n_pcs=50,
+        n_pcs=None,
+        use_rep=None,
         perplexity=30,
         early_exaggeration=12,
         learning_rate=1000,
         random_state=0,
         use_fast_tsne=True,
-        recompute_pca=False,
         n_jobs=None,
         copy=False):
-    """t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
+    """\
+    t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
     t-distributed stochastic neighborhood embedding (tSNE) [Maaten08]_ has been
     proposed for visualizating single-cell data by [Amir13]_. Here, by default,
@@ -28,9 +30,8 @@ def tsne(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_pcs : `int`, optional (default: 50)
-        Number of principal components in preprocessing PCA. Set to 0 if you
-        do not want preprocessing with PCA.
+    {doc_n_pcs}
+    {use_rep}
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -70,23 +71,7 @@ def tsne(
     """
     logg.info('computing tSNE', r=True)
     adata = adata.copy() if copy else adata
-    # preprocessing by PCA
-    if (n_pcs > 0
-        and 'X_pca' in adata.obsm_keys()
-        and adata.obsm['X_pca'].shape[1] >= n_pcs
-        and not recompute_pca):
-        X = adata.obsm['X_pca'][:, :n_pcs]
-        logg.info('    using \'X_pca\' with n_pcs = {} for tSNE'
-                  .format(n_pcs))
-    else:
-        if n_pcs > 0 and adata.X.shape[1] > n_pcs:
-            logg.info('    computing \'X_pca\' with n_pcs = {}'.format(n_pcs))
-            logg.hint('avoid this by setting n_pcs = 0')
-            X = pca(adata.X, random_state=random_state, n_comps=n_pcs)
-            adata.obsm['X_pca'] = X
-        else:
-            X = adata.X
-            logg.info('    using data matrix X directly (no PCA)')
+    X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
     params_sklearn = {'perplexity': perplexity,
                       'random_state': random_state,
@@ -101,8 +86,9 @@ def tsne(
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
-            logg.info('    using the "MulticoreTSNE" package by Ulyanov (2017)')
-            X_tsne = tsne.fit_transform(X.astype(np.float64))
+            logg.info('    using the \'MulticoreTSNE\' package by Ulyanov (2017)')
+            # need to transform to float64 for MulticoreTSNE...
+            X_tsne = tsne.fit_transform(X.astype('float64'))
             multicore_failed = False
         except ImportError:
             logg.warn('Consider installing the package MulticoreTSNE '
@@ -121,5 +107,5 @@ def tsne(
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'X_tsne\', tSNE coordinates (adata.obs)')
+              '    \'X_tsne\', tSNE coordinates (adata.obsm)')
     return adata if copy else None

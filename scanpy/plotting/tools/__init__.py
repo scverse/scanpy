@@ -12,14 +12,13 @@ from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
-from . import utils
-from .. import utils as sc_utils
-from .. import settings
-from .. import logging as logg
-
-from .anndata import scatter, ranking
-from .utils import matrix
-from .utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from .. import utils
+from ... import utils as sc_utils
+from ... import settings
+from ... import logging as logg
+from ..anndata import scatter, ranking
+from ..utils import matrix
+from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 
 # ------------------------------------------------------------------------------
 # Visualization tools
@@ -34,7 +33,7 @@ def pca(adata, **params):
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -100,15 +99,53 @@ def pca_scatter(
         ax=None):
     """Scatter plot in PCA coordinates.
 
-    See parameters of :func:`~scanpy.api.pl.pca`.
-
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    layout : {'fr', 'drl', ...}, optional (default: last computed)
+        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
+        the last computed layout is taken.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    components : str or list of str, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : matplotlib.Axes
          A matplotlib axes object.
+
+    Returns
+    -------
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -139,7 +176,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     components : str or list of integers, optional
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
@@ -168,8 +205,8 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     """
-    ranking(adata, 'uns', 'pca_variance_ratio', labels='PC', log=log)
-    utils.savefig_or_show('pca_ranking_variance', show=show, save=save)
+    ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
+    utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
 def diffmap(
@@ -195,7 +232,7 @@ def diffmap(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -269,15 +306,18 @@ def diffmap(
             [str(comp) for comp in components])
         writekey += ('_components' + components.replace(',', '')
                      + (save if isinstance(save, str) else ''))
-        if settings.savefigs or (save is not None):
+        if settings.autosave or (save is not None):
             utils.savefig(writekey)
     show = settings.autoshow if show is None else show
-    if not settings.savefigs and show: pl.show()
+    if not settings.autosave and show: pl.show()
     if show == False: return axs
 
 
 def draw_graph(
         adata,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
         layout=None,
         color=None,
         use_raw=True,
@@ -300,8 +340,14 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
+    edges : `bool`, optional (default: `False`)
+        Show edges.
+    edges_width : `float`, optional (default: 0.1)
+        Width of edges.
+    edges_color : matplotlib color, optional (default: 'grey')
+        Color of edges.
     layout : {'fr', 'drl', ...}, optional (default: last computed)
         One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
         the last computed layout is taken.
@@ -343,15 +389,17 @@ def draw_graph(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
-    if layout is None: layout = str(adata.uns['draw_graph_params']['layout'])
-    if 'X_draw_graph_' + layout not in adata.obsm_keys():
+    if layout is None: layout = str(adata.uns['draw_graph']['params']['layout'])
+    basis = 'draw_graph_' + layout
+    if 'X_' + basis not in adata.obsm_keys():
         raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
     axs = scatter(
         adata,
-        basis='draw_graph_' + layout,
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -367,9 +415,17 @@ def draw_graph(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges:
+        for ax in axs:
+            g = nx.Graph(adata.uns['neighbors']['connectivities'])
+            edge_collection = nx.draw_networkx_edges(
+                g, adata.obsm['X_' + basis],
+                ax=ax, width=edges_width, edge_color=edges_color)
+            edge_collection.set_zorder(-2)
+    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs
 
 
@@ -394,7 +450,7 @@ def tsne(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -432,7 +488,8 @@ def tsne(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -479,7 +536,7 @@ def umap(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -521,7 +578,8 @@ def umap(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     axs = scatter(
         adata,
@@ -572,7 +630,6 @@ def aga(
         left_margin=0.05,
         show=None,
         save=None,
-        ext=None,
         title_graph=None,
         groups_graph=None,
         color_graph=None,
@@ -627,7 +684,7 @@ def aga(
     aga_graph(adata, ax=axs[1], show=False, save=False, title=title_graph,
               groups=groups_graph, color=color_graph, **aga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
-    utils.savefig_or_show('aga', show=show, save=save, ext=ext)
+    utils.savefig_or_show('aga', show=show, save=save)
     if show == False: return axs
 
 
@@ -654,7 +711,7 @@ def aga_scatter(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -687,36 +744,44 @@ def aga_scatter(
 
     Returns
     -------
-    matplotlib.Axes object
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     if color is None:
         color = [adata.uns['aga_groups_key']]
     if not isinstance(color, list): color = [color]
-    ax = scatter(adata,
-                 basis=basis,
-                 color=color,
-                 alpha=alpha,
-                 groups=groups,
-                 components=components,
-                 projection=projection,
-                 legend_loc=legend_loc,
-                 legend_fontsize=legend_fontsize,
-                 legend_fontweight=legend_fontweight,
-                 color_map=color_map,
-                 palette=palette,
-                 right_margin=right_margin,
-                 size=size,
-                 title=title,
-                 ax=ax,
-                 show=False)
+    kwds = {}
+    if 'draw_graph' in basis:
+        scatter_func = draw_graph
+        kwds['edges'] = True
+    else:
+        scatter_func = scatter
+        kwds['basis'] = basis
+    axs = scatter_func(
+        adata,
+        color=color,
+        alpha=alpha,
+        groups=groups,
+        components=components,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        ax=ax,
+        show=False,
+        **kwds)
     utils.savefig_or_show('aga_' + basis, show=show, save=save)
-    if show == False: return ax
+    if show == False: return axs
 
 
 def aga_graph(
         adata,
-        solid_edges='aga_adjacency_tree_confidence',
-        dashed_edges='aga_adjacency_full_confidence',
+        solid_edges='aga_adjacency_full_confidence',
+        dashed_edges=None,
         layout=None,
         root=0,
         groups=None,
@@ -730,7 +795,6 @@ def aga_graph(
         min_edge_width=None,
         max_edge_width=None,
         title='abstracted graph',
-        ext='png',
         left_margin=0.01,
         random_state=0,
         pos=None,
@@ -795,7 +859,7 @@ def aga_graph(
         Min width of solid edges.
     max_edge_width : `float`, optional (default: `None`)
         Max width of solid and dashed edges.
-    pos : filename of `.gdf` file, array-like, optional (default: `None`)
+    pos : array-like, filename of `.gdf` file,  optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
@@ -819,7 +883,8 @@ def aga_graph(
 
     Returns
     -------
-    If `ax` is `None`, a matplotlib.Axes or an array of matplotlib.Axes.
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
 
     If `return_pos` is `True`, in addition, the positions of the nodes.
     """
@@ -872,14 +937,12 @@ def aga_graph(
             random_state=0,
             export_to_gexf=export_to_gexf,
             pos=pos)
-    if ext == 'pdf':
-        logg.warn('Be aware that saving as pdf exagerates thin lines, use "svg" instead.')
-    utils.savefig_or_show('aga_graph', show=show, ext=ext, save=save)
+    utils.savefig_or_show('aga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
     if return_pos:
-        return axs, pos if ax is None and show == False else pos
+        return (axs, pos) if show == False else pos
     else:
-        return axs if ax is None and show == False else None
+        return axs if show == False else None
 
 
 def _aga_graph(
@@ -978,17 +1041,19 @@ def _aga_graph(
             layout = 'fr'
         # igraph layouts
         if layout != 'eq_tree':
-            from .. import utils as sc_utils
-            g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
+            from ... import utils as sc_utils
+            adj_solid_weights = adjacency_solid
+            g = sc_utils.get_igraph_from_adjacency(adj_solid_weights)
             if 'rt' in layout:
-                pos_list = g.layout(layout, root=root if isinstance(root, list) else [root],
-                                    rootlevel=rootlevel).coords
+                pos_list = g.layout(
+                    layout, root=root if isinstance(root, list) else [root],
+                    rootlevel=rootlevel).coords
             elif layout == 'circle':
                 pos_list = g.layout(layout).coords
             else:
                 np.random.seed(random_state)
                 init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
-                pos_list = g.layout(layout, seed=init_coords).coords
+                pos_list = g.layout(layout, seed=init_coords, weights='weight').coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         # equally-spaced tree
         else:
@@ -1147,9 +1212,9 @@ def aga_path(
         adata,
         nodes,
         keys,
-        annotations=['aga_pseudotime'],
+        annotations=['dpt_pseudotime'],
         color_map=None,
-        color_maps_annotations={'aga_pseudotime': 'Greys'},
+        color_maps_annotations={'dpt_pseudotime': 'Greys'},
         palette_groups=None,
         n_avg=1,
         groups_key=None,
@@ -1181,12 +1246,12 @@ def aga_path(
     keys : list of str
         Either variables in `adata.var_names` or annotations in
         `adata.obs`. They are plotted using `color_map`.
-    annotations : list of annotations, optional (default: ['aga_pseudotime'])
+    annotations : list of annotations, optional (default: ['dpt_pseudotime'])
         Plot these keys with `color_maps_annotations`. Need to be keys for
         `adata.obs`.
     color_map : color map for plotting keys or `None`, optional (default: `None`)
         Matplotlib colormap.
-    color_maps_annotations : dict storing color maps or `None`, optional (default: {'aga_pseudotime': 'Greys'})
+    color_maps_annotations : dict storing color maps or `None`, optional (default: {'dpt_pseudotime': 'Greys'})
         Color maps for plotting the annotations. Keys of the dictionary must
         appear in `annotations`.
     palette_groups : list of colors or `None`, optional (default: `None`)
@@ -1232,7 +1297,7 @@ def aga_path(
                 'using the parameter `groups_key`.')
         groups_key = adata.uns['aga_groups_key']
     groups_names = adata.obs[groups_key].cat.categories
-    
+
     if palette_groups is None:
         utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         palette_groups = adata.uns[groups_key + '_colors']
@@ -1273,7 +1338,7 @@ def aga_path(
                     '`adata.obs[{}].values == str({})`.'
                     'Check whether adata.obs[{}] actually contains what you expect.'
                     .format(groups_key, group, groups_key))
-            idcs_group = np.argsort(adata.obs['aga_pseudotime'].values[
+            idcs_group = np.argsort(adata.obs['dpt_pseudotime'].values[
                 adata.obs[groups_key].values == nodes_strs[igroup]])
             idcs = idcs[idcs_group]
             if key in adata.obs_keys(): x += list(adata.obs[key].values[idcs])
@@ -1382,9 +1447,7 @@ def aga_path(
                                    interpolation='nearest',
                                    cmap=color_map_anno)
             if show_yticks:
-                # rename the label for 'aga_pseudotime'
-                label = anno.replace('aga_pseudotime', 'pseudotime')
-                anno_axis.set_yticklabels(['', label, ''],
+                anno_axis.set_yticklabels(['', anno, ''],
                                           fontsize=ytick_fontsize)
                 anno_axis.tick_params(axis='both', which='both', length=0)
             else:
@@ -1399,38 +1462,38 @@ def aga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = anno_dict['aga_pseudotime'].T
+        df['distance'] = anno_dict['dpt_pseudotime'].T
         return ax, df if ax_was_none and show == False else df
     else:
         return ax if ax_was_none and show == False else None
 
 
-def aga_attachedness(
+def aga_connectivity(
         adata,
-        attachedness_type='scaled',
+        connectivity_type='scaled',
         color_map=None,
         show=None,
         save=None):
-    """Attachedness of aga groups.
+    """Connectivity of aga groups.
     """
-    if attachedness_type == 'scaled':
-        attachedness = adata.uns['aga_attachedness']
-    elif attachedness_type == 'distance':
-        attachedness = adata.uns['aga_distances']
-    elif attachedness_type == 'absolute':
-        attachedness = adata.uns['aga_attachedness_absolute']
+    if connectivity_type == 'scaled':
+        connectivity = adata.uns['aga_connectivity']
+    elif connectivity_type == 'distance':
+        connectivity = adata.uns['aga_distances']
+    elif connectivity_type == 'absolute':
+        connectivity = adata.uns['aga_connectivity_absolute']
     else:
-        raise ValueError('Unkown attachedness_type {}.'.format(attachedness_type))
+        raise ValueError('Unkown connectivity_type {}.'.format(connectivity_type))
     adjacency = adata.uns['aga_adjacency']
-    matrix(attachedness, color_map=color_map, show=False)
+    matrix(connectivity, color_map=color_map, show=False)
     for i in range(adjacency.shape[0]):
         neighbors = adjacency[i].nonzero()[1]
         pl.scatter([i for j in neighbors], neighbors, color='green')
-    utils.savefig_or_show('aga_attachedness', show=show, save=save)
+    utils.savefig_or_show('aga_connectivity', show=show, save=save)
     # as a stripplot
     if False:
         pl.figure()
-        for i, ds in enumerate(attachedness):
+        for i, ds in enumerate(connectivity):
             ds = np.log1p(ds)
             x = [i for j, d in enumerate(ds) if i != j]
             y = [d for j, d in enumerate(ds) if i != j]
@@ -1463,7 +1526,7 @@ def dpt(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
@@ -1575,7 +1638,7 @@ def dpt_scatter(
             projection=projection,
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
+            legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
             right_margin=right_margin,
@@ -1583,9 +1646,7 @@ def dpt_scatter(
             title=title,
             show=False)
         writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
-        save = False if save is None else save
-        if settings.savefigs or save: utils.savefig(writekey)
-    utils.savefig_or_show(writekey, show=show, save=False)
+        utils.savefig_or_show(writekey, show=show, save=save)
 
 
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
@@ -1620,7 +1681,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
     """Plot groups and pseudotime."""
     pl.figure()
     pl.subplot(211)
-    timeseries_subplot(np.asarray(adata.obs['dpt_groups']),
+    timeseries_subplot(adata.obs['dpt_groups'].cat.codes,
                        time=adata.obs['dpt_order'].values,
                        color=np.asarray(adata.obs['dpt_groups']),
                        highlightsX=adata.uns['dpt_changepoints'],
@@ -1662,7 +1723,7 @@ def louvain(
 
     Parameters
     ----------
-    adata : AnnData
+    adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
@@ -1743,9 +1804,9 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
-    groups_key = str(adata.uns['rank_genes_groups_params']['group_by'])
-    reference = str(adata.uns['rank_genes_groups_params']['reference'])
-    group_names = (adata.uns['rank_genes_groups_gene_names'].dtype.names
+    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
+    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
+    group_names = (adata.uns['rank_genes_groups']['names'].dtype.names
                    if groups is None else groups)
     # one panel for each group
     n_panels = len(group_names)
@@ -1771,8 +1832,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
 
     for count, group_name in enumerate(group_names):
         pl.subplot(gs[count])
-        gene_names = adata.uns['rank_genes_groups_gene_names'][group_name]
-        scores = adata.uns['rank_genes_groups_gene_scores'][group_name]
+        gene_names = adata.uns['rank_genes_groups']['names'][group_name]
+        scores = adata.uns['rank_genes_groups']['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             pl.text(ig, scores[ig], gene_names[ig],
                     rotation='vertical', verticalalignment='bottom',
@@ -1786,7 +1847,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
     writekey = ('rank_genes_groups_'
-                + str(adata.uns['rank_genes_groups_params']['group_by']))
+                + str(adata.uns['rank_genes_groups']['params']['groupby']))
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
@@ -1833,17 +1894,17 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         A `matplotlib.Axes` object.
     """
     from ..tools import rank_genes_groups
-    groups_key = str(adata.uns['rank_genes_groups_params']['group_by'])
+    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
     if use_raw is None:
-        use_raw = bool(adata.uns['rank_genes_groups_params']['use_raw'])
-    reference = str(adata.uns['rank_genes_groups_params']['reference'])
-    groups_names = (adata.uns['rank_genes_groups_gene_names'].dtype.names
+        use_raw = bool(adata.uns['rank_genes_groups']['params']['use_raw'])
+    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
+    groups_names = (adata.uns['rank_genes_groups']['names'].dtype.names
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
         keys = []
         gene_names = adata.uns[
-            'rank_genes_groups_gene_names'][group_name][:n_genes]
+            'rank_genes_groups']['names'][group_name][:n_genes]
         if computed_distribution:
             for gene_counter, gene_name in enumerate(gene_names):
                 identifier = rank_genes_groups._build_identifier(
@@ -1889,7 +1950,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         else: ax.set_ylabel('expression')
         ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
-                    + str(adata.uns['rank_genes_groups_params']['group_by'])
+                    + str(adata.uns['rank_genes_groups']['params']['groupby'])
                     + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
 
@@ -1913,7 +1974,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     show : bool, optional (default: None)
         Show the plot, do not return axis.
     """
-    from .. import utils as sc_utils
+    from ... import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
     elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
     else: tmax = adata.n_obs

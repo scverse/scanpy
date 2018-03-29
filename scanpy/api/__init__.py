@@ -33,7 +33,16 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    :toctree: .
 
    pp.recipe_zheng17
-   pp.recipe_weinreb16
+   pp.recipe_weinreb17
+
+**Neighbors**
+
+Compute a neighborhood-graph representation of the data, usually a knn-graph.
+
+.. autosummary::
+   :toctree: .
+
+   pp.neighbors
 
 
 Tools: TL
@@ -47,20 +56,26 @@ Tools: TL
    tl.pca
    tl.tsne
    tl.umap
-   tl.diffmap
    tl.draw_graph
+   tl.diffmap
 
-**Branching trajectories and pseudotime, clustering, differential expression**
+**Clustering, branching trajectories and pseudotime based on single-cell neighborhood graph**
 
 .. autosummary::
    :toctree: .
 
-   tl.aga
    tl.louvain
    tl.dpt
+   tl.paga
+
+**Marker genes**
+
+.. autosummary::
+   :toctree: .
+
    tl.rank_genes_groups
 
-**Gene scores, gene correlation**
+**Gene scores**
 
 .. autosummary::
    :toctree: .
@@ -76,79 +91,8 @@ Tools: TL
    tl.sim
 
 
-Reading and Writing
--------------------
-
-*Note:* For reading annotation use
-`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
-it to your `AnnData` object. The following read functions are intended for
-the numeric data in the data matrix `X`.
-
-Read common file formats using
-
-.. autosummary::
-   :toctree: .
-
-   read
-
-Read 10x formatted hdf5 files using
-
-.. autosummary::
-   :toctree: .
-
-   read_10x_h5
-
-Read other formats using functions borrowed from `anndata
-<http://anndata.readthedocs.io>`_
-
-.. autosummary::
-   :toctree: .
-
-   read_h5ad
-   read_csv
-   read_excel
-   read_hdf
-   read_loom
-   read_mtx
-   read_text
-   read_umi_tools
-
-For writing, use `AnnData.write_… <http://anndata.readthedocs.io/en/latest/api.html>`_.
-
-
-Exporting
----------
-
-.. autosummary::
-   :toctree: .
-
-   export_to.spring_project
-
-
-Datasets
---------
-
-.. autosummary::
-   :toctree: .
-
-   datasets.blobs
-   datasets.krumsiek11
-   datasets.moignard15
-   datasets.paul15
-   datasets.paul15_raw
-   datasets.toggleswitch
-
-
 Plotting: PL
 -------------
-
-.. autosummary::
-   :toctree: .
-
-   pl.set_rcParams_Scanpy
-   pl.set_rcParams_Defaults
-
-.. raw:: html
 
 **Generic plotting with AnnData**
 
@@ -209,17 +153,100 @@ For any method in module `tl`, there is a method with the same name in `pl`.
    pl.sim
 
 
-Settings
+Reading
+-------
+
+*Note:* For reading annotation use
+`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
+it to your `AnnData` object. The following read functions are intended for
+the numeric data in the data matrix `X`.
+
+Read common file formats using
+
+.. autosummary::
+   :toctree: .
+
+   read
+
+Read 10x formatted hdf5 files using
+
+.. autosummary::
+   :toctree: .
+
+   read_10x_h5
+
+Read other formats using functions borrowed from `anndata
+<http://anndata.readthedocs.io>`_
+
+.. autosummary::
+   :toctree: .
+
+   read_h5ad
+   read_csv
+   read_excel
+   read_hdf
+   read_loom
+   read_mtx
+   read_text
+   read_umi_tools
+
+Classes
+-------
+
+:class:`~scanpy.api.AnnData` is borrowed from `anndata <http://anndata.readthedocs.io>`_.
+
+.. autosummary::
+   :toctree: .
+
+   AnnData
+
+Represent data as a neighborhood structure, usually a knn graph.
+
+.. autosummary::
+   :toctree: .
+
+   Neighbors
+
+
+Exporting
+---------
+
+.. autosummary::
+   :toctree: .
+
+   export_to.spring_project
+
+
+Datasets
 --------
 
+.. autosummary::
+   :toctree: .
+
+   datasets.blobs
+   datasets.krumsiek11
+   datasets.moignard15
+   datasets.paul15
+   datasets.toggleswitch
+
+
+Settings and Logging
+--------------------
+
 Global settings.
+
+.. autosummary::
+   :toctree: .
+   
+   settings.set_figure_params
+
 
 ==============================================  ===================================
 `settings.verbosity`                            Verbosity level (default: 1).
 `settings.file_format_figs`                     Format for saving figures (default: 'png').
 `settings.figdir`                               Default directory for saving figures (default: './figures').
 `settings.autoshow`                             Automatically show figures (default: `True`).
-`settings.autoshow`                             Automatically show figures (default: `True`).
+`settings.autosave`                             Automatically save figures, do not show them (default: `False`).
 ==============================================  ===================================
 
 The verbosity levels have the following meaning:
@@ -233,27 +260,13 @@ The verbosity levels have the following meaning:
 ...  Show even more detailed progress.
 ===  ======================================
 
-
-Logging
--------
+Logging.
 
 ================================================  ===================================
 `logging.print_version_and_date()`                Print the version and the date.
 `logging.print_versions_dependencies_numerics()`  Print the versions of dependencies.
 ================================================  ===================================
 
-AnnData
--------
-
-This only temporarily replicates the docs of `anndata
-<http://anndata.readthedocs.io>`_. Occurances of :class:`~scanpy.api.AnnData`
-will directly link to `anndata
-<http://anndata.readthedocs.io>`_ in the future.
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
 """
 
 from anndata import AnnData
@@ -262,6 +275,7 @@ from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_te
 
 from .. import __version__
 
+from ..neighbors import Neighbors
 from .. import settings
 from .. import logging
 from . import tl
@@ -272,6 +286,5 @@ from . import pp
 preprocessing = pp
 from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
-from ..data_structs import DataGraph
 from .. import utils
 from . import export_to

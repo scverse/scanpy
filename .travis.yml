@@ -1,14 +1,7 @@
 language: python
 python:
-  #- "3.3"  # matplotlib requires Python 3.4 or later
-  #- "3.4"  # scikit-learn requires SciPy >= 0.9, SciPy 0.9 requires Python >= 3.5
-  - "3.5"
   - "3.6"
-  #- "nightly"  # takes long and is unlikely to fail
-install:
-  - "pip install -r requires.txt"
-  - "pip install docutils"
-  - "python setup.py build_ext --inplace"
+install: source .travis_install.sh
 script:
   - pytest
   - python setup.py check --restructuredtext --strict

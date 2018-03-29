@@ -11,7 +11,7 @@ import seaborn as sns
 
 from .. import settings
 from . import utils
-from .utils import scatter_base, scatter_group
+from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata
 
 VALID_LEGENDLOCS = {
@@ -20,11 +20,12 @@ VALID_LEGENDLOCS = {
     'lower center', 'upper center', 'center'
 }
 
+
 def scatter(
         adata,
         x=None,
         y=None,
-        color='grey',
+        color=None,
         use_raw=True,
         sort_order=True,
         alpha=None,
@@ -66,7 +67,7 @@ def scatter(
         with higher values on top of others.
     basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
-    groups : str, optional (default: all groups in color)
+    groups : `str`, optional (default: all groups in color)
         Allows to restrict categories in observation annotation to a subset.
     components : `str` or list of `str`, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
@@ -78,8 +79,10 @@ def scatter(
          <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
-    legend_fontweight : `int` (default: `None`)
-         Legend font weight.
+    legend_fontweight : {'normal', 'bold', ...} (default: `None`)
+         Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
+         otherwise to 'normal'. Available are `['light', 'normal', 'medium',
+         'semibold', 'bold', 'heavy', 'black']`.
     color_map : `str` (default: 'RdBu_r')
          String denoting matplotlib color map for continuous coloring.
     palette : list of `str` (default: `None`)
@@ -96,11 +99,12 @@ def scatter(
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
-         A matplotlib axes object.
+         A `matplotlib.Axes` object.
 
     Returns
     -------
-    A list of `matplotlib.Axis` objects.
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
     """
     sanitize_anndata(adata)
     if legend_loc not in VALID_LEGENDLOCS:
@@ -109,13 +113,17 @@ def scatter(
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
-    title = None if title is None else title.split(',') if isinstance(title, str) else title
-    keys = ['grey'] if color is None else color.split(',') if isinstance(color, str) else color
-    groups = None if groups is None else groups.split(',') if isinstance(groups, str) else groups
+    keys = ['grey'] if color is None else [color] if isinstance(color, str) else color
+    if title is not None and isinstance(title, str):
+        title = [title]
     highlights = adata.uns['highlights'] if 'highlights' in adata.uns else []
     if basis is not None:
         try:
+            # ignore the '0th' diffusion component
+            if basis == 'diffmap': components += 1
             Y = adata.obsm['X_' + basis][:, components]
+            # correct the component vector for use in labeling etc.
+            if basis == 'diffmap': components -= 1
         except KeyError:
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
@@ -124,7 +132,7 @@ def scatter(
         y_arr = adata._get_obs_array(y)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
-        raise ValueError('Either provide keys for a `basis` or for `x` and `y`.')
+        raise ValueError('Either provide a `basis` or `x` and `y`.')
 
     if size is None:
         n = Y.shape[0]
@@ -148,13 +156,13 @@ def scatter(
         palettes[i] = utils.default_palette(palette)
 
     if basis is not None:
-        component_name = ('DC' if basis == 'diffmap'
-                          else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-                          else 'tSNE' if basis == 'tsne'
-                          else 'UMAP' if basis == 'umap'
-                          else 'PC' if basis == 'pca'
-                          else 'Spring' if basis == 'spring'
-                          else None)
+        component_name = (
+            'DC' if basis == 'diffmap'
+            else 'tSNE' if basis == 'tsne'
+            else 'UMAP' if basis == 'umap'
+            else 'PC' if basis == 'pca'
+            else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+            else None)
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
@@ -192,10 +200,10 @@ def scatter(
                 c = adata[:, key].X
                 continuous = True
             else:
-                raise ValueError('"' + key + '" is invalid!'
-                                 + ' specify valid observation annotation, one of '
-                                 + str(adata.obs_keys()) + ' or a gene name '
-                                 + str(adata.var_names))
+                raise ValueError(
+                    'key \'{}\' is invalid! pass valid observation annotation, '
+                    'one of {} or a gene name {}'
+                    .format(key, adata.obs_keys(), adata.var_names))
             colorbars.append(True if continuous else False)
         if categorical: categoricals.append(ikey)
         color_ids[ikey] = c
@@ -265,12 +273,14 @@ def scatter(
                                     edgecolors='none', zorder=-1)
         legend = None
         if legend_loc == 'on data':
+            if legend_fontweight is None:
+                legend_fontweight = 'bold'
             for name, pos in centroids.items():
                 axs[ikey].text(pos[0], pos[1], name,
-                                     weight=legend_fontweight,
-                                     verticalalignment='center',
-                                     horizontalalignment='center',
-                                     fontsize=legend_fontsize)
+                               weight=legend_fontweight,
+                               verticalalignment='center',
+                               horizontalalignment='center',
+                               fontsize=legend_fontsize)
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),
@@ -283,10 +293,10 @@ def scatter(
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
-    if show == False: axs
+    if show == False: return axs
 
 
-def ranking(adata, attr, keys, indices=None,
+def ranking(adata, attr, keys, dictionary=None, indices=None,
             labels=None, color='black', n_points=30,
             log=False, show=None):
     """Plot rankings.
@@ -297,7 +307,7 @@ def ranking(adata, attr, keys, indices=None,
     ----------
     adata : AnnData
         The data.
-    attr : {'var', 'obs', 'add', 'varm', 'obsm'}
+    attr : {'var', 'obs', 'uns', 'varm', 'obsm'}
         The attribute of AnnData that contains the score.
     keys : str or list of str
         The scores to look up an array from the attribute of adata.
@@ -310,7 +320,10 @@ def ranking(adata, attr, keys, indices=None,
         scores = getattr(adata, attr)[keys][:, indices]
         keys = ['{}{}'.format(keys[:-1], i+1) for i in indices]
     else:
-        scores = getattr(adata, attr)[keys]
+        if dictionary is None:
+            scores = getattr(adata, attr)[keys]
+        else:
+            scores = getattr(adata, attr)[dictionary][keys]
     n_panels = len(keys) if isinstance(keys, list) else 1
     if n_panels == 1: scores, keys = scores[:, None], [keys]
     if log: scores = np.log(scores)
@@ -344,9 +357,9 @@ def ranking(adata, attr, keys, indices=None,
     if show == False: return gs
 
 
-def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
-           size=1, scale='width', order=None, multi_panel=False, show=None,
-           save=None, ax=None, **kwargs):
+def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
+           size=1, scale='width', order=None, multi_panel=None, show=None,
+           xlabel='', rotation=None, save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
@@ -357,14 +370,14 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         Annotated data matrix.
     keys : `str` or list of `str`
         Keys for accessing variables of `.var_names` or fields of `.obs`.
-    group_by : `str` or `None`, optional (default: `None`)
+    groupby : `str` or `None`, optional (default: `None`)
         The key of the observation grouping to consider.
     log : `bool`, optional (default: `False`)
         Plot on logarithmic axis.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    multi_panel : bool, optional
-        Show fields in multiple panels. Returns a `seaborn.FacetGrid` in that case.
+    multi_panel : `bool`, optional (default: `False`)
+        Display keys in multiple panels also when `groupby is not None`.
     jitter : `float` or `bool`, optional (default: `True`)
         See `seaborn.stripplot`.
     size : int, optional (default: 1)
@@ -376,7 +389,12 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
         each violin will have the same width.
-    show : bool, optional (default: `None`)
+    xlabel : `str`, optional (default: `''`)
+        Label of the x axis. Defaults to `groupby` if `rotation` is `None`,
+        otherwise, no label is shown.
+    rotation : `float`, optional (default: `None`)
+        Rotation of xtick labels.
+    show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -391,8 +409,6 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     A `matplotlib.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
-    if group_by is not None and isinstance(keys, list):
-        raise ValueError('Pass a single key as string if using `group_by`.')
     if isinstance(keys, str): keys = [keys]
     obs_keys = False
     for key in keys:
@@ -404,40 +420,52 @@ def violin(adata, keys, group_by=None, log=False, use_raw=True, jitter=True,
     if obs_keys:
         obs_df = adata.obs
     else:
-        if group_by is None: obs_df = pd.DataFrame()
-        else: obs_df = adata.obs.copy()
+        if groupby is None: obs_df = pd.DataFrame()
+        else: obs_df = pd.DataFrame(adata.obs[groupby])
         for key in keys:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, key].X
             else:
                 X_col = adata[:, key].X
             obs_df[key] = X_col
-    if group_by is None:
+    if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
-        y = 'value'
+        ys = ['value']
     else:
         obs_tidy = obs_df
-        x = group_by
-        y = keys[0]
+        x = groupby
+        ys = keys
     if multi_panel:
-        sns.set_style('whitegrid')
+        if len(ys) == 1: y = ys[0]
+        else: raise ValueError('Cannot be combined with `groupby != None`.')
         g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
         g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, **kwargs)
         g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
         if log: g.set(yscale='log')
-        ax = g
+        if rotation is not None:
+            for ax in g.axes[0]:
+                ax.tick_params(labelrotation=rotation)
+        axs = [g]
     else:
-        ax = sns.violinplot(x=x, y=y, data=obs_tidy, inner=None, order=order,
-                            orient='vertical', scale=scale, ax=ax, **kwargs)
-        ax = sns.stripplot(x=x, y=y, data=obs_tidy, order=order,
-                           jitter=jitter, color='black', size=size, ax=ax)
-        ax.set_xlabel('' if group_by is None else group_by.replace('_', ' '))
-        if log: ax.set_yscale('log')
+        if ax is None:
+            axs, _, _, _ = setup_axes(
+                ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
+        for ax, y in zip(axs, ys):
+            ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
+                                orient='vertical', scale=scale, ax=ax, **kwargs)
+            ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
+                               jitter=jitter, color='black', size=size, ax=ax)
+            if xlabel == '' and groupby is not None and rotation is None:
+                xlabel = groupby.replace('_', ' ')
+            ax.set_xlabel(xlabel)
+            if log: ax.set_yscale('log')
+            if rotation is not None:
+                ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
-    if show == False: return ax
+    if show == False: return axs[0] if len(axs) == 1 else axs
 
 
 def clustermap(
@@ -486,7 +514,7 @@ def clustermap(
     >>> adata = sc.datasets.krumsiek11()
     >>> sc.pl.clustermap(adata, obs_keys='cell_type')
     """
-    if not isinstance(obs_keys, (str, None)):
+    if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
     X = adata.raw.X if use_raw and adata.raw is not None else adata.X

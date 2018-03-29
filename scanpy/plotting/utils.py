@@ -186,10 +186,12 @@ def savefig(writekey, dpi=None, ext=None):
     ```
     """
     if dpi is None:
-        if rcParams['savefig.dpi'] < 300:
+        if isinstance(rcParams['savefig.dpi'], int) and rcParams['savefig.dpi'] < 300:
             dpi = 300
             if settings._low_resolution_warning:
-                logg.msg('... you are using a very low resolution for saving figures, adjusting to dpi=300', v=4)
+                logg.msg(
+                    '... you are using a very low resolution for saving figures, '
+                    'adjusting to dpi=300', v=4)
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
@@ -215,8 +217,8 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
         # append it
         writekey += save
         save = True
-    save = settings.savefigs if save is None else save
-    show = (settings.autoshow and not settings.savefigs) if show is None else show
+    save = settings.autosave if save is None else save
+    show = (settings.autoshow and not settings.autosave) if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
@@ -298,7 +300,7 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
 
 def setup_axes(
         ax=None,
-        colors='blue',
+        panels='blue',
         colorbars=[False],
         right_margin=None,
         left_margin=None,
@@ -318,11 +320,11 @@ def setup_axes(
         right_margin = 1 - rcParams['figure.subplot.right'] + 0.06  # 0.10
     # make a list of right margins for each panel
     if not isinstance(right_margin, list):
-        right_margin_list = [right_margin for i in range(len(colors))]
+        right_margin_list = [right_margin for i in range(len(panels))]
     else:
         right_margin_list = right_margin
 
-    # make a figure with len(colors) panels in a row side by side
+    # make a figure with len(panels) panels in a row side by side
     top_offset = 1 - rcParams['figure.subplot.top']
     bottom_offset = 0.15 if show_ticks else 0.08
     left_offset = 1 if show_ticks else 0.3  # in units of base_height
@@ -336,17 +338,17 @@ def setup_axes(
     right_margin_factor = sum([1 + right_margin for right_margin in right_margin_list])
     width_without_offsets = right_margin_factor * draw_region_width  # this is the total width that keeps draw_region_width
 
-    right_offset = (len(colors) - 1) * left_offset
+    right_offset = (len(panels) - 1) * left_offset
     figure_width = width_without_offsets + left_offset + right_offset
     draw_region_width_frac = draw_region_width / figure_width
     left_offset_frac = left_offset / figure_width
-    right_offset_frac = 1 - (len(colors) - 1) * left_offset_frac
+    right_offset_frac = 1 - (len(panels) - 1) * left_offset_frac
 
     if ax is None:
         pl.figure(figsize=(figure_width, height),
                   subplotpars=sppars(left=0, right=1, bottom=bottom_offset))
     left_positions = [left_offset_frac, left_offset_frac + draw_region_width_frac]
-    for i in range(1, len(colors)):
+    for i in range(1, len(panels)):
         right_margin = right_margin_list[i-1]
         left_positions.append(left_positions[-1] + right_margin * draw_region_width_frac)
         left_positions.append(left_positions[-1] + draw_region_width_frac)
@@ -354,7 +356,7 @@ def setup_axes(
 
     axs = []
     if ax is None:
-        for icolor, color in enumerate(colors):
+        for icolor, color in enumerate(panels):
             left = panel_pos[2][2*icolor]
             bottom = panel_pos[0][0]
             width = draw_region_width / figure_width
@@ -410,7 +412,7 @@ def scatter_base(Y,
     if len(sizes) != len(colors) and len(sizes) == 1:
         sizes = [sizes[0] for i in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
-        ax=ax, colors=colors, colorbars=colorbars, projection=projection,
+        ax=ax, panels=colors, colorbars=colorbars, projection=projection,
         right_margin=right_margin, left_margin=left_margin,
         show_ticks=show_ticks)
     for icolor, color in enumerate(colors):
@@ -435,7 +437,7 @@ def scatter_base(Y,
                              s=sizes[icolor],
                              cmap=color_map)
         if colorbars[icolor]:
-            width = 0.006 * draw_region_width
+            width = 0.006 * draw_region_width / len(colors)
             left = panel_pos[2][2*icolor+1] + (1.2 if projection == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
@@ -465,7 +467,6 @@ def scatter_base(Y,
             ax.set_xticks([])
             ax.set_yticks([])
             if '3d' in projection: ax.set_zticks([])
-        axs.append(ax)
     # set default axis_labels
     if axis_labels is None:
         axis_labels = [[component_name + str(i) for i in idcs]

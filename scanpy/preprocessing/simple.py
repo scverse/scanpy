@@ -13,6 +13,8 @@ from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
 
+N_PCS = 50  # default number of PCs
+
 
 def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
                  max_genes=None, copy=False):
@@ -321,8 +323,6 @@ def filter_genes_dispersion(data,
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        print(disp_mad_bin)
-        print(disp_median_bin)
         df['dispersion_norm'] = np.abs((df['dispersion'].values
                                  - disp_median_bin[df['mean_bin']].values)) \
                                 / disp_mad_bin[df['mean_bin']].values
@@ -409,7 +409,7 @@ def log1p(data, copy=False):
         return X.log1p()
 
 
-def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
+def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         recompute=True, mute=False, return_info=None, copy=False,
         dtype='float32'):
     """Principal component analysis [Pedregosa11]_.
@@ -421,7 +421,7 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
     ----------
     data : :class:`~scanpy.api.AnnData`, array-like
         Data matrix of shape `n_obs` × `n_vars`.
-    n_comps : `int`, optional (default: 10)
+    n_comps : `int`, optional (default: 50)
         Number of principal components to compute.
     zero_center : `bool` or `None`, optional (default: `True`)
         If True, compute standard PCA from Covariance matrix. If False, omit
@@ -453,11 +453,12 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
          PCA representation of data.
     PCs : `.varm`
          The principal components containing the loadings.
-    pca_variance_ratio : `.uns`
+    variance_ratio : `.uns['pca']`
          Ratio of explained variance.
-    pca_variance : `.uns`
+    variance : `.uns['pca']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
+    if n_comps is None: n_comps = N_PCS
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         from .. import settings as sett  # why is this necessary?
@@ -476,8 +477,9 @@ def pca(data, n_comps=50, zero_center=True, svd_solver='auto', random_state=0,
             X_pca, components, pca_variance_ratio, pca_variance = result
             adata.obsm['X_pca'] = X_pca
             adata.varm['PCs'] = components.T
-            adata.uns['pca_variance'] = pca_variance
-            adata.uns['pca_variance_ratio'] = pca_variance_ratio
+            adata.uns['pca'] = {}
+            adata.uns['pca']['variance'] = pca_variance
+            adata.uns['pca']['variance_ratio'] = pca_variance_ratio
             logg.msg('    finished', t=True, end=' ', v=4)
             logg.msg('and added\n'
                      '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -571,18 +573,17 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     """
     if key_n_counts is None: key_n_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.info('normalizing by total count per cell', r=True)
+        logg.msg('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
         adata.obs[key_n_counts] = counts_per_cell
         adata._inplace_subset_obs(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after,
                            counts_per_cell=counts_per_cell[cell_subset])
-        logg.info('    finished', t=True, end=': ')
-        logg.info('normalized adata.X and added', no_indent=True)
-        logg.info('    \'{}\', counts per cell before normalization (adata.obs)'
-               .format(key_n_counts),
-               no_indent=True)
+        logg.msg('    finished', t=True, end=': ')
+        logg.msg('normalized adata.X and added', no_indent=True)
+        logg.msg('    \'{}\', counts per cell before normalization (adata.obs)'
+            .format(key_n_counts))
         return adata if copy else None
     # proceed with data matrix
     X = data.copy() if copy else data
@@ -666,8 +667,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     """
     logg.info('regressing out', keys, r=True)
     if issparse(adata.X):
-        logg.info('... sparse input is densified and may '
-                  'lead to huge memory consumption')
+        logg.info('    sparse input is densified and may '
+                  'lead to high memory use')
     adata = adata.copy() if copy else adata
     if isinstance(keys, str): keys = [keys]
     if issparse(adata.X):
@@ -682,7 +683,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'the mean is computed for each variable/gene.')
-        logg.msg('... regressing on per-gene means within categories', v=4)
+        logg.msg('... regressing on per-gene means within categories')
         unique_categories = np.unique(adata.obs[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in unique_categories:
@@ -733,8 +734,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
             col_index, adata.X, regressors) for col_index in chunk]
         for i_column, column in enumerate(chunk):
             adata.X[:, column] = result_lst[i_column]
-    logg.info('finished', t=True)
-    logg.hint('after `sc.pp.regress_out`, consider rescaling the adata using `sc.pp.scale`')
+    logg.info('    finished', t=True)
     return adata if copy else None
 
 
@@ -743,7 +743,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
         Annotated data matrix.
     zero_center : `bool`, optional (default: `True`)
         If `False`, omit zero-centering variables, which allows to handle sparse
@@ -763,7 +763,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
         if zero_center and issparse(adata.X):
             logg.msg(
                 '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption', v=4)
+                'densified and may lead to large memory consumption')
             adata.X = adata.X.toarray()
         scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
         return adata if copy else None
@@ -774,7 +774,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
             '... scale_data: be careful when using `max_value` without `zero_center`',
             v=4)
     if max_value is not None:
-        logg.msg('... clipping at max_value', max_value, v=4)
+        logg.msg('... clipping at max_value', max_value)
     if zero_center and issparse(X):
         logg.msg('... scale_data: as `zero_center=True`, sparse input is '
                  'densified and may lead to large memory consumption, returning copy',
@@ -815,7 +815,7 @@ def subsample(data, fraction, random_state=0, copy=False):
     n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
     new_n_obs = int(fraction * n_obs)
     obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
-    logg.msg('... subsampled to {} data points'.format(new_n_obs), v=4)
+    logg.msg('... subsampled to {} data points'.format(new_n_obs))
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         adata._inplace_subset_obs(obs_indices)
@@ -851,7 +851,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
                          .format(target_counts))
     if not isinstance(adata, AnnData):
         raise ValueError('`adata` must be an `AnnData` object'.format(adata))
-    logg.msg('downsampling to {} counts'.format(target_counts), r=True, v=4)
+    logg.msg('downsampling to {} counts'.format(target_counts), r=True)
     adata = adata.copy() if copy else adata
     np.random.seed(random_state)
     counts = adata.X.sum(axis=1)
@@ -868,7 +868,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
             for i in range(len(indices)):
                 cell_profile[indices[i]] = values[i]
             adata.X[icell] = cell_profile
-    logg.msg('finished', t=True, v=4)
+    logg.msg('finished', t=True)
     return adata if copy else None
 
 

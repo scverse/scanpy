@@ -1,131 +1,190 @@
-# Author: F. Alex Wolf (http://falexwolf.de)
-"""Init runs, manage examples.
+"""Builtin Datasets.
 """
 
+import os
+import numpy as np
+import pandas as pd
+from . import api_without_datasets as sc
+from .. import logging as logg
 
-from .builtin import *
-from ..utils import sanitize_anndata
 
-
-def init_run(run_name, suffix='', recompute=True, reread=False,
-             return_module=False):
-    """Read and preprocess data based on a "run file".
-
-    Filenames of the form "runs_whatevername.py", "scanpy_whatevername.py" and
-    "preprocessing_whatevername.py" in the current working directory are
-    automatically considered as run files.
-
-    In addition, there are builtin examples defined in the run file
-    https://github.com/theislab/scanpy/tree/master/scanpy/examples/builtin.py
+def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
+    """Gaussian Blobs.
 
     Parameters
     ----------
-    run_name : str
-        Key for looking up an example-preprocessing function.
-    suffix : str, optional (default: '')
-        Set suffix to be appended to `run_name` in naming output files.
-    recompute : bool, optional (default: True)
-        Recompute preprocessing.
-    reread : bool, optional (default: False)
-        Reread the original data file (often a text file, much slower) instead
-        of the hdf5 file.
-    return_module : bool, optional (default: False)
-        Return example module.
+    n_variables : `int`, optional (default: 11)
+        Dimension of feature space.
+    n_centers : `int`, optional (default: 5)
+        Number of cluster centers.
+    cluster_std : `float`, optional (default: 1.0)
+        Standard deviation of clusters.
+    n_observations : `int`, optional (default: 640)
+        Number of observations. By default, this is the same observation number as in
+        ``sc.examples.krumsiek11()``.
 
     Returns
     -------
-    adata : AnnData
-        Annotated data matrix, optionally with metadata such as
-        adata.uns['xroot'] : np.ndarray or int
-            Expression vector or index of root cell for DPT analysis.
-    Additionally, if return_module == True:
-    exmodule : dict, optional
-        Example module.
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix containing a observation annotation 'blobs' that
+        indicates cluster identity.
     """
-    import os, sys
-    from .. import readwrite
-    from .. import settings as sett
-    from .. import logging as logg
-    sett._run_basename = run_name
-    sett._run_suffix = suffix
-    sett.run_name = sett._run_basename + sett._run_suffix
-    adata_file = readwrite.get_filename_from_key(sett.run_name)
-    adata_file_exists = os.path.exists(adata_file)
-    # find the runfile with preprocessing functions etc.
-    loop_over_filenames = [filename for filename in os.listdir('.')
-                           if (filename.startswith('runs')
-                               or filename.startswith('preprocessing')
-                               or filename.startswith('scanpy'))
-                           and filename.endswith('.py')]
-    if len(loop_over_filenames) == 0:
-        logg.m('did not find user examples, to provide some,\n'
-               '    generate a file "runs_whatevername.py" in your working directory,\n'
-               '    analogous to https://github.com/theislab/scanpy/blob/master/scanpy/examples/builtin.py',
-               v='hint')
-    not_found = True
-    sys.path.insert(0, '.')
-    for filename in loop_over_filenames:
-        exmodule = __import__(filename.replace('.py', ''))
-        try:
-            exfunc = getattr(exmodule, run_name)
-            not_found = False
-        except AttributeError:
-            pass
-    if not_found:
-        try:
-            exfunc = getattr(builtin, run_name)
-            exmodule = builtin
-        except AttributeError:
-            import types
-            sys.exit('Do not know how to run example "{}".\nEither define a function {}() '
-                     'that returns an AnnData object in "./runfile_whatevername.py".\n'
-                     'Or, use one of the builtin examples: {}'
-                     .format(run_name, run_name,
-                             [a for a in dir(builtin)
-                              if isinstance(getattr(builtin, a), types.FunctionType)]))
-    if not adata_file_exists or recompute or reread:
-        logg.m('reading and preprocessing data')
-        # run the function
-        adata = exfunc()
-        # add run_name to adata
-        logg.m('... X has shape n_samples × n_variables = {} × {}'
-               .format(adata.X.shape[0], adata.X.shape[1]))
-        # do sanity checks on data dictionary
-        adata = sanitize_anndata(adata, verbosity=1)
-        # write the prepocessed data
-        readwrite.write(sett.run_name, adata)
-    else:
-        adata = readwrite.read(sett.run_name)
-
-    if return_module:
-        return adata, exmodule
-    else:
-        return adata
+    import sklearn.datasets
+    X, y = sklearn.datasets.make_blobs(n_samples=n_observations,
+                                       n_features=n_variables,
+                                       centers=n_centers,
+                                       cluster_std=cluster_std,
+                                       random_state=0)
+    return sc.AnnData(X, obs={'blobs': y.astype(str)})
 
 
-# -------------------------------------------------------------------------------
-# Reading and writing with sett.run_name
-# -------------------------------------------------------------------------------
+def burczynski06():
+    """Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 
+    The study assesses transcriptional profiles in peripheral blood mononuclear
+    cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
+    hybridization to microarrays interrogating more than 22,000 sequences.
 
-def read_run(run_name=None, suffix=''):
-    """Read run and init sett.run_name if provided.
+    Reference
+    ---------
+    Burczynski et al., "Molecular classification of Crohn's disease and
+    ulcerative colitis patients using transcriptional profiles in peripheral
+    blood mononuclear cells"
+    J Mol Diagn 8, 51 (2006). PMID:16436634.
     """
-    from .. import settings as sett
-    if run_name is None: run_name = sett.run_name
-    if suffix == '': suffix = sett._run_suffix
-    sett._run_basename = run_name
-    sett._run_suffix = suffix
-    sett.run_name = sett._run_basename + sett._run_suffix
-    return init_run(run_name, suffix=suffix, recompute=False)
+    filename = 'data/burczynski06/GDS1615_full.soft.gz'
+    url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
+    adata = sc.read(filename, backup_url=url, cache=True)
+    return adata
 
 
-def write_run(data, ext=None):
-    """Write run.
+def krumsiek11():
+    """Simulated myeloid progenitors [Krumsiek11]_.
 
-    ext : str or None (default: None)
-        File extension from wich to infer file format.
+    The literature-curated boolean network from [Krumsiek11]_ was used to
+    simulate the data. It describes development to four cell fates: 'monocyte',
+    'erythrocyte', 'megakaryocyte' and 'neutrophil'.
+
+    Simulate via :func:`~scanpy.api.sim`.
+
+    Returns
+    -------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
     """
-    from .. import readwrite
-    from .. import settings as sett
-    readwrite.write(sett.run_name, data, ext=ext)
+    filename = os.path.dirname(__file__) + '/krumsiek11.txt'
+    verbosity_save = sc.settings.verbosity
+    sc.settings.verbosity = 0  # suppress output...
+    adata = sc.read(filename, first_column_names=True)
+    sc.settings.verbosity = verbosity_save
+    adata.uns['iroot'] = 0
+    fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
+                   459: 'megakaryocyte', 619: 'neutrophil'}
+    adata.uns['highlights'] = fate_labels
+    cell_type = np.array(['progenitor' for i in range(adata.n_obs)])
+    cell_type[80:160] = 'monocyte'
+    cell_type[240:320] = 'erythrocyte'
+    cell_type[400:480] = 'megakaryocyte'
+    cell_type[560:640] = 'neutrophil'
+    adata.obs['cell_type'] = cell_type
+    return adata
+
+
+def moignard15():
+    """Hematopoiesis in early mouse embryos [Moignard15]_.
+
+    Returns
+    -------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    """
+    filename = 'data/moignard15/nbt.3154-S3.xlsx'
+    backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
+    adata = sc.read(filename, sheet='dCt_values.txt', cache=True, backup_url=backup_url)
+    # filter out 4 genes as in Haghverdi et al. (2016)
+    gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
+    adata = adata[:, gene_subset]  # retain non-removed genes
+    # choose root cell for DPT analysis as in Haghverdi et al. (2016)
+    adata.uns['iroot'] = 532  # note that in Matlab/R, counting starts at 1
+    # annotate with Moignard et al. (2015) experimental cell groups
+    groups_order = ['HF', 'NP', 'PS', '4SG', '4SFG']
+    # annotate each observation/cell
+    adata.obs['exp_groups'] = [
+        next(gname for gname in groups_order if sname.startswith(gname))
+        for sname in adata.obs_names]
+    # fix the order and colors of names in "groups"
+    adata.obs['exp_groups'] = pd.Categorical(adata.obs['exp_groups'],
+                                             categories=groups_order)
+    adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
+    return adata
+
+
+def paul15():
+    """Development of Myeloid Progenitors [Paul15]_.
+
+    Non-logarithmized raw data.
+
+    The data has been sent out by Email from the Amit Lab. An R version for
+    loading the data can be found here
+    https://github.com/theislab/scAnalysisTutorial
+
+    Returns
+    -------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    """
+    logg.warn('In Scanpy 0.*, this returned logarithmized data. '
+              'Now it returns non-logarithmized data.')
+    import h5py
+    filename = 'data/paul15/paul15.h5'
+    backup_url = 'http://falexwolf.de/data/paul15.h5'
+    sc.utils.check_presence_download(filename, backup_url)
+    with h5py.File(filename, 'r') as f:
+        X = f['data.debatched'][()]
+        gene_names = f['data.debatched_rownames'][()].astype(str)
+        cell_names = f['data.debatched_colnames'][()].astype(str)
+        clusters = f['cluster.id'][()].flatten()
+        infogenes_names = f['info.genes_strings'][()].astype(str)
+    # each row has to correspond to a observation, therefore transpose
+    adata = sc.AnnData(X.transpose())
+    adata.var_names = gene_names
+    adata.row_names = cell_names
+    # names reflecting the cell type identifications from the paper
+    cell_type = {7: 'MEP', 8: 'Mk', 9: 'GMP', 10: 'GMP', 11: 'DC',
+                 12: 'Baso', 13: 'Baso', 14: 'Mo', 15: 'Mo',
+                 16: 'Neu', 17: 'Neu', 18: 'Eos', 19: 'Lymph'}
+    cell_type.update({i: 'Ery' for i in range(1, 7)})
+    adata.obs['paul15_clusters'] = [
+        str(i) + cell_type[i] for i in clusters.astype(int)]
+    # make string annotations categorical (optional)
+    sc.utils.sanitize_anndata(adata)
+    # just keep the first of the two equivalent names per gene
+    adata.var_names = [gn.split(';')[0] for gn in adata.var_names]
+    # remove 10 corrupted gene names
+    infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
+    # restrict data array to the 3461 informative genes
+    adata = adata[:, infogenes_names]
+    # usually we'd set the root cell to an arbitrary cell in the MEP cluster
+    # adata.uns['iroot': np.flatnonzero(adata.obs['paul15_clusters']  == '7MEP')[0]
+    # here, set the root cell as in Haghverdi et al. (2016)
+    adata.uns['iroot'] = 840  # note that other than in Matlab/R, counting starts at 1
+    return adata
+
+
+def toggleswitch():
+    """Simulated toggleswitch.
+
+    Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
+    (2000) <https://doi.org/10.1038/35002131>`_.
+
+    Simulate via :func:`~scanpy.api.sim`.
+
+    Returns
+    -------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    """
+    filename = os.path.dirname(__file__) + '/toggleswitch.txt'
+    adata = sc.read(filename, first_column_names=True)
+    adata.uns['iroot'] = 0
+    return adata

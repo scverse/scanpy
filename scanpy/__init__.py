@@ -14,7 +14,7 @@ del get_versions
 
 if sys.version_info < (3, 0):
     warnings.warn('Scanpy only runs reliably with Python 3, preferrably >=3.5.')
-    
+
 import pandas as pd
 if pd.__version__ < LooseVersion('0.21'):
     raise ImportError('Scanpy needs pandas version >=0.21, not {}.\n'
@@ -22,10 +22,10 @@ if pd.__version__ < LooseVersion('0.21'):
                       .format(pd.__version__))
 
 import anndata
-# NOTE: LooseVersion cannot deal with the versioneer format strings
-#       that involve something like 0.5.3+7g194938
-#       Hence, the following hack
-if anndata.__version__ < LooseVersion('0.5'):
-    raise ImportError('Scanpy {} needs anndata version >=0.5, not {}.\n'
-                      'Run `pip install anndata --upgrade`.'
-                      .format(__version__, anndata.__version__))
+# NOTE: pytest does not correctly retrieve anndata's version? why?
+#       use the following hack...
+if anndata.__version__ != '0+unknown':
+    if anndata.__version__ < LooseVersion('0.5.8'):
+        raise ImportError('Scanpy {} needs anndata version >=0.5.8, not {}.\n'
+                          'Run `pip install anndata --upgrade`.'
+                          .format(__version__, anndata.__version__))
