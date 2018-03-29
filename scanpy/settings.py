@@ -227,7 +227,7 @@ def mi(*msg, end='\n'):
 def m(v=0, *msg):
     """Write message to log output, depending on verbosity level.
 
-    Now is deprecatd. See logging.m().
+    Now is deprecatd. See logging.msg().
 
     Parameters
     ----------
@@ -274,6 +274,6 @@ def _sec_to_str(t):
     t : int
         Time in seconds.
     """
-    return "%d:%02d:%02d.%03d" % \
+    return "%d:%02d:%02d.%01d" % \
         reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-               [(t*1000,), 1000, 60, 60])
+               [(t*10,), 10, 60, 60])
