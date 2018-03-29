@@ -306,10 +306,10 @@ def diffmap(
             [str(comp) for comp in components])
         writekey += ('_components' + components.replace(',', '')
                      + (save if isinstance(save, str) else ''))
-        if settings.savefigs or (save is not None):
+        if settings.autosave or (save is not None):
             utils.savefig(writekey)
     show = settings.autoshow if show is None else show
-    if not settings.savefigs and show: pl.show()
+    if not settings.autosave and show: pl.show()
     if show == False: return axs
 
 

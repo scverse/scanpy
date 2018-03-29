@@ -76,14 +76,14 @@ recompute = 'read'
 Recompute and overwrite previous result and preprocessing files.
 """
 
-savefigs = False  # This should be renamed "autosave"
+autosave = False  # This should be renamed "autosave"
 """Save plots/figures as files in directory 'figs'.
 
 Do not show plots/figures interactively.
 """
 
 autoshow = True
-"""Show all plots/figures automatically if savefigs == False.
+"""Show all plots/figures automatically if autosave == False.
 
 There is no need to call the matplotlib pl.show() in this case.
 """
