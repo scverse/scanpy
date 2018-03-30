@@ -10,7 +10,7 @@ See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.
 
 **March 28, 2018**: version 1.0
 
-Scanpy is much faster and memory efficient. Preprocess, cluster and visualize
+Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
 1.3M cells in `6 h
 <https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_1.3M.txt>`_,
 130K cells in `14 min
@@ -20,12 +20,11 @@ and 68K cells in `3 min
 
 The API gained a preprocessing function :func:`~scanpy.api.pp.neighbors` and a
 class :func:`~scanpy.api.Neighbors` to which all basic graph computations are
-delegated. By that, the used data representation in pipelines became more
-transparent and tools less bloated with parameters.
+delegated.
 
 .. warning::
 
-   Upgrading to 1.0 isn't fully backwards compatible.
+   Upgrading to 1.0 isn't fully backwards compatible - future upgrades will be.
 
    - the graph-based tools :func:`~scanpy.api.tl.louvain`
      :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
