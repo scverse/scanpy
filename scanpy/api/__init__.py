@@ -236,7 +236,8 @@ Note the functions `settings.set_figure_params` and `logging.print_versions()`.
 ==============================================  ===================================
 `settings.verbosity`                            Verbosity level (default: 1).
 `settings.file_format_figs`                     Format for saving figures (default: 'png').
-`settings.figdir`                               Default directory for saving figures (default: './figures').
+`settings.figdir`                               Default directory for saving figures (default: './figures/').
+`settings.cachedir`                             Directory for cache files (default: './cache/').
 `settings.autoshow`                             Automatically show figures (default: `True`).
 `settings.autosave`                             Automatically save figures, do not show them (default: `False`).
 ==============================================  ===================================

@@ -81,7 +81,8 @@ Further changes are
 - scanpy no longer modifies rcParams upon import, call
   `settings.set_figure_params` to set the 'scanpy style'
       
-- new cache directory is now ``./cache/``
+- default cache directory is ``./cache/``, set `settings.cachedir` to change
+  this; nested directories in this are now avoided
 
 - show edges in scatter plots based on graph visualization
   :func:`~scanpy.api.tl.draw_graph` and :func:`~scanpy.api.umap` by passing
