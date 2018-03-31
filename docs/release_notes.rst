@@ -12,9 +12,9 @@ See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.
 
 Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
 1.3M cells in `6 h
-<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_1.3M.txt>`_,
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/>`_,
 130K cells in `14 min
-<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130k.txt>`_
+<https://github.com/theislab/scanpy_usage/blob/master/170522_visualizing_one_million_cells/logfile_130K.txt>`_
 and 68K cells in `3 min
 <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170503_zheng17/zheng17.ipynb>`_.
 
