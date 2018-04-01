@@ -40,8 +40,8 @@ def diffmap(adata, n_comps=15, copy=False):
     dmap = dpt.DPT(adata)
     dmap.compute_transitions()
     dmap.compute_eigen(n_comps=n_comps)
-    adata.obsm['X_diffmap'] = dmap.rbasis
-    adata.uns['diffmap_evals'] = dmap.evals
+    adata.obsm['X_diffmap'] = dmap.eigen_basis
+    adata.uns['diffmap_evals'] = dmap.eigen_values
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
               '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
