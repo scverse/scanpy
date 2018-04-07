@@ -202,7 +202,7 @@ def savefig(writekey, dpi=None, ext=None):
     filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
     # output the following msg at warning level; it's really important for the user
     logg.msg('saving figure to file', filename, v=1)
-    pl.savefig(filename, dpi=dpi)
+    pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
 def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
