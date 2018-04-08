@@ -23,12 +23,12 @@ def louvain(
     of [Traag17]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
+    This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         The annotated data matrix.
-    n_neighbors : `int`, optional (default: 30)
-        Number of neighbors to use for construction of knn graph.
     resolution : `float` or `None`, optional (default: 1)
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
@@ -46,7 +46,7 @@ def louvain(
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
-    copy : `bool` (default: False)
+    copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
 
     Returns
