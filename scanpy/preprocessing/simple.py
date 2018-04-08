@@ -24,14 +24,14 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
     "unreliable" observations.
 
-    Only provide one of the optional arguments (`min_counts`, `min_genes`,
-    `max_counts`, `max_genes`) per call.
+    Only provide one of the optional parameters `min_counts`, `min_genes`,
+    `max_counts`, `max_genes` per call.
 
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
-        Data matrix of shape `n_obs` × `n_vars`. Rows correspond to cells and
-        columns to genes.
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     min_counts : `int`, optional (default: `None`)
         Minimum number of counts required for a cell to pass filtering.
     min_genes : `int`, optional (default: `None`)
@@ -129,17 +129,17 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     """Filter genes based on number of cells or counts.
 
     Keep genes that have at least `min_counts` counts or are expressed in at
-    least `min_cells` cells.  Or keep genes that have at most `max_counts`
-    counts or are expressed in at most `max_cells` cells.
+    least `min_cells` cells or have at most `max_counts` counts or are expressed
+    in at most `max_cells` cells.
 
-    Only provide one of the optional arguments (`min_counts`, `min_cells`,
-    `max_counts`, `max_cells`) per call.
+    Only provide one of the optional parameters `min_counts`, `min_cells`,
+    `max_counts`, `max_cells` per call.
 
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
-        Data matrix of shape `n_obs` × `n_vars`. Rows correspond to cells and
-        columns to genes.
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     min_counts : `int`, optional (default: `None`)
         Minimum number of counts required for a cell to pass filtering.
     min_cells : `int`, optional (default: `None`)
@@ -149,16 +149,27 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     max_cells : `int`, optional (default: `None`)
         Maximum number of cells expressed required for a cell to pass filtering.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
+
+    Returns
+    -------
+    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds\
+    either `n_cells` or `n_counts` to `adata.var`. Otherwise a tuple
+
+    gene_subset : `np.ndarray`
+        Boolean index mask that does filtering. `True` means that the gene is
+        kept. `False` means the gene is removed.
+    number_per_cell : `np.ndarray`
+        Either `n_counts` or `n_cells` per cell.
     """
     n_given_options = sum(
         option is not None for option in
         [min_cells, min_counts, max_cells, max_counts])
     if n_given_options != 1:
         raise ValueError(
-            'Only provide one of the optional arguments (`min_counts`,'
-            '`min_cells`, `max_counts`, `max_cells`) per call.')
+            'Only provide one of the optional parameters `min_counts`,'
+            '`min_cells`, `max_counts`, `max_cells` per call.')
 
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -209,8 +220,13 @@ def filter_genes_dispersion(data,
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
-    Depending on option `flavor`, this reproduces the R-implementations of
-    Seurat [Satija15]_ and Cell Ranger [Zheng17]_.
+    Depending on `flavor`, this reproduces the R-implementations of Seurat
+    [Satija15]_ and Cell Ranger [Zheng17]_.
+
+    The normalized dispersion is obtained by scaling with the mean and standard
+    deviation of the dispersions for genes falling into a given bin for mean
+    expression of genes. This means that for each bin of mean expression, highly
+    variable genes are selected.
 
     Use `flavor='cell_ranger'` with care and in the same way as in
     :func:`~scanpy.api.pp.recipe_zheng17`.
@@ -218,7 +234,8 @@ def filter_genes_dispersion(data,
     Parameters
     ----------
     data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
-        Data matrix.
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
         Choose the flavor for computing normalized dispersion. If choosing
         'seurat', this expects non-logarithmized data - the logarithm of mean
@@ -228,8 +245,8 @@ def filter_genes_dispersion(data,
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
-        If `n_top_genes` is not `None`, these cutoffs for the normalized gene
-        expression are ignored.
+        If `n_top_genes` unequals `None`, these cutoffs for the means and the
+        normalized dispersions are ignored.
     n_bins : `int` (default: 20)
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
@@ -237,10 +254,11 @@ def filter_genes_dispersion(data,
         about this if you set `settings.verbosity = 4`.
     n_top_genes : `int` or `None` (default: `None`)
         Number of highly-variable genes to keep.
-    log : `bool`, optional (default: True)
+    log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
     copy : `bool`, optional (default: `False`)
-        If an AnnData is passed, determines whether a copy is returned.
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
@@ -255,7 +273,7 @@ def filter_genes_dispersion(data,
         Normalized dispersions per gene. Logarithmized when `log` is `True`.
 
     If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
-    with the columns: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+    with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
@@ -389,14 +407,16 @@ def log1p(data, copy=False):
 
     Parameters
     ----------
-    data : array-like or AnnData
-        The data matrix.
-    copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
-    Returns or updates data, depending on `copy`.
+    Returns or updates `data`, depending on `copy`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -410,8 +430,7 @@ def log1p(data, copy=False):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        recompute=True, mute=False, return_info=None, copy=False,
-        dtype='float32'):
+        return_info=None, dtype='float32', copy=False):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -419,15 +438,15 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, array-like
-        Data matrix of shape `n_obs` × `n_vars`.
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     n_comps : `int`, optional (default: 50)
         Number of principal components to compute.
     zero_center : `bool` or `None`, optional (default: `True`)
-        If True, compute standard PCA from Covariance matrix. If False, omit
-        zero-centering variables, which allows to handle sparse input
-        efficiently. If None, defaults to True for dense and to False for sparse
-        input.
+        If `True`, compute standard PCA from covariance matrix. If `False`, omit
+        zero-centering variables (uses *TruncatedSVD* from scikit-learn), which
+        allows to handle sparse input efficiently.
     svd_solver : `str`, optional (default: 'auto')
         SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
         (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
@@ -435,19 +454,18 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         of the problem.
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
-    recompute : `bool`, optional (default: `True`)
-        Recompute PC coordinates. If False, use the result of previous calculation.
     return_info : `bool` or `None`, optional (default: `None`)
-        If providing an array, this defaults to False, if providing an `AnnData`,
-        defaults to `True`.
-    copy : `bool` (default: `False`)
-        If an `AnnData` is passed, determines whether a copy is returned.
+        Only relevant when not passing an :class:`scanpy.api.AnnData`: see
+        "Returns".
     dtype : str (default: 'float32')
         Numpy data type string to which to convert the result.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
-    If `data` is array-like and `return_info == True`, only returns `X_pca`,
+    If `data` is array-like and `return_info == True`, only returns `X_pca`,\
     otherwise returns or adds to `adata`:
     X_pca : `.obsm`
          PCA representation of data.
@@ -461,41 +479,30 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     if n_comps is None: n_comps = N_PCS
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        from .. import settings as sett  # why is this necessary?
-        if ('X_pca' in adata.obs
-            and adata.obsm['X_pca'].shape[1] >= n_comps
-            and not recompute
-            and (sett.recompute == 'none' or sett.recompute == 'pp')):
-            logg.msg('    not recomputing PCA, using "X_pca" contained '
-                     'in `adata.obs` (set `recompute=True` to avoid this)', v=4)
-            return adata
-        else:
-            logg.msg('compute PCA with n_comps =', n_comps, r=True, v=4)
-            result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
-                         svd_solver=svd_solver, random_state=random_state,
-                         recompute=recompute, mute=mute, return_info=True)
-            X_pca, components, pca_variance_ratio, pca_variance = result
-            adata.obsm['X_pca'] = X_pca
-            adata.varm['PCs'] = components.T
-            adata.uns['pca'] = {}
-            adata.uns['pca']['variance'] = pca_variance
-            adata.uns['pca']['variance_ratio'] = pca_variance_ratio
-            logg.msg('    finished', t=True, end=' ', v=4)
-            logg.msg('and added\n'
-                     '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-                     '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-                     '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-                     '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
+        logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
+        result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
+                     svd_solver=svd_solver, random_state=random_state,
+                     return_info=True)
+        X_pca, components, pca_variance_ratio, pca_variance = result
+        adata.obsm['X_pca'] = X_pca
+        adata.varm['PCs'] = components.T
+        adata.uns['pca'] = {}
+        adata.uns['pca']['variance'] = pca_variance
+        adata.uns['pca']['variance_ratio'] = pca_variance_ratio
+        logg.msg('    finished', t=True, end=' ', v=4)
+        logg.msg('and added\n'
+                 '    \'X_pca\', the PCA coordinates (adata.obs)\n'
+                 '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
+                 '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
+                 '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
         return adata if copy else None
     X = data  # proceed with data matrix
-    from .. import settings as sett
     if X.shape[1] < n_comps:
         n_comps = X.shape[1] - 1
         logg.msg('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', X.shape[1], v=4)
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     from sklearn.decomposition import PCA, TruncatedSVD
-    verbosity_level = np.inf if mute else 0
     if zero_center:
         if issparse(X):
             logg.msg('    as `zero_center=True`, '
@@ -516,9 +523,10 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     else:
         return X_pca
 
+
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
                        key_n_counts=None, copy=False):
-    """Normalize each cell.
+    """Normalize total counts per cell.
 
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
@@ -528,19 +536,20 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
-        Data matrix. Rows correspond to cells and columns to genes.
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     counts_per_cell_after : `float` or `None`, optional (default: `None`)
         If `None`, after normalization, each cell has a total count equal
         to the median of the *counts_per_cell* before normalization.
     counts_per_cell : `np.array`, optional (default: `None`)
         Precomputed counts per cell.
-    key_n_counts : str, optional (default: `'n_counts'`)
+    key_n_counts : `str`, optional (default: `'n_counts'`)
         Name of the field in `adata.obs` where the total counts per cell are
         stored.
-    copy : `bool` (default: `False`)
-        Determines whether function operates inplace (default) or a copy is
-        returned.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
@@ -601,7 +610,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
 
 def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
                                             mult_with_mean=False):
-    """Normalize each cell.
+    """Normalize each cell [Weinreb17]_.
 
     This is a deprecated version. See `normalize_per_cell` instead.
 
@@ -654,12 +663,13 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     ----------
     adata : :class:`~scanpy.api.AnnData`
         The annotated data matrix.
-    keys : str or list of strings
+    keys : `str` or list of `str`
         Keys for observation annotation on which to regress on.
-    n_jobs : int
-        Number of jobs for parallel computation.
-    copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+    n_jobs : `int` or `None`, optional (default: `None`)
+        Number of jobs for parallel computation. Currently has no effect.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
@@ -743,15 +753,17 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
-        Annotated data matrix.
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     zero_center : `bool`, optional (default: `True`)
         If `False`, omit zero-centering variables, which allows to handle sparse
         input efficiently.
     max_value : `float` or `None`, optional (default: `None`)
         Clip (truncate) to this value after scaling. If `None`, do not clip.
-    copy : `bool` (default: `False`)
-        Perfrom operation inplace if `False`.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
@@ -791,16 +803,16 @@ def subsample(data, fraction, random_state=0, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
     fraction : float in [0, 1]
         Subsample to this `fraction` of the number of observations.
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
-    simply_skip_samples : bool, optional (default: False)
-        Simply skip observations instead of true sampling.
-    copy : bool (default: False)
-        If an AnnData is passed, determines whether a copy is returned.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
@@ -824,6 +836,7 @@ def subsample(data, fraction, random_state=0, copy=False):
         X = data
         return X[obs_indices], obs_indices
 
+
 def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     """Downsample counts so that each cell has no more than `target_counts`.
 
@@ -839,8 +852,9 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
         'target_counts' will be downsampled to have 'target_counts' counts.
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
-    copy : `bool` (default: `False`)
-        Determines whether a copy is returned.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
 
     Returns
     -------
