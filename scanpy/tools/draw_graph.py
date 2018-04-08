@@ -18,9 +18,9 @@ def draw_graph(
         **kwds):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
 
-    Often a good alternative to tSNE, but runs considerably slower.
-
-    Consider passing `weights='weight'`.
+    An alternative to tSNE that often preserves the topology of the data
+    better. However, it runs considerably slower. This requires to run
+    :func:`~scanpy.api.pp.neighbors`, first.
 
     `Force-directed graph drawing
     <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a

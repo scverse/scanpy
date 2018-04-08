@@ -41,7 +41,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     max_genes : `int`, optional (default: `None`)
         Maximum number of genes expressed required for a cell to pass filtering.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -257,7 +257,7 @@ def filter_genes_dispersion(data,
     log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -411,7 +411,7 @@ def log1p(data, copy=False):
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -455,17 +455,17 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
     return_info : `bool` or `None`, optional (default: `None`)
-        Only relevant when not passing an :class:`scanpy.api.AnnData`: see
+        Only relevant when not passing an :class:`~scanpy.api.AnnData`: see
         "Returns".
-    dtype : str (default: 'float32')
+    dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is array-like and `return_info == True`, only returns `X_pca`,\
+    If `data` is array-like and `return_info == False`, only returns `X_pca`,\
     otherwise returns or adds to `adata`:
     X_pca : `.obsm`
          PCA representation of data.
@@ -548,7 +548,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         Name of the field in `adata.obs` where the total counts per cell are
         stored.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -668,7 +668,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
     n_jobs : `int` or `None`, optional (default: `None`)
         Number of jobs for parallel computation. Currently has no effect.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -762,7 +762,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     max_value : `float` or `None`, optional (default: `None`)
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -811,14 +811,14 @@ def subsample(data, fraction, random_state=0, copy=False):
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    Updates or returns the subsampled data, depending on `copy`. Returns
-    ``X, obs_indices`` if data is array-like, otherwise subsamples the passed
-    `AnnData` (``copy == False``) or a copy of it (``copy == True``).
+    Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
+    subsamples the passed :class:`~scanpy.api.AnnData` (`copy == False`) or
+    returns a subsampled copy of it (`copy == True`).
     """
     if fraction > 1 or fraction < 0:
         raise ValueError('`fraction` needs to be within [0, 1], not {}'
@@ -853,7 +853,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     copy : `bool`, optional (default: `False`)
-        If an :class:`scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns

@@ -10,15 +10,22 @@ from ..neighbors import Neighbors, OnFlySymMatrix
 
 def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         allow_kendall_tau_shift=True, copy=False):
-    """Infer progression of cells and branching subgroups [Haghverdi16]_ [Wolf17]_.
-
-    This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+    """Infer progression of cells and branching subgroups [Haghverdi16]_ [Wolf17i]_.
 
     Reconstruct the progression of a biological process from snapshot data and
     detect branching subgroups. `Diffusion Pseudotime analysis` has been
-    introduced by [Haghverdi16]_. Here, we use a further developed, faster and
-    `hierarchical` version, which is able to detect multiple branching events by
-    setting the parameter `n_branchings` [Wolf17]_.
+    introduced by [Haghverdi16]_. Here, we use a further developed version,
+    which is able to deal with disconnected graphs [Wolf17i]_ and can be run in
+    a `hierarchical` mode by setting the parameter `n_branchings > 1` [Wolf17]_.
+
+    This requires to run :func:`~scanpy.api.pp.neighbors`, first. In order to
+    reproduce the original implementation of DPT, use `method=='gauss'` in
+    this. Using the default `method=='umap'` only leads to minor quantitative
+    differences, though.
+
+    Use `n_branchings>0` with care. Instead of doing this for identifying
+    branching subgroups, we recommend using a Louvain clustering
+    :func:`~scanpy.api.louvain` followed by PAGA :func:`~scanpy.api.paga`.
 
     The tool is similar to the R package destiny of [Angerer16]_; the Scanpy
     implementation though runs faster and scales to much higher cell numbers.
@@ -27,7 +34,7 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    n_branchings : `int`, optional (default: 1)
+    n_branchings : `int`, optional (default: 0)
         Number of branchings to detect.
     n_dcs : `int`, optional (default: 10)
         Use `n_dcs` diffusion components to compute 'dpt' distance.
