@@ -25,7 +25,7 @@ avail_exts = {'anndata', 'csv', 'xlsx',
 
 
 def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
-         first_column_names=False, backup_url=None, cache=None):
+         first_column_names=False, backup_url=None, cache=False):
     """Read file and return :class:`~scanpy.api.AnnData` object.
 
     To speed up reading, consider passing `cache=True`, which creates an hdf5
@@ -45,8 +45,8 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
         of the AnnData object, you need to choose 'r+'.
     sheet : `str`, optional (default: `None`)
         Name of sheet/table in hdf5 or Excel file.
-    cache : `bool` or `None`, optional (default: `False`)
-        If `False`, read from source, if `True`, read from fast 'h5' cache.
+    cache : `bool`, optional (default: `False`)
+        If `False`, read from source, if `True`, read from fast 'h5ad' cache.
     ext : `str`, optional (default: `None`)
         Extension that indicates the file type. If `None`, uses extension of
         filename.
@@ -259,7 +259,7 @@ def get_params_from_list(params_list):
 
 
 def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
-          first_column_names=None, backup_url=None, cache=None,
+          first_column_names=None, backup_url=None, cache=False,
           suppress_cache_warning=False):
     if ext is not None and ext not in avail_exts:
         raise ValueError('Please provide one of the available extensions.\n'
@@ -279,7 +279,6 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     # read other file types
     filename_cache = (settings.cachedir + filename.lstrip(
         './').replace('/', '-').replace('.' + ext, '.h5ad'))
-    cache = not settings.recompute == 'read' if cache is None else cache
     if cache and os.path.exists(filename_cache):
         logg.info('... reading from cache file', filename_cache)
         adata = read_h5ad(filename_cache, backed=False)

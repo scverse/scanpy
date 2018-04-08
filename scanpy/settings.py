@@ -70,12 +70,6 @@ For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
 matplotlib.pyplot.savefig).
 """
 
-recompute = 'read'
-"""If set to 'none', use the results of previous computations.
-
-Recompute and overwrite previous result and preprocessing files.
-"""
-
 autosave = False  # This should be renamed "autosave"
 """Save plots/figures as files in directory 'figs'.
 
