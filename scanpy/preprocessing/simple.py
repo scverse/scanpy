@@ -46,13 +46,13 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
 
     Returns
     -------
-    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds
+    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds\
     either `n_genes` or `n_counts` to `adata.obs`. Otherwise a tuple
 
     cell_subset : `np.ndarray`
         Boolean index mask that does filtering. `True` means that the cell is
         kept. `False` means the cell is removed.
-    number_per_cell: `np.ndarray`
+    number_per_cell : `np.ndarray`
         Either `n_counts` or `n_genes` per cell.
 
     Examples
