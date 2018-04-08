@@ -7,7 +7,6 @@ from ..plotting.tools import diffmap
 from ..plotting.tools import draw_graph
 from ..plotting.tools import tsne
 from ..plotting.tools import umap
-from ..plotting.tools import aga, aga_connectivity, aga_graph, aga_path, aga_scatter
 from ..plotting.tools.paga import paga, paga_adjacency, paga_compare, paga_path, paga_scatter
 from ..plotting.tools import dpt, dpt_scatter, dpt_groups_pseudotime, dpt_timeseries
 from ..plotting.tools import louvain
