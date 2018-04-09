@@ -251,3 +251,39 @@ def modurl(qualname):
 from jinja2.defaults import DEFAULT_FILTERS
 
 DEFAULT_FILTERS['modurl'] = modurl
+
+
+# numpydoc-style parameter lists:
+
+import sphinx_autodoc_typehints as sat
+
+process_docstring_orig = sat.process_docstring
+
+def process_docstring(app, what, name, obj, options, lines):
+    process_docstring_orig(app, what, name, obj, options, lines)
+
+    while any(line.startswith(':param') for line in lines):
+        i_param = next(i for i, line in enumerate(lines) if line.startswith(':param'))
+        i_param_end = lines[i_param].index(':', 1)
+        name = lines[i_param][len(':param')+1:i_param_end]
+        desc_start = lines[i_param][i_param_end+1:].strip()
+
+        idxs = []
+        for i in range(i_param+1, len(lines)):
+            if not lines[i].startswith('  '):
+                break
+            idxs.append(i)
+        desc = [desc_start] + [lines[i].strip() for i in idxs]
+
+        i_type = next(i for i, line in enumerate(lines) if line.startswith(f':type {name}:'))
+        i_type_end = lines[i_type].index(':', 1)
+        typ = lines[i_type][i_type_end+1:].strip()
+
+        for index in sorted([i_param, *idxs, i_type], reverse=True):
+            del lines[index]
+
+        for item in reversed(desc):
+            lines.insert(i_param, f'    {item}')
+        lines.insert(i_param, f'{name}: {typ}')
+
+sat.process_docstring = process_docstring
