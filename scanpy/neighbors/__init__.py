@@ -613,6 +613,10 @@ class Neighbors():
     @property
     def distances_dpt(self):
         """DPT distances (on-fly matrix).
+
+        This is yields [Haghverdi16]_, Eq. 15 from the supplement with the
+        extensions of [Wolf17i]_, supplement on random-walk based distance
+        measures.
         """
         return OnFlySymMatrix(self._get_dpt_row, shape=self._adata.shape)
 
