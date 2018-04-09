@@ -12,7 +12,7 @@ def diffmap(adata, n_comps=15, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_comps : `int`, optional (default: 15)
         The number of dimensions of the representation.

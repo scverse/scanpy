@@ -27,7 +27,7 @@ def umap(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     min_dist : `float`, optional (default: 0.5)
         The effective minimum distance between embedded points. Smaller values
@@ -55,9 +55,9 @@ def umap(
     init : `string` or `np.array`, optional (default: 'spectral')
         How to initialize the low dimensional embedding.
         Options are:
-            * 'spectral': use a spectral embedding of the fuzzy 1-skeleton
-            * 'random': assign initial embedding positions at random.
-            * A numpy array of initial embedding positions.
+        * 'spectral': use a spectral embedding of the fuzzy 1-skeleton
+        * 'random': assign initial embedding positions at random.
+        * A numpy array of initial embedding positions.
     random_state : `int`, `RandomState` or `None`, optional (default: `None`)
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState`, `random_state` is the random number generator;

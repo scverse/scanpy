@@ -36,7 +36,7 @@ def neighbors(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_neighbors : `int`, optional (default: 15)
         The size of local neighborhood (in terms of number of neighboring data
@@ -499,7 +499,7 @@ class Neighbors():
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
 
     Attributes

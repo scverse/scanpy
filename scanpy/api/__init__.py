@@ -191,12 +191,7 @@ Read other formats using functions borrowed from `anndata
 Classes
 -------
 
-:class:`~scanpy.api.AnnData` is borrowed from `anndata <http://anndata.readthedocs.io>`_.
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
+:class:`~anndata.AnnData` is from `anndata <http://anndata.readthedocs.io>`_.
 
 Represent data as a neighborhood structure, usually a knn graph.
 

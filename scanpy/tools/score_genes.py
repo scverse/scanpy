@@ -28,7 +28,7 @@ def score_genes(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     gene_list : iterable
         The list of gene names used for score calculation.
@@ -118,7 +118,7 @@ def score_genes_cell_cycle(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     s_genes : `list`
         List of genes associated with S phase.

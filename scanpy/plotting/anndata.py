@@ -52,7 +52,7 @@ def scatter(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     x : `str` or `None`
         x coordinate.
@@ -359,11 +359,11 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
            xlabel='', rotation=None, save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
 
-    Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
+    Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     keys : `str` or list of `str`
         Keys for accessing variables of `.var_names` or fields of `.obs`.
@@ -469,11 +469,11 @@ def clustermap(
         adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
     """Hierarchically-clustered heatmap [Waskom16]_.
 
-    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ for :class:`~scanpy.api.AnnData`.
+    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     obs_keys : `str`
         Categorical annotation to plot with a different color map.

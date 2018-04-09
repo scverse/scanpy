@@ -113,7 +113,7 @@ def paga_scatter(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -216,7 +216,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     solid_edges : `str`, optional (default: 'paga_confidence')
         Key for `.uns['paga']` that specifies the matrix that stores the edges
@@ -647,7 +647,7 @@ def paga_path(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
     nodes : list of group names or their category indices
         A path through nodes of the abstracted graph, that is, names or indices

@@ -27,7 +27,7 @@ def louvain(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     resolution : `float` or `None`, optional (default: 1)
         For the default flavor ('vtraag'), you can provide a resolution (higher

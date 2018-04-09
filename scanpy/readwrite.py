@@ -26,7 +26,7 @@ avail_exts = {'anndata', 'csv', 'xlsx',
 
 def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
          first_column_names=False, backup_url=None, cache=False):
-    """Read file and return :class:`~scanpy.api.AnnData` object.
+    """Read file and return :class:`~anndata.AnnData` object.
 
     To speed up reading, consider passing `cache=True`, which creates an hdf5
     cache file.
@@ -39,7 +39,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
         sc.settings.file_format_data`.  This is the same behavior as in
         `sc.read(filename, ...)`.
     backed : {`False`, `True`, 'r', 'r+'}, optional (default: `False`)
-        Load :class:`~scanpy.api.AnnData` in `backed` mode instead of fully
+        Load :class:`~anndata.AnnData` in `backed` mode instead of fully
         loading it into memory (`memory` mode). Only applies to `.h5ad` files.
         `True` and 'r' are equivalent. If you want to modify backed attributes
         of the AnnData object, you need to choose 'r+'.
@@ -63,7 +63,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if is_valid_filename(filename):
@@ -95,7 +95,7 @@ def read_10x_h5(filename, genome='mm10'):
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix, where obsevations/cells are named by their
         barcode and variables/genes by gene name. The data matrix is stored in
         `adata.X`, cell names in `adata.obs_names` and gene names in
@@ -133,7 +133,7 @@ def read_10x_h5(filename, genome='mm10'):
 
 
 def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
-    """Write :class:`~scanpy.api.AnnData` objects to file.
+    """Write :class:`~anndata.AnnData` objects to file.
 
     Parameters
     ----------
@@ -142,7 +142,7 @@ def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
         generating a filename via `sc.settings.writedir + filename +
         sc.settings.file_format_data`.  This is the same behavior as in
         :func:`~scanpy.api.read`.
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     ext : {`None`, `'h5'`, `'csv'`, `'txt'`, `'npz'`} (default: `None`)
         File extension from wich to infer file format. If `None`, defaults to

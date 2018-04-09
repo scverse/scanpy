@@ -10,14 +10,23 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
+
+from typing import Union, Optional, Tuple
+
 from .. import settings as sett
 from .. import logging as logg
 
 N_PCS = 50  # default number of PCs
 
 
-def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
-                 max_genes=None, copy=False):
+def filter_cells(
+    data: Union[AnnData, np.ndarray, sp.sparse.spmatrix],
+    min_counts: Optional[int] = None,
+    min_genes: Optional[int] = None,
+    max_counts: Optional[int] = None,
+    max_genes: Optional[int] = None,
+    copy: bool = False,
+) -> Union[AnnData, Tuple[np.ndarray, np.ndarray]]:
     """Filter cell outliers based on counts and numbers of genes expressed.
 
     For instance, only keep cells with at least `min_counts` counts or
@@ -29,24 +38,24 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
+    data :
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    min_counts : `int`, optional (default: `None`)
+    min_counts :
         Minimum number of counts required for a cell to pass filtering.
-    min_genes : `int`, optional (default: `None`)
+    min_genes :
         Minimum number of genes expressed required for a cell to pass filtering.
-    max_counts : `int`, optional (default: `None`)
+    max_counts :
         Maximum number of counts required for a cell to pass filtering.
-    max_genes : `int`, optional (default: `None`)
+    max_genes :
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+    copy :
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds\
+    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
     either `n_genes` or `n_counts` to `adata.obs`. Otherwise a tuple
 
     cell_subset : `np.ndarray`
@@ -137,7 +146,7 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.spmatrix`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.spmatrix`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_counts : `int`, optional (default: `None`)
@@ -149,12 +158,12 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     max_cells : `int`, optional (default: `None`)
         Maximum number of cells expressed required for a cell to pass filtering.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~scanpy.api.AnnData`, filters the object and adds\
+    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
     either `n_cells` or `n_counts` to `adata.var`. Otherwise a tuple
 
     gene_subset : `np.ndarray`
@@ -233,7 +242,7 @@ def filter_genes_dispersion(data,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
@@ -257,7 +266,7 @@ def filter_genes_dispersion(data,
     log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -407,11 +416,11 @@ def log1p(data, copy=False):
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -438,7 +447,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     n_comps : `int`, optional (default: 50)
@@ -455,12 +464,12 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
     return_info : `bool` or `None`, optional (default: `None`)
-        Only relevant when not passing an :class:`~scanpy.api.AnnData`: see
+        Only relevant when not passing an :class:`~anndata.AnnData`: see
         "Returns".
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -536,7 +545,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     counts_per_cell_after : `float` or `None`, optional (default: `None`)
@@ -548,7 +557,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         Name of the field in `adata.obs` where the total counts per cell are
         stored.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -661,14 +670,14 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     keys : `str` or list of `str`
         Keys for observation annotation on which to regress on.
     n_jobs : `int` or `None`, optional (default: `None`)
         Number of jobs for parallel computation. Currently has no effect.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -753,7 +762,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     zero_center : `bool`, optional (default: `True`)
@@ -762,7 +771,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     max_value : `float` or `None`, optional (default: `None`)
         Clip (truncate) to this value after scaling. If `None`, do not clip.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
@@ -803,7 +812,7 @@ def subsample(data, fraction, random_state=0, copy=False):
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     fraction : float in [0, 1]
@@ -811,13 +820,13 @@ def subsample(data, fraction, random_state=0, copy=False):
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
     Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
-    subsamples the passed :class:`~scanpy.api.AnnData` (`copy == False`) or
+    subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
     """
     if fraction > 1 or fraction < 0:
@@ -845,7 +854,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     target_counts : `int` (default: 20,000)
         Target number of counts for downsampling. Cells with more counts than
@@ -853,7 +862,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns

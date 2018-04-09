@@ -45,9 +45,11 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.coverage',
               'sphinx.ext.mathjax',
               'sphinx.ext.autosummary',
+              'sphinx.ext.intersphinx',
               # 'plot_generator',
               # 'plot_directive',
-              'numpydoc',
+              'sphinx.ext.napoleon',
+              'sphinx_autodoc_typehints',
               # 'ipython_directive',
               # 'ipython_console_highlighting',
               ]
@@ -55,12 +57,19 @@ extensions = ['sphinx.ext.autodoc',
 # Generate the API documentation when building
 autosummary_generate = True
 autodoc_mock_imports = ['_tkinter']
-# both of the following two lines don't work
-# see falexwolf's issue for numpydoc
-# autodoc_member_order = 'bysource'
-# autodoc_default_flags = ['members']
-numpydoc_show_class_members = True
-numpydoc_class_members_toctree = False
+autodoc_member_order = 'bysource'
+autodoc_default_flags = ['members']
+
+napoleon_google_docstring = False
+napoleon_use_param = True
+
+intersphinx_mapping = dict(
+    python=('https://docs.python.org/3', None),
+    numpy=('https://docs.scipy.org/doc/numpy/', None),
+    scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    matplotlib=('https://matplotlib.org/', None),
+    anndata=('https://anndata.readthedocs.io/en/latest/', None),
+)
 
 def process_generate_options(app):
     # type: (Sphinx) -> None
@@ -242,71 +251,3 @@ def modurl(qualname):
 from jinja2.defaults import DEFAULT_FILTERS
 
 DEFAULT_FILTERS['modurl'] = modurl
-
-
-# -- Prettier Autodoc -----------------------------------------------------
-
-
-def f(string):
-    frame = sys._getframe(1)
-    return string.format_map(frame.f_locals)
-
-
-def unparse(ast_node: ast.expr, plain: bool=False) -> str:
-    if isinstance(ast_node, ast.Attribute):
-        if plain:
-            return ast_node.attr
-        else:
-            v = unparse(ast_node.value, plain)
-            return f('{v}.{ast_node.attr}')
-    elif isinstance(ast_node, ast.Index):
-        return unparse(ast_node.value)
-    elif isinstance(ast_node, ast.Name):
-        return ast_node.id
-    elif isinstance(ast_node, ast.Subscript):
-        v = unparse(ast_node.value, plain)
-        s = unparse(ast_node.slice, plain)
-        return f('{v}[{s}]')
-    elif isinstance(ast_node, ast.Tuple):
-        return ', '.join(unparse(e) for e in ast_node.elts)
-    else:
-        t = type(ast_node)
-        raise NotImplementedError(f('can’t unparse {t}'))
-
-
-def mangle_signature(sig: str, max_chars: int=30) -> str:
-    fn = ast.parse(f('def f{sig}: pass')).body[0]
-
-    args_all = [a.arg for a in fn.args.args]
-    n_a = len(args_all) - len(fn.args.defaults)
-    args = args_all[:n_a]  # type: List[str]
-    opts = args_all[n_a:]  # type: List[str]
-
-    # Produce a more compact signature
-    s = limited_join(', ', args, max_chars=max_chars - 2)
-    if opts:
-        if not s:
-            opts_str = limited_join(', ', opts, max_chars=max_chars - 4)
-            s = f('[{opts_str}]')
-        elif len(s) < max_chars - 4 - 2 - 3:
-            opts_str = limited_join(', ', opts, max_chars=max_chars - len(sig) - 4 - 2)
-            s += f('[, {opts_str}]')
-
-    if False:  # fn.returns:  # do not show return type in docs
-        ret = unparse(fn.returns, plain=True)
-        return f('({s}) -> {ret}')
-    return f('({s})')
-
-
-autosummary.mangle_signature = mangle_signature
-
-# TODO: also replace those for individual function pages:
-# autodoc.formatargspec
-# autodoc.format_annotation
-
-
-if __name__ == '__main__':
-    print(mangle_signature('(filename: typing.Union[str, pathlib.Path], delim: int=0) -> anndata.base.AnnData'))
-    print(mangle_signature('(a, *, b=1) -> int'))
-    print(mangle_signature('(a, b=1, *c) -> Union[str, pathlib.Path]'))
-    print(mangle_signature('(a, b=1, *c, d=1)'))

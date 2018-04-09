@@ -23,7 +23,7 @@ def spring_project(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix: `adata.uns['neighbors_distances']` needs to
         be present.
     project_dir : `str`
