@@ -678,7 +678,8 @@ class Neighbors():
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
-        if metric == 'euclidean' and X.shape[0] < 8192:
+        use_dense_distances = metric == 'euclidean' and X.shape[0] < 8192
+        if use_dense_distances:
             # standard eulcidean case for relatively small matrices
             self._distances, knn_indices, knn_distances = compute_neighbors_numpy(
                 X, n_neighbors, knn=knn)
@@ -690,8 +691,11 @@ class Neighbors():
             knn_indices, knn_distances = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric, **metric_kwds)
         logg.msg('computed neighbors', t=True, v=4)
-        self._distances, self._connectivities = compute_connectivities_umap(
-            knn_indices, knn_distances, self._adata.shape[0], self.n_neighbors)
+        if not use_dense_distances or method == 'umap':
+            # we need self._distances also for method == 'gauss' if we didn't
+            # use dense distances
+            self._distances, self._connectivities = compute_connectivities_umap(
+                knn_indices, knn_distances, self._adata.shape[0], self.n_neighbors)
         # overwrite the umap connectivities if method is 'gauss'
         # self._distances is unaffected by this
         if method == 'gauss':
