@@ -415,12 +415,22 @@ def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_
 def get_indices_distances_from_sparse_matrix(D, n_neighbors):
     indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
     distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
+    n_neighbors_m1 = n_neighbors - 1
     for i in range(indices.shape[0]):
         neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
         indices[i, 0] = i
-        indices[i, 1:] = neighbors[1]
-        distances[i, 0] = 0
-        distances[i, 1:] = D[i][neighbors]
+        distances[i, 0] = 0        
+        # account for the fact that there might be more than n_neighbors
+        # due to an approximate search
+        # [the point itself was not detected as its own neighbor during the search]
+        if len(neighbors[1]) > n_neighbors_m1:
+            sorted_indices = np.argsort(D[i][neighbors].A1)[:n_neighbors_m1]
+            indices[i, 1:] = neighbors[1][sorted_indices]
+            distances[i, 1:] = D[i][
+                neighbors[0][sorted_indices], neighbors[1][sorted_indices]]
+        else:
+            indices[i, 1:] = neighbors[1]
+            distances[i, 1:] = D[i][neighbors]
     return indices, distances
 
 
@@ -659,6 +669,8 @@ class Neighbors():
                       .format(n_neighbors))
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
+        if method not in {'umap', 'gauss'}:
+            raise ValueError('`method` needs to be \'umap\' or \'gauss\'.')
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warn(
                 'Using high n_obs without `knn=True` takes a lot of memory...')
@@ -678,10 +690,11 @@ class Neighbors():
             knn_indices, knn_distances = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric, **metric_kwds)
         logg.msg('computed neighbors', t=True, v=4)
-        if method == 'umap':
-            self._distances, self._connectivities = compute_connectivities_umap(
-                knn_indices, knn_distances, self._adata.shape[0], self.n_neighbors)
-        else:
+        self._distances, self._connectivities = compute_connectivities_umap(
+            knn_indices, knn_distances, self._adata.shape[0], self.n_neighbors)
+        # overwrite the umap connectivities if method is 'gauss'
+        # self._distances is unaffected by this
+        if method == 'gauss':
             self._compute_connectivities_diffmap()
         logg.msg('computed connectivities', t=True, v=4)
 
