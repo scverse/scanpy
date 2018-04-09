@@ -155,20 +155,31 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
 
 
 # -------------------------------------------------------------------------------
-# Colors in additional to matplotlib's colors
+# Colors in addition to matplotlib's colors
 # -------------------------------------------------------------------------------
 
 
-additional_colors = {'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2':
-            '#eee685', 'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c',
-            'tomato2': '#ee5c42', 'grey80': '#cccccc', 'grey90': '#e5e5e5',
-            'wheat4': '#8b7e66', 'grey65': '#a6a6a6', 'grey10': '#1a1a1a',
-            'grey20': '#333333', 'grey50': '#7f7f7f', 'grey30': '#4d4d4d',
-            'grey40': '#666666', 'antiquewhite2': '#eedfcc', 'grey77':
-            '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00', 'yellow4':
-            '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
-            'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3':
-            '#8968cd', 'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
+additional_colors = {
+    'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2': '#eee685',
+    'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c', 'tomato2': '#ee5c42',
+    'grey80': '#cccccc', 'grey90': '#e5e5e5', 'wheat4': '#8b7e66', 'grey65':
+    '#a6a6a6', 'grey10': '#1a1a1a', 'grey20': '#333333', 'grey50': '#7f7f7f',
+    'grey30': '#4d4d4d', 'grey40': '#666666', 'antiquewhite2': '#eedfcc',
+    'grey77': '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00',
+    'yellow4': '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
+    'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3': '#8968cd',
+    'purple4': '#551a8b', 'seagreen4': '#2e8b57', 'lightblue3': '#9ac0cd',
+    'orchid3': '#b452cd', 'indianred 3': '#cd5555', 'grey60': '#999999',
+    'mediumorchid1': '#e066ff', 'plum3': '#cd96cd', 'palevioletred3': '#cd6889',
+    'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2': '#eee685',
+    'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c', 'tomato2': '#ee5c42',
+    'grey80': '#cccccc', 'grey90': '#e5e5e5', 'wheat4': '#8b7e66', 'grey65':
+    '#a6a6a6', 'grey10': '#1a1a1a', 'grey20': '#333333', 'grey50': '#7f7f7f',
+    'grey30': '#4d4d4d', 'grey40': '#666666', 'antiquewhite2': '#eedfcc',
+    'grey77': '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00',
+    'yellow4': '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
+    'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3': '#8968cd',
+    'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
 
 
 # -------------------------------------------------------------------------------
@@ -253,13 +264,16 @@ def adjust_palette(palette, length):
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     if key + '_colors' in adata.uns:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
-            logg.info('    number of defined colors does not match number of categories,'
+            logg.info('    number of defined colors smaller than number of categories,'
                       ' using palette')
         else:
-            # do nothing
+            # make sure that these are valid colors
+            adata.uns[key + '_colors'] = [
+                additional_colors[c] if c in additional_colors else c
+                for c in adata.uns[key + '_colors']]
             return
     else:
-        logg.m('generating colors for {} using palette'.format(key), v=4)
+        logg.msg('generating colors for {} using palette'.format(key), v=4)
     palette = default_palette(palette)
     palette_adjusted = adjust_palette(palette,
                                       length=len(adata.obs[key].cat.categories))
