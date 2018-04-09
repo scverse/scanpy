@@ -174,7 +174,7 @@ def paga_degrees(adata):
         List of degrees for each node.
     """
     import networkx as nx
-    g = nx.Graph(adata.uns['paga_adjacency_full_confidence'])
+    g = nx.Graph(adata.uns['paga']['confidence'])
     degrees = [d for _, d in g.degree(weight='weight')]
     return degrees
 
@@ -193,8 +193,8 @@ def paga_expression_entropies(adata):
         Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
-    groups_order, groups_masks = utils.select_groups(adata,
-                                                     key=adata.uns['paga_groups'])
+    groups_order, groups_masks = utils.select_groups(
+        adata, key=adata.uns['paga']['groups'])
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask]
@@ -232,12 +232,13 @@ def paga_compare_paths(adata1, adata2,
     g2 = nx.Graph(adata2.uns[adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
-    asso_groups1 = utils.identify_groups(adata1.obs['paga_groups'].values,
-                                         adata2.obs['paga_groups'].values)
-    asso_groups2 = utils.identify_groups(adata2.obs['paga_groups'].values,
-                                         adata1.obs['paga_groups'].values)
-    orig_names1 = adata1.uns['paga_groups_order_original']
-    orig_names2 = adata2.uns['paga_groups_order_original']
+    paga_groups = adata.uns['paga']['groups']
+    asso_groups1 = utils.identify_groups(adata1.obs[paga_groups].values,
+                                         adata2.obs[paga_groups].values)
+    asso_groups2 = utils.identify_groups(adata2.obs[paga_groups].values,
+                                         adata1.obs[paga_groups].values)
+    orig_names1 = adata1.obs[paga_groups].cat.categories
+    orig_names2 = adata2.obs[paga_groups].cat.categories
 
     import itertools
     n_steps = 0
@@ -334,61 +335,3 @@ def paga_compare_paths(adata1, adata2,
                   frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
                   n_paths=n_paths if n_steps > 0 else np.nan)
 
-
-def paga_contract_graph(adata, min_group_size=0.01, max_n_contractions=1000, copy=False):
-    """Contract the abstracted graph.
-    """
-    adata = adata.copy() if copy else adata
-    if 'paga_adjacency_tree_confidence' not in adata.uns: raise ValueError('run tool paga first!')
-    min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * adata.n_obs)
-    logg.info('contract graph using `min_group_size={}`'.format(min_group_size))
-
-    def propose_nodes_to_contract(adjacency_tree_confidence, node_groups):
-        # nodes with two edges
-        n_edges_per_seg = np.sum(adjacency_tree_confidence > 0, axis=1).A1
-        for i in range(adjacency_tree_confidence.shape[0]):
-            if n_edges_per_seg[i] == 2:
-                neighbors = adjacency_tree_confidence[i].nonzero()[1]
-                for neighbors_edges in range(1, 20):
-                    for n_cnt, n in enumerate(neighbors):
-                        if n_edges_per_seg[n] == neighbors_edges:
-                            logg.msg('merging node {} into {} (two edges)'
-                                   .format(i, n), v=4)
-                            return i, n
-        # node groups with a very small cell number
-        for i in range(adjacency_tree_confidence.shape[0]):
-            if node_groups[str(i) == node_groups].size < min_group_size:
-                neighbors = adjacency_tree_confidence[i].nonzero()[1]
-                neighbor_sizes = [node_groups[str(n) == node_groups].size for n in neighbors]
-                n = neighbors[np.argmax(neighbor_sizes)]
-                logg.msg('merging node {} into {} '
-                       '(smaller than `min_group_size` = {})'
-                       .format(i, n, min_group_size), v=4)
-                return i, n
-        return 0, 0
-
-    def contract_nodes(adjacency_tree_confidence, node_groups):
-        for count in range(max_n_contractions):
-            i, n = propose_nodes_to_contract(adjacency_tree_confidence, node_groups)
-            if i != 0 or n != 0:
-                G = nx.Graph(adjacency_tree_confidence)
-                G_contracted = nx.contracted_nodes(G, n, i, self_loops=False)
-                adjacency_tree_confidence = nx.to_scipy_sparse_matrix(G_contracted)
-                node_groups[str(i) == node_groups] = str(n)
-                for j in range(i+1, G.size()+1):
-                    node_groups[str(j) == node_groups] = str(j-1)
-            else:
-                break
-        return adjacency_tree_confidence, node_groups
-
-    size_before = adata.uns['paga_adjacency_tree_confidence'].shape[0]
-    adata.uns['paga_adjacency_tree_confidence'], adata.obs['paga_groups'] = contract_nodes(
-        adata.uns['paga_adjacency_tree_confidence'], adata.obs['paga_groups'].values)
-    adata.uns['paga_groups_order'] = np.unique(adata.obs['paga_groups'].values)
-    for key in ['paga_adjacency_full_confidence', 'paga_groups_original',
-                'paga_groups_order_original', 'paga_groups_colors_original']:
-        if key in adata.uns: del adata.uns[key]
-    logg.info('    contracted graph from {} to {} nodes'
-              .format(size_before, adata.uns['paga_adjacency_tree_confidence'].shape[0]))
-    logg.msg('removed adata.uns["paga_adjacency_full_confidence"]', v=4)
-    return adata if copy else None
