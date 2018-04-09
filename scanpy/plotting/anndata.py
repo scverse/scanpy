@@ -240,10 +240,7 @@ def scatter(
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
         key = keys[ikey]
-        if (not key + '_colors' in adata.uns
-            or not palette_was_none
-            or len(adata.obs[key].cat.categories) != len(adata.uns[key + '_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
+        utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
