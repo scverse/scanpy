@@ -17,13 +17,18 @@ def umap(
         b=None,
         copy=False):
     """\
-    Visualize neighborhood graph using UMAP [McInnes18]_.
+    Embed the neighborhood graph using UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
-    technique for dimension reduction that is suitable for visualization of
-    high-dimensional data. It is competitive with tSNE yet, it is faster and it
-    arguably preserves more of the global structure.  We use the implementation
-    of `umap-learn <https://github.com/lmcinnes/umap>`_ [McInnes18]_.
+    technique suitable for visualizing high-dimensional data. Besides tending to
+    be faster than tSNE, it optimizes the embedding such that it best reflects
+    the topology of the data, which we represent throughout Scanpy using a
+    neighborhood graph. tSNE, by contrast, optimizes the distribution of
+    nearest-neighbor distances in the embedding such that these best match the
+    distribution of distances in the high-dimensional space.  We use the
+    implementation of `umap-learn <https://github.com/lmcinnes/umap>`_
+    [McInnes18]_. For a few comparisons of UMAP with tSNE, see this `preprint
+    <https://doi.org/10.1101/298430>`_.
 
     Parameters
     ----------
@@ -36,8 +41,8 @@ def umap(
         result on a more even dispersal of points. The value should be set
         relative to the ``spread`` value, which determines the scale at which
         embedded points will be spread out.
-    spread: `float` (optional, default 1.0)
-        The effective scale of embedded points. In combination with ``min_dist``
+    spread : `float` (optional, default 1.0)
+        The effective scale of embedded points. In combination with `min_dist`
         this determines how clustered/clumped the embedded points are.
     n_components : `int`, optional (default: 2)
         The number of dimensions of the embedding.
@@ -45,11 +50,11 @@ def umap(
         The number of epochs of the optimization.
     alpha : `float`, optional (default: 1.0)
         The initial learning rate for the embedding optimization.
-    gamma: `float` (optional, default 1.0)
+    gamma : `float` (optional, default 1.0)
         Weighting applied to negative samples in low dimensional embedding
         optimization. Values higher than one will result in greater weight
         being given to negative samples.
-    negative_sample_rate: int (optional, default 5)
+    negative_sample_rate : `int` (optional, default 5)
         The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
     init : `string` or `np.array`, optional (default: 'spectral')
@@ -63,14 +68,14 @@ def umap(
         If `RandomState`, `random_state` is the random number generator;
         If `None`, the random number generator is the `RandomState` instance used
         by `np.random`.
-    a: `float` (optional, default `None`)
+    a : `float` (optional, default `None`)
         More specific parameters controlling the embedding. If `None` these
-        values are set automatically as determined by ``min_dist`` and
-        ``spread``.
-    b: `float` (optional, default `None`)
+        values are set automatically as determined by `min_dist` and
+        `spread`.
+    b : `float` (optional, default `None`)
         More specific parameters controlling the embedding. If `None` these
-        values are set automatically as determined by ``min_dist`` and
-        ``spread``.
+        values are set automatically as determined by `min_dist` and
+        `spread`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
 
