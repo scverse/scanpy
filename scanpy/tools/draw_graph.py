@@ -89,7 +89,7 @@ def draw_graph(
         if proceed:
             init_coords = adata.obsm[key_added]
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif 'paga' in adata.uns and 'pos' in adata.uns['paga']:
+        elif 'paga' in adata.uns and 'pos' in adata.uns['paga'] and use_paga:
             groups = adata.obs[adata.uns['paga']['groups']]
             all_pos = adata.uns['paga']['pos']
             if use_paga == 'global':
