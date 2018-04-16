@@ -21,7 +21,7 @@ conda update --yes conda
 popd
 
 conda create -n testenv --yes python=$PYTHON_VERSION pip pytest \
-      numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION numba scikit-learn
+      numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION numba scikit-learn statsmodels
 
 source activate testenv
 
