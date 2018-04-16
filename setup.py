@@ -2,6 +2,8 @@ from setuptools import setup, find_packages
 from pathlib import Path
 import versioneer
 
+_sdist = versioneer.get_cmdclass()['sdist']
+
 package_name = 'scanpy'
 
 req_path = Path('requires.txt')
@@ -15,7 +17,7 @@ with open('README.rst', encoding='utf-8') as readme_f:
     readme = readme_f.read()
 
 author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Tobias Callies'
-    
+
 setup(
     name=package_name,
     version=versioneer.get_version(),
