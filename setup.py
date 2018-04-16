@@ -2,14 +2,11 @@ from setuptools import setup, find_packages
 from pathlib import Path
 import versioneer
 
-_sdist = versioneer.get_cmdclass()['sdist']
-
 package_name = 'scanpy'
 
 req_path = Path('requires.txt')
 if not req_path.is_file():
     req_path = Path(package_name + '.egg-info') / req_path
-    
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
@@ -21,6 +18,7 @@ author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Tobias Cal
 setup(
     name=package_name,
     version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Single-Cell Analysis in Python.',
     long_description=readme,
     url='http://github.com/theislab/scanpy',
