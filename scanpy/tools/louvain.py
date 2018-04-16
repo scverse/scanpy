@@ -15,7 +15,6 @@ def louvain(
         adjacency=None,
         flavor='vtraag',
         directed=True,
-        n_jobs=None,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -69,6 +68,11 @@ def louvain(
         if not isinstance(restrict_categories[0], str):
             raise ValueError('You need to use strings to label categories, '
                              'e.g. \'1\' instead of 1.')
+        for c in restrict_categories:
+            if c not in adata.obs[restrict_key].cat.categories:
+                raise ValueError(
+                    '\'{}\' is not a valid category for \'{}\''
+                    .format(c, restrict_key))
         restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
         adjacency = adjacency[restrict_indices, :]
         adjacency = adjacency[:, restrict_indices]
