@@ -11,3 +11,4 @@ networkx
 natsort
 joblib
 numba
+rpy2
