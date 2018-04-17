@@ -76,7 +76,7 @@ def mnn_concatenate(*adatas, geneset=None, k=20, sigma=1, n_jobs = None, **kwarg
     rbase      = importr('base')
     rscran     = importr('scran')
     bpparam    = importr('BiocParallel').MulticoreParam(workers = n_jobs) if n_jobs > 1 else importr('BiocParallel').SerialParam()
-    mnn_result = rscran.mnnCorrect(*datamats, BPPARAM = bpparam)
+    mnn_result = rscran.mnnCorrect(*datamats, k=k, sigma=sigma, BPPARAM = bpparam)
     corrected     = np.asarray(rbase.do_call(rbase.cbind, mnn_result[0])).T
     if geneset is None:
         adata = adata[:,geneset]
