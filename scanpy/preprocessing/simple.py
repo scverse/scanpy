@@ -694,12 +694,11 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
-                'the mean is computed for each variable/gene.')
+                'we regress on the mean for each category.')
         logg.msg('... regressing on per-gene means within categories')
-        unique_categories = np.unique(adata.obs[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
-        for category in unique_categories:
-            mask = category == adata.obs[keys[0]].values
+        for category in adata.obs[keys[0]].cat.categories:
+            mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables
