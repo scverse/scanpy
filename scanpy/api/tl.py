@@ -13,4 +13,4 @@ from ..tools.top_genes import correlation_matrix, ROC_AUC_analysis
 
 from ..tools.score_genes import score_genes, score_genes_cell_cycle
 
-from ..tools.pypairs import cyclone, sandbag, load_oscope_marker
+from ..tools.pypairs import cyclone, sandbag
