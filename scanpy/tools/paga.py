@@ -11,7 +11,7 @@ from .. import settings
 def paga(
         adata,
         groups='louvain',
-        n_jobs=None,
+        use_rna_velocity=False,
         copy=False):
     """\
     Generate cellular maps of differentiation manifolds with complex
@@ -32,9 +32,11 @@ def paga(
         graph. 'louvain_groups' uses the Louvain algorithm and optimizes
         modularity of the graph. You can also pass your predefined groups by
         choosing any categorical annotation of observations (`adata.obs`).
+    use_rna_velocity : `bool` (default: `False`)
+        Use RNA velocity to orient edges in the abstracted graph and estimate transitions.
     copy : `bool`, optional (default: `False`)
         Copy `adata` before computation and return a copy. Otherwise, perform
-        computation inplace and return None.
+        computation inplace and return `None`.
 
     Returns
     -------
@@ -55,12 +57,15 @@ def paga(
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
-    paga = PAGA(adata, groups)
+    paga = PAGA(adata, groups, use_rna_velocity=use_rna_velocity)
     paga.compute()
     adata.uns['paga'] = {}
-    adata.uns['paga']['connectivities'] = paga.connectivities_coarse
-    adata.uns['paga']['confidence'] = paga.confidence
-    adata.uns['paga']['confidence_tree'] = paga.confidence_tree
+    if not use_rna_velocity:
+        adata.uns['paga']['connectivities'] = paga.connectivities_coarse
+        adata.uns['paga']['confidence'] = paga.confidence
+        adata.uns['paga']['confidence_tree'] = paga.confidence_tree
+    else:
+        adata.uns['paga']['transitions_coarse'] = paga.transitions_coarse
     adata.uns['paga']['groups'] = groups
     adata.uns[groups + '_sizes'] = np.array(paga.vc.sizes())
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
@@ -74,15 +79,20 @@ def paga(
 
 class PAGA(Neighbors):
 
-    def __init__(self, adata, groups, threshold=0.05, tree_based_confidence=False):
+    def __init__(self, adata, groups,
+                 use_rna_velocity=False, threshold=0.05, tree_based_confidence=False):
         super(PAGA, self).__init__(adata)
         self._groups = groups
         self.threshold = threshold
         self._tree_based_confidence = tree_based_confidence
+        self._use_rna_velocity = use_rna_velocity
 
     def compute(self):
-        self.compute_connectivities_coarse()
-        self.compute_confidence()
+        if self._use_rna_velocity:
+            self.compute_transitions_coarse()
+        else:
+            self.compute_connectivities_coarse()
+            self.compute_confidence()
 
     def compute_connectivities_coarse(self):
         import igraph
@@ -94,6 +104,15 @@ class PAGA(Neighbors):
             g, membership=self._adata.obs[self._groups].cat.codes.values)
         cg = self.vc.cluster_graph(combine_edges='sum')
         self.connectivities_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+
+    def compute_transitions_coarse(self):
+        import igraph
+        g = utils.get_igraph_from_adjacency(
+            self._adata.uns['rna_velocity']['graph'], directed=True)
+        self.vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups].cat.codes.values)
+        cg = self.vc.cluster_graph(combine_edges='sum')
+        self.transitions_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')
 
     def compute_confidence(self):
         """Translates the connectivities_coarse measure into a confidence measure.
@@ -334,4 +353,3 @@ def paga_compare_paths(adata1, adata2,
                   n_steps=n_steps if n_steps > 0 else np.nan,
                   frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
                   n_paths=n_paths if n_steps > 0 else np.nan)
-
