@@ -12,6 +12,7 @@ from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
+from ..utils import sanitize_anndata
 
 N_PCS = 50  # default number of PCs
 
@@ -687,6 +688,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         logg.warn('Parallelization is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on a single categorical variable
+    sanitize_anndata(adata)
     if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
