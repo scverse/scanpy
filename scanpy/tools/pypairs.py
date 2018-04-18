@@ -1,7 +1,6 @@
 """Calculate scores based on relative expression change of maker pairs
 """
 
-import pypairs
 import pandas as pd
 
 def sandbag(
@@ -45,6 +44,10 @@ def sandbag(
     --------
     See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
+    try:
+       import pypairs
+    except ImportError:
+        raise ImportError('You need to install the package `pypairs`.')
 
     x = pd.DataFrame(adata.X)
 
@@ -107,6 +110,11 @@ def cyclone(
     --------
     See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
+    try:
+       import pypairs
+    except ImportError:
+        raise ImportError('You need to install the package `pypairs`.')
+    
     x = pd.DataFrame(adata.X)
 
     return pypairs.cyclone(
