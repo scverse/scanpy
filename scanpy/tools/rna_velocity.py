@@ -1,10 +1,12 @@
+import numpy as np
 
 
 def rna_velocity(adata, loomfile, copy=False):
-    """Estimate RNA velocity. [LaManno17]_
+    """Estimate RNA velocity [LaManno17]_
 
-    This requires generating a loom file with Velocyto, which stores the counts
-    of spliced, unspliced and ambiguous RNA for every cell and every gene.
+    This requires generating a loom file with Velocyto, which will store the
+    counts of spliced, unspliced and ambiguous RNA for every cell and every
+    gene.
 
     In contrast to Velocyto, here, we neither use RNA velocities for
     extrapolation nor for constructing a Markov process. Instead, we directly
@@ -13,26 +15,31 @@ def rna_velocity(adata, loomfile, copy=False):
     neighbor of the cell, `x` a gene expression vector and `v` a velocity
     vector.
     """
-    adata = adata.copy() if copy else adata    
+    import loompy
+    adata = adata.copy() if copy else adata
 
     # this is n_genes x n_cells
-    ds = loompy.connect(self.loom_filepath)
-    X_spliced = ds.layer['spliced'][:, :]
-    X_unspliced = ds.layer['unspliced'][:, :]
-    # X_ambiguous = ds.layer['ambiguous'][:, :]
+    ds = loompy.connect(loomfile)
     row_attrs = dict(ds.row_attrs.items())
-    gene_names = row_attrs['Gene']
-
+    col_attrs = dict(ds.col_attrs.items())
+    gene_names = [gene for gene in row_attrs['Gene'] if gene in adata.var_names]
+    # cell_names = [cell for cell in col_attrs['CellID'] if cell in adata.obs_names]
     # subset the spliced and unspliced matrices to the genes in adata
     from anndata.base import _normalize_index
     gene_index = _normalize_index(gene_names, adata.var_names)
-    X_spliced = X_spliced[gene_index]
-    X_unspliced = X_unspliced[gene_index]
+    # cell_index = _normalize_index(cell_names, adata.obs_names)
+
+    X_spliced = ds.layer['spliced'][gene_index].T
+    X_unspliced = ds.layer['unspliced'][gene_index].T
+
+    print(X_spliced.shape)
+    print(X_unspliaced.shape)
+    quit()
 
     # for now, take non-normalized values
     from ..preprocessing.simple import normalize_per_cell
-    normalize_per_cell(X_spliced.T)
-    normalize_per_cell(X_unspliced.T)
+    X_spliced = normalize_per_cell(X_spliced.T, copy=True).T
+    X_unspliced = normalize_per_cell(X_unspliced.T, copy=True).T
 
     # loop over genes
     offset = np.zeros(s.shape[0], dtype='float32')
@@ -50,7 +57,7 @@ def rna_velocity(adata, loomfile, copy=False):
     neigh = Neighbors(adata)
     knn_indices, knn_distances = get_indices_distances_from_sparse_matrix(
         neigh.distances, self.n_neighbors)
-    
+
     n_obs = adata.n_obs
     n_neighbors = neigh.n_neighbors
 
@@ -72,6 +79,5 @@ def rna_velocity(adata, loomfile, copy=False):
     adata.uns['rna_velocity'] = {}
     adata.uns['rna_velocity']['graph'] = graph
     adata.var['rna_velocity_gamma'] = gamma
-    adata.var['rna_velocity_offset'] = offset    
+    adata.var['rna_velocity_offset'] = offset
     return adata if copy else None
-    
