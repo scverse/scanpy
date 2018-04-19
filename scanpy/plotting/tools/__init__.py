@@ -890,7 +890,7 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, save=None, ext=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsize=8, show=None, save=None, ext=None):
     """Plot ranking of genes.
 
     Parameters
@@ -899,6 +899,9 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         Annotated data matrix.
     groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
+    gene_symbols : `str`
+        Key for field in `.var` that stores gene symbols if you do not want to
+        use `.var_names`.
     n_genes : `int`, optional (default: 20)
         Number of genes to show.
     fontsize : `int`, optional (default: 8)
@@ -942,7 +945,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         gene_names = adata.uns['rank_genes_groups']['names'][group_name]
         scores = adata.uns['rank_genes_groups']['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
-            pl.text(ig, scores[ig], gene_names[ig],
+            gene_name = gene_names[ig]
+            pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
         pl.title('{} vs. {}'.format(group_name, reference))
@@ -963,7 +967,6 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
                              split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
-                             computed_distribution=False,
                              ax=None, show=None, save=None):
     """Plot ranking of genes for all tested comparisons.
 
@@ -975,6 +978,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         List of group names.
     n_genes : `int`, optional (default: 20)
         Number of genes to show.
+    gene_symbols : `str`
+        Key for field in `.var` that stores gene symbols if you do not want to
+        use `.var_names`.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present. Defaults to the value that
         was used in :func:`~scanpy.api.tl.rank_genes_groups`.
@@ -988,10 +994,6 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         If set to 0, no points are drawn. See `seaborn.stripplot`.
     size : `int`, optional (default: 1)
         Size of the jitter points.
-    computed_distribution : `bool`, optional (default: `False`)
-        Set to `True` if you want to use the scaled and shifted distribution
-        previously computed with the `compute_distribution` in
-        :func:`scanpy.api.tl.rank_genes_groups`
     show : `bool`, optional (default: `None`)
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
@@ -1009,28 +1011,20 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
-        keys = []
         gene_names = adata.uns[
             'rank_genes_groups']['names'][group_name][:n_genes]
-        if computed_distribution:
-            for gene_counter, gene_name in enumerate(gene_names):
-                identifier = rank_genes_groups._build_identifier(
-                    groups_key, group_name, gene_counter, gene_name)
-                if compute_distribution and identifier not in set(adata.obs_keys()):
-                    raise ValueError(
-                        'You need to set `compute_distribution=True` in '
-                        '`sc.tl.rank_genes_groups()`.')
-                keys.append(identifier)
-        else:
-            keys = gene_names
+        keys = gene_names
         # make a "hue" option!
         df = pd.DataFrame()
+        new_keys = []
         for key in keys:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, key].X
             else:
                 X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
+            key = key if gene_symbols is None else adata.var[gene_symbols][key]
+            new_keys.append(key)
             df[key] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
@@ -1038,7 +1032,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         else:
             df['hue'][~df['hue'].isin([group_name, reference])] = np.nan
         df['hue'] = df['hue'].astype('category')
-        df_tidy = pd.melt(df, id_vars='hue', value_vars=keys)
+        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
         x = 'variable'
         y = 'value'
         hue_order = [group_name, reference]
