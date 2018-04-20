@@ -79,11 +79,10 @@ def paga(
 
 class PAGA(Neighbors):
 
-    def __init__(self, adata, groups,
-                 use_rna_velocity=False, threshold=0.05, tree_based_confidence=False):
+    def __init__(self, adata, groups, use_rna_velocity=False,
+                 tree_based_confidence=False):
         super(PAGA, self).__init__(adata)
         self._groups = groups
-        self.threshold = threshold
         self._tree_based_confidence = tree_based_confidence
         self._use_rna_velocity = use_rna_velocity
 
@@ -127,33 +126,13 @@ class PAGA(Neighbors):
         # inter- and intra-cluster based confidence
         if not self._tree_based_confidence:
             total_n = self.n_neighbors * np.array(self.vc.sizes())
-            logg.msg('{:>2} {:>2} {:>4} {:>4} {:>4} '
-                     '{:>7} {:>7} {:>7} {:>7}'
-                     .format('i', 'j', 'conn', 'n[i]', 'n[j]',
-                             'avg', 'thresh', 'var', 'conf'), v=5)
             maximum = self.connectivities_coarse.max()
             confidence = self.connectivities_coarse.copy()  # initializing
             for i in range(self.connectivities_coarse.shape[0]):
                 for j in range(i+1, self.connectivities_coarse.shape[1]):
                     if self.connectivities_coarse[i, j] > 0:
-                        minimum = min(total_n[i], total_n[j])
-                        average = self.connectivities_coarse[i, j] / minimum
                         geom_mean = np.sqrt(total_n[i] * total_n[j])
                         confidence[i, j] = self.connectivities_coarse[i, j] / geom_mean
-                        # confidence[i, j] = self.connectivities_coarse[i, j] / maximum
-                        variance = 0.0
-                        # variance = self.threshold * (1-self.threshold)
-                        # if average > self.threshold:
-                        #     confidence[i, j] = 1
-                        # else:
-                        #     confidence[i, j] = norm.cdf(average,
-                        #         self.threshold, variance)
-                        logg.msg(
-                            '{:2} {:2} {:4} {:4} {:4} '
-                            '{:7.2} {:7.2} {:7.2} {:7.2}'
-                            .format(i, j, int(self.connectivities_coarse[i, j]),
-                                    total_n[i], total_n[j],
-                                    average, self.threshold, variance, confidence[i, j]), v=5)
                         confidence[j, i] = confidence[i, j]
         # tree-based confidence
         else:

@@ -10,6 +10,19 @@ from .. import logging as logg
 from .. import settings
 from . import palettes
 
+doc_edges_arrows = """\
+edges : `bool`, optional (default: `False`)
+    Show edges.
+edges_width : `float`, optional (default: 0.1)
+    Width of edges.
+edges_color : matplotlib color, optional (default: 'grey')
+    Color of edges.
+arrows : `bool`, optional (default: `False`)
+    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
+"""
+
+
+
 
 # -------------------------------------------------------------------------------
 # Simple plotting functions
@@ -288,6 +301,32 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
                       '(`sc.settings.categories_to_ignore`)'
                       .format(name, key))
             adata.uns[key + '_colors'][iname] = 'grey'
+
+
+def plot_edges(axs, adata, basis, edges_width, edges_color):
+    if 'neighbors' not in adata.uns:
+        raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
+    g = nx.Graph(adata.uns['neighbors']['connectivities'])
+    for ax in axs:
+        edge_collection = nx.draw_networkx_edges(
+            g, adata.obsm['X_' + basis],
+            ax=ax, width=edges_width, edge_color=edges_color)
+        edge_collection.set_zorder(-2)
+
+
+def plot_arrows(axs, adata, basis):
+    if 'rna_velocity' not in adata.uns:
+        raise ValueError('`arrows=True` requires `tl.rna_velocity` to be run before.')
+    adjacency = adata.uns['rna_velocity']['graph']
+    # loop over columns of adjacency, this is where transitions start from
+    V = np.zeros((adjacency.shape[0], 2), dtype='float32')
+    for i, n in enumerate(adjacency.T):
+        for j in n.nonzero()[1]:  # these are row indices
+            V[i] += adjacency[j, i] * (
+                adata.obsm['X_' + basis][j] - adata.obsm['X_' + basis][i])
+    X = adata.obsm['X_' + basis]
+    for ax in axs:
+        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1])
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):

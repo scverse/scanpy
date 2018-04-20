@@ -556,7 +556,7 @@ class Neighbors():
             self._eigen_basis = None
             self.n_dcs = None
         if info_str != '':
-            logg.info('    initialized {}'.format(info_str))
+            logg.msg('    initialized {}'.format(info_str), v=4)
 
     @property
     def distances(self):

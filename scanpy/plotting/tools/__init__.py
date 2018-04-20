@@ -13,12 +13,15 @@ from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
 from .. import utils
+from ...utils import doc_params
 from ... import utils as sc_utils
 from ... import settings
 from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import matrix
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..utils import doc_edges_arrows
+
 
 # ------------------------------------------------------------------------------
 # Visualization tools
@@ -68,7 +71,7 @@ def pca(adata, **params):
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
@@ -103,9 +106,6 @@ def pca_scatter(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    layout : {'fr', 'drl', ...}, optional (default: last computed)
-        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
-        the last computed layout is taken.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
@@ -138,7 +138,7 @@ def pca_scatter(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -185,7 +185,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -203,7 +203,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
@@ -268,7 +268,7 @@ def diffmap(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
     """
@@ -313,14 +313,16 @@ def diffmap(
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def draw_graph(
         adata,
-        edges=False,
-        edges_width=0.1,
-        edges_color='grey',
         layout=None,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -336,26 +338,23 @@ def draw_graph(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot in graph-drawing basis.
+    """\
+    Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    edges : `bool`, optional (default: `False`)
-        Show edges.
-    edges_width : `float`, optional (default: 0.1)
-        Width of edges.
-    edges_color : matplotlib color, optional (default: 'grey')
-        Color of edges.
-    layout : {'fr', 'drl', ...}, optional (default: last computed)
-        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
-        the last computed layout is taken.
-    color : string or list of strings, optional (default: None)
+    layout : {{'fr', 'drl', ...}}, optional (default: last computed)
+        One of the `draw_graph` layouts, see
+        :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
+        is used.
+    color : `str` or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {edges_arrows}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -383,7 +382,7 @@ def draw_graph(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -418,21 +417,21 @@ def draw_graph(
         show=False,
         save=False,
         ax=ax)
-    if edges:
-        for ax in axs:
-            g = nx.Graph(adata.uns['neighbors']['connectivities'])
-            edge_collection = nx.draw_networkx_edges(
-                g, adata.obsm['X_' + basis],
-                ax=ax, width=edges_width, edge_color=edges_color)
-            edge_collection.set_zorder(-2)
-    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def tsne(
         adata,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -457,6 +456,7 @@ def tsne(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {{edges_arrows}}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -482,7 +482,7 @@ def tsne(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -491,9 +491,10 @@ def tsne(
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
     """
+    basis = 'tsne'
     axs = scatter(
         adata,
-        basis='tsne',
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -507,9 +508,12 @@ def tsne(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
 
@@ -572,7 +576,7 @@ def umap(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
@@ -667,7 +671,7 @@ def dpt(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     show_tree : bool, optional (default: False)
@@ -861,7 +865,7 @@ def louvain(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
@@ -910,7 +914,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -998,7 +1002,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -1071,7 +1075,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         Shuffle the data.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     show : bool, optional (default: None)
         Show the plot, do not return axis.
     """
