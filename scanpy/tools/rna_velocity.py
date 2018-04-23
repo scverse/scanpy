@@ -94,5 +94,59 @@ def rna_velocity(adata, loomfile, copy=False):
     neighbor of the cell, `x` a gene expression vector and `v` a velocity
     vector.
     """
-    # see notebook "scanpy_rna_velocity_all"
+    # also see notebook "scanpy_rna_velocity_all"
+
+    # the following only works in theory...
+    
+    # this is n_genes x n_cells
+    ds = loompy.connect('./all_sgete_4GU75.loom')
+    row_attrs = dict(ds.row_attrs.items())
+    col_attrs = dict(ds.col_attrs.items())
+    gene_names = [gene for gene in row_attrs['Gene'] if gene in adata.var_names]
+    cell_names = [cell for cell in col_attrs['CellID'] if cell in adata.obs_names]
+
+    # subset the s and u matrices to the genes in adata
+    from anndata.base import _normalize_index
+    gene_index = _normalize_index(gene_names, adata.var_names)
+    cell_index = _normalize_index(cell_names, adata.obs_names)
+    if len(cell_index) == 0:
+        raise ValueError(
+            'Cell names in loom file do not match cell names in AnnData.')
+    # subset to cells and genes present in adata
+    ad_s = AnnData(ds.layer['spliced'].sparse(gene_index, cell_index).tocsr().T)
+    ad_u = AnnData(ds.layer['unspliced'].sparse(gene_index, cell_index).tocsr().T)
+    ds.close()
+
+    subset, _ = sc.pp.filter_genes(ad_u.X, min_cells=50)
+    print(np.sum(subset))
+    ad_s = ad_s[:, subset]
+    ad_u = ad_u[:, subset]
+    ad_s.var_names = np.array(gene_names)[subset]
+
+    # loop over genes
+    from scipy.sparse import dok_matrix
+    offset = np.zeros(ad_s.shape[1], dtype='float32')
+    gamma = np.zeros(ad_s.shape[1], dtype='float32')
+    X_du = dok_matrix(ad_s.shape, dtype='float32')
+    for i in range(ad_s.shape[1]):
+        x = ad_s.X[:, i].toarray()
+        y = ad_u.X[:, i].toarray()
+        subset = np.logical_and(x > 0, y > 0)
+        x = x[subset]
+        y = y[subset]
+        X = np.c_[np.ones(len(x)), x]
+        offset[i], gamma[i] = np.linalg.pinv(X).dot(y)
+        subset_indices = np.flatnonzero(subset)
+        index = subset_indices, np.array([i for dummy in subset_indices])
+        X_du[index] = y - gamma[i]*x - offset[i]
+        # pl.scatter(x, y)
+        # pl.scatter(x, gamma[i]*x + offset[i])
+        # pl.scatter(x, X_du[index].toarray()[0])
+        # pl.show()
+    X_du = X_du.tocoo().tocsr()
+
+    # sc.pp.neighbors(adata, n_neighbors=100)
+
+    graph = compute_velocity_graph(adata, ad_u, X_du)
+
     return adata if copy else None
