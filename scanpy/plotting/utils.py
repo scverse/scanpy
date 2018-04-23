@@ -314,19 +314,14 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
         edge_collection.set_zorder(-2)
 
 
-def plot_arrows(axs, adata, basis):
-    if 'rna_velocity' not in adata.uns:
-        raise ValueError('`arrows=True` requires `tl.rna_velocity` to be run before.')
-    adjacency = adata.uns['rna_velocity']['graph']
-    # loop over columns of adjacency, this is where transitions start from
-    V = np.zeros((adjacency.shape[0], 2), dtype='float32')
-    for i, n in enumerate(adjacency.T):
-        for j in n.nonzero()[1]:  # these are row indices
-            V[i] += adjacency[j, i] * (
-                adata.obsm['X_' + basis][j] - adata.obsm['X_' + basis][i])
+def plot_arrows(axs, adata, basis, arrows_kwds):
+    if 'Delta_' + basis not in adata.obsm.keys():
+        raise ValueError('`arrows=True` requires \'V_\' + basis from velocyto.')
     X = adata.obsm['X_' + basis]
+    V = adata.obsm['Delta_' + basis]
     for ax in axs:
-        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1])
+        quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
+        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds)
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
