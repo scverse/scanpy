@@ -432,6 +432,7 @@ def tsne(
         edges_width=0.1,
         edges_color='grey',
         arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -512,7 +513,7 @@ def tsne(
         save=False,
         ax=ax)
     if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
-    if arrows: utils.plot_arrows(axs, adata, basis)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
     utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
