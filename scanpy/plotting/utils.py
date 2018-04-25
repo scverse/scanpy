@@ -10,6 +10,19 @@ from .. import logging as logg
 from .. import settings
 from . import palettes
 
+doc_edges_arrows = """\
+edges : `bool`, optional (default: `False`)
+    Show edges.
+edges_width : `float`, optional (default: 0.1)
+    Width of edges.
+edges_color : matplotlib color, optional (default: 'grey')
+    Color of edges.
+arrows : `bool`, optional (default: `False`)
+    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
+"""
+
+
+
 
 # -------------------------------------------------------------------------------
 # Simple plotting functions
@@ -288,6 +301,27 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
                       '(`sc.settings.categories_to_ignore`)'
                       .format(name, key))
             adata.uns[key + '_colors'][iname] = 'grey'
+
+
+def plot_edges(axs, adata, basis, edges_width, edges_color):
+    if 'neighbors' not in adata.uns:
+        raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
+    g = nx.Graph(adata.uns['neighbors']['connectivities'])
+    for ax in axs:
+        edge_collection = nx.draw_networkx_edges(
+            g, adata.obsm['X_' + basis],
+            ax=ax, width=edges_width, edge_color=edges_color)
+        edge_collection.set_zorder(-2)
+
+
+def plot_arrows(axs, adata, basis, arrows_kwds):
+    if 'Delta_' + basis not in adata.obsm.keys():
+        raise ValueError('`arrows=True` requires \'V_\' + basis from velocyto.')
+    X = adata.obsm['X_' + basis]
+    V = adata.obsm['Delta_' + basis]
+    for ax in axs:
+        quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
+        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds)
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
