@@ -3,20 +3,21 @@
 
 import pandas as pd
 
+
 def sandbag(
         adata,
         phases,
         fraction=0.5,
         subset_genes=None,
         subset_samples=None,
-        processes=1):
-    """Generate pairs of genes [Scialdone15]_.
+        n_jobs=1):
+    """Generate pairs of genes [Scialdone15]_ [Fechtner18]_.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
 
-    This reproduces the approach in Pairs [Scialdone15]_ and has been
-    implemented for Scanpy by Ron Fechtner.
+    This reproduces the approach of [Scialdone15]_ in the implementation of
+    [Fechtner18]_.
 
     Parameters
     ----------
@@ -31,8 +32,8 @@ def sandbag(
         Genes for sampling the reference set. Default is all genes.
     subset_samples : `list` or `None`, optional (default: `None`)
         Cells for sampling the reference set. Default is all samples.
-    processes : `int`, optional (default: 1)
-        Number of concurrent processes to be used. 0 = use all available cores.
+    n_jobs : `int`, optional (default: 1)
+        Number of concurrent n_jobs to be used. 0 = use all available cores.
 
     Returns
     -------
@@ -56,7 +57,7 @@ def sandbag(
         phases=phases,
         subset_genes=subset_genes,
         subset_samples=subset_samples,
-        processes=processes
+        processes=n_jobs
     )
 
 
@@ -68,11 +69,14 @@ def cyclone(
         iterations=1000,
         min_iter=100,
         min_pairs=50,
-        processes=1):
-    """Assigns scores and predicted class to samples [Scialdone15]_.
+        n_jobs=1):
+    """Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 
-    Calculates scores for each sample and each phase and assigns prediction
-    based on marker pairs indentified by sandbag
+    Calculates scores for each observation and each phase and assigns prediction
+    based on marker pairs indentified by sandbag.
+
+    This reproduces the approach of [Scialdone15]_ in the implementation of
+    [Fechtner18]_.
 
     Parameters
     ----------
@@ -93,8 +97,8 @@ def cyclone(
     min_pairs : `int`, optional (default: 50)
         An integer scalar specifying the minimum number of iterations
         for score estimation
-    processes : `int`, optional (default: 1)
-        Number of concurrent processes to be used. 0 = use all available cores.
+    n_jobs : `int`, optional (default: 1)
+        Number of concurrent n_jobs to be used. 0 = use all available cores.
 
     Returns
     -------
@@ -125,5 +129,5 @@ def cyclone(
         iterations=iterations,
         min_iter=min_iter,
         min_pairs=min_pairs,
-        processes=processes
+        processes=n_jobs
     )
