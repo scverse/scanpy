@@ -1,1 +1,1 @@
-from mnn_correct import mnn_concatenate
+from .mnn_correct import mnn_concatenate
