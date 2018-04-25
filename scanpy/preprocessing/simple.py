@@ -598,6 +598,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     # proceed with data matrix
     X = data.copy() if copy else data
     if counts_per_cell is None:
+        if copy == False:
+            raise ValueError('Can only be run with copy=True')
         cell_subset, counts_per_cell = filter_cells(X, min_counts=1)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
