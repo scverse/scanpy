@@ -274,3 +274,4 @@ from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
 from .. import utils
 from . import export_to
+from .. import rtools
