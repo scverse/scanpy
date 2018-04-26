@@ -71,7 +71,7 @@ def draw_graph(
     """
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
               r=True)
-    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular'}
+    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa2'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
@@ -81,57 +81,97 @@ def draw_graph(
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    if use_paga != 'local':
-        g = utils.get_igraph_from_adjacency(adjacency)
-    np.random.seed(random_state)
-    all_coords = None
-    if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
+    if layout == 'fa2':
         if proceed:
             init_coords = adata.obsm[key_added]
-            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-        elif 'paga' in adata.uns and 'pos' in adata.uns['paga'] and use_paga:
-            groups = adata.obs[adata.uns['paga']['groups']]
-            all_pos = adata.uns['paga']['pos']
+        else:
             if use_paga == 'global':
                 init_coords = np.ones((adjacency.shape[0], 2))
                 for i, pos in enumerate(all_pos):
                     subset = (groups == groups.cat.categories[i]).values
                     init_coords[subset] = pos
-                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
             elif use_paga == 'local':
-                all_pos -= np.min(all_pos, axis=0)
-                all_pos /= np.max(all_pos, axis=0)
-                all_coords = np.zeros((adjacency.shape[0], 2))
-                from scipy.spatial.distance import euclidean
-                for i, pos in enumerate(all_pos):
-                    subset = (groups == groups.cat.categories[i]).values
-                    adjacency_sub = adjacency[subset][:, subset]
-                    if adjacency_sub.shape[0] == 0: continue
-                    g = utils.get_igraph_from_adjacency(adjacency_sub)
-                    init_coords = np.random.random((adjacency_sub.shape[0], 2))
-                    ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-                    coords = np.array(ig_layout.coords)
-                    coords -= np.min(coords, axis=0)
-                    coords /= np.max(coords, axis=0)
-                    dists = [euclidean(pos, p) for j, p in enumerate(all_pos) if i != j]
-                    min_dist = np.min(dists)
-                    coords -= np.array([0.5, 0.5])
-                    coords *= min_dist
-                    coords += pos
-                    all_coords[subset] = coords
+                raise ValueError('`use_paga=\'local\'` is not implemented.')
+            else:
+                init_coords = np.random.random((adjacency.shape[0], 2))
+        from fa2 import ForceAtlas2
+        forceatlas2 = ForceAtlas2(
+              # Behavior alternatives
+              outboundAttractionDistribution=False,  # Dissuade hubs
+              linLogMode=False,  # NOT IMPLEMENTED
+              adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+              edgeWeightInfluence=1.0,
+              # Performance
+              jitterTolerance=1.0,  # Tolerance
+              barnesHutOptimize=True,
+              barnesHutTheta=1.2,
+              multiThreaded=False,  # NOT IMPLEMENTED
+              # Tuning
+              scalingRatio=2.0,
+              strongGravityMode=False,
+              gravity=1.0,
+              # Log
+              verbose=False)
+        if 'maxiter' in kwds:
+            iterations = kwds['maxiter']
+        elif 'iterations' in kwds:
+            iterations = kwds['iterations']
         else:
-            init_coords = np.random.random((adjacency.shape[0], 2))
-            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-    elif 'rt' in layout:
-        if root is not None: root = [root]
-        ig_layout = g.layout(layout, root=root, **kwds)
+            iterations = 500            
+        positions = forceatlas2.forceatlas2(adjacency, pos=None, iterations=iterations)
+        positions = np.array(positions)
     else:
-        ig_layout = g.layout(layout, **kwds)
+        if use_paga != 'local':
+            g = utils.get_igraph_from_adjacency(adjacency)
+        np.random.seed(random_state)
+        all_coords = None
+        if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
+            if proceed:
+                init_coords = adata.obsm[key_added]
+                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+            elif 'paga' in adata.uns and 'pos' in adata.uns['paga'] and use_paga:
+                groups = adata.obs[adata.uns['paga']['groups']]
+                all_pos = adata.uns['paga']['pos']
+                if use_paga == 'global':
+                    init_coords = np.ones((adjacency.shape[0], 2))
+                    for i, pos in enumerate(all_pos):
+                        subset = (groups == groups.cat.categories[i]).values
+                        init_coords[subset] = pos
+                    ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+                elif use_paga == 'local':
+                    all_pos -= np.min(all_pos, axis=0)
+                    all_pos /= np.max(all_pos, axis=0)
+                    all_coords = np.zeros((adjacency.shape[0], 2))
+                    from scipy.spatial.distance import euclidean
+                    for i, pos in enumerate(all_pos):
+                        subset = (groups == groups.cat.categories[i]).values
+                        adjacency_sub = adjacency[subset][:, subset]
+                        if adjacency_sub.shape[0] == 0: continue
+                        g = utils.get_igraph_from_adjacency(adjacency_sub)
+                        init_coords = np.random.random((adjacency_sub.shape[0], 2))
+                        ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+                        coords = np.array(ig_layout.coords)
+                        coords -= np.min(coords, axis=0)
+                        coords /= np.max(coords, axis=0)
+                        dists = [euclidean(pos, p) for j, p in enumerate(all_pos) if i != j]
+                        min_dist = np.min(dists)
+                        coords -= np.array([0.5, 0.5])
+                        coords *= min_dist
+                        coords += pos
+                        all_coords[subset] = coords
+            else:
+                init_coords = np.random.random((adjacency.shape[0], 2))
+                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+        elif 'rt' in layout:
+            if root is not None: root = [root]
+            ig_layout = g.layout(layout, root=root, **kwds)
+        else:
+            ig_layout = g.layout(layout, **kwds)
+        positions = np.array(ig_layout.coords) if all_coords is None else all_coords
     adata.uns['draw_graph'] = {}
     adata.uns['draw_graph']['params'] = {'layout': layout, 'random_state': random_state}
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    adata.obsm[key_added] = (np.array(ig_layout.coords)
-                           if all_coords is None else all_coords)
+    adata.obsm[key_added] = positions
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
               '    \'{}\', graph_drawing coordinates (adata.obs)'
