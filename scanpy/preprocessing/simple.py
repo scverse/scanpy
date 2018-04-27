@@ -349,6 +349,7 @@ def filter_genes_dispersion(data,
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
+        dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
