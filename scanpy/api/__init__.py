@@ -35,6 +35,14 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.recipe_zheng17
    pp.recipe_weinreb17
 
+**Batch effect correction**
+
+.. autosummary::
+   :toctree: .
+
+   pp.regress_out
+   pp.mnn_correct
+
 **Neighbors**
 
 .. autosummary::
