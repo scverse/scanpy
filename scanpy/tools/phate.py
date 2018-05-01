@@ -3,7 +3,6 @@
 try:
     import phate as ph
 except ImportError:
-    raise
     pass
 
 
