@@ -81,13 +81,15 @@ Tools: TL
 
    tl.rank_genes_groups
 
-**Gene scores**
+**Gene scores, Cell cycle**
 
 .. autosummary::
    :toctree: .
 
    tl.score_genes
    tl.score_genes_cell_cycle
+   tl.sandbag
+   tl.
 
 **Simulations**
 

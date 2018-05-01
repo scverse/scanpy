@@ -28,7 +28,11 @@ References
 
 .. [Eulenberg17] Eulenberg *et al.* (2017),
    *Reconstructing cell cycle and disease progression using deep learning*
-   `Nat. Comms., accepted <https://doi.org/10.1101/081364>`_.
+   `Nature Communications <https://doi.org/10.1101/081364>`_.
+
+.. [Fechtner18]
+   *PyPairs*,
+   `GitHub <https://github.com/rfechtner/pypairs>`_.
 
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
@@ -66,7 +70,7 @@ References
 .. [Kang18] Kang *et al.* (2018),
    *Python Implementation of MNN correct*,
    `GitHub <https://github.com/chriscainx/mnnpy>`_.
-   
+
 .. [Krumsiek10] Krumsiek *et al.* (2010),
    *Odefy – From discrete to continuous models*,
    `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-233>`_.
@@ -111,6 +115,10 @@ References
 .. [Paul15] Paul *et al.* (2015),
    *Transcriptional Heterogeneity and Lineage Commitment in Myeloid Progenitors*,
    `Cell <https://doi.org/10.1016/j.cell.2015.11.013>`_.
+
+.. [Scialdone15] Scialdone *et al.* (2015),
+   *Computational assignment of cell-cycle stage from single-cell transcriptome data*
+   `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`_.
 
 .. [Traag17] Traag (2017),
    *Louvain*,
