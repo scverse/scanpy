@@ -14,3 +14,5 @@ from ..tools.top_genes import correlation_matrix, ROC_AUC_analysis
 from ..tools.score_genes import score_genes, score_genes_cell_cycle
 
 from ..tools.pypairs import cyclone, sandbag
+
+from ..tools.phate import run_phate, PHATE
