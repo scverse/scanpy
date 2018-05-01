@@ -13,6 +13,10 @@ References
    *Fast unfolding of communities in large networks*,
    `J. Stat. Mech. <https://doi.org/10.1088/1742-5468/2008/10/P10008>`_.
 
+.. [Chippada18]
+   *ForceAtlas2 for Python and NetworkX*,
+   `GitHub <https://github.com/bhargavchippada/forceatlas2>`_.
+
 .. [Coifman05] Coifman *et al.* (2005),
    *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
    `PNAS <https://doi.org/10.1038/nmeth.3971>`_.
