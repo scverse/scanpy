@@ -6,7 +6,7 @@ from .. import logging as logg
 
 def draw_graph(
         adata,
-        layout='fr',
+        layout='fa',
         root=None,
         random_state=0,
         n_jobs=None,
@@ -16,7 +16,11 @@ def draw_graph(
         use_paga=False,
         copy=False,
         **kwds):
-    """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Csardi06]_.
+    """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Chippada18]_.
+
+    The default layout ('fa', `ForceAtlas2`) uses the package `fa2
+    <https://github.com/bhargavchippada/forceatlas2>`_, which can be installed
+    via `pip install fa2`.
 
     An alternative to tSNE that often preserves the topology of the data
     better. However, it runs considerably slower. This requires to run
@@ -35,8 +39,8 @@ def draw_graph(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    layout : `str`, optional (default: 'fr')
-        Any valid `igraph layout
+    layout : `str`, optional (default: 'fa')
+        'fa' (`ForceAtlas2`) or any valid `igraph layout
         <http://igraph.org/c/doc/igraph-Layout.html>`_. Of particular interest
         are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
@@ -71,7 +75,7 @@ def draw_graph(
     """
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),
               r=True)
-    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa2'}
+    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
     adata = adata.copy() if copy else adata
@@ -81,7 +85,7 @@ def draw_graph(
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    if layout == 'fa2':
+    if layout == 'fa':
         if proceed:
             init_coords = adata.obsm[key_added]
         else:
@@ -94,7 +98,10 @@ def draw_graph(
                 raise ValueError('`use_paga=\'local\'` is not implemented.')
             else:
                 init_coords = np.random.random((adjacency.shape[0], 2))
-        from fa2 import ForceAtlas2
+        try:
+            from fa2 import ForceAtlas2
+        except:
+            raise ImportError('Please, install package \'fa2\'.')
         forceatlas2 = ForceAtlas2(
               # Behavior alternatives
               outboundAttractionDistribution=False,  # Dissuade hubs
@@ -117,7 +124,7 @@ def draw_graph(
         elif 'iterations' in kwds:
             iterations = kwds['iterations']
         else:
-            iterations = 500            
+            iterations = 500
         positions = forceatlas2.forceatlas2(adjacency, pos=None, iterations=iterations)
         positions = np.array(positions)
     else:
