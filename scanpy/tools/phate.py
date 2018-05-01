@@ -1,5 +1,10 @@
 """Embed high-dimensional data using PHATE
 """
+try:
+    import phate as ph
+except ImportError:
+    raise
+    pass
 
 
 def PHATE(
@@ -131,27 +136,25 @@ def PHATE(
     >>> plt.show()
     """
     try:
-        import phate as ph
-    except ImportError:
+        return ph.PHATE(
+            n_components=n_components,
+            k=k,
+            a=a,
+            alpha_decay=alpha_decay,
+            n_landmark=n_landmark,
+            t=t,
+            potential_method=potential_method,
+            n_pca=n_pca,
+            knn_dist=knn_dist,
+            mds_dist=mds_dist,
+            mds=mds,
+            n_jobs=n_jobs,
+            random_state=random_state,
+            verbose=verbose,
+        )
+    except NameError:
         raise ImportError('You need to install the package `phate`: please run'
-                          ' `pip install - -user phate` in a terminal.')
-
-    return ph.PHATE(
-        n_components=n_components,
-        k=k,
-        a=a,
-        alpha_decay=alpha_decay,
-        n_landmark=n_landmark,
-        t=t,
-        potential_method=potential_method,
-        n_pca=n_pca,
-        knn_dist=knn_dist,
-        mds_dist=mds_dist,
-        mds=mds,
-        n_jobs=n_jobs,
-        random_state=random_state,
-        verbose=verbose,
-    )
+                          ' `pip install --user phate` in a terminal.')
 
 
 def run_phate(
@@ -270,24 +273,23 @@ def run_phate(
     >>> plt.show()
     """
     try:
-        import phate as ph
-    except ImportError:
+        return ph.PHATE(
+            n_components=n_components,
+            k=k,
+            a=a,
+            alpha_decay=alpha_decay,
+            n_landmark=n_landmark,
+            t=t,
+            potential_method=potential_method,
+            n_pca=n_pca,
+            knn_dist=knn_dist,
+            mds_dist=mds_dist,
+            mds=mds,
+            n_jobs=n_jobs,
+            random_state=random_state,
+            verbose=verbose,
+        ).fit_transform(adata)
+    except NameError:
         raise ImportError(
-            'You need to install the package `phate`: please run `pip install --user phate` in a terminal.')
-
-    return ph.PHATE(
-        n_components=n_components,
-        k=k,
-        a=a,
-        alpha_decay=alpha_decay,
-        n_landmark=n_landmark,
-        t=t,
-        potential_method=potential_method,
-        n_pca=n_pca,
-        knn_dist=knn_dist,
-        mds_dist=mds_dist,
-        mds=mds,
-        n_jobs=n_jobs,
-        random_state=random_state,
-        verbose=verbose,
-    ).fit_transform(adata)
+            'You need to install the package `phate`: please run `pip install '
+            '--user phate` in a terminal.')
