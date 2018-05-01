@@ -19,6 +19,9 @@ def sandbag(
     This reproduces the approach of [Scialdone15]_ in the implementation of
     [Fechtner18]_.
 
+    More information and bug reports `here
+    <https://github.com/rfechtner/pypairs>`_.
+
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
@@ -40,13 +43,9 @@ def sandbag(
     `dict` of `list` of `tuple`, i.e.
     {phase: [(Gene1, Gene2), ...]},
     containing marker pairs per phase
-
-    Examples
-    --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
     try:
-       import pypairs
+        import pypairs
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
 
@@ -102,23 +101,19 @@ def cyclone(
 
     Returns
     -------
-    Dictionary of List containing
+    `dict` of `list`
     {
         "prediction": The predicted classes based on scores
         "prediction_normalized": The predicted classes based on normalized scores
         "scores": Prediction scores
         "normalized": Normalized prediction scores
     }
-
-    Examples
-    --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
     """
     try:
-       import pypairs
+        import pypairs
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
-    
+
     x = pd.DataFrame(adata.X)
 
     return pypairs.cyclone(
