@@ -103,8 +103,7 @@ def scatter(
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     sanitize_anndata(adata)
     if legend_loc not in VALID_LEGENDLOCS:
@@ -290,7 +289,7 @@ def scatter(
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
-    if show == False: return axs
+    if show == False: return axs if len(keys) > 1 else axs[0]
 
 
 def ranking(adata, attr, keys, dictionary=None, indices=None,

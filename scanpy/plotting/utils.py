@@ -304,6 +304,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
 
 
 def plot_edges(axs, adata, basis, edges_width, edges_color):
+    if not isinstance(axs, list): axs = [axs]
     if 'neighbors' not in adata.uns:
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
     g = nx.Graph(adata.uns['neighbors']['connectivities'])
@@ -315,6 +316,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds):
+    if not isinstance(axs, list): axs = [axs]
     if 'Delta_' + basis not in adata.obsm.keys():
         raise ValueError('`arrows=True` requires \'V_\' + basis from velocyto.')
     X = adata.obsm['X_' + basis]

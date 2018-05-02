@@ -5,20 +5,15 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
-import networkx as nx
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
 from .. import utils
 from ...utils import doc_params
-from ... import utils as sc_utils
 from ... import settings
 from ... import logging as logg
 from ..anndata import scatter, ranking
-from ..utils import matrix
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..utils import doc_edges_arrows
 
@@ -144,8 +139,7 @@ def pca_scatter(
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     axs = scatter(
         adata,
@@ -271,6 +265,10 @@ def diffmap(
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
@@ -388,8 +386,7 @@ def draw_graph(
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     if layout is None: layout = str(adata.uns['draw_graph']['params']['layout'])
     basis = 'draw_graph_' + layout
@@ -489,8 +486,7 @@ def tsne(
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     basis = 'tsne'
     axs = scatter(
@@ -583,8 +579,7 @@ def umap(
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     axs = scatter(
         adata,
