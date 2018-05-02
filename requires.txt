@@ -11,4 +11,3 @@ networkx
 natsort
 joblib
 numba
-phate

@@ -15,4 +15,4 @@ from ..tools.score_genes import score_genes, score_genes_cell_cycle
 
 from ..tools.pypairs import cyclone, sandbag
 
-from ..tools.phate import run_phate, PHATE
+from ..tools.phate import phate
