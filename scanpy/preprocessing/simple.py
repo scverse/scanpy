@@ -12,6 +12,7 @@ from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
+from ..utils import sanitize_anndata
 
 N_PCS = 50  # default number of PCs
 
@@ -348,6 +349,7 @@ def filter_genes_dispersion(data,
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
     if n_top_genes is not None:
+        dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
@@ -597,6 +599,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     # proceed with data matrix
     X = data.copy() if copy else data
     if counts_per_cell is None:
+        if copy == False:
+            raise ValueError('Can only be run with copy=True')
         cell_subset, counts_per_cell = filter_cells(X, min_counts=1)
         X = X[cell_subset]
         counts_per_cell = counts_per_cell[cell_subset]
@@ -687,17 +691,17 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         logg.warn('Parallelization is currently broke, will be restored soon. Running on 1 core.')
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
     # regress on a single categorical variable
+    sanitize_anndata(adata)
     if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
-                'the mean is computed for each variable/gene.')
+                'we regress on the mean for each category.')
         logg.msg('... regressing on per-gene means within categories')
-        unique_categories = np.unique(adata.obs[keys[0]].values)
         regressors = np.zeros(adata.X.shape, dtype='float32')
-        for category in unique_categories:
-            mask = category == adata.obs[keys[0]].values
+        for category in adata.obs[keys[0]].cat.categories:
+            mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
     # regress on one or several ordinal variables

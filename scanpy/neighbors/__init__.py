@@ -556,7 +556,7 @@ class Neighbors():
             self._eigen_basis = None
             self.n_dcs = None
         if info_str != '':
-            logg.info('    initialized {}'.format(info_str))
+            logg.msg('    initialized {}'.format(info_str), v=4)
 
     @property
     def distances(self):
@@ -678,7 +678,7 @@ class Neighbors():
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
-        use_dense_distances = metric == 'euclidean' and X.shape[0] < 8192
+        use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
         if use_dense_distances:
             # standard eulcidean case for relatively small matrices
             self._distances, knn_indices, knn_distances = compute_neighbors_numpy(

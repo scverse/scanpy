@@ -5,20 +5,18 @@ Plotting functions for each tool and toplevel plotting functions for AnnData.
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
-import networkx as nx
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib.colors import is_color_like
 from matplotlib import rcParams
 
 from .. import utils
-from ... import utils as sc_utils
+from ...utils import doc_params
 from ... import settings
 from ... import logging as logg
 from ..anndata import scatter, ranking
-from ..utils import matrix
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..utils import doc_edges_arrows
+
 
 # ------------------------------------------------------------------------------
 # Visualization tools
@@ -68,7 +66,7 @@ def pca(adata, **params):
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
@@ -103,9 +101,6 @@ def pca_scatter(
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    layout : {'fr', 'drl', ...}, optional (default: last computed)
-        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
-        the last computed layout is taken.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
@@ -138,14 +133,13 @@ def pca_scatter(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     axs = scatter(
         adata,
@@ -185,7 +179,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -203,7 +197,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
@@ -268,9 +262,13 @@ def diffmap(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object. Only works if plotting a single component.
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     if components == 'all':
         components_list = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
@@ -313,14 +311,16 @@ def diffmap(
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def draw_graph(
         adata,
-        edges=False,
-        edges_width=0.1,
-        edges_color='grey',
         layout=None,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -336,26 +336,23 @@ def draw_graph(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot in graph-drawing basis.
+    """\
+    Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    edges : `bool`, optional (default: `False`)
-        Show edges.
-    edges_width : `float`, optional (default: 0.1)
-        Width of edges.
-    edges_color : matplotlib color, optional (default: 'grey')
-        Color of edges.
-    layout : {'fr', 'drl', ...}, optional (default: last computed)
-        One of the `draw_graph` layouts, see sc.tl.draw_graph. By default,
-        the last computed layout is taken.
-    color : string or list of strings, optional (default: None)
+    layout : {{'fr', 'drl', ...}}, optional (default: last computed)
+        One of the `draw_graph` layouts, see
+        :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
+        is used.
+    color : `str` or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {edges_arrows}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -383,14 +380,13 @@ def draw_graph(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     if layout is None: layout = str(adata.uns['draw_graph']['params']['layout'])
     basis = 'draw_graph_' + layout
@@ -418,21 +414,22 @@ def draw_graph(
         show=False,
         save=False,
         ax=ax)
-    if edges:
-        for ax in axs:
-            g = nx.Graph(adata.uns['neighbors']['connectivities'])
-            edge_collection = nx.draw_networkx_edges(
-                g, adata.obsm['X_' + basis],
-                ax=ax, width=edges_width, edge_color=edges_color)
-            edge_collection.set_zorder(-2)
-    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def tsne(
         adata,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -457,6 +454,7 @@ def tsne(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {{edges_arrows}}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -482,18 +480,18 @@ def tsne(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
+    basis = 'tsne'
     axs = scatter(
         adata,
-        basis='tsne',
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -507,9 +505,12 @@ def tsne(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
 
@@ -572,14 +573,13 @@ def umap(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
+    If `show==False` a `matplotlib.Axis` or a list of it.
     """
     axs = scatter(
         adata,
@@ -667,7 +667,7 @@ def dpt(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     show_tree : bool, optional (default: False)
@@ -861,7 +861,7 @@ def louvain(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : matplotlib.Axes
          A matplotlib axes object.
     """
@@ -890,7 +890,7 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, save=None, ext=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsize=8, show=None, save=None, ext=None):
     """Plot ranking of genes.
 
     Parameters
@@ -899,6 +899,9 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         Annotated data matrix.
     groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
+    gene_symbols : `str`
+        Key for field in `.var` that stores gene symbols if you do not want to
+        use `.var_names`.
     n_genes : `int`, optional (default: 20)
         Number of genes to show.
     fontsize : `int`, optional (default: 8)
@@ -907,7 +910,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -942,7 +945,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, fontsize=8, show=None, sav
         gene_names = adata.uns['rank_genes_groups']['names'][group_name]
         scores = adata.uns['rank_genes_groups']['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
-            pl.text(ig, scores[ig], gene_names[ig],
+            gene_name = gene_names[ig]
+            pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
         pl.title('{} vs. {}'.format(group_name, reference))
@@ -963,7 +967,6 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
                              split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
-                             computed_distribution=False,
                              ax=None, show=None, save=None):
     """Plot ranking of genes for all tested comparisons.
 
@@ -975,6 +978,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         List of group names.
     n_genes : `int`, optional (default: 20)
         Number of genes to show.
+    gene_symbols : `str`
+        Key for field in `.var` that stores gene symbols if you do not want to
+        use `.var_names`.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present. Defaults to the value that
         was used in :func:`~scanpy.api.tl.rank_genes_groups`.
@@ -988,15 +994,11 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         If set to 0, no points are drawn. See `seaborn.stripplot`.
     size : `int`, optional (default: 1)
         Size of the jitter points.
-    computed_distribution : `bool`, optional (default: `False`)
-        Set to `True` if you want to use the scaled and shifted distribution
-        previously computed with the `compute_distribution` in
-        :func:`scanpy.api.tl.rank_genes_groups`
     show : `bool`, optional (default: `None`)
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
@@ -1009,28 +1011,20 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
-        keys = []
         gene_names = adata.uns[
             'rank_genes_groups']['names'][group_name][:n_genes]
-        if computed_distribution:
-            for gene_counter, gene_name in enumerate(gene_names):
-                identifier = rank_genes_groups._build_identifier(
-                    groups_key, group_name, gene_counter, gene_name)
-                if compute_distribution and identifier not in set(adata.obs_keys()):
-                    raise ValueError(
-                        'You need to set `compute_distribution=True` in '
-                        '`sc.tl.rank_genes_groups()`.')
-                keys.append(identifier)
-        else:
-            keys = gene_names
+        keys = gene_names
         # make a "hue" option!
         df = pd.DataFrame()
+        new_keys = []
         for key in keys:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, key].X
             else:
                 X_col = adata[:, key].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
+            key = key if gene_symbols is None else adata.var[gene_symbols][key]
+            new_keys.append(key)
             df[key] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
@@ -1038,7 +1032,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         else:
             df['hue'][~df['hue'].isin([group_name, reference])] = np.nan
         df['hue'] = df['hue'].astype('category')
-        df_tidy = pd.melt(df, id_vars='hue', value_vars=keys)
+        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
         x = 'variable'
         y = 'value'
         hue_order = [group_name, reference]
@@ -1077,7 +1071,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         Shuffle the data.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     show : bool, optional (default: None)
         Show the plot, do not return axis.
     """
