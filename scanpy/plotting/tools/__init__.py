@@ -457,7 +457,7 @@ def tsne(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    {{edges_arrows}}
+    {edges_arrows}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -608,6 +608,122 @@ def umap(
         save=save,
         ax=ax)
     if show == False: return axs
+
+
+@doc_params(edges_arrows=doc_edges_arrows)
+def phate(
+        adata,
+        color=None,
+        use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
+        arrows_kwds=None,
+        sort_order=True,
+        alpha=None,
+        groups=None,
+        legend_loc='right margin',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        color_map=None,
+        palette=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None, ax=None):
+    """Scatter plot in PHATE basis.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    {edges_arrows}
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
+
+    Returns
+    -------
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
+
+    Examples
+    --------
+    >>> import scanpy.api as sc
+    >>> import phate
+    >>> data, branches = phate.tree.gen_dla(n_dim=100,
+                                            n_branch=20,
+                                            branch_length=100)
+    >>> data.shape
+    (2000, 100)
+    >>> adata = sc.AnnData(data)
+    >>> adata.obs['branches'] = branches
+    >>> sc.tl.phate(adata, k=5, a=20, t=150)
+    >>> adata.obsm['X_phate'].shape
+    (2000, 2)
+    >>> sc.pl.phate(adata,
+                    color='branches',
+                    color_map='tab20')
+    """
+    basis = 'phate'
+    axs = scatter(
+        adata,
+        basis=basis,
+        color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
+        alpha=alpha,
+        groups=groups,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False,
+        save=False,
+        ax=ax)
+    if edges:
+        utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows:
+        utils.plot_arrows(axs, adata, basis, arrows_kwds)
+    utils.savefig_or_show(basis, show=show, save=save)
+    if show == False:
+        return axs
 
 
 # ------------------------------------------------------------------------------
