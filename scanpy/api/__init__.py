@@ -35,6 +35,14 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.recipe_zheng17
    pp.recipe_weinreb17
 
+**Batch effect correction**
+
+.. autosummary::
+   :toctree: .
+
+   pp.regress_out
+   pp.mnn_correct
+
 **Neighbors**
 
 .. autosummary::
@@ -73,13 +81,15 @@ Tools: TL
 
    tl.rank_genes_groups
 
-**Gene scores**
+**Gene scores, Cell cycle**
 
 .. autosummary::
    :toctree: .
 
    tl.score_genes
    tl.score_genes_cell_cycle
+   tl.sandbag
+   tl.
 
 **Simulations**
 
@@ -274,3 +284,4 @@ from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
 from .. import utils
 from . import export_to
+from .. import rtools

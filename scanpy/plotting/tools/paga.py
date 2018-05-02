@@ -190,8 +190,9 @@ def paga(
         root=0,
         groups=None,
         color=None,
+        threshold=None,
         threshold_solid=None,
-        threshold_dashed=1e-6,
+        threshold_dashed=None,
         fontsize=None,
         node_size_scale=1,
         node_size_power=0.5,
@@ -245,10 +246,13 @@ def paga(
         The node colors.  Besides cluster colors, lists and uniform colors this
         also acceppts {'degree_dashed', 'degree_solid'} which are plotted using
         continuous color map.
-    threshold_solid : `float` or `None`, optional (default: `None`)
+    threshold : `float` or `None`, optional (default: 0.01)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
-    threshold_dashed : `float` or `None`, optional (default: 1e-6)
+    threshold_solid : `float` or `None`, optional (default: `threshold`)
+        Do not draw edges for weights below this threshold. Set to `None` if you
+        want all edges.
+    threshold_dashed : `float` or `None`, optional (default: `threshold`)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
     fontsize : int (default: None)
@@ -317,6 +321,7 @@ def paga(
             axs[icolor],
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
+            threshold=threshold,
             threshold_solid=threshold_solid,
             threshold_dashed=threshold_dashed,
             layout=layout,
@@ -350,8 +355,9 @@ def _paga_graph(
         ax,
         solid_edges=None,
         dashed_edges=None,
+        threshold=None,
         threshold_solid=None,
-        threshold_dashed=1e-6,
+        threshold_dashed=None,
         root=0,
         rootlevel=None,
         color=None,
@@ -400,6 +406,16 @@ def _paga_graph(
 
     # define the objects
     adjacency_solid = adata.uns['paga'][solid_edges].copy()
+    # set the the thresholds, either explicitly
+    if threshold is not None:
+        threshold_solid = threshold
+        threshold_dashed = threshold
+    # or to a default value
+    else:
+        if threshold_solid is None:
+            threshold_solid = 0.01
+        if threshold_dashed is None:
+            threshold_dashed = 0.01
     if threshold_solid is not None:
         adjacency_solid[adjacency_solid < threshold_solid] = 0
     nx_g_solid = nx.Graph(adjacency_solid)
@@ -742,7 +758,7 @@ def paga_path(
     adata_X = adata
     if use_raw and adata.raw is not None:
         adata_X = adata.raw
-    
+
     for ikey, key in enumerate(keys):
         x = []
         for igroup, group in enumerate(nodes_ints):

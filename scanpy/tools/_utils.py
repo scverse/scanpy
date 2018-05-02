@@ -35,7 +35,7 @@ def choose_representation(adata, use_rep=None, n_pcs=None):
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'
                     .format(adata.n_vars))
                 X = pca(adata.X)
-                adata.obsm['X_pca'] = X
+                adata.obsm['X_pca'] = X[:, :n_pcs]
                 return X
         else:
             logg.info('    using data matrix X directly')

@@ -81,6 +81,9 @@ def score_genes(
         obs_avg = pd.Series(
             np.nanmean(adata[:, gene_pool].X, axis=0), index=gene_pool)  # average expression of genes
 
+    obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
+    gene_pool = list(obs_avg.index)
+
     n_items = int(np.round(len(obs_avg) / (n_bins - 1)))
     obs_cut = obs_avg.rank(method='min') // n_items
     control_genes = set()
@@ -95,7 +98,16 @@ def score_genes(
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
 
-    score = np.mean(adata[:, gene_list].X, axis=1) - np.mean(adata[:, control_genes].X, axis=1)
+    if len(gene_list) == 0:
+        # We shouldn't even get here, but just in case
+        logg.hint('could not add \n'
+              '    \'{}\', score of gene set (adata.obs)'.format(score_name))
+        return adata if copy else None
+    elif len(gene_list) == 1:
+        score = np.nanmean(adata[:, gene_list].X) - np.nanmean(adata[:, control_genes].X)
+    else:
+        score = np.nanmean(adata[:, gene_list].X, axis=1) - np.nanmean(adata[:, control_genes].X, axis=1)
+
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
