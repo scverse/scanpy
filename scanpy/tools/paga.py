@@ -59,21 +59,30 @@ def paga(
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
     paga = PAGA(adata, groups, use_rna_velocity=use_rna_velocity)
     paga.compute()
-    adata.uns['paga'] = {}
+    # only add if not present
+    if 'paga' not in adata.uns:
+        adata.uns['paga'] = {}
     if not use_rna_velocity:
         adata.uns['paga']['connectivities'] = paga.connectivities_coarse
         adata.uns['paga']['confidence'] = paga.confidence
         adata.uns['paga']['confidence_tree'] = paga.confidence_tree
+        adata.uns[groups + '_sizes'] = np.array(paga.vc.sizes())
     else:
-        adata.uns['paga']['transitions_coarse'] = paga.transitions_coarse
+        adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
+        adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
-    adata.uns[groups + '_sizes'] = np.array(paga.vc.sizes())
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.hint(
-        'added\n'
-        '    \'paga/connectivities\', connectivities adjacency (adata.uns)\n'
-        '    \'paga/confidence\', confidence adjacency (adata.uns)\n'
-        '    \'paga/confidence_tree\', confidence subtree (adata.uns)')
+    if use_rna_velocity:
+        logg.hint(
+            'added\n'
+            '    \'paga/transitions_confidence\', confidence adjacency (adata.uns)\n'
+            '    \'paga/transitions_ttest\', confidence subtree (adata.uns)')
+    else:
+        logg.hint(
+            'added\n'
+            '    \'paga/connectivities\', connectivities adjacency (adata.uns)\n'
+            '    \'paga/confidence\', confidence adjacency (adata.uns)\n'
+            '    \'paga/confidence_tree\', confidence subtree (adata.uns)')
     return adata if copy else None
 
 
@@ -103,15 +112,6 @@ class PAGA(Neighbors):
             g, membership=self._adata.obs[self._groups].cat.codes.values)
         cg = self.vc.cluster_graph(combine_edges='sum')
         self.connectivities_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
-
-    def compute_transitions_coarse(self):
-        import igraph
-        g = utils.get_igraph_from_adjacency(
-            self._adata.uns['rna_velocity']['graph'], directed=True)
-        self.vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups].cat.codes.values)
-        cg = self.vc.cluster_graph(combine_edges='sum')
-        self.transitions_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')
 
     def compute_confidence(self):
         """Translates the connectivities_coarse measure into a confidence measure.
@@ -156,6 +156,83 @@ class PAGA(Neighbors):
             if len(neighbors) > 0:
                 confidence_tree[i, neighbors] = confidence[i, neighbors]
         return confidence_tree.tocsr()
+
+    def compute_transitions_coarse(self):
+        # analogous code using networkx
+        # membership = adata.obs['clusters'].cat.codes.tolist()
+        # partition = defaultdict(list)
+        # for n, p in zip(list(range(len(G))), membership):
+        #     partition[p].append(n)
+        # partition = partition.values()
+        # g_abstracted = nx.quotient_graph(g, partition, relabel=True)
+        # for some reason, though, edges aren't oriented in the quotient
+        # graph...
+        import igraph
+        g = utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'], directed=True)
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups].cat.codes.values)
+        cg_full = vc.cluster_graph(combine_edges=False)
+
+        g_bool = utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
+        vc_bool = igraph.VertexClustering(
+            g_bool, membership=self._adata.obs[self._groups].cat.codes.values)
+        cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
+        transitions_coarse = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
+        # translate this into a confidence measure
+        # the number of outgoing edges
+        # total_n = np.zeros(len(vc.sizes()))
+        # # (this is not the convention of standard stochastic matrices)
+        # total_outgoing = transitions_coarse.sum(axis=1)
+        # for i in range(len(total_n)):
+        #     total_n[i] = vc.subgraph(i).ecount()
+        #     total_n[i] += total_outgoing[i, 0]
+        # use the topology based reference, the velocity one might have very small numbers
+        total_n = self.n_neighbors * np.array(vc_bool.sizes())
+        transitions_ttest = transitions_coarse.copy()
+        transitions_confidence = transitions_coarse.copy()
+        from scipy.stats import ttest_1samp
+        for i in range(transitions_coarse.shape[0]):
+            # no symmetry in transitions_coarse, hence we should not restrict to
+            # upper triangle
+            neighbors = transitions_coarse[i].nonzero()[1]
+            for j in neighbors:
+                forward = cg_full.es.select(_source=i, _target=j)['weight']
+                backward = cg_full.es.select(_source=j, _target=i)['weight']
+                # backward direction: add minus sign
+                values = np.array(list(forward) + list(-np.array(backward)))
+                # require some minimal number of observations
+                if len(values) < 5:
+                    transitions_ttest[i, j] = 0
+                    transitions_ttest[j, i] = 0
+                    transitions_confidence[i, j] = 0
+                    transitions_confidence[j, i] = 0
+                    continue
+                t, prob = ttest_1samp(values, 0.0)
+                if t > 0:
+                    # number of outgoing edges greater than number of ingoing edges
+                    # i.e., transition from i to j
+                    transitions_ttest[i, j] = -np.log10(max(prob, 1e-10))
+                    transitions_ttest[j, i] = 0
+                else:
+                    transitions_ttest[j, i] = -np.log10(max(prob, 1e-10))
+                    transitions_ttest[i, j] = 0
+                # geom_mean
+                geom_mean = np.sqrt(total_n[i] * total_n[j])
+                diff = (len(forward) - len(backward)) / geom_mean
+                if diff > 0:
+                    transitions_confidence[i, j] = diff
+                    transitions_confidence[j, i] = 0
+                else:
+                    transitions_confidence[j, i] = -diff
+                    transitions_confidence[i, j] = 0
+        transitions_ttest.eliminate_zeros()
+        transitions_confidence.eliminate_zeros()
+        # transpose in order to match convention of stochastic matrices
+        # entry ij means transition from j to i
+        self.transitions_ttest = transitions_ttest.T
+        self.transitions_confidence = transitions_confidence.T
 
 
 def paga_degrees(adata):

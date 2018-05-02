@@ -145,7 +145,7 @@ _low_resolution_warning = True
 # --------------------------------------------------------------------------------
 
 
-def set_figure_params(dpi=None, scanpy=True, figure_formats=['png2x']):
+def set_figure_params(dpi=None, scanpy=True, color_map=None, figure_formats=['png2x']):
     """Set resolution/size, styling and format of figures.
 
     Parameters
@@ -154,6 +154,8 @@ def set_figure_params(dpi=None, scanpy=True, figure_formats=['png2x']):
         Resolution of png output in dots per inch.
     scanpy : `bool`, optional (default: `True`)
         Run :func:`scanpy.api.pl.set_rcParams_scanpy` to init Scanpy rcParams.
+    color_map : `str`, optional (default: `None`)
+        Set color map.
     figure_formats : list of strings
         Only concerns the IPython environment; see
         `IPython.core.display.set_matplotlib_formats` for more details. For
@@ -173,7 +175,7 @@ def set_figure_params(dpi=None, scanpy=True, figure_formats=['png2x']):
         rcParams['figure.dpi'] = _dpi
     if scanpy:
         from .plotting.rcmod import set_rcParams_scanpy
-        set_rcParams_scanpy()
+        set_rcParams_scanpy(color_map=color_map)
 
 
 # ------------------------------------------------------------------------------

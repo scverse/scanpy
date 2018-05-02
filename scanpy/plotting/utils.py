@@ -22,8 +22,6 @@ arrows : `bool`, optional (default: `False`)
 """
 
 
-
-
 # -------------------------------------------------------------------------------
 # Simple plotting functions
 # -------------------------------------------------------------------------------
@@ -315,10 +313,10 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
         edge_collection.set_zorder(-2)
 
 
-def plot_arrows(axs, adata, basis, arrows_kwds):
+def plot_arrows(axs, adata, basis, arrows_kwds=None):
     if not isinstance(axs, list): axs = [axs]
     if 'Delta_' + basis not in adata.obsm.keys():
-        raise ValueError('`arrows=True` requires \'V_\' + basis from velocyto.')
+        raise ValueError('`arrows=True` requires \'Delta_\' + basis from velocyto.')
     X = adata.obsm['X_' + basis]
     V = adata.obsm['Delta_' + basis]
     for ax in axs:
