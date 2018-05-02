@@ -32,7 +32,10 @@ def phate(
     embeds high dimensional single-cell data into two or three dimensions for
     visualization of biological progressions. [Moon17]_
 
-    Read more in the `PHATE Documentation <https://phate.readthedocs.io/>`_.
+    For more informaton and access to the object-oriented interface,
+    read the `PHATE Documentation <https://phate.readthedocs.io/>`_.
+    For help, tutorials, bug reports, and R/MATLAB implementations,
+    visit the `PHATE GitHub <https://github.com/KrishnaswamyLab/PHATE/>`_.
 
     Parameters
     ----------
