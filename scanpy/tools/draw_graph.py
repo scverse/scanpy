@@ -7,13 +7,12 @@ from .. import logging as logg
 def draw_graph(
         adata,
         layout='fa',
+        init_pos=None,
         root=None,
         random_state=0,
         n_jobs=None,
         adjacency=None,
         key_added_ext=None,
-        proceed=False,
-        use_paga=False,
         copy=False,
         **kwds):
     """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Chippada18]_.
@@ -58,8 +57,8 @@ def draw_graph(
         By default, append `layout`.
     proceed : `bool`, optional (default: `None`)
         Continue computation, starting off with 'X_draw_graph_`layout`'.
-    use_paga : {'local', 'global', `False`}, optional (default: `False`)
-        Use the PAGA coordinates.
+    init_pos : {'paga', any valid 2d-`.obsm` key, `False`}, optional (default: `False`)
+        Use precomputed coordinates for initialization.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
     **kwds : further parameters
@@ -85,96 +84,71 @@ def draw_graph(
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
-    if layout == 'fa':
-        if proceed:
-            init_coords = adata.obsm[key_added]
+    # init coordinates
+    np.random.seed(random_state)
+    if init_pos in adata.obsm.keys():
+        init_coords = adata.obsm[init_pos]
+    elif init_pos == 'paga':
+        if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
+            groups = adata.obs[adata.uns['paga']['groups']]
+            pos = adata.uns['paga']['pos']
+            confidence_coarse = adata.uns['paga']['confidence']
+            init_coords = np.ones((adjacency.shape[0], 2))
+            for i, group_pos in enumerate(pos):
+                subset = (groups == groups.cat.categories[i]).values
+                neighbors = confidence_coarse[i].nonzero()
+                confidence = confidence_coarse[i][neighbors]
+                nearest_neighbor = neighbors[1][np.argmax(confidence)]
+                noise = np.random.random((len(subset[subset]), 2))
+                dist = pos[i] - pos[nearest_neighbor]
+                noise = noise * dist
+                init_coords[subset] = group_pos - 0.5*dist + noise
         else:
-            if use_paga == 'global':
-                init_coords = np.ones((adjacency.shape[0], 2))
-                for i, pos in enumerate(all_pos):
-                    subset = (groups == groups.cat.categories[i]).values
-                    init_coords[subset] = pos
-            elif use_paga == 'local':
-                raise ValueError('`use_paga=\'local\'` is not implemented.')
-            else:
-                init_coords = np.random.random((adjacency.shape[0], 2))
+            raise ValueError('Compute and plot PAGA first.')
+    else:
+        init_coords = np.random.random((adjacency.shape[0], 2))
+    # actual drawing
+    if layout == 'fa':
         try:
             from fa2 import ForceAtlas2
         except:
             raise ImportError('Please, install package \'fa2\'.')
         forceatlas2 = ForceAtlas2(
-              # Behavior alternatives
-              outboundAttractionDistribution=False,  # Dissuade hubs
-              linLogMode=False,  # NOT IMPLEMENTED
-              adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-              edgeWeightInfluence=1.0,
-              # Performance
-              jitterTolerance=1.0,  # Tolerance
-              barnesHutOptimize=True,
-              barnesHutTheta=1.2,
-              multiThreaded=False,  # NOT IMPLEMENTED
-              # Tuning
-              scalingRatio=2.0,
-              strongGravityMode=False,
-              gravity=1.0,
-              # Log
-              verbose=False)
+            # Behavior alternatives
+            outboundAttractionDistribution=False,  # Dissuade hubs
+            linLogMode=False,  # NOT IMPLEMENTED
+            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+            edgeWeightInfluence=1.0,
+            # Performance
+            jitterTolerance=1.0,  # Tolerance
+            barnesHutOptimize=True,
+            barnesHutTheta=1.2,
+            multiThreaded=False,  # NOT IMPLEMENTED
+            # Tuning
+            scalingRatio=2.0,
+            strongGravityMode=False,
+            gravity=1.0,
+            # Log
+            verbose=False)
         if 'maxiter' in kwds:
             iterations = kwds['maxiter']
         elif 'iterations' in kwds:
             iterations = kwds['iterations']
         else:
             iterations = 500
-        positions = forceatlas2.forceatlas2(adjacency, pos=None, iterations=iterations)
+        positions = forceatlas2.forceatlas2(
+            adjacency, pos=init_coords, iterations=iterations)
         positions = np.array(positions)
     else:
-        if use_paga != 'local':
-            g = utils.get_igraph_from_adjacency(adjacency)
-        np.random.seed(random_state)
-        all_coords = None
+        g = utils.get_igraph_from_adjacency(adjacency)
         if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
-            if proceed:
-                init_coords = adata.obsm[key_added]
-                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-            elif 'paga' in adata.uns and 'pos' in adata.uns['paga'] and use_paga:
-                groups = adata.obs[adata.uns['paga']['groups']]
-                all_pos = adata.uns['paga']['pos']
-                if use_paga == 'global':
-                    init_coords = np.ones((adjacency.shape[0], 2))
-                    for i, pos in enumerate(all_pos):
-                        subset = (groups == groups.cat.categories[i]).values
-                        init_coords[subset] = pos
-                    ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-                elif use_paga == 'local':
-                    all_pos -= np.min(all_pos, axis=0)
-                    all_pos /= np.max(all_pos, axis=0)
-                    all_coords = np.zeros((adjacency.shape[0], 2))
-                    from scipy.spatial.distance import euclidean
-                    for i, pos in enumerate(all_pos):
-                        subset = (groups == groups.cat.categories[i]).values
-                        adjacency_sub = adjacency[subset][:, subset]
-                        if adjacency_sub.shape[0] == 0: continue
-                        g = utils.get_igraph_from_adjacency(adjacency_sub)
-                        init_coords = np.random.random((adjacency_sub.shape[0], 2))
-                        ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
-                        coords = np.array(ig_layout.coords)
-                        coords -= np.min(coords, axis=0)
-                        coords /= np.max(coords, axis=0)
-                        dists = [euclidean(pos, p) for j, p in enumerate(all_pos) if i != j]
-                        min_dist = np.min(dists)
-                        coords -= np.array([0.5, 0.5])
-                        coords *= min_dist
-                        coords += pos
-                        all_coords[subset] = coords
-            else:
-                init_coords = np.random.random((adjacency.shape[0], 2))
-                ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
+            ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
         elif 'rt' in layout:
             if root is not None: root = [root]
             ig_layout = g.layout(layout, root=root, **kwds)
         else:
             ig_layout = g.layout(layout, **kwds)
-        positions = np.array(ig_layout.coords) if all_coords is None else all_coords
+        positions = np.array(ig_layout.coords)
     adata.uns['draw_graph'] = {}
     adata.uns['draw_graph']['params'] = {'layout': layout, 'random_state': random_state}
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)

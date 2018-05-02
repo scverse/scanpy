@@ -321,6 +321,7 @@ def draw_graph(
         edges_width=0.1,
         edges_color='grey',
         arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -415,7 +416,7 @@ def draw_graph(
         save=False,
         ax=ax)
     if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
-    if arrows: utils.plot_arrows(axs, adata, basis)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
     utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
@@ -514,10 +515,16 @@ def tsne(
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def umap(
         adata,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -544,6 +551,7 @@ def umap(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {{edges_arrows}}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -551,7 +559,7 @@ def umap(
         Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
+    projection : {{'2d', '3d'}}, optional (default: '2d')
          Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
@@ -581,9 +589,10 @@ def umap(
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
+    basis = 'umap'
     axs = scatter(
         adata,
-        basis='umap',
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -599,9 +608,12 @@ def umap(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
 

@@ -419,7 +419,7 @@ def get_indices_distances_from_sparse_matrix(D, n_neighbors):
     for i in range(indices.shape[0]):
         neighbors = D[i].nonzero()  # 'true' and 'spurious' zeros
         indices[i, 0] = i
-        distances[i, 0] = 0        
+        distances[i, 0] = 0
         # account for the fact that there might be more than n_neighbors
         # due to an approximate search
         # [the point itself was not detected as its own neighbor during the search]

@@ -186,11 +186,13 @@ def paga(
         adata,
         solid_edges='confidence',
         dashed_edges=None,
+        transitions=None,
         layout=None,
         root=0,
         groups=None,
         color=None,
         threshold=None,
+        threshold_arrows=None,
         threshold_solid=None,
         threshold_dashed=None,
         fontsize=None,
@@ -321,7 +323,9 @@ def paga(
             axs[icolor],
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
+            transitions=transitions,
             threshold=threshold,
+            threshold_arrows=threshold_arrows,
             threshold_solid=threshold_solid,
             threshold_dashed=threshold_dashed,
             layout=layout,
@@ -355,7 +359,9 @@ def _paga_graph(
         ax,
         solid_edges=None,
         dashed_edges=None,
+        transitions=None,
         threshold=None,
+        threshold_arrows=None,
         threshold_solid=None,
         threshold_dashed=None,
         root=0,
@@ -520,11 +526,25 @@ def _paga_graph(
                                style='dashed', alpha=0.5)
 
     # draw solid edges
-    widths = [x[-1]['weight'] for x in nx_g_solid.edges(data=True)]
-    widths = base_edge_width * np.array(widths)
-    if min_edge_width is not None or max_edge_width is not None:
-        widths = np.clip(widths, min_edge_width, max_edge_width)
-    nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+    if transitions is None:
+        widths = [x[-1]['weight'] for x in nx_g_solid.edges(data=True)]
+        widths = base_edge_width * np.array(widths)
+        if min_edge_width is not None or max_edge_width is not None:
+            widths = np.clip(widths, min_edge_width, max_edge_width)
+        nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+    # draw directed edges
+    else:
+        adjacency_transitions = adata.uns['paga'][transitions].copy()
+        if threshold_arrows is None:
+            threshold_arrows = 0.005
+        adjacency_transitions[adjacency_transitions < threshold_arrows] = 0
+        adjacency_transitions.eliminate_zeros()
+        g_dir = nx.DiGraph(adjacency_transitions.T)
+        widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]
+        widths = 100 * base_edge_width * np.array(widths)
+        if min_edge_width is not None or max_edge_width is not None:
+            widths = np.clip(widths, min_edge_width, max_edge_width)
+        nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black')
 
     if export_to_gexf:
         for count, n in enumerate(nx_g_solid.nodes()):
