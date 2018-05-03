@@ -62,6 +62,7 @@ Tools: TL
    tl.pca
    tl.tsne
    tl.umap
+   tl.phate
    tl.draw_graph
    tl.diffmap
 
@@ -89,7 +90,6 @@ Tools: TL
    tl.score_genes
    tl.score_genes_cell_cycle
    tl.sandbag
-   tl.
 
 **Simulations**
 
@@ -134,6 +134,7 @@ For any method in module `tl`, there is a method with the same name in `pl`.
    pl.pca_variance_ratio
    pl.tsne
    pl.umap
+   pl.phate
    pl.diffmap
    pl.draw_graph
 

@@ -22,11 +22,11 @@ def phate(
         random_state=None,
         verbose=None,
         copy=False):
-    """Run PHATE dimensionality reduction.
+    """PHATE [Moon17]_.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for
-    visualization of biological progressions. [Moon17]_
+    visualization of biological progressions.
 
     For more information and access to the object-oriented interface, read the
     `PHATE documentation <https://phate.readthedocs.io/>`_.  For help,
