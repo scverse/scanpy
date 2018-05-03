@@ -198,6 +198,55 @@ additional_colors = {
 # -------------------------------------------------------------------------------
 
 
+def save_vector_with_png(filename, dpi=None):
+    fig = pl.gcf()
+    if len(fig.axes) > 1:
+        raise ValueError('`vector_graphics_friendly` only works for single-panel figures')
+    axs_list = []
+    for iax, ax in enumerate(fig.axes):
+        ax_dict = {}
+        ax_dict['set_frame_on'] = ax.get_frame_on()
+        ax.set_frame_on(False)
+        ax_dict['set_xlabel'] = ax.get_xlabel()
+        ax.set_xlabel('')
+        ax_dict['set_ylabel'] = ax.get_ylabel()
+        ax.set_ylabel('')
+        ax_dict['set_title'] = ax.get_title()
+        ax.set_title('')
+        ax_dict['texts'] = ax.texts.copy()
+        xlim, ylim = ax.get_xlim(), ax.get_ylim()
+        ax.texts = []
+        axs_list.append(ax_dict)
+    # adapt this for multiple axes
+    from tempfile import mkstemp
+    tmp_file = mkstemp(suffix='.png')[1]
+    fig.savefig(tmp_file, dpi=dpi, bbox_inches='tight')
+    # remove collections
+    ax.collections = []
+    # import collections as png
+    import matplotlib.image as mpimg
+    img = mpimg.imread(tmp_file)
+    import os
+    os.remove(tmp_file)
+    xoffset = int(0.015 * img.shape[0])
+    img = img[xoffset:-xoffset]
+    yoffset = int(0.015 * img.shape[0])
+    img = img[yoffset:-yoffset]
+    ax.imshow(img)
+    new_xlim, new_ylim = ax.get_xlim(), ax.get_ylim()
+    for k, v in ax_dict.items():
+        if k.startswith('set'):
+            getattr(ax, k)(v)
+        elif k == 'texts':
+            for t in v:
+                x = (t._x - xlim[0])/(xlim[1] - xlim[0])*(new_xlim[1] - new_xlim[0]) + new_xlim[0]
+                y = (t._y - ylim[0])/(ylim[1] - ylim[0])*(new_ylim[1] - new_ylim[0]) + new_ylim[0]
+                t._x = x
+                t._y = y
+                ax._add_text(t)
+    fig.savefig(filename, bbox_inches='tight')
+
+
 def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
@@ -224,7 +273,10 @@ def savefig(writekey, dpi=None, ext=None):
     filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
     # output the following msg at warning level; it's really important for the user
     logg.msg('saving figure to file', filename, v=1)
-    pl.savefig(filename, dpi=dpi, bbox_inches='tight')
+    if settings.vector_graphics_friendly and ext in {'pdf', 'svg'}:
+        save_vector_with_png(filename, dpi=dpi)
+    else:
+        pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
 def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):

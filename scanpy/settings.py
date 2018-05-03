@@ -94,6 +94,10 @@ figdir = './figures/'
 """Directory where plots are saved.
 """
 
+vector_graphics_friendly = False
+"""Set to true if you want to include pngs in svgs and pdfs.
+"""
+
 max_memory = 15
 """Maximal memory usage in Gigabyte.
 """
