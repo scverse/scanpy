@@ -91,6 +91,10 @@ References
    *Visualizing data using t-SNE*,
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`_.
 
+.. [Moon17] Moon *et al.* (2017),
+   *PHATE: A Dimensionality Reduction Method for Visualizing Trajectory Structures in High-Dimensional Biological Data*,
+   `BioRxiv <http://biorxiv.org/content/early/2017/03/24/120378>`_.
+
 .. [Satija15] Satija *et al.* (2015),
    *Spatial reconstruction of single-cell gene expression data*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`_.
