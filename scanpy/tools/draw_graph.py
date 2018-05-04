@@ -107,12 +107,15 @@ def draw_graph(
             raise ValueError('Compute and plot PAGA first.')
     else:
         init_coords = np.random.random((adjacency.shape[0], 2))
+    # see whether fa2 is installed
+    try:
+        from fa2 import ForceAtlas2
+    except:
+        logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
+                  'To use the faster and better ForceAtlas2 layout, '
+                  'install package \'fa2\' (`pip install fa2`).')
     # actual drawing
     if layout == 'fa':
-        try:
-            from fa2 import ForceAtlas2
-        except:
-            raise ImportError('Please, install package \'fa2\'.')
         forceatlas2 = ForceAtlas2(
             # Behavior alternatives
             outboundAttractionDistribution=False,  # Dissuade hubs
