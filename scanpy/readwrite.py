@@ -84,7 +84,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
 
 
 def read_10x_h5(filename, genome='mm10'):
-    """Read 10X-Genomics-formatted hdf5 file.
+    """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------

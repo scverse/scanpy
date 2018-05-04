@@ -10,6 +10,7 @@ from .. import logging as logg
 from .. import settings
 from . import palettes
 
+
 doc_edges_arrows = """\
 edges : `bool`, optional (default: `False`)
     Show edges.
@@ -98,7 +99,8 @@ def timeseries_subplot(X,
             s=rcParams['lines.markersize'],
             c=colors[i],
             label=var_names[i] if len(var_names) > 0 else '',
-            cmap=color_map)
+            cmap=color_map,
+            rasterized=settings._vector_friendly)
     ylim = pl.ylim()
     for ih, h in enumerate(highlightsX):
         pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
@@ -198,85 +200,31 @@ additional_colors = {
 # -------------------------------------------------------------------------------
 
 
-def save_vector_with_png(filename, dpi=None):
-    fig = pl.gcf()
-    if len(fig.axes) > 1:
-        raise ValueError('`vector_graphics_friendly` only works for single-panel figures')
-    axs_list = []
-    for iax, ax in enumerate(fig.axes):
-        ax_dict = {}
-        ax_dict['set_frame_on'] = ax.get_frame_on()
-        ax.set_frame_on(False)
-        ax_dict['set_xlabel'] = ax.get_xlabel()
-        ax.set_xlabel('')
-        ax_dict['set_ylabel'] = ax.get_ylabel()
-        ax.set_ylabel('')
-        ax_dict['set_title'] = ax.get_title()
-        ax.set_title('')
-        ax_dict['texts'] = ax.texts.copy()
-        xlim, ylim = ax.get_xlim(), ax.get_ylim()
-        ax.texts = []
-        axs_list.append(ax_dict)
-    # adapt this for multiple axes
-    from tempfile import mkstemp
-    tmp_file = mkstemp(suffix='.png')[1]
-    fig.savefig(tmp_file, dpi=dpi, bbox_inches='tight')
-    # remove collections
-    ax.collections = []
-    # import collections as png
-    import matplotlib.image as mpimg
-    img = mpimg.imread(tmp_file)
-    import os
-    os.remove(tmp_file)
-    xoffset = int(0.015 * img.shape[0])
-    img = img[xoffset:-xoffset]
-    yoffset = int(0.015 * img.shape[0])
-    img = img[yoffset:-yoffset]
-    ax.imshow(img)
-    new_xlim, new_ylim = ax.get_xlim(), ax.get_ylim()
-    for k, v in ax_dict.items():
-        if k.startswith('set'):
-            getattr(ax, k)(v)
-        elif k == 'texts':
-            for t in v:
-                x = (t._x - xlim[0])/(xlim[1] - xlim[0])*(new_xlim[1] - new_xlim[0]) + new_xlim[0]
-                y = (t._y - ylim[0])/(ylim[1] - ylim[0])*(new_ylim[1] - new_ylim[0]) + new_ylim[0]
-                t._x = x
-                t._y = y
-                ax._add_text(t)
-    fig.savefig(filename, bbox_inches='tight')
-
-
 def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
-    The filename is generated as follows:
-    ```
-    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
-    filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
-    ```
+    The `filename` is generated as follows:
+
+        filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
     """
     if dpi is None:
-        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 300:
-            dpi = 300
+        # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
+        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 200:
             if settings._low_resolution_warning:
                 logg.msg(
-                    '... you are using a very low resolution for saving figures, '
-                    'adjusting to dpi=300', v=4)
+                    '... you are using a very low resolution (dpi<200) for saving figures\n'
+                    '    Consider running `settings.set_figure_params(dpi_save=...)` '
+                    'or adjusting rcParams[\'savefig.dpi\']', v=4, noindent=True)
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
     if not os.path.exists(settings.figdir): os.makedirs(settings.figdir)
-    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
     if settings.figdir[-1] != '/': settings.figdir += '/'
     if ext is None: ext = settings.file_format_figs
     filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
     # output the following msg at warning level; it's really important for the user
     logg.msg('saving figure to file', filename, v=1)
-    if settings.vector_graphics_friendly and ext in {'pdf', 'svg'}:
-        save_vector_with_png(filename, dpi=dpi)
-    else:
-        pl.savefig(filename, dpi=dpi, bbox_inches='tight')
+    pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
 def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
@@ -292,7 +240,7 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
         writekey += save
         save = True
     save = settings.autosave if save is None else save
-    show = (settings.autoshow and not settings.autosave) if show is None else show
+    show = settings.autoshow if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
@@ -363,6 +311,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
             g, adata.obsm['X_' + basis],
             ax=ax, width=edges_width, edge_color=edges_color)
         edge_collection.set_zorder(-2)
+        edge_collection.set_rasterized(settings._vector_friendly)
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
@@ -373,7 +322,8 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
     V = adata.obsm['Delta_' + basis]
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
-        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds)
+        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds,
+                  rasterized=settings._vector_friendly)
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
@@ -394,7 +344,8 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
                c=color,
                edgecolors='none',
                s=size,
-               label=adata.obs[key].cat.categories[imask])
+               label=adata.obs[key].cat.categories[imask],
+               rasterized=settings._vector_friendly)
     return mask
 
 
@@ -535,7 +486,8 @@ def scatter_base(Y,
                              alpha=alpha,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
-                             cmap=color_map)
+                             cmap=color_map,
+                             rasterized=settings._vector_friendly)
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)
             left = panel_pos[2][2*icolor+1] + (1.2 if projection == '3d' else 0.2) * width
@@ -600,7 +552,7 @@ def scatter_single(ax, Y, *args, **kwargs):
         kwargs['s'] = 2 if Y.shape[0] > 500 else 10
     if 'edgecolors' not in kwargs:
         kwargs['edgecolors'] = 'face'
-    ax.scatter(Y[:, 0], Y[:, 1], **kwargs)
+    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=settings._vector_friendly)
     ax.set_xticks([])
     ax.set_yticks([])
 

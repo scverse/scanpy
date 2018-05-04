@@ -17,7 +17,7 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams['figure.subplot.bottom'] = 0.15
     rcParams['figure.subplot.top'] = 0.91
 
-    rcParams['lines.linewidth'] = 1.5
+    rcParams['lines.linewidth'] = 1.5  # the line width of the frame
     rcParams['lines.markersize'] = 6
     rcParams['lines.markeredgewidth'] = 1
 
