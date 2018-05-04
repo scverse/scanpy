@@ -181,7 +181,7 @@ high-resolution jupyter display backend useful for use in notebooks.
 .. autosummary::
    :toctree: .
 
-   settings.set_figure_params
+   set_figure_params
 
 Influence the global behavior of plotting functions. In non-interactive scripts,
 you'd usually want to set :class:`settings.autoshow` to ``False``.

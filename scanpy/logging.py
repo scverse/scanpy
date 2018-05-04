@@ -33,14 +33,12 @@ def hint(*args, **kwargs):
     return msg(*args, v='hint', **kwargs)
 
 
-def _verbosity_greater_or_equal_than(v):
-    if isinstance(v, str):
-        v = _VERBOSITY_LEVELS_FROM_STRINGS[v]
+def _settings_verbosity_greater_or_equal_than(v):
     if isinstance(settings.verbosity, str):
-        global_v = _VERBOSITY_LEVELS_FROM_STRINGS[settings.verbosity]
+        settings_v = _VERBOSITY_LEVELS_FROM_STRINGS[settings.verbosity]
     else:
-        global_v = settings.verbosity
-    return global_v >= v
+        settings_v = settings.verbosity
+    return settings_v >= v
 
 
 def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
@@ -70,16 +68,12 @@ def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
     if r is not None: reset = r
     if isinstance(v, str):
         v = _VERBOSITY_LEVELS_FROM_STRINGS[v]
-    if isinstance(settings.verbosity, str):
-        global_verbosity = _VERBOSITY_LEVELS_FROM_STRINGS[settings.verbosity]
-    else:
-        global_verbosity = settings.verbosity
     if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
     if v >= 4 and not no_indent:
         msg = ('   ',) + msg
-    if global_verbosity >= v:
-        if not time and not m and len(msg) > 0:
+    if _settings_verbosity_greater_or_equal_than(v):
+        if not time and not memory and len(msg) > 0:
             _write_log(*msg, end=end)
         if reset:
             try:
@@ -89,7 +83,7 @@ def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
             settings._previous_time = time_module.time()
         if time:
             elapsed = get_passed_time()
-            msg = msg + ('({})'.format(settings._sec_to_str(elapsed)),)
+            msg = msg + ('({})'.format(_sec_to_str(elapsed)),)
             _write_log(*msg, end=end)
         if memory:
             _write_log(format_memory_usage(get_memory_usage()),
