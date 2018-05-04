@@ -25,7 +25,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groups : categorical annotation of observations or 'louvain_groups', optional (default: 'louvain_groups')
         Criterion to determine the resulting partitions of the single-cell

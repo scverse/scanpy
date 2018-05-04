@@ -111,8 +111,8 @@ Further changes are
 
 ... and through `anndata v0.5 <http://anndata.readthedocs.io>`_
 
-1. inform about duplicates in :class:`~scanpy.api.AnnData.var_names` and resolve them using :func:`~scanpy.api.AnnData.var_names_make_unique`
-2. by default, generate unique observation names in :func:`~scanpy.api.AnnData.concatenate`
+1. inform about duplicates in :class:`~anndata.AnnData.var_names` and resolve them using :func:`~anndata.AnnData.var_names_make_unique`
+2. by default, generate unique observation names in :func:`~anndata.AnnData.concatenate`
 3. automatically remove unused categories after slicing
 4. read/write `.loom` files using loompy 2
 
@@ -132,14 +132,14 @@ Further changes are
 
 ... and through `anndata v0.4 <http://anndata.readthedocs.io>`_
 
-1. towards a common file format for exchanging :class:`~scanpy.api.AnnData` with
+1. towards a common file format for exchanging :class:`~anndata.AnnData` with
    packages such as Seurat and SCDE by reading and writing `.loom
    <http://loompy.org>`_ files
-2. :class:`~scanpy.api.AnnData`
+2. :class:`~anndata.AnnData`
    provides scalability beyond dataset sizes that fit into memory: see this
    `blog post
    <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_
-3. :class:`~scanpy.api.AnnData` has a :class:`~scanpy.api.AnnData.raw` attribute
+3. :class:`~anndata.AnnData` has a :class:`~anndata.AnnData.raw` attribute
    that simplifies storing the data matrix when you consider it "raw": see the
    `clustering tutorial
    <https://github.com/theislab/scanpy_usage/tree/master/170505_seurat>`_
@@ -152,8 +152,8 @@ Further changes are
 
 **November 16, 2017**: version 0.3
 
-1. :class:`~scanpy.api.AnnData` can be `concatenated <https://scanpy.readthedocs.io/en/latest/api/scanpy.api.AnnData.html>`_
-2. :class:`~scanpy.api.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
+1. :class:`~anndata.AnnData` can be `concatenated <https://scanpy.readthedocs.io/en/latest/api/anndata.AnnData.html>`_
+2. :class:`~anndata.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
 3. results of approximate graph abstraction (AGA) are `simplified <https://github.com/theislab/graph_abstraction>`_
 
 

@@ -32,7 +32,7 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_branchings : `int`, optional (default: 0)
         Number of branchings to detect.

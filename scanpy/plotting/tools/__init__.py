@@ -31,7 +31,7 @@ def pca(adata, **params):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -99,7 +99,7 @@ def pca_scatter(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -170,7 +170,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     components : str or list of integers, optional
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
@@ -226,7 +226,7 @@ def diffmap(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -342,7 +342,7 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     layout : {{'fr', 'drl', ...}}, optional (default: last computed)
         One of the `draw_graph` layouts, see
@@ -448,7 +448,7 @@ def tsne(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -544,7 +544,7 @@ def umap(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     color : string or list of strings, optional (default: None)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -761,7 +761,7 @@ def dpt(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
@@ -958,7 +958,7 @@ def louvain(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
         Choose the basis in which to plot.
@@ -1023,7 +1023,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
@@ -1100,7 +1100,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groups : list of `str`, optional (default: `None`)
         List of group names.

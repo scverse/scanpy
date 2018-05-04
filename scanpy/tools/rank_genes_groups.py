@@ -27,7 +27,7 @@ def rank_genes_groups(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groupby : `str`
         The key of the observations grouping to consider.

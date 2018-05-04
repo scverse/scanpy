@@ -36,7 +36,7 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     layout : `str`, optional (default: 'fa')
         'fa' (`ForceAtlas2`) or any valid `igraph layout
