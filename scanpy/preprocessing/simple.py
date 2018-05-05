@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 import warnings
-from bioservices import biomart
 from io import StringIO
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
@@ -908,6 +907,11 @@ def get_mito(host, org):
     Returns a `set` containing mitochondrial gene symbols, or `None` if the organism is unavailable.   
  
     """
+    try:
+        from bioservices import biomart
+    except ImportError:
+        logg.msg('to use this method you need to install the bioservices module')
+        return None
     s = biomart.BioMart(host=host)
 
     # building query
