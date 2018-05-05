@@ -209,12 +209,12 @@ def savefig(writekey, dpi=None, ext=None):
     """
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
-        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 200:
+        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 150:
             if settings._low_resolution_warning:
-                logg.msg(
-                    '... you are using a very low resolution (dpi<200) for saving figures\n'
-                    '    Consider running `settings.set_figure_params(dpi_save=...)` '
-                    'or adjusting rcParams[\'savefig.dpi\']', v=4, noindent=True)
+                logg.warn(
+                    'You are using a low resolution (dpi<150) for saving figures.\n'
+                    'Consider running `set_figure_params(dpi_save=...)`, which will '
+                    'adjust `matplotlib.rcParams[\'savefig.dpi\']`')
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']

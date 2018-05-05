@@ -200,8 +200,6 @@ def read_params(filename, asheader=False, verbosity=0):
         Dictionary that stores parameters.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if not asheader:
-        settings.m(verbosity, 'reading params file', filename)
     from collections import OrderedDict
     params = OrderedDict([])
     for line in open(filename):

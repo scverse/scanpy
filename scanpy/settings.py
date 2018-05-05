@@ -78,7 +78,7 @@ categories_to_ignore = ['N/A', 'dontknow', 'no_gate', '?']
 # --------------------------------------------------------------------------------
 
 
-def set_figure_params(scanpy=True, dpi=80, dpi_save=200, vector_friendly=True,
+def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
                       color_map=None, format='pdf', ipython_format='png2x'):
     """Set resolution/size, styling and format of figures.
 
@@ -88,7 +88,7 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=200, vector_friendly=True,
         Init default values for ``matplotlib.rcParams`` suited for Scanpy.
     dpi : `int`, optional (default: `80`)
         Resolution of rendered figures - this influences the size of figures in notebooks.
-    dpi_save : `int`, optional (default: `200`)
+    dpi_save : `int`, optional (default: `150`)
         Resolution of saved figures. This should typically be higher to achieve
         publication quality.
     vector_friendly : `bool`, optional (default: `True`)
