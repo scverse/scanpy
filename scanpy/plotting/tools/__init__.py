@@ -1091,7 +1091,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
 
 
 def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             use_raw=None,
+                             gene_names=None, use_raw=None,
                              split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
@@ -1105,7 +1105,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     groups : list of `str`, optional (default: `None`)
         List of group names.
     n_genes : `int`, optional (default: 20)
-        Number of genes to show.
+        Number of genes to show. Not used if gene_names is not None.
+    gene_names : list of `str`
+        List of genes to plot.
     gene_symbols : `str`
         Key for field in `.var` that stores gene symbols if you do not want to
         use `.var_names`.
@@ -1139,8 +1141,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
-        gene_names = adata.uns[
-            'rank_genes_groups']['names'][group_name][:n_genes]
+        if gene_names is None:
+            gene_names = adata.uns[
+                'rank_genes_groups']['names'][group_name][:n_genes]
         keys = gene_names
         # make a "hue" option!
         df = pd.DataFrame()
@@ -1156,9 +1159,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
             df[key] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
-            df['hue'][df['hue'] != group_name] = 'rest'
+            df.loc[df['hue'] != group_name, 'hue'] = 'rest'
         else:
-            df['hue'][~df['hue'].isin([group_name, reference])] = np.nan
+            df.loc[~df['hue'].isin([group_name, reference]), 'hue'] = np.nan
         df['hue'] = df['hue'].astype('category')
         df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
         x = 'variable'
