@@ -1,17 +1,17 @@
 from .. import settings
 from .. import logging as logg
-
+from ._utils import get_init_pos_from_paga
 
 def umap(
         adata,
         min_dist=0.5,
         spread=1.0,
         n_components=2,
-        n_epochs=0,
+        maxiter=None,
         alpha=1.0,
         gamma=1.0,
         negative_sample_rate=5,
-        init='spectral',
+        init_pos='spectral',
         random_state=0,
         a=None,
         b=None,
@@ -46,8 +46,9 @@ def umap(
         this determines how clustered/clumped the embedded points are.
     n_components : `int`, optional (default: 2)
         The number of dimensions of the embedding.
-    n_epochs : `int`, optional (default: 0)
-        The number of epochs of the optimization.
+    maxiter : `int`, optional (default: `None`)
+        The number of iterations (epochs) of the optimization. Called `n_epochs`
+        in the original UMAP.
     alpha : `float`, optional (default: 1.0)
         The initial learning rate for the embedding optimization.
     gamma : `float` (optional, default 1.0)
@@ -57,10 +58,13 @@ def umap(
     negative_sample_rate : `int` (optional, default 5)
         The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
-    init : `string` or `np.array`, optional (default: 'spectral')
-        How to initialize the low dimensional embedding.
+    init_pos : `string` or `np.array`, optional (default: 'spectral')
+        How to initialize the low dimensional embedding. Called `init` in the
+        original UMAP.
         Options are:
-            * 'spectral': use a spectral embedding of the fuzzy 1-skeleton
+            * Any key for `adata.obsm`.
+            * 'paga': positions from :func:`~scanpy.api.pl.paga`.
+            * 'spectral': use a spectral embedding of the graph.
             * 'random': assign initial embedding positions at random.
             * A numpy array of initial embedding positions.
     random_state : `int`, `RandomState` or `None`, optional (default: `None`)
@@ -101,6 +105,13 @@ def umap(
     else:
         a = a
         b = b
+    if init_pos in adata.obsm.keys():
+        init_coords = adata.obsm[init_pos]
+    elif init_pos == 'paga':
+        init_coords = get_init_pos_from_paga(adata)
+    else:
+        init_coords = init_pos
+    n_epochs = maxiter
     X_umap = simplicial_set_embedding(
         adata.uns['neighbors']['connectivities'].tocoo(),
         n_components,
@@ -110,7 +121,7 @@ def umap(
         gamma,
         negative_sample_rate,
         n_epochs,
-        init,
+        init_coords,
         random_state,
         max(0, settings.verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates

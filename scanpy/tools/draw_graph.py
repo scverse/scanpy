@@ -2,7 +2,7 @@ import numpy as np
 from .. import settings
 from .. import utils
 from .. import logging as logg
-
+from ._utils import get_init_pos_from_paga
 
 def draw_graph(
         adata,
@@ -89,22 +89,7 @@ def draw_graph(
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga':
-        if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
-            groups = adata.obs[adata.uns['paga']['groups']]
-            pos = adata.uns['paga']['pos']
-            confidence_coarse = adata.uns['paga']['confidence']
-            init_coords = np.ones((adjacency.shape[0], 2))
-            for i, group_pos in enumerate(pos):
-                subset = (groups == groups.cat.categories[i]).values
-                neighbors = confidence_coarse[i].nonzero()
-                confidence = confidence_coarse[i][neighbors]
-                nearest_neighbor = neighbors[1][np.argmax(confidence)]
-                noise = np.random.random((len(subset[subset]), 2))
-                dist = pos[i] - pos[nearest_neighbor]
-                noise = noise * dist
-                init_coords[subset] = group_pos - 0.5*dist + noise
-        else:
-            raise ValueError('Compute and plot PAGA first.')
+        init_coords = get_init_pos_from_paga(adata, adjacency)
     else:
         init_coords = np.random.random((adjacency.shape[0], 2))
     # see whether fa2 is installed
@@ -158,6 +143,6 @@ def draw_graph(
     adata.obsm[key_added] = positions
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
-              '    \'{}\', graph_drawing coordinates (adata.obs)'
+              '    \'{}\', graph_drawing coordinates (adata.obsm)'
               .format(key_added))
     return adata if copy else None

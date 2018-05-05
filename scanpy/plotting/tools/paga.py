@@ -184,14 +184,15 @@ def paga_scatter(
 
 def paga(
         adata,
-        solid_edges='confidence',
-        dashed_edges=None,
-        transitions=None,
         layout=None,
+        init_pos=None,
         root=0,
         groups=None,
         color=None,
         threshold=None,
+        solid_edges='confidence',
+        dashed_edges=None,
+        transitions=None,
         threshold_arrows=None,
         threshold_solid=None,
         threshold_dashed=None,
@@ -207,31 +208,32 @@ def paga(
         pos=None,
         cmap=None,
         frameon=True,
-        rootlevel=None,
-        return_pos=False,
+        add_pos=True,
         export_to_gexf=False,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        **kwds):
     """Plot the abstracted graph.
 
     This uses igraph's layout algorithms for most layouts [Csardi06]_.
+
+    When initializing the positions, note that igraph mirrors coordinates along
+    the x axis... that is, you should increase the `maxiter` parameter by 1 if
+    the layout is flipped.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
-    solid_edges : `str`, optional (default: 'paga_confidence')
-        Key for `.uns['paga']` that specifies the matrix that stores the edges
-        to be drawn solid black.
-    dashed_edges : `str` or `None`, optional (default: `None`)
-        Key for `.uns['paga']` that specifies the matrix that stores the edges
-        to be drawn dashed grey. If `None`, no dashed edges are drawn.
     layout : {'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
         Plotting layout. 'fr' stands for Fruchterman-Reingold, 'rt' stands for
         Reingold Tilford. 'eq_tree' stands for 'eqally spaced tree'. All but
         'eq_tree' use the igraph layout function. All other igraph layouts are
         also permitted. See also parameter `pos`.
+    init_pos : `np.ndarray`, optional (default: `None`)
+        Two-column array/list storing the x and y coordinates for initializing
+        the layout.
     random_state : `int` or `None`, optional (default: 0)
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, the initial
@@ -251,6 +253,12 @@ def paga(
     threshold : `float` or `None`, optional (default: 0.01)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
+    solid_edges : `str`, optional (default: 'paga_confidence')
+        Key for `.uns['paga']` that specifies the matrix that stores the edges
+        to be drawn solid black.
+    dashed_edges : `str` or `None`, optional (default: `None`)
+        Key for `.uns['paga']` that specifies the matrix that stores the edges
+        to be drawn dashed grey. If `None`, no dashed edges are drawn.
     threshold_solid : `float` or `None`, optional (default: `threshold`)
         Do not draw edges for weights below this threshold. Set to `None` if you
         want all edges.
@@ -269,15 +277,15 @@ def paga(
         Min width of solid edges.
     max_edge_width : `float`, optional (default: `None`)
         Max width of solid and dashed edges.
-    pos : array-like, filename of `.gdf` file,  optional (default: `None`)
+    pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
     export_to_gexf : `bool`, optional (default: `None`)
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
-    return_pos : `bool`, optional (default: `False`)
-        Return the positions.
+    add_pos : `bool`, optional (default: `True`)
+        Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
          Provide title for panels either as `['title1', 'title2', ...]` or
          `'title1,title2,...'`.
@@ -293,14 +301,13 @@ def paga(
 
     Returns
     -------
-    Adds `'paga_pos'` to `adata.uns`.
+    Adds `'pos'` to `adata.uns['paga']`.
 
     If `show==False`, a list of `matplotlib.Axis` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
 
     If `return_pos` is `True`, in addition, the positions of the nodes.
     """
-
     # colors is a list that contains no lists
     if isinstance(color, list) and True not in [isinstance(c, list) for c in color]: color = [color]
     if color is None or isinstance(color, str): color = [color]
@@ -321,6 +328,8 @@ def paga(
         pos = _paga_graph(
             adata,
             axs[icolor],
+            layout=layout,
+            init_pos=init_pos,
             solid_edges=solid_edges,
             dashed_edges=dashed_edges,
             transitions=transitions,
@@ -328,9 +337,7 @@ def paga(
             threshold_arrows=threshold_arrows,
             threshold_solid=threshold_solid,
             threshold_dashed=threshold_dashed,
-            layout=layout,
             root=root,
-            rootlevel=rootlevel,
             color=c,
             groups=groups[icolor],
             fontsize=fontsize,
@@ -344,19 +351,21 @@ def paga(
             title=title[icolor],
             random_state=random_state,
             export_to_gexf=export_to_gexf,
-            pos=pos)
-    adata.uns['paga']['pos'] = pos
+            pos=pos,
+            **kwds)
+    if add_pos:
+        adata.uns['paga']['pos'] = pos
+        logg.hint('added \'pos\', the PAGA positions (adata.uns[\'paga\'])')
     utils.savefig_or_show('paga_graph', show=show, save=save)
     if len(color) == 1 and isinstance(axs, list): axs = axs[0]
-    if return_pos:
-        return (axs, pos) if show == False else pos
-    else:
-        return axs if show == False else None
+    return axs if show == False else None
 
 
 def _paga_graph(
         adata,
         ax,
+        layout=None,
+        init_pos=None,
         solid_edges=None,
         dashed_edges=None,
         transitions=None,
@@ -365,7 +374,6 @@ def _paga_graph(
         threshold_solid=None,
         threshold_dashed=None,
         root=0,
-        rootlevel=None,
         color=None,
         groups=None,
         fontsize=None,
@@ -373,14 +381,14 @@ def _paga_graph(
         node_size_power=0.5,
         edge_width_scale=1,
         title=None,
-        layout=None,
         pos=None,
         cmap=None,
         frameon=True,
         min_edge_width=None,
         max_edge_width=None,
         export_to_gexf=False,
-        random_state=0):
+        random_state=0,
+        **kwds):
     node_labels = groups
     if (node_labels is not None
         and isinstance(node_labels, str)
@@ -472,14 +480,23 @@ def _paga_graph(
                     adj_tree = adata.uns['paga']['confidence_tree']
                     g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
                 pos_list = g_tree.layout(
-                    layout, root=root if isinstance(root, list) else [root],
-                    rootlevel=rootlevel).coords
+                    layout, root=root if isinstance(root, list) else [root]).coords
             elif layout == 'circle':
                 pos_list = g.layout(layout).coords
             else:
+                # I don't know why this is necessary
                 np.random.seed(random_state)
-                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
-                pos_list = g.layout(layout, seed=init_coords, weights='weight').coords
+                if init_pos is None:
+                    init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
+                else:
+                    init_pos = init_pos.copy()
+                    # this is a super-weird hack that is necessary as igraphs layout function
+                    # seems to do some strange stuff, here
+                    init_pos[:, 1] *= -1
+                    init_coords = init_pos.tolist()
+                pos_list = g.layout(
+                    layout, seed=init_coords,
+                    weights='weight', **kwds).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         # equally-spaced tree
         else:

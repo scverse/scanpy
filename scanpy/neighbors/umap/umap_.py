@@ -1137,7 +1137,7 @@ def simplicial_set_embedding(graph, n_components,
 
     total_weight = graph.data.sum()
 
-    if n_epochs <= 0:
+    if n_epochs is None:
         # For smaller datasets we can use more epochs
         if graph.shape[0] <= 10000:
             n_epochs = 500

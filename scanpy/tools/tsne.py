@@ -95,7 +95,6 @@ def tsne(
                       '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
                       'Even for n_jobs=1 this speeds up the computation considerably '
                       'and might yield better converged results.')
-            pass
     if multicore_failed:
         from sklearn.manifold import TSNE
         from . import _tsne_fix   # fix by D. DeTomaso for sklearn < 0.19
