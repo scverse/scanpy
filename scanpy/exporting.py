@@ -28,10 +28,9 @@ def spring_project(
         be present.
     project_dir : `str`
         Path to SPRING directory.
-    use_genes : `str` or `list`, optional (default: `None`)
-        Select a subset of genes. If a `str`, looks for annotation in
-        `adata.uns` useful to plot marker genes found with
-        :func:`~scanpy.api.tl.rank_gene_groups`.
+    use_genes : `'rank_gene_groups'` or `list`, optional (default: `None`)
+        Select a subset of genes. If 'rank_gene_groups', this uses the
+        annotation written by :func:`~scanpy.api.tl.rank_gene_groups`.
     cell_groupings : `str`, `list` of `str`, optional (default: `None`)
         Instead of importing all categorical annotation, pass a list of keys for
         `adata.obs`.
@@ -44,14 +43,14 @@ def spring_project(
     """
 
     gene_list = adata.var_names
-    # We allow to include rank_genes annotation.
+    # We allow to include rank_genes_groups output.
     if isinstance(use_genes, str):
         use_genes_list = []
-        if use_genes in adata.uns:
-            for rank in adata.uns[use_genes]:
+        if use_genes == 'rank_genes_groups':
+            for rank in adata.uns['rank_genes_groups']['names']:
                 for groups in rank:
                     use_genes_list.append(groups)
-            use_genes = use_genes_list
+            use_genes = list(set(use_genes_list))
         else:
             # TODO: the following check seems fishy
             if use_genes not in adata.var_names:
@@ -97,12 +96,13 @@ def spring_project(
     os.system('mkdir ' + project_dir + 'gene_colors')
     # The following Split into left right (+ casting) makes sure that every gene
     # is included, no out of bounds
+    adata_raw = adata.raw if adata.raw is not None else adata
     II = int(len(gene_list) / 50) + 1
     left = 0
     right = II
     for j in range(50):
         fname = project_dir + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
-        X_writeable_chunk = adata[:, gene_list[left:right]].X
+        X_writeable_chunk = adata_raw[:, gene_list[left:right]].X
         if issparse(X_writeable_chunk):
             X_writeable_chunk = X_writeable_chunk.toarray()
         if X_writeable_chunk.ndim == 1:
@@ -110,7 +110,7 @@ def spring_project(
         all_gene_colors = {
             g: X_writeable_chunk[:, i]
             for i, g in enumerate(gene_list[left:right])}
-        write_color_tracks(all_gene_colors, fname, adata.X.shape[0])
+        write_color_tracks(all_gene_colors, fname, adata_raw.X.shape[0])
         left += II
         right += II
         if right >= len(gene_list): right = len(gene_list)
@@ -120,7 +120,7 @@ def spring_project(
     # Create and save a dictionary of color profiles to be used by the visualizer
     # Cast: numpy datatypes as input not json serializable
     # Pre-calculate statistics before writing to speed up calculations
-    X = adata.X
+    X = adata_raw.X
     color_stats = {g: (float(np.mean(X[:, i])),
                        float(np.std(X[:, i].todense() if issparse(X) else X[:, i])),
                        float(np.max(X[:, i])),
