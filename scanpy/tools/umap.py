@@ -95,7 +95,8 @@ def umap(
         raise ValueError(
             'Did not find \'neighbors/connectivities\'. Run `sc.pp.neighbors` first.')
     logg.info('computing UMAP', r=True)
-    if not adata.uns['neighbors']['params']['method'] == 'umap':
+    if ('params' not in adata.uns['neighbors']
+        or adata.uns['neighbors']['params']['method'] != 'umap'):
         logg.warn('neighbors/connectivities have not been computed using umap')
     from sklearn.utils import check_random_state
     random_state = check_random_state(random_state)

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -5,6 +6,7 @@ import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib.colors import is_color_like
 from matplotlib import rcParams
+from collections import Iterable
 
 from .. import utils
 from ... import utils as sc_utils
@@ -197,6 +199,7 @@ def paga(
         threshold_solid=None,
         threshold_dashed=None,
         fontsize=None,
+        text_kwds={},
         node_size_scale=1,
         node_size_power=0.5,
         edge_width_scale=1,
@@ -207,6 +210,8 @@ def paga(
         random_state=0,
         pos=None,
         cmap=None,
+        cax=None,
+        cb_kwds={},
         frameon=True,
         add_pos=True,
         export_to_gexf=False,
@@ -267,6 +272,9 @@ def paga(
         want all edges.
     fontsize : int (default: None)
         Font size for node labels.
+    text_kwds : keywords for text
+        See `here
+        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`_.
     node_size_scale : float (default: 1.0)
         Increase or decrease the size of the nodes.
     node_size_power : float (default: 0.5)
@@ -284,6 +292,14 @@ def paga(
     export_to_gexf : `bool`, optional (default: `None`)
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
+    cmap : color map
+        The color map.
+    cax : `matplotlib.Axes`
+        A matplotlib axes object for a potential colorbar.
+    cb_kwds : colorbar keywords
+        See `here
+        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`_,
+        for instance, `ticks`.
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
@@ -301,15 +317,13 @@ def paga(
 
     Returns
     -------
-    Adds `'pos'` to `adata.uns['paga']`.
+    Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
 
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
-
-    If `return_pos` is `True`, in addition, the positions of the nodes.
+    If `show==False`, one or more `matplotlib.Axis` objects. If at least one colorbar is
+    drawn, a list with colorbar instances will be returned, too.
     """
     # colors is a list that contains no lists
-    if isinstance(color, list) and True not in [isinstance(c, list) for c in color]: color = [color]
+    if isinstance(color, Iterable) and all([not isinstance(c, Iterable) for c in color]): color = [color]
     if color is None or isinstance(color, str): color = [color]
 
     # groups is a list that contains no lists
@@ -324,8 +338,9 @@ def paga(
         axs = ax
     if len(color) == 1 and not isinstance(axs, list): axs = [axs]
 
+    cbs = []
     for icolor, c in enumerate(color):
-        pos = _paga_graph(
+        pos, cb = _paga_graph(
             adata,
             axs[icolor],
             layout=layout,
@@ -341,6 +356,7 @@ def paga(
             color=c,
             groups=groups[icolor],
             fontsize=fontsize,
+            text_kwds=text_kwds,
             node_size_scale=node_size_scale,
             node_size_power=node_size_power,
             edge_width_scale=edge_width_scale,
@@ -348,11 +364,15 @@ def paga(
             max_edge_width=max_edge_width,
             frameon=frameon,
             cmap=cmap,
+            cax=cax,
+            cb_kwds=cb_kwds,
             title=title[icolor],
             random_state=random_state,
             export_to_gexf=export_to_gexf,
             pos=pos,
             **kwds)
+        if cb is not None:
+            cbs.append(cb)
     if add_pos:
         adata.uns['paga']['pos'] = pos
         logg.hint('added \'pos\', the PAGA positions (adata.uns[\'paga\'])')
@@ -377,6 +397,7 @@ def _paga_graph(
         color=None,
         groups=None,
         fontsize=None,
+        text_kwds=None,
         node_size_scale=1,
         node_size_power=0.5,
         edge_width_scale=1,
@@ -387,6 +408,8 @@ def _paga_graph(
         min_edge_width=None,
         max_edge_width=None,
         export_to_gexf=False,
+        cax=None,
+        cb_kwds={},
         random_state=0,
         **kwds):
     node_labels = groups
@@ -452,7 +475,7 @@ def _paga_graph(
 
     # plot numeric colors
     colorbar = False
-    if isinstance(color, (list, np.ndarray)) and not isinstance(color[0], (str, dict)):
+    if isinstance(color, Iterable) and not isinstance(color[0], (str, dict)):
         import matplotlib
         norm = matplotlib.colors.Normalize()
         color = norm(color)
@@ -564,6 +587,9 @@ def _paga_graph(
         nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black')
 
     if export_to_gexf:
+        if isinstance(color[0], tuple):
+            from matplotlib.colors import rgb2hex
+            color = [rgb2hex(c) for c in color]
         for count, n in enumerate(nx_g_solid.nodes()):
             nx_g_solid.node[count]['label'] = node_labels[count]
             nx_g_solid.node[count]['color'] = color[count]
@@ -571,7 +597,10 @@ def _paga_graph(
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
                              'z': 0}}
-        logg.msg('exporting to {}'.format(settings.writedir + 'paga_graph.gexf'), v=1)
+        filename = settings.writedir + 'paga_graph.gexf'
+        logg.msg('exporting to {}'.format(filename), v=1)
+        if settings.writedir != '' and not os.path.exists(settings.writedir):
+            os.makedirs(settings.writedir)
         nx.write_gexf(nx_g_solid, settings.writedir + 'paga_graph.gexf')
 
     # deal with empty graph
@@ -604,12 +633,12 @@ def _paga_graph(
         groups_sizes / median_group_size, node_size_power)
     # usual scatter plot
     if is_color_like(color[0]):
-        ax.scatter(pos_array[:, 0], pos_array[:, 1],
-                   c=color, edgecolors='face', s=groups_sizes)
+        scatter = ax.scatter(pos_array[:, 0], pos_array[:, 1],
+                             c=color, edgecolors='face', s=groups_sizes)
         for count, group in enumerate(node_labels):
             ax.text(pos_array[count, 0], pos_array[count, 1], group,
-                verticalalignment='center',
-                horizontalalignment='center', size=fontsize)
+                    verticalalignment='center',
+                     horizontalalignment='center', size=fontsize, **text_kwds)
     # else pie chart plot
     else:
         force_labels_to_front = True  # TODO: solve this differently!
@@ -663,10 +692,10 @@ def _paga_graph(
                        transform=a.transAxes, size=fontsize)
     if title is not None: ax.set_title(title)
     if colorbar:
-        ax1 = pl.axes([0.95, 0.1, 0.03, 0.7])
-        cb = matplotlib.colorbar.ColorbarBase(ax1, cmap=cmap,
-                                              norm=norm)
-    return pos_array
+        cax = pl.axes([0.95, 0.1, 0.03, 0.8]) if cax is None else cax
+        cb = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap,
+                                              norm=norm, **cb_kwds)
+    return pos_array, cb
 
 
 def paga_path(

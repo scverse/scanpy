@@ -260,9 +260,11 @@ def adjust_palette(palette, length):
        or (not isinstance(palette, list) and len(palette.by_key()['color']) < length)):
         if length <= 28:
             palette = palettes.default_26
-        else:
+        elif length <= len(palettes.default_64):  # 103 colors
             palette = palettes.default_64
-        logg.m('... updating the color palette to provide enough colors')
+        else:
+            palette = ['grey' for i in range(length)]
+            logg.info('more than 103 colors would be required, initializing as \'grey\'')
         return palette if islist else cycler(color=palette)
     elif islist:
         return palette
@@ -275,8 +277,8 @@ def adjust_palette(palette, length):
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     if key + '_colors' in adata.uns:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
-            logg.info('    number of defined colors smaller than number of categories,'
-                      ' using palette')
+            logg.info('    number of colors in `.uns[{}\'_colors\']` smaller than number of categories,'
+                      ' falling back to palette'.format(key))
         else:
             # make sure that these are valid colors
             adata.uns[key + '_colors'] = [
