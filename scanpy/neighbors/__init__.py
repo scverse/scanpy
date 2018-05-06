@@ -698,7 +698,7 @@ class Neighbors():
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
-                X, n_neighbors, random_state, metric, **metric_kwds)
+                X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
         logg.msg('computed neighbors', t=True, v=4)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
