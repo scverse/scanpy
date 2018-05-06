@@ -143,7 +143,7 @@ def get_passed_time():
 
 def print_version_and_date():
     from . import __version__
-    _mi('Running Scanpy', __version__, 'on {}.'.format(get_date_string()))
+    _write_log('Running Scanpy', __version__, 'on {}.'.format(get_date_string()))
 
 
 _DEPENDENCIES_NUMERICS = [
