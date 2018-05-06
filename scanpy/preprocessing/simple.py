@@ -402,7 +402,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
     return gene_subset
 
 
-def log1p(data, copy=False):
+def log1p(data, copy=False, chunked=False, chunk_size=None):
     """Logarithmize the data matrix.
 
     Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
@@ -422,7 +422,11 @@ def log1p(data, copy=False):
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = log1p(data.X)
+        if chunked:
+            for chunk, start, end in adata.chunks(chunk_size):
+                adata.X[start:end] = log1p(chunk)
+        else:
+            adata.X = log1p(data.X)
         return adata if copy else None
     X = data  # proceed with data matrix
     if not issparse(X):
@@ -432,7 +436,7 @@ def log1p(data, copy=False):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=None, dtype='float32', copy=False):
+        return_info=None, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -482,10 +486,32 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
-        result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
-                     svd_solver=svd_solver, random_state=random_state,
-                     return_info=True)
-        X_pca, components, pca_variance_ratio, pca_variance = result
+
+        if chunked:
+            from sklearn.decomposition import IncrementalPCA
+            n_comps = adata.X.shape[1] - 1 if adata.X.shape[1] < n_comps else n_comps
+            X_pca = np.zeros((adata.X.shape[0], n_comps), adata.X.dtype)
+
+            ipca = IncrementalPCA(n_components=n_comps)
+
+            for chunk, _, _ in adata.chunks(chunk_size):
+                chunk = chunk.toarray() if issparse(chunk) else chunk
+                ipca.partial_fit(chunk)
+            for chunk, start, end in adata.chunks(chunk_size):
+                chunk = chunk.toarray() if issparse(chunk) else chunk
+                X_pca[start:end] = ipca.transform(chunk)
+
+            if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
+
+            components = ipca.components_
+            pca_variance_ratio = ipca.explained_variance_ratio_
+            pca_variance = ipca.explained_variance_
+
+        else:
+            result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
+                         svd_solver=svd_solver, random_state=random_state,
+                         return_info=True)
+            X_pca, components, pca_variance_ratio, pca_variance = result
         adata.obsm['X_pca'] = X_pca
         adata.varm['PCs'] = components.T
         adata.uns['pca'] = {}
@@ -518,6 +544,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                '    the first component, e.g., might be heavily influenced by different means\n'
                '    the following components often resemble the exact PCA very closely', v=4)
         pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
+
     X_pca = pca_.fit_transform(X)
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
     if False if return_info is None else return_info:
