@@ -4,6 +4,7 @@ from .. import utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
 
+
 def draw_graph(
         adata,
         layout='fa',
@@ -93,12 +94,14 @@ def draw_graph(
     else:
         init_coords = np.random.random((adjacency.shape[0], 2))
     # see whether fa2 is installed
-    try:
-        from fa2 import ForceAtlas2
-    except:
-        logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
-                  'To use the faster and better ForceAtlas2 layout, '
-                  'install package \'fa2\' (`pip install fa2`).')
+    if layout == 'fa':
+        try:
+            from fa2 import ForceAtlas2
+        except:
+            logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
+                      'To use the faster and better ForceAtlas2 layout, '
+                      'install package \'fa2\' (`pip install fa2`).')
+            layout = 'fr'
     # actual drawing
     if layout == 'fa':
         forceatlas2 = ForceAtlas2(
