@@ -15,7 +15,7 @@ from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata
 
 VALID_LEGENDLOCS = {
-    'right margin', 'on data', 'best', 'upper right', 'upper left',
+    'none', 'right margin', 'on data', 'best', 'upper right', 'upper left',
     'lower left', 'lower right', 'right', 'center left', 'center right',
     'lower center', 'upper center', 'center'
 }
@@ -74,8 +74,8 @@ def scatter(
     projection : {'2d', '3d'}, optional (default: '2d')
          Projection of plot.
     legend_loc : `str`, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for `matplotlib.pyplot.legend
+         Location of legend, either 'none', 'on data', 'right margin' or valid
+         keywords for `matplotlib.pyplot.legend
          <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
