@@ -15,20 +15,24 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
     Reconstruct the progression of a biological process from snapshot data and
     detect branching subgroups. `Diffusion Pseudotime analysis` has been
     introduced by [Haghverdi16]_. Here, we use a further developed version,
-    which is able to deal with disconnected graphs [Wolf17i]_ and can be run in
-    a `hierarchical` mode by setting the parameter `n_branchings > 1` [Wolf17]_.
+    which is able to deal with disconnected graphs [Wolf17i]_ and can -
+    nonrobustly - be run in a `hierarchical` mode by setting the parameter
+    `n_branchings>1` [Wolf17]_.
+
+    We recommend, however, to only use this for computing pseudotime
+    `n_branchings=0`. In order to do so, you need to annotate your data with a
+    root cell. For instance::
+
+        adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
+
+    Instead of callling this with `n_branchings>0`, we recommend using a Louvain
+    clustering :func:`~scanpy.api.louvain` whose connectivity is estimated via
+    :func:`~scanpy.api.paga`.
 
     This requires to run :func:`~scanpy.api.pp.neighbors`, first. In order to
     reproduce the original implementation of DPT, use `method=='gauss'` in
     this. Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
-
-    Use `n_branchings>0` with care. Instead of doing this for identifying
-    branching subgroups, we recommend using a Louvain clustering
-    :func:`~scanpy.api.louvain` followed by PAGA :func:`~scanpy.api.paga`.
-
-    The tool is similar to the R package destiny of [Angerer16]_; the Scanpy
-    implementation though runs faster and scales to much higher cell numbers.
 
     Parameters
     ----------
@@ -68,6 +72,10 @@ def dpt(adata, n_branchings=0, n_dcs=10, min_group_size=0.01,
         eigenvectors as columns.
     diffmap_evals : `np.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
+
+    Notes
+    -----
+    The tool is similar to the R package `destiny` of [Angerer16]_.
     """
     adata = adata.copy() if copy else adata
     if 'neighbors' not in adata.uns:
