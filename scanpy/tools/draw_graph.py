@@ -86,12 +86,12 @@ def draw_graph(
         adjacency = adata.uns['neighbors']['connectivities']
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
     # init coordinates
-    np.random.seed(random_state)
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, adjacency)
+        init_coords = get_init_pos_from_paga(adata, adjacency, random_state=random_state)
     else:
+        np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2))
     # see whether fa2 is installed
     if layout == 'fa':

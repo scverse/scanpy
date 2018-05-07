@@ -86,7 +86,8 @@ def preprocess_with_pca(adata, n_pcs=None, random_state=0):
             return adata.X
 
 
-def get_init_pos_from_paga(adata, adjacency=None):
+def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
+    np.random.seed(random_state)
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     if 'paga' in adata.uns and 'pos' in adata.uns['paga']:

@@ -68,7 +68,7 @@ def umap(
             * 'spectral': use a spectral embedding of the graph.
             * 'random': assign initial embedding positions at random.
             * A numpy array of initial embedding positions.
-    random_state : `int`, `RandomState` or `None`, optional (default: `None`)
+    random_state : `int`, `RandomState` or `None`, optional (default: 0)
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState`, `random_state` is the random number generator;
         If `None`, the random number generator is the `RandomState` instance used
@@ -99,8 +99,6 @@ def umap(
     if ('params' not in adata.uns['neighbors']
         or adata.uns['neighbors']['params']['method'] != 'umap'):
         logg.warn('neighbors/connectivities have not been computed using umap')
-    from sklearn.utils import check_random_state
-    random_state = check_random_state(random_state)
     from ..neighbors.umap.umap_ import find_ab_params, simplicial_set_embedding
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
@@ -110,9 +108,11 @@ def umap(
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata)
+        init_coords = get_init_pos_from_paga(adata, random_state=random_state)
     else:
         init_coords = init_pos
+    from sklearn.utils import check_random_state
+    random_state = check_random_state(random_state)
     n_epochs = maxiter
     X_umap = simplicial_set_embedding(
         adata.uns['neighbors']['connectivities'].tocoo(),
