@@ -11,7 +11,7 @@ from ..plotting.tools import umap
 from ..plotting.tools.paga import paga, paga_adjacency, paga_compare, paga_path
 from ..plotting.tools import dpt, dpt_scatter, dpt_groups_pseudotime, dpt_timeseries
 from ..plotting.tools import louvain
-from ..plotting.tools import rank_genes_groups, rank_genes_groups_violin
+from ..plotting.tools import rank_genes_groups, rank_genes_groups_violin, genes_groups_violin
 from ..plotting.tools import sim
 
 from ..plotting.rcmod import set_rcParams_scanpy, set_rcParams_defaults
