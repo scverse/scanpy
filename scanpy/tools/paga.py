@@ -280,7 +280,7 @@ def paga_expression_entropies(adata):
 
 
 def paga_compare_paths(adata1, adata2,
-                      adjacency_key='paga_adjacency_full_confidence'):
+                       adjacency_key='confidence', adjacency_key2=None):
     """Compare paths in abstracted graphs in two datasets.
 
     Compute the fraction of consistent paths between leafs, a measure for the
@@ -289,12 +289,18 @@ def paga_compare_paths(adata1, adata2,
     By increasing the verbosity to level 4 and 5, the paths that do not agree
     and the paths that agree are written to the output, respectively.
 
+    The PAGA "groups key" needs to be the same in both objects.
+
     Parameters
     ----------
     adata1, adata2 : AnnData
         Annotated data matrices to compare.
     adjacency_key : str
-        Key for indexing the adjacency matrices to be used in adata1 and adata2.
+        Key for indexing the adjacency matrices in `.uns['paga']` to be used in
+        adata1 and adata2.
+    adjacency_key2 : str, None
+        If provided, used for adata2.
+
 
     Returns
     -------
@@ -303,11 +309,11 @@ def paga_compare_paths(adata1, adata2,
     ``frac_paths``.
     """
     import networkx as nx
-    g1 = nx.Graph(adata1.uns[adjacency_key])
-    g2 = nx.Graph(adata2.uns[adjacency_key])
+    g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
+    g2 = nx.Graph(adata2.uns['paga'][adjacency_key2 if adjacency_key2 is not None else adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
-    paga_groups = adata.uns['paga']['groups']
+    paga_groups = adata1.uns['paga']['groups']
     asso_groups1 = utils.identify_groups(adata1.obs[paga_groups].values,
                                          adata2.obs[paga_groups].values)
     asso_groups2 = utils.identify_groups(adata2.obs[paga_groups].values,
@@ -343,6 +349,7 @@ def paga_compare_paths(adata1, adata2,
             n_agreeing_paths += 1
             n_steps += 1
             n_agreeing_steps += 1
+            logg.msg('there are no connecting paths in both graphs', v=5, no_indent=True)
             continue
         elif no_path1 or no_path2:
             # non-consistent result

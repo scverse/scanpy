@@ -71,6 +71,8 @@ def neighbors(
     """
     logg.info('computing neighbors', r=True)
     adata = adata.copy() if copy else adata
+    if adata.isview:  # we shouldn't need this here...
+        adata._init_as_actual(adata.copy())
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
         n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, use_rep=use_rep,
@@ -536,16 +538,25 @@ class Neighbors():
         self._init_iroot()
         # use the graph in adata
         info_str = ''
+        self.knn = None
+        self._distances = None
+        self._connectivities = None
         if 'neighbors' in adata.uns:
-            self.knn = issparse(adata.uns['neighbors']['distances'])
-            self._distances = adata.uns['neighbors']['distances']
-            self._connectivities = adata.uns['neighbors']['connectivities']
-            self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+            if 'distances' in adata.uns['neighbors']:
+                self.knn = issparse(adata.uns['neighbors']['distances'])
+                self._distances = adata.uns['neighbors']['distances']
+            if 'connectivities' in adata.uns['neighbors']:
+                self.knn = issparse(adata.uns['neighbors']['connectivities'])
+                self._connectivities = adata.uns['neighbors']['connectivities']
+            if 'params' in adata.uns['neighbors']:
+                self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+            else:
+                # estimating n_neighbors
+                if self._connectivities is None:
+                    self.n_neighbors = int(self._distances.count_nonzero() / self._distances.shape[0])
+                else:
+                    self.n_neighbors = int(self._connectivities.count_nonzero() / self._connectivities.shape[0] / 2)
             info_str += '`.distances` `.connectivities` '
-        else:
-            self.knn = None
-            self._distances = None
-            self._connectivities = None
         if 'X_diffmap' in adata.obsm_keys():
             self._eigen_values = _backwards_compat_get_full_eval(adata)
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
@@ -689,7 +700,7 @@ class Neighbors():
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
-                X, n_neighbors, random_state, metric, **metric_kwds)
+                X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
         logg.msg('computed neighbors', t=True, v=4)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
