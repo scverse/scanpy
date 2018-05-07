@@ -1257,8 +1257,10 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         _ax.set_xlabel('genes')
         _ax.set_title('{} vs. {}'.format(group_name, reference))
         _ax.legend_.remove()
-        if computed_distribution: _ax.set_ylabel('z-score w.r.t. to bulk mean')
-        else: _ax.set_ylabel('expression')
+        #FIXME computed_distribution: missing default parameter?
+#        if computed_distribution: _ax.set_ylabel('z-score w.r.t. to bulk mean')
+#        else: _ax.set_ylabel('expression')
+        _ax.set_ylabel('expression')
         _ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
                     + str(adata.uns['rank_genes_groups']['params']['groupby'])
