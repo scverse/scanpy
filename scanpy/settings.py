@@ -79,7 +79,7 @@ categories_to_ignore = ['N/A', 'dontknow', 'no_gate', '?']
 
 
 def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
-                      color_map=None, format='pdf', ipython_format='png2x'):
+                      color_map=None, format='pdf', transparent=False, ipython_format='png2x'):
     """Set resolution/size, styling and format of figures.
 
     Parameters
@@ -97,6 +97,9 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
         Convenience method for setting the default color map.
     format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
         This sets the default format for saving figures: `file_format_figs`.
+    transparent : `bool`, optional (default: `True`)
+        Save figures with transparent back ground. Sets
+        `rcParams['savefig.transparent']`.
     ipython_format : list of `str`, optional (default: 'png2x')
         Only concerns the notebook/IPython environment; see
         `IPython.core.display.set_matplotlib_formats` for more details.
@@ -112,11 +115,15 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
     global file_format_figs
     file_format_figs = format
     if dpi is not None:
-        rcParams['savefig.dpi'] = dpi_save
         rcParams['figure.dpi'] = dpi
+    if dpi_save is not None:
+        rcParams['savefig.dpi'] = dpi_save
+    if transparent is not None:
+        rcParams['savefig.transparent'] = transparent
     if scanpy:
         from .plotting.rcmod import set_rcParams_scanpy
         set_rcParams_scanpy(color_map=color_map)
+
 
 
 # ------------------------------------------------------------------------------

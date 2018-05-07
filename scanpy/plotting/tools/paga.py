@@ -539,7 +539,7 @@ def _paga_graph(
     # node positions from adjacency_solid
     if pos is None:
         if layout is None:
-            layout = 'fa'
+            layout = 'fr'
         if layout == 'fa':
             try:
                 from fa2 import ForceAtlas2
