@@ -22,7 +22,7 @@ Two further packages, needed for several graph computations, have not been
 automatically installed. Manually install them in this order
 
 - `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` or ``conda install -c conda-forge python-igraph``
-- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain`` or ``conda install -c vtraag louvain``
+- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain`` or ``conda install -c conda-forge louvain``
 
 If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
 

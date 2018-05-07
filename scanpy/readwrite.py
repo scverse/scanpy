@@ -84,7 +84,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
 
 
 def read_10x_h5(filename, genome='mm10'):
-    """Read 10X-Genomics-formatted hdf5 file.
+    """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------
@@ -200,8 +200,6 @@ def read_params(filename, asheader=False, verbosity=0):
         Dictionary that stores parameters.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
-    if not asheader:
-        settings.m(verbosity, 'reading params file', filename)
     from collections import OrderedDict
     params = OrderedDict([])
     for line in open(filename):
