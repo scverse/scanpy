@@ -71,6 +71,8 @@ def neighbors(
     """
     logg.info('computing neighbors', r=True)
     adata = adata.copy() if copy else adata
+    if adata.isview:  # we shouldn't need this here...
+        adata._init_as_actual(adata.copy())
     neighbors = Neighbors(adata)
     neighbors.compute_neighbors(
         n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, use_rep=use_rep,
