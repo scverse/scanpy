@@ -98,12 +98,15 @@ def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
         for i, group_pos in enumerate(pos):
             subset = (groups == groups.cat.categories[i]).values
             neighbors = confidence_coarse[i].nonzero()
-            confidence = confidence_coarse[i][neighbors]
-            nearest_neighbor = neighbors[1][np.argmax(confidence)]
-            noise = np.random.random((len(subset[subset]), 2))
-            dist = pos[i] - pos[nearest_neighbor]
-            noise = noise * dist
-            init_pos[subset] = group_pos - 0.5*dist + noise
+            if len(neighbors[1]) > 0:
+                confidence = confidence_coarse[i][neighbors]
+                nearest_neighbor = neighbors[1][np.argmax(confidence)]
+                noise = np.random.random((len(subset[subset]), 2))
+                dist = pos[i] - pos[nearest_neighbor]
+                noise = noise * dist
+                init_pos[subset] = group_pos - 0.5*dist + noise
+            else:
+                init_pos[subset] = group_pos
     else:
         raise ValueError('Plot PAGA first, so that adata.uns[\'paga\']'
                          'with key \'pos\'.')
