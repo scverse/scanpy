@@ -36,11 +36,12 @@ def umap(
         Annotated data matrix.
     min_dist : `float`, optional (default: 0.5)
         The effective minimum distance between embedded points. Smaller values
-        will result in a more clustered/clumped embedding where nearby points
-        on the manifold are drawn closer together, while larger values will
-        result on a more even dispersal of points. The value should be set
-        relative to the ``spread`` value, which determines the scale at which
-        embedded points will be spread out.
+        will result in a more clustered/clumped embedding where nearby points on
+        the manifold are drawn closer together, while larger values will result
+        on a more even dispersal of points. The value should be set relative to
+        the ``spread`` value, which determines the scale at which embedded
+        points will be spread out. The default of in the `umap-learn` package is
+        0.1.
     spread : `float` (optional, default 1.0)
         The effective scale of embedded points. In combination with `min_dist`
         this determines how clustered/clumped the embedded points are.
