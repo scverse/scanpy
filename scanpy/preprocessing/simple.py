@@ -423,7 +423,7 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         if chunked:
-            for chunk, start, end in adata.chunks_X(chunk_size):
+            for chunk, start, end in adata.chunked_X(chunk_size):
                 adata.X[start:end] = log1p(chunk)
         else:
             adata.X = log1p(data.X)
@@ -500,10 +500,10 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
         pca_ = IncrementalPCA(n_components=n_comps)
 
-        for chunk, _, _ in adata.chunks_X(chunk_size):
+        for chunk, _, _ in adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             pca_.partial_fit(chunk)
-        for chunk, start, end in adata.chunks_X(chunk_size):
+        for chunk, start, end in adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
