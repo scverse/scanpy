@@ -1047,7 +1047,8 @@ def paga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = anno_dict['dpt_pseudotime'].T
+        if 'dpt_pseudotime' in anno_dict:
+            df['distance'] = anno_dict['dpt_pseudotime'].T
         return ax, df if ax_was_none and show == False else df
     else:
         return ax if ax_was_none and show == False else None

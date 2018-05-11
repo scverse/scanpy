@@ -139,7 +139,7 @@ class DPT(Neighbors):
         super(DPT, self).__init__(adata)
         self.flavor = 'haghverdi16'
         self.n_branchings = n_branchings
-        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.X.shape[0])
+        self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.shape[0])
         self.passed_adata = adata  # just for debugging purposes
         self.choose_largest_segment = False
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
@@ -182,7 +182,7 @@ class DPT(Neighbors):
         # indices of the points in the segment)
         # initialize the search for branchings with a single segment,
         # that is, get the indices of the whole data set
-        indices_all = np.arange(self._adata.X.shape[0], dtype=int)
+        indices_all = np.arange(self._adata.shape[0], dtype=int)
         # let's keep a list of segments, the first segment to add is the
         # whole data set
         segs = [indices_all]
@@ -288,7 +288,7 @@ class DPT(Neighbors):
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
-        allindices = np.arange(self._adata.X.shape[0], dtype=int)
+        allindices = np.arange(self._adata.shape[0], dtype=int)
         for iseg, seg in enumerate(segs):
             # do not consider too small segments
             if segs_tips[iseg][0] == -1: continue
@@ -353,7 +353,7 @@ class DPT(Neighbors):
         # make segs a list of mask arrays, it's easier to store
         # as there is a hdf5 equivalent
         for iseg, seg in enumerate(self.segs):
-            mask = np.zeros(self._adata.X.shape[0], dtype=bool)
+            mask = np.zeros(self._adata.shape[0], dtype=bool)
             mask[seg] = True
             self.segs[iseg] = mask
         # convert to arrays
@@ -362,7 +362,7 @@ class DPT(Neighbors):
 
     def set_segs_names(self):
         """Return a single array that stores integer segment labels."""
-        segs_names = np.zeros(self._adata.X.shape[0], dtype=np.int8)
+        segs_names = np.zeros(self._adata.shape[0], dtype=np.int8)
         self.segs_names_unique = []
         for iseg, seg in enumerate(self.segs):
             segs_names[seg] = iseg
