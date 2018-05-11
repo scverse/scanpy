@@ -164,7 +164,7 @@ def scatter(
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
             else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-            else None)
+            else basis)
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
