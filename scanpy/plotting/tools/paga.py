@@ -160,6 +160,10 @@ def _paga_scatter(
         from . import draw_graph
         scatter_func = draw_graph
         kwds['edges'] = True
+    elif basis == 'umap':
+        from . import umap
+        scatter_func = umap
+        kwds['edges'] = True
     else:
         from . import scatter
         scatter_func = scatter
