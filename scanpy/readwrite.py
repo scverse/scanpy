@@ -309,8 +309,6 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             adata = read_text(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             adata = _read_softgz(filename)
-        elif ext == 'txt.gz':
-            sys.exit('TODO: implement similar to read_softgz')
         else:
             raise ValueError('Unkown extension {}.'.format(ext))
         if cache:
