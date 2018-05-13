@@ -338,12 +338,11 @@ def _read_softgz(filename):
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     import gzip
-    with gzip.open(filename) as file:
+    with gzip.open(filename, mode='rt') as file:
         # The header part of the file contains information about the
         # samples. Read that information first.
         samples_info = {}
         for line in file:
-            line = line.decode("utf-8")
             if line.startswith("!dataset_table_begin"):
                 break
             elif line.startswith("!subset_description"):
@@ -354,7 +353,7 @@ def _read_softgz(filename):
                 for k in subset_ids:
                     samples_info[k] = subset_description
         # Next line is the column headers (sample id's)
-        sample_names = file.readline().decode("utf-8").split("\t")
+        sample_names = file.readline().split("\t")
         # The column indices that contain gene expression data
         I = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
@@ -365,7 +364,6 @@ def _read_softgz(filename):
         # identifiers
         gene_names, X = [], []
         for line in file:
-            line = line.decode("utf-8")
             # This is what signals the end of the gene expression data
             # section in the file
             if line.startswith("!dataset_table_end"):
@@ -504,15 +502,14 @@ def check_datafile_present_and_download(filename, backup_url=None):
 
 def is_valid_filename(filename, return_ext=False):
     """Check whether the argument is a filename."""
-    pt = Path(filename)
-    ext = pt.suffixes
+    ext = Path(filename).suffixes
 
     # cases for gzipped/bzipped text files
     if len(ext) == 2 and ext[0][1:] in text_exts and ext[1][1:] in ('gz', 'bz2'):
         return ext[0][1:] if return_ext else True
     elif len(ext) == 1 and ext[0][1:] in avail_exts:
         return ext[0][1:] if return_ext else True
-    elif pt.suffix == '.soft.gz':
+    elif ''.join(ext) == '.soft.gz':
         return 'soft.gz' if return_ext else True
     else:
         if return_ext:
