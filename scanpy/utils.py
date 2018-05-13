@@ -10,6 +10,7 @@ from pandas.api.types import CategoricalDtype
 from . import settings
 from . import logging as logg
 
+EPS = 1e-15
 
 def doc_params(**kwds):
     """\
@@ -68,6 +69,118 @@ def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
 # --------------------------------------------------------------------------------
 # Graph stuff
 # --------------------------------------------------------------------------------
+
+
+def cross_entropy_graphs(adata_ref, adata_cmp):
+    """Compare graphs based on cross entropy.
+
+    Returns
+    -------
+    The cross entropy and the geodesic-distance-weighted cross entropy as
+    ``entropy, geo_entropy_d, geo_entropy_o``.
+    """
+    graph_ref = adata_ref.uns['neighbors']['connectivities']
+    graph_cmp = adata_cmp.uns['neighbors']['connectivities']
+
+    graph_ref = graph_ref.tocoo()  # makes a copy
+    graph_cmp = graph_cmp.tocoo()
+
+    edgeset_ref = {e for e in zip(graph_ref.row, graph_ref.col)}
+    edgeset_cmp = {e for e in zip(graph_cmp.row, graph_cmp.col)}
+    edgeset_union = list(edgeset_ref.union(edgeset_cmp))
+
+    edgeset_union_indices = tuple(zip(*edgeset_union))
+    edgeset_union_indices = (np.array(edgeset_union_indices[0]), np.array(edgeset_union_indices[1]))
+
+    n_edges_ref = len(graph_ref.nonzero()[0])
+    n_edges_cmp = len(graph_cmp.nonzero()[0])
+    n_edges_union = len(edgeset_union)
+    logg.msg(
+        '... n_edges_ref', n_edges_ref,
+        'n_edges_cmp', n_edges_cmp,
+        'n_edges_union', n_edges_union)
+
+    graph_ref = graph_ref.tocsr()  # need a copy of the csr graph anyways
+    graph_cmp = graph_cmp.tocsr()
+
+    p_ref = graph_ref[edgeset_union_indices].A1
+    p_cmp = graph_cmp[edgeset_union_indices].A1
+
+    # the following is how one compares it to log_loss form sklearn
+    # p_ref[p_ref.nonzero()] = 1
+    # from sklearn.metrics import log_loss
+    # print(log_loss(p_ref, p_cmp))
+    p_cmp = np.clip(p_cmp, EPS, 1-EPS)
+    ratio = np.clip(p_ref / p_cmp, EPS, None)
+    ratio_1m = np.clip((1 - p_ref) / (1 - p_cmp), EPS, None)
+
+    entropy = np.sum(p_ref * np.log(ratio) + (1-p_ref) * np.log(ratio_1m))
+
+    n_edges_fully_connected = (graph_ref.shape[0]**2 - graph_ref.shape[0])
+    entropy /= n_edges_fully_connected
+
+    fraction_edges = n_edges_ref / n_edges_fully_connected
+    naive_entropy = (fraction_edges * np.log(1./fraction_edges)
+                     + (1-fraction_edges) * np.log(1./(1-fraction_edges)))
+    logg.msg('cross entropy of naive sparse prediction {:.3e}'.format(naive_entropy))
+    logg.msg('cross entropy of random prediction {:.3e}'.format(-np.log(0.5)))
+
+    logg.info('cross entropy {:.3e}'.format(entropy))
+
+    from .neighbors import Neighbors
+    neigh_ref = Neighbors(adata_ref)
+    neigh_ref.compute_transitions()
+    neigh_ref.compute_eigen()
+    dist_ref = neigh_ref.distances_dpt
+
+    neigh_cmp = Neighbors(adata_cmp)
+    neigh_cmp.compute_transitions()
+    neigh_cmp.compute_eigen()
+    dist_cmp = neigh_cmp.distances_dpt
+
+    num = np.zeros_like(p_ref)
+    denom = np.zeros_like(p_ref)
+    for i, e in enumerate(edgeset_union):
+        num[i] = dist_cmp[e]
+        denom[i] = dist_ref[e]
+
+    num = np.clip(num, EPS, None)
+    denom = np.clip(denom, EPS, None)
+
+    weights = np.array(num / denom)
+    one_over_weights = np.array(denom / num)
+
+    # the following is just for annotation of figures
+    if 'highlights' not in adata_cmp.uns:
+        adata_cmp.uns['highlights'] = {}
+    max_weights = np.argpartition(weights, kth=-3)[-3:]
+    points = list(edgeset_union_indices[0][max_weights])
+    points2 = list(edgeset_union_indices[1][max_weights])
+    found_disconnected_points = False
+    for ip, p in enumerate(points):
+        if weights[max_weights][ip] == np.inf:
+            adata_cmp.uns['highlights'][p] = 'D' + str(ip)
+            adata_cmp.uns['highlights'][points2[ip]] = 'D' + str(ip)
+            found_disconnected_points = True
+    if found_disconnected_points:
+        logg.msg('3 most disconnected points', points)
+        logg.msg('    with weights', weights[max_weights].round(1))
+    else:
+        max_weights = np.argpartition(one_over_weights, kth=-3)[-3:]
+        points = list(edgeset_union_indices[0][max_weights])
+        for p in points:
+            adata_cmp.uns['highlights'][p] = 'O'
+        logg.msg('3 most overlapping points', points)
+        logg.msg('    with weights', one_over_weights[max_weights].round(1))
+
+    geo_entropy_d = np.sum(weights * p_ref * np.log(ratio))
+    geo_entropy_o = np.sum(one_over_weights * (1-p_ref) * np.log(ratio_1m))
+
+    geo_entropy_d /= n_edges_fully_connected
+    geo_entropy_o /= n_edges_fully_connected
+
+    logg.info('geodesic cross entropy {:.3e}'.format(geo_entropy_d + geo_entropy_d))
+    return entropy, geo_entropy_d, geo_entropy_o
 
 
 def get_graph_tool_from_adjacency(adjacency, directed=None):
