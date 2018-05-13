@@ -5,6 +5,7 @@ import os
 import sys
 import numpy as np
 import time
+from pathlib import Path
 from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
 from anndata import read as read_h5ad
@@ -12,10 +13,12 @@ from anndata import read as read_h5ad
 from . import settings
 from . import logging as logg
 
-avail_exts = {'anndata', 'csv', 'xlsx',
-              'txt', 'tsv', 'tab', 'data',  # these four are all equivalent
+# .gz and .bz2 suffixes are also allowed for text formats
+text_exts = {'csv',
+             'tsv', 'tab', 'data', 'txt'} # these four are all equivalent
+avail_exts = {'anndata', 'xlsx',
               'h5', 'h5ad',
-              'soft.gz', 'txt.gz', 'mtx'}
+              'soft.gz', 'mtx'} | text_exts
 """Available file formats for reading data. """
 
 
@@ -503,12 +506,20 @@ def check_datafile_present_and_download(filename, backup_url=None):
 
 def is_valid_filename(filename, return_ext=False):
     """Check whether the argument is a filename."""
-    for ext in avail_exts:
-        if filename.endswith('.' + ext):
-            return ext if return_ext else True
-    if return_ext:
-        raise ValueError('"{}" does not end on a valid extension.\n'
-                         'Please, provide one of the available extensions.\n{}'
-                         .format(filename, avail_exts))
+    pt = Path(filename)
+    ext = pt.suffixes
+
+    # cases for gzipped/bzipped text files
+    if len(ext) == 2 and ext[0][1:] in text_exts and ext[1][1:] in ('gz', 'bz2'):
+        return ext[0][1:] if return_ext else True
+    elif len(ext) == 1 and ext[0][1:] in avail_exts:
+        return ext[0][1:] if return_ext else True
+    elif pt.suffix == '.soft.gz':
+        return 'soft.gz' if return_ext else True
     else:
-        return False
+        if return_ext:
+            raise ValueError('"{}" does not end on a valid extension.\n'
+                             'Please, provide one of the available extensions.\n{}'
+                             .format(filename, avail_exts))
+        else:
+            return False
