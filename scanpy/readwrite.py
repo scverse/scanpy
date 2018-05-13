@@ -353,7 +353,7 @@ def _read_softgz(filename):
                 for k in subset_ids:
                     samples_info[k] = subset_description
         # Next line is the column headers (sample id's)
-        sample_names = file.readline().split("\t")
+        sample_names = file.readline().strip().split("\t")
         # The column indices that contain gene expression data
         I = [i for i, x in enumerate(sample_names) if x.startswith("GSM")]
         # Restrict the column headers to those that we keep
