@@ -436,7 +436,7 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        dtype='float32', copy=False, chunked=False, chunk_size=None):
+        return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -444,7 +444,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     n_comps : `int`, optional (default: 50)
@@ -460,15 +460,19 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         of the problem.
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
+    return_info : `bool`, optional (default: `False`)
+        Only relevant when not passing an :class:`~scanpy.api.AnnData`: see
+        "Returns".
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
         If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
-        is returned.
+        is returned. Is ignored otherwise.
 
     Returns
     -------
-    Returns AnnData object if copy=True or adds to `data`:
+    If `data` is array-like and `return_info == False`, only returns `X_pca`,\
+    otherwise returns or adds to `adata`:
     X_pca : `.obsm`
          PCA representation of data.
     PCs : `.varm`
@@ -481,8 +485,13 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     if n_comps is None: n_comps = N_PCS
 
-    adata = data.copy() if copy else data
-    #adata = AnnData(data) if not isinstance(data, AnnData) else ...
+    if isinstance(data, AnnData):
+        data_is_AnnData = True
+        adata = data.copy() if copy else data
+    else:
+        data_is_AnnData = False
+        adata = AnnData(data)
+
     logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
 
     if adata.n_vars < n_comps:
@@ -503,6 +512,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         for chunk, _, _ in adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             pca_.partial_fit(chunk)
+
         for chunk, start, end in adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
@@ -514,7 +524,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                 logg.msg('    as `zero_center=True`, '
                        'sparse input is densified and may '
                        'lead to huge memory consumption', v=4)
-                X = adata.X.toarray() #Copying the whole adata.X here, could cause memory problems
+                X = adata.X.toarray()  # Copying the whole adata.X here, could cause memory problems
             else:
                 X = adata.X
             pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
@@ -530,18 +540,24 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
 
-    adata.obsm['X_pca'] = X_pca
-    adata.varm['PCs'] = pca_.components_.T
-    adata.uns['pca'] = {}
-    adata.uns['pca']['variance'] = pca_.explained_variance_
-    adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-    logg.msg('    finished', t=True, end=' ', v=4)
-    logg.msg('and added\n'
-             '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-             '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-             '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-             '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
-    return adata if copy else None
+    if data_is_AnnData:
+        adata.obsm['X_pca'] = X_pca
+        adata.varm['PCs'] = pca_.components_.T
+        adata.uns['pca'] = {}
+        adata.uns['pca']['variance'] = pca_.explained_variance_
+        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
+        logg.msg('    finished', t=True, end=' ', v=4)
+        logg.msg('and added\n'
+                 '    \'X_pca\', the PCA coordinates (adata.obs)\n'
+                 '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
+                 '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
+                 '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
+        return adata if copy else None
+    else:
+        if return_info:
+            return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
+        else:
+            return X_pca
 
 
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
