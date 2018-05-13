@@ -866,7 +866,11 @@ class Neighbors():
                   '    {}'.format(str(evals).replace('\n', '\n    ')))
         count_ones = sum([1 for v in evals if v == 1])
         if count_ones > len(evals)/2:
-            logg.warn('Transition matrix has many irreducible blocks!')
+            logg.warn('Transition matrix has many disconnected components!')
+        self._number_connected_components = 1
+        if issparse(matrix):
+            from scipy.sparse.csgraph import connected_components
+            self._connected_components = connected_components(matrix)
         self._eigen_values = evals
         self._eigen_basis = evecs
 
@@ -890,13 +894,22 @@ class Neighbors():
             self._set_iroot_via_xroot(xroot)
 
     def _get_dpt_row(self, i):
+        use_mask = False
+        if self._connected_components[0] > 1:
+            use_mask = True
+            label = self._connected_components[1][i]
+            mask = self._connected_components[1] == label
         row = sum([(self.eigen_values[l]/(1-self.eigen_values[l])
                      * (self.eigen_basis[i, l] - self.eigen_basis[:, l]))**2
                    # account for float32 precision
-                    for l in range(0, self.eigen_values.size) if self.eigen_values[l] < 0.999999])
+                    for l in range(0, self.eigen_values.size) if self.eigen_values[l] < 0.9994])
         row += sum([(self.eigen_basis[i, l] - self.eigen_basis[:, l])**2
-                    for l in range(0, self.eigen_values.size) if self.eigen_values[l] >= 0.999999])
-        return np.sqrt(row)
+                    for l in range(0, self.eigen_values.size) if self.eigen_values[l] >= 0.9994])
+        if not use_mask:
+            return np.sqrt(row)
+        else:
+            row[~mask] = np.inf
+            return np.sqrt(row)
 
     def _compute_Lp_matrix(self):
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
@@ -907,7 +920,6 @@ class Neighbors():
         self.Lp = sum([1/self.eigen_values[i]
                       * np.outer(self.eigen_basis[:, i], self.eigen_basis[:, i])
                       for i in range(1, self.eigen_values.size)])
-        settings.mt(0, 'computed pseudoinverse of Laplacian')
 
     def _compute_C_matrix(self):
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
@@ -953,7 +965,7 @@ class Neighbors():
         """Return pseudotime with respect to root point.
         """
         self.pseudotime = self.distances_dpt[self.iroot].copy()
-        self.pseudotime /= np.max(self.pseudotime)
+        self.pseudotime /= np.max(self.pseudotime[self.pseudotime < np.inf])
 
     def _set_iroot_via_xroot(self, xroot):
         """Determine the index of the root cell.
