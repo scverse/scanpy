@@ -517,7 +517,8 @@ def is_valid_filename(filename, return_ext=False):
     else:
         if return_ext:
             raise ValueError('"{}" does not end on a valid extension.\n'
-                             'Please, provide one of the available extensions.\n{}'
+                             'Please, provide one of the available extensions.\n{}\n'
+                             'Text files with .gz and .bz2 extensions are also supported.'
                              .format(filename, avail_exts))
         else:
             return False
