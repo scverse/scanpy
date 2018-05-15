@@ -1,6 +1,7 @@
 """Plotting functions for AnnData.
 """
 
+import os
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -10,12 +11,13 @@ from matplotlib.colors import is_color_like
 import seaborn as sns
 
 from .. import settings
+from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata
 
 VALID_LEGENDLOCS = {
-    'right margin', 'on data', 'best', 'upper right', 'upper left',
+    'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
     'lower left', 'lower right', 'right', 'center left', 'center right',
     'lower center', 'upper center', 'center'
 }
@@ -74,9 +76,10 @@ def scatter(
     projection : {'2d', '3d'}, optional (default: '2d')
          Projection of plot.
     legend_loc : `str`, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for `matplotlib.pyplot.legend
+         Location of legend, either 'none', 'on data', 'right margin' or valid
+         keywords for `matplotlib.pyplot.legend
          <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
+         If 'on data export', the positions are exported to a text file.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
     legend_fontweight : {'normal', 'bold', ...} (default: `None`)
@@ -137,7 +140,7 @@ def scatter(
         n = Y.shape[0]
         size = 120000 / n
 
-    if legend_loc == 'on data' and legend_fontsize is None:
+    if legend_loc.startswith('on data') and legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
     elif legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
@@ -161,7 +164,7 @@ def scatter(
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
             else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-            else None)
+            else basis)
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
@@ -249,7 +252,7 @@ def scatter(
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     mask_remaining[mask] = False
-                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
+                    if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
         else:
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
@@ -260,7 +263,7 @@ def scatter(
                     iname = np.flatnonzero(adata.obs[key].cat.categories.values == name)[0]
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
-                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
+                    if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
@@ -268,7 +271,7 @@ def scatter(
             axs[ikey].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
         legend = None
-        if legend_loc == 'on data':
+        if legend_loc.startswith('on data'):
             if legend_fontweight is None:
                 legend_fontweight = 'bold'
             for name, pos in centroids.items():
@@ -277,6 +280,15 @@ def scatter(
                                verticalalignment='center',
                                horizontalalignment='center',
                                fontsize=legend_fontsize)
+            if legend_loc == 'on data export':
+                all_pos = np.zeros((len(centroids), 2))
+                for iname, name in enumerate(adata.obs[key].cat.categories):
+                    all_pos[iname] = centroids[name]
+                filename = settings.writedir + 'pos.csv'
+                logg.msg('exporting label positions to {}'.format(filename), v=1)
+                if settings.writedir != '' and not os.path.exists(settings.writedir):
+                    os.makedirs(settings.writedir)
+                np.savetxt(filename, all_pos, delimiter=',')
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),

@@ -10,6 +10,7 @@ from .. import logging as logg
 from .. import settings
 from . import palettes
 
+
 doc_edges_arrows = """\
 edges : `bool`, optional (default: `False`)
     Show edges.
@@ -20,8 +21,6 @@ edges_color : matplotlib color, optional (default: 'grey')
 arrows : `bool`, optional (default: `False`)
     Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
 """
-
-
 
 
 # -------------------------------------------------------------------------------
@@ -100,7 +99,8 @@ def timeseries_subplot(X,
             s=rcParams['lines.markersize'],
             c=colors[i],
             label=var_names[i] if len(var_names) > 0 else '',
-            cmap=color_map)
+            cmap=color_map,
+            rasterized=settings._vector_friendly)
     ylim = pl.ylim()
     for ih, h in enumerate(highlightsX):
         pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
@@ -203,24 +203,22 @@ additional_colors = {
 def savefig(writekey, dpi=None, ext=None):
     """Save current figure to file.
 
-    The filename is generated as follows:
-    ```
-    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
-    filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
-    ```
+    The `filename` is generated as follows:
+
+        filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
     """
     if dpi is None:
-        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 300:
-            dpi = 300
+        # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
+        if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 150:
             if settings._low_resolution_warning:
-                logg.msg(
-                    '... you are using a very low resolution for saving figures, '
-                    'adjusting to dpi=300', v=4)
+                logg.warn(
+                    'You are using a low resolution (dpi<150) for saving figures.\n'
+                    'Consider running `set_figure_params(dpi_save=...)`, which will '
+                    'adjust `matplotlib.rcParams[\'savefig.dpi\']`')
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
     if not os.path.exists(settings.figdir): os.makedirs(settings.figdir)
-    if settings.run_name != '': writekey = settings.run_name + '_' + writekey
     if settings.figdir[-1] != '/': settings.figdir += '/'
     if ext is None: ext = settings.file_format_figs
     filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
@@ -242,7 +240,7 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
         writekey += save
         save = True
     save = settings.autosave if save is None else save
-    show = (settings.autoshow and not settings.autosave) if show is None else show
+    show = settings.autoshow if show is None else show
     if save: savefig(writekey, dpi=dpi, ext=ext)
     if show: pl.show()
     if save: pl.close()  # clear figure
@@ -262,9 +260,11 @@ def adjust_palette(palette, length):
        or (not isinstance(palette, list) and len(palette.by_key()['color']) < length)):
         if length <= 28:
             palette = palettes.default_26
-        else:
+        elif length <= len(palettes.default_64):  # 103 colors
             palette = palettes.default_64
-        logg.m('... updating the color palette to provide enough colors')
+        else:
+            palette = ['grey' for i in range(length)]
+            logg.info('more than 103 colors would be required, initializing as \'grey\'')
         return palette if islist else cycler(color=palette)
     elif islist:
         return palette
@@ -277,8 +277,8 @@ def adjust_palette(palette, length):
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     if key + '_colors' in adata.uns:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
-            logg.info('    number of defined colors smaller than number of categories,'
-                      ' using palette')
+            logg.info('    number of colors in `.uns[{}\'_colors\']` smaller than number of categories,'
+                      ' falling back to palette'.format(key))
         else:
             # make sure that these are valid colors
             adata.uns[key + '_colors'] = [
@@ -313,17 +313,19 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
             g, adata.obsm['X_' + basis],
             ax=ax, width=edges_width, edge_color=edges_color)
         edge_collection.set_zorder(-2)
+        edge_collection.set_rasterized(settings._vector_friendly)
 
 
-def plot_arrows(axs, adata, basis, arrows_kwds):
+def plot_arrows(axs, adata, basis, arrows_kwds=None):
     if not isinstance(axs, list): axs = [axs]
     if 'Delta_' + basis not in adata.obsm.keys():
-        raise ValueError('`arrows=True` requires \'V_\' + basis from velocyto.')
+        raise ValueError('`arrows=True` requires \'Delta_\' + basis from velocyto.')
     X = adata.obsm['X_' + basis]
     V = adata.obsm['Delta_' + basis]
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
-        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds)
+        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds,
+                  rasterized=settings._vector_friendly)
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
@@ -344,7 +346,8 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
                c=color,
                edgecolors='none',
                s=size,
-               label=adata.obs[key].cat.categories[imask])
+               label=adata.obs[key].cat.categories[imask],
+               rasterized=settings._vector_friendly)
     return mask
 
 
@@ -485,7 +488,8 @@ def scatter_base(Y,
                              alpha=alpha,
                              edgecolors='none',  # 'face',
                              s=sizes[icolor],
-                             cmap=color_map)
+                             cmap=color_map,
+                             rasterized=settings._vector_friendly)
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)
             left = panel_pos[2][2*icolor+1] + (1.2 if projection == '3d' else 0.2) * width
@@ -550,7 +554,7 @@ def scatter_single(ax, Y, *args, **kwargs):
         kwargs['s'] = 2 if Y.shape[0] > 500 else 10
     if 'edgecolors' not in kwargs:
         kwargs['edgecolors'] = 'face'
-    ax.scatter(Y[:, 0], Y[:, 1], **kwargs)
+    ax.scatter(Y[:, 0], Y[:, 1], **kwargs, rasterized=settings._vector_friendly)
     ax.set_xticks([])
     ax.set_yticks([])
 

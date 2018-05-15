@@ -4,7 +4,6 @@
 import numpy as np
 import os
 import json
-from math import inf
 from scipy.sparse import issparse
 import logging as logg
 from pandas.api.types import is_string_dtype, is_categorical
@@ -24,14 +23,12 @@ def spring_project(
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix: `adata.uns['neighbors_distances']` needs to
-        be present.
+        Annotated data matrix: `adata.uns['neighbors']` needs to be present.
     project_dir : `str`
         Path to SPRING directory.
-    use_genes : `str` or `list`, optional (default: `None`)
-        Select a subset of genes. If a `str`, looks for annotation in
-        `adata.uns` useful to plot marker genes found with
-        :func:`~scanpy.api.tl.rank_gene_groups`.
+    use_genes : `'rank_gene_groups'` or `list`, optional (default: `None`)
+        Select a subset of genes. If 'rank_gene_groups', this uses the
+        annotation written by :func:`~scanpy.api.tl.rank_gene_groups`.
     cell_groupings : `str`, `list` of `str`, optional (default: `None`)
         Instead of importing all categorical annotation, pass a list of keys for
         `adata.obs`.
@@ -44,14 +41,14 @@ def spring_project(
     """
 
     gene_list = adata.var_names
-    # We allow to include rank_genes annotation.
+    # We allow to include rank_genes_groups output.
     if isinstance(use_genes, str):
         use_genes_list = []
-        if use_genes in adata.uns:
-            for rank in adata.uns[use_genes]:
+        if use_genes == 'rank_genes_groups':
+            for rank in adata.uns['rank_genes_groups']['names']:
                 for groups in rank:
                     use_genes_list.append(groups)
-            use_genes = use_genes_list
+            use_genes = list(set(use_genes_list))
         else:
             # TODO: the following check seems fishy
             if use_genes not in adata.var_names:
@@ -73,10 +70,6 @@ def spring_project(
 
     if 'neighbors' not in adata.uns:
         raise ValueError('Run `sc.pp.neighbors` first.')
-    # Note that output here will always be sparse
-    D = adata.uns['neighbors']['distances']
-    k = adata.uns['neighbors']['params']['n_neighbors']
-    edges = get_knn_edges_sparse(D, k)
 
     # write custom color tracks
     if isinstance(custom_color_tracks, str):
@@ -97,12 +90,13 @@ def spring_project(
     os.system('mkdir ' + project_dir + 'gene_colors')
     # The following Split into left right (+ casting) makes sure that every gene
     # is included, no out of bounds
+    adata_raw = adata.raw if adata.raw is not None else adata
     II = int(len(gene_list) / 50) + 1
     left = 0
     right = II
     for j in range(50):
         fname = project_dir + 'gene_colors/color_data_all_genes-' + repr(j) + '.csv'
-        X_writeable_chunk = adata[:, gene_list[left:right]].X
+        X_writeable_chunk = adata_raw[:, gene_list[left:right]].X
         if issparse(X_writeable_chunk):
             X_writeable_chunk = X_writeable_chunk.toarray()
         if X_writeable_chunk.ndim == 1:
@@ -110,7 +104,7 @@ def spring_project(
         all_gene_colors = {
             g: X_writeable_chunk[:, i]
             for i, g in enumerate(gene_list[left:right])}
-        write_color_tracks(all_gene_colors, fname, adata.X.shape[0])
+        write_color_tracks(all_gene_colors, fname, adata_raw.X.shape[0])
         left += II
         right += II
         if right >= len(gene_list): right = len(gene_list)
@@ -120,7 +114,7 @@ def spring_project(
     # Create and save a dictionary of color profiles to be used by the visualizer
     # Cast: numpy datatypes as input not json serializable
     # Pre-calculate statistics before writing to speed up calculations
-    X = adata.X
+    X = adata_raw.X
     color_stats = {g: (float(np.mean(X[:, i])),
                        float(np.std(X[:, i].todense() if issparse(X) else X[:, i])),
                        float(np.max(X[:, i])),
@@ -162,62 +156,18 @@ def spring_project(
     json.dump(categorical_coloring_data, open(
               project_dir + '/categorical_coloring_data.json', 'w'), indent=4)
 
+    # The actual graph
     nodes = [{'name': i, 'number': i} for i in range(X.shape[0])]
-    edges = [{'source': int(i), 'target': int(j)} for i, j in edges]
+    if 'distances' in adata.uns['neighbors']:  # these are sparse matrices
+        matrix = adata.uns['neighbors']['distances']
+    else:
+        matrix = adata.uns['neighbors']['connectivities']
+    matrix = matrix.tocoo()
+    edges = [{'source': int(i), 'target': int(j)}
+             for i, j in zip(matrix.row, matrix.col)]
     out = {'nodes': nodes, 'links': edges}
     open(project_dir + 'graph_data.json', 'w').write(
         json.dumps(out, indent=4, separators=(',', ': ')))
-
-
-# The following method is only used when a full (non-sparse) distance matrix is given as an input parameter
-# Depending on input size, this can be very cost-inefficient
-def get_knn_edges(dmat, k):
-    edge_dict = {}
-    for i in range(dmat.shape[0]):
-        # Save modified coordinate values, rewrite so that adata_object is not changed!
-        l=k
-        saved_values={}
-        while l>0:
-            j = dmat[i, :].argmin()
-            saved_values[j]=dmat[i,j]
-            if i != j:
-                ii, jj = tuple(sorted([i, j]))
-                edge_dict[(ii, jj)] = dmat[i, j]
-            dmat[i, j] = 0
-            l=l-1
-        # Rewrite safed values:
-        for j, val in enumerate(saved_values):
-            dmat[i,j]=val
-
-    return edge_dict.keys()
-
-
-# This is a (preliminary) alternative to get_knn_edges
-# We assume that D is a distance matrix containing only non-zero entries for the (k-1)nn
-# (as is the value for data graph distance local)
-# This is the version for knn as in graph distance local.
-def get_knn_edges_sparse(dmat, k):
-    edge_dict = {}
-    if not issparse(dmat):
-        return get_knn_edges(dmat,k)
-    else:
-        for i in range(dmat.shape[0]):
-            l=1
-            saved_values={}
-            while l<k:
-                row = dmat.getrow(i)
-                data_index=row.data.argmin()
-                j=row.indices[data_index]
-                saved_values[j] = dmat[i, j]
-                if i != j:
-                    ii, jj = tuple(sorted([i, j]))
-                    edge_dict[(ii, jj)] = dmat[i, j]
-                dmat[i, j] = inf
-                l = l + 1
-            # Rewrite safed values:
-            for j in saved_values:
-                dmat[i, j] = saved_values[j]
-    return edge_dict.keys()
 
 
 def write_color_tracks(ctracks, fname, n_cells=0):
