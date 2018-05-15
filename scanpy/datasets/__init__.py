@@ -87,6 +87,7 @@ def krumsiek11():
     cell_type[400:480] = 'megakaryocyte'
     cell_type[560:640] = 'neutrophil'
     adata.obs['cell_type'] = cell_type
+    sc.utils.sanitize_anndata(adata)
     return adata
 
 

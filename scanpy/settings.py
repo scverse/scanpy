@@ -1,22 +1,5 @@
-"""Settings, Logging and Timing
-
-Sets global variables like verbosity, manages logging and timing.
+"""Settings
 """
-# Note
-# ----
-# The very first version (tracking cpu time) of this was based on
-# http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution
-
-import time
-from functools import reduce
-
-# directory for configuration files etc.
-# if not os.path.exists('.scanpy/'):
-#     os.makedirs('.scanpy/')
-
-# --------------------------------------------------------------------------------
-# Global Settings Attributes
-# --------------------------------------------------------------------------------
 
 verbosity = 1
 """Set global verbosity level.
@@ -30,47 +13,25 @@ Level 5: also show even more detailed progress.
 etc.
 """
 
-run_name = ''
-"""Run name. Often associated with a certain way of preprocessing of parameter combination.
-
-All files generated during the run have this name as prefix.
-"""
-
-_run_basename = ''
-"""Basename of the run.
-
-This usually associated with a certain way of preprocessing the data and running
-several tools after that.
-
-Determines the naming of all output files.
-"""
-
-_run_suffix = ''
-"""Global suffix that is appended to project identifier.
-"""
-
 plot_suffix = ''
 """Global suffix that is appended to figure filenames.
-
-Is needed when the computation parameters remain unchanged, but only plotting
-parameters are changed.
 """
 
 file_format_data = 'h5ad'
 """File format for saving AnnData objects.
 
-Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5'
-(hdf5) and 'npz' for importing and exporting.
+Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5ad'
+(hdf5) for lossless saving.
 """
 
-file_format_figs = 'png'
+file_format_figs = 'pdf'
 """File format for saving figures.
 
 For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
-matplotlib.pyplot.savefig).
+`matplotlib.pyplot.savefig`).
 """
 
-autosave = False  # This should be renamed "autosave"
+autosave = False
 """Save plots/figures as files in directory 'figs'.
 
 Do not show plots/figures interactively.
@@ -96,6 +57,8 @@ figdir = './figures/'
 
 max_memory = 15
 """Maximal memory usage in Gigabyte.
+
+Is currently not well respected....
 """
 
 n_jobs = 2
@@ -105,82 +68,80 @@ n_jobs = 2
 logfile = ''
 """Name of logfile. By default is set to '' and writes to standard output."""
 
-import __main__ as main
-is_run_from_file = not hasattr(main, '__file__')
-"""Determines whether run from file.
-
-Currently only affects whether total computation
-time since importing this module is output after leaving the session.
-"""
-
-def _is_run_from_ipython():
-    try:
-        __IPYTHON__
-        return True
-    except NameError:
-        return False
-"""Determines whether run from Ipython.
-
-Only affects progress bars
-"""
-is_run_from_ipython = _is_run_from_ipython()
-
-
-_dpi = 400
-"""Resolution of png figures.
-
-We need this global variable as, for example, Seaborn resets rcParams['savefig.dpi'].
-"""
-
 categories_to_ignore = ['N/A', 'dontknow', 'no_gate', '?']
 """Categories that are omitted in plotting etc.
+"""
+
+
+# --------------------------------------------------------------------------------
+# Functions
+# --------------------------------------------------------------------------------
+
+
+def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
+                      color_map=None, format='pdf', transparent=False, ipython_format='png2x'):
+    """Set resolution/size, styling and format of figures.
+
+    Parameters
+    ----------
+    scanpy : `bool`, optional (default: `True`)
+        Init default values for ``matplotlib.rcParams`` suited for Scanpy.
+    dpi : `int`, optional (default: `80`)
+        Resolution of rendered figures - this influences the size of figures in notebooks.
+    dpi_save : `int`, optional (default: `150`)
+        Resolution of saved figures. This should typically be higher to achieve
+        publication quality.
+    vector_friendly : `bool`, optional (default: `True`)
+        Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
+    color_map : `str`, optional (default: `None`)
+        Convenience method for setting the default color map.
+    format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
+        This sets the default format for saving figures: `file_format_figs`.
+    transparent : `bool`, optional (default: `True`)
+        Save figures with transparent back ground. Sets
+        `rcParams['savefig.transparent']`.
+    ipython_format : list of `str`, optional (default: 'png2x')
+        Only concerns the notebook/IPython environment; see
+        `IPython.core.display.set_matplotlib_formats` for more details.
+    """
+    try:
+        import IPython
+        IPython.core.display.set_matplotlib_formats(ipython_format)
+    except:
+        pass
+    from matplotlib import rcParams
+    global _vector_friendly
+    _vector_friendly = vector_friendly
+    global file_format_figs
+    file_format_figs = format
+    if dpi is not None:
+        rcParams['figure.dpi'] = dpi
+    if dpi_save is not None:
+        rcParams['savefig.dpi'] = dpi_save
+    if transparent is not None:
+        rcParams['savefig.transparent'] = transparent
+    if scanpy:
+        from .plotting.rcmod import set_rcParams_scanpy
+        set_rcParams_scanpy(color_map=color_map)
+
+
+
+# ------------------------------------------------------------------------------
+# Private global variables & functions
+# ------------------------------------------------------------------------------
+
+_vector_friendly = False
+"""Set to true if you want to include pngs in svgs and pdfs.
 """
 
 _low_resolution_warning = True
 """Print warning when saving a figure with low resolution."""
 
+def _set_start_time():
+    from time import time
+    return time()
 
-# --------------------------------------------------------------------------------
-# Global Setting Functions
-# --------------------------------------------------------------------------------
-
-
-def set_figure_params(dpi=None, scanpy=True, figure_formats=['png2x']):
-    """Set resolution/size, styling and format of figures.
-
-    Parameters
-    ----------
-    dpi : `int`, optional
-        Resolution of png output in dots per inch.
-    scanpy : `bool`, optional (default: `True`)
-        Run :func:`scanpy.api.pl.set_rcParams_scanpy` to init Scanpy rcParams.
-    figure_formats : list of strings
-        Only concerns the IPython environment; see
-        `IPython.core.display.set_matplotlib_formats` for more details. For
-        setting the default format for saving figures, directly set
-        `file_format_figs`.
-    """
-    try:
-        import IPython
-        IPython.core.display.set_matplotlib_formats(*figure_formats)
-    except:
-        pass
-    from matplotlib import rcParams
-    global _dpi
-    if dpi is not None:
-        _dpi = dpi
-        rcParams['savefig.dpi'] = _dpi
-        rcParams['figure.dpi'] = _dpi
-    if scanpy:
-        from .plotting.rcmod import set_rcParams_scanpy
-        set_rcParams_scanpy()
-
-
-# ------------------------------------------------------------------------------
-# Private global variables
-# ------------------------------------------------------------------------------
-
-_start = time.time()
+_start = _set_start_time()
 """Time when the settings module is first imported."""
 
 _previous_time = _start
@@ -190,84 +151,13 @@ _previous_memory_usage = -1
 """Stores the previous memory usage."""
 
 
-# --------------------------------------------------------------------------------
-# Logging
-# --------------------------------------------------------------------------------
+def _is_run_from_ipython():
+    """Determines whether run from Ipython.
 
-
-def mi(*msg, end='\n'):
-    """Write message to log output, ignoring the verbosity level.
-
-    Parameters
-    ----------
-    *msg :
-        One or more arguments to be formatted as string. Same behavior as print
-        function.
+    Only affects progress bars.
     """
-    if logfile == '':
-        # in python 3, the following works
-        print(*msg, end=end)
-        # we do not bother for compat anymore?
-        # due to compatibility with the print statement in python 2 we choose
-        # print(' '.join([str(m) for m in msg]))
-    else:
-        out = ''
-        for s in msg:
-            out += str(s) + ' '
-        with open(logfile, 'a') as f:
-            f.write(out + end)
-
-
-def m(v=0, *msg):
-    """Write message to log output, depending on verbosity level.
-
-    Now is deprecatd. See logging.msg().
-
-    Parameters
-    ----------
-    v : int
-        Verbosity level of message.
-    *msg :
-        One or more arguments to be formatted as string. Same behavior as print
-        function.
-    """
-    if v < verbosity - 2:
-        mi(*msg)
-
-
-def mt(v=0, *msg, start=False):
-    """Write message to log output and show computation time.
-
-    Depends on chosen verbosity level.
-
-    Now is deprecatd. See logging.m().
-
-    Parameters
-    ----------
-    v : int
-        Verbosity level of message.
-    *msg : str
-        One or more arguments to be formatted as string. Same behavior as print
-        function.
-    """
-    if v < verbosity - 2:
-        global _previous_time
-        now = time.time()
-        if start:
-            _previous_time = now
-        elapsed = now - _previous_time
-        _previous_time = now
-        mi(_sec_to_str(elapsed), '-', *msg)
-
-
-def _sec_to_str(t):
-    """Format time in seconds.
-
-    Parameters
-    ----------
-    t : int
-        Time in seconds.
-    """
-    return "%d:%02d:%02d.%02d" % \
-        reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-               [(t*100,), 100, 60, 60])
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False

@@ -7,7 +7,7 @@ from anndata import logging
 from . import settings
 
 
-verbosity_levels_from_strings = {
+_VERBOSITY_LEVELS_FROM_STRINGS = {
     'error': 0,
     'warn': 1,
     'info': 2,
@@ -33,14 +33,12 @@ def hint(*args, **kwargs):
     return msg(*args, v='hint', **kwargs)
 
 
-def verbosity_greater_or_equal_than(v):
-    if isinstance(v, str):
-        v = verbosity_levels_from_strings[v]
+def _settings_verbosity_greater_or_equal_than(v):
     if isinstance(settings.verbosity, str):
-        global_v = verbosity_levels_from_strings[settings.verbosity]
+        settings_v = _VERBOSITY_LEVELS_FROM_STRINGS[settings.verbosity]
     else:
-        global_v = settings.verbosity
-    return global_v >= v
+        settings_v = settings.verbosity
+    return settings_v >= v
 
 
 def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
@@ -69,18 +67,14 @@ def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
     if m is not None: memory = m
     if r is not None: reset = r
     if isinstance(v, str):
-        v = verbosity_levels_from_strings[v]
-    if isinstance(settings.verbosity, str):
-        global_verbosity = verbosity_levels_from_strings[settings.verbosity]
-    else:
-        global_verbosity = settings.verbosity
+        v = _VERBOSITY_LEVELS_FROM_STRINGS[v]
     if v == 3:  # insert "--> " before hints
         msg = ('-->',) + msg
     if v >= 4 and not no_indent:
         msg = ('   ',) + msg
-    if global_verbosity >= v:
-        if not time and not m and len(msg) > 0:
-            settings.mi(*msg, end=end)
+    if _settings_verbosity_greater_or_equal_than(v):
+        if not time and not memory and len(msg) > 0:
+            _write_log(*msg, end=end)
         if reset:
             try:
                 settings._previous_memory_usage, _ = get_memory_usage()
@@ -89,15 +83,56 @@ def msg(*msg, v=4, time=False, memory=False, reset=False, end='\n',
             settings._previous_time = time_module.time()
         if time:
             elapsed = get_passed_time()
-            msg = msg + ('({})'.format(settings._sec_to_str(elapsed)),)
-            settings.mi(*msg, end=end)
+            msg = msg + ('({})'.format(_sec_to_str(elapsed)),)
+            _write_log(*msg, end=end)
         if memory:
-            settings.mi(format_memory_usage(get_memory_usage()),
+            _write_log(format_memory_usage(get_memory_usage()),
                         msg='' if time else msg, end=end)
 
-m = msg
+m = msg  # backwards compat
+
+
+def _write_log(*msg, end='\n'):
+    """Write message to log output, ignoring the verbosity level.
+
+    This is the most basic function.
+
+    Parameters
+    ----------
+    *msg :
+        One or more arguments to be formatted as string. Same behavior as print
+        function.
+    """
+    from .settings import logfile
+    if logfile == '':
+        print(*msg, end=end)
+    else:
+        out = ''
+        for s in msg:
+            out += str(s) + ' '
+        with open(logfile, 'a') as f:
+            f.write(out + end)
+
+
+def _sec_to_str(t):
+    """Format time in seconds.
+
+    Parameters
+    ----------
+    t : int
+        Time in seconds.
+    """
+    from functools import reduce
+    return "%d:%02d:%02d.%02d" % \
+        reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
+               [(t*100,), 100, 60, 60])
+
+
 print_memory_usage = logging.print_memory_usage
+
+
 get_memory_usage = logging.get_memory_usage
+
 
 def get_passed_time():
     now = time_module.time()
@@ -108,10 +143,10 @@ def get_passed_time():
 
 def print_version_and_date():
     from . import __version__
-    settings.mi('Running Scanpy', __version__, 'on {}.'.format(get_date_string()))
+    _write_log('Running Scanpy', __version__, 'on {}.'.format(get_date_string()))
 
 
-_dependencies_numerics = [
+_DEPENDENCIES_NUMERICS = [
     'anndata',  # anndata actually shouldn't, but as long as it's in development
     'numpy',
     'scipy',
@@ -122,7 +157,7 @@ _dependencies_numerics = [
     'louvain']
 
 
-_dependencies_plotting = ['matplotlib', 'seaborn']
+_DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
 
 
 def _print_versions_dependencies(dependencies):
@@ -142,28 +177,28 @@ def print_versions():
 
     Matplotlib and Seaborn are excluded from this.
     """
-    _print_versions_dependencies(['scanpy'] + _dependencies_numerics)
+    _print_versions_dependencies(['scanpy'] + _DEPENDENCIES_NUMERICS)
 
 
 def print_versions_dependencies_numerics():
     """Dependencies that might influence numerical results (computed data).
     """
     print('Dependencies:', end=' ')
-    _print_versions_dependencies(_dependencies_numerics)
+    _print_versions_dependencies(_DEPENDENCIES_NUMERICS)
 
 
 def print_versions_dependencies_plotting():
     """Dependencies that might influence plots (but not computed data).
     """
     print('Dependencies:', end=' ')
-    _print_versions_dependencies(_dependencies_plotting)
+    _print_versions_dependencies(_DEPENDENCIES_PLOTTING)
 
 
 def print_versions_dependencies_all():
     """All relevant dependencies.
     """
     _print_versions_dependencies(
-        _dependencies_numerics + _dependencies_plotting)
+        _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING)
 
 
 def get_date_string():

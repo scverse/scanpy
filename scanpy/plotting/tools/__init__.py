@@ -321,6 +321,7 @@ def draw_graph(
         edges_width=0.1,
         edges_color='grey',
         arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -415,7 +416,7 @@ def draw_graph(
         save=False,
         ax=ax)
     if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
-    if arrows: utils.plot_arrows(axs, adata, basis)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
     utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
 
@@ -454,7 +455,7 @@ def tsne(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    {{edges_arrows}}
+    {edges_arrows}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -514,10 +515,16 @@ def tsne(
     if show == False: return axs
 
 
+@doc_params(edges_arrows=doc_edges_arrows)
 def umap(
         adata,
         color=None,
         use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
+        arrows_kwds=None,
         sort_order=True,
         alpha=None,
         groups=None,
@@ -544,6 +551,7 @@ def umap(
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    {{edges_arrows}}
     sort_order : `bool`, optional (default: `True`)
         For continuous annotations used as color parameter, plot data points
         with higher values on top of others.
@@ -551,7 +559,7 @@ def umap(
         Restrict to a few categories in categorical observation annotation.
     components : str or list of str, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
+    projection : {{'2d', '3d'}}, optional (default: '2d')
          Projection of plot.
     legend_loc : str, optional (default: 'right margin')
          Location of legend, either 'on data', 'right margin' or valid keywords
@@ -581,9 +589,10 @@ def umap(
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
+    basis = 'umap'
     axs = scatter(
         adata,
-        basis='umap',
+        basis=basis,
         color=color,
         use_raw=use_raw,
         sort_order=sort_order,
@@ -599,10 +608,129 @@ def umap(
         right_margin=right_margin,
         size=size,
         title=title,
-        show=show,
-        save=save,
+        show=False,
+        save=False,
         ax=ax)
+    if edges: utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows: utils.plot_arrows(axs, adata, basis, arrows_kwds)
+    utils.savefig_or_show(basis, show=show, save=save)
     if show == False: return axs
+
+
+@doc_params(edges_arrows=doc_edges_arrows)
+def phate(
+        adata,
+        color=None,
+        use_raw=True,
+        edges=False,
+        edges_width=0.1,
+        edges_color='grey',
+        arrows=False,
+        arrows_kwds=None,
+        sort_order=True,
+        alpha=None,
+        groups=None,
+        legend_loc='right margin',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        color_map=None,
+        palette=None,
+        right_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None, ax=None):
+    """Scatter plot in PHATE basis.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    {edges_arrows}
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]` or
+         `"title1,title2,..."`.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
+
+    Returns
+    -------
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
+
+    Examples
+    --------
+    >>> import scanpy.api as sc
+    >>> import phate
+    >>> data, branches = phate.tree.gen_dla(n_dim=100,
+                                            n_branch=20,
+                                            branch_length=100)
+    >>> data.shape
+    (2000, 100)
+    >>> adata = sc.AnnData(data)
+    >>> adata.obs['branches'] = branches
+    >>> sc.tl.phate(adata, k=5, a=20, t=150)
+    >>> adata.obsm['X_phate'].shape
+    (2000, 2)
+    >>> sc.pl.phate(adata,
+                    color='branches',
+                    color_map='tab20')
+    """
+    basis = 'phate'
+    axs = scatter(
+        adata,
+        basis=basis,
+        color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
+        alpha=alpha,
+        groups=groups,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        size=size,
+        title=title,
+        show=False,
+        save=False,
+        ax=ax)
+    if edges:
+        utils.plot_edges(axs, adata, basis, edges_width, edges_color)
+    if arrows:
+        utils.plot_arrows(axs, adata, basis, arrows_kwds)
+    utils.savefig_or_show(basis, show=show, save=save)
+    if show == False:
+        return axs
 
 
 # ------------------------------------------------------------------------------
@@ -890,7 +1018,7 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsize=8, show=None, save=None, ext=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8, show=None, save=None, ext=None):
     """Plot ranking of genes.
 
     Parameters
@@ -914,9 +1042,11 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
-    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
-    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
-    group_names = (adata.uns['rank_genes_groups']['names'].dtype.names
+    if key is None:
+        key = 'rank_genes_groups'
+    groups_key = str(adata.uns[key]['params']['groupby'])
+    reference = str(adata.uns[key]['params']['reference'])
+    group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
     # one panel for each group
     n_panels = len(group_names)
@@ -942,8 +1072,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
 
     for count, group_name in enumerate(group_names):
         pl.subplot(gs[count])
-        gene_names = adata.uns['rank_genes_groups']['names'][group_name]
-        scores = adata.uns['rank_genes_groups']['scores'][group_name]
+        gene_names = adata.uns[key]['names'][group_name]
+        scores = adata.uns[key]['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             gene_name = gene_names[ig]
             pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
@@ -958,12 +1088,13 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
     writekey = ('rank_genes_groups_'
-                + str(adata.uns['rank_genes_groups']['params']['groupby']))
+                + str(adata.uns[key]['params']['groupby']))
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
 def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             use_raw=None,
+                             gene_names=None, use_raw=None,
+                             key=None,
                              split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
@@ -977,7 +1108,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     groups : list of `str`, optional (default: `None`)
         List of group names.
     n_genes : `int`, optional (default: 20)
-        Number of genes to show.
+        Number of genes to show. Not used if gene_names is not None.
+    gene_names : list of `str`
+        List of genes to plot.
     gene_symbols : `str`
         Key for field in `.var` that stores gene symbols if you do not want to
         use `.var_names`.
@@ -1002,17 +1135,20 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
+    if key is None:
+        key = 'rank_genes_groups'
     from ..tools import rank_genes_groups
-    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
+    groups_key = str(adata.uns[key]['params']['groupby'])
     if use_raw is None:
-        use_raw = bool(adata.uns['rank_genes_groups']['params']['use_raw'])
-    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
-    groups_names = (adata.uns['rank_genes_groups']['names'].dtype.names
+        use_raw = bool(adata.uns[key]['params']['use_raw'])
+    reference = str(adata.uns[key]['params']['reference'])
+    groups_names = (adata.uns[key]['names'].dtype.names
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
-        gene_names = adata.uns[
-            'rank_genes_groups']['names'][group_name][:n_genes]
+        if gene_names is None:
+            gene_names = adata.uns[
+                key]['names'][group_name][:n_genes]
         keys = gene_names
         # make a "hue" option!
         df = pd.DataFrame()
@@ -1028,9 +1164,9 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
             df[key] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
-            df['hue'][df['hue'] != group_name] = 'rest'
+            df.loc[df['hue'] != group_name, 'hue'] = 'rest'
         else:
-            df['hue'][~df['hue'].isin([group_name, reference])] = np.nan
+            df.loc[~df['hue'].isin([group_name, reference]), 'hue'] = np.nan
         df['hue'] = df['hue'].astype('category')
         df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
         x = 'variable'
@@ -1051,7 +1187,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         else: ax.set_ylabel('expression')
         ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
-                    + str(adata.uns['rank_genes_groups']['params']['groupby'])
+                    + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
 

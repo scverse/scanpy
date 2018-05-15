@@ -7,7 +7,7 @@ from cycler import cycler
 
 from . import palettes
 
-def set_rcParams_scanpy(fontsize=14):
+def set_rcParams_scanpy(fontsize=14, color_map=None):
     """Set matplotlib.rcParams to Scanpy defaults."""
 
     # figure
@@ -17,7 +17,7 @@ def set_rcParams_scanpy(fontsize=14):
     rcParams['figure.subplot.bottom'] = 0.15
     rcParams['figure.subplot.top'] = 0.91
 
-    rcParams['lines.linewidth'] = 1.5
+    rcParams['lines.linewidth'] = 1.5  # the line width of the frame
     rcParams['lines.markersize'] = 6
     rcParams['lines.markeredgewidth'] = 1
 
@@ -57,8 +57,8 @@ def set_rcParams_scanpy(fontsize=14):
     rcParams['axes.grid'] = True
     rcParams['grid.color'] = '.8'
 
-    # color map
-    rcParams['image.cmap'] = 'RdBu_r'  # seaborn 0.8.0 now has 'rocket'
+    # color map  # seaborn 0.8.0 has 'rocket'
+    rcParams['image.cmap'] = 'RdBu_r' if color_map is None else color_map
 
 
 def set_rcParams_defaults():

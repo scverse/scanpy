@@ -402,7 +402,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
     return gene_subset
 
 
-def log1p(data, copy=False):
+def log1p(data, copy=False, chunked=False, chunk_size=None):
     """Logarithmize the data matrix.
 
     Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
@@ -422,7 +422,11 @@ def log1p(data, copy=False):
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = log1p(data.X)
+        if chunked:
+            for chunk, start, end in adata.chunked_X(chunk_size):
+                adata.X[start:end] = log1p(chunk)
+        else:
+            adata.X = log1p(data.X)
         return adata if copy else None
     X = data  # proceed with data matrix
     if not issparse(X):
@@ -432,7 +436,7 @@ def log1p(data, copy=False):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=None, dtype='float32', copy=False):
+        return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -456,14 +460,14 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         of the problem.
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
-    return_info : `bool` or `None`, optional (default: `None`)
+    return_info : `bool`, optional (default: `False`)
         Only relevant when not passing an :class:`~scanpy.api.AnnData`: see
         "Returns".
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
         If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
-        is returned.
+        is returned. Is ignored otherwise.
 
     Returns
     -------
@@ -478,19 +482,70 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     variance : `.uns['pca']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
+
     if n_comps is None: n_comps = N_PCS
+
     if isinstance(data, AnnData):
+        data_is_AnnData = True
         adata = data.copy() if copy else data
-        logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
-        result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
-                     svd_solver=svd_solver, random_state=random_state,
-                     return_info=True)
-        X_pca, components, pca_variance_ratio, pca_variance = result
+    else:
+        data_is_AnnData = False
+        adata = AnnData(data)
+
+    logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
+
+    if adata.n_vars < n_comps:
+        n_comps = adata.n_vars - 1
+        logg.msg('reducing number of computed PCs to',
+               n_comps, 'as dim of data is only', adata.n_vars, v=4)
+
+    if chunked:
+        if not zero_center or random_state or svd_solver != 'auto':
+            logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
+
+        from sklearn.decomposition import IncrementalPCA
+
+        X_pca = np.zeros((adata.X.shape[0], n_comps), adata.X.dtype)
+
+        pca_ = IncrementalPCA(n_components=n_comps)
+
+        for chunk, _, _ in adata.chunked_X(chunk_size):
+            chunk = chunk.toarray() if issparse(chunk) else chunk
+            pca_.partial_fit(chunk)
+
+        for chunk, start, end in adata.chunked_X(chunk_size):
+            chunk = chunk.toarray() if issparse(chunk) else chunk
+            X_pca[start:end] = pca_.transform(chunk)
+    else:
+        zero_center = zero_center if zero_center is not None else False if issparse(adata.X) else True
+        if zero_center:
+            from sklearn.decomposition import PCA
+            if issparse(adata.X):
+                logg.msg('    as `zero_center=True`, '
+                       'sparse input is densified and may '
+                       'lead to huge memory consumption', v=4)
+                X = adata.X.toarray()  # Copying the whole adata.X here, could cause memory problems
+            else:
+                X = adata.X
+            pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
+        else:
+            from sklearn.decomposition import TruncatedSVD
+            logg.msg('    without zero-centering: \n'
+                   '    the explained variance does not correspond to the exact statistical defintion\n'
+                   '    the first component, e.g., might be heavily influenced by different means\n'
+                   '    the following components often resemble the exact PCA very closely', v=4)
+            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
+            X = adata.X
+        X_pca = pca_.fit_transform(X)
+
+    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
+
+    if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        adata.varm['PCs'] = components.T
+        adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca'] = {}
-        adata.uns['pca']['variance'] = pca_variance
-        adata.uns['pca']['variance_ratio'] = pca_variance_ratio
+        adata.uns['pca']['variance'] = pca_.explained_variance_
+        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
         logg.msg('    finished', t=True, end=' ', v=4)
         logg.msg('and added\n'
                  '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -498,32 +553,11 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                  '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
                  '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
         return adata if copy else None
-    X = data  # proceed with data matrix
-    if X.shape[1] < n_comps:
-        n_comps = X.shape[1] - 1
-        logg.msg('reducing number of computed PCs to',
-               n_comps, 'as dim of data is only', X.shape[1], v=4)
-    zero_center = zero_center if zero_center is not None else False if issparse(X) else True
-    from sklearn.decomposition import PCA, TruncatedSVD
-    if zero_center:
-        if issparse(X):
-            logg.msg('    as `zero_center=True`, '
-                   'sparse input is densified and may '
-                   'lead to huge memory consumption', v=4)
-            X = X.toarray()
-        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
-        logg.msg('    without zero-centering: \n'
-               '    the explained variance does not correspond to the exact statistical defintion\n'
-               '    the first component, e.g., might be heavily influenced by different means\n'
-               '    the following components often resemble the exact PCA very closely', v=4)
-        pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-    X_pca = pca_.fit_transform(X)
-    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
-    if False if return_info is None else return_info:
-        return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
-    else:
-        return X_pca
+        if return_info:
+            return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
+        else:
+            return X_pca
 
 
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
