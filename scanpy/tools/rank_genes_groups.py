@@ -20,6 +20,7 @@ def rank_genes_groups(
         reference='rest',
         n_genes=100,
         only_positive=True,
+        key_added=None,
         copy=False,
         method='t-test_overestim_var',
         **kwds):
@@ -85,8 +86,11 @@ def rank_genes_groups(
                                  adata.obs[groupby].cat.categories.tolist()))
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
-    adata.uns['rank_genes_groups'] = {}
-    adata.uns['rank_genes_groups']['params'] = {
+    
+    if key_added is None:
+        key_added = 'rank_genes_groups'
+    adata.uns[key_added] = {}
+    adata.uns[key_added]['params'] = {
         'groupby': groupby,
         'reference': reference,
         'method': method,
@@ -287,14 +291,16 @@ def rank_genes_groups(
     groups_order_save = [str(g) for g in groups_order]
     if reference != 'rest':
         groups_order_save = [g for g in groups_order if g != reference]
-    adata.uns['rank_genes_groups']['scores'] = np.rec.fromarrays(
+    adata.uns[key_added]['scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_scores],
         dtype=[(rn, 'float32') for rn in groups_order_save])
-    adata.uns['rank_genes_groups']['names'] = np.rec.fromarrays(
+    adata.uns[key_added]['names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.hint('added to `.uns[\'rank_genes_groups\']`\n'
-           '    \'names\', sorted np.recarray to be indexed by group ids\n'
-           '    \'scores\', sorted np.recarray to be indexed by group ids')
+    logg.hint(
+        'added to `.uns[\'{}\']`\n'
+        '    \'names\', sorted np.recarray to be indexed by group ids\n'
+        '    \'scores\', sorted np.recarray to be indexed by group ids'
+        .format(key_added))
     return adata if copy else None
