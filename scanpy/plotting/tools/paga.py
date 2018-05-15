@@ -681,8 +681,8 @@ def _paga_graph(
             from matplotlib.colors import rgb2hex
             colors = [rgb2hex(c) for c in colors]
         for count, n in enumerate(nx_g_solid.nodes()):
-            nx_g_solid.node[count]['label'] = node_labels[count]
-            nx_g_solid.node[count]['color'] = colors[count]
+            nx_g_solid.node[count]['label'] = str(node_labels[count])
+            nx_g_solid.node[count]['color'] = str(colors[count])
             nx_g_solid.node[count]['viz'] = {
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
