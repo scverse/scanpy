@@ -541,6 +541,7 @@ class Neighbors():
         self.knn = None
         self._distances = None
         self._connectivities = None
+        self._number_connected_components = None
         if 'neighbors' in adata.uns:
             if 'distances' in adata.uns['neighbors']:
                 self.knn = issparse(adata.uns['neighbors']['distances'])
@@ -557,6 +558,10 @@ class Neighbors():
                 else:
                     self.n_neighbors = int(self._connectivities.count_nonzero() / self._connectivities.shape[0] / 2)
             info_str += '`.distances` `.connectivities` '
+            self._number_connected_components = 1
+            if issparse(self._connectivities):
+                from scipy.sparse.csgraph import connected_components
+                self._connected_components = connected_components(self._connectivities)
         if 'X_diffmap' in adata.obsm_keys():
             self._eigen_values = _backwards_compat_get_full_eval(adata)
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
@@ -712,6 +717,10 @@ class Neighbors():
         if method == 'gauss':
             self._compute_connectivities_diffmap()
         logg.msg('computed connectivities', t=True, v=4)
+        self._number_connected_components = 1
+        if issparse(self._connectivities):
+            from scipy.sparse.csgraph import connected_components
+            self._connected_components = connected_components(self._connectivities)
 
     def _compute_connectivities_diffmap(self, density_normalize=True):
         # init distances
@@ -864,13 +873,8 @@ class Neighbors():
             evecs = evecs[:, ::-1]
         logg.info('    eigenvalues of transition matrix\n'
                   '    {}'.format(str(evals).replace('\n', '\n    ')))
-        count_ones = sum([1 for v in evals if v == 1])
-        if count_ones > len(evals)/2:
+        if self._connected_components[0] > len(evals)/2:
             logg.warn('Transition matrix has many disconnected components!')
-        self._number_connected_components = 1
-        if issparse(matrix):
-            from scipy.sparse.csgraph import connected_components
-            self._connected_components = connected_components(matrix)
         self._eigen_values = evals
         self._eigen_basis = evecs
 
