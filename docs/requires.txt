@@ -10,7 +10,7 @@ seaborn
 h5py
 tables
 scikit-learn>=0.19.1
-statsmodels
+# statsmodels  # not needed for docs
 networkx
 natsort
 joblib
