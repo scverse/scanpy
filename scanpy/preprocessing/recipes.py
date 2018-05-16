@@ -51,7 +51,7 @@ def recipe_seurat(adata, log=True, plot=False, copy=False):
         adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log)
     if plot:
         from .. import plotting as pl  # should not import at the top of the file
-        pl.filter_genes_dispersion(filter_result, log=not log)
+        pl.preprocessing.filter_genes_dispersion(filter_result, log=not log)
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
     if log: pp.log1p(adata)
     pp.scale(adata, max_value=10)
@@ -105,7 +105,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
         adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
     if plot:
         from .. import plotting as pl  # should not import at the top of the file
-        pl.filter_genes_dispersion(filter_result, log=True)
+        pl.preprocessing.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter_result.gene_subset]
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
