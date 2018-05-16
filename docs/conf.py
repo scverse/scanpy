@@ -6,12 +6,18 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+
+import matplotlib
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
 from sphinx.ext.autosummary import limited_join
 
 
-if 'six' in sys.modules:  # remove PyCharm’s old six module
+# Don’t use tkinter agg when importing scanpy → … → matplotlib
+matplotlib.use('agg')
+
+# remove PyCharm’s old six module
+if 'six' in sys.modules:
     for pypath in list(sys.path):
         if 'PyCharm' in pypath and 'helpers' in pypath:
             sys.path.remove(pypath)
@@ -49,7 +55,6 @@ extensions = [
 
 # Generate the API documentation when building
 autosummary_generate = True
-autodoc_mock_imports = ['_tkinter']
 # both of the following two lines don't work
 # see falexwolf's issue for numpydoc
 # autodoc_member_order = 'bysource'
