@@ -29,3 +29,10 @@ def test_normalize_per_cell():
     sc.pp.normalize_per_cell(adata_sparse)
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(
         axis=1).A1.tolist()
+
+def test_recipe_plotting():
+    sc.settings.autoshow = False
+    adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
+    # These shouldn't throw an error
+    sc.pp.recipe_seurat(adata.copy(), plot=True)
+    sc.pp.recipe_zheng17(adata.copy(), plot=True)
