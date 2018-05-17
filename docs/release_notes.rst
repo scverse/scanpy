@@ -29,12 +29,16 @@ delegated.
    - the graph-based tools :func:`~scanpy.api.tl.louvain`
      :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
      :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
-     :func:`~scanpy.api.tl.paga` now require prior computation of the graph::
+     :func:`~scanpy.api.tl.paga` now require prior computation of the graph:
+     
+     .. code:: python
      
          sc.pp.neighbors(adata, n_neighbors=5)
          sc.tl.louvain(adata)
      
-     instead of previously::
+     instead of previously:
+     
+     .. code:: python
      
          sc.tl.louvain(adata, n_neighbors=5)
          
