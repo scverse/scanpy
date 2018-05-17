@@ -197,7 +197,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
         # remove old disconnected and overlapping points
         new_highlights = {}
         for k, v in adata_ref.uns['highlights'].items():
-            if v != 'O' and not v.startswith('D') and len(v) > 3:
+            if v != 'O' and v not in {'D0', 'D1', 'D2', 'D3', 'D4'}:
                 new_highlights[k] = v
         adata_ref.uns['highlights'] = new_highlights
 

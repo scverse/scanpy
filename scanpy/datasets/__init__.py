@@ -65,6 +65,8 @@ def krumsiek11():
     simulate the data. It describes development to four cell fates: 'monocyte',
     'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
+    See also the discussion of this data in [Wolf17i]_.
+
     Simulate via :func:`~scanpy.api.sim`.
 
     Returns
@@ -78,14 +80,14 @@ def krumsiek11():
     adata = sc.read(filename, first_column_names=True)
     sc.settings.verbosity = verbosity_save
     adata.uns['iroot'] = 0
-    fate_labels = {0: 'progenitor', 159: 'monocyte', 319: 'erythrocyte',
-                   459: 'megakaryocyte', 619: 'neutrophil'}
+    fate_labels = {0: 'Stem', 159: 'Mo', 319: 'Ery',
+                   459: 'Mk', 619: 'Neu'}
     adata.uns['highlights'] = fate_labels
     cell_type = np.array(['progenitor' for i in range(adata.n_obs)])
-    cell_type[80:160] = 'monocyte'
-    cell_type[240:320] = 'erythrocyte'
-    cell_type[400:480] = 'megakaryocyte'
-    cell_type[560:640] = 'neutrophil'
+    cell_type[80:160] = 'Mo'
+    cell_type[240:320] = 'Ery'
+    cell_type[400:480] = 'Mk'
+    cell_type[560:640] = 'Neu'
     adata.obs['cell_type'] = cell_type
     sc.utils.sanitize_anndata(adata)
     return adata
