@@ -92,10 +92,11 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
     try:
         from mnnpy import mnn_correct as mnn_cor
         n_jobs = settings.n_jobs if n_jobs is None else n_jobs
-        datas, mnn_list, angle_list = mnn_cor(*datas, var_index, var_subset, batch_key, index_unique,
-                                                batch_categories, k, sigma, cos_norm_in, cos_norm_out,
-                                                svd_dim, var_adj, compute_angle, mnn_order, svd_mode,
-                                                do_concatenate, save_raw, n_jobs, **kwargs)
+        datas, mnn_list, angle_list = mnn_cor(
+            *datas, var_index=var_index, var_subset=var_subset, batch_key=batch_key, index_unique=index_unique,
+            batch_categories=batch_categories, k=k, sigma=sigma, cos_norm_in=cos_norm_in, cos_norm_out=cos_norm_out,
+            svd_dim=svd_dim, var_adj=var_adj, compute_angle=compute_angle, mnn_order=mnn_order, svd_mode=svd_mode,
+            do_concatenate=do_concatenate, save_raw=save_raw, n_jobs=n_jobs, **kwargs)
         return datas, mnn_list, angle_list
     except ImportError:
         raise ImportError(
