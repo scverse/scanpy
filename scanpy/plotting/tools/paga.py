@@ -481,13 +481,13 @@ def _paga_graph(
         if threshold_dashed is None:
             threshold_dashed = 0.01  # default treshold
     if threshold_solid > 0:
-        adjacency_solid[adjacency_solid < threshold_solid] = 0
+        adjacency_solid.data[adjacency_solid.data < threshold_solid] = 0
         adjacency_solid.eliminate_zeros()
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
         if threshold_dashed > 0:
-            adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
+            adjacency_dashed.data[adjacency_dashed.data < threshold_dashed] = 0
             adjacency_dashed.eliminate_zeros()
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
@@ -667,7 +667,7 @@ def _paga_graph(
         adjacency_transitions = adata.uns['paga'][transitions].copy()
         if threshold_arrows is None:
             threshold_arrows = 0.005
-        adjacency_transitions[adjacency_transitions < threshold_arrows] = 0
+        adjacency_transitions.data[adjacency_transitions.data < threshold_arrows] = 0
         adjacency_transitions.eliminate_zeros()
         g_dir = nx.DiGraph(adjacency_transitions.T)
         widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]
