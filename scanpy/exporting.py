@@ -48,7 +48,7 @@ def spring_project(
 
     Examples
     --------
-    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/180502_SPRING_export>`_.
+    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_.
     """    
     
     # need to get nearest neighbors first
