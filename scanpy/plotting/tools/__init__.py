@@ -1093,7 +1093,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
 
 
 def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             gene_names=None, use_raw=None,
+                             gene_names=None, gene_symbols=None,
+                             use_raw=None,
                              key=None,
                              split=True,
                              scale='width',
