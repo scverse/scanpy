@@ -254,9 +254,9 @@ def mangle_signature(sig: str, max_chars: int = 30) -> str:
             opts_str = limited_join(', ', opts, max_chars=max_chars - len(sig) - 4 - 2)
             s += f'[, {opts_str}]'
 
-    if False:  # fn.returns:  # do not show return type in docs
+    if False:  # if fn.returns:  # do not show return type in docs
         ret = unparse(fn.returns, plain=True)
-        return f('({s}) -> {ret}')
+        return f'({s}) -> {ret}'
     return f'({s})'
 
 
