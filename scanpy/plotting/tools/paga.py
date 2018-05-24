@@ -19,6 +19,7 @@ from ..utils import matrix
 def paga_compare(
         adata,
         basis='tsne',
+        edges=None,
         color=None,
         alpha=None,
         groups=None,
@@ -39,11 +40,10 @@ def paga_compare(
         groups_graph=None,
         color_graph=None,
         **paga_graph_params):
-    """Statisical graph abstraction.
+    """Scatter and abstracted graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
-    :func:`~sanpy.api.pl.paga_scatter` and :func:`~scanpy.api.pl.paga_graph` for
-    most of the parameters.
+    :func:`~scanpy.api.pl.paga` for all related parameters.
 
     See :func:`~scanpy.api.pl.paga_path` for visualizing gene changes along paths
     through the abstracted graph.
@@ -52,11 +52,40 @@ def paga_compare(
 
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]`.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     title : `str` or `None`, optional (default: `None`)
         Title for the scatter panel, or, if `title_graph is None`, title for the
         whole figure.
     title_graph : `str` or `None`, optional (default: `None`)
         Separate title for the abstracted graph.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
     axs, _, _, _ = utils.setup_axes(panels=[0, 1],
                                     right_margin=right_margin)  # dummy colors
@@ -66,10 +95,9 @@ def paga_compare(
         suptitle = title
         title = ''
         title_graph = ''
-    elif title_graph is None:
-        title_graph = 'abstracted graph'
     _paga_scatter(adata,
                 basis=basis,
+                edges=edges,
                 color=color,
                 alpha=alpha,
                 groups=groups,
@@ -96,6 +124,7 @@ def paga_compare(
 def _paga_scatter(
         adata,
         basis='tsne',
+        edges=None,
         color=None,
         alpha=None,
         groups=None,
@@ -112,46 +141,6 @@ def _paga_scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot of paga groups.
-
-    Parameters
-    ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: None)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    show : bool, optional (default: None)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-
-    Returns
-    -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
-    """
     if color is None:
         color = [adata.uns['paga']['groups']]
     if not isinstance(color, list): color = [color]
@@ -159,11 +148,11 @@ def _paga_scatter(
     if 'draw_graph' in basis:
         from . import draw_graph
         scatter_func = draw_graph
-        kwds['edges'] = True
+        kwds['edges'] = True if edges is None else edges
     elif basis == 'umap':
         from . import umap
         scatter_func = umap
-        kwds['edges'] = True
+        kwds['edges'] = True if edges is None else edges
     else:
         from . import scatter
         scatter_func = scatter
