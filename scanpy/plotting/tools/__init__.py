@@ -1093,7 +1093,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
 
 
 def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             gene_names=None, use_raw=None,
+                             gene_names=None, gene_symbols=None,
+                             use_raw=None,
                              key=None,
                              split=True,
                              scale='width',
@@ -1149,26 +1150,25 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         if gene_names is None:
             gene_names = adata.uns[
                 key]['names'][group_name][:n_genes]
-        keys = gene_names
         # make a "hue" option!
         df = pd.DataFrame()
-        new_keys = []
-        for key in keys:
+        new_gene_names = []
+        for g in gene_names:
             if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, key].X
+                X_col = adata.raw[:, g].X
             else:
-                X_col = adata[:, key].X
+                X_col = adata[:, g].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
-            key = key if gene_symbols is None else adata.var[gene_symbols][key]
-            new_keys.append(key)
-            df[key] = X_col
+            new_gene_names.append(
+                g if gene_symbols is None else adata.var[gene_symbols][g])
+            df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df.loc[df['hue'] != group_name, 'hue'] = 'rest'
         else:
             df.loc[~df['hue'].isin([group_name, reference]), 'hue'] = np.nan
         df['hue'] = df['hue'].astype('category')
-        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
+        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_gene_names)
         x = 'variable'
         y = 'value'
         hue_order = [group_name, reference]
@@ -1183,8 +1183,7 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         ax.set_xlabel('genes')
         ax.set_title('{} vs. {}'.format(group_name, reference))
         ax.legend_.remove()
-        if computed_distribution: ax.set_ylabel('z-score w.r.t. to bulk mean')
-        else: ax.set_ylabel('expression')
+        ax.set_ylabel('expression')
         ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
                     + str(adata.uns[key]['params']['groupby'])

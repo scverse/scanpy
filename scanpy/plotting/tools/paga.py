@@ -212,12 +212,13 @@ def paga(
         edge_width_scale=1,
         min_edge_width=None,
         max_edge_width=None,
-        title='abstracted graph',
+        title=None,
         left_margin=0.01,
         random_state=0,
         pos=None,
         cmap=None,
         cax=None,
+        colorbar=None,
         cb_kwds={},
         frameon=True,
         add_pos=True,
@@ -312,8 +313,7 @@ def paga(
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
-         Provide title for panels either as `['title1', 'title2', ...]` or
-         `'title1,title2,...'`.
+         Provide a title.
     frameon : `bool`, optional (default: `True`)
          Draw a frame around the abstracted graph.
     show : `bool`, optional (default: `None`)
@@ -393,6 +393,7 @@ def paga(
             frameon=frameon,
             cmap=cmap,
             cax=cax,
+            colorbar=colorbar,
             cb_kwds=cb_kwds,
             title=title[icolor],
             random_state=random_state,
@@ -436,6 +437,7 @@ def _paga_graph(
         max_edge_width=None,
         export_to_gexf=False,
         cax=None,
+        colorbar=None,
         cb_kwds={},
         single_component=False,
         random_state=0):
@@ -481,15 +483,19 @@ def _paga_graph(
         if threshold_dashed is None:
             threshold_dashed = 0.01  # default treshold
     if threshold_solid > 0:
-        adjacency_solid[adjacency_solid < threshold_solid] = 0
+        adjacency_solid.data[adjacency_solid.data < threshold_solid] = 0
         adjacency_solid.eliminate_zeros()
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
         if threshold_dashed > 0:
-            adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
+            adjacency_dashed.data[adjacency_dashed.data < threshold_dashed] = 0
             adjacency_dashed.eliminate_zeros()
         nx_g_dashed = nx.Graph(adjacency_dashed)
+
+    # uniform color
+    if isinstance(colors, str) and is_color_like(colors):
+        colors = [colors for c in range(len(node_labels))]
 
     # color degree of the graph
     if isinstance(colors, str) and colors.startswith('degree'):
@@ -503,7 +509,6 @@ def _paga_graph(
         colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
 
     # plot numeric colors
-    colorbar = False
     if isinstance(colors, Iterable) and not isinstance(colors[0], (str, dict)):
         import matplotlib
         norm = matplotlib.colors.Normalize()
@@ -511,7 +516,9 @@ def _paga_graph(
         if cmap is None: cmap = rcParams['image.cmap']
         cmap = matplotlib.cm.get_cmap(cmap)
         colors = [cmap(c) for c in colors]
-        colorbar = True
+        colorbar = True if colorbar is None else colorbar
+    else:
+        colorbar = False
 
     if len(colors) < len(node_labels):
         print(node_labels, colors)
@@ -667,7 +674,7 @@ def _paga_graph(
         adjacency_transitions = adata.uns['paga'][transitions].copy()
         if threshold_arrows is None:
             threshold_arrows = 0.005
-        adjacency_transitions[adjacency_transitions < threshold_arrows] = 0
+        adjacency_transitions.data[adjacency_transitions.data < threshold_arrows] = 0
         adjacency_transitions.eliminate_zeros()
         g_dir = nx.DiGraph(adjacency_transitions.T)
         widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]

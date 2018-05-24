@@ -3,6 +3,7 @@
 
 from collections import namedtuple
 import numpy as np
+import scipy.sparse
 from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
@@ -71,14 +72,30 @@ def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
 # --------------------------------------------------------------------------------
 
 
-def cross_entropy_graphs(adata_ref, adata_cmp):
-    """Compare graphs based on cross entropy.
+def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
+    """Compare neighborhood graph of representation based on cross entropy.
+
+    `n_points` denotes the number of points to add as highlight annotation.
 
     Returns
     -------
     The cross entropy and the geodesic-distance-weighted cross entropy as
     ``entropy, geo_entropy_d, geo_entropy_o``.
+
+    Adds the most overlapping or disconnected points as annotation to `adata`.
     """
+    # see below why we need this
+    if 'X_diffmap' not in adata.obsm.keys():
+        raise ValueError('Run `tl.diffmap` on `adata`, first.')
+
+    adata_ref = adata  # simple renaming, don't need copy here
+    adata_cmp = adata.copy()
+    n_neighbors = adata_ref.uns['neighbors']['params']['n_neighbors']
+    from .neighbors import neighbors
+    neighbors(adata_cmp, n_neighbors=n_neighbors, use_rep=use_rep)
+    from .tools.diffmap import diffmap
+    diffmap(adata_cmp)
+
     graph_ref = adata_ref.uns['neighbors']['connectivities']
     graph_cmp = adata_cmp.uns['neighbors']['connectivities']
 
@@ -124,62 +141,97 @@ def cross_entropy_graphs(adata_ref, adata_cmp):
                      + (1-fraction_edges) * np.log(1./(1-fraction_edges)))
     logg.msg('cross entropy of naive sparse prediction {:.3e}'.format(naive_entropy))
     logg.msg('cross entropy of random prediction {:.3e}'.format(-np.log(0.5)))
-
     logg.info('cross entropy {:.3e}'.format(entropy))
+
+    # for manifold analysis, restrict to largest connected component in
+    # reference
+    # now that we clip at a quite high value below, this might not even be
+    # necessary
+    n_components, labels = scipy.sparse.csgraph.connected_components(graph_ref)
+    largest_component = np.arange(graph_ref.shape[0], dtype=int)
+    if n_components > 1:
+        component_sizes = np.bincount(labels)
+        logg.msg('largest component has size', component_sizes.max())
+        largest_component = np.where(
+            component_sizes == component_sizes.max())[0][0]
+        graph_ref_red = graph_ref.tocsr()[labels == largest_component, :]
+        graph_ref_red = graph_ref_red.tocsc()[:, labels == largest_component]
+        graph_ref_red = graph_ref_red.tocoo()
+        graph_cmp_red = graph_cmp.tocsr()[labels == largest_component, :]
+        graph_cmp_red = graph_cmp_red.tocsc()[:, labels == largest_component]
+        graph_cmp_red = graph_cmp_red.tocoo()
+        edgeset_ref_red = {e for e in zip(graph_ref_red.row, graph_ref_red.col)}
+        edgeset_cmp_red = {e for e in zip(graph_cmp_red.row, graph_cmp_red.col)}
+        edgeset_union_red = edgeset_ref_red.union(edgeset_cmp_red)
+        map_indices = np.where(labels == largest_component)[0]
+        edgeset_union_red = {
+            (map_indices[i], map_indices[j]) for (i, j) in edgeset_union_red}
 
     from .neighbors import Neighbors
     neigh_ref = Neighbors(adata_ref)
-    neigh_ref.compute_transitions()
-    neigh_ref.compute_eigen()
-    dist_ref = neigh_ref.distances_dpt
+    dist_ref = neigh_ref.distances_dpt  # we expect 'X_diffmap' to be already present
 
     neigh_cmp = Neighbors(adata_cmp)
-    neigh_cmp.compute_transitions()
-    neigh_cmp.compute_eigen()
     dist_cmp = neigh_cmp.distances_dpt
 
-    num = np.zeros_like(p_ref)
-    denom = np.zeros_like(p_ref)
+    d_cmp = np.zeros_like(p_ref)
+    d_ref = np.zeros_like(p_ref)
     for i, e in enumerate(edgeset_union):
-        num[i] = dist_cmp[e]
-        denom[i] = dist_ref[e]
+        # skip contributions that are not in the largest component
+        if n_components > 1 and e not in edgeset_union_red:
+            continue
+        d_cmp[i] = dist_cmp[e]
+        d_ref[i] = dist_ref[e]
 
-    num = np.clip(num, EPS, None)
-    denom = np.clip(denom, EPS, None)
+    MAX_DIST = 1000
+    d_cmp = np.clip(d_cmp, 0.1, MAX_DIST)  # we don't want to measure collapsing clusters
+    d_ref = np.clip(d_ref, 0.1, MAX_DIST)
 
-    weights = np.array(num / denom)
-    one_over_weights = np.array(denom / num)
+    weights = np.array(d_cmp / d_ref)            # disconnected regions
+    weights_overlap = np.array(d_ref / d_cmp)    # overlapping regions
 
     # the following is just for annotation of figures
-    if 'highlights' not in adata_cmp.uns:
-        adata_cmp.uns['highlights'] = {}
-    max_weights = np.argpartition(weights, kth=-3)[-3:]
+    if 'highlights' not in adata_ref.uns:
+        adata_ref.uns['highlights'] = {}
+    else:
+        # remove old disconnected and overlapping points
+        new_highlights = {}
+        for k, v in adata_ref.uns['highlights'].items():
+            if v != 'O' and v not in {'D0', 'D1', 'D2', 'D3', 'D4'}:
+                new_highlights[k] = v
+        adata_ref.uns['highlights'] = new_highlights
+
+    # points that are maximally disconnected
+    max_weights = np.argpartition(weights, kth=-n_points)[-n_points:]
     points = list(edgeset_union_indices[0][max_weights])
     points2 = list(edgeset_union_indices[1][max_weights])
     found_disconnected_points = False
     for ip, p in enumerate(points):
-        if weights[max_weights][ip] == np.inf:
-            adata_cmp.uns['highlights'][p] = 'D' + str(ip)
-            adata_cmp.uns['highlights'][points2[ip]] = 'D' + str(ip)
+        if d_cmp[max_weights][ip] == MAX_DIST:
+            adata_ref.uns['highlights'][p] = 'D' + str(ip)
+            adata_ref.uns['highlights'][points2[ip]] = 'D' + str(ip)
             found_disconnected_points = True
     if found_disconnected_points:
-        logg.msg('3 most disconnected points', points)
+        logg.msg('most disconnected points', points)
         logg.msg('    with weights', weights[max_weights].round(1))
-    else:
-        max_weights = np.argpartition(one_over_weights, kth=-3)[-3:]
-        points = list(edgeset_union_indices[0][max_weights])
-        for p in points:
-            adata_cmp.uns['highlights'][p] = 'O'
-        logg.msg('3 most overlapping points', points)
-        logg.msg('    with weights', one_over_weights[max_weights].round(1))
+
+    max_weights = np.argpartition(
+        weights_overlap, kth=-n_points)[-n_points:]
+    points = list(edgeset_union_indices[0][max_weights])
+    for p in points:
+        adata_ref.uns['highlights'][p] = 'O'
+    logg.msg('most overlapping points', points)
+    logg.msg('    with weights', weights_overlap[max_weights].round(1))
+    logg.msg('    with d_rep', d_cmp[max_weights].round(1))
+    logg.msg('    with d_ref', d_ref[max_weights].round(1))
 
     geo_entropy_d = np.sum(weights * p_ref * np.log(ratio))
-    geo_entropy_o = np.sum(one_over_weights * (1-p_ref) * np.log(ratio_1m))
+    geo_entropy_o = np.sum(weights_overlap * (1-p_ref) * np.log(ratio_1m))
 
     geo_entropy_d /= n_edges_fully_connected
     geo_entropy_o /= n_edges_fully_connected
 
-    logg.info('geodesic cross entropy {:.3e}'.format(geo_entropy_d + geo_entropy_d))
+    logg.info('geodesic cross entropy {:.3e}'.format(geo_entropy_d + geo_entropy_o))
     return entropy, geo_entropy_d, geo_entropy_o
 
 

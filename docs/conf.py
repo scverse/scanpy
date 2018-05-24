@@ -6,27 +6,25 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
-
-import matplotlib
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
 from sphinx.ext.autosummary import limited_join
 
-
-# Don’t use tkinter agg when importing scanpy → … → matplotlib
-matplotlib.use('agg')
-
 # remove PyCharm’s old six module
 if 'six' in sys.modules:
+    print(*sys.path, sep='\n')
     for pypath in list(sys.path):
-        if 'PyCharm' in pypath and 'helpers' in pypath:
+        if any(p in pypath for p in ['PyCharm', 'pycharm']) and 'helpers' in pypath:
             sys.path.remove(pypath)
     del sys.modules['six']
 
+import matplotlib  # noqa
+# Don’t use tkinter agg when importing scanpy → … → matplotlib
+matplotlib.use('agg')
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
-import scanpy.api
+import scanpy.api  # noqa
 
 
 logger = logging.getLogger(__name__)
@@ -118,7 +116,7 @@ texinfo_documents = [
 
 def process_generate_options(app: Sphinx):
     genfiles = app.config.autosummary_generate
-    
+
     if genfiles and not hasattr(genfiles, '__len__'):
         env = app.builder.env
         genfiles = [
@@ -128,19 +126,19 @@ def process_generate_options(app: Sphinx):
         ]
     if not genfiles:
         return
-    
+
     from sphinx.ext.autosummary.generate import generate_autosummary_docs
-    
+
     ext = app.config.source_suffix
     genfiles = [
         genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
         for genfile in genfiles
     ]
-    
+
     suffix = autosummary.get_rst_suffix(app)
     if suffix is None:
         return
-    
+
     generate_autosummary_docs(
         genfiles, builder=app.builder,
         warn=logger.warning, info=logger.info,
@@ -256,9 +254,9 @@ def mangle_signature(sig: str, max_chars: int = 30) -> str:
             opts_str = limited_join(', ', opts, max_chars=max_chars - len(sig) - 4 - 2)
             s += f'[, {opts_str}]'
 
-    if False:  # fn.returns:  # do not show return type in docs
+    if False:  # if fn.returns:  # do not show return type in docs
         ret = unparse(fn.returns, plain=True)
-        return f('({s}) -> {ret}')
+        return f'({s}) -> {ret}'
     return f'({s})'
 
 
