@@ -124,11 +124,13 @@ def louvain(
             categories=natsorted(unique_groups.astype('U')))
     else:
         key_added = restrict_key + '_R' if key_added is None else key_added
-        adata.obs[key_added] = adata.obs[restrict_key].astype('U')
-        adata.obs[key_added].iloc[restrict_indices] = '-'.join(restrict_categories) + ','
-        adata.obs[key_added].iloc[restrict_indices] += groups.astype('U')
-        adata.obs[key_added] = adata.obs[key_added].astype(
-            'category', categories=natsorted(adata.obs[key_added].unique()))
+        all_groups = adata.obs[restrict_key].astype('U')
+        prefix = '-'.join(restrict_categories) + ','
+        new_groups = [prefix + g for g in groups.astype('U')]
+        all_groups.iloc[restrict_indices] = new_groups
+        adata.obs[key_added] = pd.Categorical(
+            values=all_groups,
+            categories=natsorted(all_groups.unique()))
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
