@@ -326,7 +326,9 @@ def filter_genes_dispersion(data,
                 'normalized dispersion was set to 1.\n    '
                 'Decreasing `n_bins` will likely avoid this effect.'
                 .format(gen_indices), v=4)
-        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin]
+        # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
+        # but there’s still a dtype error without “.value”.
+        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin].values
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
