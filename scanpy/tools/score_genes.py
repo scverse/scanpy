@@ -104,9 +104,9 @@ def score_genes(
               '    \'{}\', score of gene set (adata.obs)'.format(score_name))
         return adata if copy else None
     elif len(gene_list) == 1:
-        score = np.nanmean(adata[:, gene_list].X) - np.nanmean(adata[:, control_genes].X)
+        score = np.nanmean(adata[:, gene_list].X.toarray()) - np.nanmean(adata[:, control_genes].X.toarray())
     else:
-        score = np.nanmean(adata[:, gene_list].X, axis=1) - np.nanmean(adata[:, control_genes].X, axis=1)
+        score = np.nanmean(adata[:, gene_list].X.toarray(), axis=1) - np.nanmean(adata[:, control_genes].X.toarray(), axis=1)
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
