@@ -30,9 +30,49 @@ def test_normalize_per_cell():
     assert adata.X.sum(axis=1).tolist() == adata_sparse.X.sum(
         axis=1).A1.tolist()
 
+
 def test_recipe_plotting():
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))
     # These shouldn't throw an error
     sc.pp.recipe_seurat(adata.copy(), plot=True)
     sc.pp.recipe_zheng17(adata.copy(), plot=True)
+
+
+def test_regress_out_minimal():
+    adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1, key_n_counts='n_counts2')
+    adata.obs['percent_mito'] = [0.1, 0.2, 0.05]
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+
+    single = sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True)
+    assert adata.X.shape == single.shape
+
+    multi = sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'], n_jobs=2, copy=True)
+
+    np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_large():
+    from scipy.sparse import random
+    adata = AnnData(random(5000, 2000, density=0.6, format='csr'))
+    adata.obs['percent_mito'] = np.random.rand(adata.X.shape[0])
+    adata.obs['n_counts'] = adata.X.sum(axis=1)
+
+    single = sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'], n_jobs=1, copy=True)
+    assert adata.X.shape == single.X.shape
+
+    multi = sc.pp.regress_out(adata, keys=['n_counts', 'percent_mito'], n_jobs=32, copy=True)
+
+    np.testing.assert_array_equal(single.X, multi.X)
+
+
+def test_regress_out_categorical():
+    from scipy.sparse import random
+    import pandas as pd
+    adata = AnnData(random(2500, 1000, density=0.6, format='csr'))
+    # create a categorical column
+    adata.obs['batch'] = pd.Categorical(np.random.randint(1, 10, size=adata.X.shape[0]))
+
+    multi = sc.pp.regress_out(adata, keys='batch', n_jobs=32, copy=True)
+    assert adata.X.shape == multi.X.shape
