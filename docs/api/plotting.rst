@@ -64,6 +64,9 @@ a method with the same name in ``pl``.
 
 **Marker genes**   
    
+.. autosummary::
+   :toctree: .
+
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
 
