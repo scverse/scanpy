@@ -1,6 +1,7 @@
 """Plotting functions for AnnData.
 """
 
+import os
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -10,18 +11,254 @@ from matplotlib.colors import is_color_like
 import seaborn as sns
 
 from .. import settings
+from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata
 
 VALID_LEGENDLOCS = {
-    'right margin', 'on data', 'best', 'upper right', 'upper left',
+    'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
     'lower left', 'lower right', 'right', 'center left', 'center right',
     'lower center', 'upper center', 'center'
 }
 
-
 def scatter(
+        adata,
+        x=None,
+        y=None,
+        color=None,
+        use_raw=True,
+        sort_order=True,
+        alpha=None,
+        basis=None,
+        groups=None,
+        components=None,
+        projection='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        color_map=None,
+        palette=None,
+        right_margin=None,
+        left_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None,
+        ax=None):
+    """Scatter plot.
+
+    Color with annotation of observations (`.obs`) or variables (`.var`) or 
+    expression of genes (`.var_names`).
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    x : `str` or `None`
+        x coordinate.
+    y : `str` or `None`
+        y coordinate.
+    color : string or list of strings, optional (default: `None`)
+        Keys for observation/cell or variable/gene annotation 
+        `[\'ann1\', \'ann2\']`.
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    sort_order : `bool`, optional (default: `True`)
+        For continuous annotations used as color parameter, plot data points
+        with higher values on top of others.
+    basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
+        String that denotes a plotting tool that computed coordinates.
+    groups : `str`, optional (default: all groups in color)
+        Allows to restrict categories in observation or variable annotation 
+        to a subset.
+    components : `str` or list of `str`, optional (default: '1,2')
+         String of the form '1,2' or ['1,2', '2,3'].
+    projection : {'2d', '3d'}, optional (default: '2d')
+         Projection of plot.
+    legend_loc : `str`, optional (default: 'right margin')
+         Location of legend, either 'none', 'on data', 'right margin' or valid
+         keywords for `matplotlib.pyplot.legend
+         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
+         If 'on data export', the positions are exported to a text file.
+    legend_fontsize : `int` (default: `None`)
+         Legend font size.
+    legend_fontweight : {'normal', 'bold', ...} (default: `None`)
+         Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
+         otherwise to 'normal'. Available are `['light', 'normal', 'medium',
+         'semibold', 'bold', 'heavy', 'black']`.
+    color_map : `str` (default: 'RdBu_r')
+         String denoting matplotlib color map for continuous coloring.
+    palette : list of `str` (default: `None`)
+         Colors to use for plotting groups (categorical annotation).
+    right_margin : `float` (default: 0.3)
+         Adjust how far the plotting panel extends to the right.
+    size : float (default: None)
+         Point size. Dependent on number of data points by default.
+    title : `str` or list of `str`, optional (default: `None`)
+         Provide title for panels either as `[\'title1\', ...]`.
+    show : `bool`, optional (default: `None`)
+         Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    ax : `matplotlib.Axes`
+         A `matplotlib.Axes` object.
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    if basis is not None:
+        axs = _scatter_obs(
+            adata=adata,
+            x=x,
+            y=y,
+            color=color,
+            use_raw=use_raw,
+            sort_order=sort_order,
+            alpha=alpha,
+            basis=basis,
+            groups=groups,
+            components=components,
+            projection=projection,
+            legend_loc=legend_loc,
+            legend_fontsize=legend_fontsize,
+            legend_fontweight=legend_fontweight,
+            color_map=color_map,
+            palette=palette,
+            right_margin=right_margin,
+            left_margin=left_margin,
+            size=size,
+            title=title,
+            show=show,
+            save=save,
+            ax=ax)
+
+    elif x is not None and y is not None:
+        if x in adata.obs_keys() and y in adata.obs_keys() and color not in adata.var_keys():
+            axs = _scatter_obs(
+                adata=adata,
+                x=x,
+                y=y,
+                color=color,
+                use_raw=use_raw,
+                sort_order=sort_order,
+                alpha=alpha,
+                basis=basis,
+                groups=groups,
+                components=components,
+                projection=projection,
+                legend_loc=legend_loc,
+                legend_fontsize=legend_fontsize,
+                legend_fontweight=legend_fontweight,
+                color_map=color_map,
+                palette=palette,
+                right_margin=right_margin,
+                left_margin=left_margin,
+                size=size,
+                title=title,
+                show=show,
+                save=save,
+                ax=ax)
+            
+        elif x in adata.var_keys() and y in adata.var_keys() and color not in adata.obs_keys():
+            axs = _scatter_var(
+                adata=adata,
+                x=x,
+                y=y,
+                color=color,
+                use_raw=use_raw,
+                sort_order=sort_order,
+                alpha=alpha,
+                basis=basis,
+                groups=groups,
+                components=components,
+                projection=projection,
+                legend_loc=legend_loc,
+                legend_fontsize=legend_fontsize,
+                legend_fontweight=legend_fontweight,
+                color_map=color_map,
+                palette=palette,
+                right_margin=right_margin,
+                left_margin=left_margin,
+                size=size,
+                title=title,
+                show=show,
+                save=save,
+                ax=ax)
+        else:
+            raise ValueError('`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
+    else:
+        raise ValueError('Either provide a `basis` or `x` and `y`.')
+
+    #return axis object if returned
+    if axs is not None:
+        return axs
+
+
+def _scatter_var(
+        adata,
+        x=None,
+        y=None,
+        color=None,
+        use_raw=True,
+        sort_order=True,
+        alpha=None,
+        basis=None,
+        groups=None,
+        components=None,
+        projection='2d',
+        legend_loc='right margin',
+        legend_fontsize=None,
+        legend_fontweight=None,
+        color_map=None,
+        palette=None,
+        right_margin=None,
+        left_margin=None,
+        size=None,
+        title=None,
+        show=None,
+        save=None,
+        ax=None):
+    #Transpose adata to allow it to work
+    adata_T = adata.T
+
+    #Send transposed anndata object to _scatter_obs()
+    axs = _scatter_obs(
+        adata=adata_T,
+        x=x,
+        y=y,
+        color=color,
+        use_raw=use_raw,
+        sort_order=sort_order,
+        alpha=alpha,
+        basis=basis,
+        groups=groups,
+        components=components,
+        projection=projection,
+        legend_loc=legend_loc,
+        legend_fontsize=legend_fontsize,
+        legend_fontweight=legend_fontweight,
+        color_map=color_map,
+        palette=palette,
+        right_margin=right_margin,
+        left_margin=left_margin,
+        size=size,
+        title=title,
+        show=show,
+        save=save,
+        ax=ax)
+
+    #Store .uns annotations that were added to the new adata object
+    adata.uns = adata_T.uns
+
+    #return axis object if returned
+    if axs is not None:
+        return axs
+
+    
+def _scatter_obs(
         adata,
         x=None,
         y=None,
@@ -74,9 +311,10 @@ def scatter(
     projection : {'2d', '3d'}, optional (default: '2d')
          Projection of plot.
     legend_loc : `str`, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for `matplotlib.pyplot.legend
+         Location of legend, either 'none', 'on data', 'right margin' or valid
+         keywords for `matplotlib.pyplot.legend
          <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
+         If 'on data export', the positions are exported to a text file.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
     legend_fontweight : {'normal', 'bold', ...} (default: `None`)
@@ -137,7 +375,7 @@ def scatter(
         n = Y.shape[0]
         size = 120000 / n
 
-    if legend_loc == 'on data' and legend_fontsize is None:
+    if legend_loc.startswith('on data') and legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
     elif legend_fontsize is None:
         legend_fontsize = rcParams['legend.fontsize']
@@ -161,7 +399,7 @@ def scatter(
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
             else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-            else None)
+            else basis)
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
@@ -249,7 +487,7 @@ def scatter(
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     mask_remaining[mask] = False
-                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
+                    if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
         else:
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
@@ -260,7 +498,7 @@ def scatter(
                     iname = np.flatnonzero(adata.obs[key].cat.categories.values == name)[0]
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
-                    if legend_loc == 'on data': add_centroid(centroids, name, Y, mask)
+                    if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
@@ -268,7 +506,7 @@ def scatter(
             axs[ikey].scatter(*data, marker='.', c='grey', s=size,
                                     edgecolors='none', zorder=-1)
         legend = None
-        if legend_loc == 'on data':
+        if legend_loc.startswith('on data'):
             if legend_fontweight is None:
                 legend_fontweight = 'bold'
             for name, pos in centroids.items():
@@ -277,6 +515,15 @@ def scatter(
                                verticalalignment='center',
                                horizontalalignment='center',
                                fontsize=legend_fontsize)
+            if legend_loc == 'on data export':
+                all_pos = np.zeros((len(centroids), 2))
+                for iname, name in enumerate(adata.obs[key].cat.categories):
+                    all_pos[iname] = centroids[name]
+                filename = settings.writedir + 'pos.csv'
+                logg.msg('exporting label positions to {}'.format(filename), v=1)
+                if settings.writedir != '' and not os.path.exists(settings.writedir):
+                    os.makedirs(settings.writedir)
+                np.savetxt(filename, all_pos, delimiter=',')
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(frameon=False, loc='center left',
                                             bbox_to_anchor=(1, 0.5),

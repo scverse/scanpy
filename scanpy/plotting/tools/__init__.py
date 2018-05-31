@@ -1018,7 +1018,7 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsize=8, show=None, save=None, ext=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8, show=None, save=None, ext=None):
     """Plot ranking of genes.
 
     Parameters
@@ -1042,9 +1042,11 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
-    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
-    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
-    group_names = (adata.uns['rank_genes_groups']['names'].dtype.names
+    if key is None:
+        key = 'rank_genes_groups'
+    groups_key = str(adata.uns[key]['params']['groupby'])
+    reference = str(adata.uns[key]['params']['reference'])
+    group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
     # one panel for each group
     n_panels = len(group_names)
@@ -1070,8 +1072,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
 
     for count, group_name in enumerate(group_names):
         pl.subplot(gs[count])
-        gene_names = adata.uns['rank_genes_groups']['names'][group_name]
-        scores = adata.uns['rank_genes_groups']['scores'][group_name]
+        gene_names = adata.uns[key]['names'][group_name]
+        scores = adata.uns[key]['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             gene_name = gene_names[ig]
             pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
@@ -1086,7 +1088,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, fontsiz
         pl.ylim([ymin, ymax])
         pl.xlim(-0.9, ig+1-0.1)
     writekey = ('rank_genes_groups_'
-                + str(adata.uns['rank_genes_groups']['params']['groupby']))
+                + str(adata.uns[key]['params']['groupby']))
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
@@ -1172,8 +1174,9 @@ def genes_groups_violin(adata, groups=None,
 
 
 def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             gene_symbols=None,
+                             gene_names=None, gene_symbols=None,
                              use_raw=None,
+                             key=None,
                              split=True,
                              scale='width',
                              strip=True, jitter=True, size=1,
@@ -1212,37 +1215,39 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     ax : `matplotlib.Axes`, optional (default: `None`)
         A `matplotlib.Axes` object.
     """
+    if key is None:
+        key = 'rank_genes_groups'
     from ..tools import rank_genes_groups
-    groups_key = str(adata.uns['rank_genes_groups']['params']['groupby'])
+    groups_key = str(adata.uns[key]['params']['groupby'])
     if use_raw is None:
-        use_raw = bool(adata.uns['rank_genes_groups']['params']['use_raw'])
-    reference = str(adata.uns['rank_genes_groups']['params']['reference'])
-    groups_names = (adata.uns['rank_genes_groups']['names'].dtype.names
+        use_raw = bool(adata.uns[key]['params']['use_raw'])
+    reference = str(adata.uns[key]['params']['reference'])
+    groups_names = (adata.uns[key]['names'].dtype.names
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
     for group_name in groups_names:
-        gene_names = adata.uns[
-            'rank_genes_groups']['names'][group_name][:n_genes]
-        keys = gene_names
+        if gene_names is None:
+            gene_names = adata.uns[
+                key]['names'][group_name][:n_genes]
         # make a "hue" option!
         df = pd.DataFrame()
-        new_keys = []
-        for key in keys:
+        new_gene_names = []
+        for g in gene_names:
             if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, key].X
+                X_col = adata.raw[:, g].X
             else:
-                X_col = adata[:, key].X
+                X_col = adata[:, g].X
             if issparse(X_col): X_col = X_col.toarray().flatten()
-            key = key if gene_symbols is None else adata.var[gene_symbols][key]
-            new_keys.append(key)
-            df[key] = X_col
+            new_gene_names.append(
+                g if gene_symbols is None else adata.var[gene_symbols][g])
+            df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
             df.loc[df['hue'] != group_name, 'hue'] = 'rest'
         else:
             df.loc[~df['hue'].isin([group_name, reference]), 'hue'] = np.nan
         df['hue'] = df['hue'].astype('category')
-        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
+        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_gene_names)
         x = 'variable'
         y = 'value'
         hue_order = [group_name, reference]
@@ -1257,13 +1262,10 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         _ax.set_xlabel('genes')
         _ax.set_title('{} vs. {}'.format(group_name, reference))
         _ax.legend_.remove()
-        #FIXME computed_distribution: missing default parameter?
-#        if computed_distribution: _ax.set_ylabel('z-score w.r.t. to bulk mean')
-#        else: _ax.set_ylabel('expression')
         _ax.set_ylabel('expression')
         _ax.set_xticklabels(gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
-                    + str(adata.uns['rank_genes_groups']['params']['groupby'])
+                    + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
 

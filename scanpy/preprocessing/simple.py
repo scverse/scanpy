@@ -328,7 +328,9 @@ def filter_genes_dispersion(data,
                 'normalized dispersion was set to 1.\n    '
                 'Decreasing `n_bins` will likely avoid this effect.'
                 .format(gen_indices), v=4)
-        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin]
+        # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
+        # but there’s still a dtype error without “.value”.
+        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin].values
         disp_mean_bin[one_gene_per_bin] = 0
         # actually do the normalization
         df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
@@ -404,7 +406,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
     return gene_subset
 
 
-def log1p(data, copy=False):
+def log1p(data, copy=False, chunked=False, chunk_size=None):
     """Logarithmize the data matrix.
 
     Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
@@ -424,7 +426,11 @@ def log1p(data, copy=False):
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        adata.X = log1p(data.X)
+        if chunked:
+            for chunk, start, end in adata.chunked_X(chunk_size):
+                adata.X[start:end] = log1p(chunk)
+        else:
+            adata.X = log1p(data.X)
         return adata if copy else None
     X = data  # proceed with data matrix
     if not issparse(X):
@@ -434,7 +440,7 @@ def log1p(data, copy=False):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=None, dtype='float32', copy=False):
+        return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -458,14 +464,14 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         of the problem.
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
-    return_info : `bool` or `None`, optional (default: `None`)
+    return_info : `bool`, optional (default: `False`)
         Only relevant when not passing an :class:`~scanpy.api.AnnData`: see
         "Returns".
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
         If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
-        is returned.
+        is returned. Is ignored otherwise.
 
     Returns
     -------
@@ -480,19 +486,70 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     variance : `.uns['pca']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
+
     if n_comps is None: n_comps = N_PCS
+
     if isinstance(data, AnnData):
+        data_is_AnnData = True
         adata = data.copy() if copy else data
-        logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
-        result = pca(adata.X, n_comps=n_comps, zero_center=zero_center,
-                     svd_solver=svd_solver, random_state=random_state,
-                     return_info=True)
-        X_pca, components, pca_variance_ratio, pca_variance = result
+    else:
+        data_is_AnnData = False
+        adata = AnnData(data)
+
+    logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
+
+    if adata.n_vars < n_comps:
+        n_comps = adata.n_vars - 1
+        logg.msg('reducing number of computed PCs to',
+               n_comps, 'as dim of data is only', adata.n_vars, v=4)
+
+    if chunked:
+        if not zero_center or random_state or svd_solver != 'auto':
+            logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
+
+        from sklearn.decomposition import IncrementalPCA
+
+        X_pca = np.zeros((adata.X.shape[0], n_comps), adata.X.dtype)
+
+        pca_ = IncrementalPCA(n_components=n_comps)
+
+        for chunk, _, _ in adata.chunked_X(chunk_size):
+            chunk = chunk.toarray() if issparse(chunk) else chunk
+            pca_.partial_fit(chunk)
+
+        for chunk, start, end in adata.chunked_X(chunk_size):
+            chunk = chunk.toarray() if issparse(chunk) else chunk
+            X_pca[start:end] = pca_.transform(chunk)
+    else:
+        zero_center = zero_center if zero_center is not None else False if issparse(adata.X) else True
+        if zero_center:
+            from sklearn.decomposition import PCA
+            if issparse(adata.X):
+                logg.msg('    as `zero_center=True`, '
+                       'sparse input is densified and may '
+                       'lead to huge memory consumption', v=4)
+                X = adata.X.toarray()  # Copying the whole adata.X here, could cause memory problems
+            else:
+                X = adata.X
+            pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
+        else:
+            from sklearn.decomposition import TruncatedSVD
+            logg.msg('    without zero-centering: \n'
+                   '    the explained variance does not correspond to the exact statistical defintion\n'
+                   '    the first component, e.g., might be heavily influenced by different means\n'
+                   '    the following components often resemble the exact PCA very closely', v=4)
+            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
+            X = adata.X
+        X_pca = pca_.fit_transform(X)
+
+    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
+
+    if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        adata.varm['PCs'] = components.T
+        adata.varm['PCs'] = pca_.components_.T
         adata.uns['pca'] = {}
-        adata.uns['pca']['variance'] = pca_variance
-        adata.uns['pca']['variance_ratio'] = pca_variance_ratio
+        adata.uns['pca']['variance'] = pca_.explained_variance_
+        adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
         logg.msg('    finished', t=True, end=' ', v=4)
         logg.msg('and added\n'
                  '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -500,32 +557,11 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                  '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
                  '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
         return adata if copy else None
-    X = data  # proceed with data matrix
-    if X.shape[1] < n_comps:
-        n_comps = X.shape[1] - 1
-        logg.msg('reducing number of computed PCs to',
-               n_comps, 'as dim of data is only', X.shape[1], v=4)
-    zero_center = zero_center if zero_center is not None else False if issparse(X) else True
-    from sklearn.decomposition import PCA, TruncatedSVD
-    if zero_center:
-        if issparse(X):
-            logg.msg('    as `zero_center=True`, '
-                   'sparse input is densified and may '
-                   'lead to huge memory consumption', v=4)
-            X = X.toarray()
-        pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
     else:
-        logg.msg('    without zero-centering: \n'
-               '    the explained variance does not correspond to the exact statistical defintion\n'
-               '    the first component, e.g., might be heavily influenced by different means\n'
-               '    the following components often resemble the exact PCA very closely', v=4)
-        pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-    X_pca = pca_.fit_transform(X)
-    if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
-    if False if return_info is None else return_info:
-        return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
-    else:
-        return X_pca
+        if return_info:
+            return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
+        else:
+            return X_pca
 
 
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
@@ -671,29 +707,32 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
         The annotated data matrix.
     keys : `str` or list of `str`
         Keys for observation annotation on which to regress on.
-    n_jobs : `int` or `None`, optional (default: `None`)
-        Number of jobs for parallel computation. Currently has no effect.
+    n_jobs : `int` or `None`, optional. If None is given, then the n_jobs seting is used (default: `None`)
+        Number of jobs for parallel computation.
     copy : `bool`, optional (default: `False`)
         If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    Depening on `copy` returns or updates `adata` with the corrected data matrix.
+    Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
     logg.info('regressing out', keys, r=True)
     if issparse(adata.X):
         logg.info('    sparse input is densified and may '
                   'lead to high memory use')
     adata = adata.copy() if copy else adata
-    if isinstance(keys, str): keys = [keys]
+    if isinstance(keys, str):
+        keys = [keys]
+
     if issparse(adata.X):
         adata.X = adata.X.toarray()
-    if n_jobs is not None:
-        logg.warn('Parallelization is currently broke, will be restored soon. Running on 1 core.')
+
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
+
     # regress on a single categorical variable
     sanitize_anndata(adata)
+    variable_is_categorical = False
     if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
         if len(keys) > 1:
             raise ValueError(
@@ -706,52 +745,78 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
             mask = (category == adata.obs[keys[0]]).values
             for ix, x in enumerate(adata.X.T):
                 regressors[mask, ix] = x[mask].mean()
+        variable_is_categorical = True
     # regress on one or several ordinal variables
     else:
-        regressors = np.array(
-            [adata.obs[key].values if key in adata.obs_keys()
-             else adata[:, key].X for key in keys]).T
-    regressors = np.c_[np.ones(adata.X.shape[0]), regressors]
+        # create data frame with selected keys (if given)
+        if keys:
+            regressors = adata.obs[keys]
+        else:
+            regressors = adata.obs.copy()
+
+        # add column of ones at index 0 (first column)
+        regressors.insert(0, 'ones', 1.0)
+
     len_chunk = np.ceil(min(1000, adata.X.shape[1]) / n_jobs).astype(int)
     n_chunks = np.ceil(adata.X.shape[1] / len_chunk).astype(int)
-    chunks = [np.arange(start, min(start + len_chunk, adata.X.shape[1]))
-              for start in range(0, n_chunks * len_chunk, len_chunk)]
 
+    tasks = []
+    # split the adata.X matrix by columns in chunks of size n_chunk (the last chunk could be of smaller
+    # size than the others)
+    chunk_list = np.array_split(adata.X, n_chunks, axis=1)
+    if variable_is_categorical:
+        regressors_chunk = np.array_split(regressors, n_chunks, axis=1)
+    for idx, data_chunk in enumerate(chunk_list):
+        # each task is a tuple of a data_chunk eg. (adata.X[:,0:100]) and
+        # the regressors. This data will be passed to each of the jobs.
+        if variable_is_categorical:
+            regres = regressors_chunk[idx]
+        else:
+            regres = regressors
+        tasks.append(tuple((data_chunk, regres, variable_is_categorical)))
+
+    if n_jobs > 1 and n_chunks > 1:
+        import multiprocessing
+        pool = multiprocessing.Pool(n_jobs)
+        res = pool.map_async(_regress_out_chunk, tasks).get(9999999)
+        pool.close()
+
+    else:
+        res = list(map(_regress_out_chunk, tasks))
+
+    # res is a list of vectors (each corresponding to a regressed gene column).
+    # The transpose is needed to get the matrix in the shape needed
+    adata.X = np.vstack(res).T.astype(adata.X.dtype)
+    logg.info('    finished', t=True)
+    return adata if copy else None
+
+
+def _regress_out_chunk(data):
+    # data is a tuple containing the selected columns from adata.X
+    # and the regressors dataFrame
+    data_chunk = data[0]
+    regressors = data[1]
+    variable_is_categorical = data[2]
+
+    responses_chunk_list = []
     import statsmodels.api as sm
     from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
-    def _regress_out(col_index, responses, regressors):
+    for col_index in range(data_chunk.shape[1]):
+        if variable_is_categorical:
+            regres = np.c_[np.ones(regressors.shape[0]), regressors[:, col_index]]
+        else:
+            regres = regressors
         try:
-            if regressors.shape[1] - 1 == responses.shape[1]:
-                regressors_view = np.c_[regressors[:, 0], regressors[:, col_index + 1]]
-            else:
-                regressors_view = regressors
-            result = sm.GLM(responses[:, col_index],
-                            regressors_view, family=sm.families.Gaussian()).fit()
+            result = sm.GLM(data_chunk[:, col_index], regres, family=sm.families.Gaussian()).fit()
             new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
             logg.warn('Encountered PerfectSeparationError, setting to 0 as in R.')
-            new_column = np.zeros(responses.shape[0])
-        return new_column
+            new_column = np.zeros(data_chunk.shape[0])
 
-    def _regress_out_chunk(chunk, responses, regressors):
-        chunk_array = np.zeros((responses.shape[0], chunk.size),
-                               dtype=responses.dtype)
-        for i, col_index in enumerate(chunk):
-            chunk_array[:, i] = _regress_out(col_index, responses, regressors)
-        return chunk_array
+        responses_chunk_list.append(new_column)
 
-    for chunk in chunks:
-        # why did this break after migrating to dataframes?
-        # result_lst = Parallel(n_jobs=n_jobs)(
-        #     delayed(_regress_out)(
-        #         col_index, adata.X, regressors) for col_index in chunk)
-        result_lst = [_regress_out(
-            col_index, adata.X, regressors) for col_index in chunk]
-        for i_column, column in enumerate(chunk):
-            adata.X[:, column] = result_lst[i_column]
-    logg.info('    finished', t=True)
-    return adata if copy else None
+    return np.vstack(responses_chunk_list)
 
 
 def scale(data, zero_center=True, max_value=None, copy=False):

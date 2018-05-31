@@ -1,7 +1,10 @@
 language: python
 python:
+  - "3.5"
   - "3.6"
 install: source .travis_install.sh
+env:
+  - MPLBACKEND=Agg
 script:
   - pytest
   - python setup.py check --restructuredtext --strict
