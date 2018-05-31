@@ -613,9 +613,14 @@ def _paga_graph(
                     # seems to do some strange stuff, here
                     init_pos[:, 1] *= -1
                     init_coords = init_pos.tolist()
-                pos_list = g.layout(
-                    layout, seed=init_coords,
-                    weights='weight', **layout_kwds).coords
+                try:
+                    pos_list = g.layout(
+                        layout, seed=init_coords,
+                        weights='weight', **layout_kwds).coords
+                except:  # hack for excepting attribute error for empty graphs...
+                    pos_list = g.layout(
+                        layout, seed=init_coords,
+                        **layout_kwds).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     else:
