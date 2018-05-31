@@ -1092,95 +1092,15 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
     utils.savefig_or_show(writekey, show=show, save=save)
 
 
-def genes_groups_violin(adata, groups=None,
-                        groups_key='louvain',
-                        gene_names=None,
-                        split=True,
-                        scale='width',
-                        strip=True, jitter=True, size=1,
-                        ax=None, show=None, save=None):
-    """Plot ranking of genes for all tested comparisons.
-
-    Parameters
-    ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    groups : list of `str`, optional (default: `None`)
-        List of group names.
-    groups_key : `str` (default: 'louvain')
-        Key that defines the grouping of observations.
-    gene_names : list of `str`
-        List of genes to plot.
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present. Defaults to the value that
-        was used in :func:`~scanpy.api.tl.rank_genes_groups`.
-    split : `bool`, optional (default: `True`)
-        Whether to split the violins or not.
-    scale : `str` (default: 'width')
-        See `seaborn.violinplot`.
-    strip : `bool` (default: `True`)
-        Show a strip plot on top of the violin plot.
-    jitter : `int`, `float`, `bool`, optional (default: `True`)
-        If set to 0, no points are drawn. See `seaborn.stripplot`.
-    size : `int`, optional (default: 1)
-        Size of the jitter points.
-    show : `bool`, optional (default: `None`)
-        Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : `matplotlib.Axes`, optional (default: `None`)
-        A `matplotlib.Axes` object.
-    """
-    groups_names = groups
-    reference = 'rest'
-    if isinstance(groups_names, str):
-        groups_names = [groups_names]
-    for group_name in groups_names:
-        keys = gene_names
-        # make a "hue" option!
-        df = pd.DataFrame()
-        new_keys = []
-        for key in keys:
-            if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, key].X
-            else:
-                X_col = adata[:, key].X
-            if issparse(X_col): X_col = X_col.toarray().flatten()
-            new_keys.append(key)
-            df[key] = X_col
-        df['hue'] = adata.obs[groups_key].astype(str).values
-        df.loc[df['hue'] != group_name, 'hue'] = 'rest'
-        df['hue'] = df['hue'].astype('category')
-        df_tidy = pd.melt(df, id_vars='hue', value_vars=new_keys)
-        x = 'variable'
-        y = 'value'
-        hue_order = [group_name, reference]
-        import seaborn as sns
-        _ax = sns.violinplot(x=x, y=y, data=df_tidy, inner=None,
-                             hue_order=hue_order, hue='hue', split=split,
-                             scale=scale, orient='vertical', ax=ax)
-        if strip:
-            _ax = sns.stripplot(x=x, y=y, data=df_tidy,
-                                hue='hue', dodge=True, hue_order=hue_order,
-                                jitter=jitter, color='black', size=size, ax=_ax)
-        _ax.set_xlabel('genes')
-        _ax.set_title('{} vs. {}'.format(group_name, reference))
-        _ax.legend_.remove()
-        _ax.set_ylabel('expression')
-        _ax.set_xticklabels(gene_names, rotation='vertical')
-        writekey = ('genes_groups_' + group_name)
-        utils.savefig_or_show(writekey, show=show, save=save)
-
-
-def rank_genes_groups_violin(adata, groups=None, n_genes=20,
-                             gene_names=None, gene_symbols=None,
-                             use_raw=None,
-                             key=None,
-                             split=True,
-                             scale='width',
-                             strip=True, jitter=True, size=1,
-                             ax=None, show=None, save=None):
+def rank_genes_groups_violin(
+        adata, groups=None, n_genes=20,
+        gene_names=None, gene_symbols=None,
+        use_raw=None,
+        key=None,
+        split=True,
+        scale='width',
+        strip=True, jitter=True, size=1,
+        ax=None, show=None, save=None):
     """Plot ranking of genes for all tested comparisons.
 
     Parameters
@@ -1190,10 +1110,13 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     groups : list of `str`, optional (default: `None`)
         List of group names.
     n_genes : `int`, optional (default: 20)
-        Number of genes to show.
-    gene_symbols : `str`
+        Number of genes to show. Is ignored if `gene_names` is passed.
+    gene_names : `None` or list of `str` (default: `None`)
+        List of genes to plot. Is only useful if interested in a custom gene list,
+        which is not the result of :func:`scanpy.api.tl.rank_genes_groups`.
+    gene_symbols : `str`, optional (default: `None`)
         Key for field in `.var` that stores gene symbols if you do not want to
-        use `.var_names`.
+        use `.var_names` displayed in the plot.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present. Defaults to the value that
         was used in :func:`~scanpy.api.tl.rank_genes_groups`.
@@ -1217,7 +1140,6 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
     """
     if key is None:
         key = 'rank_genes_groups'
-    from ..tools import rank_genes_groups
     groups_key = str(adata.uns[key]['params']['groupby'])
     if use_raw is None:
         use_raw = bool(adata.uns[key]['params']['use_raw'])
@@ -1229,7 +1151,6 @@ def rank_genes_groups_violin(adata, groups=None, n_genes=20,
         if gene_names is None:
             gene_names = adata.uns[
                 key]['names'][group_name][:n_genes]
-        # make a "hue" option!
         df = pd.DataFrame()
         new_gene_names = []
         for g in gene_names:
