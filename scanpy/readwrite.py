@@ -507,8 +507,8 @@ def is_valid_filename(filename, return_ext=False):
     # cases for gzipped/bzipped text files
     if len(ext) == 2 and ext[0][1:] in text_exts and ext[1][1:] in ('gz', 'bz2'):
         return ext[0][1:] if return_ext else True
-    elif len(ext) == 1 and ext[0][1:] in avail_exts:
-        return ext[0][1:] if return_ext else True
+    elif ext[-1][1:] in avail_exts:
+        return ext[-1][1:] if return_ext else True
     elif ''.join(ext) == '.soft.gz':
         return 'soft.gz' if return_ext else True
     else:
