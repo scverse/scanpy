@@ -152,6 +152,16 @@ Read other formats using functions borrowed from `anndata
    read_text
    read_umi_tools
 
+
+Queries
+-------
+
+.. autosummary::
+   :toctree: .
+
+   queries.mitochondrial_genes
+
+
 Classes
 -------
 
