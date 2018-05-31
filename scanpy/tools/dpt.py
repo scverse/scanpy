@@ -8,8 +8,21 @@ from .. import logging as logg
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 
-def dpt(adata, n_branchings=0, min_group_size=0.01,
-        allow_kendall_tau_shift=True, n_dcs=None, copy=False):
+def _diffmap(adata, n_comps=15):
+    logg.info('computing Diffusion Maps using n_comps={}(=n_dcs)'.format(n_comps), r=True)
+    dpt = DPT(adata)
+    dpt.compute_transitions()
+    dpt.compute_eigen(n_comps=n_comps)
+    adata.obsm['X_diffmap'] = dpt.eigen_basis
+    adata.uns['diffmap_evals'] = dpt.eigen_values
+    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.hint('added\n'
+              '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
+              '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
+
+
+def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
+        allow_kendall_tau_shift=True, copy=False):
     """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf17i]_.
 
     Reconstruct the progression of a biological process from snapshot
@@ -42,6 +55,8 @@ def dpt(adata, n_branchings=0, min_group_size=0.01,
     ----------
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
+    n_dcs : `int`, optional (default: 10)
+        The number of diffusion components to use.
     n_branchings : `int`, optional (default: 0)
         Number of branchings to detect.
     min_group_size : [0, 1] or `float`, optional (default: 0.01)
@@ -75,42 +90,27 @@ def dpt(adata, n_branchings=0, min_group_size=0.01,
     -----
     The tool is similar to the R package `destiny` of [Angerer16]_.
     """
-    # backwards compat error
-    if n_dcs is not None:
-        raise ValueError(
-            'Since version 1.1, `tl.dpt` no longer accepts a parameter `n_dcs`. '
-            'You can reproduce the previous behavior by setting the parameter '
-            '`n_comps` in a previous computation of `tl.diffmap`. \n'
-            'However, note that `n_dcs` had the default parameter 10, whereas '
-            '`n_comps` has the default parameter 15.')
-    # backwards compat warning: someone uses the default of diffmap, it might be unkowingly
-    if 'X_diffmap' in adata.obsm.keys() and adata.obsm['X_diffmap'].shape[1] == 15:
-        logg.warn(
-            'Note that previously, `tl.dpt` had a default setting of `n_dcs=10`. '
-            'Right now, you\'re running `tl.dpt` using 15 DCs. This is '
-            'the default of `tl.diffmap`, which is the better default for complex datasets. '
-            'You can influence this behavior using the parameter `n_comps` in `tl.diffmap`, '
-            'and obtain the previous default by setting `n_comps` to 10.')
     # standard errors, warnings etc.
     adata = adata.copy() if copy else adata
     if 'neighbors' not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` and `tl.diffmap` first.')
-    if 'X_diffmap' not in adata.obsm.keys():
-        raise ValueError(
-            'You need to run `pp.diffmap` first.')
     if 'iroot' not in adata.uns and 'xroot' not in adata.var:
         logg.warn(
             'No root cell found. To compute pseudotime, pass the index or '
             'expression vector of a root cell, one of:\n'
             '    adata.uns[\'iroot\'] = root_cell_index\n'
             '    adata.var[\'xroot\'] = adata[root_cell_name, :].X')
+    if 'X_diffmap' not in adata.obsm.keys():
+        logg.warn('Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
+                  'Falling back to `tl.diffmap` with default parameters.')
+        _diffmap(adata)
     # start with the actual computation
-    logg.info('computing Diffusion Pseudotime', r=True)
-    if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
-    dpt = DPT(adata, min_group_size=min_group_size,
+    dpt = DPT(adata, n_dcs=n_dcs, min_group_size=min_group_size,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift)
+    logg.info('computing Diffusion Pseudotime using n_dcs={}'.format(n_dcs), r=True)
+    if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
         adata.uns['iroot'] = dpt.iroot  # update iroot, might have changed when subsampling, for example
@@ -144,9 +144,9 @@ class DPT(Neighbors):
     """Hierarchical Diffusion Pseudotime.
     """
 
-    def __init__(self, adata, min_group_size=0.01,
+    def __init__(self, adata, n_dcs=None, min_group_size=0.01,
                  n_branchings=0, allow_kendall_tau_shift=False):
-        super(DPT, self).__init__(adata)
+        super(DPT, self).__init__(adata, n_dcs=n_dcs)
         self.flavor = 'haghverdi16'
         self.n_branchings = n_branchings
         self.min_group_size = min_group_size if min_group_size >= 1 else int(min_group_size * self._adata.shape[0])
