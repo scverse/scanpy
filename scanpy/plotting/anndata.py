@@ -22,6 +22,7 @@ VALID_LEGENDLOCS = {
     'lower center', 'upper center', 'center'
 }
 
+
 def scatter(
         adata,
         x=None,
@@ -46,10 +47,10 @@ def scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot.
+    """Scatter plot along observations or variables axes.
 
-    Color with annotation of observations (`.obs`) or variables (`.var`) or 
-    expression of genes (`.var_names`).
+    Color the plot using annotations of observations (`.obs`), variables
+    (`.var`) or expression of genes (`.var_names`).
 
     Parameters
     ----------
@@ -60,7 +61,7 @@ def scatter(
     y : `str` or `None`
         y coordinate.
     color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell or variable/gene annotation 
+        Keys for observation/cell or variable/gene annotation
         `[\'ann1\', \'ann2\']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
@@ -70,8 +71,8 @@ def scatter(
     basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
         String that denotes a plotting tool that computed coordinates.
     groups : `str`, optional (default: all groups in color)
-        Allows to restrict categories in observation or variable annotation 
-        to a subset.
+        Allows to restrict categories in observation or variable annotation to a
+        subset.
     components : `str` or list of `str`, optional (default: '1,2')
          String of the form '1,2' or ['1,2', '2,3'].
     projection : {'2d', '3d'}, optional (default: '2d')
@@ -188,13 +189,12 @@ def scatter(
                 save=save,
                 ax=ax)
         else:
-            raise ValueError('`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
+            raise ValueError(
+                '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
 
-    #return axis object if returned
-    if axs is not None:
-        return axs
+    return axs
 
 
 def _scatter_var(
@@ -221,10 +221,9 @@ def _scatter_var(
         show=None,
         save=None,
         ax=None):
-    #Transpose adata to allow it to work
+    
     adata_T = adata.T
-
-    #Send transposed anndata object to _scatter_obs()
+    
     axs = _scatter_obs(
         adata=adata_T,
         x=x,
@@ -250,12 +249,10 @@ def _scatter_var(
         save=save,
         ax=ax)
 
-    #Store .uns annotations that were added to the new adata object
+    # store .uns annotations that were added to the new adata object
     adata.uns = adata_T.uns
 
-    #return axis object if returned
-    if axs is not None:
-        return axs
+    return axs
 
     
 def _scatter_obs(
@@ -282,67 +279,7 @@ def _scatter_obs(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot.
-
-    Color with annotation of observations (`.obs`) or expression of genes
-    (`.var_names`).
-
-    Parameters
-    ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    x : `str` or `None`
-        x coordinate.
-    y : `str` or `None`
-        y coordinate.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation `[\'ann1\', \'ann2\']`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
-        String that denotes a plotting tool that computed coordinates.
-    groups : `str`, optional (default: all groups in color)
-        Allows to restrict categories in observation annotation to a subset.
-    components : `str` or list of `str`, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : `str`, optional (default: 'right margin')
-         Location of legend, either 'none', 'on data', 'right margin' or valid
-         keywords for `matplotlib.pyplot.legend
-         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
-         If 'on data export', the positions are exported to a text file.
-    legend_fontsize : `int` (default: `None`)
-         Legend font size.
-    legend_fontweight : {'normal', 'bold', ...} (default: `None`)
-         Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
-         otherwise to 'normal'. Available are `['light', 'normal', 'medium',
-         'semibold', 'bold', 'heavy', 'black']`.
-    color_map : `str` (default: 'RdBu_r')
-         String denoting matplotlib color map for continuous coloring.
-    palette : list of `str` (default: `None`)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : `float` (default: 0.3)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: None)
-         Point size. Observation-number dependent by default.
-    title : `str` or list of `str`, optional (default: `None`)
-         Provide title for panels either as `[\'title1\', ...]`.
-    show : `bool`, optional (default: `None`)
-         Show the plot.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    ax : `matplotlib.Axes`
-         A `matplotlib.Axes` object.
-
-    Returns
-    -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
-    """
+    """See docstring of scatter."""
     sanitize_anndata(adata)
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -682,9 +619,10 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
     if multi_panel:
         if len(ys) == 1: y = ys[0]
         else: raise ValueError('Cannot be combined with `groupby != None`.')
-        g = sns.FacetGrid(obs_tidy, col=x, sharey=False)
-        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, **kwargs)
-        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size,
+        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
+        # don't really know why this gives a warning without passing `order`
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, order=keys, **kwargs)
+        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
                      color='black').set_titles(
                          col_template='{col_name}').set_xlabels('')
         if log: g.set(yscale='log')
