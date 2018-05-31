@@ -1,6 +1,4 @@
-from ..tools import dpt
-from .. import settings
-from .. import logging as logg
+from .dpt import _diffmap
 
 
 def diffmap(adata, n_comps=15, copy=False):
@@ -37,7 +35,6 @@ def diffmap(adata, n_comps=15, copy=False):
     diffmap_evals : `np.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
-    logg.info('computing Diffusion Maps', r=True)
     if 'neighbors' not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
@@ -45,13 +42,5 @@ def diffmap(adata, n_comps=15, copy=False):
         raise ValueError(
             'Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
-    dmap = dpt.DPT(adata)
-    dmap.compute_transitions()
-    dmap.compute_eigen(n_comps=n_comps)
-    adata.obsm['X_diffmap'] = dmap.eigen_basis
-    adata.uns['diffmap_evals'] = dmap.eigen_values
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
-    logg.hint('added\n'
-              '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
-              '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
+    _diffmap(adata, n_comps=n_comps)
     return adata if copy else None

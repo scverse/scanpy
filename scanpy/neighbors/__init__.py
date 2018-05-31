@@ -533,7 +533,7 @@ class Neighbors():
     to_igraph
     """
 
-    def __init__(self, adata):
+    def __init__(self, adata, n_dcs=None):
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
@@ -562,9 +562,18 @@ class Neighbors():
             if issparse(self._connectivities):
                 from scipy.sparse.csgraph import connected_components
                 self._connected_components = connected_components(self._connectivities)
+                self._number_connected_components = self._connected_components[0]
         if 'X_diffmap' in adata.obsm_keys():
             self._eigen_values = _backwards_compat_get_full_eval(adata)
             self._eigen_basis = _backwards_compat_get_full_X_diffmap(adata)
+            if n_dcs is not None:
+                if n_dcs > len(self._eigen_values):
+                    raise ValueError(
+                        'Cannot instantiate using `n_dcs`={}. '
+                        'Compute diffmap/spectrum with more components first.'
+                        .format(n_dcs))
+                self._eigen_values = self._eigen_values[:n_dcs]
+                self._eigen_basis = self._eigen_basis[:, :n_dcs]
             self.n_dcs = len(self._eigen_values)
             info_str += '`.eigen_values` `.eigen_basis` `.distances_dpt`'
         else:
@@ -721,6 +730,7 @@ class Neighbors():
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
             self._connected_components = connected_components(self._connectivities)
+            self._number_connected_components = self._connected_components[0]
 
     def _compute_connectivities_diffmap(self, density_normalize=True):
         # init distances
@@ -873,7 +883,7 @@ class Neighbors():
             evecs = evecs[:, ::-1]
         logg.info('    eigenvalues of transition matrix\n'
                   '    {}'.format(str(evals).replace('\n', '\n    ')))
-        if self._connected_components[0] > len(evals)/2:
+        if self._number_connected_components > len(evals)/2:
             logg.warn('Transition matrix has many disconnected components!')
         self._eigen_values = evals
         self._eigen_basis = evecs
@@ -899,7 +909,7 @@ class Neighbors():
 
     def _get_dpt_row(self, i):
         use_mask = False
-        if self._connected_components[0] > 1:
+        if self._number_connected_components > 1:
             use_mask = True
             label = self._connected_components[1][i]
             mask = self._connected_components[1] == label
