@@ -19,6 +19,7 @@ from ..utils import matrix
 def paga_compare(
         adata,
         basis='tsne',
+        edges=None,
         color=None,
         alpha=None,
         groups=None,
@@ -39,11 +40,10 @@ def paga_compare(
         groups_graph=None,
         color_graph=None,
         **paga_graph_params):
-    """Statisical graph abstraction.
+    """Scatter and abstracted graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
-    :func:`~sanpy.api.pl.paga_scatter` and :func:`~scanpy.api.pl.paga_graph` for
-    most of the parameters.
+    :func:`~scanpy.api.pl.paga` for all related parameters.
 
     See :func:`~scanpy.api.pl.paga_path` for visualizing gene changes along paths
     through the abstracted graph.
@@ -52,11 +52,40 @@ def paga_compare(
 
     Parameters
     ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    color : string or list of strings, optional (default: None)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
+        string `"ann1,ann2,..."`.
+    groups : str, optional (default: all groups)
+        Restrict to a few categories in categorical observation annotation.
+    legend_loc : str, optional (default: 'right margin')
+         Location of legend, either 'on data', 'right margin' or valid keywords
+         for matplotlib.legend.
+    legend_fontsize : int (default: None)
+         Legend font size.
+    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
+         String denoting matplotlib color map.
+    palette : list of str (default: None)
+         Colors to use for plotting groups (categorical annotation).
+    size : float (default: None)
+         Point size.
+    title : str, optional (default: None)
+         Provide title for panels either as `["title1", "title2", ...]`.
+    right_margin : float or list of floats (default: None)
+         Adjust the width of the space right of each plotting panel.
     title : `str` or `None`, optional (default: `None`)
         Title for the scatter panel, or, if `title_graph is None`, title for the
         whole figure.
     title_graph : `str` or `None`, optional (default: `None`)
         Separate title for the abstracted graph.
+    show : bool, optional (default: None)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+    ax : matplotlib.Axes
+         A matplotlib axes object.
     """
     axs, _, _, _ = utils.setup_axes(panels=[0, 1],
                                     right_margin=right_margin)  # dummy colors
@@ -66,10 +95,9 @@ def paga_compare(
         suptitle = title
         title = ''
         title_graph = ''
-    elif title_graph is None:
-        title_graph = 'abstracted graph'
     _paga_scatter(adata,
                 basis=basis,
+                edges=edges,
                 color=color,
                 alpha=alpha,
                 groups=groups,
@@ -96,6 +124,7 @@ def paga_compare(
 def _paga_scatter(
         adata,
         basis='tsne',
+        edges=None,
         color=None,
         alpha=None,
         groups=None,
@@ -112,46 +141,6 @@ def _paga_scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot of paga groups.
-
-    Parameters
-    ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: None)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    show : bool, optional (default: None)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-
-    Returns
-    -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
-    corresponds to the 'right margin' drawing area for color bars and legends.
-    """
     if color is None:
         color = [adata.uns['paga']['groups']]
     if not isinstance(color, list): color = [color]
@@ -159,7 +148,11 @@ def _paga_scatter(
     if 'draw_graph' in basis:
         from . import draw_graph
         scatter_func = draw_graph
-        kwds['edges'] = True
+        kwds['edges'] = True if edges is None else edges
+    elif basis == 'umap':
+        from . import umap
+        scatter_func = umap
+        kwds['edges'] = True if edges is None else edges
     else:
         from . import scatter
         scatter_func = scatter
@@ -208,12 +201,13 @@ def paga(
         edge_width_scale=1,
         min_edge_width=None,
         max_edge_width=None,
-        title='abstracted graph',
+        title=None,
         left_margin=0.01,
         random_state=0,
         pos=None,
         cmap=None,
         cax=None,
+        colorbar=None,
         cb_kwds={},
         frameon=True,
         add_pos=True,
@@ -308,8 +302,7 @@ def paga(
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
-         Provide title for panels either as `['title1', 'title2', ...]` or
-         `'title1,title2,...'`.
+         Provide a title.
     frameon : `bool`, optional (default: `True`)
          Draw a frame around the abstracted graph.
     show : `bool`, optional (default: `None`)
@@ -389,6 +382,7 @@ def paga(
             frameon=frameon,
             cmap=cmap,
             cax=cax,
+            colorbar=colorbar,
             cb_kwds=cb_kwds,
             title=title[icolor],
             random_state=random_state,
@@ -432,6 +426,7 @@ def _paga_graph(
         max_edge_width=None,
         export_to_gexf=False,
         cax=None,
+        colorbar=None,
         cb_kwds={},
         single_component=False,
         random_state=0):
@@ -477,15 +472,19 @@ def _paga_graph(
         if threshold_dashed is None:
             threshold_dashed = 0.01  # default treshold
     if threshold_solid > 0:
-        adjacency_solid[adjacency_solid < threshold_solid] = 0
+        adjacency_solid.data[adjacency_solid.data < threshold_solid] = 0
         adjacency_solid.eliminate_zeros()
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
         if threshold_dashed > 0:
-            adjacency_dashed[adjacency_dashed < threshold_dashed] = 0
+            adjacency_dashed.data[adjacency_dashed.data < threshold_dashed] = 0
             adjacency_dashed.eliminate_zeros()
         nx_g_dashed = nx.Graph(adjacency_dashed)
+
+    # uniform color
+    if isinstance(colors, str) and is_color_like(colors):
+        colors = [colors for c in range(len(node_labels))]
 
     # color degree of the graph
     if isinstance(colors, str) and colors.startswith('degree'):
@@ -499,7 +498,6 @@ def _paga_graph(
         colors = (np.array(colors) - np.min(colors)) / (np.max(colors) - np.min(colors))
 
     # plot numeric colors
-    colorbar = False
     if isinstance(colors, Iterable) and not isinstance(colors[0], (str, dict)):
         import matplotlib
         norm = matplotlib.colors.Normalize()
@@ -507,7 +505,9 @@ def _paga_graph(
         if cmap is None: cmap = rcParams['image.cmap']
         cmap = matplotlib.cm.get_cmap(cmap)
         colors = [cmap(c) for c in colors]
-        colorbar = True
+        colorbar = True if colorbar is None else colorbar
+    else:
+        colorbar = False
 
     if len(colors) < len(node_labels):
         print(node_labels, colors)
@@ -539,7 +539,7 @@ def _paga_graph(
     # node positions from adjacency_solid
     if pos is None:
         if layout is None:
-            layout = 'fa'
+            layout = 'fr'
         if layout == 'fa':
             try:
                 from fa2 import ForceAtlas2
@@ -613,9 +613,14 @@ def _paga_graph(
                     # seems to do some strange stuff, here
                     init_pos[:, 1] *= -1
                     init_coords = init_pos.tolist()
-                pos_list = g.layout(
-                    layout, seed=init_coords,
-                    weights='weight', **layout_kwds).coords
+                try:
+                    pos_list = g.layout(
+                        layout, seed=init_coords,
+                        weights='weight', **layout_kwds).coords
+                except:  # hack for excepting attribute error for empty graphs...
+                    pos_list = g.layout(
+                        layout, seed=init_coords,
+                        **layout_kwds).coords
             pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
         pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
     else:
@@ -663,7 +668,7 @@ def _paga_graph(
         adjacency_transitions = adata.uns['paga'][transitions].copy()
         if threshold_arrows is None:
             threshold_arrows = 0.005
-        adjacency_transitions[adjacency_transitions < threshold_arrows] = 0
+        adjacency_transitions.data[adjacency_transitions.data < threshold_arrows] = 0
         adjacency_transitions.eliminate_zeros()
         g_dir = nx.DiGraph(adjacency_transitions.T)
         widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]
@@ -677,8 +682,8 @@ def _paga_graph(
             from matplotlib.colors import rgb2hex
             colors = [rgb2hex(c) for c in colors]
         for count, n in enumerate(nx_g_solid.nodes()):
-            nx_g_solid.node[count]['label'] = node_labels[count]
-            nx_g_solid.node[count]['color'] = colors[count]
+            nx_g_solid.node[count]['label'] = str(node_labels[count])
+            nx_g_solid.node[count]['color'] = str(colors[count])
             nx_g_solid.node[count]['viz'] = {
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
@@ -1047,7 +1052,8 @@ def paga_path(
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
-        df['distance'] = anno_dict['dpt_pseudotime'].T
+        if 'dpt_pseudotime' in anno_dict:
+            df['distance'] = anno_dict['dpt_pseudotime'].T
         return ax, df if ax_was_none and show == False else df
     else:
         return ax if ax_was_none and show == False else None
