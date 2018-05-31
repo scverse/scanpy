@@ -13,6 +13,7 @@ from ..readwrite import read, read_10x_h5, write, read_params, write_params
 from . import datasets
 from . import export_to
 from . import logging
+from . import queries
 
 # unfortunately, we cannot put this here as long as we have simple global
 # variables in settings... they couldn't be set in this case...

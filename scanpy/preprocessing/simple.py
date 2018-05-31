@@ -4,10 +4,8 @@ Compositions of these functions are found in sc.preprocess.recipes.
 """
 
 import numpy as np
-import pandas as pd
 import scipy as sp
 import warnings
-from io import StringIO
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
@@ -955,53 +953,6 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
             adata.X[icell] = cell_profile
     logg.msg('finished', t=True)
     return adata if copy else None
-
-
-def get_mito(host, org):
-    """Get mitochondrial gene symbols for specific organism through BioMart.
-       
-    Parameters
-    ----------
-    host : `str`, e.g. 'useast.ensembl.org'
-        BioMart url
-    org : `str`, supports 'hsapiens' or 'mmusculus'
-        Organism to query
-        
-    Returns
-    -------
-    Returns a `set` containing mitochondrial gene symbols, or `None` if the organism is unavailable.   
- 
-    """
-    try:
-        from bioservices import biomart
-    except ImportError:
-        logg.msg('to use this method you need to install the bioservices module')
-        return None
-    s = biomart.BioMart(host=host)
-
-    # building query
-    s.new_query()
-    if org == 'hsapiens':
-        s.add_dataset_to_xml('hsapiens_gene_ensembl')
-        s.add_attribute_to_xml('hgnc_symbol')
-    elif org == 'mmusculus':
-        s.add_dataset_to_xml('mmusculus_gene_ensembl')
-        s.add_attribute_to_xml('mgi_symbol')
-    else:
-        logg.msg('organism ', str(org), ' is unavailable', v=4, no_indent=True)
-        return None
-    s.add_attribute_to_xml('chromosome_name')
-    xml = s.get_xml()
-
-    # parsing mitochondrial gene symbols
-    res = pd.read_csv(StringIO(s.query(xml)), sep='\t', header=None)
-    res.columns = ['symbol', 'chromosome_name']
-    res = res.dropna()
-    res = res[res['chromosome_name'] == 'MT']
-    res = res.set_index('symbol')
-    res = res[~res.index.duplicated(keep='first')]
-
-    return set(res.index)
 
 
 def zscore_deprecated(X):
