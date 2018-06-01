@@ -65,7 +65,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Tobias Callies, Davide Cittaro, Gokcen Eraslan'
+author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Tobias Callies'
 copyright = f'{datetime.now():%Y}, {author}'
 
 version = scanpy.__version__.replace('.dirty', '')
@@ -77,7 +77,7 @@ todo_include_todos = False
 
 # -- Options for HTML output ----------------------------------------------
 
-
+html_theme = 'sphinx_rtd_theme'
 html_theme_options = dict(
     navigation_depth=2,
 )
