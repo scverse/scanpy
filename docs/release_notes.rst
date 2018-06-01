@@ -1,14 +1,12 @@
-See the documentation of version 0.4.4 `here <http://scanpy.readthedocs.io/en/0.4.4/>`_. See a list of all releases `here <https://github.com/theislab/scanpy/releases>`_.
+.. note::
+
+    Also see the release notes of `anndata <http://anndata.readthedocs.org>`_.
+
+.. role:: small
 
 
-**Soon**
-
-- more canonical analyses steps like clustering genes, computing correlations...
-
-- exporting to Gephi from :class:`~scanpy.api.Neighbors`
-  
-
-**March 28, 2018**: version 1.0
+Version 1.0 :small:`March 28, 2018`
+-----------------------------------
 
 Scanpy is much faster and more memory efficient. Preprocess, cluster and visualize
 1.3M cells in `6 h
@@ -98,9 +96,9 @@ Further changes are
 
 - 'X_diffmap' now contains the zero component, plotting remains unchanged
      
-  
 
-**February 26, 2018**: version 0.4.4
+Version 0.4.4 :small:`February 26, 2018`
+----------------------------------------
 
 1. embed cells using :func:`~scanpy.api.tl.umap` [McInnes18]_: `examples <https://github.com/theislab/scanpy/pull/92>`_
 2. score sets of genes, e.g. for cell cycle, using :func:`~scanpy.api.tl.score_genes` [Satija15]_: `notebook <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/180209_cell_cycle/cell_cycle.ipynb>`_
