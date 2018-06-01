@@ -7,33 +7,45 @@ from ..neighbors import Neighbors
 from .. import utils
 from .. import settings
 
+_AVAIL_MODELS = {'v1.0', 'v1.2'}
+
 
 def paga(
         adata,
         groups='louvain',
         use_rna_velocity=False,
+        model='v1.2',
         copy=False):
     """\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
 
-    Partition-based graph abstraction (PAGA) quantifies the connectivities of
-    partitions of a neighborhood graph of single cells, thereby generating a
-    much simpler abstracted graph whose nodes label the partitions. Together
-    with a random walk-based distance measure, this generates a partial
-    coordinatization of data useful for exploring and explaining its variation.
+    By quantifying the connectivity of partitions (groups, clusters) of the
+    single-cell graph, partition-based graph abstraction (PAGA) generates a much
+    simpler abstracted graph (*PAGA graph*) of partitions, in which edge weights
+    represent confidence in the presence of connections. By tresholding this
+    confidence in :func:`scanpy.api.paga`, a much simpler representation of data
+    can be obtained.
+
+    The confidence can be interpreted as the ratio of the actual versus the
+    expected value of connetions under the null model of randomly connecting
+    partitions. We do not provide a p-value as this null model does not
+    precisely capture what one would consider "connected" in real data, hence it
+    strongly overestimates the expected value. See an extensive discussion of
+    this in [Wolf17i]_.
 
     Parameters
     ----------
     adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    groups : categorical annotation of observations or 'louvain_groups', optional (default: 'louvain_groups')
-        Criterion to determine the resulting partitions of the single-cell
-        graph. 'louvain_groups' uses the Louvain algorithm and optimizes
-        modularity of the graph. You can also pass your predefined groups by
-        choosing any categorical annotation of observations (`adata.obs`).
+        An annotated data matrix.
+    groups : key for categorical in `adata.obs`, optional (default: 'louvain')
+        You can pass your predefined groups by choosing any categorical
+        annotation of observations (`adata.obs`).
     use_rna_velocity : `bool` (default: `False`)
-        Use RNA velocity to orient edges in the abstracted graph and estimate transitions.
+        Use RNA velocity to orient edges in the abstracted graph and estimate
+        transitions. Requires that `adata.uns` contains a directed single-cell
+        graph with key `['velocyto_transitions']`. This feature might be subject
+        to change in the future.
     copy : `bool`, optional (default: `False`)
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
@@ -42,14 +54,22 @@ def paga(
     -------
     Returns or updates `adata` depending on `copy` with
     connectivities : np.ndarray (adata.uns['connectivities'])
-        The full adjacency matrix of the abstracted graph, weights
-        correspond to connectivities.
-    confidence : np.ndarray (adata.uns['confidence'])
-        The full adjacency matrix of the abstracted graph, weights
-        correspond to confidence in the presence of an edge.
-    confidence_tree : sc.sparse csr matrix (adata.uns['confidence_tree'])
+        The full adjacency matrix of the abstracted graph, weights correspond to
+        confidence in the connectivities of partitions.
+    connectivities_tree : sc.sparse csr matrix (adata.uns['connectivities_tree'])
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
+
+    Notes
+    -----
+    Together with a random walk-based distance measure, this generates a partial
+    coordinatization of data useful for exploring and explaining its variation.
+
+    See Also
+    --------
+    pl.paga
+    pl.paga_path
+    pl.paga_compare
     """
     if 'neighbors' not in adata.uns:
         raise ValueError(
@@ -57,107 +77,137 @@ def paga(
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running partition-based graph abstraction (PAGA)', reset=True)
-    paga = PAGA(adata, groups, use_rna_velocity=use_rna_velocity)
-    paga.compute()
+    paga = PAGA(adata, groups, model=model)
     # only add if not present
     if 'paga' not in adata.uns:
         adata.uns['paga'] = {}
     if not use_rna_velocity:
-        adata.uns['paga']['connectivities'] = paga.connectivities_coarse
-        adata.uns['paga']['confidence'] = paga.confidence
-        adata.uns['paga']['confidence_tree'] = paga.confidence_tree
-        adata.uns[groups + '_sizes'] = np.array(paga.vc.sizes())
+        paga.compute_connectivities()
+        adata.uns['paga']['connectivities'] = paga.connectivities
+        adata.uns['paga']['connectivities_tree'] = paga.connectivities_tree
+        adata.uns[groups + '_sizes'] = np.array(paga.ns)
     else:
-        adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
+        paga.compute_transitions()
+        adata.uns['paga']['transitions_connectivities'] = paga.transitions_connectivities
         adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     if use_rna_velocity:
         logg.hint(
             'added\n'
-            '    \'paga/transitions_confidence\', confidence adjacency (adata.uns)\n'
-            '    \'paga/transitions_ttest\', confidence subtree (adata.uns)')
+            '    \'paga/transitions_connectivities\', connectivities adjacency (adata.uns)\n'
+            '    \'paga/transitions_ttest\', t-test on transitions (adata.uns)')
     else:
         logg.hint(
             'added\n'
             '    \'paga/connectivities\', connectivities adjacency (adata.uns)\n'
-            '    \'paga/confidence\', confidence adjacency (adata.uns)\n'
-            '    \'paga/confidence_tree\', confidence subtree (adata.uns)')
+            '    \'paga/connectivities_tree\', connectivities subtree (adata.uns)')
     return adata if copy else None
 
 
-class PAGA(Neighbors):
+class PAGA():
 
-    def __init__(self, adata, groups, use_rna_velocity=False,
-                 tree_based_confidence=False):
-        super(PAGA, self).__init__(adata)
-        self._groups = groups
-        self._tree_based_confidence = tree_based_confidence
-        self._use_rna_velocity = use_rna_velocity
+    def __init__(self, adata, groups, model='v1.2'):
+        self._adata = adata
+        self._neighbors = Neighbors(adata)
+        self._groups_key = groups
+        self._model = model
 
-    def compute(self):
-        if self._use_rna_velocity:
-            self.compute_transitions_coarse()
+    def compute_connectivities(self):
+        if self._model == 'v1.2':
+            return self._compute_connectivities_v1_2()
+        elif self._model == 'v1.0':
+            return self._compute_connectivities_v1_0()
         else:
-            self.compute_connectivities_coarse()
-            self.compute_confidence()
+            raise ValueError(
+                '`model` {} needs to be one of {}.'
+                .format(self._model, _AVAIL_MODELS))
 
-    def compute_connectivities_coarse(self):
+    def _compute_connectivities_v1_2(self):
         import igraph
-        ones = self.connectivities.copy()
-        # graph where edges carry weight 1
+        ones = self._neighbors.distances.copy()
+        ones.data = np.ones(len(ones.data))
+        # should be directed if we deal with distances
+        g = utils.get_igraph_from_adjacency(ones, directed=True)
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+        cg = vc.cluster_graph(combine_edges='sum')
+        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
+        inter_es.data = np.round(inter_es.data)
+        inter_es = inter_es.astype(int)
+        inter_es = inter_es + inter_es.T
+        ns = vc.sizes()
+        es = [vc.subgraph(i).ecount() for i in range(len(ns))]
+        connectivities = inter_es.astype('float32').copy()
+        inter_es = inter_es.tocoo()
+        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
+            expected_random_null = (es[i]*ns[j] + es[j]*ns[i])/(ns[i] + ns[j] - 1)
+            if expected_random_null != 0:
+                scaled_value = v / expected_random_null
+            else:
+                scaled_value = 1
+            if scaled_value > 1:
+                scaled_value = 1
+            connectivities[i, j] = scaled_value
+        # set attributes
+        self.ns = ns
+        self.connectivities = connectivities
+        self.connectivities_tree = self._get_connectivities_tree_v1_2()
+        return inter_es.tocsr(), connectivities
+
+    def _compute_connectivities_v1_0(self):
+        import igraph
+        ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
         g = utils.get_igraph_from_adjacency(ones)
-        self.vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups].cat.codes.values)
-        cg = self.vc.cluster_graph(combine_edges='sum')
-        self.connectivities_coarse = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+        cg = vc.cluster_graph(combine_edges='sum')
+        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+        ns = vc.sizes()
+        es = [vc.subgraph(i).ecount() for i in range(len(ns))]
+        connectivities = inter_es.astype('float64').copy()
+        inter_es = inter_es.tocoo()
+        for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
+            geom_mean_approx_knn = np.sqrt(self._neighbors.n_neighbors**2 * ns[i] * ns[j])
+            if geom_mean_approx_knn != 0:
+                scaled_value = v / geom_mean_approx_knn
+            else:
+                scaled_value = 1
+            connectivities[i, j] = scaled_value
+        # set attributes
+        self.ns = ns
+        self.connectivities = connectivities
+        self.connectivities_tree = self._get_connectivities_tree_v1_0(inter_es)
+        return inter_es.tocsr(), connectivities
 
-    def compute_confidence(self):
-        """Translates the connectivities_coarse measure into a confidence measure.
-        """
-        pseudo_distance = self.connectivities_coarse.copy()
-        pseudo_distance.data = 1./pseudo_distance.data
-        connectivities_coarse_tree = minimum_spanning_tree(pseudo_distance)
-        connectivities_coarse_tree.data = 1./connectivities_coarse_tree.data
-        connectivities_coarse_tree_indices = [
-            connectivities_coarse_tree[i].nonzero()[1]
-            for i in range(connectivities_coarse_tree.shape[0])]
-        # inter- and intra-cluster based confidence
-        if not self._tree_based_confidence:
-            total_n = self.n_neighbors * np.array(self.vc.sizes())
-            maximum = self.connectivities_coarse.max()
-            confidence = self.connectivities_coarse.copy()  # initializing
-            for i in range(self.connectivities_coarse.shape[0]):
-                for j in range(i+1, self.connectivities_coarse.shape[1]):
-                    if self.connectivities_coarse[i, j] > 0:
-                        geom_mean = np.sqrt(total_n[i] * total_n[j])
-                        confidence[i, j] = self.connectivities_coarse[i, j] / geom_mean
-                        confidence[j, i] = confidence[i, j]
-        # tree-based confidence
-        else:
-            median_connectivities_coarse_tree = np.median(connectivities_coarse_tree.data)
-            confidence = self.connectivities_coarse.copy()
-            confidence.data[self.connectivities_coarse.data >= median_connectivities_coarse_tree] = 1
-            connectivities_coarse_adjusted = self.connectivities_coarse.copy()
-            connectivities_coarse_adjusted.data -= median_connectivities_coarse_tree
-            connectivities_coarse_adjusted.data = np.exp(connectivities_coarse_adjusted.data)
-            index = self.connectivities_coarse.data < median_connectivities_coarse_tree
-            confidence.data[index] = connectivities_coarse_adjusted.data[index]
-        confidence_tree = self.compute_confidence_tree(
-            confidence, connectivities_coarse_tree_indices)
-        self.confidence = confidence
-        self.confidence_tree = confidence_tree
-
-    def compute_confidence_tree(
-            self, confidence, connectivities_coarse_tree_indices):
-        confidence_tree = sp.sparse.lil_matrix(confidence.shape, dtype=float)
-        for i, neighbors in enumerate(connectivities_coarse_tree_indices):
+    def _get_connectivities_tree_v1_2(self):
+        inverse_connectivities = self.connectivities.copy()
+        inverse_connectivities.data = 1./inverse_connectivities.data
+        connectivities_tree = minimum_spanning_tree(inverse_connectivities)
+        connectivities_tree_indices = [
+            connectivities_tree[i].nonzero()[1]
+            for i in range(connectivities_tree.shape[0])]
+        connectivities_tree = sp.sparse.lil_matrix(self.connectivities.shape, dtype=float)
+        for i, neighbors in enumerate(connectivities_tree_indices):
             if len(neighbors) > 0:
-                confidence_tree[i, neighbors] = confidence[i, neighbors]
-        return confidence_tree.tocsr()
+                connectivities_tree[i, neighbors] = self.connectivities[i, neighbors]
+        return connectivities_tree.tocsr()
 
-    def compute_transitions_coarse(self):
+    def _get_connectivities_tree_v1_0(self, inter_es):
+        inverse_inter_es = inter_es.copy()
+        inverse_inter_es.data = 1./inverse_inter_es.data
+        connectivities_tree = minimum_spanning_tree(inverse_inter_es)
+        connectivities_tree_indices = [
+            connectivities_tree[i].nonzero()[1]
+            for i in range(connectivities_tree.shape[0])]
+        connectivities_tree = sp.sparse.lil_matrix(inter_es.shape, dtype=float)
+        for i, neighbors in enumerate(connectivities_tree_indices):
+            if len(neighbors) > 0:
+                connectivities_tree[i, neighbors] = self.connectivities[i, neighbors]
+        return connectivities_tree.tocsr()
+
+    def compute_transitions(self):
         # analogous code using networkx
         # membership = adata.obs['clusters'].cat.codes.tolist()
         # partition = defaultdict(list)
@@ -179,24 +229,24 @@ class PAGA(Neighbors):
         vc_bool = igraph.VertexClustering(
             g_bool, membership=self._adata.obs[self._groups].cat.codes.values)
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
-        transitions_coarse = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
+        transitions = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
         # translate this into a confidence measure
         # the number of outgoing edges
         # total_n = np.zeros(len(vc.sizes()))
         # # (this is not the convention of standard stochastic matrices)
-        # total_outgoing = transitions_coarse.sum(axis=1)
+        # total_outgoing = transitions.sum(axis=1)
         # for i in range(len(total_n)):
         #     total_n[i] = vc.subgraph(i).ecount()
         #     total_n[i] += total_outgoing[i, 0]
         # use the topology based reference, the velocity one might have very small numbers
-        total_n = self.n_neighbors * np.array(vc_bool.sizes())
-        transitions_ttest = transitions_coarse.copy()
-        transitions_confidence = transitions_coarse.copy()
+        total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
+        transitions_ttest = transitions.copy()
+        transitions_confidence = transitions.copy()
         from scipy.stats import ttest_1samp
-        for i in range(transitions_coarse.shape[0]):
-            # no symmetry in transitions_coarse, hence we should not restrict to
+        for i in range(transitions.shape[0]):
+            # no symmetry in transitions, hence we should not restrict to
             # upper triangle
-            neighbors = transitions_coarse[i].nonzero()[1]
+            neighbors = transitions[i].nonzero()[1]
             for j in neighbors:
                 forward = cg_full.es.select(_source=i, _target=j)['weight']
                 backward = cg_full.es.select(_source=j, _target=i)['weight']
@@ -249,7 +299,7 @@ def paga_degrees(adata):
         List of degrees for each node.
     """
     import networkx as nx
-    g = nx.Graph(adata.uns['paga']['confidence'])
+    g = nx.Graph(adata.uns['paga']['connectivities'])
     degrees = [d for _, d in g.degree(weight='weight')]
     return degrees
 
@@ -280,7 +330,7 @@ def paga_expression_entropies(adata):
 
 
 def paga_compare_paths(adata1, adata2,
-                       adjacency_key='confidence', adjacency_key2=None):
+                       adjacency_key='connectivities', adjacency_key2=None):
     """Compare paths in abstracted graphs in two datasets.
 
     Compute the fraction of consistent paths between leafs, a measure for the

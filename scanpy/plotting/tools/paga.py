@@ -188,7 +188,7 @@ def paga(
         labels=None,
         colors=None,
         single_component=False,
-        solid_edges='confidence',
+        solid_edges='connectivities',
         dashed_edges=None,
         transitions=None,
         threshold_arrows=None,
@@ -217,7 +217,7 @@ def paga(
         show=None,
         save=None,
         ax=None):
-    """Plot the abstracted graph through thresholding low-confidence edges.
+    """Plot the abstracted graph through thresholding low-connectivity edges.
 
     This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
 
@@ -226,8 +226,8 @@ def paga(
     adata : :class:`~scanpy.api.AnnData`
         Annotated data matrix.
     threshold : `float` or `None`, optional (default: 0.01)
-        Do not draw edges for weights below this threshold. Set to 0 if you
-        want all edges. Discarding low-confidence edges helps in getting a much
+        Do not draw edges for weights below this threshold. Set to 0 if you want
+        all edges. Discarding low-connectivity edges helps in getting a much
         clearer picture of the graph.
     labels : `None`, `str`, `list`, `dict`, optional (default: `None`)
         The node labels. If `None`, this defaults to the group labels stored in
@@ -257,7 +257,7 @@ def paga(
         vertices are automatically calculated based on topological sorting.
     single_component : `bool`, optional (default: `False`)
         Restrict to largest connected component.
-    solid_edges : `str`, optional (default: 'paga_confidence')
+    solid_edges : `str`, optional (default: 'paga_connectivities')
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: `None`)
@@ -583,7 +583,7 @@ def _paga_graph(
         elif layout == 'eq_tree':
             nx_g_tree = nx_g_solid
             if solid_edges == 'connectivities':
-                adj_tree = adata.uns['paga']['confidence_tree']
+                adj_tree = adata.uns['paga']['connectivities_tree']
                 nx_g_tree = nx.Graph(adj_tree)
             pos = utils.hierarchy_pos(nx_g_tree, root)
             if len(pos) < adjacency_solid.shape[0]:
@@ -596,7 +596,7 @@ def _paga_graph(
             if 'rt' in layout:
                 g_tree = g
                 if solid_edges == 'connectivities':
-                    adj_tree = adata.uns['paga']['confidence_tree']
+                    adj_tree = adata.uns['paga']['connectivities_tree']
                     g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
                 pos_list = g_tree.layout(
                     layout, root=root if isinstance(root, list) else [root]).coords
@@ -1061,8 +1061,8 @@ def paga_path(
 
 def paga_adjacency(
         adata,
-        adjacency='paga_confidence',
-        adjacency_tree='paga_confidence_tree',
+        adjacency='connectivities',
+        adjacency_tree='connectivities_tree',
         as_heatmap=True,
         color_map=None,
         show=None,
