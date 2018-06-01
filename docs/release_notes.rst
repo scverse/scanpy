@@ -4,6 +4,21 @@
 
 .. role:: small
 
+          
+Version 1.1 :small:`May 31, 2018`
+---------------------------------
+
+- :func:`~scanpy.api.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonable pdfs by rasterizing large scatter plots
+- :func:`~scanpy.api.tl.draw_graph` now defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster - thanks to S Wollock
+- :func:`~scanpy.api.pl.scatter` also plots along variables axis - thanks to MD Luecken
+- :func:`~scanpy.api.pp.pca` and :func:`~scanpy.api.pp.log1p` support chunk processing - thanks to S Rybakov
+- :func:`~scanpy.api.pp.regress_out` is back to multiprocessing - thanks to F Ramirez
+- :func:`~scanpy.api.read` reads compressed text files - thanks to G Eraslan
+- :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes - thanks to FG Brundu
+- :func:`~scanpy.api.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
+- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_
+- :func:`~scanpy.api.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
+
 
 Version 1.0 :small:`March 28, 2018`
 -----------------------------------
@@ -90,7 +105,7 @@ Further changes are
   :func:`~scanpy.api.tl.draw_graph` and :func:`~scanpy.api.umap` by passing
   `edges=True`
 
-- :func:`~scanpy.api.pp.downsample_counts` function
+- :func:`~scanpy.api.pp.downsample_counts` for downsampling counts - thanks to MD Luecken
 
 - default 'louvain_groups' are now called 'louvain'
 
