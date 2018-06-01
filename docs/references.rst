@@ -71,6 +71,10 @@ References
    *Characterization of the single-cell transcriptional landscape by highly multiplex RNA-seq*,
    `Genome Research <https://doi.org/10.1101/gr.110882.110>`_.
 
+.. [Jacomy14] Jacomy *et al.* (2014),
+   *ForceAtlas2, a Continuous Graph Layout Algorithm for Handy Network Visualization Designed for the Gephi Software*
+   `PLOS One <https://doi.org/10.1371/journal.pone.0098679>`_.
+
 .. [Kang18] Kang *et al.* (2018),
    *Python Implementation of MNN correct*,
    `GitHub <https://github.com/chriscainx/mnnpy>`_.
