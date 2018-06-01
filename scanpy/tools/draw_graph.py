@@ -16,24 +16,21 @@ def draw_graph(
         key_added_ext=None,
         copy=False,
         **kwds):
-    """Force-directed graph drawing [Fruchterman91]_ [Islam11]_ [Chippada18]_.
-
-    The default layout ('fa', `ForceAtlas2`) uses the package `fa2
-    <https://github.com/bhargavchippada/forceatlas2>`_, which can be installed
-    via `pip install fa2`.
+    """Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. However, it runs considerably slower. This requires to run
-    :func:`~scanpy.api.pp.neighbors`, first.
+    better. This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+
+    The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package `fa2
+    <https://github.com/bhargavchippada/forceatlas2>`_ [Chippada18]_, which can
+    be installed via `pip install fa2`.
 
     `Force-directed graph drawing
     <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a
     class of long-established algorithms for visualizing graphs. It has been
-    suggested for visualizing single-cell data by [Islam11]_. Here, by
-    default, the Fruchterman & Reingold [Fruchterman91]_ algorithm is used; many
-    other layouts are available. Uses the igraph implementation [Csardi06]_.
-
-    Similar approaches have been used by [Zunder15]_ or [Weinreb17]_.
+    suggested for visualizing single-cell data by [Islam11]_. Many other layouts
+    as implemented in igraph [Csardi06]_ are available. Similar approaches have
+    been used by [Zunder15]_ or [Weinreb17]_.
 
     Parameters
     ----------
