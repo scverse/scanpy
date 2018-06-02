@@ -131,14 +131,12 @@ class PAGA():
         g = utils.get_igraph_from_adjacency(ones, directed=True)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
-        cg = vc.cluster_graph(combine_edges='sum')
-        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
-        inter_es.data = np.round(inter_es.data)
-        inter_es = inter_es.astype(int)
-        inter_es = inter_es + inter_es.T
         ns = vc.sizes()
         es = [vc.subgraph(i).ecount() for i in range(len(ns))]
-        connectivities = inter_es.astype('float32').copy()
+        cg = vc.cluster_graph(combine_edges='sum')
+        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
+        inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
+        connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             expected_random_null = (es[i]*ns[j] + es[j]*ns[i])/(ns[i] + ns[j] - 1)
@@ -162,11 +160,10 @@ class PAGA():
         g = utils.get_igraph_from_adjacency(ones)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+        ns = vc.sizes()
         cg = vc.cluster_graph(combine_edges='sum')
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
-        ns = vc.sizes()
-        es = [vc.subgraph(i).ecount() for i in range(len(ns))]
-        connectivities = inter_es.astype('float64').copy()
+        connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             geom_mean_approx_knn = np.sqrt(self._neighbors.n_neighbors**2 * ns[i] * ns[j])

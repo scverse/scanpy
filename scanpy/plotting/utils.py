@@ -22,6 +22,7 @@ arrows : `bool`, optional (default: `False`)
     Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
 """
 
+_tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
 
 # -------------------------------------------------------------------------------
 # Simple plotting functions
