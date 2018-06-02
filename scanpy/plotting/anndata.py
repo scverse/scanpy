@@ -162,7 +162,7 @@ def scatter(
                 show=show,
                 save=save,
                 ax=ax)
-            
+
         elif x in adata.var_keys() and y in adata.var_keys() and color not in adata.obs_keys():
             axs = _scatter_var(
                 adata=adata,
@@ -221,9 +221,9 @@ def _scatter_var(
         show=None,
         save=None,
         ax=None):
-    
+
     adata_T = adata.T
-    
+
     axs = _scatter_obs(
         adata=adata_T,
         x=x,
@@ -254,7 +254,7 @@ def _scatter_var(
 
     return axs
 
-    
+
 def _scatter_obs(
         adata,
         x=None,
@@ -452,10 +452,14 @@ def _scatter_obs(
                                verticalalignment='center',
                                horizontalalignment='center',
                                fontsize=legend_fontsize)
-            if legend_loc == 'on data export':
-                all_pos = np.zeros((len(centroids), 2))
-                for iname, name in enumerate(adata.obs[key].cat.categories):
+            all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
+            for iname, name in enumerate(adata.obs[key].cat.categories):
+                if name in centroids:
                     all_pos[iname] = centroids[name]
+                else:
+                    all_pos[iname] = [np.nan, np.nan]
+            utils._tmp_cluster_pos = all_pos
+            if legend_loc == 'on data export':
                 filename = settings.writedir + 'pos.csv'
                 logg.msg('exporting label positions to {}'.format(filename), v=1)
                 if settings.writedir != '' and not os.path.exists(settings.writedir):

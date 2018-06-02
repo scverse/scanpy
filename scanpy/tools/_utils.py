@@ -93,14 +93,14 @@ def get_init_pos_from_paga(adata, adjacency=None, random_state=0):
     if 'paga' in adata.uns and 'pos' in adata.uns['paga']:
         groups = adata.obs[adata.uns['paga']['groups']]
         pos = adata.uns['paga']['pos']
-        confidence_coarse = adata.uns['paga']['confidence']
+        connectivities_coarse = adata.uns['paga']['connectivities']
         init_pos = np.ones((adjacency.shape[0], 2))
         for i, group_pos in enumerate(pos):
             subset = (groups == groups.cat.categories[i]).values
-            neighbors = confidence_coarse[i].nonzero()
+            neighbors = connectivities_coarse[i].nonzero()
             if len(neighbors[1]) > 0:
-                confidence = confidence_coarse[i][neighbors]
-                nearest_neighbor = neighbors[1][np.argmax(confidence)]
+                connectivities = connectivities_coarse[i][neighbors]
+                nearest_neighbor = neighbors[1][np.argmax(connectivities)]
                 noise = np.random.random((len(subset[subset]), 2))
                 dist = pos[i] - pos[nearest_neighbor]
                 noise = noise * dist
