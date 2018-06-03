@@ -132,6 +132,7 @@ class PAGA():
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         ns = vc.sizes()
+        n = sum(ns)
         es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
         cg = vc.cluster_graph(combine_edges='sum')
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
@@ -140,7 +141,7 @@ class PAGA():
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
-            expected_random_null = (es[i]*ns[j] + es[j]*ns[i])/(ns[i] + ns[j] - 1)
+            expected_random_null = (es[i]*ns[j] + es[j]*ns[i])/(n - 1)
             if expected_random_null != 0:
                 scaled_value = v / expected_random_null
             else:
@@ -166,8 +167,11 @@ class PAGA():
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
+        n_neighbors_sq = self._neighbors.n_neighbors**2
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
-            geom_mean_approx_knn = np.sqrt(self._neighbors.n_neighbors**2 * ns[i] * ns[j])
+            # have n_neighbors**2 inside sqrt for backwards compat
+            geom_mean_approx_knn = np.sqrt(
+                n_neighbors_sq * ns[i] * ns[j])
             if geom_mean_approx_knn != 0:
                 scaled_value = v / geom_mean_approx_knn
             else:
