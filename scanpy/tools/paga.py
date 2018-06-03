@@ -132,9 +132,10 @@ class PAGA():
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         ns = vc.sizes()
-        es = [vc.subgraph(i).ecount() for i in range(len(ns))]
+        es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
         cg = vc.cluster_graph(combine_edges='sum')
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
+        es = np.array(es_inner_cluster) + inter_es.sum(axis=1).A1
         inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
