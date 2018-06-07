@@ -88,7 +88,7 @@ def paga(
         adata.uns[groups + '_sizes'] = np.array(paga.ns)
     else:
         paga.compute_transitions()
-        adata.uns['paga']['transitions_connectivities'] = paga.transitions_connectivities
+        adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
         adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
@@ -223,13 +223,13 @@ class PAGA():
         g = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'], directed=True)
         vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups].cat.codes.values)
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         cg_full = vc.cluster_graph(combine_edges=False)
 
         g_bool = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
         vc_bool = igraph.VertexClustering(
-            g_bool, membership=self._adata.obs[self._groups].cat.codes.values)
+            g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values)
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
         transitions = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
         # translate this into a confidence measure

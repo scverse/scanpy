@@ -80,8 +80,8 @@ def krumsiek11():
     adata = sc.read(filename, first_column_names=True)
     sc.settings.verbosity = verbosity_save
     adata.uns['iroot'] = 0
-    fate_labels = {'0': 'Stem', '159': 'Mo', '319': 'Ery',
-                   '459': 'Mk', '619': 'Neu'}
+    fate_labels = {0: 'Stem', 159: 'Mo', 319: 'Ery',
+                   459: 'Mk', 619: 'Neu'}
     adata.uns['highlights'] = fate_labels
     cell_type = np.array(['progenitor' for i in range(adata.n_obs)])
     cell_type[80:160] = 'Mo'
