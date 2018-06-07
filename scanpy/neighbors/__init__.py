@@ -669,6 +669,7 @@ class Neighbors():
             use_rep=None,
             method='umap',
             random_state=0,
+            write_knn_indices=False,
             precompute_metric=None,
             metric='euclidean',
             metric_kwds={}):
@@ -686,7 +687,9 @@ class Neighbors():
 
         Returns
         -------
-        Writes attributes `.distances` and `.connectivities`.
+        Writes sparse graph attributes `.distances` and `.connectivities`.
+        Also writes `.knn_indices` and `.knn_distances` if
+        `write_knn_indices==True`.
         """
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
@@ -715,6 +718,10 @@ class Neighbors():
                 metric = 'precomputed'
             knn_indices, knn_distances = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
+        # write indices as attributes
+        if write_knn_indices:
+            self.knn_indices = knn_indices
+            self.knn_distances = knn_distances
         logg.msg('computed neighbors', t=True, v=4)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
