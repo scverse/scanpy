@@ -19,3 +19,5 @@ from ..plotting import palettes
 
 from ..plotting.utils import matrix
 from ..plotting.utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+
+from ..plotting.qc import highest_expr_genes
