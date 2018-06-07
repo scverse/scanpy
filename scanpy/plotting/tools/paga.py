@@ -526,6 +526,15 @@ def _paga_graph(
             x_color.append(np.mean(adata_gene.X[subset]))
         colors = x_color
 
+    # plot continuous annotation
+    if isinstance(colors, str) and colors in adata.obs:
+        x_color = []
+        cats = adata.obs[groups_key].cat.categories
+        for icat, cat in enumerate(cats):
+            subset = (cat == adata.obs[groups_key]).values
+            x_color.append(adata.obs.loc[subset, colors].mean())
+        colors = x_color
+
     if len(colors) < len(node_labels):
         print(node_labels, colors)
         raise ValueError(
