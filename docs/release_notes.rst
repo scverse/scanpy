@@ -8,7 +8,7 @@
 Version 1.2 :small:`June 8, 2018`
 ---------------------------------
 
-- :func:`~scanpy.api.tl.paga` improved; restore the previous default model by passing `model='v1.0'`
+- :func:`~scanpy.api.tl.paga` improved, see `theislab/paga <https://github.com/theislab/paga>`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
 
 Version 1.1 :small:`May 31, 2018`
