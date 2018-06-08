@@ -440,7 +440,7 @@ def _scatter_obs(
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
             if projection == '3d': data.append(Y[mask_remaining, 2])
-            axs[ikey].scatter(*data, marker='.', c='grey', s=size,
+            axs[ikey].scatter(*data, marker='.', c='lightgrey', s=size,
                                     edgecolors='none', zorder=-1)
         legend = None
         if legend_loc.startswith('on data'):
