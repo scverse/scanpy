@@ -4,7 +4,13 @@
 
 .. role:: small
 
-          
+
+Version 1.2 :small:`June 8, 2018`
+---------------------------------
+
+- :func:`~scanpy.api.tl.paga` improved; restore the previous default model by passing `model='v1.0'`
+
+
 Version 1.1 :small:`May 31, 2018`
 ---------------------------------
 
@@ -43,20 +49,20 @@ delegated.
      :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
      :func:`~scanpy.api.tl.umap` :func:`~scanpy.api.tl.diffmap`
      :func:`~scanpy.api.tl.paga` now require prior computation of the graph:
-     
+
      .. code:: python
-     
+
          sc.pp.neighbors(adata, n_neighbors=5)
          sc.tl.louvain(adata)
-     
+
      instead of previously:
-     
+
      .. code:: python
-     
+
          sc.tl.louvain(adata, n_neighbors=5)
-         
+
    - install `numba` via ``conda install numba``, which replaces cython
-      
+
    - the default connectivity measure (dpt will look different using default
      settings) changed. setting `method='gauss'` in `sc.pp.neighbors` uses
      gauss kernel connectivities and reproduces the previous behavior,
@@ -77,7 +83,7 @@ delegated.
      some results might therefore look slightly different
 
 Further changes are
-   
+
 - UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
   UMAP is now also used for measuring connectivities and computing neighbors,
@@ -88,16 +94,16 @@ Further changes are
   pseudotime and clustering need to be computed separately via
   :func:`~scanpy.api.tl.louvain` and :func:`~scanpy.api.tl.dpt`, the
   connectivity measure has been improved
-           
+
 - logistic regression for finding marker genes
   :func:`~scanpy.api.tl.rank_genes_groups` with parameter `method='logreg'`
 
 - :func:`~scanpy.api.tl.louvain` now provides a better implementation for
-  reclustering via `restrict_to`        
-        
+  reclustering via `restrict_to`
+
 - scanpy no longer modifies rcParams upon import, call
   `settings.set_figure_params` to set the 'scanpy style'
-      
+
 - default cache directory is ``./cache/``, set `settings.cachedir` to change
   this; nested directories in this are now avoided
 
@@ -110,7 +116,7 @@ Further changes are
 - default 'louvain_groups' are now called 'louvain'
 
 - 'X_diffmap' now contains the zero component, plotting remains unchanged
-     
+
 
 Version 0.4.4 :small:`February 26, 2018`
 ----------------------------------------
