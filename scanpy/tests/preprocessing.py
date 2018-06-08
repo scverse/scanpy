@@ -17,6 +17,8 @@ def test_normalize_per_cell():
     # now with copy option
     adata = AnnData(
         np.array([[1, 0], [3, 0], [5, 6]]))
+    # note that sc.pp.normalize_per_cell is also used in
+    # pl.highest_expr_genes with parameter counts_per_cell_after=100
     adata_copy = sc.pp.normalize_per_cell(
         adata, counts_per_cell_after=1, copy=True)
     assert adata_copy.X.sum(axis=1).tolist() == [1., 1., 1.]
