@@ -95,6 +95,10 @@ References
    *Visualizing data using t-SNE*,
    `JMLR <http://www.jmlr.org/papers/v9/vandermaaten08a.html>`_.
 
+.. [McCarthy17] McCarthy *et al.* (2017),
+   *scater: Single-cell analysis toolkit for gene expression data in R*,
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btw777>`_.
+
 .. [Moon17] Moon *et al.* (2017),
    *PHATE: A Dimensionality Reduction Method for Visualizing Trajectory Structures in High-Dimensional Biological Data*,
    `BioRxiv <http://biorxiv.org/content/early/2017/03/24/120378>`_.

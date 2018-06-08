@@ -9,6 +9,7 @@ The following describes the plotting submodule of ``scanpy.api``.
 
     See the :ref:`settings` section for some important plotting configurations.
 
+
 Generic
 -------
 
@@ -25,6 +26,19 @@ Thin wrappers for Seaborn [Waskom16]_ functions.
 
    pl.violin
    pl.clustermap
+
+   
+Preprocessing
+-------------
+
+Methods for visualizing quality control and results of preprocessing functions.
+
+.. autosummary::
+   :toctree: .
+
+   pl.highest_expr_genes
+   pl.filter_genes_dispersion
+
 
 Tools
 -----

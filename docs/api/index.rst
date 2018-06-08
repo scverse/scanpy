@@ -28,6 +28,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.scale
    pp.subsample
    pp.downsample_counts
+   
+For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens` and :func:`pl.filter_genes_dispersion` :doc:`plotting API <plotting>`.
 
 **Recipes**
 
