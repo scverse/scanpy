@@ -8,7 +8,7 @@
 Version 1.2.1 :small:`June 9, 2018`
 -----------------------------------
 
-- :func:`pl.highest_expr_genes` for quality control, plot genes with highest mean fraction of cells, similar to plotQC of *Scater* [McCarthy17]_
+- :func:`pl.highest_expr_genes` for quality control, plot genes with highest mean fraction of cells, similar to plotQC of *Scater* [McCarthy17]_ - thanks to F Ramirez
 
 
 Version 1.2 :small:`June 8, 2018`
