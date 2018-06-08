@@ -1018,7 +1018,8 @@ def louvain(
     utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
-def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8, show=None, save=None, ext=None):
+def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
+                      show=None, save=None, panels_per_row=5, ax=None):
     """Plot ranking of genes.
 
     Parameters
@@ -1036,6 +1037,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         Fontsize for gene names.
     show : `bool`, optional (default: `None`)
         Show the plot, do not return axis.
+    panels_per_row: `int`, optional (default: 5)
+        Number of panels shown per row.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
@@ -1051,12 +1054,9 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
     # one panel for each group
     n_panels = len(group_names)
     # set up the figure
-    if n_panels <= 5:
-        n_panels_y = 1
-        n_panels_x = n_panels
-    else:
-        n_panels_y = 2
-        n_panels_x = int(n_panels/2+0.5)
+    n_panels_x = panels_per_row
+    n_panels_y = np.ceil(len(group_names) / n_panels_x).astype(int)
+
     from matplotlib import gridspec
     fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
                              n_panels_y * rcParams['figure.figsize'][1]))
@@ -1189,7 +1189,7 @@ def rank_genes_groups_violin(
                     + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
-
+        return _ax
 
 def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         show=None, save=None):
