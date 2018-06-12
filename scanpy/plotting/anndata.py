@@ -541,7 +541,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
     if show == False: return gs
 
 
-def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
+def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
            xlabel='', rotation=None, save=None, ax=None, **kwargs):
     """Violin plot [Waskom16]_.
@@ -562,7 +562,11 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         Use `raw` attribute of `adata` if present.
     multi_panel : `bool`, optional (default: `False`)
         Display keys in multiple panels also when `groupby is not None`.
+    stripplot : `bool` optional (default: `True`)
+        Add a stripplot on top of the violin plot.
+        See `seaborn.stripplot`.
     jitter : `float` or `bool`, optional (default: `True`)
+        Add jitter to the stripplot (only when stripplot is True)
         See `seaborn.stripplot`.
     size : int, optional (default: 1)
         Size of the jitter points.
@@ -621,19 +625,57 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         x = groupby
         ys = keys
     if multi_panel:
-        if len(ys) == 1: y = ys[0]
-        else: raise ValueError('Cannot be combined with `groupby != None`.')
-        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-        # don't really know why this gives a warning without passing `order`
-        g = g.map(sns.violinplot, y, inner=None, orient='vertical', scale=scale, order=keys, **kwargs)
-        g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
-                     color='black').set_titles(
-                         col_template='{col_name}').set_xlabels('')
-        if log: g.set(yscale='log')
-        if rotation is not None:
-            for ax in g.axes[0]:
-                ax.tick_params(labelrotation=rotation)
-        axs = [g]
+        if len(ys) == 1:
+            y = ys[0]
+            g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
+            # don't really know why this gives a warning without passing `order`
+            g = g.map(sns.violinplot, y, inner=None, orient='vertical',
+                      scale=scale, order=keys, **kwargs)
+            g.set_titles(col_template='{col_name}').set_xlabels('')
+            axs = [g]
+            if stripplot:
+                g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
+                          color='black')
+            if log:
+                g.set(yscale='log')
+            if rotation is not None:
+                for ax in g.axes[0]:
+                    ax.tick_params(labelrotation=rotation)
+        else:
+            # Make a very compact plot in which the y and x axis are shared.
+            # The image is composed of individual plots stacked on top of each
+            # other. Each subplot contains and individual violin plot where
+            # x = categories in `groupby` and y is each of the keys provided.
+            # An example is: keys = marker genes, groupby = louvain clusters.
+            height = len(ys) * 0.6 + 3
+            width = len(x) * 0.9 + 2
+            fig, axs = pl.subplots(nrows=len(ys), ncols=1, sharex=True, sharey=True,
+                                    figsize=(width, height))
+            for idx, y in enumerate(ys):
+                ax = axs[idx]
+                ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
+                                    orient='vertical', scale=scale, ax=ax, **kwargs)
+                if stripplot:
+                    ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
+                                       jitter=jitter, color='black', size=size, ax=ax)
+
+                ax.set_ylabel(y, rotation=0, fontsize=11, labelpad=8, ha='right')
+                # remove the grids because in such a compact plot are unnecessary
+                ax.grid(False)
+
+                # remove the xticks labels except for the last processed plot (first from bottom-up).
+                # Because the plots share the x axis it is redundant and less compact to plot the
+                # axis for each plot
+                if idx < len(ys) - 1:
+                    ax.set_xticklabels([])
+                if log:
+                    ax.set_yscale('log')
+                if rotation is not None:
+                    ax.tick_params(labelrotation=rotation)
+
+            # remove the spacing between subplots
+            pl.subplots_adjust(wspace=0, hspace=0)
+
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
@@ -641,12 +683,14 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, jitter=True,
         for ax, y in zip(axs, ys):
             ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, **kwargs)
-            ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
-                               jitter=jitter, color='black', size=size, ax=ax)
+            if stripplot:
+                ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
+                                   jitter=jitter, color='black', size=size, ax=ax)
             if xlabel == '' and groupby is not None and rotation is None:
                 xlabel = groupby.replace('_', ' ')
             ax.set_xlabel(xlabel)
-            if log: ax.set_yscale('log')
+            if log:
+                ax.set_yscale('log')
             if rotation is not None:
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
