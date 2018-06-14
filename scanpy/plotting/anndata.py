@@ -762,3 +762,111 @@ def clustermap(
     show = settings.autoshow if show is None else show
     if show: pl.show()
     else: return g
+
+
+def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7, **kwargs):
+    """Plot a heatmap of the expression values of `var_names`. If groupby is given, the heatmap
+    is ordered by the respective group. For example, a list of marker genes
+    can be plotted, ordered by clustering. If the groupby observation is not categorical
+    the observation is turn into a categorical by binning the data into the number
+    especified in `num_categories`.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        var_names should be a valid subset of  `.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that groupby is
+        a categorical. If groupby is not a categorical observation, it would be
+        subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value determines
+        the number of groups into which the groupby observation should be subdivided.
+   **kwargs : keyword arguments
+        Are passed to `seaborn.heatmap`.
+
+    Returns
+    -------
+    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
+    second axis is the heatmap and the third axis is the colorbar.
+
+    """
+    from scipy.sparse import issparse
+    sanitize_anndata(adata)
+    if isinstance(var_names, str):
+        var_names = [var_names]
+    if groupby is not None:
+        if groupby not in adata.obs_keys():
+            raise ValueError('groupby has to be a valid observation. Given value: {}, '
+                             'valid observations: {}'.format(groupby, adata.obs_keys()))
+
+    if use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    if log:
+        matrix = np.log1p(matrix)
+
+    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+    if groupby is None:
+        x = 'variable'
+    else:
+        if not is_categorical_dtype(adata.obs[groupby]):
+            # if the groupby column is not categorical, turn it into one
+            # by subdividing into 7 categories
+            categorical = pd.cut(adata.obs[groupby], num_categories)
+        else:
+            categorical = adata.obs[groupby]
+        obs_tidy.set_index(categorical, groupby, inplace=True)
+        x = obs_tidy.index.categories
+
+    height = 12
+    width = len(var_names) * 0.3 + 2
+    fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
+                           figsize=(width, height), gridspec_kw={'width_ratios': [0.5, 10, 0.5]})
+    groupby_ax = axs[0]
+    heatmap_ax = axs[1]
+    heatmap_cbar_ax = axs[2]
+
+    if groupby:
+        obs_tidy = obs_tidy.sort_index()
+
+    groupby_ax.imshow(np.matrix(obs_tidy.index.codes).T, aspect='auto')
+
+    # determine groupby label positions
+    value_sum = 0
+    ticks = []
+    for value in obs_tidy.index.value_counts():
+        ticks.append(value_sum + (value / 2))
+        value_sum += value
+
+    groupby_ax.set_yticks(ticks)
+    groupby_ax.set_yticklabels(x)
+
+    # remove y ticks
+    groupby_ax.tick_params(axis='y', left=False)
+    # remove x ticks and labels
+    groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
+
+    # remove surrounding lines
+    groupby_ax.spines['right'].set_visible(False)
+    groupby_ax.spines['top'].set_visible(False)
+    groupby_ax.spines['left'].set_visible(False)
+    groupby_ax.spines['bottom'].set_visible(False)
+
+    groupby_ax.set_ylabel(groupby)
+
+    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
+    heatmap_ax.set_yticklabels([])
+    heatmap_ax.set_ylabel('')
+    pl.subplots_adjust(wspace=0.05, hspace=0.01)
+    return axs
