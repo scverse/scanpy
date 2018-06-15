@@ -764,7 +764,8 @@ def clustermap(
     else: return g
 
 
-def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7, **kwargs):
+def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+            show=None, save=None, **kwargs):
     """Plot a heatmap of the expression values of `var_names`. If groupby is given, the heatmap
     is ordered by the respective group. For example, a list of marker genes
     can be plotted, ordered by clustering. If the groupby observation is not categorical
@@ -788,7 +789,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value determines
         the number of groups into which the groupby observation should be subdivided.
-   **kwargs : keyword arguments
+    show : bool, optional (default: `None`)
+         Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    **kwargs : keyword arguments
         Are passed to `seaborn.heatmap`.
 
     Returns
@@ -870,4 +876,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     heatmap_ax.set_yticklabels([])
     heatmap_ax.set_ylabel('')
     pl.subplots_adjust(wspace=0.02, hspace=0.01)
+    utils.savefig_or_show('heatmap', show=show, save=save)
+
     return axs
