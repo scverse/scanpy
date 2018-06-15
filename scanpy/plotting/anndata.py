@@ -831,8 +831,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     height = 12
     width = len(var_names) * 0.3 + 2
+    ax_frac2width = 0.010 * width
     fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
-                           figsize=(width, height), gridspec_kw={'width_ratios': [0.5, 10, 0.5]})
+                           figsize=(width, height), gridspec_kw={'width_ratios': [ax_frac2width, width, ax_frac2width]})
     groupby_ax = axs[0]
     heatmap_ax = axs[1]
     heatmap_cbar_ax = axs[2]
@@ -868,5 +869,5 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
     heatmap_ax.set_yticklabels([])
     heatmap_ax.set_ylabel('')
-    pl.subplots_adjust(wspace=0.05, hspace=0.01)
+    pl.subplots_adjust(wspace=0.02, hspace=0.01)
     return axs
