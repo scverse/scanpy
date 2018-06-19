@@ -102,7 +102,7 @@ def read_10x_h5(filename, genome='mm10'):
         Annotated data matrix, where obsevations/cells are named by their
         barcode and variables/genes by gene name. The data matrix is stored in
         `adata.X`, cell names in `adata.obs_names` and gene names in
-        `adata.var_names`. The gene IDs are stored in `adata.obs['gene_ids']`.
+        `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
     """
     logg.info('reading', filename, r=True, end=' ')
     import tables
