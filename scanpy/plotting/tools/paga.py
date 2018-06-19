@@ -187,6 +187,7 @@ def paga(
         edge_width_scale=1,
         min_edge_width=None,
         max_edge_width=None,
+        arrowsize=30,
         title=None,
         left_margin=0.01,
         random_state=0,
@@ -264,6 +265,10 @@ def paga(
         Min width of solid edges.
     max_edge_width : `float`, optional (default: `None`)
         Max width of solid and dashed edges.
+    arrowsize : `int`, optional (default: 30)
+       For directed graphs, choose the size of the arrow head head's length and
+       width. See :py:class: `matplotlib.patches.FancyArrowPatch` for attribute
+       `mutation_scale` for more info.
     pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
         Two-column array/list storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
@@ -382,6 +387,7 @@ def paga(
             random_state=random_state,
             export_to_gexf=export_to_gexf,
             single_component=single_component,
+            arrowsize=arrowsize,
             pos=pos)
         if colorbars[icolor]:
             bottom = panel_pos[0][0]
@@ -435,6 +441,7 @@ def _paga_graph(
         use_raw=True,
         cb_kwds={},
         single_component=False,
+        arrowsize=30,
         random_state=0):
     node_labels = labels  # rename for clarity
     if (node_labels is not None
@@ -704,7 +711,7 @@ def _paga_graph(
         widths = 100 * base_edge_width * np.array(widths)
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
-        nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black')
+        nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black', arrowsize=arrowsize)
 
     if export_to_gexf:
         if isinstance(colors[0], tuple):
