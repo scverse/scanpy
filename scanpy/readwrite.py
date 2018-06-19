@@ -91,9 +91,9 @@ def read_10x_h5(filename, genome='mm10'):
 
     Parameters
     ----------
-    filename : `str`
+    filename : :class:`str` | :class:`~pathlib.Path`
         Filename.
-    genome : `str`, optional (default: 'mm10')
+    genome : :class:`str`, optional (default: ``'mm10'``)
         Genome group in hdf5 file.
 
     Returns
@@ -106,7 +106,7 @@ def read_10x_h5(filename, genome='mm10'):
     """
     logg.info('reading', filename, r=True, end=' ')
     import tables
-    with tables.open_file(filename, 'r') as f:
+    with tables.open_file(str(filename), 'r') as f:
         try:
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
