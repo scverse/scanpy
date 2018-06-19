@@ -11,3 +11,5 @@ networkx
 natsort
 joblib
 numba
+python-igraph
+louvain
