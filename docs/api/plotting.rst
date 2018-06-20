@@ -25,6 +25,7 @@ Thin wrappers for Seaborn [Waskom16]_ functions.
    :toctree: .
 
    pl.violin
+   pl.heatmap
    pl.clustermap
 
    
