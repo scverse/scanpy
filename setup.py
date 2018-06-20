@@ -26,6 +26,9 @@ setup(
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD',
     install_requires=requires,
+    extras_require=dict(
+        louvain=['python-igraph', 'louvain'],
+    ),
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!
     # you also need MANIFTEST.in
