@@ -407,7 +407,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
 def log1p(data, copy=False, chunked=False, chunk_size=None):
     """Logarithmize the data matrix.
 
-    Computes `X = log(X + 1)`, where `log` denotes the natural logrithm.
+    Computes `X = log(X + 1)`, where `log` denotes the natural logarithm.
 
     Parameters
     ----------
