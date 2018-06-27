@@ -1076,7 +1076,12 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         scores = adata.uns[key]['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             gene_name = gene_names[ig]
-            pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
+            if adata.raw is not None and adata.uns[key]['params']['use_raw']:
+                pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.raw.var[gene_symbols][gene_name],
+                    rotation='vertical', verticalalignment='bottom',
+                    horizontalalignment='center', fontsize=fontsize)
+            else:
+                pl.text(ig, scores[ig], gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
         pl.title('{} vs. {}'.format(group_name, reference))
