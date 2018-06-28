@@ -835,9 +835,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         obs_tidy.set_index(categorical, groupby, inplace=True)
         x = obs_tidy.index.categories
 
-    height = 12
-    width = len(var_names) * 0.3 + 2
-    ax_frac2width = 0.010 * width
+    height = 10
+    heatmap_width = len(var_names) * 0.18
+    width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    ax_frac2width = 0.25
     fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
                            figsize=(width, height), gridspec_kw={'width_ratios': [ax_frac2width, width, ax_frac2width]})
     groupby_ax = axs[0]
@@ -847,17 +848,20 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     if groupby:
         obs_tidy = obs_tidy.sort_index()
 
-    groupby_ax.imshow(np.matrix(obs_tidy.index.codes).T, aspect='auto')
-
     # determine groupby label positions
     value_sum = 0
     ticks = []
-    for value in obs_tidy.index.value_counts():
+    labels = []
+    label2code = {}
+    for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
         ticks.append(value_sum + (value / 2))
+        labels.append(label)
         value_sum += value
+        label2code[label] = code
 
+    groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
     groupby_ax.set_yticks(ticks)
-    groupby_ax.set_yticklabels(x)
+    groupby_ax.set_yticklabels(labels)
 
     # remove y ticks
     groupby_ax.tick_params(axis='y', left=False)
@@ -873,9 +877,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax.set_ylabel(groupby)
 
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
-    heatmap_ax.set_yticklabels([])
+    heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
-    pl.subplots_adjust(wspace=0.02, hspace=0.01)
+    pl.subplots_adjust(wspace=0.03, hspace=0.01)
     utils.savefig_or_show('heatmap', show=show, save=save)
 
     return axs
