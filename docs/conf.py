@@ -4,7 +4,7 @@ import inspect
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
@@ -191,7 +191,7 @@ github_url1 = 'https://github.com/{github_user}/{github_repo}/tree/{github_versi
 github_url2 = 'https://github.com/theislab/anndata/tree/master'
 
 
-def modurl(qualname):
+def modurl(qualname: str) -> str:
     """Get the full GitHub URL for some object’s qualname."""
     obj, module = get_obj_module(qualname)
     github_url = github_url1
@@ -206,12 +206,20 @@ def modurl(qualname):
     return f'{github_url}/{path}{fragment}'
 
 
+def api_image(qualname: str) -> Optional[str]:
+    # I’d like to make this a contextfilter, but the jinja context doesn’t contain the path,
+    # so no chance to not hardcode “api/” here.
+    path = Path(__file__).parent / 'api' / f'{qualname}.png'
+    print(path, path.is_file())
+    return f'.. image:: {path.name}\n   :width: 200\n   :align: right' if path.is_file() else ''
+
+
 # html_context doesn’t apply to autosummary templates ☹
 # and there’s no way to insert filters into those templates
 # so we have to modify the default filters
 from jinja2.defaults import DEFAULT_FILTERS
 
-DEFAULT_FILTERS['modurl'] = modurl
+DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
 # -- Prettier Autodoc -----------------------------------------------------
