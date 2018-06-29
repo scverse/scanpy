@@ -31,7 +31,7 @@ def louvain(
     resolution : `float` or `None`, optional (default: 1)
         For the default flavor ('vtraag'), you can provide a resolution (higher
         resolution means finding more and smaller clusters), which defaults to
-        1.0.
+        1.0. See “Time as a resolution parameter” in [Lambiotte09]_.
     random_state : `int`, optional (default: 0)
         Change the initialization of the optimization.
     restrict_to : `tuple`, optional (default: None)
