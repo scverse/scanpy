@@ -87,6 +87,10 @@ References
    *Hierarchical Differentiation of Myeloid Progenitors Is Encoded in the Transcription Factor Network*,
    `PLoS ONE <https://doi.org/10.1371/journal.pone.0022649>`_.
 
+.. [Lambiotte09] Lambiotte *et al.* (2009)
+   *Laplacian Dynamics and Multiscale Modular Structure in Networks*
+   `arXiv <https://arxiv.org/abs/0812.1770>`_
+
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
    `Cell <https://doi.org/10.1016/j.cell.2015.05.047>`_.
