@@ -22,8 +22,12 @@ References
    `PNAS <https://doi.org/10.1038/nmeth.3971>`_.
 
 .. [Csardi06] Csardi *et al.* (2006),
-   *The igraph software package for complex network researc*,
+   *The igraph software package for complex network research*,
    `InterJournal Complex Systems <http://igraph.org>`_.
+
+.. [Eraslan18] Eraslan and Simon *et al.* (2018),
+   *Single cell RNA-seq denoising using a deep count autoencoder*,
+   `bioRxiv <https://doi.org/10.1101/300681>`_.
 
 .. [Ester96] Ester *et al.* (1996),
    *A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise*,
