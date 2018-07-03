@@ -5,9 +5,10 @@
 .. role:: small
 
 
-On master :small:`June 20, 2018`
---------------------------------
+On master :small:`July 3, 2018`
+-------------------------------
 
+- :func:`~scanpy.api.pp.dca` for imputation and preprocessing using an autoencoder [Eraslan18]_
 - :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`_ - thanks to F Ramirez
 - :func:`~scanpy.api.pl.violin` now produces very compact overview figures with many panels, see `here <https://github.com/theislab/scanpy/pull/175>`_ - thanks to F Ramirez
 - :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`_; plot genes with highest mean fraction of cells, similar to plotQC of *Scater* [McCarthy17]_ - thanks to F Ramirez
@@ -30,7 +31,7 @@ Version 1.1 :small:`May 31, 2018`
 - :func:`~scanpy.api.read` reads compressed text files - thanks to G Eraslan
 - :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes - thanks to FG Brundu
 - :func:`~scanpy.api.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
-- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_
+- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_ - thanks to S Gigante
 - :func:`~scanpy.api.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
