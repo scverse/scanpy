@@ -46,6 +46,13 @@ For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens` an
 
    pp.mnn_correct
 
+**Imputation**
+
+.. autosummary::
+   :toctree: .
+
+   pp.dca
+
 **Neighbors**
 
 .. autosummary::
