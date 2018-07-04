@@ -883,3 +883,172 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     utils.savefig_or_show('heatmap', show=show, save=save)
 
     return axs
+
+
+def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+            show=None, save=None, **kwargs):
+    """Makes a 'dot plot' of the expression values of `var_names`.
+    For each var_name and each groupby category a dot is plotted.
+    Each dot represents two values: mean expression within
+    each category (visualized by color) and fraction of cells expressing the
+    var_name in the category. (visualized by the size of the dot).
+    If groupby is not given, the dotplot assumes that all data belongs to a single
+    category. A gene is not considered expressed if the expression value in the adata
+    (or adata.raw) is equal to zero.
+    For example, for each marker gene, the mean value and the percentage of cells
+    expressing the gene can be visualized for each cluster.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        var_names should be a valid subset of  `.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that groupby is
+        a categorical. If groupby is not a categorical observation, it would be
+        subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value determines
+        the number of groups into which the groupby observation should be subdivided.
+    show : bool, optional (default: `None`)
+         Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    **kwargs : keyword arguments
+        Are passed to `seaborn.heatmap`.
+
+    Returns
+    -------
+    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
+    second axis is the heatmap and the third axis is the colorbar.
+
+    """
+    from scipy.sparse import issparse
+    sanitize_anndata(adata)
+    if isinstance(var_names, str):
+        var_names = [var_names]
+    if groupby is not None:
+        if groupby not in adata.obs_keys():
+            raise ValueError('groupby has to be a valid observation. Given value: {}, '
+                             'valid observations: {}'.format(groupby, adata.obs_keys()))
+
+    if use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    if log:
+        matrix = np.log1p(matrix)
+
+    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+    if groupby is None:
+        # assign all data to a single category to allow groupby opeerations
+        categorical = pd.Series(np.repeat(0, obs_tidy.shape[0]), dtype='category')
+    else:
+        if not is_categorical_dtype(adata.obs[groupby]):
+            # if the groupby column is not categorical, turn it into one
+            # by subdividing into 7 categories
+            categorical = pd.cut(adata.obs[groupby], num_categories)
+        else:
+            categorical = adata.obs[groupby]
+    obs_tidy.set_index(categorical, groupby, inplace=True)
+    categories = obs_tidy.index.categories
+    # for if category defined by groupby (if any) compute for each var_name
+    # 1. the mean value over the category
+    # 2. the fraction of cells in the category having a value > 0
+
+    # 1. compute mean value
+    mean_obs = obs_tidy.groupby(level=0).mean()
+
+    # 2. compute fraction of cells having value >0
+    # transform obs_tidy into boolean matrix
+    obs_bool = obs_tidy.astype(bool)
+
+    # compute the sum per group which in the boolean matrix this is the number
+    # of values >0, and divide the result by the total number of values in the group
+    # (given by `count()`)
+    fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+
+    # set up axes
+    height = len(categories) * 0.5
+    # if the number of categories is small (eg 1 or 2) use
+    # a larger height
+    height = max([4, height])
+    heatmap_width = len(var_names) * 0.2
+    width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    ax_frac2width = 0.25
+    size_legend_width = 0.5
+    fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
+                           figsize=(width, height),
+                           gridspec_kw={'width_ratios': [width, ax_frac2width, size_legend_width]})
+
+    dot_ax = axs[0]
+    color_legend = axs[1]
+    size_legend = axs[2]
+
+    # make scatter plot in which
+    # x = var_names
+    # y = groupby category
+    # size = fraction
+    # color = mean expression
+
+    y, x = np.indices(mean_obs.shape)
+    y = y.flatten()
+    x = x.flatten()
+    frac = fraction_obs.values.flatten()
+    mean_flat = mean_obs.values.flatten()
+    cmap = pl.get_cmap('Reds')
+
+    size = (frac * 10) ** 2
+
+    import matplotlib.colors
+    normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
+    colors = [cmap(normalize(value)) for value in mean_flat]
+
+    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none')
+    y_ticks = range(mean_obs.shape[0])
+    dot_ax.set_yticks(y_ticks)
+    dot_ax.set_yticklabels([mean_obs.index[idx] for idx in y_ticks])
+
+    x_ticks = range(mean_obs.shape[1])
+    dot_ax.set_xticks(x_ticks)
+    dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
+    dot_ax.grid(False)
+    dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
+
+    # plot colorbar
+    import matplotlib.colorbar
+    matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
+
+    # plot size bar
+    fracs_legend = np.array([0.25, 0.50, 0.75, 1])
+    size = (fracs_legend * 10) ** 2
+    color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
+    size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
+    size_legend.set_yticks(range(len(size)))
+    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legend])
+
+    size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
+
+    # remove x ticks and labels
+    size_legend.tick_params(axis='x', bottom=False, labelbottom=False)
+    size_legend.set_ylim(-10, len(size))
+
+    # remove surrounding lines
+    size_legend.spines['right'].set_visible(False)
+    size_legend.spines['top'].set_visible(False)
+    size_legend.spines['left'].set_visible(False)
+    size_legend.spines['bottom'].set_visible(False)
+    size_legend.grid(False)
+
+    pl.subplots_adjust(wspace=0.1, hspace=0.01)
+    utils.savefig_or_show('heatmap', show=show, save=save)
+    return axs
