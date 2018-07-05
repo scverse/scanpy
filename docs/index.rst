@@ -6,12 +6,13 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018) <h
 
 .. include:: release_notes.rst
 
+.. Put references first so all references are resolved
 .. toctree::
    :maxdepth: 1
    :hidden:
 
+   references
    examples
    basic_usage
    installation
    api/index
-   references

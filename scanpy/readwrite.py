@@ -331,8 +331,8 @@ def _read_softgz(filename):
     -------
     adata
 
-    Note
-    ----
+    Notes
+    -----
     The function is based on a script by Kerby Shedden.
     http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
