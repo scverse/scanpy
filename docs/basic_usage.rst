@@ -17,7 +17,7 @@ where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds
 
     sc.pl.louvain(adata, **plotting_params)
 
-If you pass ``show=False``, a `matplotlib.Axes <https://matplotlib.org/api/axes_api.html>`__ instance is returned and you have all of matplotlib's detailed configuration possibilities.
+If you pass ``show=False``, a :class:`matplotlib.axes.Axes` instance is returned and you have all of matplotlib's detailed configuration possibilities.
 
 To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`__. If you want to return a copy of the :class:`~anndata.AnnData` object and leave the passed ``adata`` unchanged, pass ``copy=True``.
 
