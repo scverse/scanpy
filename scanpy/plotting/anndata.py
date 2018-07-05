@@ -648,7 +648,8 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             # x = categories in `groupby` and y is each of the keys provided.
             # An example is: keys = marker genes, groupby = louvain clusters.
             height = len(ys) * 0.6 + 3
-            width = len(x) * 0.9 + 2
+            categories = adata.obs[groupby].cat.categories
+            width = len(categories) * 0.2 + 1
             fig, axs = pl.subplots(nrows=len(ys), ncols=1, sharex=True, sharey=True,
                                     figsize=(width, height))
             for idx, y in enumerate(ys):
@@ -875,10 +876,13 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax.spines['bottom'].set_visible(False)
 
     groupby_ax.set_ylabel(groupby)
+    groupby_ax.grid(False)
 
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
+    heatmap_ax.set_xticks(range(len(var_names)))
+    heatmap_ax.set_xticklabels(var_names)
     pl.subplots_adjust(wspace=0.03, hspace=0.01)
     utils.savefig_or_show('heatmap', show=show, save=save)
 
@@ -981,7 +985,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     height = len(categories) * 0.5
     # if the number of categories is small (eg 1 or 2) use
     # a larger height
-    height = max([4, height])
+    height = max([2, height])
     heatmap_width = len(var_names) * 0.2
     width = heatmap_width + 3  # +3 to account for the colorbar and labels
     ax_frac2width = 0.25
@@ -1022,6 +1026,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     dot_ax.set_xticks(x_ticks)
     dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
     dot_ax.grid(False)
+    dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
+
+    # to be consistent with the heatmap plot, is better to
+    # invert the order of the y-axis, such that the first group is on
+    # top
+    ymin, ymax = dot_ax.get_ylim()
+    dot_ax.set_ylim(ymax, ymin)
+
     dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
 
     # plot colorbar
