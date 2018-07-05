@@ -22,7 +22,7 @@ def draw_graph(
     better. This requires to run :func:`~scanpy.api.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package `fa2
-    <https://github.com/bhargavchippada/forceatlas2>`_ [Chippada18]_, which can
+    <https://github.com/bhargavchippada/forceatlas2>`__ [Chippada18]_, which can
     be installed via `pip install fa2`.
 
     `Force-directed graph drawing
@@ -38,7 +38,7 @@ def draw_graph(
         Annotated data matrix.
     layout : `str`, optional (default: 'fa')
         'fa' (`ForceAtlas2`) or any valid `igraph layout
-        <http://igraph.org/c/doc/igraph-Layout.html>`_. Of particular interest
+        <http://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
         are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
         Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and
@@ -61,7 +61,7 @@ def draw_graph(
         Return a copy instead of writing to adata.
     **kwds : further parameters
         Parameters of chosen igraph layout. See, e.g.,
-        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`_. One of the most important ones is `maxiter`.
+        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`__. One of the most important ones is `maxiter`.
 
     Returns
     -------

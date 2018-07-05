@@ -254,7 +254,7 @@ def paga(
         Font size for node labels.
     text_kwds : keywords for text
         See `here
-        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`_.
+        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`__.
     node_size_scale : float (default: 1.0)
         Increase or decrease the size of the nodes.
     node_size_power : float (default: 0.5)
@@ -282,7 +282,7 @@ def paga(
         A matplotlib axes object for a potential colorbar.
     cb_kwds : colorbar keywords
         See `here
-        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`_,
+        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`__,
         for instance, `ticks`.
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.

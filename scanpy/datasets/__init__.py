@@ -178,7 +178,7 @@ def toggleswitch():
     """Simulated toggleswitch.
 
     Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
-    (2000) <https://doi.org/10.1038/35002131>`_.
+    (2000) <https://doi.org/10.1038/35002131>`__.
 
     Simulate via :func:`~scanpy.api.sim`.
 

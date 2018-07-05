@@ -80,7 +80,7 @@ def scatter(
     legend_loc : `str`, optional (default: 'right margin')
          Location of legend, either 'none', 'on data', 'right margin' or valid
          keywords for `matplotlib.pyplot.legend
-         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`_.
+         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`__.
          If 'on data export', the positions are exported to a text file.
     legend_fontsize : `int` (default: `None`)
          Legend font size.
@@ -701,7 +701,7 @@ def clustermap(
         adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
     """Hierarchically-clustered heatmap [Waskom16]_.
 
-    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ for :class:`~anndata.AnnData`.
+    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
@@ -718,7 +718,7 @@ def clustermap(
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     **kwargs : keyword arguments
-        Keyword arguments passed to `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_.
+        Keyword arguments passed to `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
 
     Returns
     -------

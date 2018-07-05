@@ -8,7 +8,7 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
     """Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
 
     This uses the implementatino of `mnnpy
-    <https://github.com/chriscainx/mnnpy>`_ [Kang18]_.
+    <https://github.com/chriscainx/mnnpy>`__ [Kang18]_.
 
     Depending on `do_concatenate`, returns matrices or `AnnData` objects in the
     original order containing corrected expression values or a concatenated
@@ -17,7 +17,7 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
     Be reminded that it is not advised to use the corrected data matrices for
     differential expression testing.
 
-    More information and bug reports `here <https://github.com/chriscainx/mnnpy>`_.
+    More information and bug reports `here <https://github.com/chriscainx/mnnpy>`__.
 
     Parameters
     ----------
