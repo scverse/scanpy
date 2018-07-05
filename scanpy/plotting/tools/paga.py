@@ -298,8 +298,8 @@ def paga(
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
-    Note
-    ----
+    Notes
+    -----
 
     When initializing the positions, note that - for some reason - igraph
     mirrors coordinates along the x axis... that is, you should increase the
