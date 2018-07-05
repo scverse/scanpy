@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # -- General configuration ------------------------------------------------
 
-# needs_sphinx = '1.0'
+needs_sphinx = '1.7'  # autosummary bugfix
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
@@ -148,7 +148,8 @@ def process_generate_options(app: Sphinx):
     generate_autosummary_docs(
         genfiles, builder=app.builder,
         warn=logger.warning, info=logger.info,
-        suffix=suffix, base_path=app.srcdir, imported_members=True,
+        suffix=suffix, base_path=app.srcdir,
+        imported_members=True, app=app,
     )
 
 
