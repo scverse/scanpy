@@ -881,7 +881,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
-    heatmap_ax.set_xticks(range(len(var_names)))
+    heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
     heatmap_ax.set_xticklabels(var_names)
     pl.subplots_adjust(wspace=0.03, hspace=0.01)
     utils.savefig_or_show('heatmap', show=show, save=save)
