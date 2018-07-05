@@ -21,7 +21,7 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
 
     Parameters
     ----------
-    datas : `numpy.ndarray` or :class:`~scanpy.api.AnnData`
+    datas : `numpy.ndarray` or :class:`~anndata.AnnData`
         Expression matrices or AnnData objects. Matrices should be shaped like
         n_obs * n_vars (n_cell * n_gene) and have consistent number of
         columns. AnnData objects should have same number of variables.
@@ -81,7 +81,7 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
 
     Returns
     -------
-    datas : `numpy.ndarray` or :class:`~scanpy.api.AnnData`
+    datas : `numpy.ndarray` or :class:`~anndata.AnnData`
         Corrected matrix/matrices or AnnData object/objects, depending on the
         input type and `do_concatenate`.
     mnn_list : `list`

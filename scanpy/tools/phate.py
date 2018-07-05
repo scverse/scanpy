@@ -35,7 +35,7 @@ def phate(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_components : `int`, optional (default: 2)
         number of dimensions in which the data will be embedded

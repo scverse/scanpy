@@ -28,7 +28,7 @@ def rank_genes_groups(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groupby : `str`
         The key of the observations grouping to consider.
@@ -86,7 +86,7 @@ def rank_genes_groups(
                                  adata.obs[groupby].cat.categories.tolist()))
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
-    
+
     if key_added is None:
         key_added = 'rank_genes_groups'
     adata.uns[key_added] = {}

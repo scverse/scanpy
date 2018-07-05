@@ -36,7 +36,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
     groups : key for categorical in `adata.obs`, optional (default: 'louvain')
         You can pass your predefined groups by choosing any categorical

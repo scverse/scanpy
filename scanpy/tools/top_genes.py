@@ -17,7 +17,7 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
 
         Parameters
         ----------
-        adata : :class:`~scanpy.api.AnnData`
+        adata : :class:`~anndata.AnnData`
             Annotated data matrix.
         name_list : list, optional (default: None)
             Takes a list of genes for which to calculate the correlation matrix
@@ -114,7 +114,7 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
 
             Parameters
             ----------
-            adata : :class:`~scanpy.api.AnnData`
+            adata : :class:`~anndata.AnnData`
                 Annotated data matrix.
             groupby : `str`
                 The key of the sample grouping to consider.

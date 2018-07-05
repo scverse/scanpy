@@ -9,12 +9,13 @@ test_compr.h5
 test_no_compr.h5
 docs/_build
 docs/api/scanpy.api.*.rst
+!docs/api/scanpy.api.AnnData.rst
 archive/
 data/
 figs/
 */figs*/
 write/
-./examples/
+/examples/
 scanpy.egg-info/
 scanpy_user/
 scanpy_save/

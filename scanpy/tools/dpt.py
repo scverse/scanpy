@@ -53,7 +53,7 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_dcs : `int`, optional (default: 10)
         The number of diffusion components to use.

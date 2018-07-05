@@ -62,7 +62,7 @@ def sim(model,
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
 
     Examples

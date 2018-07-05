@@ -22,7 +22,7 @@ def correlation_matrix(adata,groupby=None ,group=None, corr_matrix=None, annotat
 
             Parameters
             ----------
-            adata : :class:`~scanpy.api.AnnData`
+            adata : :class:`~anndata.AnnData`
                 Annotated data matrix.
             groupby : `str`, optional (default: None)
                 If specified, searches data_annotation for correlation_matrix+groupby+str(group)
@@ -77,7 +77,7 @@ def exploratory_rank_analysis(adata, groupby, x='inflation', y='mean', groups='a
 
                 Parameters
                 ----------
-                adata : :class:`~scanpy.api.AnnData`
+                adata : :class:`~anndata.AnnData`
                     Annotated data matrix.
                 groupby : `str`
                     The key of the sample grouping to consider.
@@ -400,7 +400,7 @@ def top_ranked_group_analysis(adata, groupby, groupid, n=100, special_markers=No
 
                 Parameters
                 ----------
-                adata : :class:`~scanpy.api.AnnData`
+                adata : :class:`~anndata.AnnData`
                     Annotated data matrix.
                 groupby : `str`
                     The key of the sample grouping to consider.
@@ -574,7 +574,7 @@ def scatter(adata, groupby, groupid, x,y, n=100, special_markers=None,
 
                 Parameters
                 ----------
-                adata : :class:`~scanpy.api.AnnData`
+                adata : :class:`~anndata.AnnData`
                     Annotated data matrix.
                 groupby : `str`
                     The key of the sample grouping to consider.
@@ -771,7 +771,7 @@ def ROC_AUC_analysis(adata,groupby,group,n_genes=100, special_markers=None, colo
 
         Parameters
         ----------
-        adata : :class:`~scanpy.api.AnnData`
+        adata : :class:`~anndata.AnnData`
             Annotated data matrix.
         groupby : `str`
             The key of the sample grouping to consider.

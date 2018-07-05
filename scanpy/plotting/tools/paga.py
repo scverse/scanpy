@@ -51,7 +51,7 @@ def paga_compare(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     kwds_scatter : `dict`
         Keywords for :func:`~scanpy.api.pl.scatter`.
@@ -211,7 +211,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     threshold : `float` or `None`, optional (default: 0.01)
         Do not draw edges for weights below this threshold. Set to 0 if you want
@@ -836,7 +836,7 @@ def paga_path(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
     nodes : list of group names or their category indices
         A path through nodes of the abstracted graph, that is, names or indices

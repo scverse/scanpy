@@ -24,7 +24,7 @@ def sandbag(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     phases : `dict`
         Dictionary of lists, i.e. {phase: [sample, ...]},
@@ -79,7 +79,7 @@ def cyclone(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     marker_pairs : `dict`
         Dictionary of marker pairs. See :func:`~scanpy.api.sandbag` output.

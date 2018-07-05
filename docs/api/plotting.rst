@@ -28,7 +28,7 @@ Thin wrappers for Seaborn [Waskom16]_ functions.
    pl.heatmap
    pl.clustermap
 
-   
+
 Preprocessing
 -------------
 
@@ -45,7 +45,7 @@ Tools
 -----
 
 Methods that extract and visualize tool-specific annotation in an
-:class:`~scanpy.api.AnnData` object.  For any method in module ``tl``, there is
+:class:`~anndata.AnnData` object.  For any method in module ``tl``, there is
 a method with the same name in ``pl``.
 
 **Embeddings**
@@ -77,8 +77,8 @@ a method with the same name in ``pl``.
    pl.paga_path
    pl.paga_compare
 
-**Marker genes**   
-   
+**Marker genes**
+
 .. autosummary::
    :toctree: .
 

@@ -32,7 +32,7 @@ def umap(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     min_dist : `float`, optional (default: 0.5)
         The effective minimum distance between embedded points. Smaller values
