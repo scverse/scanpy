@@ -146,8 +146,7 @@ Read 10x formatted hdf5 files using
 
    read_10x_h5
 
-Read other formats using functions borrowed from `anndata
-<http://anndata.readthedocs.io>`_
+Read other formats using functions borrowed from :mod:`anndata`
 
 .. autosummary::
    :toctree: .

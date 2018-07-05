@@ -1,6 +1,6 @@
 .. note::
 
-    Also see the release notes of `anndata <http://anndata.readthedocs.org>`_.
+    Also see the :ref:`release notes <anndata:release_notes>` of :mod:`anndata`.
 
 .. role:: small
 
@@ -141,7 +141,7 @@ Version 0.4.4 :small:`February 26, 2018`
    <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`_ [Waskom16]_
 2. only return `matplotlib.Axis` in plotting functions of ``sc.pl`` when `show=False`, otherwise `None`
 
-... and through `anndata v0.5 <http://anndata.readthedocs.io>`_
+... and through :mod:`anndata` v0.5.
 
 1. inform about duplicates in :class:`~anndata.AnnData.var_names` and resolve them using :func:`~anndata.AnnData.var_names_make_unique`
 2. by default, generate unique observation names in :func:`~anndata.AnnData.concatenate`
@@ -162,7 +162,7 @@ Version 0.4.4 :small:`February 26, 2018`
    <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_,
    `docs <https://scanpy.readthedocs.io/en/latest/api/index.html>`_
 
-... and through `anndata v0.4 <http://anndata.readthedocs.io>`_
+... and through :mod:`anndata` v0.4.
 
 1. towards a common file format for exchanging :class:`~anndata.AnnData` with
    packages such as Seurat and SCDE by reading and writing `.loom
@@ -184,10 +184,9 @@ Version 0.4.4 :small:`February 26, 2018`
 
 **November 16, 2017**: version 0.3
 
-1. :class:`~anndata.AnnData` can be `concatenated <https://anndata.readthedocs.io/en/latest/anndata.AnnData.html>`_
-2. :class:`~anndata.AnnData` is available as a `separate package <https://pypi.python.org/pypi/anndata/>`_
+1. :class:`~anndata.AnnData` can be :meth:`~anndata.AnnData.concatenate` d.
+2. :class:`~anndata.AnnData` is available as a `separate package <https://pypi.org/project/anndata/>`_
 3. results of approximate graph abstraction (AGA) are `simplified <https://github.com/theislab/graph_abstraction>`_
-
 
 **October 25, 2017**: version 0.2.9
 

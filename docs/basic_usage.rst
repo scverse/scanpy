@@ -25,8 +25,7 @@ To facilitate writing memory-efficient pipelines, by default, Scanpy tools opera
 AnnData
 ^^^^^^^
 
-Scanpy is based on `anndata <http://anndata.readthedocs.io>`_, which provides
-the :class:`~anndata.AnnData` class.
+Scanpy is based on :mod:`anndata`, which provides the :class:`~anndata.AnnData` class.
 
 .. raw:: html
 

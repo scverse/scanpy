@@ -7,7 +7,7 @@ Running the following installs most of the requirements::
 
    conda install seaborn scikit-learn statsmodels numba
 
-Pull Scanpy from `PyPI <https://pypi.python.org/pypi/scanpy>`__ (consider using ``pip3`` to access Python 3)::
+Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
   pip install scanpy
 
@@ -31,7 +31,7 @@ If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image fr
 
 .. _Docker: https://en.wikipedia.org/wiki/Docker_(software)
 .. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
-  
+
 Trouble shooting
 ~~~~~~~~~~~~~~~~
 
@@ -45,12 +45,12 @@ If you do not have sudo rights (you get a ``Permission denied`` error)::
 - If python-igraph still fails to install, see `here <https://stackoverflow.com/questions/29589696/problems-compiling-c-core-of-igraph-with-python-2-7-9-anaconda-2-2-0-on-mac-osx>`__ or consider installing gcc via ``brew install gcc --without-multilib`` and exporting ``export CC="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"; export CXX="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"``, where ``X`` and ``x`` refers to the version of ``gcc``; in my case, the path reads ``/usr/local/Cellar/gcc/6.3.0_1/bin/gcc-6``.
 
 **On Windows**, you can follow these steps::
-  
+
     conda install pandas cython
     conda install -c vtraag python-igraph
     conda install -c vtraag louvain
     pip install scanpy
-      
+
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~
