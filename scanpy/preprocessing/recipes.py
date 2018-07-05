@@ -14,7 +14,7 @@ def recipe_weinreb17(adata, log=True, mean_threshold=0.01, cv_threshold=2,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     copy : bool (default: False)
         Return a copy if true.
@@ -67,7 +67,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     Expects non-logarithmized data. If using logarithmized data, pass `log=False`.
 
     The recipe runs the following steps
-    
+
     .. code:: python
 
         sc.pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
@@ -83,7 +83,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_top_genes : `int`, optional (default: 1000)
         Number of genes to keep.

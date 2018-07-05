@@ -36,7 +36,7 @@ def dca(adata,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An anndata file with `.raw` attribute representing raw counts.
     mode : `str`, optional. `denoise`(default), or `latent`.
         `denoise` overwrites `adata.X` with denoised expression values.

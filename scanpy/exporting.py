@@ -27,7 +27,7 @@ def spring_project(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix: `adata.uns['neighbors']` needs to
         be present.
     project_dir : `str`
@@ -37,7 +37,7 @@ def spring_project(
     subplot_name: `str`, optional (default: `None`)
         Name of subplot folder to be created at `project_dir+"/"+subplot_name`
     cell_groupings : `str`, `list` of `str`, optional (default: `None`)
-        Instead of importing all categorical annotations when `None`, 
+        Instead of importing all categorical annotations when `None`,
         pass a list of keys for `adata.obs`.
     custom_color_tracks : `str`, `list` of `str`, optional (default: `None`)
         Specify specific `adata.obs` keys for continuous coloring.
@@ -49,12 +49,12 @@ def spring_project(
     Examples
     --------
     See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_.
-    """    
-    
+    """
+
     # need to get nearest neighbors first
     if 'neighbors' not in adata.uns:
         raise ValueError('Run `sc.pp.neighbors` first.')
-    
+
     # check that requested 2-D embedding has been generated
     if embedding_method not in adata.obsm_keys():
         if 'X_' + embedding_method in adata.obsm_keys():
@@ -63,10 +63,10 @@ def spring_project(
             if embedding_method in adata.uns:
                 embedding_method = 'X_' + embedding_method + '_' + adata.uns[embedding_method]['params']['layout']
             else:
-                raise ValueError('Run the specified embedding method `%s` first.' %embedding_method)            
-    
+                raise ValueError('Run the specified embedding method `%s` first.' %embedding_method)
+
     coords = adata.obsm[embedding_method]
-    
+
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
     project_dir = project_dir.rstrip('/') + '/'
@@ -77,13 +77,13 @@ def spring_project(
     if not os.path.exists(subplot_dir):
         os.makedirs(subplot_dir)
     print("Writing subplot to %s" %subplot_dir)
-    
+
     # Write counts matrices as hdf5 files and npz if they do not already exist
     # or if user requires overwrite.
     # To do: check if Alex's h5sparse format will allow fast loading from just
     # one file.
     write_counts_matrices = True
-    base_dir_filelist = ['counts_norm_sparse_genes.hdf5', 'counts_norm_sparse_cells.hdf5', 
+    base_dir_filelist = ['counts_norm_sparse_genes.hdf5', 'counts_norm_sparse_cells.hdf5',
                          'counts_norm.npz', 'total_counts.txt', 'genes.txt']
     if all([os.path.isfile(project_dir + f) for f in base_dir_filelist]):
         if not overwrite:
@@ -92,7 +92,7 @@ def spring_project(
             write_counts_matrices = False
         else:
             logg.warning('Overwriting the files in %s.' %project_dir)
-    
+
     # Ideally, all genes will be written from adata.raw
     if adata.raw is not None:
         E = adata.raw.X.tocsc()
@@ -100,13 +100,13 @@ def spring_project(
     else:
         E = adata.X.tocsc()
         gene_list = list(adata.var_names)
-    
+
     # Keep track of total counts per cell if present
     if total_counts_key in adata.obs:
         total_counts = np.array(adata.obs[total_counts_key])
     else:
         total_counts = E.sum(1).A1
-    
+
     # Write the counts matrices to project directory
     if write_counts_matrices:
         write_hdf5_genes(E, gene_list, project_dir + 'counts_norm_sparse_genes.hdf5')
@@ -116,7 +116,7 @@ def spring_project(
             for g in gene_list:
                 o.write(g + '\n')
         np.savetxt(project_dir + 'total_counts.txt', total_counts)
-    
+
     # Get categorical and continuous metadata
     categorical_extras = {}
     continuous_extras = {}
@@ -148,8 +148,8 @@ def spring_project(
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
             else:
                 logg.warning('Custom color track "%s" is not a continuous variable' %obs_name)
-    
-            
+
+
     # Write continuous colors
     continuous_extras['Uniform'] = np.zeros(E.shape[0])
     write_color_tracks(continuous_extras, subplot_dir+'color_data_gene_sets.csv')
@@ -165,30 +165,30 @@ def spring_project(
     categorical_coloring_data = build_categ_colors(categorical_coloring_data, categorical_extras)
     write_cell_groupings(subplot_dir+'categorical_coloring_data.json', categorical_coloring_data)
 
-    # Write graph in two formats for backwards compatibility 
+    # Write graph in two formats for backwards compatibility
     edges = get_edges(adata)
     write_graph(subplot_dir + 'graph_data.json', E.shape[0], edges)
     write_edges(subplot_dir + 'edges.csv', edges)
-    
-    
-    # Write cell filter; for now, subplots must be generated from within SPRING, 
+
+
+    # Write cell filter; for now, subplots must be generated from within SPRING,
     # so cell filter includes all cells.
     np.savetxt(subplot_dir + 'cell_filter.txt', np.arange(E.shape[0]), fmt='%i')
     np.save(subplot_dir + 'cell_filter.npy', np.arange(E.shape[0]))
-    
+
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
     coords = coords - coords.min(0)[None,:]
     coords = coords * (np.array([1000, 1000]) / coords.ptp(0))[None,:] + np.array([200,-200])[None,:]
-    np.savetxt(subplot_dir + 'coordinates.txt', 
-               np.hstack((np.arange(E.shape[0])[:,None], coords)), 
+    np.savetxt(subplot_dir + 'coordinates.txt',
+               np.hstack((np.arange(E.shape[0])[:,None], coords)),
                fmt='%i,%.6f,%.6f')
-    
+
     # Write some useful intermediates, if they exist
     if 'X_pca' in adata.obsm_keys():
-        np.savez_compressed(subplot_dir + 'intermediates.npz', 
-                            Epca=adata.obsm['X_pca'], 
+        np.savez_compressed(subplot_dir + 'intermediates.npz',
+                            Epca=adata.obsm['X_pca'],
                             total_counts = total_counts)
-    
+
     # Write PAGA data, if present
     if 'paga' in adata.uns:
         clusts = np.array(adata.obs[adata.uns['paga']['groups']].cat.codes)
@@ -197,7 +197,7 @@ def spring_project(
         export_PAGA_to_SPRING(adata, paga_coords, subplot_dir + 'PAGA_data.json')
 
     return None
-    
+
 
 # --------------------------------------------------------------------------------
 # Helper Functions
@@ -229,9 +229,9 @@ def get_edges(adata):
 
 def write_hdf5_genes(E, gene_list, filename):
     '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_genes.hdf5"'''
-        
+
     E = E.tocsc()
-    
+
     hf = h5py.File(filename, 'w')
     counts_group = hf.create_group('counts')
     cix_group = hf.create_group('cell_ix')
@@ -247,12 +247,12 @@ def write_hdf5_genes(E, gene_list, filename):
         cix_group.create_dataset(g, data = cell_ix)
 
     hf.close()
-    
+
 def write_hdf5_cells(E, filename):
     '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5" '''
-    
+
     E = E.tocsr()
-    
+
     hf = h5py.File(filename, 'w')
     counts_group = hf.create_group('counts')
     gix_group = hf.create_group('gene_ix')
@@ -268,7 +268,7 @@ def write_hdf5_cells(E, filename):
         gix_group.create_dataset(str(iC), data = gene_ix)
 
     hf.close()
-    
+
 def write_sparse_npz(E, filename, compressed = False):
     ''' SPRING standard: filename = main_spring_dir + "/counts_norm.npz"'''
     E = E.tocsc()
@@ -305,7 +305,7 @@ def get_color_stats_genes(color_stats, E, gene_list):
     maxes = E.max(0).todense().A1
 
     pctl = 99.6
-    pctl_n = (100-pctl) / 100. * E.shape[0]    
+    pctl_n = (100-pctl) / 100. * E.shape[0]
     pctls = np.zeros(E.shape[1], dtype=float)
     for iG in range(E.shape[1]):
         n_nonzero = E.indptr[iG+1] - E.indptr[iG]
@@ -334,14 +334,14 @@ def build_categ_colors(categorical_coloring_data, cell_groupings):
 def write_cell_groupings(filename, categorical_coloring_data):
     with open(filename,'w') as f:
         f.write(json.dumps(categorical_coloring_data,indent=4, sort_keys=True))#.decode('utf-8'))
-        
+
 def export_PAGA_to_SPRING(adata, paga_coords, outpath):
-    
+
     # retrieve node data
     group_key = adata.uns['paga']['groups']
     names = adata.obs[group_key].cat.categories
     coords = [list(xy) for xy in paga_coords]
-    
+
     sizes = list(adata.uns[group_key + '_sizes'])
     clus_labels = adata.obs[group_key].cat.codes.values
     cell_groups = [[int(j) for j in np.nonzero(clus_labels==i)[0]] for i in range(len(names))]
@@ -352,42 +352,42 @@ def export_PAGA_to_SPRING(adata, paga_coords, outpath):
         import scanpy.plotting.utils
         scanpy.plotting.utils.add_colors_for_categorical_sample_annotation(adata, group_key)
         colors = list(adata.uns[group_key + '_colors'])
-        
+
     # retrieve edge level data
     sources,targets = adata.uns['paga']['connectivities'].nonzero()
     weights = np.sqrt(adata.uns['paga']['connectivities'].data) / 3
-    
-    # save a threshold weight for showing edges so that by default, 
-    # the number of edges shown is 8X the number of nodes 
+
+    # save a threshold weight for showing edges so that by default,
+    # the number of edges shown is 8X the number of nodes
     if len(names) * 8 > len(weights):
         min_edge_weight_view = 0
     else:
         min_edge_weight_view = sorted(weights)[-len(names)*8]
-    
+
     # save another threshold for even saving edges at all, with 100 edges per node
-    if len(weights) < 100*len(names): 
+    if len(weights) < 100*len(names):
         min_edge_weight_save = 0
-    else: 
+    else:
         min_edge_weight_save = sorted(weights)[-len(names)*100]
-    
+
     # make node list
     nodes = []
     for i,name,xy,color,size,cells in zip(range(len(names)),names,coords,colors,sizes,cell_groups):
         nodes.append({'index':i,'size':int(size), 'color':color, 'coordinates':xy, 'cells':cells, 'name':name})
-    
+
     # make link list, avoid redundant encoding (graph is undirected)
     links = []
     for source,target,weight in zip(sources,targets,weights):
         if source < target and weight > min_edge_weight_save:
             links.append({'source':int(source), 'target':int(target), 'weight':float(weight)})
-    
+
     # save data about edge weights
     edge_weight_meta = {'min_edge_weight': min_edge_weight_view,
                         'max_edge_weight': np.max(weights)}
-    
+
     PAGA_data = {'nodes':nodes, 'links':links, 'edge_weight_meta':edge_weight_meta}
-    
+
     import json
     json.dump(PAGA_data,open(outpath,'w'), indent=4)
-    
+
     return None
