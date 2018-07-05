@@ -1,6 +1,6 @@
 .. note::
 
-    Also see the :ref:`release notes <anndata:release_notes>` of :mod:`anndata`.
+    Also see the :ref:`release notes <anndata:index>` of :mod:`anndata`.
 
 .. role:: small
 

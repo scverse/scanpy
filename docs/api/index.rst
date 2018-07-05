@@ -128,7 +128,7 @@ Reading
 -------
 
 *Note:* For reading annotation use
-`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`__ and add
+:ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>` and add
 it to your `AnnData` object. The following read functions are intended for
 the numeric data in the data matrix `X`.
 
