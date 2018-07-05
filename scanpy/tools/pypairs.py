@@ -20,7 +20,7 @@ def sandbag(
     [Fechtner18]_.
 
     More information and bug reports `here
-    <https://github.com/rfechtner/pypairs>`_.
+    <https://github.com/rfechtner/pypairs>`__.
 
     Parameters
     ----------

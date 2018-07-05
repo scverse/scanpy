@@ -17,9 +17,9 @@ where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds
 
     sc.pl.louvain(adata, **plotting_params)
 
-If you pass ``show=False``, a `matplotlib.Axes <https://matplotlib.org/api/axes_api.html>`_ instance is returned and you have all of matplotlib's detailed configuration possibilities.
+If you pass ``show=False``, a `matplotlib.Axes <https://matplotlib.org/api/axes_api.html>`__ instance is returned and you have all of matplotlib's detailed configuration possibilities.
 
-To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_. If you want to return a copy of the :class:`~anndata.AnnData` object and leave the passed ``adata`` unchanged, pass ``copy=True``.
+To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`__. If you want to return a copy of the :class:`~anndata.AnnData` object and leave the passed ``adata`` unchanged, pass ``copy=True``.
 
 
 AnnData
@@ -39,7 +39,7 @@ annotation (``adata.uns``). Values can be retrieved and appended via
 variables can be accessed via ``adata.obs_names`` and ``adata.var_names``,
 respectively. :class:`~anndata.AnnData` objects can be sliced like
 dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``.
-For more, see this `blog post <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_.
+For more, see this `blog post <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`__.
 
 To read a data file to an :class:`~anndata.AnnData` object, call::
 

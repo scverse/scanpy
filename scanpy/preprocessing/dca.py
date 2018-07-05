@@ -32,7 +32,7 @@ def dca(adata,
     cells in low dimensions. Type of the autoencoder and return values are
     determined by the parameters.
 
-    More information and bug reports `here <https://github.com/theislab/dca>`_.
+    More information and bug reports `here <https://github.com/theislab/dca>`__.
 
     Parameters
     ----------

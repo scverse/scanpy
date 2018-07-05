@@ -23,7 +23,7 @@ def spring_project(
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
 
-    See `SPRING <https://github.com/AllonKleinLab/SPRING>`_ or [Weinreb17]_ for details.
+    See `SPRING <https://github.com/AllonKleinLab/SPRING>`__ or [Weinreb17]_ for details.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ def spring_project(
 
     Examples
     --------
-    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`_.
+    See this `tutorial <https://github.com/theislab/scanpy_usage/tree/master/171111_SPRING_export>`__.
     """
 
     # need to get nearest neighbors first

@@ -67,7 +67,7 @@ def sim(model,
 
     Examples
     --------
-    See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11>`_
+    See this `use case <https://github.com/theislab/scanpy_usage/tree/master/170430_krumsiek11>`__
     """
     params = locals()
     if params_file:

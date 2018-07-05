@@ -5,10 +5,10 @@ def mnn_concatenate(*adatas, geneset=None, k=20, sigma=1, n_jobs=None, **kwds):
 
     Batch effect correction by matching mutual nearest neighbors [Haghverdi18]_
     has been implemented as a function 'mnnCorrect' in the R package
-    `scran <https://bioconductor.org/packages/release/bioc/html/scran.html>`_
+    `scran <https://bioconductor.org/packages/release/bioc/html/scran.html>`__
     This function provides a wrapper to use the mnnCorrect function when
     concatenating Anndata objects by using the Python-R interface `rpy2
-    <https://pypi.org/project/rpy2/>`_.
+    <https://pypi.org/project/rpy2/>`__.
 
     Parameters
     ----------
@@ -20,13 +20,13 @@ def mnn_concatenate(*adatas, geneset=None, k=20, sigma=1, n_jobs=None, **kwds):
         A list specifying the genes with which distances between cells are
         calculated in mnnCorrect, typically the highly variable genes.
         All genes are used if no geneset provided. See the `scran manual
-        <https://bioconductor.org/packages/release/bioc/html/scran.html>`_ for
+        <https://bioconductor.org/packages/release/bioc/html/scran.html>`__ for
         details.
     k : `int`, ptional (default: 20)
-        See the `scran manual <https://bioconductor.org/packages/release/bioc/html/scran.html>`_
+        See the `scran manual <https://bioconductor.org/packages/release/bioc/html/scran.html>`__
         for details.
     sigma : `int`, ptional (default: 20)
-        See the `scran manual <https://bioconductor.org/packages/release/bioc/html/scran.html>`_
+        See the `scran manual <https://bioconductor.org/packages/release/bioc/html/scran.html>`__
         for details.
     n_jobs : `int` or `None` (default: `sc.settings.n_jobs`)
         Number of jobs.

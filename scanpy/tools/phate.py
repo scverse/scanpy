@@ -29,9 +29,9 @@ def phate(
     visualization of biological progressions.
 
     For more information and access to the object-oriented interface, read the
-    `PHATE documentation <https://phate.readthedocs.io/>`_.  For help,
+    `PHATE documentation <https://phate.readthedocs.io/>`__.  For help,
     tutorials, bug reports, and R/MATLAB implementations, visit the `PHATE
-    GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`_.
+    GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`__.
 
     Parameters
     ----------
