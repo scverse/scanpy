@@ -404,7 +404,7 @@ def filter_genes_fano_deprecated(X, Ecutoff, Vcutoff):
     return gene_subset
 
 
-def log1p(data, copy=False):
+def log1p(data, copy=False, chunked=False, chunk_size=None):
     """Logarithmize the data matrix.
 
     Computes `X = log(X + 1)`, where `log` denotes the natural logarithm.
@@ -424,16 +424,23 @@ def log1p(data, copy=False):
     """
     if copy:
         data = data.copy()
-    
-    if isinstance(data, AnnData):
-        if issparse(data.X):
-            np.log1p(data.X.data, out=data.X.data)
+
+    def _log1p(X):
+        if issparse(X):
+            np.log1p(X.data, out=X.data)
         else:
-            np.log1p(data.X, out=data.X)
-    elif issparse(data):
-        np.log1p(data.data, out=data.data)
+            np.log1p(X, out=X)
+
+        return X
+
+    if isinstance(data, AnnData):
+        if chunked:
+            for chunk, start, end in data.chunked_X(chunk_size):
+                 data.X[start:end] = _log1p(chunk)
+        else:
+            _log1p(data.X)
     else:
-        np.log1p(data, out=data)
+        _log1p(data)
 
     return data if copy else None
 
