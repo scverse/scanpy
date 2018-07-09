@@ -152,6 +152,10 @@ References
    *Multicore t-SNE*,
    `GitHub <https://github.com/DmitryUlyanov/Multicore-TSNE>`__.
 
+.. [vanDijk18] Van Dijk D *et al.* (2018),
+   *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
+   `Cell <https://www.cell.com/cell/abstract/S0092-8674(18)30724-4>`__.
+
 .. [Weinreb17] Weinreb *et al.* (2016),
    *SPRING: a kinetic interface for visualizing high dimensional single-cell expression data*,
    `bioRxiv <https://doi.org/10.1101/090332>`__.
