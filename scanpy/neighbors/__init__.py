@@ -515,24 +515,6 @@ class Neighbors():
         An annotated data matrix.
     """
 
-    # Attributes
-    # ----------
-    # distances
-    # connectivities
-    # transitions
-    # transitions_sym
-    # eigen_values
-    # eigen_basis
-    # laplacian
-    # distances_dpt
-    #
-    # Methods
-    # -------
-    # compute_neighbors
-    # compute_transitions
-    # compute_eigen
-    # to_igraph
-
     def __init__(self, adata, n_dcs=None):
         self._adata = adata
         self._init_iroot()
