@@ -422,19 +422,27 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    if isinstance(data, AnnData):
-        adata = data.copy() if copy else data
-        if chunked:
-            for chunk, start, end in adata.chunked_X(chunk_size):
-                adata.X[start:end] = log1p(chunk)
+    if copy:
+        data = data.copy()
+
+    def _log1p(X):
+        if issparse(X):
+            np.log1p(X.data, out=X.data)
         else:
-            adata.X = log1p(data.X)
-        return adata if copy else None
-    X = data  # proceed with data matrix
-    if not issparse(X):
-        return np.log1p(X)
+            np.log1p(X, out=X)
+
+        return X
+
+    if isinstance(data, AnnData):
+        if chunked:
+            for chunk, start, end in data.chunked_X(chunk_size):
+                 data.X[start:end] = _log1p(chunk)
+        else:
+            _log1p(data.X)
     else:
-        return X.log1p()
+        _log1p(data)
+
+    return data if copy else None
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
