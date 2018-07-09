@@ -236,28 +236,32 @@ def paga(
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, the initial
         state is not reproducible.
-    root : int, str or list of int, optional (default: 0)
+    root : `int`, `str` or list of `int`, optional (default: 0)
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied
         node IDs are used as the roots of the trees (or a single tree if the
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
-    single_component : `bool`, optional (default: `False`)
-        Restrict to largest connected component.
+    transitions : `str` or `None`, optional (default: `None`)
+        Key for `.uns['paga']` that specifies the matrix that - for instance
+        `'transistions_confidence'` - that specifies the matrix that stores the
+        arrows.
     solid_edges : `str`, optional (default: 'paga_connectivities')
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: `None`)
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn dashed grey. If `None`, no dashed edges are drawn.
+    single_component : `bool`, optional (default: `False`)
+        Restrict to largest connected component.
     fontsize : `int` (default: `None`)
         Font size for node labels.
-    text_kwds : keywords for text
+    text_kwds : keywords for `matplotlib.text`
         See `here
-        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`__.
-    node_size_scale : float (default: 1.0)
+        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`_.
+    node_size_scale : `float` (default: 1.0)
         Increase or decrease the size of the nodes.
-    node_size_power : float (default: 0.5)
+    node_size_power : `float` (default: 0.5)
         The power with which groups sizes influence the radius of the nodes.
     edge_width_scale : `float`, optional (default: 5)
         Edge with scale in units of `rcParams['lines.linewidth']`.
