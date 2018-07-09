@@ -4,7 +4,7 @@ from .pca import pca
 from ..preprocessing.simple import N_PCS
 
 doc_use_rep = """\
-use_rep : \{`None`, 'X'\} or any key for `.obsm`, optional (default: `None`)
+use_rep : {`None`, 'X'} or any key for `.obsm`, optional (default: `None`)
     Use the indicated representation. If `None`, the representation is chosen
     automatically: for `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
     If 'X_pca' is not present, it's computed with default parameters.\

@@ -28,6 +28,8 @@ setup(
     install_requires=requires,
     extras_require=dict(
         louvain=['python-igraph', 'louvain'],
+        doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints'],
+        test=['pytest'],
     ),
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!
