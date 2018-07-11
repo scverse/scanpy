@@ -445,6 +445,39 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
     return data if copy else None
 
 
+def sqrt(data, copy=False, chunked=False, chunk_size=None):
+    """Square root the data matrix.
+
+    Computes `X = sqrt(X)`.
+
+    Parameters
+    ----------
+    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
+        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
+        is returned.
+
+    Returns
+    -------
+    Returns or updates `data`, depending on `copy`.
+    """
+    if isinstance(data, AnnData):
+        adata = data.copy() if copy else data
+        if chunked:
+            for chunk, start, end in adata.chunked_X(chunk_size):
+                adata.X[start:end] = sqrt(chunk)
+        else:
+            adata.X = sqrt(data.X)
+        return adata if copy else None
+    X = data  # proceed with data matrix
+    if not issparse(X):
+        return np.sqrt(X)
+    else:
+        return X.sqrt()
+
+
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
