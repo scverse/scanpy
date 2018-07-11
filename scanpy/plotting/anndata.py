@@ -15,7 +15,7 @@ from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from .utils import doc_scatter_bulk
+from .utils import doc_scatter_bulk, doc_show_save_ax
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -24,7 +24,7 @@ VALID_LEGENDLOCS = {
 }
 
 
-@doc_params(scatter_bulk=doc_scatter_bulk)
+@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def scatter(
         adata,
         x=None,
@@ -49,7 +49,8 @@ def scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot along observations or variables axes.
+    """\
+    Scatter plot along observations or variables axes.
 
     Color the plot using annotations of observations (`.obs`), variables
     (`.var`) or expression of genes (`.var_names`).
@@ -70,13 +71,7 @@ def scatter(
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
     {scatter_bulk}
-    show : `bool`, optional (default: `None`)
-         Show the plot.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : `matplotlib.Axes`
-         A `matplotlib.Axes` object.
+    {show_save_ax}
 
     Returns
     -------
@@ -438,14 +433,15 @@ def _scatter_obs(
                     os.makedirs(settings.writedir)
                 np.savetxt(filename, all_pos, delimiter=',')
         elif legend_loc == 'right margin':
-            legend = axs[ikey].legend(frameon=False, loc='center left',
-                                            bbox_to_anchor=(1, 0.5),
-                                            ncol=(1 if len(adata.obs[key].cat.categories) <= 14
-                                                  else 2 if len(adata.obs[key].cat.categories) <= 30 else 3),
-                                            fontsize=legend_fontsize)
+            legend = axs[ikey].legend(
+                frameon=False, loc='center left',
+                bbox_to_anchor=(1, 0.5),
+                ncol=(1 if len(adata.obs[key].cat.categories) <= 14
+                      else 2 if len(adata.obs[key].cat.categories) <= 30 else 3),
+                fontsize=legend_fontsize)
         elif legend_loc != 'none':
-            legend = axs[ikey].legend(frameon=False, loc=legend_loc,
-                                            fontsize=legend_fontsize)
+            legend = axs[ikey].legend(
+                frameon=False, loc=legend_loc, fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
@@ -513,10 +509,12 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
     if show == False: return gs
 
 
+@doc_params(show_save_ax=doc_show_save_ax)
 def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
-           xlabel='', rotation=None, save=None, ax=None, **kwargs):
-    """Violin plot [Waskom16]_.
+           xlabel='', rotation=None, save=None, ax=None, **kwds):
+    """\
+    Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
@@ -544,7 +542,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         Size of the jitter points.
     order : list of str, optional (default: `True`)
         Order in which to show the categories.
-    scale : {'area', 'count', 'width'}, optional (default: 'width')
+    scale : {{'area', 'count', 'width'}}, optional (default: 'width')
         The method used to scale the width of each violin. If 'area', each
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
@@ -554,14 +552,8 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         otherwise, no label is shown.
     rotation : `float`, optional (default: `None`)
         Rotation of xtick labels.
-    show : `bool`, optional (default: `None`)
-         Show the plot.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    ax : `matplotlib.Axes`
-         A `matplotlib.Axes` object.
-    **kwargs : keyword arguments
+    {show_save_ax}
+    **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
 
     Returns
@@ -602,7 +594,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
             # don't really know why this gives a warning without passing `order`
             g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwargs)
+                      scale=scale, order=keys, **kwds)
             g.set_titles(col_template='{col_name}').set_xlabels('')
             axs = [g]
             if stripplot:
@@ -626,7 +618,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             for idx, y in enumerate(ys):
                 ax = axs[idx]
                 ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                    orient='vertical', scale=scale, ax=ax, **kwargs)
+                                    orient='vertical', scale=scale, ax=ax, **kwds)
                 if stripplot:
                     ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                        jitter=jitter, color='black', size=size, ax=ax)
@@ -654,7 +646,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
         for ax, y in zip(axs, ys):
             ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, **kwargs)
+                                orient='vertical', scale=scale, ax=ax, **kwds)
             if stripplot:
                 ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
@@ -669,11 +661,15 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
     if show == False: return axs[0] if len(axs) == 1 else axs
 
 
+@doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
-    """Hierarchically-clustered heatmap [Waskom16]_.
+        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwds):
+    """\
+    Hierarchically-clustered heatmap [Waskom16]_.
 
-    Wraps `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for :class:`~anndata.AnnData`.
+    Wraps `seaborn.clustermap
+    <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for
+    :class:`~anndata.AnnData`.
 
     Parameters
     ----------
@@ -684,13 +680,10 @@ def clustermap(
         Currently, only a single key is supported.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    show : bool, optional (default: `None`)
-         Show the plot.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
-    **kwargs : keyword arguments
-        Keyword arguments passed to `seaborn.clustermap <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
+    {show_save_ax}
+    **kwds : keyword arguments
+        Keyword arguments passed to `seaborn.clustermap
+        <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
 
     Returns
     -------
@@ -728,20 +721,24 @@ def clustermap(
             row_colors.cat.categories,
             adata.uns[obs_keys + '_colors']))
         row_colors = adata.obs[obs_keys].map(lut)
-        g = sns.clustermap(df, row_colors=row_colors, **kwargs)
+        g = sns.clustermap(df, row_colors=row_colors, **kwds)
     else:
-        g = sns.clustermap(df, **kwargs)
+        g = sns.clustermap(df, **kwds)
     show = settings.autoshow if show is None else show
     if show: pl.show()
     else: return g
 
 
+@doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            show=None, save=None, **kwargs):
-    """Plot a heatmap of the expression values of `var_names`. If groupby is given, the heatmap
-    is ordered by the respective group. For example, a list of marker genes
-    can be plotted, ordered by clustering. If the groupby observation is not categorical
-    the observation is turn into a categorical by binning the data into the number
+            show=None, save=None, **kwds):
+    """\
+    Heatmap of the expression values of set of genes..
+
+    If `groupby` is given, the heatmap is ordered by the respective group. For
+    example, a list of marker genes can be plotted, ordered by clustering. If
+    the `groupby` observation annotation is not categorical the observation
+    annotation is turned into a categorical by binning the data into the number
     especified in `num_categories`.
 
     Parameters
@@ -749,31 +746,28 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     var_names : `str` or list of `str`
-        var_names should be a valid subset of  `.var_names`.
+        `var_names` should be a valid subset of  `adata.var_names`.
     groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that groupby is
-        a categorical. If groupby is not a categorical observation, it would be
-        subdivided into `num_categories`.
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories`.
     log : `bool`, optional (default: `False`)
         Use the log of the values
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value determines
-        the number of groups into which the groupby observation should be subdivided.
-    show : bool, optional (default: `None`)
-         Show the plot.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    **kwargs : keyword arguments
+        Only used if groupby observation is not categorical. This value
+        determines the number of groups into which the groupby observation
+        should be subdivided.
+    {show_save_ax}
+    **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
 
     Returns
     -------
-    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
-    second axis is the heatmap and the third axis is the colorbar.
-
+    A list of `matplotlib.Axes` where the first ax is the groupby categories
+    colorcode, the second axis is the heatmap and the third axis is the
+    colorbar.
     """
     from scipy.sparse import issparse
     sanitize_anndata(adata)
@@ -811,8 +805,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     heatmap_width = len(var_names) * 0.18
     width = heatmap_width + 3  # +3 to account for the colorbar and labels
     ax_frac2width = 0.25
-    fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
-                           figsize=(width, height), gridspec_kw={'width_ratios': [ax_frac2width, width, ax_frac2width]})
+    fig, axs = pl.subplots(
+        nrows=1, ncols=3, sharey=False,
+        figsize=(width, height),
+        gridspec_kw={'width_ratios': [ax_frac2width, width, ax_frac2width]})
     groupby_ax = axs[0]
     heatmap_ax = axs[1]
     heatmap_cbar_ax = axs[2]
@@ -848,7 +844,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     groupby_ax.set_ylabel(groupby)
 
-    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
+    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
     pl.subplots_adjust(wspace=0.03, hspace=0.01)

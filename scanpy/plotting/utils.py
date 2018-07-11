@@ -54,6 +54,16 @@ title : `str`, optional (default: `None`)
      Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
 """
 
+doc_show_save_ax = """\
+show : `bool`, optional (default: `None`)
+     Show the plot, do not return axis.
+save : `bool` or `str`, optional (default: `None`)
+    If `True` or a `str`, save the figure. A string is appended to the default
+    filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+ax : `matplotlib.Axes`, optional (default: `None`)
+    A matplotlib axes object. Only works if plotting a single component.\
+"""
+
 _tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
 
 
