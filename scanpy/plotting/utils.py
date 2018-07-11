@@ -318,8 +318,9 @@ def adjust_palette(palette, length):
         return palette
 
 
-def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
-    if key + '_colors' in adata.uns:
+def add_colors_for_categorical_sample_annotation(
+        adata, key, palette=None, force_update_colors=False):
+    if key + '_colors' in adata.uns and not force_update_colors:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
             logg.info('    number of colors in `.uns[{}\'_colors\']` smaller than number of categories,'
                       ' falling back to palette'.format(key))
@@ -337,13 +338,15 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None):
     adata.uns[key + '_colors'] = palette_adjusted[
         :len(adata.obs[key].cat.categories)].by_key()['color']
     if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
-        raise ValueError('Cannot plot more than {} categories, which is not enough for {}.'
-                         .format(len(adata.uns[key + '_colors']), key))
+        raise ValueError(
+            'Cannot plot more than {} categories, which is not enough for {}.'
+            .format(len(adata.uns[key + '_colors']), key))
     for iname, name in enumerate(adata.obs[key].cat.categories):
         if name in settings.categories_to_ignore:
-            logg.info('... setting color of group \'{}\' in \'{}\' to \'grey\' '
-                      '(`sc.settings.categories_to_ignore`)'
-                      .format(name, key))
+            logg.info(
+                '    setting color of group \'{}\' in \'{}\' to \'grey\' '
+                '(`sc.settings.categories_to_ignore`)'
+                .format(name, key))
             adata.uns[key + '_colors'][iname] = 'grey'
 
 

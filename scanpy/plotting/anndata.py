@@ -381,7 +381,8 @@ def _scatter_obs(
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
         key = keys[ikey]
-        utils.add_colors_for_categorical_sample_annotation(adata, key, palette)
+        utils.add_colors_for_categorical_sample_annotation(
+            adata, key, palette, force_update_colors=not palette_was_none)
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
