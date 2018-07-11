@@ -48,7 +48,7 @@ Methods that extract and visualize tool-specific annotation in an
 :class:`~anndata.AnnData` object.  For any method in module ``tl``, there is
 a method with the same name in ``pl``.
 
-**Embeddings**
+**PCA**
 
 .. autosummary::
    :toctree: .
@@ -57,6 +57,12 @@ a method with the same name in ``pl``.
    pl.pca_loadings
    pl.pca_scatter
    pl.pca_variance_ratio
+   
+**Embeddings**
+
+.. autosummary::
+   :toctree: .
+             
    pl.tsne
    pl.umap
    pl.diffmap
@@ -65,12 +71,11 @@ a method with the same name in ``pl``.
 
 **Branching trajectories and pseudotime, clustering**
 
+Visualize clusters using one of the embedding methods passing ``color='louvain'``.
+
 .. autosummary::
    :toctree: .
 
-   pl.louvain
-   pl.dpt
-   pl.dpt_scatter
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
    pl.paga

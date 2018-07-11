@@ -14,7 +14,8 @@ from .. import settings
 from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
-from ..utils import sanitize_anndata
+from ..utils import sanitize_anndata, doc_params
+from .utils import doc_scatter_bulk
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -23,6 +24,7 @@ VALID_LEGENDLOCS = {
 }
 
 
+@doc_params(scatter_bulk=doc_scatter_bulk)
 def scatter(
         adata,
         x=None,
@@ -65,44 +67,14 @@ def scatter(
         `[\'ann1\', \'ann2\']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    basis : {'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}
+    basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
-    groups : `str`, optional (default: all groups in color)
-        Allows to restrict categories in observation or variable annotation to a
-        subset.
-    components : `str` or list of `str`, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : `str`, optional (default: 'right margin')
-         Location of legend, either 'none', 'on data', 'right margin' or valid
-         keywords for `matplotlib.pyplot.legend
-         <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html>`__.
-         If 'on data export', the positions are exported to a text file.
-    legend_fontsize : `int` (default: `None`)
-         Legend font size.
-    legend_fontweight : {'normal', 'bold', ...} (default: `None`)
-         Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
-         otherwise to 'normal'. Available are `['light', 'normal', 'medium',
-         'semibold', 'bold', 'heavy', 'black']`.
-    color_map : `str` (default: 'RdBu_r')
-         String denoting matplotlib color map for continuous coloring.
-    palette : list of `str` (default: `None`)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : `float` (default: 0.3)
-         Adjust how far the plotting panel extends to the right.
-    size : float (default: None)
-         Point size. Dependent on number of data points by default.
-    title : `str` or list of `str`, optional (default: `None`)
-         Provide title for panels either as `[\'title1\', ...]`.
+    {scatter_bulk}
     show : `bool`, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     ax : `matplotlib.Axes`
          A `matplotlib.Axes` object.
 
