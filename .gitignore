@@ -4,9 +4,9 @@
 .coverage
 cache/
 coverage.xml
-test.h5
-test_compr.h5
-test_no_compr.h5
+test.h5ad
+test_compr.h5ad
+test_no_compr.h5ad
 docs/_build
 docs/api/scanpy.api.*.rst
 !docs/api/scanpy.api.AnnData.rst
