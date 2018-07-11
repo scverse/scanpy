@@ -15,7 +15,7 @@ from ... import settings
 from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from ..utils import doc_edges_arrows
+from ..utils import doc_edges_arrows, doc_scatter_bulk
 
 
 # ------------------------------------------------------------------------------
@@ -23,8 +23,10 @@ from ..utils import doc_edges_arrows
 # ------------------------------------------------------------------------------
 
 
+@doc_params(scatter_bulk=doc_scatter_bulk)
 def pca(adata, **params):
-    """Plot PCA results.
+    """\
+    Plot PCA results.
 
     The parameters are the ones of the scatter plot. Call pca_ranking separately
     if you want to change the default settings.
@@ -33,36 +35,16 @@ def pca(adata, **params):
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
+    color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Options for keyword argument 'loc'.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
+    {scatter_bulk}
+    title : str, optional (default: `None`)
          Provide title for panels either as `["title1", "title2", ...]` or
          `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -75,6 +57,7 @@ def pca(adata, **params):
     pca_variance_ratio(adata, show=show)
 
 
+@doc_params(scatter_bulk=doc_scatter_bulk)
 def pca_scatter(
         adata,
         color=None,
@@ -95,41 +78,20 @@ def pca_scatter(
         show=None,
         save=None,
         ax=None):
-    """Scatter plot in PCA coordinates.
+    """\
+    Scatter plot in PCA coordinates.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
+    color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -175,7 +137,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
     components : str or list of integers, optional
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
-    show : bool, optional (default: None)
+    show : bool, optional (default: `None`)
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -193,7 +155,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
 
     Parameters
     ----------
-    show : bool, optional (default: None)
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -203,6 +165,7 @@ def pca_variance_ratio(adata, log=False, show=None, save=None):
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
+@doc_params(scatter_bulk=doc_scatter_bulk)
 def diffmap(
         adata,
         color=None,
@@ -222,43 +185,20 @@ def diffmap(
         title=None,
         show=None,
         save=None, ax=None):
-    """Scatter plot in Diffusion Map basis.
+    """\
+    Scatter plot in Diffusion Map basis.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
+    color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors cycle to use for categorical groups.
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -311,7 +251,7 @@ def diffmap(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows)
+@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk)
 def draw_graph(
         adata,
         layout=None,
@@ -348,36 +288,14 @@ def draw_graph(
         One of the `draw_graph` layouts, see
         :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
         is used.
-    color : `str` or list of strings, optional (default: None)
+    color : `str` or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     {edges_arrows}
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -421,7 +339,7 @@ def draw_graph(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows)
+@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk)
 def tsne(
         adata,
         color=None,
@@ -444,40 +362,21 @@ def tsne(
         title=None,
         show=None,
         save=None, ax=None):
-    """Scatter plot in tSNE basis.
+    """\
+    Scatter plot in tSNE basis.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
+    color : string or list of strings, optional (default: `None`)
+        Keys for observation/cell annotation either as list `["ann1", "ann2"]`
+        or string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     {edges_arrows}
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -515,7 +414,7 @@ def tsne(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows)
+@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk)
 def umap(
         adata,
         color=None,
@@ -540,44 +439,21 @@ def umap(
         title=None,
         show=None,
         save=None, ax=None):
-    """Scatter plot in UMAP basis.
+    """\
+    Scatter plot in UMAP basis.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
+    color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    {{edges_arrows}}
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {{'2d', '3d'}}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {edges_arrows}
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -617,7 +493,7 @@ def umap(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows)
+@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk)
 def phate(
         adata,
         color=None,
@@ -640,40 +516,21 @@ def phate(
         title=None,
         show=None,
         save=None, ax=None):
-    """Scatter plot in PHATE basis.
+    """\
+    Scatter plot in PHATE basis.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    color : string or list of strings, optional (default: None)
+    color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
         string `"ann1,ann2,..."`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     {edges_arrows}
-    sort_order : `bool`, optional (default: `True`)
-        For continuous annotations used as color parameter, plot data points
-        with higher values on top of others.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
+    {scatter_bulk}
+    show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
@@ -739,151 +596,6 @@ def phate(
 # ------------------------------------------------------------------------------
 
 
-def dpt(
-        adata,
-        basis='diffmap',
-        color=None,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        color_map=None,
-        palette=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None):
-    """Plot results of DPT analysis.
-
-    Parameters
-    ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
-        Choose the basis in which to plot.
-    color : string or list of strings, optional (default: None)
-        Observation/ cell annotation for coloring in the form "ann1,ann2,...". String
-        annotation is plotted assuming categorical annotation, float and integer
-        annotation is plotted assuming continuous annoation.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    size : float (default: None)
-         Point size.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-    show_tree : bool, optional (default: False)
-         This shows the inferred tree. For more than a single branching, the
-         result is pretty unreliable. Use tool `aga` (Approximate Graph
-         Abstraction) instead.
-    """
-    colors = ['dpt_pseudotime']
-    if len(np.unique(adata.obs['dpt_groups'].values)) > 1: colors += ['dpt_groups']
-    if color is not None: colors = color
-    dpt_scatter(
-        adata,
-        basis=basis,
-        color=color,
-        alpha=alpha,
-        groups=groups,
-        components=components,
-        projection=projection,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        color_map=color_map,
-        palette=palette,
-        right_margin=right_margin,
-        size=size,
-        title=title,
-        show=False,
-        save=save)
-    dpt_groups_pseudotime(adata, color_map=color_map, show=False, save=save)
-    dpt_timeseries(adata, color_map=color_map, show=show, save=save)
-
-
-def dpt_scatter(
-        adata,
-        basis='diffmap',
-        color=None,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        color_map=None,
-        palette=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None):
-    """Scatter plot of DPT results.
-
-    See parameters of sc.pl.dpt().
-    """
-
-    colors = ['dpt_pseudotime']
-    if len(np.unique(adata.obs['dpt_groups'].values)) > 1: colors += ['dpt_groups']
-    if color is not None:
-        if not isinstance(color, list): colors = color.split(',')
-        else: colors = color
-    if components == 'all':
-        components_list = ['1,2', '1,3', '1,4', '1,5', '2,3', '2,4', '2,5', '3,4', '3,5', '4,5']
-    else:
-        if components is None:
-            components = '1,2' if '2d' in projection else '1,2,3'
-        if not isinstance(components, list): components_list = [components]
-        else: components_list = components
-    for components in components_list:
-        axs = scatter(
-            adata,
-            basis=basis,
-            color=colors,
-            groups=groups,
-            components=components,
-            projection=projection,
-            legend_loc=legend_loc,
-            legend_fontsize=legend_fontsize,
-            legend_fontweight=legend_fontweight,
-            color_map=color_map,
-            palette=palette,
-            right_margin=right_margin,
-            size=size,
-            title=title,
-            show=False)
-        writekey = 'dpt_' + basis + '_components' + components.replace(',', '')
-        utils.savefig_or_show(writekey, show=show, save=save)
-
-
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
     """Heatmap of pseudotime series.
 
@@ -934,88 +646,6 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
                        yticks=[0, 1],
                        color_map=color_map)
     utils.savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
-
-
-def louvain(
-        adata,
-        basis='tsne',
-        color=None,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        color_map=None,
-        palette=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None, ax=None):
-    """Plot results of Louvain clustering.
-
-    Parameters
-    ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    basis : {`'diffmap'`, `'pca'`, `'tsne'`, `'draw_graph_...'`}
-        Choose the basis in which to plot.
-    color : string or list of strings, optional (default: None)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    groups : str, optional (default: all groups)
-        Restrict to a few categories in categorical observation annotation.
-    components : str or list of str, optional (default: '1,2')
-         String of the form '1,2' or ['1,2', '2,3'].
-    projection : {'2d', '3d'}, optional (default: '2d')
-         Projection of plot.
-    legend_loc : str, optional (default: 'right margin')
-         Location of legend, either 'on data', 'right margin' or valid keywords
-         for matplotlib.legend.
-    legend_fontsize : int (default: None)
-         Legend font size.
-    color_map : str (default: `matplotlib.rcParams['image.cmap']`)
-         String denoting matplotlib color map.
-    palette : list of str (default: None)
-         Colors to use for plotting groups (categorical annotation).
-    right_margin : float or list of floats (default: None)
-         Adjust the width of the space right of each plotting panel.
-    title : str, optional (default: None)
-         Provide title for panels either as `["title1", "title2", ...]` or
-         `"title1,title2,..."`.
-    show : bool, optional (default: None)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-    """
-    add_color = []
-    if color is not None:
-        add_color = color if isinstance(color, list) else color.split(',')
-    color = ['louvain_groups'] + add_color
-    axs = scatter(
-        adata,
-        basis=basis,
-        color=color,
-        alpha=alpha,
-        groups=groups,
-        components=components,
-        projection=projection,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        color_map=color_map,
-        palette=palette,
-        right_margin=right_margin,
-        size=size,
-        title=title,
-        show=False,
-        save=False)
-    utils.savefig_or_show('louvain_' + basis, show=show, save=save)
 
 
 def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
@@ -1212,7 +842,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    show : bool, optional (default: None)
+    show : bool, optional (default: `None`)
         Show the plot, do not return axis.
     """
     from ... import utils as sc_utils

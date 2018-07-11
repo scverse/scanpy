@@ -8,17 +8,22 @@ from . import utils
 # --------------------------------------------------------------------------------
 
 
-def filter_genes_dispersion(result, log=False, save=None, show=None):
-    """Plot dispersions vs. means for genes.
+def filter_genes_dispersion(result, log=False, show=None, save=None):
+    """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
     Parameters
     ----------
-    result: np.recarray
-        Result of sc.pp.filter_genes_dispersion.
-    log : bool
+    result : `np.recarray`
+        Result of :func:`~scanpy.api.pp.filter_genes_dispersion`.
+    log : `bool`
         Plot on logarithmic axes.
+    show : bool, optional (default: `None`)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
     gene_subset = result.gene_subset
     means = result.means
