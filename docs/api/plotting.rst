@@ -7,7 +7,7 @@ The following describes the plotting submodule of ``scanpy.api``.
 
 .. note::
 
-    See the :ref:`settings` section for some important plotting configurations.
+    See the :ref:`settings` section for all important plotting configurations.
 
 
 Generic
@@ -17,16 +17,10 @@ Generic
    :toctree: .
 
    pl.scatter
-   pl.ranking
-
-Thin wrappers for Seaborn [Waskom16]_ functions.
-
-.. autosummary::
-   :toctree: .
-
    pl.violin
    pl.heatmap
    pl.clustermap
+   pl.ranking
 
 
 Preprocessing
