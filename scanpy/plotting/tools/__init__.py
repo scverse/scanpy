@@ -344,6 +344,7 @@ def rank_genes_groups_violin(
     groups_names = (adata.uns[key]['names'].dtype.names
                     if groups is None else groups)
     if isinstance(groups_names, str): groups_names = [groups_names]
+    axs = []
     for group_name in groups_names:
         if gene_names is None:
             gene_names = adata.uns[
@@ -386,7 +387,9 @@ def rank_genes_groups_violin(
                     + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)
         utils.savefig_or_show(writekey, show=show, save=save)
-        return _ax
+        axs.append(_ax)
+    if show == False: return axs
+
 
 def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         show=None, save=None):
