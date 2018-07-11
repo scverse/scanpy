@@ -32,7 +32,7 @@ def phate(
     `PHATE documentation <https://phate.readthedocs.io/>`__.  For
     tutorials, bug reports, and R/MATLAB implementations, visit the `PHATE
     GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`__. For help
-    using PHATE, visit <https://krishnaswamylab.org/get-help>.
+    using PHATE, go `here <https://krishnaswamylab.org/get-help>`__.
 
     Parameters
     ----------
