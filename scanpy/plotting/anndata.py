@@ -982,21 +982,49 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
     # set up axes
-    height = len(categories) * 0.5
+    height = len(categories) * 0.3 + 1  # +1 for labels
     # if the number of categories is small (eg 1 or 2) use
     # a larger height
-    height = max([2, height])
-    heatmap_width = len(var_names) * 0.2
-    width = heatmap_width + 3  # +3 to account for the colorbar and labels
-    ax_frac2width = 0.25
-    size_legend_width = 0.5
-    fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
-                           figsize=(width, height),
-                           gridspec_kw={'width_ratios': [width, ax_frac2width, size_legend_width]})
+    height = max([1.5, height])
+    heatmap_width = len(var_names) * 0.5
+    width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
 
-    dot_ax = axs[0]
-    color_legend = axs[1]
-    size_legend = axs[2]
+    # colorbar ax width should not change with differences in the width of the image
+    # otherwise can become too small
+    colorbar_width = 0.4
+    colorbar_width_spacer = 0.7
+    size_legend_width = 0.5
+
+    # define a layout of 1 row x 4 columns
+    # First ax is for the main figure
+    # Second ax is for the color bar legend
+    # Third ax is for an spacer that avoids the ticks
+    # from the color bar to be hidden beneath the next axis
+    # Fourth ax is to plot the size legend
+    from matplotlib import gridspec
+    fig = pl.figure(figsize=(width, height))
+    axs = gridspec.GridSpec(nrows=1, ncols=4, left=0.05, right=0.48, wspace=0.05,
+                            width_ratios=[heatmap_width, colorbar_width, colorbar_width_spacer, size_legend_width])
+    if len(categories) < 4:
+        #  hen two few categories are shown, the colorbar and size legend
+        # are compressed, thus, the dotplot ax is split into two:
+        axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[0], height_ratios=[len(categories) * 0.3, 1])
+        dot_ax = fig.add_subplot(axs2[0])
+    else:
+        dot_ax = fig.add_subplot(axs[0])
+
+    color_legend = fig.add_subplot(axs[1])
+
+    # to keep the size_legen of about the same height, irrespective
+    # of the number of categories, the fourth ax is subdivided into two parts
+    size_legend_height = min(1.3, height)
+    # wspace is proportional to the width but a constant value is
+    # needed such that the spacing is the same for thinner or wider images.
+    wspace = 10.5/ width
+    axs3 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[3], wspace=wspace,
+                                            height_ratios=[size_legend_height / height,
+                                                           (height - size_legend_height) / height])
+    size_legend = fig.add_subplot(axs3[0])
 
     # make scatter plot in which
     # x = var_names
@@ -1027,14 +1055,15 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
     dot_ax.grid(False)
     dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
+    dot_ax.set_ylabel(groupby)
 
     # to be consistent with the heatmap plot, is better to
     # invert the order of the y-axis, such that the first group is on
     # top
     ymin, ymax = dot_ax.get_ylim()
-    dot_ax.set_ylim(ymax, ymin)
+    dot_ax.set_ylim(ymax+0.5, ymin - 0.5)
 
-    dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
+    dot_ax.set_xlim(-1, len(var_names) + 0.5)
 
     # plot colorbar
     import matplotlib.colorbar
@@ -1052,7 +1081,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     # remove x ticks and labels
     size_legend.tick_params(axis='x', bottom=False, labelbottom=False)
-    size_legend.set_ylim(-10, len(size))
 
     # remove surrounding lines
     size_legend.spines['right'].set_visible(False)
@@ -1061,6 +1089,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     size_legend.spines['bottom'].set_visible(False)
     size_legend.grid(False)
 
-    pl.subplots_adjust(wspace=0.1, hspace=0.01)
+    ymin, ymax = size_legend.get_ylim()
+    size_legend.set_ylim(ymin, ymax+0.5)
+
     utils.savefig_or_show('heatmap', show=show, save=save)
     return axs
