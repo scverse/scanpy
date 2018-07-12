@@ -18,7 +18,7 @@ def magic(adata,
           random_state=None,
           n_jobs=None,
           verbose=False,
-          copy=False,
+          copy=None,
           **kwargs):
     """Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
 
@@ -64,13 +64,16 @@ def magic(adata,
     verbose : `bool`, `int` or `None`, optional (default: `sc.settings.verbosity`)
         If `True` or an integer `>= 2`, print status messages.
         If `None`, `sc.settings.verbosity` is used.
-    copy : `bool`, optional. Default: `False`.
-        If true, a copy of anndata is returned.
+    copy : `bool` or `None`, optional. Default: `None`.
+        If true, a copy of anndata is returned. If `None`, `copy` is True if
+        `genes` is not `'all_genes'` or `'pca_only'`. `copy` may only be False
+        if `genes` is `'all_genes'` or `'pca_only'`, as the resultant data
+        will otherwise have different column names from the input data.
     kwargs : additional arguments to `magic.MAGIC`
 
     Returns
     -------
-    If `copy` is true, AnnData object is returned.
+    If `copy` is True, AnnData object is returned.
 
     If `subset_genes` is not `all_genes`, PCA on MAGIC values of cells are stored in
     `adata.obsm['X_magic']` and `adata.X` is not modified.
@@ -84,8 +87,8 @@ def magic(adata,
     >>> adata = sc.datasets.paul15()
     >>> sc.pp.normalize_per_cell(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
-    >>> sc.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], k=5)
-    >>> adata.obsm['X_magic'].shape
+    >>> adata_magic = sc.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], k=5)
+    >>> adata_magic.shape
     (2730, 3)
     >>> sc.pp.magic(adata, name_list='pca_only', k=5)
     >>> adata.obsm['X_magic'].shape
@@ -103,6 +106,16 @@ def magic(adata,
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`')
 
     logg.info('computing PHATE', r=True)
+    needs_copy = not (name_list is None or
+                      (isinstance(name_list, str) and
+                       name_list in ["all_genes", "pca_only"]))
+    if copy is None:
+        copy = needs_copy
+    elif needs_copy and not copy:
+        raise ValueError(
+            "Can only perform MAGIC in-place with `name_list=='all_genes' or "
+            "`name_list=='pca_only'` (got {}). Consider setting "
+            "`copy=True`".format(name_list))
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
     if isinstance(verbose, int):
@@ -122,16 +135,19 @@ def magic(adata,
     logg.info('    finished', time=True,
               end=' ' if settings.verbosity > 2 else '\n')
     # update AnnData instance
-    adata.raw = adata
-    if X_magic.shape[1] != adata.X.shape[1]:
-        adata.obsm["X_magic"] = X_magic
-        if name_list == "pca_only":
-            logg.hint('added\n'
-                      '    \'X_magic\', PCA on MAGIC coordinates (adata.obsm)')
-        else:
-            logg.hint('added\n'
-                      '    \'X_magic\', MAGIC smoothed gene values (adata.obsm)')
+    if name_list == "pca_only":
+        # special case - update adata.obsm with smoothed values
+        adata.obsm["X_magic"] = X_magic.X
+        logg.hint('added\n'
+                  '    \'X_magic\', PCA on MAGIC coordinates (adata.obsm)')
+    elif copy:
+        # just return X_magic
+        X_magic.raw = adata
+        adata = X_magic
     else:
-        adata.X = X_magic
+        # replace data with smoothed data
+        adata.raw = adata
+        adata.X = X_magic.X
+
     if copy:
         return adata
