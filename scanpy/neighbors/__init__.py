@@ -1,8 +1,12 @@
+from typing import Union, Optional, Any, Mapping, Callable
+
 import numpy as np
 import scipy
-from scipy.sparse import issparse
-from scipy.sparse import coo_matrix
+from anndata import AnnData
+from numpy.random import RandomState
+from scipy.sparse import issparse, coo_matrix
 from sklearn.metrics import pairwise_distances
+
 from .. import settings
 from .. import logging as logg
 from .. utils import doc_params
@@ -15,16 +19,17 @@ N_PCS = 50  # default number of PCs
 
 @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
-        adata,
-        n_neighbors=15,
-        n_pcs=None,
-        use_rep=None,
-        knn=True,
-        random_state=0,
-        method='umap',
-        metric='euclidean',
-        metric_kwds={},
-        copy=False):
+    adata: AnnData,
+    n_neighbors: int = 15,
+    n_pcs: Optional[int] = None,
+    use_rep: Optional[str] = None,
+    knn: bool = True,
+    random_state: Optional[Union[int, RandomState]] = 0,
+    method: str = 'umap',
+    metric: Union[str, Callable[[np.ndarray, np.ndarray], float]] = 'euclidean',
+    metric_kwds: Mapping[str, Any] = {},
+    copy: bool = False
+) -> Optional[AnnData]:
     """\
     Compute a neighborhood graph of observations [McInnes18]_.
 
@@ -36,9 +41,9 @@ def neighbors(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata
         Annotated data matrix.
-    n_neighbors : `int`, optional (default: 15)
+    n_neighbors
         The size of local neighborhood (in terms of number of neighboring data
         points) used for manifold approximation. Larger values result in more
         global views of the manifold, while smaller values result in more local
@@ -48,15 +53,21 @@ def neighbors(
         `n_neighbors` neighbor.
     {n_pcs}
     {use_rep}
-    knn : `bool`, optional (default: `True`)
+    knn
         If `True`, use a hard threshold to restrict the number of neighbors to
         `n_neighbors`, that is, consider a knn graph. Otherwise, use a Gaussian
         Kernel to assign low weights to neighbors more distant than the
         `n_neighbors` nearest neighbor.
+    random_state
+        A numpy random seed.
     method : {{'umap', 'gauss', `None`}}  (default: `'umap'`)
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
-    copy : `bool` (default: `False`)
+    metric
+        A known metric’s name or a callable that returns a distance.
+    metric_kwds
+        Options for the metric.
+    copy
         Return a copy instead of writing to adata.
 
     Returns
@@ -459,7 +470,7 @@ def _backwards_compat_get_full_eval(adata):
         return adata.uns['diffmap_evals']
 
 
-class OnFlySymMatrix():
+class OnFlySymMatrix:
     """Emulate a matrix where elements are calculated on the fly.
     """
     def __init__(self, get_row, shape, DC_start=0, DC_end=-1, rows=None, restrict_array=None):
@@ -503,7 +514,7 @@ class OnFlySymMatrix():
                               rows=self.rows, restrict_array=index_array)
 
 
-class Neighbors():
+class Neighbors:
     """Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a graph of nearest neighbor relations (edges)
@@ -511,29 +522,13 @@ class Neighbors():
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
-        An annotated data matrix.
-
-    Attributes
-    ----------
-    distances
-    connectivities
-    transitions
-    transitions_sym
-    eigen_values
-    eigen_basis
-    laplacian
-    distances_dpt
-
-    Methods
-    -------
-    compute_neighbors
-    compute_transitions
-    compute_eigen
-    to_igraph
+    adata
+        Annotated data object.
+    n_dcs
+        Number of diffusion components to use.
     """
 
-    def __init__(self, adata, n_dcs=None):
+    def __init__(self, adata: AnnData, n_dcs: Optional[int] = None):
         self._adata = adata
         self._init_iroot()
         # use the graph in adata
@@ -599,14 +594,16 @@ class Neighbors():
     def transitions(self):
         """Transition matrix (sparse matrix).
 
-        Note: this has not been tested, in contrast to `transitions_sym`.
-
         Is conjugate to the symmetrized transition matrix via::
 
             self.transitions = self.Z *  self.transitions_sym / self.Z
 
         where ``self.Z`` is the diagonal matrix storing the normalization of the
         underlying kernel matrix.
+
+        Notes
+        -----
+        This has not been tested, in contrast to `transitions_sym`.
         """
         if issparse(self.Z):
             Zinv = self.Z.power(-1)
@@ -662,25 +659,25 @@ class Neighbors():
 
     @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     def compute_neighbors(
-            self,
-            n_neighbors=30,
-            knn=True,
-            n_pcs=None,
-            use_rep=None,
-            method='umap',
-            random_state=0,
-            write_knn_indices=False,
-            precompute_metric=None,
-            metric='euclidean',
-            metric_kwds={}):
+        self,
+        n_neighbors: int = 30,
+        knn: bool = True,
+        n_pcs: Optional[int] = None,
+        use_rep: Optional[str] = None,
+        method: str = 'umap',
+        random_state: Optional[Union[RandomState, int]] = 0,
+        write_knn_indices: bool = False,
+        metric: str = 'euclidean',
+        metric_kwds: Mapping[str, Any] = {}
+    ) -> None:
         """\
         Compute distances and connectivities of neighbors.
 
         Parameters
         ----------
-        n_neighbors : `int`, optional (default: 30)
+        n_neighbors
              Use this number of nearest neighbors.
-        knn : `bool`, optional (default: `True`)
+        knn
              Restrict result to `n_neighbors` nearest neighbors.
         {n_pcs}
         {use_rep}

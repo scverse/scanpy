@@ -26,13 +26,13 @@ def umap(
     neighborhood graph. tSNE, by contrast, optimizes the distribution of
     nearest-neighbor distances in the embedding such that these best match the
     distribution of distances in the high-dimensional space.  We use the
-    implementation of `umap-learn <https://github.com/lmcinnes/umap>`_
+    implementation of `umap-learn <https://github.com/lmcinnes/umap>`__
     [McInnes18]_. For a few comparisons of UMAP with tSNE, see this `preprint
-    <https://doi.org/10.1101/298430>`_.
+    <https://doi.org/10.1101/298430>`__.
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     min_dist : `float`, optional (default: 0.5)
         The effective minimum distance between embedded points. Smaller values

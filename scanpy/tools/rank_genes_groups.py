@@ -28,7 +28,7 @@ def rank_genes_groups(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     groupby : `str`
         The key of the observations grouping to consider.
@@ -47,15 +47,15 @@ def rank_genes_groups(
         If 't-test', uses t-test, if 'wilcoxon', uses Wilcoxon-Rank-Sum. If
         't-test_overestim_var', overestimates variance of each group. If
         'logreg' uses logistic regression, see [Ntranos18]_, `here
-        <https://github.com/theislab/scanpy/issues/95>`_ and `here
-        <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`_, for
+        <https://github.com/theislab/scanpy/issues/95>`__ and `here
+        <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__, for
         why this is meaningful.
     only_positive : bool, optional (default: `True`)
         Only consider positive differences.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
-        <http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`_.
+        <http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`__.
         For instance, you can pass `penalty='l1'` to try to come up with a
         minimal set of genes that are good predictors (sparse solution meaning
         few non-zero fitted coefficients).
@@ -86,7 +86,7 @@ def rank_genes_groups(
                                  adata.obs[groupby].cat.categories.tolist()))
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
-    
+
     if key_added is None:
         key_added = 'rank_genes_groups'
     adata.uns[key_added] = {}

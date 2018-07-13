@@ -8,12 +8,11 @@ from .. import logging as logg
 def phate(
         adata,
         n_components=2,
-        k=15,
-        a=10,
-        alpha_decay=None,
+        k=5,
+        a=15,
         n_landmark=2000,
         t='auto',
-        potential_method='log',
+        gamma=1,
         n_pca=100,
         knn_dist='euclidean',
         mds_dist='euclidean',
@@ -21,7 +20,8 @@ def phate(
         n_jobs=None,
         random_state=None,
         verbose=None,
-        copy=False):
+        copy=False,
+        **kwargs):
     """PHATE [Moon17]_.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
@@ -29,33 +29,33 @@ def phate(
     visualization of biological progressions.
 
     For more information and access to the object-oriented interface, read the
-    `PHATE documentation <https://phate.readthedocs.io/>`_.  For help,
+    `PHATE documentation <https://phate.readthedocs.io/>`__.  For
     tutorials, bug reports, and R/MATLAB implementations, visit the `PHATE
-    GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`_.
+    GitHub page <https://github.com/KrishnaswamyLab/PHATE/>`__. For help
+    using PHATE, go `here <https://krishnaswamylab.org/get-help>`__.
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_components : `int`, optional (default: 2)
         number of dimensions in which the data will be embedded
-    k : `int`, optional (default: 15)
+    k : `int`, optional (default: 5)
         number of nearest neighbors on which to build kernel
-    a : `int`, optional (default: `None`)
+    a : `int`, optional (default: 15)
         sets decay rate of kernel tails.
         If None, alpha decaying kernel is not used
-    alpha_decay : `bool` or `None` (default: `None`)
-        forces the use of alpha decaying kernel
-        If None, alpha decaying kernel is used for small inputs
-        (n_samples < n_landmark) and not used otherwise
     n_landmark : `int`, optional (default: 2000)
         number of landmarks to use in fast PHATE
     t : `int` or 'auto', optional (default: 'auto')
         power to which the diffusion operator is powered
-        sets the level of diffusion
-    potential_method : {'log', 'sqrt'}, optional (default: 'log')
-        Selects which transformation of the diffusional operator is used
-        to compute the diffusion potential
+        sets the level of diffusion. If 'auto', t is selected
+        according to the knee point in the Von Neumann Entropy of
+        the diffusion operator
+    gamma : float, optional, default: 1
+        Informational distance constant between -1 and 1.
+        `gamma=1` gives the PHATE log potential, `gamma=0` gives
+        a square root potential.
     n_pca : `int`, optional (default: 100)
         Number of principal components to use for calculating
         neighborhoods. For extremely large datasets, using
@@ -85,6 +85,7 @@ def phate(
         If `None`, `sc.settings.verbosity` is used.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to `adata`.
+    kwargs : additional arguments to `phate.PHATE`
 
     Returns
     -------
@@ -124,10 +125,9 @@ def phate(
         n_components=n_components,
         k=k,
         a=a,
-        alpha_decay=alpha_decay,
         n_landmark=n_landmark,
         t=t,
-        potential_method=potential_method,
+        gamma=gamma,
         n_pca=n_pca,
         knn_dist=knn_dist,
         mds_dist=mds_dist,
@@ -135,11 +135,12 @@ def phate(
         n_jobs=n_jobs,
         random_state=random_state,
         verbose=verbose,
+        **kwargs
     ).fit_transform(adata)
     logg.info('    finished', time=True,
               end=' ' if settings.verbosity > 2 else '\n')
     # update AnnData instance
-    adata.obsm['X_phate'] = X_phate  # annotate samples with tSNE coordinates
+    adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates
     logg.hint('added\n'
               '    \'X_phate\', PHATE coordinates (adata.obsm)')
     return adata if copy else None

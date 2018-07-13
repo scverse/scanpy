@@ -1,7 +1,12 @@
 """Utility functions and classes
 """
 
+import inspect
 from collections import namedtuple
+from functools import partial
+from types import ModuleType
+from typing import Union, Callable, Optional
+
 import numpy as np
 import scipy.sparse
 from natsort import natsorted
@@ -12,6 +17,46 @@ from . import settings
 from . import logging as logg
 
 EPS = 1e-15
+
+def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
+    if getattr(c_or_f, '__doc__', None) is None:
+        return None
+    doc = inspect.getdoc(c_or_f)
+    if isinstance(c_or_f, type) and hasattr(c_or_f, '__init__'):
+        sig = inspect.signature(c_or_f.__init__)
+    else:
+        sig = inspect.signature(c_or_f)
+
+    def type_doc(name: str):
+        param = sig.parameters[name]  # type: inspect.Parameter
+        cls = getattr(param.annotation, '__qualname__', repr(param.annotation))
+        if param.default is not param.empty:
+            return '{}, optional (default: {!r})'.format(cls, param.default)
+        else:
+            return cls
+
+    return '\n'.join(
+        '{} : {}'.format(line, type_doc(line)) if line.strip() in sig.parameters else line
+        for line in doc.split('\n')
+    )
+
+
+def descend_classes_and_funcs(mod: ModuleType, root: str):
+    for obj in vars(mod).values():
+        if not getattr(obj, '__module__', getattr(obj, '__qualname__', getattr(obj, '__name__', ''))).startswith(root):
+            continue
+        if isinstance(obj, Callable):
+            yield obj
+            if isinstance(obj, type):
+                yield from (m for m in vars(obj).values() if isinstance(m, Callable))
+        elif isinstance(obj, ModuleType):
+            yield from descend_classes_and_funcs(obj, root)
+
+
+def annotate_doc_types(mod: ModuleType, root: str):
+    for c_or_f in descend_classes_and_funcs(mod, root):
+        c_or_f.getdoc = partial(getdoc, c_or_f)
+
 
 def doc_params(**kwds):
     """\
@@ -668,8 +713,8 @@ def merge_dicts(*ds):
     """Given any number of dicts, shallow copy and merge into a new dict,
     precedence goes to key value pairs in latter dicts.
 
-    Note
-    ----
+    Notes
+    -----
     http://stackoverflow.com/questions/38987/how-to-merge-two-python-dictionaries-in-a-single-expression
     """
     result = ds[0]

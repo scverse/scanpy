@@ -39,7 +39,7 @@ def paga_compare(
         title_graph=None,
         groups_graph=None,
         **paga_graph_params):
-    """Scatter and abstracted graph side-by-side.
+    """Scatter and PAGA graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
     :func:`~scanpy.api.pl.paga` for all related parameters.
@@ -51,7 +51,7 @@ def paga_compare(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     kwds_scatter : `dict`
         Keywords for :func:`~scanpy.api.pl.scatter`.
@@ -176,9 +176,6 @@ def paga(
         solid_edges='connectivities',
         dashed_edges=None,
         transitions=None,
-        threshold_arrows=None,
-        threshold_solid=None,
-        threshold_dashed=None,
         fontsize=None,
         fontweight='bold',
         text_kwds={},
@@ -211,7 +208,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     threshold : `float` or `None`, optional (default: 0.01)
         Do not draw edges for weights below this threshold. Set to 0 if you want
@@ -236,28 +233,32 @@ def paga(
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, the initial
         state is not reproducible.
-    root : int, str or list of int, optional (default: 0)
+    root : `int`, `str` or list of `int`, optional (default: 0)
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied
         node IDs are used as the roots of the trees (or a single tree if the
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
-    single_component : `bool`, optional (default: `False`)
-        Restrict to largest connected component.
+    transitions : `str` or `None`, optional (default: `None`)
+        Key for `.uns['paga']` that specifies the matrix that - for instance
+        `'transistions_confidence'` - that specifies the matrix that stores the
+        arrows.
     solid_edges : `str`, optional (default: 'paga_connectivities')
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
     dashed_edges : `str` or `None`, optional (default: `None`)
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn dashed grey. If `None`, no dashed edges are drawn.
+    single_component : `bool`, optional (default: `False`)
+        Restrict to largest connected component.
     fontsize : `int` (default: `None`)
         Font size for node labels.
-    text_kwds : keywords for text
+    text_kwds : keywords for `matplotlib.text`
         See `here
         <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`_.
-    node_size_scale : float (default: 1.0)
+    node_size_scale : `float` (default: 1.0)
         Increase or decrease the size of the nodes.
-    node_size_power : float (default: 0.5)
+    node_size_power : `float` (default: 0.5)
         The power with which groups sizes influence the radius of the nodes.
     edge_width_scale : `float`, optional (default: 5)
         Edge with scale in units of `rcParams['lines.linewidth']`.
@@ -282,14 +283,14 @@ def paga(
         A matplotlib axes object for a potential colorbar.
     cb_kwds : colorbar keywords
         See `here
-        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`_,
+        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`__,
         for instance, `ticks`.
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
          Provide a title.
-    frameon : `bool`, optional (default: `True`)
-         Draw a frame around the abstracted graph.
+    frameon : `bool`, optional (default: `False`)
+         Draw a frame around the PAGA graph.
     show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
@@ -298,19 +299,24 @@ def paga(
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
-    Note
-    ----
+    Returns
+    -------
+    If `show==False`, one or more `matplotlib.Axis` objects.
+
+    Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
+
+    Notes
+    -----
 
     When initializing the positions, note that - for some reason - igraph
     mirrors coordinates along the x axis... that is, you should increase the
     `maxiter` parameter by 1 if the layout is flipped.
 
-    Returns
-    -------
-    Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
-
-    If `show==False`, one or more `matplotlib.Axis` objects. If at least one colorbar is
-    drawn, a list with colorbar instances will be returned, too.
+    See also
+    --------
+    tl.paga
+    pl.paga_compare
+    pl.paga_path
     """
     if groups is not None:  # backwards compat
         labels = groups
@@ -364,9 +370,6 @@ def paga(
             dashed_edges=dashed_edges,
             transitions=transitions,
             threshold=threshold,
-            threshold_arrows=threshold_arrows,
-            threshold_solid=threshold_solid,
-            threshold_dashed=threshold_dashed,
             root=root,
             labels=labels[icolor],
             fontsize=fontsize,
@@ -417,9 +420,6 @@ def _paga_graph(
         dashed_edges=None,
         transitions=None,
         threshold=None,
-        threshold_arrows=None,
-        threshold_solid=None,
-        threshold_dashed=None,
         root=0,
         colors=None,
         labels=None,
@@ -472,26 +472,18 @@ def _paga_graph(
     if isinstance(root, list) and root[0] in node_labels:
         root = [list(node_labels).index(r) for r in root]
 
-    # define the objects
+    # define the adjacency matrices
     adjacency_solid = adata.uns['paga'][solid_edges].copy()
-    # set the the thresholds, either explicitly
-    if threshold is not None:
-        threshold_solid = threshold
-        threshold_dashed = threshold
-    # or to a default value
-    else:
-        if threshold_solid is None:
-            threshold_solid = 0.01  # default threshold
-        if threshold_dashed is None:
-            threshold_dashed = 0.01  # default treshold
-    if threshold_solid > 0:
-        adjacency_solid.data[adjacency_solid.data < threshold_solid] = 0
+    if threshold is None:
+        threshold = 0.01  # default threshold
+    if threshold > 0:
+        adjacency_solid.data[adjacency_solid.data < threshold] = 0
         adjacency_solid.eliminate_zeros()
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
         adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
-        if threshold_dashed > 0:
-            adjacency_dashed.data[adjacency_dashed.data < threshold_dashed] = 0
+        if threshold > 0:
+            adjacency_dashed.data[adjacency_dashed.data < threshold] = 0
             adjacency_dashed.eliminate_zeros()
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
@@ -702,9 +694,8 @@ def _paga_graph(
     # draw directed edges
     else:
         adjacency_transitions = adata.uns['paga'][transitions].copy()
-        if threshold_arrows is None:
-            threshold_arrows = 0.005
-        adjacency_transitions.data[adjacency_transitions.data < threshold_arrows] = 0
+        if threshold is None: threshold = 0.005
+        adjacency_transitions.data[adjacency_transitions.data < threshold] = 0
         adjacency_transitions.eliminate_zeros()
         g_dir = nx.DiGraph(adjacency_transitions.T)
         widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]
@@ -836,7 +827,7 @@ def paga_path(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
     nodes : list of group names or their category indices
         A path through nodes of the abstracted graph, that is, names or indices

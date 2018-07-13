@@ -28,8 +28,9 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.scale
    pp.subsample
    pp.downsample_counts
-   
-For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens` and :func:`pl.filter_genes_dispersion` :doc:`plotting API <plotting>`.
+
+For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens`
+and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
 
 **Recipes**
 
@@ -45,6 +46,14 @@ For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens` an
    :toctree: .
 
    pp.mnn_correct
+
+**Imputation**
+
+.. autosummary::
+   :toctree: .
+
+   pp.dca
+   pp.magic
 
 **Neighbors**
 
@@ -121,7 +130,7 @@ Reading
 -------
 
 *Note:* For reading annotation use
-`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
+:ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>` and add
 it to your `AnnData` object. The following read functions are intended for
 the numeric data in the data matrix `X`.
 
@@ -139,8 +148,7 @@ Read 10x formatted hdf5 files using
 
    read_10x_h5
 
-Read other formats using functions borrowed from `anndata
-<http://anndata.readthedocs.io>`_
+Read other formats using functions borrowed from :mod:`anndata`
 
 .. autosummary::
    :toctree: .
@@ -167,12 +175,7 @@ Queries
 Classes
 -------
 
-:class:`~scanpy.api.AnnData` is borrowed from `anndata <http://anndata.readthedocs.io>`_.
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
+:class:`~anndata.AnnData` is reexported from :mod:`anndata`.
 
 Represent data as a neighborhood structure, usually a knn graph.
 

@@ -61,8 +61,8 @@ max_memory = 15
 Is currently not well respected....
 """
 
-n_jobs = 2
-"""Maximal number of jobs/ CPUs to use for parallel computing.
+n_jobs = 1
+"""Default number of jobs/ CPUs to use for parallel computing.
 """
 
 logfile = ''
