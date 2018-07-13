@@ -17,7 +17,7 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_top : int, optional (default:30)
         Number of top

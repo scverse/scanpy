@@ -25,7 +25,7 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix containing a observation annotation 'blobs' that
         indicates cluster identity.
     """
@@ -71,7 +71,7 @@ def krumsiek11():
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
     filename = os.path.dirname(__file__) + '/krumsiek11.txt'
@@ -98,7 +98,7 @@ def moignard15():
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
     filename = 'data/moignard15/nbt.3154-S3.xlsx'
@@ -133,7 +133,7 @@ def paul15():
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
     logg.warn('In Scanpy 0.*, this returned logarithmized data. '
@@ -178,13 +178,13 @@ def toggleswitch():
     """Simulated toggleswitch.
 
     Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
-    (2000) <https://doi.org/10.1038/35002131>`_.
+    (2000) <https://doi.org/10.1038/35002131>`__.
 
     Simulate via :func:`~scanpy.api.sim`.
 
     Returns
     -------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
     filename = os.path.dirname(__file__) + '/toggleswitch.txt'

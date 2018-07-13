@@ -7,7 +7,7 @@ The following describes the plotting submodule of ``scanpy.api``.
 
 .. note::
 
-    See the :ref:`settings` section for some important plotting configurations.
+    See the :ref:`settings` section for all important plotting configurations.
 
 
 Generic
@@ -17,18 +17,12 @@ Generic
    :toctree: .
 
    pl.scatter
-   pl.ranking
-
-Thin wrappers for Seaborn [Waskom16]_ functions.
-
-.. autosummary::
-   :toctree: .
-
    pl.violin
    pl.heatmap
    pl.clustermap
+   pl.ranking
 
-   
+
 Preprocessing
 -------------
 
@@ -45,10 +39,10 @@ Tools
 -----
 
 Methods that extract and visualize tool-specific annotation in an
-:class:`~scanpy.api.AnnData` object.  For any method in module ``tl``, there is
+:class:`~anndata.AnnData` object.  For any method in module ``tl``, there is
 a method with the same name in ``pl``.
 
-**Embeddings**
+**PCA**
 
 .. autosummary::
    :toctree: .
@@ -57,6 +51,12 @@ a method with the same name in ``pl``.
    pl.pca_loadings
    pl.pca_scatter
    pl.pca_variance_ratio
+   
+**Embeddings**
+
+.. autosummary::
+   :toctree: .
+             
    pl.tsne
    pl.umap
    pl.diffmap
@@ -65,20 +65,19 @@ a method with the same name in ``pl``.
 
 **Branching trajectories and pseudotime, clustering**
 
+Visualize clusters using one of the embedding methods passing ``color='louvain'``.
+
 .. autosummary::
    :toctree: .
 
-   pl.louvain
-   pl.dpt
-   pl.dpt_scatter
    pl.dpt_groups_pseudotime
    pl.dpt_timeseries
    pl.paga
    pl.paga_path
    pl.paga_compare
 
-**Marker genes**   
-   
+**Marker genes**
+
 .. autosummary::
    :toctree: .
 

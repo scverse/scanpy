@@ -36,7 +36,7 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An annotated data matrix.
     groups : key for categorical in `adata.obs`, optional (default: 'louvain')
         You can pass your predefined groups by choosing any categorical
@@ -46,6 +46,8 @@ def paga(
         transitions. Requires that `adata.uns` contains a directed single-cell
         graph with key `['velocyto_transitions']`. This feature might be subject
         to change in the future.
+    model : {{'v1.2', 'v1.0'}}, optional (default: 'v1.2')
+        The PAGA connectivity model.
     copy : `bool`, optional (default: `False`)
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
@@ -85,18 +87,19 @@ def paga(
         paga.compute_connectivities()
         adata.uns['paga']['connectivities'] = paga.connectivities
         adata.uns['paga']['connectivities_tree'] = paga.connectivities_tree
+        # adata.uns['paga']['expected_n_edges_random'] = paga.expected_n_edges_random
         adata.uns[groups + '_sizes'] = np.array(paga.ns)
     else:
         paga.compute_transitions()
         adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
-        adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
+        # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     if use_rna_velocity:
         logg.hint(
             'added\n'
-            '    \'paga/transitions_connectivities\', connectivities adjacency (adata.uns)\n'
-            '    \'paga/transitions_ttest\', t-test on transitions (adata.uns)')
+            '    \'paga/transitions_confidence\', connectivities adjacency (adata.uns)')
+        #    '    \'paga/transitions_ttest\', t-test on transitions (adata.uns)')
     else:
         logg.hint(
             'added\n'
@@ -139,6 +142,7 @@ class PAGA():
         es = np.array(es_inner_cluster) + inter_es.sum(axis=1).A1
         inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
         connectivities = inter_es.copy()
+        expected_n_edges = inter_es.copy()
         inter_es = inter_es.tocoo()
         for i, j, v in zip(inter_es.row, inter_es.col, inter_es.data):
             expected_random_null = (es[i]*ns[j] + es[j]*ns[i])/(n - 1)
@@ -149,8 +153,10 @@ class PAGA():
             if scaled_value > 1:
                 scaled_value = 1
             connectivities[i, j] = scaled_value
+            expected_n_edges[i, j] = expected_random_null
         # set attributes
         self.ns = ns
+        self.expected_n_edges_random = expected_n_edges
         self.connectivities = connectivities
         self.connectivities_tree = self._get_connectivities_tree_v1_2()
         return inter_es.tocsr(), connectivities
@@ -210,44 +216,67 @@ class PAGA():
         return connectivities_tree.tocsr()
 
     def compute_transitions(self):
-        # analogous code using networkx
-        # membership = adata.obs['clusters'].cat.codes.tolist()
-        # partition = defaultdict(list)
-        # for n, p in zip(list(range(len(G))), membership):
-        #     partition[p].append(n)
-        # partition = partition.values()
-        # g_abstracted = nx.quotient_graph(g, partition, relabel=True)
-        # for some reason, though, edges aren't oriented in the quotient
-        # graph...
+        if 'velocyto_transitions' not in self._adata.uns:
+            raise ValueError(
+                'The passed AnnData needs to have an `uns` annotation '
+                'with key \'velocyto_transitions\' - a sparse matrix from RNA velocity.')
+        if self._adata.uns['velocyto_transitions'].shape != (self._adata.n_obs, self._adata.n_obs):
+            raise ValueError(
+                'The passed \'velocyto_transitions\' have shape {} but shoud have shape {}'
+                .format(self._adata.uns['velocyto_transitions'].shape,
+                        (self._adata.n_obs, self._adata.n_obs)))
+        # restore this at some point
+        # if 'expected_n_edges_random' not in self._adata.uns['paga']:
+        #     raise ValueError(
+        #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
+        import igraph
+        g = utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+        # set combine_edges to False if you want self loops
+        cg_full = vc.cluster_graph(combine_edges='sum')
+        transitions = utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
+        transitions = transitions - transitions.T
+        transitions_conf = transitions.copy()
+        transitions = transitions.tocoo()
+        total_n = self._neighbors.n_neighbors * np.array(vc.sizes())
+        # total_n_sum = sum(total_n)
+        # expected_n_edges_random = self._adata.uns['paga']['expected_n_edges_random']
+        for i, j, v in zip(transitions.row, transitions.col, transitions.data):
+            # if expected_n_edges_random[i, j] != 0:
+            #     # factor 0.5 because of asymmetry
+            #     reference = 0.5 * expected_n_edges_random[i, j]
+            # else:
+            #     # approximate
+            #     reference = self._neighbors.n_neighbors * total_n[i] * total_n[j] / total_n_sum
+            reference = np.sqrt(total_n[i] * total_n[j])
+            transitions_conf[i, j] = 0 if v < 0 else v / reference
+        transitions_conf.eliminate_zeros()
+        # transpose in order to match convention of stochastic matrices
+        # entry ij means transition from j to i
+        self.transitions_confidence = transitions_conf.T
+
+    def compute_transitions_old(self):
         import igraph
         g = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'], directed=True)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+        # this stores all single-cell edges in the cluster graph
         cg_full = vc.cluster_graph(combine_edges=False)
-
+        # this is the boolean version that simply counts edges in the clustered graph
         g_bool = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
         vc_bool = igraph.VertexClustering(
             g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values)
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
         transitions = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
-        # translate this into a confidence measure
-        # the number of outgoing edges
-        # total_n = np.zeros(len(vc.sizes()))
-        # # (this is not the convention of standard stochastic matrices)
-        # total_outgoing = transitions.sum(axis=1)
-        # for i in range(len(total_n)):
-        #     total_n[i] = vc.subgraph(i).ecount()
-        #     total_n[i] += total_outgoing[i, 0]
-        # use the topology based reference, the velocity one might have very small numbers
         total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
         transitions_ttest = transitions.copy()
         transitions_confidence = transitions.copy()
         from scipy.stats import ttest_1samp
         for i in range(transitions.shape[0]):
-            # no symmetry in transitions, hence we should not restrict to
-            # upper triangle
             neighbors = transitions[i].nonzero()[1]
             for j in neighbors:
                 forward = cg_full.es.select(_source=i, _target=j)['weight']

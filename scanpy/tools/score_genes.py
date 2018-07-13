@@ -28,7 +28,7 @@ def score_genes(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     gene_list : iterable
         The list of gene names used for score calculation.
@@ -53,7 +53,7 @@ def score_genes(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
+    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     logg.info('computing score \'{}\''.format(score_name), r=True)
     adata = adata.copy() if copy else adata
@@ -130,7 +130,7 @@ def score_genes_cell_cycle(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     s_genes : `list`
         List of genes associated with S phase.
@@ -159,7 +159,7 @@ def score_genes_cell_cycle(
 
     Examples
     --------
-    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`_.
+    See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
     logg.info('calculating cell cycle phase')
 

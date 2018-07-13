@@ -28,7 +28,7 @@ def tsne(
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
