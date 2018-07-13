@@ -673,7 +673,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                     ax.set_yscale('log')
                 if rotation is not None:
                     ax.tick_params(labelrotation=rotation)
-
             # remove the spacing between subplots
             pl.subplots_adjust(wspace=0, hspace=0)
 
@@ -825,7 +824,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
-        x = 'variable'
+        groupby = ''
+        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
         if not is_categorical_dtype(adata.obs[groupby]):
             # if the groupby column is not categorical, turn it into one
@@ -833,8 +833,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
             categorical = pd.cut(adata.obs[groupby], num_categories)
         else:
             categorical = adata.obs[groupby]
-        obs_tidy.set_index(categorical, groupby, inplace=True)
-        x = obs_tidy.index.categories
+    obs_tidy.set_index(categorical, groupby, inplace=True)
+    categories = obs_tidy.index.categories
 
     height = 10
     heatmap_width = len(var_names) * 0.18
@@ -861,8 +861,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         label2code[label] = code
 
     groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
-    groupby_ax.set_yticks(ticks)
-    groupby_ax.set_yticklabels(labels)
+    if len(categories) > 1:
+        groupby_ax.set_yticks(ticks)
+        groupby_ax.set_yticklabels(labels)
 
     # remove y ticks
     groupby_ax.tick_params(axis='y', left=False)
