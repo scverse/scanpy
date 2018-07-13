@@ -543,7 +543,8 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 
 def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
-           xlabel='', rotation=None, save=None, ax=None, **kwargs):
+           xlabel='', rotation=None, save=None, ax=None, multi_panel_figsize=None,
+           multi_panel_swap_axes=False, **kwargs):
     """Violin plot [Waskom16]_.
 
     Wraps `seaborn.violinplot` for :class:`~scanpy.api.AnnData`.
@@ -589,6 +590,11 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
     ax : `matplotlib.Axes`
          A `matplotlib.Axes` object.
+    multi_panel_figsize : (float, float), optional (default: None)
+        Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
+    multi_panel_swap_axes: `bool`, optional (default: `False`)
+         By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
+         By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.  
     **kwargs : keyword arguments
         Are passed to `seaborn.violinplot`.
 
@@ -625,35 +631,28 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         x = groupby
         ys = keys
     if multi_panel:
-        if len(ys) == 1:
-            y = ys[0]
-            g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-            # don't really know why this gives a warning without passing `order`
-            g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwargs)
-            g.set_titles(col_template='{col_name}').set_xlabels('')
-            axs = [g]
-            if stripplot:
-                g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
-                          color='black')
-            if log:
-                g.set(yscale='log')
-            if rotation is not None:
-                for ax in g.axes[0]:
-                    ax.tick_params(labelrotation=rotation)
-        else:
-            # Make a very compact plot in which the y and x axis are shared.
-            # The image is composed of individual plots stacked on top of each
-            # other. Each subplot contains and individual violin plot where
-            # x = categories in `groupby` and y is each of the keys provided.
-            # An example is: keys = marker genes, groupby = louvain clusters.
-            height = len(ys) * 0.6 + 3
-            categories = adata.obs[groupby].cat.categories
-            width = len(categories) * 0.2 + 1
+        # Make a very compact plot in which the y and x axis are shared.
+        # The image is composed of individual plots stacked on top of each
+        # other. Each subplot contains and individual violin plot where
+        # x = categories in `groupby` and y is each of the keys provided.
+        # If multi_panel_swap_axes is True, then x and y are swapped.
+        # An example is: keys = marker genes, groupby = louvain clusters.
+
+        categories = adata.obs[groupby].cat.categories
+        if multi_panel_swap_axes is False:
+            if multi_panel_figsize is None:
+                height = len(ys) * 0.6 + 3
+                width = len(categories) * 0.2 + 1
+            else:
+                height, width = multi_panel_figsize
             fig, axs = pl.subplots(nrows=len(ys), ncols=1, sharex=True, sharey=True,
-                                    figsize=(width, height))
+                                   figsize=(width, height))
             for idx, y in enumerate(ys):
-                ax = axs[idx]
+                if len(ys) > 1:
+                    ax = axs[idx]
+                else:
+                    ax = axs
+
                 ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
                                     orient='vertical', scale=scale, ax=ax, **kwargs)
                 if stripplot:
@@ -663,6 +662,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 ax.set_ylabel(y, rotation=0, fontsize=11, labelpad=8, ha='right')
                 # remove the grids because in such a compact plot are unnecessary
                 ax.grid(False)
+                ax.tick_params(axis='y', left=False, right=True, labelright=True, labelleft=False)
 
                 # remove the xticks labels except for the last processed plot (first from bottom-up).
                 # Because the plots share the x axis it is redundant and less compact to plot the
@@ -674,7 +674,40 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 if rotation is not None:
                     ax.tick_params(labelrotation=rotation)
             # remove the spacing between subplots
-            pl.subplots_adjust(wspace=0, hspace=0)
+        else:
+            if multi_panel_figsize is None:
+                height = len(categories) * 0.6 + 3
+                width = len(ys) * 0.2 + 1
+            else:
+                height, width = multi_panel_figsize
+            fig, axs = pl.subplots(nrows=len(categories), ncols=1, sharex=True, sharey=True,
+                                   figsize=(width, height))
+            for idx, category in enumerate(categories):
+                df = pd.melt(obs_tidy[obs_tidy[groupby] == category], value_vars=keys)
+                ax = axs[idx]
+                ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
+                                    orient='vertical', scale=scale, ax=ax, **kwargs)
+
+                if stripplot:
+                    ax = sns.stripplot('variable', y='value', data=df, order=order,
+                                       jitter=jitter, color='black', size=size, ax=ax)
+
+                ax.set_ylabel(category, rotation=0, fontsize=11, labelpad=8, ha='right')
+                # remove the grids because in such a compact plot are unnecessary
+                ax.grid(False)
+                ax.tick_params(axis='y', left=False, right=True, labelright=True, labelleft=False)
+
+                # remove the xticks labels except for the last processed plot (first from bottom-up).
+                # Because the plots share the x axis it is redundant and less compact to plot the
+                # axis for each plot
+                if idx < len(categories) - 1:
+                    ax.set_xticklabels([])
+                if log:
+                    ax.set_yscale('log')
+                if rotation is not None:
+                    ax.tick_params(labelrotation=rotation)
+        # remove the spacing between subplots
+        pl.subplots_adjust(wspace=0, hspace=0)
 
     else:
         if ax is None:
