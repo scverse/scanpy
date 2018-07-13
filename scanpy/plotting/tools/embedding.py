@@ -1,3 +1,4 @@
+from matplotlib import pyplot as pl
 from .. import utils
 from ..anndata import scatter
 from ...utils import doc_params
