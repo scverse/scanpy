@@ -592,9 +592,10 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
          A `matplotlib.Axes` object.
     multi_panel_figsize : (float, float), optional (default: None)
         Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
+        Format is (width, height)
     multi_panel_swap_axes: `bool`, optional (default: `False`)
          By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
-         By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.  
+         By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.
     **kwargs : keyword arguments
         Are passed to `seaborn.violinplot`.
 
@@ -644,7 +645,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 height = len(ys) * 0.6 + 3
                 width = len(categories) * 0.2 + 1
             else:
-                height, width = multi_panel_figsize
+                width, height = multi_panel_figsize
             fig, axs = pl.subplots(nrows=len(ys), ncols=1, sharex=True, sharey=True,
                                    figsize=(width, height))
             for idx, y in enumerate(ys):
@@ -798,12 +799,12 @@ def clustermap(
 
 
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            show=None, save=None, **kwargs):
+            show=None, save=None, figsize=None, **kwargs):
     """Plot a heatmap of the expression values of `var_names`. If groupby is given, the heatmap
     is ordered by the respective group. For example, a list of marker genes
     can be plotted, ordered by clustering. If the groupby observation is not categorical
     the observation is turn into a categorical by binning the data into the number
-    especified in `num_categories`.
+    specified in `num_categories`.
 
     Parameters
     ----------
@@ -827,6 +828,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height). If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
     **kwargs : keyword arguments
         Are passed to `seaborn.heatmap`.
 
@@ -869,9 +873,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     obs_tidy.set_index(categorical, groupby, inplace=True)
     categories = obs_tidy.index.categories
 
-    height = 10
-    heatmap_width = len(var_names) * 0.18
-    width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    if figsize is None:
+        height = 10
+        heatmap_width = len(var_names) * 0.18
+        width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    else:
+        width, height = figsize
     ax_frac2width = 0.25
     fig, axs = pl.subplots(nrows=1, ncols=3, sharey=False,
                            figsize=(width, height), gridspec_kw={'width_ratios': [ax_frac2width, width, ax_frac2width]})
@@ -924,7 +931,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 
 def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            show=None, save=None, **kwargs):
+            figsize=None, show=None, save=None, **kwargs):
     """Makes a 'dot plot' of the expression values of `var_names`.
     For each var_name and each groupby category a dot is plotted.
     Each dot represents two values: mean expression within
@@ -953,6 +960,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value determines
         the number of groups into which the groupby observation should be subdivided.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height. If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
     show : bool, optional (default: `None`)
          Show the plot.
     save : `bool` or `str`, optional (default: `None`)
@@ -1015,13 +1025,16 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     # (given by `count()`)
     fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
-    # set up axes
-    height = len(categories) * 0.3 + 1  # +1 for labels
-    # if the number of categories is small (eg 1 or 2) use
-    # a larger height
-    height = max([1.5, height])
-    heatmap_width = len(var_names) * 0.5
-    width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+    if figsize is None:
+        height = len(categories) * 0.3 + 1  # +1 for labels
+        # if the number of categories is small (eg 1 or 2) use
+        # a larger height
+        height = max([1.5, height])
+        heatmap_width = len(var_names) * 0.5
+        width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+    else:
+        width, height = figsize
+        heatmap_width = width * 0.75
 
     # colorbar ax width should not change with differences in the width of the image
     # otherwise can become too small
