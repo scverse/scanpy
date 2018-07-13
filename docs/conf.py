@@ -1,14 +1,12 @@
-import ast
 import sys
 import inspect
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
-from sphinx.ext.autosummary import limited_join
 
 # remove PyCharm’s old six module
 if 'six' in sys.modules:
@@ -40,7 +38,8 @@ extensions = [
     'sphinx.ext.autosummary',
     # 'plot_generator',
     # 'plot_directive',
-    'numpydoc',
+    'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',
     'sphinx.ext.intersphinx',
     # 'ipython_directive',
     # 'ipython_console_highlighting',
@@ -52,8 +51,9 @@ autosummary_generate = True
 # see falexwolf's issue for numpydoc
 # autodoc_member_order = 'bysource'
 # autodoc_default_flags = ['members']
-numpydoc_show_class_members = True
-numpydoc_class_members_toctree = True
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
 
 intersphinx_mapping = dict(
     python=('https://docs.python.org/3', None),
@@ -226,61 +226,69 @@ from jinja2.defaults import DEFAULT_FILTERS
 DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
-# -- Prettier Autodoc -----------------------------------------------------
-# TODO: replace with sphinx.ext.napoleon
+# -- Prettier Param docs --------------------------------------------
 
 
-def unparse(ast_node: ast.expr, plain: bool = False) -> str:
-    if isinstance(ast_node, ast.Attribute):
-        if plain:
-            return ast_node.attr
+from typing import Dict, List, Tuple
+
+from docutils import nodes
+from sphinx import addnodes
+from sphinx.domains.python import PyTypedField, PyObject
+from sphinx.environment import BuildEnvironment
+
+
+class PrettyTypedField(PyTypedField):
+    list_type = nodes.definition_list
+
+    def make_field(
+        self,
+        types: Dict[str, List[nodes.Node]],
+        domain: str,
+        items: Tuple[str, List[nodes.inline]],
+        env: BuildEnvironment = None
+    ) -> nodes.field:
+        def makerefs(rolename, name, node):
+            return self.make_xrefs(rolename, domain, name, node, env=env)
+
+        def handle_item(fieldarg: str, content: List[nodes.inline]) -> nodes.definition_list_item:
+            head = nodes.term()
+            head += makerefs(self.rolename, fieldarg, addnodes.literal_strong)
+            fieldtype = types.pop(fieldarg, None)
+            if fieldtype is not None:
+                head += nodes.Text(' : ')
+                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
+                    typename = ''.join(n.astext() for n in fieldtype)
+                    head += makerefs(self.typerolename, typename, addnodes.literal_emphasis)
+                else:
+                    head += fieldtype
+
+            body_content = nodes.paragraph('', '', *content)
+            body = nodes.definition('', body_content)
+
+            return nodes.definition_list_item('', head, body)
+
+        fieldname = nodes.field_name('', self.label)
+        if len(items) == 1 and self.can_collapse:
+            fieldarg, content = items[0]
+            bodynode = handle_item(fieldarg, content)
         else:
-            v = unparse(ast_node.value, plain)
-            return f'{v}.{ast_node.attr}'
-    elif isinstance(ast_node, ast.Index):
-        return unparse(ast_node.value)
-    elif isinstance(ast_node, ast.Name):
-        return ast_node.id
-    elif isinstance(ast_node, ast.Subscript):
-        v = unparse(ast_node.value, plain)
-        s = unparse(ast_node.slice, plain)
-        return f'{v}[{s}]'
-    elif isinstance(ast_node, ast.Tuple):
-        return ', '.join(unparse(e) for e in ast_node.elts)
-    else:
-        t = type(ast_node)
-        raise NotImplementedError(f'can’t unparse {t}')
+            bodynode = self.list_type()
+            for fieldarg, content in items:
+                bodynode += handle_item(fieldarg, content)
+        fieldbody = nodes.field_body('', bodynode)
+        return nodes.field('', fieldname, fieldbody)
 
 
-def mangle_signature(sig: str, max_chars: int = 30) -> str:
-    fn = ast.parse(f'def f{sig}: pass').body[0]
-
-    args_all = [a.arg for a in fn.args.args]
-    n_a = len(args_all) - len(fn.args.defaults)
-    args: List[str] = args_all[:n_a]
-    opts: List[str] = args_all[n_a:]
-
-    # Produce a more compact signature
-    s = limited_join(', ', args, max_chars=max_chars - 2)
-    if opts:
-        if not s:
-            opts_str = limited_join(', ', opts, max_chars=max_chars - 4)
-            s = f'[{opts_str}]'
-        elif len(s) < max_chars - 4 - 2 - 3:
-            opts_str = limited_join(', ', opts, max_chars=max_chars - len(sig) - 4 - 2)
-            s += f'[, {opts_str}]'
-
-    if False:  # if fn.returns:  # do not show return type in docs
-        ret = unparse(fn.returns, plain=True)
-        return f'({s}) -> {ret}'
-    return f'({s})'
-
-
-autosummary.mangle_signature = mangle_signature
-
-
-if __name__ == '__main__':
-    print(mangle_signature('(filename: typing.Union[str, pathlib.Path], delim: int=0) -> anndata.base.AnnData'))
-    print(mangle_signature('(a, *, b=1) -> int'))
-    print(mangle_signature('(a, b=1, *c) -> Union[str, pathlib.Path]'))
-    print(mangle_signature('(a, b=1, *c, d=1)'))
+# replace matching field types with ours
+PyObject.doc_field_types = [
+    PrettyTypedField(
+        ft.name,
+        names=ft.names,
+        typenames=ft.typenames,
+        label=ft.label,
+        rolename=ft.rolename,
+        typerolename=ft.typerolename,
+        can_collapse=ft.can_collapse,
+    ) if isinstance(ft, PyTypedField) else ft
+    for ft in PyObject.doc_field_types
+]
