@@ -20,7 +20,7 @@ export PATH=/home/travis/miniconda3/bin:$PATH
 conda update --yes conda
 popd
 
-conda create -n testenv --yes python=$TRAVIS_PYTHON_VERSION pip pytest \
+conda create -n testenv --yes python=$TRAVIS_PYTHON_VERSION pip pytest hdf5 \
       numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION numba scikit-learn statsmodels
 
 source activate testenv
