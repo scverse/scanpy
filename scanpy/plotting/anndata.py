@@ -102,9 +102,10 @@ def scatter(
             show=show,
             save=save,
             ax=ax)
-
     elif x is not None and y is not None:
-        if x in adata.obs_keys() and y in adata.obs_keys() and color not in adata.var_keys():
+        if ((x in adata.obs.keys() or x in adata.var.index)
+            and (y in adata.obs.keys() or y in adata.var.index)
+            and (color is None or color in adata.obs.keys() or color in adata.var.index)):
             axs = _scatter_obs(
                 adata=adata,
                 x=x,
@@ -129,8 +130,9 @@ def scatter(
                 show=show,
                 save=save,
                 ax=ax)
-
-        elif x in adata.var_keys() and y in adata.var_keys() and color not in adata.obs_keys():
+        elif ((x in adata.var.keys() or x in adata.obs.index)
+                and (y in adata.var.keys() or y in adata.obs.index)
+                and (color is None or color in adata.var.keys() or color in adata.obs.index)):
             axs = _scatter_var(
                 adata=adata,
                 x=x,
@@ -160,7 +162,6 @@ def scatter(
                 '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
-
     return axs
 
 
