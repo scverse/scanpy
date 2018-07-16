@@ -50,7 +50,7 @@ def test_dotplot():
     os.remove(outfile.name)
 
 
-def test_dotplot():
+def test_dotplot_numeric_column():
     adata = sc.datasets.krumsiek11()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_dotplot2_', delete=False)
     adata.obs['Gata2'] = adata.X[:, 0]
