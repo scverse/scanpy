@@ -13,7 +13,12 @@ Preprocessing: PP
 
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
-**Basic Preprocessing**
+Basic Preprocessing
+~~~~~~~~~~~~~~~~~~~
+
+For visual quality control, see :func:`~scanpy.api.pl.highest_expr_gens` and
+:func:`~scanpy.api.pl.filter_genes_dispersion` in the :doc:`plotting API
+<plotting>`.
 
 .. autosummary::
    :toctree: .
@@ -29,10 +34,8 @@ Filtering of highly-variable genes, batch-effect correction, per-cell normalizat
    pp.subsample
    pp.downsample_counts
 
-For visual quality control, also see :func:`~scanpy.api.pl.highest_expr_gens`
-and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
-
-**Recipes**
+Recipes
+~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -41,14 +44,21 @@ and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
    pp.recipe_weinreb17
    pp.recipe_seurat
 
-**Batch effect correction** - beyond :func:`pp.regress_out`
+Batch effect correction
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that a simple batch correction method is available via :func:`pp.regress_out`.
 
 .. autosummary::
    :toctree: .
 
    pp.mnn_correct
 
-**Imputation** - note that the limitations of imputation are still under `debate <https://github.com/theislab/scanpy/issues/189>`__
+Imputation
+~~~~~~~~~~
+
+Note that the fundamental limitations of imputation are still under `debate
+<https://github.com/theislab/scanpy/issues/189>`__.
 
 .. autosummary::
    :toctree: .
@@ -56,7 +66,8 @@ and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
    pp.dca
    pp.magic
 
-**Neighbors**
+Neighbors
+~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -67,7 +78,8 @@ and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
 Tools: TL
 ----------
 
-**Embeddings**
+Embeddings
+~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -79,7 +91,8 @@ Tools: TL
    tl.diffmap
    tl.phate
 
-**Clustering, branching trajectories and pseudotime based on single-cell graph**
+Clustering and trajectory inference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -88,14 +101,16 @@ Tools: TL
    tl.dpt
    tl.paga
 
-**Marker genes**
+Marker genes
+~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
 
    tl.rank_genes_groups
 
-**Gene scores, Cell cycle**
+Gene scores, Cell cycle
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
@@ -105,7 +120,8 @@ Tools: TL
    tl.sandbag
    tl.cyclone
 
-**Simulations**
+Simulations
+~~~~~~~~~~~
 
 .. autosummary::
    :toctree: .
