@@ -561,7 +561,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
          By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
          By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwargs : keyword arguments
         Are passed to `seaborn.violinplot`.
 
     Returns
@@ -620,7 +620,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                     ax = axs
 
                 ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                    orient='vertical', scale=scale, ax=ax, **kwds)
+                                    orient='vertical', scale=scale, ax=ax, **kwargs)
                 if stripplot:
                     ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                        jitter=jitter, color='black', size=size, ax=ax)
@@ -680,7 +680,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
         for ax, y in zip(axs, ys):
             ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, **kwds)
+                                orient='vertical', scale=scale, ax=ax, **kwargs)
             if stripplot:
                 ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
@@ -697,7 +697,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwds):
+        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
     """\
     Hierarchically-clustered heatmap [Waskom16]_.
 
@@ -715,7 +715,7 @@ def clustermap(
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwargs : keyword arguments
         Keyword arguments passed to `seaborn.clustermap
         <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
 
@@ -755,9 +755,9 @@ def clustermap(
             row_colors.cat.categories,
             adata.uns[obs_keys + '_colors']))
         row_colors = adata.obs[obs_keys].map(lut)
-        g = sns.clustermap(df, row_colors=row_colors, **kwds)
+        g = sns.clustermap(df, row_colors=row_colors, **kwargs)
     else:
-        g = sns.clustermap(df, **kwds)
+        g = sns.clustermap(df, **kwargs)
     show = settings.autoshow if show is None else show
     if show: pl.show()
     else: return g
@@ -797,7 +797,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         Figure size (width, height). If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwargs : keyword arguments
         Are passed to `seaborn.heatmap`.
 
     Returns
@@ -887,7 +887,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax.set_ylabel(groupby)
     groupby_ax.grid(False)
 
-    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
+    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
     heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
@@ -937,7 +937,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     **kwargs : keyword arguments
-        Are passed to `seaborn.heatmap`.
+        Are passed to `matplotlib.pyplot.scatter`.
 
     Returns
     -------
@@ -1060,7 +1060,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
     colors = [cmap(normalize(value)) for value in mean_flat]
 
-    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none')
+    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwargs)
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
     dot_ax.set_yticklabels([mean_obs.index[idx] for idx in y_ticks])
