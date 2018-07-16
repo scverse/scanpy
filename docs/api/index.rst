@@ -11,7 +11,7 @@ Import Scanpy's high-level API as::
 Preprocessing: PP
 ------------------
 
-Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
+Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
 **Basic Preprocessing**
 
@@ -39,6 +39,7 @@ and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
 
    pp.recipe_zheng17
    pp.recipe_weinreb17
+   pp.recipe_seurat
 
 **Batch effect correction** - beyond :func:`pp.regress_out`
 
@@ -47,7 +48,7 @@ and :func:`pl.filter_genes_dispersion` in the :doc:`plotting API <plotting>`.
 
    pp.mnn_correct
 
-**Imputation**
+**Imputation** - note that the limitations of imputation are still under `debate <https://github.com/theislab/scanpy/issues/189>`__
 
 .. autosummary::
    :toctree: .
