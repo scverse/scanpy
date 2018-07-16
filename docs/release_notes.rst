@@ -8,6 +8,7 @@
 On master :small:`July 11, 2018`
 --------------------------------
 
+- :func:`~scanpy.api.pl.dotplot` for visualizing genes across conditions and clusters, see `here <https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c>`__; :small:`thanks to F Ramirez`
 - :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :small:`thanks to S Gigante`
 - :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
 - :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`__ :small:`thanks to F Ramirez`
