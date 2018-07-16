@@ -1,4 +1,4 @@
-from ..plotting.anndata import scatter, violin, ranking, clustermap, heatmap
+from ..plotting.anndata import scatter, violin, ranking, clustermap, heatmap, dotplot
 
 from ..plotting.preprocessing import filter_genes_dispersion
 

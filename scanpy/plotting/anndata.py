@@ -513,7 +513,8 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 @doc_params(show_save_ax=doc_show_save_ax)
 def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
-           xlabel='', rotation=None, save=None, ax=None, **kwds):
+           xlabel='', rotation=None, save=None, ax=None, multi_panel_figsize=None,
+           multi_panel_swap_axes=False, **kwargs):
     """\
     Violin plot [Waskom16]_.
 
@@ -553,6 +554,12 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         otherwise, no label is shown.
     rotation : `float`, optional (default: `None`)
         Rotation of xtick labels.
+    multi_panel_figsize : (float, float), optional (default: None)
+        Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
+        Format is (width, height)
+    multi_panel_swap_axes: `bool`, optional (default: `False`)
+         By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
+         By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
@@ -590,34 +597,28 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         x = groupby
         ys = keys
     if multi_panel:
-        if len(ys) == 1:
-            y = ys[0]
-            g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-            # don't really know why this gives a warning without passing `order`
-            g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwds)
-            g.set_titles(col_template='{col_name}').set_xlabels('')
-            axs = [g]
-            if stripplot:
-                g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
-                          color='black')
-            if log:
-                g.set(yscale='log')
-            if rotation is not None:
-                for ax in g.axes[0]:
-                    ax.tick_params(labelrotation=rotation)
-        else:
-            # Make a very compact plot in which the y and x axis are shared.
-            # The image is composed of individual plots stacked on top of each
-            # other. Each subplot contains and individual violin plot where
-            # x = categories in `groupby` and y is each of the keys provided.
-            # An example is: keys = marker genes, groupby = louvain clusters.
-            height = len(ys) * 0.6 + 3
-            width = len(x) * 0.9 + 2
+        # Make a very compact plot in which the y and x axis are shared.
+        # The image is composed of individual plots stacked on top of each
+        # other. Each subplot contains and individual violin plot where
+        # x = categories in `groupby` and y is each of the keys provided.
+        # If multi_panel_swap_axes is True, then x and y are swapped.
+        # An example is: keys = marker genes, groupby = louvain clusters.
+
+        categories = adata.obs[groupby].cat.categories
+        if multi_panel_swap_axes is False:
+            if multi_panel_figsize is None:
+                height = len(ys) * 0.6 + 3
+                width = len(categories) * 0.2 + 1
+            else:
+                width, height = multi_panel_figsize
             fig, axs = pl.subplots(nrows=len(ys), ncols=1, sharex=True, sharey=True,
-                                    figsize=(width, height))
+                                   figsize=(width, height))
             for idx, y in enumerate(ys):
-                ax = axs[idx]
+                if len(ys) > 1:
+                    ax = axs[idx]
+                else:
+                    ax = axs
+
                 ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
                                     orient='vertical', scale=scale, ax=ax, **kwds)
                 if stripplot:
@@ -627,6 +628,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 ax.set_ylabel(y, rotation=0, fontsize=11, labelpad=8, ha='right')
                 # remove the grids because in such a compact plot are unnecessary
                 ax.grid(False)
+                ax.tick_params(axis='y', left=False, right=True, labelright=True, labelleft=False)
 
                 # remove the xticks labels except for the last processed plot (first from bottom-up).
                 # Because the plots share the x axis it is redundant and less compact to plot the
@@ -637,9 +639,40 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                     ax.set_yscale('log')
                 if rotation is not None:
                     ax.tick_params(labelrotation=rotation)
+        else:
+            if multi_panel_figsize is None:
+                height = len(categories) * 0.6 + 3
+                width = len(ys) * 0.2 + 1
+            else:
+                height, width = multi_panel_figsize
+            fig, axs = pl.subplots(nrows=len(categories), ncols=1, sharex=True, sharey=True,
+                                   figsize=(width, height))
+            for idx, category in enumerate(categories):
+                df = pd.melt(obs_tidy[obs_tidy[groupby] == category], value_vars=keys)
+                ax = axs[idx]
+                ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
+                                    orient='vertical', scale=scale, ax=ax, **kwargs)
 
-            # remove the spacing between subplots
-            pl.subplots_adjust(wspace=0, hspace=0)
+                if stripplot:
+                    ax = sns.stripplot('variable', y='value', data=df, order=order,
+                                       jitter=jitter, color='black', size=size, ax=ax)
+
+                ax.set_ylabel(category, rotation=0, fontsize=11, labelpad=8, ha='right')
+                # remove the grids because in such a compact plot are unnecessary
+                ax.grid(False)
+                ax.tick_params(axis='y', left=False, right=True, labelright=True, labelleft=False)
+
+                # remove the xticks labels except for the last processed plot (first from bottom-up).
+                # Because the plots share the x axis it is redundant and less compact to plot the
+                # axis for each plot
+                if idx < len(categories) - 1:
+                    ax.set_xticklabels([])
+                if log:
+                    ax.set_yscale('log')
+                if rotation is not None:
+                    ax.tick_params(labelrotation=rotation)
+        # remove the spacing between subplots
+        pl.subplots_adjust(wspace=0, hspace=0)
 
     else:
         if ax is None:
@@ -732,7 +765,7 @@ def clustermap(
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            show=None, save=None, **kwds):
+            show=None, save=None, figsize=None, **kwargs):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -760,6 +793,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
         should be subdivided.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height). If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
@@ -791,7 +827,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     obs_tidy = pd.DataFrame(matrix, columns=var_names)
     if groupby is None:
-        x = 'variable'
+        groupby = ''
+        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
     else:
         if not is_categorical_dtype(adata.obs[groupby]):
             # if the groupby column is not categorical, turn it into one
@@ -799,12 +836,15 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
             categorical = pd.cut(adata.obs[groupby], num_categories)
         else:
             categorical = adata.obs[groupby]
-        obs_tidy.set_index(categorical, groupby, inplace=True)
-        x = obs_tidy.index.categories
+    obs_tidy.set_index(categorical, groupby, inplace=True)
+    categories = obs_tidy.index.categories
 
-    height = 10
-    heatmap_width = len(var_names) * 0.18
-    width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    if figsize is None:
+        height = 10
+        heatmap_width = len(var_names) * 0.18
+        width = heatmap_width + 3  # +3 to account for the colorbar and labels
+    else:
+        width, height = figsize
     ax_frac2width = 0.25
     fig, axs = pl.subplots(
         nrows=1, ncols=3, sharey=False,
@@ -829,8 +869,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         label2code[label] = code
 
     groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
-    groupby_ax.set_yticks(ticks)
-    groupby_ax.set_yticklabels(labels)
+    if len(categories) > 1:
+        groupby_ax.set_yticks(ticks)
+        groupby_ax.set_yticklabels(labels)
 
     # remove y ticks
     groupby_ax.tick_params(axis='y', left=False)
@@ -844,11 +885,227 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax.spines['bottom'].set_visible(False)
 
     groupby_ax.set_ylabel(groupby)
+    groupby_ax.grid(False)
 
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
+    heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
+    heatmap_ax.set_xticklabels(var_names)
     pl.subplots_adjust(wspace=0.03, hspace=0.01)
     utils.savefig_or_show('heatmap', show=show, save=save)
 
+    return axs
+
+
+def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+            figsize=None, show=None, save=None, **kwargs):
+    """Makes a 'dot plot' of the expression values of `var_names`.
+    For each var_name and each groupby category a dot is plotted.
+    Each dot represents two values: mean expression within
+    each category (visualized by color) and fraction of cells expressing the
+    var_name in the category. (visualized by the size of the dot).
+    If groupby is not given, the dotplot assumes that all data belongs to a single
+    category. A gene is not considered expressed if the expression value in the adata
+    (or adata.raw) is equal to zero.
+    For example, for each marker gene, the mean value and the percentage of cells
+    expressing the gene can be visualized for each cluster.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        var_names should be a valid subset of  `.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that groupby is
+        a categorical. If groupby is not a categorical observation, it would be
+        subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value determines
+        the number of groups into which the groupby observation should be subdivided.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height. If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
+    show : bool, optional (default: `None`)
+         Show the plot.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    **kwargs : keyword arguments
+        Are passed to `seaborn.heatmap`.
+
+    Returns
+    -------
+    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
+    second axis is the heatmap and the third axis is the colorbar.
+
+    """
+    from scipy.sparse import issparse
+    sanitize_anndata(adata)
+    if isinstance(var_names, str):
+        var_names = [var_names]
+    if groupby is not None:
+        if groupby not in adata.obs_keys():
+            raise ValueError('groupby has to be a valid observation. Given value: {}, '
+                             'valid observations: {}'.format(groupby, adata.obs_keys()))
+
+    if use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    if log:
+        matrix = np.log1p(matrix)
+
+    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+    if groupby is None:
+        # assign all data to a single category to allow groupby opeerations
+        categorical = pd.Series(np.repeat(0, obs_tidy.shape[0]), dtype='category')
+    else:
+        if not is_categorical_dtype(adata.obs[groupby]):
+            # if the groupby column is not categorical, turn it into one
+            # by subdividing into 7 categories
+            categorical = pd.cut(adata.obs[groupby], num_categories)
+        else:
+            categorical = adata.obs[groupby]
+    obs_tidy.set_index(categorical, groupby, inplace=True)
+    categories = obs_tidy.index.categories
+    # for if category defined by groupby (if any) compute for each var_name
+    # 1. the mean value over the category
+    # 2. the fraction of cells in the category having a value > 0
+
+    # 1. compute mean value
+    mean_obs = obs_tidy.groupby(level=0).mean()
+
+    # 2. compute fraction of cells having value >0
+    # transform obs_tidy into boolean matrix
+    obs_bool = obs_tidy.astype(bool)
+
+    # compute the sum per group which in the boolean matrix this is the number
+    # of values >0, and divide the result by the total number of values in the group
+    # (given by `count()`)
+    fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+
+    if figsize is None:
+        height = len(categories) * 0.3 + 1  # +1 for labels
+        # if the number of categories is small (eg 1 or 2) use
+        # a larger height
+        height = max([1.5, height])
+        heatmap_width = len(var_names) * 0.5
+        width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+    else:
+        width, height = figsize
+        heatmap_width = width * 0.75
+
+    # colorbar ax width should not change with differences in the width of the image
+    # otherwise can become too small
+    colorbar_width = 0.4
+    colorbar_width_spacer = 0.7
+    size_legend_width = 0.5
+
+    # define a layout of 1 row x 4 columns
+    # First ax is for the main figure
+    # Second ax is for the color bar legend
+    # Third ax is for an spacer that avoids the ticks
+    # from the color bar to be hidden beneath the next axis
+    # Fourth ax is to plot the size legend
+    from matplotlib import gridspec
+    fig = pl.figure(figsize=(width, height))
+    axs = gridspec.GridSpec(nrows=1, ncols=4, left=0.05, right=0.48, wspace=0.05,
+                            width_ratios=[heatmap_width, colorbar_width, colorbar_width_spacer, size_legend_width])
+    if len(categories) < 4:
+        #  hen two few categories are shown, the colorbar and size legend
+        # are compressed, thus, the dotplot ax is split into two:
+        axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[0], height_ratios=[len(categories) * 0.3, 1])
+        dot_ax = fig.add_subplot(axs2[0])
+    else:
+        dot_ax = fig.add_subplot(axs[0])
+
+    color_legend = fig.add_subplot(axs[1])
+
+    # to keep the size_legen of about the same height, irrespective
+    # of the number of categories, the fourth ax is subdivided into two parts
+    size_legend_height = min(1.3, height)
+    # wspace is proportional to the width but a constant value is
+    # needed such that the spacing is the same for thinner or wider images.
+    wspace = 10.5/ width
+    axs3 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[3], wspace=wspace,
+                                            height_ratios=[size_legend_height / height,
+                                                           (height - size_legend_height) / height])
+    size_legend = fig.add_subplot(axs3[0])
+
+    # make scatter plot in which
+    # x = var_names
+    # y = groupby category
+    # size = fraction
+    # color = mean expression
+
+    y, x = np.indices(mean_obs.shape)
+    y = y.flatten()
+    x = x.flatten()
+    frac = fraction_obs.values.flatten()
+    mean_flat = mean_obs.values.flatten()
+    cmap = pl.get_cmap('Reds')
+
+    size = (frac * 10) ** 2
+
+    import matplotlib.colors
+    normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
+    colors = [cmap(normalize(value)) for value in mean_flat]
+
+    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none')
+    y_ticks = range(mean_obs.shape[0])
+    dot_ax.set_yticks(y_ticks)
+    dot_ax.set_yticklabels([mean_obs.index[idx] for idx in y_ticks])
+
+    x_ticks = range(mean_obs.shape[1])
+    dot_ax.set_xticks(x_ticks)
+    dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
+    dot_ax.grid(False)
+    dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
+    dot_ax.set_ylabel(groupby)
+
+    # to be consistent with the heatmap plot, is better to
+    # invert the order of the y-axis, such that the first group is on
+    # top
+    ymin, ymax = dot_ax.get_ylim()
+    dot_ax.set_ylim(ymax+0.5, ymin - 0.5)
+
+    dot_ax.set_xlim(-1, len(var_names) + 0.5)
+
+    # plot colorbar
+    import matplotlib.colorbar
+    matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
+
+    # plot size bar
+    fracs_legend = np.array([0.25, 0.50, 0.75, 1])
+    size = (fracs_legend * 10) ** 2
+    color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
+    size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
+    size_legend.set_yticks(range(len(size)))
+    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legend])
+
+    size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
+
+    # remove x ticks and labels
+    size_legend.tick_params(axis='x', bottom=False, labelbottom=False)
+
+    # remove surrounding lines
+    size_legend.spines['right'].set_visible(False)
+    size_legend.spines['top'].set_visible(False)
+    size_legend.spines['left'].set_visible(False)
+    size_legend.spines['bottom'].set_visible(False)
+    size_legend.grid(False)
+
+    ymin, ymax = size_legend.get_ylim()
+    size_legend.set_ylim(ymin, ymax+0.5)
+
+    utils.savefig_or_show('heatmap', show=show, save=save)
     return axs
