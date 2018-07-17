@@ -131,15 +131,15 @@ def _paga_scatter(
     if not isinstance(color, list): color = [color]
     kwds = {}
     if 'draw_graph' in basis:
-        from . import draw_graph
+        from .embedding import draw_graph
         scatter_func = draw_graph
         kwds['edges'] = True if edges is None else edges
     elif basis == 'umap':
-        from . import umap
+        from .embedding import umap
         scatter_func = umap
         kwds['edges'] = True if edges is None else edges
     else:
-        from . import scatter
+        from ..anndata import scatter
         scatter_func = scatter
         kwds['basis'] = basis
     axs = scatter_func(
