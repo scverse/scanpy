@@ -19,7 +19,7 @@ from ..utils import matrix
 def paga_compare(
         adata,
         basis=None,
-        edges=None,
+        edges=False,
         color=None,
         alpha=None,
         groups=None,
