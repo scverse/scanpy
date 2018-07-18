@@ -5,15 +5,20 @@
 .. role:: small
 
 
-On master :small:`July 11, 2018`
+On master :small:`July 16, 2018`
 --------------------------------
 
-- :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :small:`thanks to S Gigante`
-- :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
+Plotting of marker genes and quality control:
+  
+- :func:`~scanpy.api.pl.dotplot` for visualizing genes across conditions and clusters, see `here <https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c>`__ :small:`thanks to F Ramirez`  
 - :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`__ :small:`thanks to F Ramirez`
 - :func:`~scanpy.api.pl.violin` now produces very compact overview figures with many panels, see `here <https://github.com/theislab/scanpy/pull/175>`__ :small:`thanks to F Ramirez`
-- :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`__; plot genes with highest mean fraction of cells, similar to plotQC of *Scater* [McCarthy17]_ :small:`thanks to F Ramirez`
+- :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`__; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :small:`thanks to F Ramirez`
 
+There now is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__ on imputation:
+
+- :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :small:`thanks to S Gigante`
+- :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_  
 
 Version 1.2 :small:`June 8, 2018`
 ---------------------------------
@@ -51,7 +56,7 @@ The API gained a preprocessing function :func:`~scanpy.api.pp.neighbors` and a
 class :func:`~scanpy.api.Neighbors` to which all basic graph computations are
 delegated.
 
-Upgrading to 1.0 isn't fully backwards compatible - future upgrades will be.
+Upgrading to 1.0 isn't fully backwards compatible in the following changes:
 
 - the graph-based tools :func:`~scanpy.api.tl.louvain`
   :func:`~scanpy.api.tl.dpt` :func:`~scanpy.api.tl.draw_graph`
@@ -75,7 +80,7 @@ Upgrading to 1.0 isn't fully backwards compatible - future upgrades will be.
 - upgrading scikit-learn from 0.18 to 0.19 changed the implementation of PCA,
   some results might therefore look slightly different
 
-Further changes are
+Further changes are:
 
 - UMAP [McInnes18]_ can serve as a first visualization of the data just as tSNE,
   in contrast to tSNE, UMAP directly embeds the single-cell graph and is faster;
