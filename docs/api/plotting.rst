@@ -19,6 +19,7 @@ Generic
    pl.scatter
    pl.violin
    pl.heatmap
+   pl.dotplot
    pl.clustermap
    pl.ranking
 
