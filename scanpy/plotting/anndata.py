@@ -102,9 +102,10 @@ def scatter(
             show=show,
             save=save,
             ax=ax)
-
     elif x is not None and y is not None:
-        if x in adata.obs_keys() and y in adata.obs_keys() and color not in adata.var_keys():
+        if ((x in adata.obs.keys() or x in adata.var.index)
+            and (y in adata.obs.keys() or y in adata.var.index)
+            and (color is None or color in adata.obs.keys() or color in adata.var.index)):
             axs = _scatter_obs(
                 adata=adata,
                 x=x,
@@ -129,8 +130,9 @@ def scatter(
                 show=show,
                 save=save,
                 ax=ax)
-
-        elif x in adata.var_keys() and y in adata.var_keys() and color not in adata.obs_keys():
+        elif ((x in adata.var.keys() or x in adata.obs.index)
+                and (y in adata.var.keys() or y in adata.obs.index)
+                and (color is None or color in adata.var.keys() or color in adata.obs.index)):
             axs = _scatter_var(
                 adata=adata,
                 x=x,
@@ -160,7 +162,6 @@ def scatter(
                 '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
-
     return axs
 
 
@@ -514,7 +515,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
            xlabel='', rotation=None, save=None, ax=None, multi_panel_figsize=None,
-           multi_panel_swap_axes=False, **kwargs):
+           multi_panel_swap_axes=False, **kwds):
     """\
     Violin plot [Waskom16]_.
 
@@ -561,7 +562,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
          By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
          By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.
     {show_save_ax}
-    **kwargs : keyword arguments
+    **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
 
     Returns
@@ -604,7 +605,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
             # don't really know why this gives a warning without passing `order`
             g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwargs)
+                      scale=scale, order=keys, **kwds)
             if stripplot:
                 g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
                           color='black')
@@ -638,7 +639,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                         ax = axs
 
                     ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                        orient='vertical', scale=scale, ax=ax, **kwargs)
+                                        orient='vertical', scale=scale, ax=ax, **kwds)
                     if stripplot:
                         ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                            jitter=jitter, color='black', size=size, ax=ax)
@@ -669,7 +670,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                     df = pd.melt(obs_tidy[obs_tidy[groupby] == category], value_vars=keys)
                     ax = axs[idx]
                     ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
-                                        orient='vertical', scale=scale, ax=ax, **kwargs)
+                                        orient='vertical', scale=scale, ax=ax, **kwds)
 
                     if stripplot:
                         ax = sns.stripplot('variable', y='value', data=df, order=order,
@@ -698,7 +699,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                 ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
         for ax, y in zip(axs, ys):
             ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, **kwargs)
+                                orient='vertical', scale=scale, ax=ax, **kwds)
             if stripplot:
                 ax = sns.stripplot(x, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
@@ -715,7 +716,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwargs):
+        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwds):
     """\
     Hierarchically-clustered heatmap [Waskom16]_.
 
@@ -733,7 +734,7 @@ def clustermap(
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     {show_save_ax}
-    **kwargs : keyword arguments
+    **kwds : keyword arguments
         Keyword arguments passed to `seaborn.clustermap
         <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
 
@@ -773,9 +774,9 @@ def clustermap(
             row_colors.cat.categories,
             adata.uns[obs_keys + '_colors']))
         row_colors = adata.obs[obs_keys].map(lut)
-        g = sns.clustermap(df, row_colors=row_colors, **kwargs)
+        g = sns.clustermap(df, row_colors=row_colors, **kwds)
     else:
-        g = sns.clustermap(df, **kwargs)
+        g = sns.clustermap(df, **kwds)
     show = settings.autoshow if show is None else show
     if show: pl.show()
     else: return g
@@ -783,7 +784,7 @@ def clustermap(
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            show=None, save=None, figsize=None, **kwargs):
+            show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -815,7 +816,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         Figure size (width, height). If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
     {show_save_ax}
-    **kwargs : keyword arguments
+    **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
 
     Returns
@@ -905,7 +906,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax.set_ylabel(groupby)
     groupby_ax.grid(False)
 
-    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwargs)
+    sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
     heatmap_ax.set_ylabel('')
     heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
@@ -917,7 +918,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 
 def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            figsize=None, show=None, save=None, **kwargs):
+            figsize=None, show=None, save=None, **kwds):
     """Makes a 'dot plot' of the expression values of `var_names`.
     For each var_name and each groupby category a dot is plotted.
     Each dot represents two values: mean expression within
@@ -954,7 +955,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    **kwargs : keyword arguments
+    **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
 
     Returns
@@ -1078,7 +1079,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
     colors = [cmap(normalize(value)) for value in mean_flat]
 
-    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwargs)
+    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwds)
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
     dot_ax.set_yticklabels([mean_obs.index[idx] for idx in y_ticks])
