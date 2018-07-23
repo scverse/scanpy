@@ -615,7 +615,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             if rotation is not None:
                 for ax in g.axes[0]:
                     ax.tick_params(labelrotation=rotation)
-            axs = g
         else:
             # Make a very compact plot in which the y and x axis are shared.
             # The image is composed of individual plots stacked on top of each
@@ -623,6 +622,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
             # x = categories in `groupby` and y is each of the keys provided.
             # If multi_panel_swap_axes is True, then x and y are swapped.
             # An example is: keys = marker genes, groupby = louvain clusters.
+
             categories = adata.obs[groupby].cat.categories
             if multi_panel_swap_axes is False:
                 if multi_panel_figsize is None:
@@ -692,6 +692,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
                         ax.tick_params(labelrotation=rotation)
             # remove the spacing between subplots
             pl.subplots_adjust(wspace=0, hspace=0)
+
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
@@ -955,7 +956,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     **kwds : keyword arguments
-        Are passed to `seaborn.heatmap`.
+        Are passed to `matplotlib.pyplot.scatter`.
 
     Returns
     -------
@@ -1078,7 +1079,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
     colors = [cmap(normalize(value)) for value in mean_flat]
 
-    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none')
+    dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwds)
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
     dot_ax.set_yticklabels([mean_obs.index[idx] for idx in y_ticks])
