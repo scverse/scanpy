@@ -113,15 +113,16 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         cell_subset = number_per_cell <= max_number
 
     s = np.sum(~cell_subset)
-    logg.msg('filtered out {} cells that have'.format(s), end=' ', v=4)
-    if min_genes is not None or min_counts is not None:
-        logg.msg('less than',
-               str(min_genes) + ' genes expressed'
-               if min_counts is None else str(min_counts) + ' counts', v=4, no_indent=True)
-    if max_genes is not None or max_counts is not None:
-        logg.msg('more than ',
-               str(max_genes) + ' genes expressed'
-               if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
+    if s > 0:
+        logg.info('filtered out {} cells that have'.format(s), end=' ')
+        if min_genes is not None or min_counts is not None:
+            logg.info('less than',
+                   str(min_genes) + ' genes expressed'
+                   if min_counts is None else str(min_counts) + ' counts', no_indent=True)
+        if max_genes is not None or max_counts is not None:
+            logg.info('more than ',
+                   str(max_genes) + ' genes expressed'
+                   if max_counts is None else str(max_counts) + ' counts', no_indent=True)
     return cell_subset, number_per_cell
 
 
@@ -197,15 +198,16 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
         gene_subset = number_per_gene <= max_number
 
     s = np.sum(~gene_subset)
-    logg.msg('filtered out {} genes that are detected'.format(s), end=' ', v=4)
-    if min_cells is not None or min_counts is not None:
-        logg.msg('in less than',
-               str(min_cells) + ' cells'
-               if min_counts is None else str(min_counts) + ' counts', v=4, no_indent=True)
-    if max_cells is not None or max_counts is not None:
-        logg.msg('in more than ',
-               str(max_cells) + ' cells'
-               if max_counts is None else str(max_counts) + ' counts', v=4, no_indent=True)
+    if s > 0:
+        logg.info('filtered out {} genes that are detected'.format(s), end=' ')
+        if min_cells is not None or min_counts is not None:
+            logg.info('in less than',
+                   str(min_cells) + ' cells'
+                   if min_counts is None else str(min_counts) + ' counts', no_indent=True)
+        if max_cells is not None or max_counts is not None:
+            logg.info('in more than ',
+                   str(max_cells) + ' cells'
+                   if max_counts is None else str(max_counts) + ' counts', no_indent=True)
     return gene_subset, number_per_gene
 
 
