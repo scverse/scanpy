@@ -181,19 +181,36 @@ def rank_genes_groups(
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_names.append(adata_comp.var_names[global_indices])
     elif method == 'logreg':
+    #if reference is not set, then the groups listed will be compared to the rest
+    #if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
-        if reference != 'rest':
-            raise ValueError('\'logreg\' is only implemented for `reference==\'rest\'`.')
+        if reference not in groups:
+            raise Exception("reference must be in groups")
+        if len(groups) == 1:
+            raise Exception("Cannot perform logistic regression on a single cluster.")
+        if len(groups) == 2: #binary logistic regression
+            adata_copy = adata[(adata.obs[groupby] == groups_order[0]) | (adata.obs[groupby] == groups_order[1])]
+            X = adata_copy.raw.X
+        else:
+            logg.hint("Logreg is currently implemented for either all or binary classification. Running one vs. all:")
+            adata_copy = adata
+            
         clf = LogisticRegression(**kwds)
-        clf.fit(X, adata.obs[groupby])
+        clf.fit(X, adata_copy.obs[groupby])
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
-            scores = scores_all[igroup]
+            if reference != 'rest' and len(groups) <= 2: #binary logistic regression
+                scores = scores_all[0]
+            else:
+                scores = scores_all[igroup]
             partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
             partial_indices = np.argsort(scores[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
-            rankings_gene_names.append(adata_comp.var_names[global_indices])
+            rankings_gene_names.append(adata_copy.raw.var_names[global_indices])
+            if reference != 'rest' and len(groups) <= 2:
+                break
+
     elif method == 'wilcoxon':
         # Wilcoxon-rank-sum test is usually more powerful in detecting marker genes
         # Limit maximal RAM that is required by the calculation. Currently set fixed to roughly 100 MByte
