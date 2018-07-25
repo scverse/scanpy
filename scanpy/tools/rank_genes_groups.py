@@ -184,22 +184,22 @@ def rank_genes_groups(
     #if reference is not set, then the groups listed will be compared to the rest
     #if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
-        if reference not in groups:
-            raise Exception("reference must be in groups")
+        reference = groups_order[0]
         if len(groups) == 1:
             raise Exception("Cannot perform logistic regression on a single cluster.")
-        if len(groups) == 2: #binary logistic regression
-            adata_copy = adata[(adata.obs[groupby] == groups_order[0]) | (adata.obs[groupby] == groups_order[1])]
-            X = adata_copy.raw.X
-        else:
-            logg.hint("Logreg is currently implemented for either all or binary classification. Running one vs. all:")
-            adata_copy = adata
+
+        adata_copy = adata[adata.obs[groupby].isin(groups_order)]
+        
+        adata_comp = adata_copy
+        if adata.raw is not None and use_raw:
+            adata_comp = adata_copy.raw
+        X = adata_comp.X
             
         clf = LogisticRegression(**kwds)
         clf.fit(X, adata_copy.obs[groupby])
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
-            if reference != 'rest' and len(groups) <= 2: #binary logistic regression
+            if len(groups) <= 2: #binary logistic regression
                 scores = scores_all[0]
             else:
                 scores = scores_all[igroup]
@@ -208,7 +208,7 @@ def rank_genes_groups(
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_names.append(adata_copy.raw.var_names[global_indices])
-            if reference != 'rest' and len(groups) <= 2:
+            if len(groups) <= 2:
                 break
 
     elif method == 'wilcoxon':
@@ -306,7 +306,7 @@ def rank_genes_groups(
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
 
     groups_order_save = [str(g) for g in groups_order]
-    if reference != 'rest':
+    if (reference != 'rest' and method != 'logreg') or (method == 'logreg' and len(groups) == 2):
         groups_order_save = [g for g in groups_order if g != reference]
     adata.uns[key_added]['scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_scores],
