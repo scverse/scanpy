@@ -12,6 +12,7 @@ def umap(
         gamma=1.0,
         negative_sample_rate=5,
         init_pos='spectral',
+        key_added_ext='umap',
         random_state=0,
         a=None,
         b=None,
@@ -56,6 +57,9 @@ def umap(
         Weighting applied to negative samples in low dimensional embedding
         optimization. Values higher than one will result in greater weight
         being given to negative samples.
+    key_added_ext: `string` (default 'umap')
+        The extension of the field added to obsm, the default value will result
+        in a field called X_umap.
     negative_sample_rate : `int` (optional, default 5)
         The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
@@ -126,7 +130,7 @@ def umap(
         init_coords,
         random_state,
         max(0, settings.verbosity-3))
-    adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
+    adata.obsm['X_'+key_added_ext] = X_umap  # annotate samples with UMAP coordinates
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint('added\n'
               '    \'X_umap\', UMAP coordinates (adata.obsm)')
