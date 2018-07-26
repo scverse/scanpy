@@ -51,7 +51,7 @@ def draw_graph(
     adjacency : sparse matrix or `None`, optional (default: `None`)
         Sparse adjacency matrix of the graph, defaults to
         `adata.uns['neighbors']['connectivities']`.
-    key_ext : `str`, optional (default: `None`)
+    key_added_ext : `str`, optional (default: `None`)
         By default, append `layout`.
     proceed : `bool`, optional (default: `None`)
         Continue computation, starting off with 'X_draw_graph_`layout`'.
