@@ -1,5 +1,5 @@
-Basic Usage
------------
+Usage Principles
+----------------
 
 Import the Scanpy API as::
 
@@ -13,7 +13,7 @@ in ``sc.tl``, e.g.::
 
     sc.tl.louvain(adata, **tool_params)  # cluster cells using Louvain clustering
 
-where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations of *n_vars* gene expression variables. For each tool, there is at least one associated plotting function in ``sc.pl``, which retrieves and plots the added annotation::
+where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations (cells) of *n_vars* variables (genes). For each tool, there is at least one associated plotting function in ``sc.pl``, which retrieves and plots the added annotation::
 
     sc.pl.louvain(adata, **plotting_params)
 
