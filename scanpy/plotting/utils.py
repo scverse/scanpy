@@ -378,7 +378,7 @@ def plot_arrows(axs, adata, basis, arrows_kwds=None):
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):
     """Scatter of group using representation of data Y.
     """
-    mask = adata.obs[key].cat.categories[imask] == adata.obs[key].values
+    mask = adata.obs[key].cat.categories.sort_values()[imask] == adata.obs[key].values
     color = adata.uns[key + '_colors'][imask]
     if not isinstance(color[0], str):
         from matplotlib.colors import rgb2hex
