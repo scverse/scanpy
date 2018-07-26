@@ -422,7 +422,7 @@ def _scatter_obs(
                                horizontalalignment='center',
                                fontsize=legend_fontsize)
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
-            for iname, name in enumerate(adata.obs[key].cat.categories):
+            for iname, name in enumerate(adata.obs[key].cat.categories.sort_values()):
                 if name in centroids:
                     all_pos[iname] = centroids[name]
                 else:
