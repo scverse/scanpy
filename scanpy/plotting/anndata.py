@@ -388,7 +388,7 @@ def _scatter_obs(
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
         if groups is None:
-            for iname, name in enumerate(adata.obs[key].cat.categories):
+            for iname, name in enumerate(adata.obs[key].cat.categories.sort_values()):
                 if name not in settings.categories_to_ignore:
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
@@ -401,7 +401,7 @@ def _scatter_obs(
                                      + ' specify valid name, one of '
                                      + str(adata.obs[key].cat.categories))
                 else:
-                    iname = np.flatnonzero(adata.obs[key].cat.categories.values == name)[0]
+                    iname = np.flatnonzero(adata.obs[key].cat.categories.sort_values().values == name)[0]
                     mask = scatter_group(axs[ikey], key, iname,
                                          adata, Y, projection, size=size, alpha=alpha)
                     if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
