@@ -341,7 +341,7 @@ def add_colors_for_categorical_sample_annotation(
         raise ValueError(
             'Cannot plot more than {} categories, which is not enough for {}.'
             .format(len(adata.uns[key + '_colors']), key))
-    for iname, name in enumerate(adata.obs[key].cat.categories):
+    for iname, name in enumerate(sorted(adata.obs[key].cat.categories)):
         if name in settings.categories_to_ignore:
             logg.info(
                 '    setting color of group \'{}\' in \'{}\' to \'grey\' '
