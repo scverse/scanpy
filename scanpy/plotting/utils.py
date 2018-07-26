@@ -393,7 +393,7 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
                c=color,
                edgecolors='none',
                s=size,
-               label=adata.obs[key].cat.categories[imask],
+               label=adata.obs[key].cat.categories.sort_values()[imask],
                rasterized=settings._vector_friendly)
     return mask
 
