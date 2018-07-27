@@ -36,16 +36,24 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
     A `matplotlib.Axes` object
 
     """
+    from scipy.sparse import issparse
+
     # compute the percentage of each gene per cell
     dat = normalize_per_cell(adata, counts_per_cell_after=100, copy=True)
 
     # identify the genes with the highest mean
-    dat.var['mean_percent'] = dat.X.mean(axis=0).A1
+    if issparse(dat.X):
+        dat.var['mean_percent'] = dat.X.mean(axis=0).A1
+        top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
+        dat = dat[:, top]
+        dat = pd.DataFrame(dat.X.toarray(), index=dat.obs_names, columns=dat.var_names)
 
-    top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
+    else:
+        dat.var['mean_percent'] = dat.X.mean(axis=0)        
+        top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
+        dat = dat[:, top]
+        dat = pd.DataFrame(dat.X, index=dat.obs_names, columns=dat.var_names)        
 
-    dat = dat[:, top]
-    dat = pd.DataFrame(dat.X.todense(), index=dat.obs_names, columns=dat.var_names)
     if not ax:
         # figsize is hardcoded to produce a tall image. To change the fig size,
         # a matplotlib.Axes object needs to be passed.
