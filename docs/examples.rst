@@ -7,7 +7,7 @@ Tutorials
 Clustering
 ----------
 
-Currently, for getting started, we recommend `Scanpy's reimplementation <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb>`__ of Seurat's [Satija15]_ clustering `tutorial <http://satijalab.org/seurat/pbmc3k_tutorial.html>`__ for 2700 PBMCs from 10x Genomics, containing preprocessing, clustering and the identification of cell types via known marker genes.
+Currently, for getting started, we recommend `Scanpy's reimplementation <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170505_seurat/seurat.ipynb>`__ of Seurat's [Satija15]_ clustering tutorial 2700 PBMCs from 10x Genomics, containing preprocessing, clustering and the identification of cell types via known marker genes.
 
 You might compare this to `clustering 68K PBMCs <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170503_zheng17/zheng17.ipynb>`__ as it would be done in Cell Ranger [Zheng17]_.
 
@@ -33,7 +33,7 @@ You can extend this to multi-resolution analyses of whole animals, such as `here
 
    <img src="http://www.falexwolf.de/img/paga_planaria.png" style="width: 350px">
 
-The PAGA method beyind this is described `here <https://rawgit.com/falexwolf/paga_paper/master/paga.pdf>`__ and can be cited using this `doi <https://doi.org/10.1101/208819>`__. As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_ for two hematopoiesis datasets: `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`__ for [Paul15]_ and `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`__ for [Moignard15]_.
+The PAGA method behind this is described `here <https://rawgit.com/falexwolf/paga_paper/master/paga.pdf>`__ and can be cited using this `doi <https://doi.org/10.1101/208819>`__. As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_ for two hematopoiesis datasets: `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`__ for [Paul15]_ and `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`__ for [Moignard15]_.
 
 
 ------------
