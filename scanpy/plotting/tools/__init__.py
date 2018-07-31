@@ -9,7 +9,7 @@ from ...utils import doc_params
 from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from ..utils import doc_scatter_bulk, doc_show_save_ax
+from ..docs import doc_scatter_bulk, doc_show_save_ax
 
 
 # ------------------------------------------------------------------------------
