@@ -5,7 +5,7 @@
 .. role:: small
 
 
-On master :small:`July 16, 2018`
+On master :small:`July 31, 2018`
 --------------------------------
 
 Plotting of marker genes and quality control:
@@ -18,7 +18,12 @@ Plotting of marker genes and quality control:
 There now is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__ on imputation:
 
 - :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :small:`thanks to S Gigante`
-- :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_  
+- :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
+
+Further changes:
+
+- `frameon=False` enables easy removal of frames in scatter plots and in :func:`~scanpy.api.set_figure_params`
+
 
 Version 1.2 :small:`June 8, 2018`
 ---------------------------------

@@ -1,4 +1,4 @@
-"""Overwrite matplotlib's and seaborn's default rcParams.
+"""Set the default matplotlib.rcParams.
 """
 
 import matplotlib
@@ -57,8 +57,8 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams['axes.grid'] = True
     rcParams['grid.color'] = '.8'
 
-    # color map  # seaborn 0.8.0 has 'rocket'
-    rcParams['image.cmap'] = 'RdBu_r' if color_map is None else color_map
+    # color map
+    rcParams['image.cmap'] = rcParams['image.cmap'] if color_map is None else color_map
 
 
 def set_rcParams_defaults():
