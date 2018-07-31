@@ -15,7 +15,7 @@ from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from .utils import doc_scatter_bulk, doc_show_save_ax
+from .docs import doc_scatter_bulk, doc_show_save_ax
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -64,8 +64,8 @@ def scatter(
     y : `str` or `None`
         y coordinate.
     color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell or variable/gene annotation
-        `[\'ann1\', \'ann2\']`.
+        Keys for annotations of observations/cells or variables/genes, e.g.,
+        `'ann1'` or `['ann1', 'ann2']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
