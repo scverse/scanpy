@@ -48,6 +48,8 @@ color_map : `str`, optional (default: `matplotlib.rcParams['image.cmap']`)
      String denoting matplotlib color map.
 palette : list of `str`, optional (default: `None`)
      Colors to use for plotting groups (categorical annotation).
+frameon : `bool`, optional (default: `True`)
+     Draw a frame around the scatter plot.
 right_margin : `float` or list of `float` (default: `None`)
      Adjust the width of the space right of each plotting panel.
 size : `float`, optional (default: `None`)
