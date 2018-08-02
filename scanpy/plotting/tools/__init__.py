@@ -281,8 +281,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
         pl.title('{} vs. {}'.format(group_name, reference))
-        if n_panels <= 5 or count >= n_panels_x: pl.xlabel('ranking')
-        if count == 0 or count == n_panels_x: pl.ylabel('score')
+        if count >= n_panels_x * (n_panels_y - 1): pl.xlabel('ranking')
+        if count % n_panels_x == 0: pl.ylabel('score')
         ymin = np.min(scores)
         ymax = np.max(scores)
         ymax += 0.3*(ymax-ymin)
