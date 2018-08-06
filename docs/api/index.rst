@@ -257,7 +257,7 @@ Datasets
    datasets.moignard15
    datasets.paul15
    datasets.toggleswitch
-
+   datasets.pbmc68k_reduced
 
 Exporting
 ---------
