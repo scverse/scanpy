@@ -9,7 +9,7 @@ from ...utils import doc_params
 from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from ..utils import doc_scatter_bulk, doc_show_save_ax
+from ..docs import doc_scatter_bulk, doc_show_save_ax
 
 
 # ------------------------------------------------------------------------------
@@ -297,7 +297,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
         ax.set_title('{} vs. {}'.format(group_name, reference))
-        ax.set_xlabel('ranking')
+        if count >= n_panels_x * (n_panels_y - 1):
+            ax.set_xlabel('ranking')
 
         # print the 'score' label only on the first panel per row.
         if count % n_panels_x == 0:

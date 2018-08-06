@@ -3,10 +3,10 @@ from .. import utils
 from ..anndata import scatter
 from ...utils import doc_params
 from ... import settings
-from ..utils import doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
 
 
-@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def diffmap(
         adata,
         color=None,
@@ -21,6 +21,7 @@ def diffmap(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         size=None,
         title=None,
@@ -32,13 +33,7 @@ def diffmap(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
+    {adata_color_etc}
     {scatter_bulk}
     {show_save_ax}
 
@@ -69,6 +64,7 @@ def diffmap(
             legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
+            frameon=frameon,
             right_margin=right_margin,
             size=size,
             title=title,
@@ -87,7 +83,7 @@ def diffmap(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def draw_graph(
         adata,
         layout=None,
@@ -107,6 +103,7 @@ def draw_graph(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         size=None,
         title=None,
@@ -118,17 +115,11 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    layout : {{'fr', 'drl', ...}}, optional (default: last computed)
+    {adata_color_etc}
+    layout : {{'fa', 'fr', 'drl', ...}}, optional (default: last computed)
         One of the `draw_graph` layouts, see
         :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
         is used.
-    color : `str` or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
     {edges_arrows}
     {scatter_bulk}
     {show_save_ax}
@@ -169,7 +160,7 @@ def draw_graph(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def tsne(
         adata,
         color=None,
@@ -187,6 +178,7 @@ def tsne(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         size=None,
         title=None,
@@ -198,13 +190,7 @@ def tsne(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]`
-        or string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
+    {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
     {show_save_ax}
@@ -227,6 +213,7 @@ def tsne(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         size=size,
         title=title,
@@ -239,7 +226,7 @@ def tsne(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def umap(
         adata,
         color=None,
@@ -259,6 +246,7 @@ def umap(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         size=None,
         title=None,
@@ -270,13 +258,7 @@ def umap(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
+    {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
     {show_save_ax}
@@ -301,6 +283,7 @@ def umap(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         size=size,
         title=title,
@@ -313,7 +296,7 @@ def umap(
     if show == False: return axs
 
 
-@doc_params(edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def phate(
         adata,
         color=None,
@@ -331,6 +314,7 @@ def phate(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         size=None,
         title=None,
@@ -342,13 +326,7 @@ def phate(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
+    {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
     {show_save_ax}
@@ -390,6 +368,7 @@ def phate(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         size=size,
         title=title,
