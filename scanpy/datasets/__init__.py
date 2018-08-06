@@ -201,7 +201,7 @@ def pbmc68kb_reduced():
     The original PBMC 68k dataset was preprocessed using scanpy and was saved
     keeping only 724 cells and 221 highly variable genes.
 
-    The saved file contains the annotation of cell types (key: 'bulk_labels'), tsne and umap coordinates,
+    The saved file contains the annotation of cell types (key: 'bulk_labels'), UMAP coordinates,
     louvain clustering and gene rankings based on the bulk_labels.
 
     Returns

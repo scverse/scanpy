@@ -54,3 +54,12 @@ pl.savefig("master_ranked_genes_stacked_violin.png", dpi=80)
 
 sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4)
 pl.savefig("master_ranked_genes_dotplot.png", dpi=80)
+
+sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
+pl.savefig("master_ranked_genes_violin.png", dpi=80)
+
+sc.pl.umap(pbmc, color='louvain')
+pl.savefig("master_umap.png", dpi=80)
+
+sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5)
+pl.savefig("master_umap_gene_expr.png", dpi=80)
