@@ -85,7 +85,7 @@ def test_stacked_violin():
 
 
 def test_violin():
-    pbmc = sc.datasets.pbmc68kb_reduced()
+    pbmc = sc.datasets.pbmc68k_reduced()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_violin_', delete=False)
     sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
     pl.savefig(outfile.name, dpi=80)
@@ -98,11 +98,19 @@ def test_violin():
 
 
 def test_rank_genes_groups():
-    pbmc = sc.datasets.pbmc68kb_reduced()
+    pbmc = sc.datasets.pbmc68k_reduced()
 
     # test ranked genes panels
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_genes_groups_', delete=False)
+
     sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3)
+    pl.savefig(outfile.name, dpi=80)
+
+    res = compare_images(ROOT + '/master_ranked_genes_sharey.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test ranked genes panels sharey = False
+    sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3, sharey=False)
     pl.savefig(outfile.name, dpi=80)
 
     res = compare_images(ROOT + '/master_ranked_genes.png', outfile.name, tolerance)
@@ -141,7 +149,7 @@ def test_rank_genes_groups():
 
 def test_umap():
 
-    pbmc = sc.datasets.pbmc68kb_reduced()
+    pbmc = sc.datasets.pbmc68k_reduced()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_scatter_', delete=False)
 
     # test umap with louvain clusters

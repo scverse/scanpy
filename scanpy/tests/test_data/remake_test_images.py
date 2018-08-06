@@ -5,6 +5,8 @@ import matplotlib.pyplot as pl
 
 import scanpy.api as sc
 
+#sc.set_figure_params()
+
 adata = sc.datasets.krumsiek11()
 
 # make heatmap
@@ -39,11 +41,14 @@ pl.savefig('master_stacked_violin_swapped_axes.png', dpi=80)
 ####
 # tests based on pbmc68k_reduced dataset
 
-pbmc = sc.datasets.pbmc68kb_reduced()
+pbmc = sc.datasets.pbmc68k_reduced()
 sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
 pl.savefig("master_violin_multi_panel.png", dpi=80)
 
 sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3)
+pl.savefig("master_ranked_genes_sharey.png", dpi=80)
+
+sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3, sharey=False)
 pl.savefig("master_ranked_genes.png", dpi=80)
 
 sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=5)
