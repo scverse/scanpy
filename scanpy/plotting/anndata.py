@@ -711,7 +711,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
                    show=None, save=None, figsize=None, var_group_positions=None,
                    var_group_labels=None, swap_axes=False, **kwds):
     """\
-    Violin plot [Waskom16]_.
+    Stacked violin plots.
+
+    Makes a compact image composed of individual violin plots (from `seaborn.violinplot`)
+    stacked on top of each other. Useful to visualize gene expression per cluster.
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
@@ -768,18 +771,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
 
     Returns
     -------
-    A `matplotlib.Axes` object if `ax` is `None` else `None`.
+    A list of `matplotlib.Axes` where each ax corresponds to each row in the image
     """
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
     from matplotlib import gridspec
 
-    # Make a very compact plot in which the y and x axis are shared.
-    # The image is composed of individual plots stacked on top of each
-    # other. Each subplot contains and individual violin plot where
-    # x = categories in `groupby` and y is each of the var_names provided.
-    # If multi_panel_swap_axes is True, then x and y are swapped.
-    # An example is: var_names = marker genes, groupby = louvain clusters.
     if swap_axes is False:
         # plot image in which x = var_names and y = groupby categories
         if figsize is None:
@@ -893,6 +890,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
     pl.subplots_adjust(wspace=0, hspace=0)
 
     utils.savefig_or_show('stacked_violin', show=show, save=save)
+
+    return axs
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
