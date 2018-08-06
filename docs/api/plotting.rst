@@ -20,6 +20,7 @@ Generic
    pl.violin
    pl.heatmap
    pl.dotplot
+   pl.stacked_violin
    pl.clustermap
    pl.ranking
 
@@ -52,12 +53,12 @@ a method with the same name in ``pl``.
    pl.pca_loadings
    pl.pca_scatter
    pl.pca_variance_ratio
-   
+
 **Embeddings**
 
 .. autosummary::
    :toctree: .
-             
+
    pl.tsne
    pl.umap
    pl.diffmap
@@ -84,6 +85,10 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
 
    pl.rank_genes_groups
    pl.rank_genes_groups_violin
+   pl.rank_genes_groups_stacked_violin
+   pl.rank_genes_groups_heatmap
+   pl.rank_genes_groups_dotplot
+
 
 **Simulations**
 
