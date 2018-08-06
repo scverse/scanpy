@@ -72,13 +72,17 @@ categories_to_ignore = ['N/A', 'dontknow', 'no_gate', '?']
 """Categories that are omitted in plotting etc.
 """
 
+_frameon = False
+"""See set_figure_params.
+"""
+
 
 # --------------------------------------------------------------------------------
 # Functions
 # --------------------------------------------------------------------------------
 
 
-def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
+def set_figure_params(scanpy=True, dpi=80, dpi_save=150, frameon=False, vector_friendly=True,
                       color_map=None, format='pdf', transparent=False, ipython_format='png2x'):
     """Set resolution/size, styling and format of figures.
 
@@ -91,6 +95,8 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
     dpi_save : `int`, optional (default: `150`)
         Resolution of saved figures. This should typically be higher to achieve
         publication quality.
+    frameon : `bool`, optional (default: `False`)
+        Add frames and axes labels to scatter plots with tick-less axes.
     vector_friendly : `bool`, optional (default: `True`)
         Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
     color_map : `str`, optional (default: `None`)
@@ -123,6 +129,8 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, vector_friendly=True,
     if scanpy:
         from .plotting.rcmod import set_rcParams_scanpy
         set_rcParams_scanpy(color_map=color_map)
+    global _frameon
+    _frameon = frameon
 
 
 

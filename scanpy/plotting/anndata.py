@@ -15,7 +15,7 @@ from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from .utils import doc_scatter_bulk, doc_show_save_ax
+from .docs import doc_scatter_bulk, doc_show_save_ax
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -42,6 +42,7 @@ def scatter(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         left_margin=None,
         size=None,
@@ -64,8 +65,8 @@ def scatter(
     y : `str` or `None`
         y coordinate.
     color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell or variable/gene annotation
-        `[\'ann1\', \'ann2\']`.
+        Keys for annotations of observations/cells or variables/genes, e.g.,
+        `'ann1'` or `['ann1', 'ann2']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
@@ -95,6 +96,7 @@ def scatter(
             legend_fontweight=legend_fontweight,
             color_map=color_map,
             palette=palette,
+            frameon=frameon,
             right_margin=right_margin,
             left_margin=left_margin,
             size=size,
@@ -123,6 +125,7 @@ def scatter(
                 legend_fontweight=legend_fontweight,
                 color_map=color_map,
                 palette=palette,
+                frameon=frameon,
                 right_margin=right_margin,
                 left_margin=left_margin,
                 size=size,
@@ -150,6 +153,7 @@ def scatter(
                 legend_fontweight=legend_fontweight,
                 color_map=color_map,
                 palette=palette,
+                frameon=frameon,
                 right_margin=right_margin,
                 left_margin=left_margin,
                 size=size,
@@ -182,6 +186,7 @@ def _scatter_var(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         left_margin=None,
         size=None,
@@ -209,6 +214,7 @@ def _scatter_var(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         left_margin=left_margin,
         size=size,
@@ -240,6 +246,7 @@ def _scatter_obs(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         right_margin=None,
         left_margin=None,
         size=None,
@@ -249,6 +256,7 @@ def _scatter_obs(
         ax=None):
     """See docstring of scatter."""
     sanitize_anndata(adata)
+    
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
             'Invalid `legend_loc`, need to be one of: {}.'.format(VALID_LEGENDLOCS))
@@ -378,7 +386,8 @@ def _scatter_obs(
         median = np.median(Y_mask, axis=0)
         i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
         centroids[name] = Y_mask[i]
-
+        
+    # loop over all categorical annotation and plot it
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
         key = keys[ikey]
@@ -446,6 +455,15 @@ def _scatter_obs(
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize)
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
+
+    # draw a frame around the scatter
+    frameon = settings._frameon if frameon is None else frameon
+    if not frameon:
+        for ax in axs:
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+            ax.set_frame_on(False)
+            
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs if len(keys) > 1 else axs[0]
 

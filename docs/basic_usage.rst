@@ -1,5 +1,5 @@
-Basic Usage
------------
+Usage Principles
+----------------
 
 Import the Scanpy API as::
 
@@ -11,11 +11,11 @@ Workflow
 The typical workflow consists of subsequent calls of data analysis tools
 in ``sc.tl``, e.g.::
 
-    sc.tl.louvain(adata, **tool_params)  # cluster cells using Louvain clustering
+    sc.tl.tsne(adata, **tool_params)  # embed the data using tSNE
 
-where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations of *n_vars* gene expression variables. For each tool, there is at least one associated plotting function in ``sc.pl``, which retrieves and plots the added annotation::
+where ``adata`` is an :class:`~anndata.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations (cells) of *n_vars* variables (genes). For each tool, there typically is an associated plotting function in ``sc.pl``::
 
-    sc.pl.louvain(adata, **plotting_params)
+    sc.pl.tsne(adata, **plotting_params)
 
 If you pass ``show=False``, a :class:`matplotlib.axes.Axes` instance is returned and you have all of matplotlib's detailed configuration possibilities.
 
