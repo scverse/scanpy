@@ -892,7 +892,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
     # remove the spacing between subplots
     pl.subplots_adjust(wspace=0, hspace=0)
 
-    utils.savefig_or_show('violin', show=show, save=save)
+    utils.savefig_or_show('stacked_violin', show=show, save=save)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -1238,7 +1238,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     ymin, ymax = size_legend.get_ylim()
     size_legend.set_ylim(ymin, ymax+0.5)
 
-    utils.savefig_or_show('heatmap', show=show, save=save)
+    utils.savefig_or_show('dotplot', show=show, save=save)
     return axs
 
 
