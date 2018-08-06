@@ -260,7 +260,8 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
                            right=1-(n_panels_x-1)*left-0.01/n_panels_x,
                            bottom=bottom,
                            top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0.18)
+                           wspace=0.18,
+                           hspace=0.2)
 
     for count, group_name in enumerate(group_names):
         pl.subplot(gs[count])
@@ -291,6 +292,128 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
     writekey = ('rank_genes_groups_'
                 + str(adata.uns[key]['params']['groupby']))
     utils.savefig_or_show(writekey, show=show, save=save)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
+                            n_genes=10, key=None,
+                            show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using the specified plot type
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    {show_save_ax}
+    """
+    if key is None:
+        key = 'rank_genes_groups'
+
+    groups_key = str(adata.uns[key]['params']['groupby'])
+    group_names = (adata.uns[key]['names'].dtype.names
+                   if groups is None else groups)
+
+    # make a list of tuples containing the index for the start gene and the
+    # end gene that should be labelled
+    group_positions = [(x, x + n_genes -1) for x in range(0, n_genes * len(group_names), n_genes)]
+
+    # sum(list, []) is used to flatten the gene list
+    gene_names = sum([list(adata.uns[key]['names'][x][:n_genes]) for x in group_names], [])
+
+    if plot_type == 'dotplot':
+        from ..anndata import dotplot
+        dotplot(adata, gene_names, groups_key, var_group_labels=group_names,
+                var_group_positions=group_positions, show=show, save=save, **kwds)
+
+    if plot_type == 'heatmap':
+        from ..anndata import heatmap
+        heatmap(adata, gene_names, groups_key, var_group_labels=group_names,
+                var_group_positions=group_positions, show=show, save=save, **kwds)
+
+    if plot_type == 'stacked_violin':
+        from ..anndata import stacked_violin
+        stacked_violin(adata, gene_names, groups_key, var_group_labels=group_names,
+                       var_group_positions=group_positions, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, key=None,
+                               show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using heatmap plot (see `heatmap`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.heatmap`.
+    {show_save_ax}
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
+                            key=key, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, key=None,
+                              show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using dotplot plot (see `dotplot`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    {show_save_ax}
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.dotplot`.
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
+                            key=key, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, key=None,
+                                     show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using stacked_violin plot (see `stacked_violin`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    {show_save_ax}
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.stacked_violin`.
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
+                            key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
