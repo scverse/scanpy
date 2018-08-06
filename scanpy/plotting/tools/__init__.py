@@ -216,7 +216,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
-                      n_panels_per_row=4, show=None, save=None, ax=None):
+                      n_panels_per_row=4, sharey=True, show=None, save=None, ax=None):
     """\
     Plot ranking of genes.
 
@@ -235,6 +235,10 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         Fontsize for gene names.
     n_panels_per_row: `int`, optional (default: 4)
         Number of panels shown per row.
+    sharey: `bool`, optional (default: True)
+        Controls if the y-axis of each panels should be shared. But setting
+        sharey=False, each panel has its own y-axis range.
+
     {show_save_ax}
     """
     if key is None:
@@ -260,35 +264,60 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
                            right=1-(n_panels_x-1)*left-0.01/n_panels_x,
                            bottom=bottom,
                            top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                           wspace=0.18,
-                           hspace=0.2)
+                           wspace=0.22,
+                           hspace=0.4)
 
+    ax0 = None
+    ymin = np.Inf
+    ymax = -np.Inf
     for count, group_name in enumerate(group_names):
-        pl.subplot(gs[count])
+        if sharey is True:
+            if ax0 is None:
+                ax = fig.add_subplot(gs[count])
+                ax0 = ax
+            else:
+                ax = fig.add_subplot(gs[count], sharey=ax0)
+        else:
+            ax = fig.add_subplot(gs[count])
+
         gene_names = adata.uns[key]['names'][group_name]
         scores = adata.uns[key]['scores'][group_name]
         for ig, g in enumerate(gene_names[:n_genes]):
             gene_name = gene_names[ig]
             if adata.raw is not None and adata.uns[key]['params']['use_raw']:
-                pl.text(
+                ax.text(
                     ig, scores[ig],
                     gene_name if gene_symbols is None else adata.raw.var[gene_symbols][gene_name],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
             else:
-                pl.text(
+                ax.text(
                     ig, scores[ig],
                     gene_name if gene_symbols is None else adata.var[gene_symbols][gene_name],
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=fontsize)
-        pl.title('{} vs. {}'.format(group_name, reference))
-        if n_panels <= 5 or count >= n_panels_x: pl.xlabel('ranking')
-        if count == 0 or count == n_panels_x: pl.ylabel('score')
-        ymin = np.min(scores)
-        ymax = np.max(scores)
+        ax.set_title('{} vs. {}'.format(group_name, reference))
+        ax.set_xlabel('ranking')
+
+        # print the 'score' label only on the first panel per row.
+        if count % n_panels_x == 0:
+            ax.set_ylabel('score')
+
+        ax.set_xlim(-0.9, ig + 1-0.1)
+
+        if sharey is True:
+            ymin = min(ymin, np.min(scores))
+            ymax = max(ymax, np.max(scores))
+        else:
+            ymin = np.min(scores)
+            ymax = np.max(scores)
+            ymax += 0.3*(np.max(scores)-np.min(scores))
+            ax.set_ylim([ymin, ymax])
+
+    if sharey is True:
         ymax += 0.3*(ymax-ymin)
-        pl.ylim([ymin, ymax])
-        pl.xlim(-0.9, ig+1-0.1)
+        ax.set_ylim([ymin, ymax])
+
     writekey = ('rank_genes_groups_'
                 + str(adata.uns[key]['params']['groupby']))
     utils.savefig_or_show(writekey, show=show, save=save)
