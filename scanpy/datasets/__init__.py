@@ -193,7 +193,7 @@ def toggleswitch():
     return adata
 
 
-def pbmc68kb_reduced():
+def pbmc68k_reduced():
     """
     10x PBMC 68k dataset from
     https://support.10xgenomics.com/single-cell-gene-expression/datasets
