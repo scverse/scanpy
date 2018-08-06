@@ -26,3 +26,31 @@ sc.pl.dotplot(adata, adata.var_names, 'Gata2', use_raw=False,
               num_categories=7, figsize=(7, 2.5))
 pl.savefig('master_dotplot2.png', dpi=80)
 
+# make stacked violing plot
+sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False)
+pl.title("image may have cut labels.\nThis is ok for test")
+pl.savefig('master_stacked_violin.png', dpi=80)
+
+# make stacked violing plot with swapped axes
+sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, swap_axes=True, figsize=(3, 5))
+pl.savefig('master_stacked_violin_swapped_axes.png', dpi=80)
+
+
+####
+# tests based on pbmc68k_reduced dataset
+
+pbmc = sc.datasets.pbmc68kb_reduced()
+sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
+pl.savefig("master_violin_multi_panel.png", dpi=80)
+
+sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3)
+pl.savefig("master_ranked_genes.png", dpi=80)
+
+sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=5)
+pl.savefig("master_ranked_genes_heatmap.png", dpi=80)
+
+sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3)
+pl.savefig("master_ranked_genes_stacked_violin.png", dpi=80)
+
+sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4)
+pl.savefig("master_ranked_genes_dotplot.png", dpi=80)
