@@ -99,36 +99,62 @@ def test_violin():
 
 def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68kb_reduced()
+
+    # test ranked genes panels
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_genes_groups_', delete=False)
     sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3)
     pl.savefig(outfile.name, dpi=80)
 
     res = compare_images(ROOT + '/master_ranked_genes.png', outfile.name, tolerance)
-
     assert res is None, res
 
-    os.remove(outfile.name)
-
+    # test ranked genes using heatmap
     sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=5)
     pl.savefig(outfile.name, dpi=80)
-    res = compare_images(ROOT + '/master_ranked_genes_heatmap.png', outfile.name, tolerance)
 
+    res = compare_images(ROOT + '/master_ranked_genes_heatmap.png', outfile.name, tolerance)
     assert res is None, res
 
-    os.remove(outfile.name)
-
+    # test ranked genes using stacked violin plots
     sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3)
     pl.savefig(outfile.name, dpi=80)
-    res = compare_images(ROOT + '/master_ranked_genes_stacked_violin.png', outfile.name, tolerance)
 
+    res = compare_images(ROOT + '/master_ranked_genes_stacked_violin.png', outfile.name, tolerance)
     assert res is None, res
 
-    os.remove(outfile.name)
-
+    # test ranked genes using dotplot
     sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4)
     pl.savefig(outfile.name, dpi=80)
-    res = compare_images(ROOT + '/master_ranked_genes_dotplot.png', outfile.name, tolerance)
 
+    res = compare_images(ROOT + '/master_ranked_genes_dotplot.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test ranked genes using violin plots
+    sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
+    pl.savefig(outfile.name, dpi=80)
+
+    res = compare_images(ROOT + '/master_ranked_genes_violin.png', outfile.name, tolerance)
     assert res is None, res
 
     os.remove(outfile.name)
+
+
+def test_umap():
+
+    pbmc = sc.datasets.pbmc68kb_reduced()
+    outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_scatter_', delete=False)
+
+    # test umap with louvain clusters
+    sc.pl.umap(pbmc, color='louvain')
+    pl.savefig(outfile.name, dpi=80)
+
+    res = compare_images(ROOT + '/master_umap.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test umap with gene expression
+    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5)
+    pl.savefig(outfile.name, dpi=80)
+
+    res = compare_images(ROOT + '/master_umap_gene_expr.png', outfile.name, tolerance)
+    assert res is None, res
+
