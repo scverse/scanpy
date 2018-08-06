@@ -514,8 +514,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 @doc_params(show_save_ax=doc_show_save_ax)
 def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
-           xlabel='', rotation=None, save=None, ax=None, multi_panel_figsize=None,
-           multi_panel_swap_axes=False, **kwds):
+           xlabel='', rotation=None, save=None, ax=None, **kwds):
     """\
     Violin plot [Waskom16]_.
 
@@ -555,12 +554,6 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         otherwise, no label is shown.
     rotation : `float`, optional (default: `None`)
         Rotation of xtick labels.
-    multi_panel_figsize : (float, float), optional (default: None)
-        Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
-        Format is (width, height)
-    multi_panel_swap_axes: `bool`, optional (default: `False`)
-         By default, in multi_panel, the y axis contains the `keys` and the x axis the group by categories.
-         By setting `multi_panel_swap_axes` then y are the group categories and x the `keys`.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
