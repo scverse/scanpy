@@ -28,6 +28,13 @@ sc.pl.dotplot(adata, adata.var_names, 'Gata2', use_raw=False,
               num_categories=7, figsize=(7, 2.5))
 pl.savefig('master_dotplot2.png', dpi=80)
 
+sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False)
+pl.savefig('master_matrixplot.png', dpi=80)
+
+sc.pl.matrixplot(adata, adata.var_names, 'Gata2', use_raw=False,
+                 num_categories=4, figsize=(8, 2.5), cmap='viridis')
+pl.savefig('master_matrixplot2.png', dpi=80)
+
 # make stacked violing plot
 sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False)
 pl.title("image may have cut labels.\nThis is ok for test")
@@ -59,6 +66,9 @@ pl.savefig("master_ranked_genes_stacked_violin.png", dpi=80)
 
 sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4)
 pl.savefig("master_ranked_genes_dotplot.png", dpi=80)
+
+sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5)
+pl.savefig('master_ranked_genes_matrixplot.png', dpi=80)
 
 sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
 pl.savefig("master_ranked_genes_violin.png", dpi=80)

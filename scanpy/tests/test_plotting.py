@@ -61,6 +61,29 @@ def test_dotplot():
     os.remove(outfile.name)
 
 
+def test_matrixplot():
+    adata = sc.datasets.krumsiek11()
+    outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_matrixplot_', delete=False)
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False)
+    pl.savefig(outfile.name, dpi=80)
+    res = compare_images(ROOT + '/master_matrixplot.png', outfile.name, tolerance)
+
+    assert res is None, res
+
+    os.remove(outfile.name)
+
+    # test matrixplot numeric column and alternative cmap
+    adata.obs['Gata2'] = adata.X[:, 0]
+    sc.pl.matrixplot(adata, adata.var_names, 'Gata2', use_raw=False,
+                     num_categories=4, figsize=(8, 2.5), cmap='viridis')
+    pl.savefig(outfile.name, dpi=80)
+    res = compare_images(ROOT + '/master_matrixplot2.png', outfile.name, tolerance)
+
+    assert res is None, res
+
+    os.remove(outfile.name)
+
+
 def test_stacked_violin():
     adata = sc.datasets.krumsiek11()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_stacked_violin_', delete=False)
@@ -135,6 +158,13 @@ def test_rank_genes_groups():
     pl.savefig(outfile.name, dpi=80)
 
     res = compare_images(ROOT + '/master_ranked_genes_dotplot.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test ranked genes using matrixplot
+    sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5)
+    pl.savefig(outfile.name, dpi=80)
+
+    res = compare_images(ROOT + '/master_ranked_genes_matrixplot.png', outfile.name, tolerance)
     assert res is None, res
 
     # test ranked genes using violin plots

@@ -313,11 +313,11 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
             ymin = np.min(scores)
             ymax = np.max(scores)
             ymax += 0.3*(np.max(scores)-np.min(scores))
-            ax.set_ylim([ymin, ymax])
+            ax.set_ylim(ymin, ymax)
 
     if sharey is True:
         ymax += 0.3*(ymax-ymin)
-        ax.set_ylim([ymin, ymax])
+        ax.set_ylim(ymin, ymax)
 
     writekey = ('rank_genes_groups_'
                 + str(adata.uns[key]['params']['groupby']))
@@ -350,7 +350,7 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
     # make a list of tuples containing the index for the start gene and the
     # end gene that should be labelled
-    group_positions = [(x, x + n_genes -1) for x in range(0, n_genes * len(group_names), n_genes)]
+    group_positions = [(x, x + n_genes - 1) for x in range(0, n_genes * len(group_names), n_genes)]
 
     # sum(list, []) is used to flatten the gene list
     gene_names = sum([list(adata.uns[key]['names'][x][:n_genes]) for x in group_names], [])
@@ -360,22 +360,27 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
         dotplot(adata, gene_names, groups_key, var_group_labels=group_names,
                 var_group_positions=group_positions, show=show, save=save, **kwds)
 
-    if plot_type == 'heatmap':
+    elif plot_type == 'heatmap':
         from ..anndata import heatmap
         heatmap(adata, gene_names, groups_key, var_group_labels=group_names,
                 var_group_positions=group_positions, show=show, save=save, **kwds)
 
-    if plot_type == 'stacked_violin':
+    elif plot_type == 'stacked_violin':
         from ..anndata import stacked_violin
         stacked_violin(adata, gene_names, groups_key, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
+    elif plot_type == 'matrixplot':
+        from ..anndata import matrixplot
+        matrixplot(adata, gene_names, groups_key, var_group_labels=group_names,
+                   var_group_positions=group_positions, show=show, save=save, **kwds)
+
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, key=None,
-                               show=None, save=None, **kwds):
+                              show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using heatmap plot (see `heatmap`)
+    Plot ranking of genes using heatmap plot (see `scanpy.api.pl.heatmap`)
 
     Parameters
     ----------
@@ -400,7 +405,7 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, key=None,
 def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, key=None,
                               show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using dotplot plot (see `dotplot`)
+    Plot ranking of genes using dotplot plot (see `scanpy.api.pl.dotplot`)
 
     Parameters
     ----------
@@ -425,7 +430,7 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, key=None,
 def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, key=None,
                                      show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using stacked_violin plot (see `stacked_violin`)
+    Plot ranking of genes using stacked_violin plot (see `scanpy.api.pl.stacked_violin`)
 
     Parameters
     ----------
@@ -443,6 +448,31 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, key=None,
     """
 
     _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
+                            key=key, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, key=None,
+                                 show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using matrixplot plot (see `scanpy.api.pl.matrixplot`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    {show_save_ax}
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.matrixplot`.
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
                             key=key, show=show, save=save, **kwds)
 
 
