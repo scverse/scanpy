@@ -766,7 +766,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names` (only when swap_axes=False).
         This will draw a 'bracket'
-        on top of the dotplot between the given start and end positions. If the
+        on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
         top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
         between the fourth var_name and the tenth var_name. By giving more
@@ -948,7 +948,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         number of  `var_names` and the height is set to 10.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the dotplot between the given start and end positions. If the
+        on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
         top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
         between the fourth var_name and the tenth var_name. By giving more
@@ -1092,7 +1092,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         number of  `var_names` and the height is set to 10.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the dotplot between the given start and end positions. If the
+        on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
         top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
         between the fourth var_name and the tenth var_name. By giving more
@@ -1298,7 +1298,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
         number of  `var_names` and the height is set to 10.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the dotplot between the given start and end positions. If the
+        on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
         top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
         between the fourth var_name and the tenth var_name. By giving more
@@ -1378,7 +1378,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     # plot colorbar
     pl.colorbar(pc, cax=color_legend)
 
-    utils.savefig_or_show('dotplot', show=show, save=save)
+    utils.savefig_or_show('matrixplot', show=show, save=save)
     return axs
 
 

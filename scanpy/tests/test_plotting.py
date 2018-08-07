@@ -19,6 +19,7 @@ def test_heatmap():
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_heatmap_', delete=False)
     sc.pl.heatmap(adata, adata.var_names, 'cell_type', use_raw=False)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_heatmap.png', outfile.name, tolerance)
     assert res is None, res
 
@@ -32,6 +33,7 @@ def test_heatmap():
     sc.pl.heatmap(adata, adata.var_names, 'Gata2', use_raw=False,
                   num_categories=4, figsize=(4.5, 5))
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_heatmap2.png', outfile.name, tolerance)
     assert res is None, res
 
@@ -43,6 +45,7 @@ def test_dotplot():
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_dotplot_', delete=False)
     sc.pl.dotplot(adata, adata.var_names, 'cell_type', use_raw=False)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_dotplot.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -54,6 +57,7 @@ def test_dotplot():
     sc.pl.dotplot(adata, adata.var_names, 'Gata2', use_raw=False,
                   num_categories=7, figsize=(7, 2.5))
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_dotplot2.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -66,6 +70,7 @@ def test_matrixplot():
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_matrixplot_', delete=False)
     sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_matrixplot.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -77,6 +82,7 @@ def test_matrixplot():
     sc.pl.matrixplot(adata, adata.var_names, 'Gata2', use_raw=False,
                      num_categories=4, figsize=(8, 2.5), cmap='viridis')
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_matrixplot2.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -91,6 +97,7 @@ def test_stacked_violin():
 
     pl.title("image may have cut labels.\nThis is ok for test")
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_stacked_violin.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -100,6 +107,7 @@ def test_stacked_violin():
     # test swapped axes
     sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, swap_axes=True, figsize=(3, 5))
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
     res = compare_images(ROOT + '/master_stacked_violin_swapped_axes.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -112,6 +120,7 @@ def test_violin():
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_violin_', delete=False)
     sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_violin_multi_panel.png', outfile.name, tolerance)
 
@@ -128,6 +137,7 @@ def test_rank_genes_groups():
 
     sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_sharey.png', outfile.name, tolerance)
     assert res is None, res
@@ -135,6 +145,7 @@ def test_rank_genes_groups():
     # test ranked genes panels sharey = False
     sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3, sharey=False)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes.png', outfile.name, tolerance)
     assert res is None, res
@@ -142,6 +153,7 @@ def test_rank_genes_groups():
     # test ranked genes using heatmap
     sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=5)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_heatmap.png', outfile.name, tolerance)
     assert res is None, res
@@ -149,6 +161,7 @@ def test_rank_genes_groups():
     # test ranked genes using stacked violin plots
     sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_stacked_violin.png', outfile.name, tolerance)
     assert res is None, res
@@ -156,6 +169,7 @@ def test_rank_genes_groups():
     # test ranked genes using dotplot
     sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_dotplot.png', outfile.name, tolerance)
     assert res is None, res
@@ -163,6 +177,7 @@ def test_rank_genes_groups():
     # test ranked genes using matrixplot
     sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_matrixplot.png', outfile.name, tolerance)
     assert res is None, res
@@ -170,6 +185,7 @@ def test_rank_genes_groups():
     # test ranked genes using violin plots
     sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_ranked_genes_violin.png', outfile.name, tolerance)
     assert res is None, res
@@ -185,6 +201,7 @@ def test_umap():
     # test umap with louvain clusters
     sc.pl.umap(pbmc, color='louvain')
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_umap.png', outfile.name, tolerance)
     assert res is None, res
@@ -192,6 +209,7 @@ def test_umap():
     # test umap with gene expression
     sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5)
     pl.savefig(outfile.name, dpi=80)
+    pl.close()
 
     res = compare_images(ROOT + '/master_umap_gene_expr.png', outfile.name, tolerance)
     assert res is None, res

@@ -21,6 +21,7 @@ Generic
    pl.heatmap
    pl.dotplot
    pl.stacked_violin
+   pl.matrixplot
    pl.clustermap
    pl.ranking
 
@@ -88,6 +89,7 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    pl.rank_genes_groups_stacked_violin
    pl.rank_genes_groups_heatmap
    pl.rank_genes_groups_dotplot
+   pl.rank_genes_groups_matrixplot
 
 
 **Simulations**
