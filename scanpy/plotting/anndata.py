@@ -1502,7 +1502,7 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     codes = []
 
     # rotate labels if any of them is longer than 4 characters
-    if rotation is None:
+    if rotation is None and group_labels is not None and len(group_labels) > 0:
         if max([len(x) for x in group_labels]) > 4:
             rotation = 90
         else:
