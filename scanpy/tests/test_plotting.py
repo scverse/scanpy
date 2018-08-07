@@ -93,7 +93,7 @@ def test_matrixplot():
 def test_stacked_violin():
     adata = sc.datasets.krumsiek11()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_stacked_violin_', delete=False)
-    sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False)
+    sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, color='blue')
 
     pl.title("image may have cut labels.\nThis is ok for test")
     pl.savefig(outfile.name, dpi=80)
@@ -183,7 +183,8 @@ def test_rank_genes_groups():
     assert res is None, res
 
     # test ranked genes using violin plots
-    sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
+    sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5,
+                                   jitter=False, strip=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 

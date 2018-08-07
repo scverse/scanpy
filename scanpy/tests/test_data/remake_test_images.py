@@ -42,7 +42,7 @@ pl.savefig('master_matrixplot2.png', dpi=80)
 pl.close()
 
 # make stacked violing plot
-sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False)
+sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, color='blue')
 pl.title("image may have cut labels.\nThis is ok for test")
 pl.savefig('master_stacked_violin.png', dpi=80)
 pl.close()
@@ -57,7 +57,7 @@ pl.close()
 # tests based on pbmc68k_reduced dataset
 
 pbmc = sc.datasets.pbmc68k_reduced()
-sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
+sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=False, multi_panel=True, jitter=False)
 pl.savefig("master_violin_multi_panel.png", dpi=80)
 pl.close()
 
@@ -85,7 +85,8 @@ sc.pl.rank_genes_groups_matrixplot(pbmc, n_genes=5)
 pl.savefig('master_ranked_genes_matrixplot.png', dpi=80)
 pl.close()
 
-sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5)
+sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5,
+                               jitter=False, strip=False)
 pl.savefig("master_ranked_genes_violin.png", dpi=80)
 pl.close()
 
