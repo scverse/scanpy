@@ -256,7 +256,7 @@ def _scatter_obs(
         ax=None):
     """See docstring of scatter."""
     sanitize_anndata(adata)
-    
+
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
             'Invalid `legend_loc`, need to be one of: {}.'.format(VALID_LEGENDLOCS))
@@ -386,7 +386,7 @@ def _scatter_obs(
         median = np.median(Y_mask, axis=0)
         i = np.argmin(np.sum(np.abs(Y_mask - median), axis=1))
         centroids[name] = Y_mask[i]
-        
+
     # loop over all categorical annotation and plot it
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
@@ -463,7 +463,7 @@ def _scatter_obs(
             ax.set_xlabel('')
             ax.set_ylabel('')
             ax.set_frame_on(False)
-            
+
     utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs if len(keys) > 1 else axs[0]
 
@@ -720,7 +720,7 @@ def clustermap(
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
                    show=None, save=None, figsize=None, var_group_positions=None,
-                   var_group_labels=None, swap_axes=False, **kwds):
+                   var_group_labels=None, var_group_rotation=None, swap_axes=False, **kwds):
     """\
     Stacked violin plots.
 
@@ -775,7 +775,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
         Labels for each of the var_group_positions that want to be highlighted.
     swap_axes: `bool`, optional (default: `False`)
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby `categories.
-         By setting `swap_axes` then y are the `groupby` categories and x the `var_names`.
+         By setting `swap_axes` then y are the `groupby` categories and x the `var_names`. When swapping
+         axes var_group_positions are no longer used
+    var_group_rotation : `float` (default: `None`)
+        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
@@ -822,7 +825,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
                 if idx == 0:
                     brackets_ax = fig.add_subplot(axs[0], sharex=ax0)
                     _plot_gene_groups_brackets(brackets_ax, group_positions=var_group_positions,
-                                               group_labels=var_group_labels)
+                                               group_labels=var_group_labels,
+                                               rotation=var_group_rotation)
 
                 continue
 
@@ -845,8 +849,9 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
 
-            ax.tick_params(axis='y', left=False, right=True, labelright=True, labelleft=False)
-            ax.set_ylabel(category, rotation=0, fontsize=11, labelpad=8, ha='right', va='center')
+            ax.tick_params(axis='y', left=False, right=True, labelright=True,
+                           labelleft=False, labelsize='x-small')
+            ax.set_ylabel(category, rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             ax.set_xlabel('')
             if log:
                 ax.set_yscale('log')
@@ -858,7 +863,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
                 ax.set_xticklabels([])
                 ax.tick_params(axis='x', bottom=False, top=False, labeltop=False, labelbottom=False)
 
-        ax0.tick_params(axis='x', labelrotation=90)
+        ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
 
     else:
         # plot image in which x = group by and y = var_names
@@ -881,11 +886,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
                 ax = sns.stripplot(x=obs_tidy.index, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
 
-            ax.set_ylabel(y, rotation=0, fontsize=11, labelpad=8, ha='right', va='center')
+            ax.set_ylabel(y, rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
             ax.tick_params(axis='y', right=True, labelright=True,
-                           labelleft=False, labelrotation=0)
+                           labelleft=False, labelrotation=0, labelsize='x-small')
+            ax.tick_params(axis='x', labelsize='small')
 
             # remove the xticks labels except for the last processed plot (first from bottom-up).
             # Because the plots share the x axis it is redundant and less compact to plot the
@@ -895,7 +901,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
             if log:
                 ax.set_yscale('log')
 
-            ax.tick_params(axis='x', labelrotation=90)
+            if max([len(x) for x in categories]) > 1:
+                ax.tick_params(axis='x', labelrotation=90)
 
     # remove the spacing between subplots
     pl.subplots_adjust(wspace=0, hspace=0)
@@ -908,7 +915,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
             var_group_positions=None, var_group_labels=None,
-            show=None, save=None, figsize=None, **kwds):
+            var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -948,6 +955,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         positions, more brackets are drawn.
     var_group_labels : list of `str`
         Labels for each of the var_group_positions that want to be highlighted.
+    var_group_rotation : `float` (default: `None`)
+        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
@@ -991,6 +1000,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     groupby_ax = fig.add_subplot(axs[1, 0])
     heatmap_ax = fig.add_subplot(axs[1, 1])
     heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
+    heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
 
     if groupby:
         obs_tidy = obs_tidy.sort_index()
@@ -1012,7 +1022,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         groupby_ax.set_yticklabels(labels)
 
     # remove y ticks
-    groupby_ax.tick_params(axis='y', left=False)
+    groupby_ax.tick_params(axis='y', left=False, labelsize='small')
     # remove x ticks and labels
     groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
 
@@ -1027,6 +1037,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
     heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
+    heatmap_ax.tick_params(axis='x', labelsize='small')
     heatmap_ax.set_ylabel('')
     heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
     heatmap_ax.set_xticklabels(var_names)
@@ -1035,7 +1046,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     if var_group_positions is not None and len(var_group_positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
         _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                   group_labels=var_group_labels,
+                                   group_labels=var_group_labels, rotation=var_group_rotation,
                                    left_adjustment=0.2, right_adjustment=0.8)
 
     utils.savefig_or_show('heatmap', show=show, save=save)
@@ -1046,7 +1057,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax)
 def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
             figsize=None, var_group_positions=None, var_group_labels=None,
-            show=None, save=None, **kwds):
+            var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Makes a 'dot plot' of the expression values of `var_names`.
     For each var_name and each groupby category a dot is plotted.
@@ -1088,6 +1099,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         positions, more brackets are drawn.
     var_group_labels : list of `str`
         Labels for each of the var_group_positions that want to be highlighted.
+    var_group_rotation : `float` (default: `None`)
+        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
@@ -1203,6 +1216,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     x_ticks = range(mean_obs.shape[1])
     dot_ax.set_xticks(x_ticks)
     dot_ax.set_xticklabels([mean_obs.columns[idx] for idx in x_ticks], rotation=90)
+    dot_ax.tick_params(axis='both', labelsize='small')
     dot_ax.grid(False)
     dot_ax.set_xlim(-0.5, len(var_names) + 0.5)
     dot_ax.set_ylabel(groupby)
@@ -1219,7 +1233,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     if var_group_positions is not None and len(var_group_positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
         _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                   group_labels=var_group_labels)
+                                   group_labels=var_group_labels,
+                                   rotation=var_group_rotation)
 
     # plot colorbar
     import matplotlib.colorbar
@@ -1247,6 +1262,121 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
     ymin, ymax = size_legend.get_ylim()
     size_legend.set_ylim(ymin, ymax+0.5)
+
+    utils.savefig_or_show('dotplot', show=show, save=save)
+    return axs
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+               figsize=None, var_group_positions=None, var_group_labels=None,
+               var_group_rotation=None, show=None, save=None, **kwds):
+    """\
+    Creates a heatmap of the mean expression values per cluster of each var_names
+    If groupby is not given, the matrixplot assumes that all data belongs to a single
+    category.
+
+    Parameters
+    ----------
+    adata : :class:`~scanpy.api.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        var_names should be a valid subset of  `.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that groupby is
+        a categorical. If groupby is not a categorical observation, it would be
+        subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `True`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value determines
+        the number of groups into which the groupby observation should be subdivided.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height. If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
+    var_group_positions :  list of `tuples`.
+        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
+        on top of the dotplot between the given start and end positions. If the
+        parameter `var_group_labels` is set, the corresponding labels is added on
+        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
+        between the fourth var_name and the tenth var_name. By giving more
+        positions, more brackets are drawn.
+    var_group_labels : list of `str`
+        Labels for each of the var_group_positions that want to be highlighted.
+    var_group_rotation : `float` (default: `None`)
+        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    {show_save_ax}
+    **kwds : keyword arguments
+        Are passed to `matplotlib.pyplot.pcolor`.
+
+    Returns
+    -------
+    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
+    second axis is the heatmap and the third axis is the colorbar.
+
+    """
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+
+    mean_obs = obs_tidy.groupby(level=0).mean()
+    if figsize is None:
+        height = len(categories) * 0.2 + 1  # +1 for labels
+        heatmap_width = len(var_names) * 0.6
+        width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+    else:
+        width, height = figsize
+        heatmap_width = width * 0.75
+
+    # colorbar ax width should not change with differences in the width of the image
+    colorbar_width = 0.4
+
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        # add some space in case 'brackets' want to be plotted on top of the image
+        height_ratios = [0.5, 10]
+        height += 0.5
+    else:
+        height_ratios = [0, 10.5]
+
+    # define a layout of 2 rows x 2 columns
+    # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
+    # second row is for main content. This second row
+    # is divided into two axes:
+    #   first ax is for the main matrix figure
+    #   second ax is for the color bar legend
+    from matplotlib import gridspec
+    fig = pl.figure(figsize=(width, height))
+    axs = gridspec.GridSpec(nrows=2, ncols=2, left=0.05, right=0.48, wspace=0.05, hspace=0.04,
+                            width_ratios=[heatmap_width, colorbar_width],
+                            height_ratios=height_ratios)
+    matrix_ax = fig.add_subplot(axs[1, 0])
+
+    color_legend = fig.add_subplot(axs[1, 1])
+
+    pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
+    y_ticks = np.arange(mean_obs.shape[0]) + 0.5
+    matrix_ax.set_yticks(y_ticks)
+    matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
+    # invert y axis to show categories ordered from top to bottom
+    matrix_ax.set_ylim(mean_obs.shape[0], 0)
+
+    x_ticks = np.arange(mean_obs.shape[1]) + 0.5
+    matrix_ax.set_xticks(x_ticks)
+    matrix_ax.set_xticklabels([mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90)
+    matrix_ax.tick_params(axis='both', labelsize='small')
+    matrix_ax.grid(False)
+    matrix_ax.set_xlim(-0.5, len(var_names) + 0.5)
+    matrix_ax.set_ylabel(groupby)
+    matrix_ax.set_xlim(0, mean_obs.shape[1])
+    # plot group legends on top of matrix_ax (if given)
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
+        _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
+                                   group_labels=var_group_labels, rotation=var_group_rotation,
+                                   left_adjustment=0.2, right_adjustment=0.8)
+
+    # plot colorbar
+    pl.colorbar(pc, cax=color_legend)
 
     utils.savefig_or_show('dotplot', show=show, save=save)
     return axs
@@ -1321,7 +1451,7 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=True, log=False, 
 
 
 def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
-                               left_adjustment=-0.3, right_adjustment=0.3):
+                               left_adjustment=-0.3, right_adjustment=0.3, rotation=None):
     """
     Draws brackets that represent groups of genes on the give axis.
     For best results, this axis is located on top of an image whose
@@ -1350,7 +1480,9 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     right_adjustment : `float`
         adjustment to plot the bracket end slightly before or after the last gene position
         If the value is negative the start is moved before.
-
+    rotation : `float` (default None)
+        rotation degrees for the labels. If not given, small labels (<4 characters) are not
+        rotated, otherwise, they are rotated 90 degrees
     Returns
     -------
     None
@@ -1364,9 +1496,17 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
 
     left = [x[0] + left_adjustment for x in group_positions]
     right = [x[1] + right_adjustment for x in group_positions]
+
     # verts and codes are used by PathPatch to make the brackets
     verts = []
     codes = []
+
+    # rotate labels if any of them is longer than 4 characters
+    if rotation is None:
+        if max([len(x) for x in group_labels]) > 4:
+            rotation = 90
+        else:
+            rotation = 0
     for idx in range(len(left)):
         verts.append((left[idx], 0))  # lower-left
         verts.append((left[idx], 0.6))  # upper-left
@@ -1380,7 +1520,8 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
 
         try:
             group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-            gene_groups_ax.text(group_x_center, 1.1, group_labels[idx], ha='center', va='bottom', rotation=90)
+            gene_groups_ax.text(group_x_center, 1.1, group_labels[idx], ha='center',
+                                va='bottom', rotation=rotation)
         except:
             pass
 
