@@ -606,7 +606,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
 
 def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
-                       key_n_counts=None, copy=False):
+                       key_n_counts=None, copy=False, layers=[], use_rep=None):
     """Normalize total counts per cell.
 
     Normalize each cell by total counts over all genes, so that every cell has
@@ -670,6 +670,20 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         adata._inplace_subset_obs(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after,
                            counts_per_cell=counts_per_cell[cell_subset])
+
+        layers = adata.layers.keys() if layers == 'all' else layers
+        if use_rep == 'after':
+            after = counts_per_cell_after
+        elif use_rep == 'X':
+            after = np.median(counts_per_cell[cell_subset])
+        elif use_rep is None:
+            after = None
+        else: raise ValueError('use_rep should be "after", "X" or None')
+        for layer in layers:
+            subset, counts = filter_cells(adata.layers[layer], min_counts=1)
+            temp = normalize_per_cell(adata.layers[layer][subset], after, counts[subset], copy=True)
+            adata.layers[layer][subset] = temp
+
         logg.msg('    finished', t=True, end=': ')
         logg.msg('normalized adata.X and added', no_indent=True)
         logg.msg('    \'{}\', counts per cell before normalization (adata.obs)'
