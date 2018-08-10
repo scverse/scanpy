@@ -191,3 +191,24 @@ def toggleswitch():
     adata = sc.read(filename, first_column_names=True)
     adata.uns['iroot'] = 0
     return adata
+
+
+def pbmc68k_reduced():
+    """
+    10x PBMC 68k dataset from
+    https://support.10xgenomics.com/single-cell-gene-expression/datasets
+
+    The original PBMC 68k dataset was preprocessed using scanpy and was saved
+    keeping only 724 cells and 221 highly variable genes.
+
+    The saved file contains the annotation of cell types (key: 'bulk_labels'), UMAP coordinates,
+    louvain clustering and gene rankings based on the bulk_labels.
+
+    Returns
+    -------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    """
+
+    filename = os.path.dirname(__file__) + '/10x_pbmc68k_reduced.h5ad'
+    return sc.read(filename)
