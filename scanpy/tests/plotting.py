@@ -9,7 +9,7 @@ from tempfile import NamedTemporaryFile
 
 import scanpy.api as sc
 
-ROOT = os.path.dirname(os.path.abspath(__file__)) + "/test_data/"
+ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
 
