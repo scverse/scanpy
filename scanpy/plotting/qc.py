@@ -6,14 +6,15 @@ from ..preprocessing.simple import normalize_per_cell
 
 
 def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs):
-    """
-    Computes, for each gene, the fraction of counts assigned
-    to that gene within a cell. The n_top genes with the highest
-    mean fraction over all cells are plotted as boxplots.
+    """Fraction of counts assigned to each gene over all cells.
 
-    This plot is similar to the `scater` package function
-    `plotQC(type = "highest-expression")`.
-    See (https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html)
+    Computes, for each gene, the fraction of counts assigned to that gene within
+    a cell. The `n_top` genes with the highest mean fraction over all cells are
+    plotted as boxplots.
+
+    This plot is similar to the `scater` package function `plotQC(type =
+    "highest-expression")`.
+    See `here <https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html>`__.
 
     Parameters
     ----------
@@ -23,7 +24,7 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
         Number of top
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
     show : bool, optional (default: None)
         Show the plot, do not return axis.
     ax : `matplotlib.Axes`
@@ -49,10 +50,10 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
         dat = pd.DataFrame(dat.X.toarray(), index=dat.obs_names, columns=dat.var_names)
 
     else:
-        dat.var['mean_percent'] = dat.X.mean(axis=0)        
+        dat.var['mean_percent'] = dat.X.mean(axis=0)
         top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
         dat = dat[:, top]
-        dat = pd.DataFrame(dat.X, index=dat.obs_names, columns=dat.var_names)        
+        dat = pd.DataFrame(dat.X, index=dat.obs_names, columns=dat.var_names)
 
     if not ax:
         # figsize is hardcoded to produce a tall image. To change the fig size,
@@ -62,4 +63,4 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
     sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwargs)
     ax.set_xlabel("% of total counts")
     utils.savefig_or_show('highest_expression', show=show, save=save)
-    return ax
+    return ax if show == False else None
