@@ -16,9 +16,17 @@ def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
     a cell. The `n_top` genes with the highest mean fraction over all cells are
     plotted as boxplots.
 
-    This plot is similar to the `scater` package function `plotQC(type =
-    "highest-expression")`, see `here
-    <https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html>`__.
+    This plot is similar to the `scater` package function `plotHighestExprs(type
+    = "highest-expression")`, see `here
+    <https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html>`__. Quoting
+    from there:
+
+        *We expect to see the “usual suspects”, i.e., mitochondrial genes, actin,
+        ribosomal protein, MALAT1. A few spike-in transcripts may also be
+        present here, though if all of the spike-ins are in the top 50, it
+        suggests that too much spike-in RNA was added. A large number of
+        pseudo-genes or predicted genes may indicate problems with alignment.*
+        -- Davis McCarthy and Aaron Lun
 
     Parameters
     ----------
