@@ -3,39 +3,36 @@ from matplotlib import pyplot as plt
 import pandas as pd
 from . import utils
 from ..preprocessing.simple import normalize_per_cell
+from ..utils import doc_params
+from .docs import doc_show_save_ax
 
 
-def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs):
-    """Fraction of counts assigned to each gene over all cells.
+@doc_params(show_save_ax=doc_show_save_ax)
+def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
+    """\
+    Fraction of counts assigned to each gene over all cells.
 
     Computes, for each gene, the fraction of counts assigned to that gene within
     a cell. The `n_top` genes with the highest mean fraction over all cells are
     plotted as boxplots.
 
     This plot is similar to the `scater` package function `plotQC(type =
-    "highest-expression")`.
-    See `here <https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html>`__.
+    "highest-expression")`, see `here
+    <https://bioconductor.org/packages/devel/bioc/vignettes/scater/inst/doc/vignette-qc.html>`__.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    n_top : int, optional (default:30)
+    n_top : `int`, optional (default:30)
         Number of top
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
-    show : bool, optional (default: None)
-        Show the plot, do not return axis.
-    ax : `matplotlib.Axes`
-         A `matplotlib.Axes` object.
-    **kwargs : keyword arguments
+    {show_save_ax}
+    **kwds : keyword arguments
         Are passed to `seaborn.boxplot`.
 
     Returns
     -------
-    A `matplotlib.Axes` object
-
+    If `show==False` a `matplotlib.Axis`.
     """
     from scipy.sparse import issparse
 
@@ -60,7 +57,7 @@ def highest_expr_genes(adata, n_top=30, save=None, show=None, ax=None, **kwargs)
         # a matplotlib.Axes object needs to be passed.
         height = (n_top * 0.2) + 1.5
         fig, ax = plt.subplots(figsize=(5, height))
-    sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwargs)
+    sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwds)
     ax.set_xlabel("% of total counts")
     utils.savefig_or_show('highest_expression', show=show, save=save)
     return ax if show == False else None
