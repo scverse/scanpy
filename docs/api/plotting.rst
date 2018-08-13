@@ -52,8 +52,8 @@ a method with the same name in ``pl``.
 
    pl.pca
    pl.pca_loadings
-   pl.pca_scatter
    pl.pca_variance_ratio
+   pl.pca_overview
 
 **Embeddings**
 

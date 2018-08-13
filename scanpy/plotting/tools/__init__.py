@@ -18,7 +18,7 @@ from ..docs import doc_scatter_bulk, doc_show_save_ax
 
 
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca(adata, **params):
+def pca_overview(adata, **params):
     """\
     Plot PCA results.
 
@@ -49,7 +49,7 @@ def pca(adata, **params):
 
 
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca_scatter(
+def pca(
         adata,
         color=None,
         use_raw=True,
@@ -116,6 +116,10 @@ def pca_scatter(
         save=False, ax=ax)
     utils.savefig_or_show('pca_scatter', show=show, save=save)
     if show == False: return axs
+
+
+# backwards compat
+pca_scatter = pca
 
 
 def pca_loadings(adata, components=None, show=None, save=None):
