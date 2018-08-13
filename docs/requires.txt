@@ -2,7 +2,7 @@
 sphinx_rtd_theme>=0.3.1
 sphinx-autodoc-typehints
 # same as ../requires.txt, but omitting the c++ packages
-anndata>=0.5.8
+anndata>=0.6.7
 matplotlib>=2.2
 pandas>=0.21
 scipy
