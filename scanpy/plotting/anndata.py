@@ -278,8 +278,8 @@ def _scatter_obs(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_obs_array(x)
-        y_arr = adata._get_obs_array(y)
+        x_arr = adata._get_obs_array(x, use_raw=use_raw)
+        y_arr = adata._get_obs_array(y, use_raw=use_raw)
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
