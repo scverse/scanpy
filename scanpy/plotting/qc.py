@@ -66,6 +66,6 @@ def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
         height = (n_top * 0.2) + 1.5
         fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwds)
-    ax.set_xlabel("% of total counts")
-    utils.savefig_or_show('highest_expression', show=show, save=save)
+    ax.set_xlabel('% of total counts')
+    utils.savefig_or_show('highest_expr_genes', show=show, save=save)
     return ax if show == False else None
