@@ -20,6 +20,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 tolerance = 13  # default matplotlib pixel difference tolerance
 
 def save_and_compare_images(basename):
+    if not os.path.exists('./figures/'): os.makedirs('./figures/')
     outname = './figures/' + basename + '.png'
     pl.savefig(outname, dpi=80)
     pl.close()
@@ -27,7 +28,7 @@ def save_and_compare_images(basename):
     assert res is None, res
 
 def test_pbmc3k():
-    
+
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
     # Preprocessing
