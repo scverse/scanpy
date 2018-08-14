@@ -4,20 +4,21 @@
 
 .. role:: small
 
+.. role:: smaller
 
 On master :small:`July 31, 2018`
 --------------------------------
 
 Plotting of marker genes and quality control:
-  
-- :func:`~scanpy.api.pl.dotplot` for visualizing genes across conditions and clusters, see `here <https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c>`__ :small:`thanks to F Ramirez`  
-- :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`__ :small:`thanks to F Ramirez`
-- :func:`~scanpy.api.pl.violin` now produces very compact overview figures with many panels, see `here <https://github.com/theislab/scanpy/pull/175>`__ :small:`thanks to F Ramirez`
-- :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`__; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :small:`thanks to F Ramirez`
+
+- :func:`~scanpy.api.pl.dotplot` for visualizing genes across conditions and clusters, see `here <https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c>`__ :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`__ :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.api.pl.violin` now produces very compact overview figures with many panels, see `here <https://github.com/theislab/scanpy/pull/175>`__ :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`__; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :smaller:`thanks to F Ramirez`
 
 There now is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__ on imputation:
 
-- :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :small:`thanks to S Gigante`
+- :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :smaller:`thanks to S Gigante`
 - :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
 
 Further changes:
@@ -35,14 +36,14 @@ Version 1.1 :small:`May 31, 2018`
 ---------------------------------
 
 - :func:`~scanpy.api.set_figure_params` by default passes `vector_friendly=True` and allows you to produce reasonablly sized pdfs by rasterizing large scatter plots
-- :func:`~scanpy.api.tl.draw_graph` now defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :small:`thanks to S Wollock`
-- :func:`~scanpy.api.pl.scatter` also plots along variables axis :small:`thanks to MD Luecken`
-- :func:`~scanpy.api.pp.pca` and :func:`~scanpy.api.pp.log1p` support chunk processing :small:`thanks to S Rybakov`
-- :func:`~scanpy.api.pp.regress_out` is back to multiprocessing :small:`thanks to F Ramirez`
-- :func:`~scanpy.api.read` reads compressed text files :small:`thanks to G Eraslan`
-- :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes :small:`thanks to FG Brundu`
+- :func:`~scanpy.api.tl.draw_graph` now defaults to the ForceAtlas2 layout [Jacomy14]_ [Chippada18]_, which is often more visually appealing and whose computation is much faster :smaller:`thanks to S Wollock`
+- :func:`~scanpy.api.pl.scatter` also plots along variables axis :smaller:`thanks to MD Luecken`
+- :func:`~scanpy.api.pp.pca` and :func:`~scanpy.api.pp.log1p` support chunk processing :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.api.pp.regress_out` is back to multiprocessing :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.api.read` reads compressed text files :smaller:`thanks to G Eraslan`
+- :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes :smaller:`thanks to FG Brundu`
 - :func:`~scanpy.api.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
-- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_ :small:`thanks to S Gigante`
+- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_ :smaller:`thanks to S Gigante`
 - :func:`~scanpy.api.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
@@ -107,7 +108,7 @@ Further changes are:
 - show edges in scatter plots based on graph visualization
   :func:`~scanpy.api.tl.draw_graph` and :func:`~scanpy.api.umap` by passing
   `edges=True`
-- :func:`~scanpy.api.pp.downsample_counts` for downsampling counts :small:`thanks to MD Luecken`
+- :func:`~scanpy.api.pp.downsample_counts` for downsampling counts :smaller:`thanks to MD Luecken`
 - default 'louvain_groups' are now called 'louvain'
 - 'X_diffmap' now contains the zero component, plotting remains unchanged
 
@@ -133,7 +134,7 @@ Version 0.4.2 :small:`January 7, 2018`
 - amendments in `PAGA <https://github.com/theislab/paga>`__ and its plotting
   functions
 
-  
+
 Version 0.4 :small:`December 23, 2017`
 --------------------------------------
 
@@ -158,8 +159,8 @@ Version 0.3 :small:`November 16, 2017`
 
 
 Version 0.2.9 :small:`October 25, 2017`
----------------------------------------  
-  
+---------------------------------------
+
 Initial release of `partition-based graph abstraction (PAGA) <https://github.com/theislab/paga>`__.
 
 
