@@ -13,6 +13,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
 
+sc.pl.set_rcParams_defaults()
+
 
 def test_heatmap():
     adata = sc.datasets.krumsiek11()
