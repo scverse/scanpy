@@ -46,3 +46,84 @@ def test_pbmc3k():
         adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
     # add the total counts per cell as observations-annotation to adata
     adata.obs['n_counts'] = adata.X.sum(axis=1).A1
+
+    sc.pl.violin(adata, ['n_genes', 'n_counts', 'percent_mito'],
+                 jitter=False, multi_panel=True)
+    save_and_compare_images('violin')
+
+    sc.pl.scatter(adata, x='n_counts', y='percent_mito')
+    save_and_compare_images('scatter_1')
+    sc.pl.scatter(adata, x='n_counts', y='n_genes')
+    save_and_compare_images('scatter_2')
+
+    adata = adata[adata.obs['n_genes'] < 2500, :]
+    adata = adata[adata.obs['percent_mito'] < 0.05, :]
+
+    adata.raw = sc.pp.log1p(adata, copy=True)
+
+    sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+
+    filter_result = sc.pp.filter_genes_dispersion(
+        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5)
+    sc.pl.filter_genes_dispersion(filter_result)
+    save_and_compare_images('filter_genes_dispersion')
+
+    adata = adata[:, filter_result.gene_subset]
+    sc.pp.log1p(adata)
+    sc.pp.regress_out(adata, ['n_counts', 'percent_mito'])
+    sc.pp.scale(adata, max_value=10)
+
+    # PCA
+
+    sc.tl.pca(adata, svd_solver='arpack')
+    sc.pl.pca(adata, color='CST3')
+    save_and_compare_images('pca')
+
+    sc.pl.pca_variance_ratio(adata, log=True)
+    save_and_compare_images('pca_variance_ratio')
+
+    # UMAP
+
+    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
+    # sc.tl.umap(adata)  # umaps lead to slight variations
+
+    # sc.pl.umap(adata, color=['CST3', 'NKG7', 'PPBP'], use_raw=False)
+    # save_and_compare_images('umap_1')
+
+    # Clustering the graph
+
+    sc.tl.louvain(adata)
+    # sc.pl.umap(adata, color=['louvain', 'CST3', 'NKG7'])
+    # save_and_compare_images('umap_2')
+    sc.pl.scatter(adata, 'CST3', 'NKG7', color='louvain')
+    save_and_compare_images('scatter_3')
+
+    # Finding marker genes
+
+    sc.tl.rank_genes_groups(adata, 'louvain')
+    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False)
+    save_and_compare_images('rank_genes_groups_1')
+
+    sc.tl.rank_genes_groups(adata, 'louvain', method='logreg')
+    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False)
+    save_and_compare_images('rank_genes_groups_2')
+
+    sc.tl.rank_genes_groups(adata, 'louvain', groups=['0'], reference='1')
+    sc.pl.rank_genes_groups(adata, groups='0', n_genes=20)
+    save_and_compare_images('rank_genes_groups_3')
+
+    sc.pl.rank_genes_groups_violin(adata, groups='0', n_genes=8)
+    save_and_compare_images('rank_genes_groups_4')
+
+    new_cluster_names = [
+        'CD4 T cells', 'CD14+ Monocytes',
+        'B cells', 'CD8 T cells',
+        'NK cells', 'FCGR3A+ Monocytes',
+        'Dendritic cells', 'Megakaryocytes']
+    adata.rename_categories('louvain', new_cluster_names)
+
+    # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False)
+    # save_and_compare_images('umap_3')
+    
+    sc.pl.violin(adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90)
+    save_and_compare_images('violin_2')
