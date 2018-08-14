@@ -15,13 +15,6 @@ import numpy as np
 import os
 import scanpy.api as sc
 
-sc.settings.verbosity = 3  # verbosity: errors (0), warnings (1), info (2), hints (3)
-sc.settings.set_figure_params(dpi=80, dpi_save=80, format='png')
-sc.logging.print_versions()
-sc.settings.autosave = True
-sc.settings.autoshow = False
-results_file = './write/pmbc3k.h5ad'
-
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
@@ -29,6 +22,10 @@ tolerance = 13  # default matplotlib pixel difference tolerance
 
 def test_pbmc3k():
 
+    sc.settings.set_figure_params(dpi=80, dpi_save=80, format='png')
+    sc.settings.autosave = True
+    sc.settings.autoshow = False
+    
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
     # Preprocessing
