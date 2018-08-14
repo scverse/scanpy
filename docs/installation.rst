@@ -5,11 +5,11 @@ If you do not have a working Python 3.5 or 3.6 installation, consider
 downloading and installing Miniconda_ (see `Installing Miniconda`_).
 Running the following installs most of the requirements::
 
-   conda install seaborn scikit-learn statsmodels numba
+    conda install seaborn scikit-learn statsmodels numba
 
 Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider using ``pip3`` to access Python 3)::
 
-  pip install scanpy
+    pip install scanpy
 
 To work with the latest version on `GitHub
 <https://github.com/theislab/scanpy>`__: clone the repository and ``cd`` into
@@ -23,9 +23,10 @@ automatically installed: `python-igraph <http://igraph.org/python/>`__ [Csardi06
 and `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_.
 Install them together with scanpy using the ``louvain`` extra or manually::
 
+    conda install -c conda-forge python-igraph louvain  # by far the fastest, or...
     pip install scanpy[louvain]        # or...
-    pip install python-igraph louvain  # or...
-    conda install -c conda-forge python-igraph louvain
+    pip install python-igraph louvain
+
 
 If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
 
