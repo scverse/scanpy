@@ -10,7 +10,7 @@
 import matplotlib as mpl
 mpl.use('agg')
 from matplotlib.testing.compare import compare_images
-
+import matplotlib.pyplot as pl
 import numpy as np
 import os
 import scanpy.api as sc
@@ -19,21 +19,21 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
 
+def save_and_compare_images(basename):
+    outname = './figures/' + basename + '.png'
+    pl.savefig(outname, dpi=80)
+    pl.close()
+    res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
+    assert res is None, res
 
 def test_pbmc3k():
-
-    sc.settings.set_figure_params(dpi=80, dpi_save=80, format='png')
-    sc.settings.autosave = True
-    sc.settings.autoshow = False
     
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
     # Preprocessing
 
     sc.pl.highest_expr_genes(adata, n_top=20)
-    res = compare_images(ROOT + '/highest_expr_genes.png',
-                         './figures/highest_expr_genes.png', tolerance * 2)
-    assert res is None, res
+    save_and_compare_images('highest_expr_genes')
 
     sc.pp.filter_cells(adata, min_genes=200)
     sc.pp.filter_genes(adata, min_cells=3)
