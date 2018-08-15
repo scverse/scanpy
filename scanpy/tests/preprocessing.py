@@ -42,6 +42,14 @@ def test_normalize_per_cell():
         axis=1).A1.tolist()
 
 
+def test_subsample():
+    adata = AnnData(np.ones((200, 10)))
+    sc.pp.subsample(adata, n_obs=40)
+    assert adata.n_obs == 40
+    sc.pp.subsample(adata, fraction=0.1)
+    assert adata.n_obs == 4
+
+
 def test_recipe_plotting():
     sc.settings.autoshow = False
     adata = AnnData(np.random.randint(0, 1000, (1000, 1000)))

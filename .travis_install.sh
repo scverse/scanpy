@@ -26,5 +26,6 @@ conda create -n testenv --yes python=$TRAVIS_PYTHON_VERSION pip pytest hdf5 \
 source activate testenv
 
 pip install -r requires.txt
+conda install -c conda-forge python-igraph louvain --yes
 pip install docutils
 python setup.py develop
