@@ -49,7 +49,8 @@ def scatter(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
     """\
     Scatter plot along observations or variables axes.
 
@@ -103,7 +104,8 @@ def scatter(
             title=title,
             show=show,
             save=save,
-            ax=ax)
+            ax=ax,
+            layers=layers)
     elif x is not None and y is not None:
         if ((x in adata.obs.keys() or x in adata.var.index)
             and (y in adata.obs.keys() or y in adata.var.index)
@@ -132,7 +134,8 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax)
+                ax=ax,
+                layers=layers)
         elif ((x in adata.var.keys() or x in adata.obs.index)
                 and (y in adata.var.keys() or y in adata.obs.index)
                 and (color is None or color in adata.var.keys() or color in adata.obs.index)):
@@ -160,7 +163,8 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax)
+                ax=ax,
+                layers=layers)
         else:
             raise ValueError(
                 '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
@@ -193,7 +197,8 @@ def _scatter_var(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
 
     adata_T = adata.T
 
@@ -221,7 +226,8 @@ def _scatter_var(
         title=title,
         show=show,
         save=save,
-        ax=ax)
+        ax=ax,
+        layers=layers)
 
     # store .uns annotations that were added to the new adata object
     adata.uns = adata_T.uns
@@ -253,9 +259,18 @@ def _scatter_obs(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
     """See docstring of scatter."""
     sanitize_anndata(adata)
+
+    if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
+        layers = (layers, layers, layers)
+    elif isinstance(layers, (tuple, list)) and len(layers) == 3:
+        for layer in layers:
+            if layer not in anndata.layers.keys() and layer != 'X':
+                raise ValueError('layers should have elements that are either "X" or in adata.layers.keys()')
+    else: raise ValueError('layers should be a string or a list/tuple of length 3')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
