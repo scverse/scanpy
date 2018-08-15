@@ -280,7 +280,7 @@ def filter_genes_dispersion(data,
     """
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
-        logg.warn('If you pass `n_top_genes`, all cutoffs are ignored.')
+        logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
     if min_disp is None: min_disp = 0.5
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
@@ -501,7 +501,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     svd_solver : `str`, optional (default: 'auto')
         SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
         (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
-        due to Halko (2009). "auto" chooses automatically depending on the size
+        due to Halko (2009). 'auto' chooses automatically depending on the size
         of the problem.
     random_state : `int`, optional (default: 0)
         Change to use different intial states for the optimization.
@@ -527,6 +527,13 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     variance : `.uns['pca']`
          Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
+    # chunked calculation is not randomized, anyways
+    if svd_solver in {'auto', 'randomized'} and not chunked:
+        logg.info(
+            'Note that scikit-learn\'s randomized PCA might not be exactly '
+            'reproducible across different computational platforms. For exact '
+            'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
+            'become the Scanpy default in the future.')
 
     if n_comps is None: n_comps = N_PCS
 
