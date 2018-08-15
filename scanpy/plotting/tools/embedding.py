@@ -79,7 +79,7 @@ def diffmap(
         if settings.autosave or (save is not None):
             utils.savefig(writekey)
     show = settings.autoshow if show is None else show
-    if not settings.autosave and show: pl.show()
+    if show: pl.show()
     if show == False: return axs
 
 
