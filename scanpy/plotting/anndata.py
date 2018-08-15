@@ -631,6 +631,8 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         if ax is None:
             axs, _, _, _ = setup_axes(
                 ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
+        else:
+            axs = [ax]
         for ax, y in zip(axs, ys):
             ax = sns.violinplot(x, y=y, data=obs_tidy, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, **kwds)
