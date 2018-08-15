@@ -2,6 +2,10 @@
     font-size:40%;
 }
 
+.smaller {
+    font-size:60%;
+}
+
 .rst-content dl:not(.docutils) dl dt {
     /* mimick numpydoc’s blockquote style */
     font-weight: normal;

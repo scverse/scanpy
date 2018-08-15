@@ -924,7 +924,7 @@ def scale(data, zero_center=True, max_value=None, copy=False):
     return X if copy else None
 
 
-def subsample(data, fraction, random_state=0, copy=False):
+def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
     """Subsample to a fraction of the number of observations.
 
     Parameters
@@ -932,8 +932,10 @@ def subsample(data, fraction, random_state=0, copy=False):
     data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    fraction : float in [0, 1]
+    fraction : `float` in [0, 1] or `None`, optional (default: `None`)
         Subsample to this `fraction` of the number of observations.
+    n_obs : `int` or `None`, optional (default: `None`)
+        Subsample to this number of observations.
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
     copy : `bool`, optional (default: `False`)
@@ -946,14 +948,19 @@ def subsample(data, fraction, random_state=0, copy=False):
     subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
     returns a subsampled copy of it (`copy == True`).
     """
-    if fraction > 1 or fraction < 0:
-        raise ValueError('`fraction` needs to be within [0, 1], not {}'
-                         .format(fraction))
     np.random.seed(random_state)
-    n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
-    new_n_obs = int(fraction * n_obs)
-    obs_indices = np.random.choice(n_obs, size=new_n_obs, replace=False)
-    logg.msg('... subsampled to {} data points'.format(new_n_obs))
+    old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
+    if n_obs is not None:
+        new_n_obs = n_obs
+    elif fraction is not None:
+        if fraction > 1 or fraction < 0:
+            raise ValueError('`fraction` needs to be within [0, 1], not {}'
+                             .format(fraction))
+        new_n_obs = int(fraction * old_n_obs)
+        logg.msg('... subsampled to {} data points'.format(new_n_obs))
+    else:
+        raise ValueError('Either pass `n_obs` or `fraction`.')
+    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         adata._inplace_subset_obs(obs_indices)

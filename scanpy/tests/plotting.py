@@ -9,9 +9,11 @@ from tempfile import NamedTemporaryFile
 
 import scanpy.api as sc
 
-ROOT = os.path.dirname(os.path.abspath(__file__)) + "/test_data/"
+ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
+
+sc.pl.set_rcParams_defaults()
 
 
 def test_heatmap():
@@ -200,7 +202,7 @@ def test_umap():
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_scatter_', delete=False)
 
     # test umap with louvain clusters
-    sc.pl.umap(pbmc, color='louvain')
+    sc.pl.umap(pbmc, color='louvain', frameon=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 
@@ -208,10 +210,9 @@ def test_umap():
     assert res is None, res
 
     # test umap with gene expression
-    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5)
+    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5, frameon=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 
     res = compare_images(ROOT + '/master_umap_gene_expr.png', outfile.name, tolerance)
     assert res is None, res
-

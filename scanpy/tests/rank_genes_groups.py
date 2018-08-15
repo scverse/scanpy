@@ -10,7 +10,7 @@ from anndata import AnnData
 from scanpy.api.tl import rank_genes_groups
 
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).parent / Path('_data/')
 
 
 # We test results for a simple generic example
@@ -32,21 +32,19 @@ def get_example_data(*, sparse=False):
     # Create cluster according to groups
     adata.obs['true_groups'] = pd.Categorical(np.concatenate((
         np.zeros((10,), dtype=int),
-        np.ones( (90,), dtype=int),
+        np.ones((90,), dtype=int),
     )))
 
     return adata
 
 
 def get_true_scores():
-    # Here, we have saved the true results
-    # Note: Default value is on copying = true.
     with Path(HERE, 'objs_t_test.pkl').open('rb') as f:
         true_scores_t_test, true_names_t_test = pickle.load(f)
     with Path(HERE, 'objs_wilcoxon.pkl').open('rb') as f:
         true_scores_wilcoxon, true_names_wilcoxon = pickle.load(f)
 
-    return true_names_t_test,  true_names_wilcoxon, \
+    return true_names_t_test, true_names_wilcoxon,\
            true_scores_t_test, true_scores_wilcoxon
 
 
@@ -55,7 +53,7 @@ def test_results_dense():
 
     adata = get_example_data()
 
-    true_names_t_test,  true_names_wilcoxon, \
+    true_names_t_test, true_names_wilcoxon,\
     true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
     # Now run the rank_genes_groups, test functioning.
@@ -77,7 +75,7 @@ def test_results_sparse():
 
     adata_sparse = get_example_data(sparse=True)
 
-    true_names_t_test,  true_names_wilcoxon, \
+    true_names_t_test, true_names_wilcoxon,\
     true_scores_t_test, true_scores_wilcoxon = get_true_scores()
 
     rank_genes_groups(adata_sparse, 'true_groups', n_genes=20, method='t-test')
@@ -91,7 +89,6 @@ def test_results_sparse():
         max_error = max(max_error, abs(
             adata_sparse.uns['rank_genes_groups']['scores'][i][1] - true_scores_t_test[i][1]))
 
-    # assert np.array_equal(true_scores_t_test,adata_sparse.uns['rank_genes_groups']['scores'])
     assert max_error < ERROR_TOLERANCE
     rank_genes_groups(adata_sparse, 'true_groups', n_genes=20, method='wilcoxon')
     assert np.array_equal(true_scores_wilcoxon, adata_sparse.uns['rank_genes_groups']['scores'])
