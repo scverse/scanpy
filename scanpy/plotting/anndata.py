@@ -271,7 +271,7 @@ def _scatter_obs(
         layers = (layers, layers, layers)
     elif isinstance(layers, (tuple, list)) and len(layers) == 3:
         for layer in layers:
-            if layer not in anndata.layers.keys() and layer != 'X':
+            if layer not in adata.layers.keys() and layer != 'X':
                 raise ValueError('layers should have elements that are either "X" or in adata.layers.keys()')
     else: raise ValueError('layers should be a string or a list/tuple of length 3')
 
