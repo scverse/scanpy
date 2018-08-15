@@ -72,6 +72,9 @@ def scatter(
         Use `raw` attribute of `adata` if present.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
+    layers : string or list/tuple of strings, optional (default: `X`)
+        Layers' names specification for x, y and color.
+        If layers is a string, then it is expanded to (layers, layers, layers).
     {scatter_bulk}
     {show_save_ax}
 
@@ -272,6 +275,9 @@ def _scatter_obs(
                 raise ValueError('layers should have elements that are either "X" or in adata.layers.keys()')
     else: raise ValueError('layers should be a string or a list/tuple of length 3')
 
+    if use_raw and (layers != ('X', 'X', 'X') or layers != ['X', 'X', 'X']):
+        ValueError('use_raw should be False if layers different from "X" are used')
+
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
             'Invalid `legend_loc`, need to be one of: {}.'.format(VALID_LEGENDLOCS))
@@ -293,8 +299,8 @@ def _scatter_obs(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_obs_array(x, use_raw=use_raw)
-        y_arr = adata._get_obs_array(y, use_raw=use_raw)
+        x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
+        y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
@@ -362,7 +368,7 @@ def _scatter_obs(
                 c = adata.raw[:, key].X
                 continuous = True
             elif key in adata.var_names:
-                c = adata[:, key].X
+                c = adata[:, key].X if layers[2]=='X' else adata[:, key].layers[layers[2]]
                 continuous = True
             else:
                 raise ValueError(
