@@ -266,6 +266,7 @@ def _scatter_obs(
         layers='X'):
     """See docstring of scatter."""
     sanitize_anndata(adata)
+    from scipy.sparse import issparse
 
     if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
         layers = (layers, layers, layers)
@@ -369,6 +370,7 @@ def _scatter_obs(
                 continuous = True
             elif key in adata.var_names:
                 c = adata[:, key].X if layers[2]=='X' else adata[:, key].layers[layers[2]]
+                c = c.toarray().flatten() if issparse(c) else c
                 continuous = True
             else:
                 raise ValueError(
