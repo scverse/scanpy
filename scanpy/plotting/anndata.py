@@ -302,6 +302,10 @@ def _scatter_obs(
     elif x is not None and y is not None:
         x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
         y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
+        
+        x_arr = x_arr.toarray().flatten() if issparse(x_arr) else x_arr
+        y_arr = y_arr.toarray().flatten() if issparse(y_arr) else y_arr
+
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
