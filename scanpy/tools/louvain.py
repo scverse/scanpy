@@ -15,6 +15,7 @@ def louvain(
         adjacency=None,
         flavor='vtraag',
         directed=True,
+        use_weights=False,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -45,6 +46,8 @@ def louvain(
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
         much more powerful.
+    use_weights : `bool`, optional (default: `False`)
+        Use weights from knn graph.
     copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
 
@@ -90,11 +93,16 @@ def louvain(
         if flavor == 'vtraag':
             import louvain
             if resolution is None: resolution = 1
+            if use_weights:
+                weights = np.array(g.es["weight"]).astype(np.float64)
+            else:
+                weights = None
             try:
                 logg.info('    using the "louvain" package of Traag (2017)')
                 louvain.set_rng_seed(random_state)
                 part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
-                                              resolution_parameter=resolution)
+                                              resolution_parameter=resolution,
+                                              weights=weights)
                 # adata.uns['louvain_quality'] = part.quality()
             except AttributeError:
                 logg.warn('Did not find package louvain>=0.6, '
@@ -104,7 +112,8 @@ def louvain(
                           'If you want 100% reproducible results, '
                           'update via "pip install louvain --upgrade".')
                 part = louvain.find_partition(g, method='RBConfiguration',
-                                              resolution_parameter=resolution)
+                                              resolution_parameter=resolution,
+                                              weights=weights)
         elif flavor == 'igraph':
             part = g.community_multilevel()
         groups = np.array(part.membership)
