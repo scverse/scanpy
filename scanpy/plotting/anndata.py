@@ -31,6 +31,7 @@ def scatter(
         y=None,
         color=None,
         use_raw=True,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -49,8 +50,7 @@ def scatter(
         title=None,
         show=None,
         save=None,
-        ax=None,
-        layers='X'):
+        ax=None):
     """\
     Scatter plot along observations or variables axes.
 
@@ -70,11 +70,12 @@ def scatter(
         `'ann1'` or `['ann1', 'ann2']`.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    layers : `str` or tuple of strings, optional (default: `X`)
+        Use the `layers` attribute of `adata` if present: specify the layer for
+        `x`, `y` and `color`. If `layers` is a string, then it is expanded to
+        `(layers, layers, layers)`.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
-    layers : string or list/tuple of strings, optional (default: `X`)
-        Layers' names specification for x, y and color.
-        If layers is a string, then it is expanded to (layers, layers, layers).
     {scatter_bulk}
     {show_save_ax}
 
@@ -89,6 +90,7 @@ def scatter(
             y=y,
             color=color,
             use_raw=use_raw,
+            layers=layers,
             sort_order=sort_order,
             alpha=alpha,
             basis=basis,
@@ -107,8 +109,7 @@ def scatter(
             title=title,
             show=show,
             save=save,
-            ax=ax,
-            layers=layers)
+            ax=ax)
     elif x is not None and y is not None:
         if ((x in adata.obs.keys() or x in adata.var.index)
             and (y in adata.obs.keys() or y in adata.var.index)
@@ -119,6 +120,7 @@ def scatter(
                 y=y,
                 color=color,
                 use_raw=use_raw,
+                layers=layers,
                 sort_order=sort_order,
                 alpha=alpha,
                 basis=basis,
@@ -137,8 +139,7 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax,
-                layers=layers)
+                ax=ax)
         elif ((x in adata.var.keys() or x in adata.obs.index)
                 and (y in adata.var.keys() or y in adata.obs.index)
                 and (color is None or color in adata.var.keys() or color in adata.obs.index)):
@@ -148,6 +149,7 @@ def scatter(
                 y=y,
                 color=color,
                 use_raw=use_raw,
+                layers=layers,
                 sort_order=sort_order,
                 alpha=alpha,
                 basis=basis,
@@ -166,8 +168,7 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax,
-                layers=layers)
+                ax=ax)
         else:
             raise ValueError(
                 '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
@@ -182,6 +183,7 @@ def _scatter_var(
         y=None,
         color=None,
         use_raw=True,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -200,8 +202,7 @@ def _scatter_var(
         title=None,
         show=None,
         save=None,
-        ax=None,
-        layers='X'):
+        ax=None):
 
     adata_T = adata.T
 
@@ -211,6 +212,7 @@ def _scatter_var(
         y=y,
         color=color,
         use_raw=use_raw,
+        layers=layers,
         sort_order=sort_order,
         alpha=alpha,
         basis=basis,
@@ -229,8 +231,7 @@ def _scatter_var(
         title=title,
         show=show,
         save=save,
-        ax=ax,
-        layers=layers)
+        ax=ax)
 
     # store .uns annotations that were added to the new adata object
     adata.uns = adata_T.uns
@@ -244,6 +245,7 @@ def _scatter_obs(
         y=None,
         color=None,
         use_raw=True,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -262,22 +264,25 @@ def _scatter_obs(
         title=None,
         show=None,
         save=None,
-        ax=None,
-        layers='X'):
+        ax=None):
     """See docstring of scatter."""
     sanitize_anndata(adata)
     from scipy.sparse import issparse
 
+    # process layers
+    if layers is None:
+        layers = 'X'
     if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
         layers = (layers, layers, layers)
     elif isinstance(layers, (tuple, list)) and len(layers) == 3:
         for layer in layers:
             if layer not in adata.layers.keys() and layer != 'X':
-                raise ValueError('layers should have elements that are either "X" or in adata.layers.keys()')
-    else: raise ValueError('layers should be a string or a list/tuple of length 3')
-
+                raise ValueError(
+                    '`layers` should have elements that are either \'X\' or in adata.layers.keys().')
+    else:
+        raise ValueError('`layers` should be a string or a list/tuple of length 3.')
     if use_raw and (layers != ('X', 'X', 'X') or layers != ['X', 'X', 'X']):
-        ValueError('use_raw should be False if layers different from "X" are used')
+        ValueError('`use_raw` must be `False` if layers other than \'X\' are used.')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -302,7 +307,7 @@ def _scatter_obs(
     elif x is not None and y is not None:
         x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
         y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
-        
+
         x_arr = x_arr.toarray().flatten() if issparse(x_arr) else x_arr
         y_arr = y_arr.toarray().flatten() if issparse(y_arr) else y_arr
 
@@ -344,46 +349,41 @@ def _scatter_obs(
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
 
-    # the actual color ids, e.g. 'grey' or '#109482'
-    color_ids = [None if not is_color_like(key)
-                 else key for key in keys]
+    # generate the colors
+    color_ids = []
     categoricals = []
     colorbars = []
     for ikey, key in enumerate(keys):
-        if color_ids[ikey] is not None:
-            c = color_ids[ikey]
-            continuous = True
-            categorical = False
-            colorbars.append(False)
-        else:
-            c = 'white' if projection == '2d' else 'white'
-            categorical = False
-            continuous = False
-            # test whether we have categorial or continuous annotation
-            if key in adata.obs_keys():
-                if is_categorical_dtype(adata.obs[key]):
-                    categorical = True
-                else:
-                    continuous = True
-                    c = adata.obs[key]
-            # coloring according to gene expression
-            elif (use_raw
-                  and adata.raw is not None
-                  and key in adata.raw.var_names):
-                c = adata.raw[:, key].X
-                continuous = True
-            elif key in adata.var_names:
-                c = adata[:, key].X if layers[2]=='X' else adata[:, key].layers[layers[2]]
-                c = c.toarray().flatten() if issparse(c) else c
-                continuous = True
+        c = 'white'
+        categorical = False  # by default, assume continuous or flat color
+        colorbar = None
+        # test whether we have categorial or continuous annotation
+        if key in adata.obs_keys():
+            if is_categorical_dtype(adata.obs[key]):
+                categorical = True
             else:
-                raise ValueError(
-                    'key \'{}\' is invalid! pass valid observation annotation, '
-                    'one of {} or a gene name {}'
-                    .format(key, adata.obs_keys(), adata.var_names))
-            colorbars.append(True if continuous else False)
+                c = adata.obs[key]
+        # coloring according to gene expression
+        elif (use_raw
+              and adata.raw is not None
+              and key in adata.raw.var_names):
+            c = adata.raw[:, key].X
+        elif key in adata.var_names:
+            c = adata[:, key].X if layers[2] == 'X' else adata[:, key].layers[layers[2]]
+            c = c.toarray().flatten() if issparse(c) else c
+        elif is_color_like(key):  # a flat color
+            c = key
+            colorbar = False
+        else:
+            raise ValueError(
+                'key \'{}\' is invalid! pass valid observation annotation, '
+                'one of {} or a gene name {}'
+                .format(key, adata.obs_keys(), adata.var_names))
+        if colorbar is None:
+            colorbar = not categorical
+        colorbars.append(colorbar)
         if categorical: categoricals.append(ikey)
-        color_ids[ikey] = c
+        color_ids.append(c)
 
     if right_margin is None and len(categoricals) > 0:
         if legend_loc == 'right margin': right_margin = 0.5
