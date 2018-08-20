@@ -49,7 +49,8 @@ def scatter(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
     """\
     Scatter plot along observations or variables axes.
 
@@ -71,6 +72,9 @@ def scatter(
         Use `raw` attribute of `adata` if present.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
+    layers : string or list/tuple of strings, optional (default: `X`)
+        Layers' names specification for x, y and color.
+        If layers is a string, then it is expanded to (layers, layers, layers).
     {scatter_bulk}
     {show_save_ax}
 
@@ -103,7 +107,8 @@ def scatter(
             title=title,
             show=show,
             save=save,
-            ax=ax)
+            ax=ax,
+            layers=layers)
     elif x is not None and y is not None:
         if ((x in adata.obs.keys() or x in adata.var.index)
             and (y in adata.obs.keys() or y in adata.var.index)
@@ -132,7 +137,8 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax)
+                ax=ax,
+                layers=layers)
         elif ((x in adata.var.keys() or x in adata.obs.index)
                 and (y in adata.var.keys() or y in adata.obs.index)
                 and (color is None or color in adata.var.keys() or color in adata.obs.index)):
@@ -160,7 +166,8 @@ def scatter(
                 title=title,
                 show=show,
                 save=save,
-                ax=ax)
+                ax=ax,
+                layers=layers)
         else:
             raise ValueError(
                 '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
@@ -193,7 +200,8 @@ def _scatter_var(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
 
     adata_T = adata.T
 
@@ -221,7 +229,8 @@ def _scatter_var(
         title=title,
         show=show,
         save=save,
-        ax=ax)
+        ax=ax,
+        layers=layers)
 
     # store .uns annotations that were added to the new adata object
     adata.uns = adata_T.uns
@@ -253,9 +262,22 @@ def _scatter_obs(
         title=None,
         show=None,
         save=None,
-        ax=None):
+        ax=None,
+        layers='X'):
     """See docstring of scatter."""
     sanitize_anndata(adata)
+    from scipy.sparse import issparse
+
+    if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
+        layers = (layers, layers, layers)
+    elif isinstance(layers, (tuple, list)) and len(layers) == 3:
+        for layer in layers:
+            if layer not in adata.layers.keys() and layer != 'X':
+                raise ValueError('layers should have elements that are either "X" or in adata.layers.keys()')
+    else: raise ValueError('layers should be a string or a list/tuple of length 3')
+
+    if use_raw and (layers != ('X', 'X', 'X') or layers != ['X', 'X', 'X']):
+        ValueError('use_raw should be False if layers different from "X" are used')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -278,8 +300,12 @@ def _scatter_obs(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_obs_array(x, use_raw=use_raw)
-        y_arr = adata._get_obs_array(y, use_raw=use_raw)
+        x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
+        y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
+        
+        x_arr = x_arr.toarray().flatten() if issparse(x_arr) else x_arr
+        y_arr = y_arr.toarray().flatten() if issparse(y_arr) else y_arr
+
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
@@ -347,7 +373,8 @@ def _scatter_obs(
                 c = adata.raw[:, key].X
                 continuous = True
             elif key in adata.var_names:
-                c = adata[:, key].X
+                c = adata[:, key].X if layers[2]=='X' else adata[:, key].layers[layers[2]]
+                c = c.toarray().flatten() if issparse(c) else c
                 continuous = True
             else:
                 raise ValueError(

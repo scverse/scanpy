@@ -18,7 +18,7 @@ text_exts = {'csv',
              'tsv', 'tab', 'data', 'txt'} # these four are all equivalent
 avail_exts = {'anndata', 'xlsx',
               'h5', 'h5ad',
-              'soft.gz', 'mtx'} | text_exts
+              'soft.gz', 'mtx', 'loom'} | text_exts
 """Available file formats for reading data. """
 
 
@@ -28,7 +28,7 @@ avail_exts = {'anndata', 'xlsx',
 
 
 def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
-         first_column_names=False, backup_url=None, cache=False):
+         first_column_names=False, backup_url=None, cache=False, **kwargs):
     """Read file and return :class:`~anndata.AnnData` object.
 
     To speed up reading, consider passing `cache=True`, which creates an hdf5
@@ -72,7 +72,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     if is_valid_filename(filename):
         return _read(filename, backed=backed, sheet=sheet, ext=ext,
                      delimiter=delimiter, first_column_names=first_column_names,
-                     backup_url=backup_url, cache=cache)
+                     backup_url=backup_url, cache=cache, **kwargs)
     # generate filename and read to dict
     filekey = filename
     filename = settings.writedir + filekey + '.' + settings.file_format_data
@@ -261,7 +261,7 @@ def get_params_from_list(params_list):
 
 def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
           first_column_names=None, backup_url=None, cache=False,
-          suppress_cache_warning=False):
+          suppress_cache_warning=False, **kwargs):
     if ext is not None and ext not in avail_exts:
         raise ValueError('Please provide one of the available extensions.\n'
                          + avail_exts)
@@ -309,6 +309,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             adata = read_text(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             adata = _read_softgz(filename)
+        elif ext == 'loom':
+            adata = read_loom(filename=filename, **kwargs)
         else:
             raise ValueError('Unkown extension {}.'.format(ext))
         if cache:
