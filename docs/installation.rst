@@ -3,7 +3,8 @@ Installation
 
 If you do not have a working Python 3.5 or 3.6 installation, consider
 downloading and installing Miniconda_ (see `Installing Miniconda`_).
-Running the following installs most of the requirements::
+If you chose to do so or have a working conda environment already,
+running the following installs most of the requirements fastest::
 
     conda install seaborn scikit-learn statsmodels numba
 
