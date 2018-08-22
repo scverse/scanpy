@@ -432,6 +432,7 @@ def _scatter_obs(
                     mask_remaining[mask] = False
                     if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
         else:
+            groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
                     raise ValueError('"' + name + '" is invalid!'
