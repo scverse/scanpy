@@ -50,11 +50,15 @@ def louvain(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    None
+        By default (`copy=False`), updates ``adata`` with the following fields:
 
-    louvain : `pd.Series` (``adata.obs``, dtype `category`)
-        Array of dim (number of samples) that stores the subgroup id ('0',
-        '1', ...) for each cell.
+        louvain : :class:`pandas.Series` (``adata.obs``, dtype `category`)
+            Array of dim (number of samples) that stores the subgroup id ('0',
+            '1', ...) for each cell.
+    
+    AnnData
+        When `copy=True` is set, a copy of ``adata`` with those fields is returned.
     """
     logg.info('running Louvain clustering', r=True)
     adata = adata.copy() if copy else adata
