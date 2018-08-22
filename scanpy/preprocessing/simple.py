@@ -688,8 +688,8 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         else: raise ValueError('use_rep should be "after", "X" or None')
         for layer in layers:
             subset, counts = filter_cells(adata.layers[layer], min_counts=1)
-            temp = normalize_per_cell(adata.layers[layer][subset], after, counts[subset], copy=True)
-            adata.layers[layer][subset] = temp
+            temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
+            adata.layers[layer] = temp
 
         logg.msg('    finished', t=True, end=': ')
         logg.msg('normalized adata.X and added', no_indent=True)
@@ -706,9 +706,11 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
         counts_per_cell = counts_per_cell[cell_subset]
     if counts_per_cell_after is None:
         counts_per_cell_after = np.median(counts_per_cell)
-    counts_per_cell /= counts_per_cell_after
-    if not issparse(X): X /= counts_per_cell[:, np.newaxis]
-    else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        counts_per_cell /= counts_per_cell_after
+        if not issparse(X): X /= counts_per_cell[:, np.newaxis]
+        else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
     return X if copy else None
 
 
