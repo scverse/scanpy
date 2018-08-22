@@ -1085,7 +1085,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            figsize=None, var_group_positions=None, var_group_labels=None,
+            color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Makes a 'dot plot' of the expression values of `var_names`.
@@ -1116,6 +1116,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value determines
         the number of groups into which the groupby observation should be subdivided.
+    color_map : `str`, optional (default: `Reds`)
+        String denoting matplotlib color map.
     figsize : (float, float), optional (default: None)
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
@@ -1229,7 +1231,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     x = x.flatten()
     frac = fraction_obs.values.flatten()
     mean_flat = mean_obs.values.flatten()
-    cmap = pl.get_cmap('Reds')
+    cmap = pl.get_cmap(color_map)
 
     size = (frac * 10) ** 2
 
