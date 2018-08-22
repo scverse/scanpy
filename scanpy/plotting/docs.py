@@ -8,7 +8,7 @@ adata : :class:`~anndata.AnnData`
 color : string or list of strings, optional (default: `None`)
     Keys for annotations of observations/cells or variables/genes, e.g.,
     `'ann1'` or `['ann1', 'ann2']`.
-use_raw : `bool`, optional (default: `True`)
+use_raw : `bool`, optional (default: `None`)
     Use `raw` attribute of `adata` if present.\
 """
 
