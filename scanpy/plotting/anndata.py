@@ -563,7 +563,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
            size=1, scale='width', order=None, multi_panel=None, show=None,
            xlabel='', rotation=None, save=None, ax=None, **kwds):
     """\
-    Violin plot [Waskom16]_.
+    Violin plot.
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
@@ -684,7 +684,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
 def clustermap(
         adata, obs_keys=None, use_raw=None, show=None, save=None, **kwds):
     """\
-    Hierarchically-clustered heatmap [Waskom16]_.
+    Hierarchically-clustered heatmap.
 
     Wraps `seaborn.clustermap
     <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for
@@ -1094,15 +1094,17 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, show=None, save=None, **kwds):
     """\
-    Makes a 'dot plot' of the expression values of `var_names`.
-    For each var_name and each groupby category a dot is plotted.
-    Each dot represents two values: mean expression within
-    each category (visualized by color) and fraction of cells expressing the
-    var_name in the category. (visualized by the size of the dot).
-    If groupby is not given, the dotplot assumes that all data belongs to a single
-    category. A gene is not considered expressed if the expression value in the adata
-    (or adata.raw) is equal to zero.
-    For example, for each marker gene, the mean value and the percentage of cells
+    Makes a _dot plot_ of the expression values of `var_names`.
+
+    For each var_name and each `groupby` category a dot is plotted. Each dot
+    represents two values: mean expression within each category (visualized by
+    color) and fraction of cells expressing the var_name in the
+    category. (visualized by the size of the dot).  If groupby is not given, the
+    dotplot assumes that all data belongs to a single category. A gene is not
+    considered expressed if the expression value in the adata (or adata.raw) is
+    equal to zero.
+
+    For instance, for each marker gene, the mean value and the percentage of cells
     expressing the gene can be visualized for each cluster.
 
     Parameters
@@ -1146,7 +1148,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     -------
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
-
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
@@ -1353,7 +1354,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     -------
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
-
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
@@ -1447,9 +1447,7 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False, 
 
     Returns
     -------
-    Tuple of `pandas.DataFrame` and list of categories
-
-
+    Tuple of `pandas.DataFrame` and list of categories.
     """
     from scipy.sparse import issparse
     sanitize_anndata(adata)
@@ -1523,13 +1521,11 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     rotation : `float` (default None)
         rotation degrees for the labels. If not given, small labels (<4 characters) are not
         rotated, otherwise, they are rotated 90 degrees
+
     Returns
     -------
     None
-
     """
-    if use_raw is None and adata.raw is not None: use_raw = True
-
     import matplotlib.patches as patches
     from matplotlib.path import Path
 
