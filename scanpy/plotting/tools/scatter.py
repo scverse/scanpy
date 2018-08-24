@@ -3,14 +3,14 @@ from pandas.api.types import is_categorical_dtype
 import numpy as np
 from matplotlib import rcParams
 from .. import utils
-from ...utils import doc_params
+from ...utils import sanitize_anndata, doc_params
 from ... import settings
 from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
 from ... import logging as logg
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def umap2(adata, **kwargs):
+def umap(adata, **kwargs):
     """\
     Scatter plot in UMAP basis.
 
@@ -29,7 +29,7 @@ def umap2(adata, **kwargs):
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def tsne2(adata, **kwargs):
+def tsne(adata, **kwargs):
     """\
     Scatter plot in tSNE basis.
 
@@ -48,7 +48,7 @@ def tsne2(adata, **kwargs):
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def phate2(adata, **kwargs):
+def phate(adata, **kwargs):
     """\
     Scatter plot in PHATE basis.
 
@@ -86,7 +86,7 @@ def phate2(adata, **kwargs):
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def diffmap2(adata, **kwargs):
+def diffmap(adata, **kwargs):
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -105,7 +105,7 @@ def diffmap2(adata, **kwargs):
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def draw_graph2(adata, layout, **kwargs):
+def draw_graph(adata, layout, **kwargs):
     """\
     Scatter plot in graph-drawing basis.
 
@@ -135,7 +135,7 @@ def draw_graph2(adata, layout, **kwargs):
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca2(adata, **kwargs):
+def pca(adata, **kwargs):
     """\
     Scatter plot in PCA coordinates.
 
@@ -178,15 +178,15 @@ def simple_scatter(adata,
                    save=None,
                    ax=None, **kwargs):
 
-    # TODO
-    if components is not None:
-        print("components is currently not used")
+    sanitize_anndata(adata)
+
     if color_map is not None:
         print("instead of color_map use cmap")
         kwargs['cmap'] = color_map
     if size is not None:
         print("instead of size use 's'")
         kwargs['s'] = size
+    # TODO
     if palette is not None:
         print("palette is currently not used")
     if right_margin is not None:
@@ -214,7 +214,13 @@ def simple_scatter(adata,
 
     if components is not None:
         # components should be a string of coma separated integers
-        components_list = [int(x.strip()) -1 for x in components.split(',')]
+        if isinstance(components, str):
+            components_list = [int(x.strip()) - 1 for x in components.split(',')]
+        elif isinstance(components, list):
+            components_list = [int(x) - 1 for x in components]
+        else:
+            raise ValueError("Given components: '{}' are not valid. Please check. "
+                             "A valid example is `components='2,3'`")
         # check if the components are present in the data
         try:
             scatter_array = adata.obsm['X_' + basis][:, components_list]
@@ -227,6 +233,7 @@ def simple_scatter(adata,
 
     ###
     # setup layout. Most of the code is for the case when multiple plots are required
+    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2']
     if isinstance(color, list) and len(color) > 1:
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
@@ -252,7 +259,7 @@ def simple_scatter(adata,
                                hspace=0.2,
                                wspace=0.2)
     else:
-        # this case handles color='variable' and color=['variable']
+        # this case handles color='variable' and color=['variable'], which are the same
         if isinstance(color, str):
             color = [color]
         multi_panel = False
@@ -264,15 +271,31 @@ def simple_scatter(adata,
     # make the plots
     axs = []
     for count, value_to_plot in enumerate(color):
+
+        ###
+        # when plotting, the color of the dots is determined for each plot
+        # the data is either categorical or continuous and the data could be in
+        # 'obs' or in 'var'
         categorical = False
         # check if value to plot is in obs
         if value_to_plot in adata.obs.columns:
             if is_categorical_dtype(adata.obs[value_to_plot]):
                 categorical = True
+
+                try:
+                    adata.uns[value_to_plot + "_colors"]
+                except KeyError:
+                    utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot)
+
+                if palette:
+                    utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot,
+                                                                       palette=palette, force_update_colors=True)
+
                 # for categorical data, colors should be
                 # stored in adata.uns
                 # Obtain color vector by converting every category
                 # into its respective color
+
                 color_vector = [adata.uns[value_to_plot + '_colors'][x] for x in adata.obs[value_to_plot].cat.codes]
                 if groups is not None:
                     if isinstance(groups, str):
@@ -285,6 +308,8 @@ def simple_scatter(adata,
                 color_vector = adata.obs[value_to_plot]
         # check if value to plot is in var
         elif use_raw is False and value_to_plot in adata.var_names:
+            # TODO
+            # can this be done in a different, probably faster way?
             color_vector = adata[:,value_to_plot].X
 
         elif use_raw is True and value_to_plot in adata.raw.var_names:
@@ -293,6 +318,7 @@ def simple_scatter(adata,
             raise ValueError("Given 'color': {} is not a valid observation "
                              "or var. Valid observations are: {}".format(value_to_plot, adata.obs.columns))
 
+        # check if higher value points should be plot on top
         if categorical is False and sort_order is True:
             order = np.argsort(color_vector)
             color_vector = color_vector[order]
@@ -320,6 +346,23 @@ def simple_scatter(adata,
         ax.set_xticks([])
         if projection == '3d':
             ax.set_zticks([])
+
+        # set default axis_labels
+        name = basis2name(basis)
+        if components is not None:
+            axis_labels = [name + str(x + 1) for x in components_list]
+        elif projection == '3d':
+            axis_labels = [name + str(x + 1) for x in range(3)]
+
+        else:
+            axis_labels = [name + str(x + 1) for x in range(2)]
+
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+        if projection == '3d':
+            # shift the label closer to the axis
+            ax.set_zlabel(axis_labels[2], labelpad=-7)
+        ax.autoscale_view()
 
         # add legends or colorbars
         if categorical is True:
@@ -350,7 +393,7 @@ def simple_scatter(adata,
             if legend_loc == 'on data':
                 # identify centroids to put labels
                 for label in categories:
-                    _scatter = scatter_array[adata.obs[value_to_plot] == label,:]
+                    _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
                     x_pos, y_pos = np.median(_scatter, axis=0)
 
                     ax.text(x_pos, y_pos, label,
@@ -371,6 +414,21 @@ def simple_scatter(adata,
     utils.savefig_or_show(basis, show=show, save=save)
     if show == False:
         return axs
+
+
+def basis2name(basis):
+    """
+    converts the 'basis' into the proper name.
+    """
+
+    component_name = (
+        'DC' if basis == 'diffmap'
+        else 'tSNE' if basis == 'tsne'
+        else 'UMAP' if basis == 'umap'
+        else 'PC' if basis == 'pca'
+        else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+        else basis)
+    return component_name
 
 
 def plot_edges(ax, adata, basis, edges_width, edges_color):
