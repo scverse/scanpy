@@ -1,8 +1,12 @@
 from matplotlib import pyplot as pl
+from pandas.api.types import is_categorical_dtype
+import numpy as np
+from matplotlib import rcParams
 from .. import utils
 from ...utils import doc_params
 from ... import settings
 from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from ... import logging as logg
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
@@ -158,7 +162,7 @@ def simple_scatter(adata,
                    basis=None,
                    groups=None,
                    components=None,
-                   projection=None,
+                   projection='2d',
                    color_map=None,
                    palette=None,
                    right_margin=None,
@@ -177,14 +181,12 @@ def simple_scatter(adata,
     # TODO
     if components is not None:
         print("components is currently not used")
-    if projection is not None:
-        print("projection is currently not used")
     if color_map is not None:
         print("instead of color_map use cmap")
         kwargs['cmap'] = color_map
     if size is not None:
-        print("instead of size use markersize")
-        kwargs['markersize'] = size
+        print("instead of size use 's'")
+        kwargs['s'] = size
     if palette is not None:
         print("palette is currently not used")
     if right_margin is not None:
@@ -192,10 +194,39 @@ def simple_scatter(adata,
     if left_margin is not None:
         print("left_margin is currently not used")
 
+    if projection == '3d':
+        from mpl_toolkits.mplot3d import Axes3D
+        args_3d = {'projection': '3d'}
+    else:
+        args_3d = {}
 
-    from pandas.api.types import is_categorical_dtype
-    import numpy as np
-    from matplotlib import rcParams
+    ####
+    # get the points position
+    n_dims = 2
+    if projection == '3d':
+        # check if the data has a third dimension
+        if adata.obsm['X_' + basis].shape[1] == 2:
+            if settings._low_resolution_warning:
+                logg.warn('Selected projections is "3d" but only two dimensions '
+                          'are available. Only these two dimensions will be plotted')
+        else:
+            n_dims = 3
+
+    if components is not None:
+        # components should be a string of coma separated integers
+        components_list = [int(x.strip()) -1 for x in components.split(',')]
+        # check if the components are present in the data
+        try:
+            scatter_array = adata.obsm['X_' + basis][:, components_list]
+        except:
+            raise ValueError("Given components: '{}' are not valid. Please check. "
+                             "A valid example is `components='2,3'`")
+
+    else:
+        scatter_array = adata.obsm['X_' + basis][:, :n_dims]
+
+    ###
+    # setup layout. Most of the code is for the case when multiple plots are required
     if isinstance(color, list) and len(color) > 1:
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
@@ -226,9 +257,11 @@ def simple_scatter(adata,
             color = [color]
         multi_panel = False
         if ax is None:
-            fig, ax = pl.subplots(1, 1)
+            fig = pl.figure()
+            ax = fig.add_subplot(111, **args_3d)
 
-    scatter_array = adata.obsm['X_' + basis][:, :2]
+    ###
+    # make the plots
     axs = []
     for count, value_to_plot in enumerate(color):
         categorical = False
@@ -268,7 +301,7 @@ def simple_scatter(adata,
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
         if multi_panel is True:
-            ax = pl.subplot(gs[count])
+            ax = pl.subplot(gs[count], **args_3d)
             axs.append(ax)
         if frameon is False:
             ax.axis('off')
@@ -277,7 +310,7 @@ def simple_scatter(adata,
         else:
             ax.set_title(title)
 
-        # plot the scatter plot
+        # make the scatter plot
         cax= ax.scatter(scatter_array[:, 0], scatter_array[:, 1],
                         marker=".", c=color_vector, rasterized=settings._vector_friendly,
                         **kwargs)
@@ -285,6 +318,8 @@ def simple_scatter(adata,
         # remove y and x ticks
         ax.set_yticks([])
         ax.set_xticks([])
+        if projection == '3d':
+            ax.set_zticks([])
 
         # add legends or colorbars
         if categorical is True:
