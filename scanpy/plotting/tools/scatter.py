@@ -305,9 +305,9 @@ def plot_scatter(adata,
         ax.autoscale_view()
 
         if edges:
-            plot_edges(ax, adata, basis, edges_width, edges_color)
+            utils.plot_edges(ax, adata, basis, edges_width, edges_color)
         if arrows:
-            plot_arrows(ax, adata, basis, arrows_kwds)
+            utils.plot_arrows(ax, adata, basis, arrows_kwds)
 
         if value_to_plot is None:
             # if only dots were plotted without an associated value
@@ -484,26 +484,3 @@ def _basis2name(basis):
         else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
         else basis)
     return component_name
-
-
-def plot_edges(ax, adata, basis, edges_width, edges_color):
-    import networkx as nx
-
-    if 'neighbors' not in adata.uns:
-        raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
-    g = nx.Graph(adata.uns['neighbors']['connectivities'])
-    edge_collection = nx.draw_networkx_edges(
-        g, adata.obsm['X_' + basis],
-        ax=ax, width=edges_width, edge_color=edges_color)
-    edge_collection.set_zorder(-2)
-    edge_collection.set_rasterized(settings._vector_friendly)
-
-
-def plot_arrows(ax, adata, basis, arrows_kwds=None):
-    if 'Delta_' + basis not in adata.obsm.keys():
-        raise ValueError('`arrows=True` requires \'Delta_\' + basis from velocyto.')
-    X = adata.obsm['X_' + basis]
-    V = adata.obsm['Delta_' + basis]
-    quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
-    ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds,
-              rasterized=settings._vector_friendly)
