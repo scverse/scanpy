@@ -244,59 +244,16 @@ def plot_scatter(adata,
     axs = []
     for count, value_to_plot in enumerate(color):
 
-        ###
-        # when plotting, the color of the dots is determined for each plot
-        # the data is either categorical or continuous and the data could be in
-        # 'obs' or in 'var'
-        categorical = False
-        if value_to_plot is None:
-            color_vector = 'lightgray'
-        # check if value to plot is in obs
-        elif value_to_plot in adata.obs.columns:
-            if is_categorical_dtype(adata.obs[value_to_plot]):
-                categorical = True
-
-                try:
-                    adata.uns[value_to_plot + "_colors"]
-                except KeyError:
-                    utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot)
-
-                if palette:
-                    utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot,
-                                                                       palette=palette, force_update_colors=True)
-
-                # for categorical data, colors should be
-                # stored in adata.uns
-                # Obtain color vector by converting every category
-                # into its respective color
-
-                color_vector = [adata.uns[value_to_plot + '_colors'][x] for x in adata.obs[value_to_plot].cat.codes]
-                if groups is not None:
-                    if isinstance(groups, str):
-                        groups = [groups]
-                    color_vector = np.array(color_vector, dtype='<U15')
-                    # set color to 'light gray' for all values
-                    # that are not in the groups
-                    color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
-            else:
-                color_vector = adata.obs[value_to_plot]
-        # check if value to plot is in var
-        elif use_raw is False and value_to_plot in adata.var_names:
-            # TODO
-            # can this be done in a different, probably in a faster way?
-            color_vector = adata[:,value_to_plot].X
-
-        elif use_raw is True and value_to_plot in adata.raw.var_names:
-            color_vector = adata.raw[:,value_to_plot].X
-        else:
-            raise ValueError("Given 'color': {} is not a valid observation "
-                             "or var. Valid observations are: {}".format(value_to_plot, adata.obs.columns))
+        color_vector, categorical = _get_color_values(adata, value_to_plot, groups, palette, use_raw)
 
         # check if higher value points should be plot on top
-        if value_to_plot is not None and categorical is False and sort_order is True:
+        if sort_order is True and value_to_plot is not None and categorical is False:
             order = np.argsort(color_vector)
             color_vector = color_vector[order]
-            data_points = data_points[order, :]
+            _data_points = data_points[order, :]
+
+        else:
+            _data_points = data_points
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -314,9 +271,15 @@ def plot_scatter(adata,
             kwargs['s'] = 120000 / data_points.shape[0]
 
         # make the scatter plot
-        cax= ax.scatter(data_points[:, 0], data_points[:, 1],
-                        marker=".", c=color_vector, rasterized=settings._vector_friendly,
-                        **kwargs)
+        if projection == '3d':
+            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1], _data_points[:, 2],
+                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                            **kwargs)
+        else:
+            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1],
+                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                            **kwargs)
+
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -357,7 +320,7 @@ def plot_scatter(adata,
 
     axs = axs if multi_panel else ax
     utils.savefig_or_show(basis, show=show, save=save)
-    if show == False:
+    if show is False:
         return axs
 
 
@@ -446,6 +409,66 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax)
+
+
+def _get_color_values(adata, value_to_plot, groups, palette, use_raw):
+    """
+    Returns the value or color associated to each data point.
+    For categorical data, the return value is list of colors taken
+    from the category palette or from the given `palette` value.
+
+    For non-categorical data, the values are returned
+    """
+
+    ###
+    # when plotting, the color of the dots is determined for each plot
+    # the data is either categorical or continuous and the data could be in
+    # 'obs' or in 'var'
+    categorical = False
+    if value_to_plot is None:
+        color_vector = 'lightgray'
+    # check if value to plot is in obs
+    elif value_to_plot in adata.obs.columns:
+        if is_categorical_dtype(adata.obs[value_to_plot]):
+            categorical = True
+
+            if palette:
+                utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot,
+                                                                   palette=palette, force_update_colors=True)
+            else:
+                # it is a good idea to always run add_colors_for_categorical_sample_annotation not only updates
+                # as this will fix most problems with color and categories.
+                utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot)
+
+            # for categorical data, colors should be
+            # stored in adata.uns
+            # Obtain color vector by converting every category
+            # into its respective color
+
+            color_vector = [adata.uns[value_to_plot + '_colors'][x] for x in adata.obs[value_to_plot].cat.codes]
+            if groups is not None:
+                if isinstance(groups, str):
+                    groups = [groups]
+                color_vector = np.array(color_vector, dtype='<U15')
+                # set color to 'light gray' for all values
+                # that are not in the groups
+                color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        else:
+            color_vector = adata.obs[value_to_plot]
+
+    # check if value to plot is in var
+    elif use_raw is False and value_to_plot in adata.var_names:
+        # TODO
+        # can this be done in a different, probably in a faster way?
+        color_vector = adata[:, value_to_plot].X
+
+    elif use_raw is True and value_to_plot in adata.raw.var_names:
+        color_vector = adata.raw[:, value_to_plot].X
+    else:
+        raise ValueError("Given 'color': {} is not a valid observation "
+                         "or var. Valid observations are: {}".format(value_to_plot, adata.obs.columns))
+
+    return color_vector, categorical
 
 
 def _basis2name(basis):
