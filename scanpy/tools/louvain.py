@@ -90,13 +90,13 @@ def louvain(
             directed = False
         if not directed: logg.m('    using the undirected graph', v=4)
         g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        if use_weights:
+            weights = np.array(g.es["weight"]).astype(np.float64)
+        else:
+            weights = None
         if flavor == 'vtraag':
             import louvain
             if resolution is None: resolution = 1
-            if use_weights:
-                weights = np.array(g.es["weight"]).astype(np.float64)
-            else:
-                weights = None
             try:
                 logg.info('    using the "louvain" package of Traag (2017)')
                 louvain.set_rng_seed(random_state)
@@ -115,7 +115,7 @@ def louvain(
                                               resolution_parameter=resolution,
                                               weights=weights)
         elif flavor == 'igraph':
-            part = g.community_multilevel()
+            part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
     elif flavor == 'taynaud':
         # this is deprecated
