@@ -1271,7 +1271,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-               figsize=None, var_group_positions=None, var_group_labels=None,
+               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=True,
                var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -1322,10 +1322,12 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     mean_obs = obs_tidy.groupby(level=0).mean()
+
+    dendro_width = 1.8 if dendrogram is True else 0
     if figsize is None:
         height = len(categories) * 0.2 + 1  # +1 for labels
         heatmap_width = len(var_names) * 0.6
-        width = heatmap_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+        width = heatmap_width + dendro_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
     else:
         width, height = figsize
         heatmap_width = width * 0.75
@@ -1340,20 +1342,54 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     else:
         height_ratios = [0, 10.5]
 
-    # define a layout of 2 rows x 2 columns
+    # define a layout of 2 rows x 3 columns
     # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
     # second row is for main content. This second row
-    # is divided into two axes:
-    #   first ax is for the main matrix figure
-    #   second ax is for the color bar legend
+    # is divided into three axes:
+    #   first ax is for the dendrogram
+    #   second ax is for the main matrix figure
+    #   third ax is for the color bar legend
     from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=2, left=0.05, right=0.48, wspace=0.05, hspace=0.04,
-                            width_ratios=[heatmap_width, colorbar_width],
+    axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.05, hspace=0.04,
+                            width_ratios=[dendro_width, heatmap_width, colorbar_width],
                             height_ratios=height_ratios)
-    matrix_ax = fig.add_subplot(axs[1, 0])
 
-    color_legend = fig.add_subplot(axs[1, 1])
+    if dendrogram is True:
+        # compute a correlation matrix based on all the data in adata (or adata.raw if use_raw is true)
+        # this is to avoid doing the computation only on the few genes that are being plotted
+        # which could bias the results.
+        gene_names = adata.var_names if use_raw is False else adata.raw.var_names
+
+        _, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        mean_df = df.groupby(level=0).mean()
+
+        import scipy.cluster.hierarchy as sch
+        dendro_ax = fig.add_subplot(axs[1, 0])
+        # TODO, 'pearson' and 'average' can probaly can be parameters of the method
+        corr_matrix = mean_df.T.corr(method='pearson')
+        y_var = sch.linkage(corr_matrix, method='average')
+        z_var = sch.dendrogram(y_var, orientation='left', link_color_func=lambda k: 'darkred', ax=dendro_ax)
+        dendro_ax.set_xticks([])
+        dendro_ax.set_yticks([])
+        dendro_ax.grid(False)
+
+        # invert y-axe to match main matrix plot
+        ymin, ymax = dendro_ax.get_ylim()
+        dendro_ax.set_ylim(ymax, ymin)
+        dendro_ax.spines['right'].set_visible(False)
+        dendro_ax.spines['top'].set_visible(False)
+        dendro_ax.spines['left'].set_visible(False)
+        dendro_ax.spines['bottom'].set_visible(False)
+
+        # reorder mean_obs rows
+        index = z_var['leaves']
+        mean_obs = mean_obs.iloc[index, :]
+        dendro_ax.set_ylabel(groupby)
+
+    matrix_ax = fig.add_subplot(axs[1, 1])
+
+    color_legend = fig.add_subplot(axs[1, 2])
 
     pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
     y_ticks = np.arange(mean_obs.shape[0]) + 0.5
@@ -1368,11 +1404,15 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     matrix_ax.tick_params(axis='both', labelsize='small')
     matrix_ax.grid(False)
     matrix_ax.set_xlim(-0.5, len(var_names) + 0.5)
-    matrix_ax.set_ylabel(groupby)
+    if dendrogram is False:
+        # only add the label is dendrogram is false, otherwise the matrix label
+        # overlaps with the dendrogram
+        matrix_ax.set_ylabel(groupby)
     matrix_ax.set_xlim(0, mean_obs.shape[1])
+
     # plot group legends on top of matrix_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
-        gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
+        gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=matrix_ax)
         _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
                                    group_labels=var_group_labels, rotation=var_group_rotation,
                                    left_adjustment=0.2, right_adjustment=0.8)
