@@ -113,7 +113,6 @@ def score_genes(
               '    \'{}\', score of gene set (adata.obs)'.format(score_name))
         return adata if copy else None
     elif len(gene_list) == 1:
-        return
         score = _adata[:, gene_list].X - np.nanmean(_adata[:, control_genes].X.toarray(), axis=1)
     else:
         score = np.nanmean(_adata[:, gene_list].X.toarray(), axis=1) - np.nanmean(_adata[:, control_genes].X.toarray(), axis=1)
