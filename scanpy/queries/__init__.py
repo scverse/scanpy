@@ -98,4 +98,4 @@ def gene_coordinates(host, org, gene, chr_exclude=[]):
     res = res[~res['chromosome_name'].isin(chr_exclude)]
     res = res.set_index('symbol')
 
-    return res.loc[gene, :]
+    return res.loc[[gene], :]
