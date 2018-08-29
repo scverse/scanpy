@@ -366,23 +366,25 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
     if plot_type == 'dotplot':
         from ..anndata import dotplot
-        dotplot(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
+        res = dotplot(adata, gene_names, groupby, var_group_labels=group_names,
+                      var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'heatmap':
         from ..anndata import heatmap
-        heatmap(adata, gene_names, groupby, var_group_labels=group_names,
-                var_group_positions=group_positions, show=show, save=save, **kwds)
+        res = heatmap(adata, gene_names, groupby, var_group_labels=group_names,
+                      var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'stacked_violin':
         from ..anndata import stacked_violin
-        stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
-                       var_group_positions=group_positions, show=show, save=save, **kwds)
+        res = stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+                             var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
         from ..anndata import matrixplot
-        matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
-                   var_group_positions=group_positions, show=show, save=save, **kwds)
+        res = matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
+                         var_group_positions=group_positions, show=show, save=save, **kwds)
+
+    return res
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -412,7 +414,7 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
     {show_save_ax}
     """
 
-    _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
+    return _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 

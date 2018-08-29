@@ -916,7 +916,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            var_group_positions=None, var_group_labels=None,
+            var_group_positions=None, var_group_labels=None, dendrogram=True,
             var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
@@ -971,10 +971,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     """
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
+    dendro_width = 1.8 if dendrogram is True else 0
     if figsize is None:
         height = 6
-        heatmap_width = len(var_names) * 0.25
-        width = heatmap_width + 3  # +3 to account for the colorbar and labels
+        heatmap_width = len(var_names) * 0.3
+        width = heatmap_width + dendro_width + 3  # +3 to account for the colorbar and labels
     else:
         width, height = figsize
     ax_frac2width = 0.25
@@ -985,25 +986,36 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     else:
         height_ratios = [0, height]
 
-    # define a layout of 2 rows x 3 columns
+    # define a layout of 2 rows x 4 columns
     # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
     # second row is for main content. This second row is divided into three axes:
     #   first ax is for the categories defined by `groupby`
     #   second ax is for the heatmap
-    #   third ax is for colorbar
+    #   third ax is for the dendrogram
+    #   fourth ax is for colorbar
 
     from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.5 / width,
+    axs = gridspec.GridSpec(nrows=2, ncols=4, left=0.05, right=0.48, wspace=0.5 / width,
                             hspace=0.13 / height,
-                            width_ratios=[ax_frac2width, width, ax_frac2width],
+                            width_ratios=[ax_frac2width, width, dendro_width, ax_frac2width],
                             height_ratios=height_ratios)
 
     groupby_ax = fig.add_subplot(axs[1, 0])
     heatmap_ax = fig.add_subplot(axs[1, 1])
-    heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
+    heatmap_cbar_ax = fig.add_subplot(axs[1, 3])
     heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
 
+    if dendrogram is True:
+        dendro_ax = fig.add_subplot(axs[1, 2])
+        categories_idx_ordered, var_names_idx_ordered, var_group_labels, var_group_positions = \
+            _plot_dendrogram(dendro_ax, adata, var_names, groupby, categories, var_group_labels,
+                             var_group_positions, use_raw, log, num_categories)
+
+        # reorder obs_tidy
+        obs_tidy = obs_tidy.iloc[:, var_names_idx_ordered]
+        obs_tidy.index = obs_tidy.index.reorder_categories([categories[x] for x in categories_idx_ordered], ordered=True)
+        var_names = [var_names[x] for x in var_names_idx_ordered]
     if groupby:
         obs_tidy = obs_tidy.sort_index()
 
@@ -1155,7 +1167,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     else:
         height_ratios = [0, 10.5]
 
-    # define a layout of 2 rows x 4 columns
+    # define a layout of 2 rows x 5 columns
     # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
     # second row is for main content. This second row
     # is divided into 4 axes:
@@ -1163,7 +1175,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     #   second ax is for dendrogram (if present)
     #   third ax is for the color bar legend
     #   fourth ax is for an spacer that avoids the ticks
-    #    from the color bar to be hidden beneath the size lengend axis
+    #             from the color bar to be hidden beneath the size lengend axis
     #   fifth ax is to plot the size legend
     from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
@@ -1571,17 +1583,9 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
 
 
 def _plot_dendrogram(dendro_ax, adata, var_names, groupby, categories, var_group_labels, var_group_positions, use_raw,
-                     log, num_categories, cor_method='pearson', linkage_method='average'):
+                     log, num_categories, cor_method='pearson', linkage_method='ward'):
     """
     Plots a dendrogram on the given ax,
-    :param dendro_ax:
-    :param adata:
-    :param var_group_labels:
-    :param var_group_positions:
-    :param use_raw:
-    :param cor_method:
-    :param linkage_method:
-    :return:
     """
 
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
@@ -1599,6 +1603,8 @@ def _plot_dendrogram(dendro_ax, adata, var_names, groupby, categories, var_group
     corr_matrix = mean_df.T.corr(method=cor_method)
     y_var = sch.linkage(corr_matrix, method=linkage_method)
     z_var = sch.dendrogram(y_var, orientation='right', link_color_func=lambda k: 'darkred', ax=dendro_ax)
+
+    import pprint as pp
     dendro_ax.set_xticks([])
     dendro_ax.set_yticks([])
     dendro_ax.grid(False)
