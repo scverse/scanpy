@@ -1323,6 +1323,8 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
 
     mean_obs = obs_tidy.groupby(level=0).mean()
 
+    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+
     dendro_width = 1.8 if dendrogram is True else 0
     if figsize is None:
         height = len(categories) * 0.2 + 1  # +1 for labels
@@ -1371,7 +1373,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
         y_var = sch.linkage(corr_matrix, method='average')
         z_var = sch.dendrogram(y_var, orientation='left', link_color_func=lambda k: 'darkred', ax=dendro_ax)
         dendro_ax.set_xticks([])
-        dendro_ax.set_yticks([])
+        #dendro_ax.set_yticks([])
         dendro_ax.grid(False)
 
         # invert y-axe to match main matrix plot
@@ -1387,6 +1389,25 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
         mean_obs = mean_obs.iloc[index, :]
         dendro_ax.set_ylabel(groupby)
 
+        # reorder var_groups (if any)
+        if has_var_groups and list(var_group_labels) == list(categories):
+            positions_ordered = []
+            labels_ordered = []
+            position_start = 0
+            var_names_idx_ordered = []
+            for idx in index:
+                position = var_group_positions[idx]
+                _var_names = var_names[position[0]:position[1] + 1]
+                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+                positions_ordered.append((position_start, position_start + len(_var_names) -1))
+                position_start += len(_var_names)
+                labels_ordered.append(var_group_labels[idx])
+            var_group_labels = labels_ordered
+            var_group_positions = positions_ordered
+
+            # get the new column indices:
+            mean_obs = mean_obs.iloc[:, var_names_idx_ordered]
+
     matrix_ax = fig.add_subplot(axs[1, 1])
 
     color_legend = fig.add_subplot(axs[1, 2])
@@ -1394,7 +1415,14 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
     y_ticks = np.arange(mean_obs.shape[0]) + 0.5
     matrix_ax.set_yticks(y_ticks)
-    matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
+    if dendrogram is False:
+        matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
+    else:
+        dendro_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
+        dendro_ax.tick_params(axis='y', right=False, labelleft=True, left=False,
+                              labelright=False, labelsize='small')
+        matrix_ax.set_yticks([])
+
     # invert y axis to show categories ordered from top to bottom
     matrix_ax.set_ylim(mean_obs.shape[0], 0)
 
