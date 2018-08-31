@@ -10,8 +10,7 @@ from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..docs import doc_scatter_bulk, doc_show_save_ax
-
-
+from .scatterplots import pca
 # ------------------------------------------------------------------------------
 # PCA
 # ------------------------------------------------------------------------------
@@ -43,7 +42,7 @@ def pca_overview(adata, **params):
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
-    pca_scatter(adata, **params, show=False)
+    scatterplots.pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
