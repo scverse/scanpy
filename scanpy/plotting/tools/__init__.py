@@ -49,7 +49,7 @@ def pca_overview(adata, **params):
 
 
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca(
+def pca_prev(
         adata,
         color=None,
         use_raw=True,

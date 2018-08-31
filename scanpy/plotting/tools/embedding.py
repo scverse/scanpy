@@ -7,7 +7,7 @@ from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def diffmap(
+def diffmap_prev(
         adata,
         color=None,
         use_raw=True,
@@ -84,7 +84,7 @@ def diffmap(
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def draw_graph(
+def draw_graph_prev(
         adata,
         layout=None,
         color=None,
@@ -161,7 +161,7 @@ def draw_graph(
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def tsne(
+def tsne_prev(
         adata,
         color=None,
         use_raw=True,
@@ -227,7 +227,7 @@ def tsne(
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def umap(
+def umap_prev(
         adata,
         color=None,
         use_raw=True,
@@ -297,7 +297,7 @@ def umap(
 
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def phate(
+def phate_prev(
         adata,
         color=None,
         use_raw=True,
