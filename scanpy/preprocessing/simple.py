@@ -513,6 +513,13 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
+    chunked : `bool`, optional (default: `False`)
+        If `True`, perform an incremental PCA on segments of `chunk_size`. The 
+        incremental PCA automatically zero centers and ignores settings of 
+        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
+    chunk_size : `int`, optional (default: `None`)
+        Number of observations to include in each chunk. Required if `chunked`
+        is `True`.
 
     Returns
     -------
