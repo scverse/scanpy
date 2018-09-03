@@ -148,6 +148,7 @@ def draw_graph(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         size=size,
         title=title,
