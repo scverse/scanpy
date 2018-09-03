@@ -1,4 +1,4 @@
-anndata>=0.6.9
+anndata>=0.6.10
 matplotlib>=2.2
 pandas>=0.21
 scipy
