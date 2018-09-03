@@ -1,4 +1,4 @@
 include versioneer.py
+include requirements.txt
 include scanpy/_version.py
 include scanpy/*/*.txt
-include scanpy/requirements.txt
