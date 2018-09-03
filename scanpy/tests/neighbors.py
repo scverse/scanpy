@@ -1,6 +1,7 @@
 import numpy as np
 from anndata import AnnData
 from scanpy.api import Neighbors
+import pytest
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]
@@ -77,12 +78,11 @@ transitions_gauss_noknn = [
     [0.01376173086464405, 0.04657683148980141, 0.8235670328140259, 0.11609435081481934],
     [0.10631592571735382, 0.07337487488985062, 0.13356748223304749, 0.6867417693138123]]
 
+@pytest.fixture
+def neigh():
+    return Neighbors(AnnData(np.array(X)))
 
-def test_compute_connectivities():
-    adata = AnnData(np.array(X))
-    neigh = Neighbors(adata)
-
-    # method='umap'
+def test_umap_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='umap', n_neighbors=n_neighbors)
     assert np.allclose(
         neigh.distances.toarray(), distances_euclidean)
@@ -92,7 +92,7 @@ def test_compute_connectivities():
     assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_umap)
     assert np.allclose(neigh.transitions.toarray(), transitions_umap)
 
-    # method='gauss' no knn
+def test_gauss_noknn_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', knn=False, n_neighbors=3)
     assert np.allclose(
         neigh.distances, distances_euclidean_all)
@@ -102,7 +102,7 @@ def test_compute_connectivities():
     assert np.allclose(neigh.transitions_sym, transitions_sym_gauss_noknn)
     assert np.allclose(neigh.transitions, transitions_gauss_noknn)
 
-    # method='gauss'
+def test_gauss_connectivities_euclidean(neigh):
     neigh.compute_neighbors(method='gauss', n_neighbors=n_neighbors)
     assert np.allclose(
         neigh.distances.toarray(), distances_euclidean)
@@ -112,3 +112,11 @@ def test_compute_connectivities():
     assert np.allclose(neigh.transitions_sym.toarray(), transitions_sym_gauss_knn)
     assert np.allclose(neigh.transitions.toarray(), transitions_gauss_knn)
 
+def test_metrics_argument():
+    no_knn_euclidean = neigh()
+    no_knn_euclidean.compute_neighbors(method="gauss", knn=False, 
+        n_neighbors=n_neighbors, metric="euclidean")
+    no_knn_manhattan = neigh()
+    no_knn_manhattan.compute_neighbors(method="gauss", knn=False,
+        n_neighbors=n_neighbors, metric="manhattan")
+    assert not np.allclose(no_knn_euclidean.distances, no_knn_manhattan.distances)
