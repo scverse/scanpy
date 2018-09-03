@@ -115,6 +115,10 @@ References
    *Spatial reconstruction of single-cell gene expression data*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`__.
 
+.. [Manno18] La Manno *et al.* (2018),
+   *RNA velocity of single cells*,
+   `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.   
+
 .. [McInnes18] McInnes & Healy (2018),
    *UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction*,
    `arXiv <https://arxiv.org/abs/1802.03426>`__.

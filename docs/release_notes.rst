@@ -6,8 +6,13 @@
 
 .. role:: smaller
 
-On master :small:`July 31, 2018`
---------------------------------
+Version 1.3 :small:`September 3, 2018`
+--------------------------------------
+
+RNA velocity in single cells [Manno18]_:
+
+- Scanpy and AnnData suport loom's layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`thanks to S Rybakov and V Bergen`
+- the package `scvelo <https://github.com/theislab/scvelo>`__ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
 
 Plotting of marker genes and quality control:
 
@@ -25,6 +30,7 @@ Further changes:
 
 - `frameon=False` enables easy removal of frames in scatter plots and in :func:`~scanpy.api.set_figure_params`
 
+And several consistency fixes.  
 
 Version 1.2 :small:`June 8, 2018`
 ---------------------------------
