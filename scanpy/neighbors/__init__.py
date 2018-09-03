@@ -101,82 +101,6 @@ def neighbors(
     return adata if copy else None
 
 
-def compute_euclidean_distances_using_matrix_mult(X, Y):
-    """Compute euclidean distance matrix for data arrays X and Y.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store observations, columns store variables).
-    Y : np.ndarray
-        Data array (rows store observations, columns store variables).
-
-    Returns
-    -------
-    distances : np.ndarray
-        Distance matrix.
-    """
-    XX = np.einsum('ij,ij->i', X, X)[:, None]
-    if X is Y:
-        YY = XX
-    else:
-        YY = np.einsum('ij,ij->i', Y, Y)[:, None]
-    distances = np.dot(X, Y.T)
-    distances *= -2
-    distances += XX
-    distances += YY.T
-    np.maximum(distances, 0, out=distances)
-    if X is Y:
-        distances.flat[::distances.shape[0] + 1] = 0.
-    # print(distances)
-    # print(distances[distances < 0])
-    # distances[distances < 0] = 0  # set to 0
-    distances = np.sqrt(distances)
-    return distances
-
-
-def compute_neighbors_numpy_chunk(X, Y, n_neighbors):
-    """Compute distance matrix in euclidean norm for chunk.
-    """
-    D = compute_euclidean_distances_using_matrix_mult(X, Y)
-    chunk_range = np.arange(D.shape[0])[:, None]
-    indices_chunk = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
-    indices_chunk = indices_chunk[chunk_range,
-                                  np.argsort(D[chunk_range, indices_chunk])]
-    distances_chunk = D[chunk_range, indices_chunk]
-    # we know that a point has zero-distance to itself:
-    #     set the first distance to zero
-    #     if we don't this, for large data (not treated by tests)
-    #     we might introduce spurious small non-zero values
-    #     which affects backwards compat
-    distances_chunk[:, 0] = 0
-    return indices_chunk, distances_chunk
-
-
-def compute_neighbors_numpy(X, n_neighbors, knn=True):
-    """Compute distance matrix in uared euclidean norm.
-    """
-    if not knn:
-        D = compute_euclidean_distances_using_matrix_mult(X, X)
-        indices, distances = get_indices_distances_from_dense_matrix(D, n_neighbors)
-        return D, indices, distances
-    # assume we can fit at max 20000 data points into memory
-    len_chunk = np.ceil(min(20000, X.shape[0])).astype(int)
-    n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
-    chunks = [np.arange(start, min(start + len_chunk, X.shape[0]))
-             for start in range(0, n_chunks * len_chunk, len_chunk)]
-    indices = np.zeros((X.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((X.shape[0], n_neighbors), dtype=np.float32)
-    for i_chunk, chunk in enumerate(chunks):
-        indices_chunk, distances_chunk = compute_neighbors_numpy_chunk(
-            X[chunk], X, n_neighbors)
-        indices[chunk] = indices_chunk
-        distances[chunk] = distances_chunk
-    D = get_sparse_matrix_from_indices_distances_numpy(
-        indices, distances, X.shape[0], n_neighbors)
-    return D, indices, distances
-
-
 def compute_neighbors_umap(
         X, n_neighbors, random_state=None,
         metric='euclidean', metric_kwds={}, angular=False,
@@ -705,9 +629,14 @@ class Neighbors:
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
         if use_dense_distances:
-            # standard eulcidean case for relatively small matrices
-            self._distances, knn_indices, knn_distances = compute_neighbors_numpy(
-                X, n_neighbors, knn=knn)
+            _distances = pairwise_distances(X, metric=metric, **metric_kwds)
+            knn_indices, knn_distances = get_indices_distances_from_dense_matrix(
+                _distances, n_neighbors)
+            if knn:
+                self._distances = get_sparse_matrix_from_indices_distances_numpy(
+                    knn_indices, knn_distances, X.shape[0], n_neighbors)
+            else:
+                self._distances = _distances
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
