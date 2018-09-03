@@ -30,6 +30,7 @@ def paga_compare(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         size=None,
         title=None,
         right_margin=None,
@@ -91,6 +92,7 @@ def paga_compare(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=None,
         size=size,
         title=title,
@@ -100,7 +102,7 @@ def paga_compare(
     if 'pos' not in paga_graph_params:
         paga_graph_params['pos'] = utils._tmp_cluster_pos
     paga(adata, ax=axs[1], show=False, save=False, title=title_graph,
-         labels=groups_graph, colors=color, **paga_graph_params)
+         labels=groups_graph, colors=color, frameon=frameon, **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
     utils.savefig_or_show('paga_compare', show=show, save=save)
     if show == False: return axs
@@ -120,6 +122,7 @@ def _paga_scatter(
         legend_fontweight=None,
         color_map=None,
         palette=None,
+        frameon=None,
         size=None,
         title=None,
         right_margin=None,
@@ -153,6 +156,7 @@ def _paga_scatter(
         legend_fontweight=legend_fontweight,
         color_map=color_map,
         palette=palette,
+        frameon=frameon,
         right_margin=right_margin,
         size=size,
         title=title,
