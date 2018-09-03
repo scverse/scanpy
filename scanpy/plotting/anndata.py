@@ -1190,6 +1190,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
         # reorder matrix
         mean_obs = mean_obs.iloc[categories_idx_ordered, var_names_idx_ordered]
+        fraction_obs = fraction_obs.iloc[categories_idx_ordered, var_names_idx_ordered]
 
     if len(categories) < 4:
         # when few categories are shown, the colorbar and size legend
@@ -1604,7 +1605,6 @@ def _plot_dendrogram(dendro_ax, adata, var_names, groupby, categories, var_group
     y_var = sch.linkage(corr_matrix, method=linkage_method)
     z_var = sch.dendrogram(y_var, orientation='right', link_color_func=lambda k: 'darkred', ax=dendro_ax)
 
-    import pprint as pp
     dendro_ax.set_xticks([])
     dendro_ax.set_yticks([])
     dendro_ax.grid(False)
@@ -1635,5 +1635,7 @@ def _plot_dendrogram(dendro_ax, adata, var_names, groupby, categories, var_group
             labels_ordered.append(var_group_labels[idx])
         var_group_labels = labels_ordered
         var_group_positions = positions_ordered
+    else:
+        var_names_idx_ordered = range(len(var_names))
 
     return categories_idx_ordered, var_names_idx_ordered, var_group_labels, var_group_positions
