@@ -10,6 +10,8 @@ if not req_path.is_file():
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
+print(requires)
+
 with open('README.rst', encoding='utf-8') as readme_f:
     readme = readme_f.read()
 
