@@ -4,9 +4,7 @@ import versioneer
 
 package_name = 'scanpy'
 
-req_path = Path('requires.txt')
-if not req_path.is_file():
-    req_path = Path(package_name + '.egg-info') / req_path
+req_path = Path('requirements.txt')
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
 
