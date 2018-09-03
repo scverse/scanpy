@@ -10,8 +10,7 @@ from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..docs import doc_scatter_bulk, doc_show_save_ax
-
-
+from .scatterplots import pca
 # ------------------------------------------------------------------------------
 # PCA
 # ------------------------------------------------------------------------------
@@ -43,13 +42,13 @@ def pca_overview(adata, **params):
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
-    pca_scatter(adata, **params, show=False)
+    scatterplots.pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
 
 
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca(
+def pca_prev(
         adata,
         color=None,
         use_raw=True,
@@ -445,8 +444,8 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=
         Are passed to `scanpy.api.pl.dotplot`.
     """
 
-    _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
-                            groupby=groupby, key=key, show=show, save=save, **kwds)
+    return _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
+                                   groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -476,8 +475,8 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
         Are passed to `scanpy.api.pl.stacked_violin`.
     """
 
-    _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
-                            groupby=groupby, key=key, show=show, save=save, **kwds)
+    return _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
+                                   groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -507,8 +506,8 @@ def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, k
         Are passed to `scanpy.api.pl.matrixplot`.
     """
 
-    _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
-                            groupby=groupby, key=key, show=show, save=save, **kwds)
+    return _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
+                                   groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
