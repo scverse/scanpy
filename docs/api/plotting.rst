@@ -17,9 +17,9 @@ Generic
    :toctree: .
 
    pl.scatter
-   pl.violin
    pl.heatmap
    pl.dotplot
+   pl.violin
    pl.stacked_violin
    pl.matrixplot
    pl.clustermap
