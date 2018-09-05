@@ -220,7 +220,7 @@ def plot_scatter(adata,
         n_panels_x = panels_per_row
         n_panels_y = np.ceil(len(color) / n_panels_x).astype(int)
         # each panel will have the size of rcParams['figure.figsize']
-        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * 1.2,
+        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
                                  n_panels_y * rcParams['figure.figsize'][1]))
         left = 0.2 / n_panels_x
         bottom = 0.13 / n_panels_y
