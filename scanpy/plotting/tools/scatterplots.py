@@ -173,6 +173,8 @@ def plot_scatter(adata,
                  legend_fontweight=None,
                  legend_loc='right margin',
                  panels_per_row=4,
+                 hspace=0.2,
+                 wspace=0.1,
                  title=None,
                  show=None,
                  save=None,
@@ -218,7 +220,7 @@ def plot_scatter(adata,
         n_panels_x = panels_per_row
         n_panels_y = np.ceil(len(color) / n_panels_x).astype(int)
         # each panel will have the size of rcParams['figure.figsize']
-        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
+        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * 1.2,
                                  n_panels_y * rcParams['figure.figsize'][1]))
         left = 0.2 / n_panels_x
         bottom = 0.13 / n_panels_y
@@ -228,15 +230,16 @@ def plot_scatter(adata,
                                right=1-(n_panels_x-1)*left-0.01/n_panels_x,
                                bottom=bottom,
                                top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                               hspace=0.2,
-                               wspace=0.2)
+                               hspace=hspace,
+                               wspace=wspace)
     else:
         # this case handles color='variable' and color=['variable'], which are the same
         if isinstance(color, str) or color is None:
             color = [color]
         multi_panel = False
         if ax is None:
-            fig = pl.figure()
+            fig = pl.figure(figsize=(rcParams['figure.figsize'][0] * 1.2,
+                                     rcParams['figure.figsize'][0]))
             ax = fig.add_subplot(111, **args_3d)
 
     ###
@@ -279,7 +282,6 @@ def plot_scatter(adata,
             cax= ax.scatter(_data_points[:, 0], _data_points[:, 1],
                             marker=".", c=color_vector, rasterized=settings._vector_friendly,
                             **kwargs)
-
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -385,9 +387,10 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 # use empty scatter to set labels
                 ax.scatter([], [], c=color, label=label)
             if multi_panel is True:
-                # Shrink current axis by 20% to fit legend
+                # Shrink current axis by 10% to fit legend and match
+                # size of plots that are not categorical
                 box = ax.get_position()
-                ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+                ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
             ax.legend(
                 frameon=False, loc='center left',
                 bbox_to_anchor=(1, 0.5),
@@ -408,7 +411,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                         fontsize=legend_fontsize)
     else:
         # add colorbar to figure
-        pl.colorbar(cax, ax=ax)
+        pl.colorbar(cax, ax=ax, pad=0.01)
 
 
 def _get_color_values(adata, value_to_plot, groups, palette, use_raw):
