@@ -45,7 +45,7 @@ def louvain(
         `adata.uns['neighbors']['connectivities']`.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
-        much more powerful.
+        much more powerful, and the default.
     use_weights : `bool`, optional (default: `False`)
         Use weights from knn graph.
     copy : `bool` (default: `False`)
