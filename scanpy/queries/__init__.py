@@ -9,9 +9,9 @@ def mitochondrial_genes(host, org):
     ----------
     host : {{'www.ensembl.org', ...}}
         A valid BioMart host URL.
-    org : {{'hsapiens', 'mmusculus'}}
-        Organism to query. Currently available are human ('hsapiens') and mouse
-        ('mmusculus').
+    org : {{'hsapiens', 'mmusculus', 'drerio'}}
+        Organism to query. Currently available are human ('hsapiens'), mouse
+        ('mmusculus') and zebrafish ('drerio').
 
     Returns
     -------
@@ -33,6 +33,9 @@ def mitochondrial_genes(host, org):
     elif org == 'mmusculus':
         s.add_dataset_to_xml('mmusculus_gene_ensembl')
         s.add_attribute_to_xml('mgi_symbol')
+    elif org == 'drerio':
+        s.add_dataset_to_xml('drerio_gene_ensembl')
+        s.add_attribute_to_xml('zfin_id_symbol')
     else:
         logg.msg('organism ', str(org), ' is unavailable', v=4, no_indent=True)
         return None
