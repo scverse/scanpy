@@ -1,4 +1,5 @@
 import pandas as pd
+from .. import logging as logg
 
 
 def mitochondrial_genes(host, org):
