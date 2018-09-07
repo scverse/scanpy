@@ -59,9 +59,9 @@ def gene_coordinates(host, org, gene, chr_exclude=[]):
     ----------
     host : {{'www.ensembl.org', ...}}
         A valid BioMart host URL. Can be used to control genome build.
-    org : {{'hsapiens', 'mmusculus'}}
-        Organism to query. Currently available are human ('hsapiens') and mouse
-        ('mmusculus').
+    org : {{'hsapiens', 'mmusculus', 'drerio'}}
+        Organism to query. Currently available are human ('hsapiens'), mouse
+        ('mmusculus') and zebrafish ('drerio').
     gene :
         The gene symbol (e.g. 'hgnc_symbol' for human) for which to retrieve
         coordinates.
@@ -87,6 +87,9 @@ def gene_coordinates(host, org, gene, chr_exclude=[]):
     elif org == 'mmusculus':
         s.add_dataset_to_xml('mmusculus_gene_ensembl')
         s.add_attribute_to_xml('mgi_symbol')
+    elif org == 'drerio':
+        s.add_dataset_to_xml('drerio_gene_ensembl')
+        s.add_attribute_to_xml('zfin_id_symbol')
     else:
         logg.msg('organism ', str(org), ' is unavailable', v=4, no_indent=True)
         return None
