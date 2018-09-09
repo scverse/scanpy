@@ -17,6 +17,7 @@ def louvain(
         directed=True,
         use_weights=False,
         partition_type=None,
+        partition_kwargs={},
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -52,6 +53,9 @@ def louvain(
     partition_type : `~louvain.MutableVertexPartition`, optional (default: `None`)
         Type of partition to use. Only a valid argument if `flavor` is 
         `'vtraag'`.
+    partition_kwargs : `dict`, optional
+        Key word arguments to pass to partitioning, if `vtraag` method is 
+        being used.
     copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
 
@@ -103,14 +107,16 @@ def louvain(
             weights = None
         if flavor == 'vtraag':
             import louvain
-            if resolution is None: resolution = 1
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
+            if resolution is not None:
+                partition_kwargs["resolution_parameter"] = resolution
+            if use_weights:
+                partition_kwargs["weights"] = weights
             logg.info('    using the "louvain" package of Traag (2017)')
             louvain.set_rng_seed(random_state)
             part = louvain.find_partition(g, partition_type,
-                                            resolution_parameter=resolution,
-                                            weights=weights)
+                                          **partition_kwargs)
             # adata.uns['louvain_quality'] = part.quality()
         elif flavor == 'igraph':
             part = g.community_multilevel(weights=weights)
