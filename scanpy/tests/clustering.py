@@ -17,3 +17,9 @@ def test_nofail(adata_neighbors):
     sc.tl.louvain(adata_neighbors, use_weights=True)
     sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
     sc.tl.louvain(adata_neighbors, flavor="igraph")
+
+def test_partition_type(adata_neighbors):
+    import louvain
+    sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
+    # Fails due to passing a resolution parameter
+    # sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)

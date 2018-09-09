@@ -27,7 +27,7 @@ setup(
     license='BSD',
     install_requires=requires,
     extras_require=dict(
-        louvain=['python-igraph', 'louvain'],
+        louvain=['python-igraph', 'louvain>=0.6'],
         doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints'],
         test=['pytest'],
     ),
