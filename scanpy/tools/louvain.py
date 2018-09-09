@@ -17,7 +17,7 @@ def louvain(
         directed=True,
         use_weights=False,
         partition_type=None,
-        partition_kwargs={},
+        partition_kwargs=None,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -53,7 +53,7 @@ def louvain(
     partition_type : `~louvain.MutableVertexPartition`, optional (default: `None`)
         Type of partition to use. Only a valid argument if `flavor` is 
         `'vtraag'`.
-    partition_kwargs : `dict`, optional
+    partition_kwargs : `dict`, optional (default: `None`)
         Key word arguments to pass to partitioning, if `vtraag` method is 
         being used.
     copy : `bool` (default: `False`)
@@ -107,6 +107,8 @@ def louvain(
             weights = None
         if flavor == 'vtraag':
             import louvain
+            if partition_kwargs is None:
+                partition_kwargs = {}
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
             if resolution is not None:
