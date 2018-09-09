@@ -21,5 +21,4 @@ def test_nofail(adata_neighbors):
 def test_partition_type(adata_neighbors):
     import louvain
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
-    # Fails due to passing a resolution parameter
-    # sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
+    sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
