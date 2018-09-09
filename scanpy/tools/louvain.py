@@ -16,6 +16,7 @@ def louvain(
         flavor='vtraag',
         directed=True,
         use_weights=False,
+        partition_type=None,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -48,6 +49,9 @@ def louvain(
         much more powerful, and the default.
     use_weights : `bool`, optional (default: `False`)
         Use weights from knn graph.
+    partition_type : `~louvain.MutableVertexPartition`, optional (default: `None`)
+        Type of partition to use. Only a valid argument if `flavor` is 
+        `'vtraag'`.
     copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
 
@@ -64,6 +68,9 @@ def louvain(
         When `copy=True` is set, a copy of ``adata`` with those fields is returned.
     """
     logg.info('running Louvain clustering', r=True)
+    if (flavor != 'vtraag') and (partition_type is not None):
+        raise ValueError(
+            '`partition_type` is only a valid argument when `flavour` is "vtraag"')
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
@@ -97,23 +104,14 @@ def louvain(
         if flavor == 'vtraag':
             import louvain
             if resolution is None: resolution = 1
-            try:
-                logg.info('    using the "louvain" package of Traag (2017)')
-                louvain.set_rng_seed(random_state)
-                part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
-                                              resolution_parameter=resolution,
-                                              weights=weights)
-                # adata.uns['louvain_quality'] = part.quality()
-            except AttributeError:
-                logg.warn('Did not find package louvain>=0.6, '
-                          'the clustering result will therefore not '
-                          'be 100% reproducible, '
-                          'but still meaningful. '
-                          'If you want 100% reproducible results, '
-                          'update via "pip install louvain --upgrade".')
-                part = louvain.find_partition(g, method='RBConfiguration',
-                                              resolution_parameter=resolution,
-                                              weights=weights)
+            if partition_type is None:
+                partition_type = louvain.RBConfigurationVertexPartition
+            logg.info('    using the "louvain" package of Traag (2017)')
+            louvain.set_rng_seed(random_state)
+            part = louvain.find_partition(g, partition_type,
+                                            resolution_parameter=resolution,
+                                            weights=weights)
+            # adata.uns['louvain_quality'] = part.quality()
         elif flavor == 'igraph':
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
