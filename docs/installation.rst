@@ -1,6 +1,22 @@
 Installation
 ------------
 
+Bioconda
+~~~~~~~~
+
+The easiest way to install scanpy is via bioconda_. Once bioconda
+is set up, you can set up a python3 bioconda environment with scanpy
+installed::
+
+    conda create -n scanpy python=3.6 scanpy
+
+And when you want to use scanpy, switch to that environment::
+
+    source activate scanpy
+
+Manual
+~~~~~~
+
 If you do not have a working Python 3.5 or 3.6 installation, consider
 downloading and installing Miniconda_ (see `Installing Miniconda`_).
 If you chose to do so or have a working conda environment already,
@@ -29,10 +45,14 @@ Install them together with scanpy using the ``louvain`` extra or manually::
     pip install python-igraph louvain
 
 
+Docker
+~~~~~~
+
 If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
 
 .. _Docker: https://en.wikipedia.org/wiki/Docker_(software)
 .. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
+.. _bioconda: https://bioconda.github.io/
 
 Trouble shooting
 ~~~~~~~~~~~~~~~~

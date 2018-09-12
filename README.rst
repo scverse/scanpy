@@ -1,4 +1,4 @@
-|PyPI| |Docs| |Build Status|
+|PyPI| |Docs| |Build Status| |bioconda|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
     :target: https://pypi.org/project/scanpy
@@ -6,6 +6,8 @@
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
+.. |bioconda| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square
+   :target: http://bioconda.github.io/recipes/scanpy/README.html
 ..
    .. |Coverage| image:: https://codecov.io/gh/theislab/scanpy/branch/master/graph/badge.svg
       :target: https://codecov.io/gh/theislab/scanpy
