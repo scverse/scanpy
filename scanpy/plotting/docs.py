@@ -32,7 +32,8 @@ sort_order : `bool`, optional (default: `True`)
 groups : `str`, optional (default: `all groups`)
     Restrict to a few categories in categorical observation annotation.
 components : `str` or list of `str`, optional (default: '1,2')
-     For instance, ['1,2', '2,3'].
+     For instance, ['1,2', '2,3']. To plot all available components 
+     use components='all'
 projection : {'2d', '3d'}, optional (default: '2d')
      Projection of plot.
 legend_loc : str, optional (default: 'right margin')
@@ -40,22 +41,22 @@ legend_loc : str, optional (default: 'right margin')
      for matplotlib.legend.
 legend_fontsize : `int`, optional (default: `None`)
      Legend font size.
-legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
+legend_fontweight : {'normal', 'bold', ...}, optional (default: `bold`)
      Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
      otherwise to 'normal'. Available are `['light', 'normal', 'medium',
      'semibold', 'bold', 'heavy', 'black']`.
-color_map : `str`, optional (default: `matplotlib.rcParams['image.cmap']`)
-     String denoting matplotlib color map.
 palette : list of `str`, optional (default: `None`)
      Colors to use for plotting groups (categorical annotation).
 frameon : `bool`, optional (default: `True`)
      Draw a frame around the scatter plot.
-right_margin : `float` or list of `float` (default: `None`)
-     Adjust the width of the space right of each plotting panel.
-size : `float`, optional (default: `None`)
-     Point size.
+wspace : `float` (default: 0.1)
+     Adjust the width of the space between multiple panels.
+hspace : `float` (default: 0.25)
+     Adjust the height of the space between multiple panels.
 title : `str`, optional (default: `None`)
      Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
+**kwargs: Arguments to pass to `matplotlib.pyplot.scatter`, for example the color map (eg: cmap='viridis'),
+the marker size (s=10) the maximum and minimum values (eg. vmin=-2, vmax=5) etc. 
 """
 
 

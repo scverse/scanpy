@@ -100,7 +100,6 @@ def diffmap(adata, **kwargs):
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
-
     return plot_scatter(adata, basis='diffmap', **kwargs)
 
 
@@ -165,15 +164,13 @@ def plot_scatter(adata,
                  projection='2d',
                  color_map=None,
                  palette=None,
-                 right_margin=None,
-                 left_margin=None,
                  size=None,
                  frameon=None,
                  legend_fontsize=None,
-                 legend_fontweight=None,
+                 legend_fontweight='bold',
                  legend_loc='right margin',
                  panels_per_row=4,
-                 hspace=0.2,
+                 hspace=0.25,
                  wspace=0.1,
                  title=None,
                  show=None,
@@ -188,13 +185,6 @@ def plot_scatter(adata,
         print("instead of size use 's'")
         kwargs['s'] = size
 
-    # TODO
-    # are this options really needed?
-    if right_margin is not None:
-        print("right_margin is currently not used")
-    if left_margin is not None:
-        print("left_margin is currently not used")
-
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
         args_3d = {'projection': '3d'}
@@ -204,21 +194,26 @@ def plot_scatter(adata,
     ####
     # get the points position and the components list (only if components is not 'None)
     data_points, components_list = _get_data_points(adata, basis, projection, components)
-
     ###
     # setup layout. Most of the code is for the case when multiple plots are required
     # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2']
-    if isinstance(color, list) and len(color) > 1:
+    if (isinstance(color, list) and len(color) > 1) or len(components_list) > 1:
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
                              "a given ax can not be used")
+        # change from None to empty list
+        if isinstance(color, str) or color is None:
+            color = [color]
+        if len(components_list) == 0:
+            components_list = [None]
 
         multi_panel = True
         # each plot needs to be its own panel
         from matplotlib import gridspec
         # set up the figure
+        num_panels = len(color) * len(components_list)
         n_panels_x = panels_per_row
-        n_panels_y = np.ceil(len(color) / n_panels_x).astype(int)
+        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
         # each panel will have the size of rcParams['figure.figsize']
         fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
                                  n_panels_y * rcParams['figure.figsize'][1]))
@@ -236,27 +231,35 @@ def plot_scatter(adata,
         # this case handles color='variable' and color=['variable'], which are the same
         if isinstance(color, str) or color is None:
             color = [color]
+        if len(components_list) == 0:
+            components_list = [None]
         multi_panel = False
         if ax is None:
-            fig = pl.figure(figsize=(rcParams['figure.figsize'][0] * 1.2,
-                                     rcParams['figure.figsize'][0]))
+            fig = pl.figure()
             ax = fig.add_subplot(111, **args_3d)
 
     ###
     # make the plots
     axs = []
-    for count, value_to_plot in enumerate(color):
+    import itertools
+    idx_components = range(len(components_list))
 
-        color_vector, categorical = _get_color_values(adata, value_to_plot, groups, palette, use_raw)
+    # use itertools.product to make a plot for each color and for each component
+    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
+    # The plots are: [color=gene1, components=[1,2], color=gene1, components=[2,3],
+    #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
+    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
+        color_vector, categorical = _get_color_values(adata, value_to_plot,
+                                                      groups, palette, use_raw)
 
         # check if higher value points should be plot on top
         if sort_order is True and value_to_plot is not None and categorical is False:
             order = np.argsort(color_vector)
             color_vector = color_vector[order]
-            _data_points = data_points[order, :]
+            _data_points = data_points[component_idx][order, :]
 
         else:
-            _data_points = data_points
+            _data_points = data_points[component_idx]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
@@ -271,7 +274,7 @@ def plot_scatter(adata,
             ax.set_title(title)
 
         if 's' not in kwargs:
-            kwargs['s'] = 120000 / data_points.shape[0]
+            kwargs['s'] = 120000 / _data_points.shape[0]
 
         # make the scatter plot
         if projection == '3d':
@@ -292,7 +295,7 @@ def plot_scatter(adata,
         # set default axis_labels
         name = _basis2name(basis)
         if components is not None:
-            axis_labels = [name + str(x + 1) for x in components_list]
+            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
         elif projection == '3d':
             axis_labels = [name + str(x + 1) for x in range(3)]
 
@@ -317,8 +320,7 @@ def plot_scatter(adata,
             continue
 
         _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                                data_points, legend_fontweight, legend_fontsize, groups,
-                                multi_panel)
+                                _data_points, legend_fontweight, legend_fontsize, groups)
 
     axs = axs if multi_panel else ax
     utils.savefig_or_show(basis, show=show, save=save)
@@ -328,7 +330,18 @@ def plot_scatter(adata,
 
 def _get_data_points(adata, basis, projection, components):
     """
-    Returns the data points corresponding to the selected basis, projection and/or components
+    Returns the data points corresponding to the selected basis, projection and/or components.
+
+    Because multiple components are given (eg components=['1,2', '2,3'] the
+    returned data are lists, containing each of the components. When only one component is plotted
+    the list length is 1.
+
+    Returns
+    -------
+    `tuple` of:
+        data_points : `list`. Each list is a numpy array containing the data points
+        components : `list` The cleaned list of components. Eg. [[0,1]] or [[0,1], [1,2]]
+                    for components = [1,2] and components=['1,2', '2,3'] respectively
     """
     n_dims = 2
     if projection == '3d':
@@ -340,31 +353,51 @@ def _get_data_points(adata, basis, projection, components):
         else:
             n_dims = 3
 
+    if components == 'all':
+        components = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
+            for i in range(1, adata.obsm['X_{}'.format(basis)].shape[1])]
+
+    components_list = []
     if components is not None:
-        # components should be a string of coma separated integers
+        # components have different formats, either a list with integers, a string
+        # or a list of strings.
+
         if isinstance(components, str):
-            components_list = [int(x.strip()) - 1 for x in components.split(',')]
+            # eg: components='1,2'
+            components_list.append([int(x.strip()) - 1 for x in components.split(',')])
+
         elif isinstance(components, list):
-            components_list = [int(x) - 1 for x in components]
+            if isinstance(components[0], int):
+                # components=[1,2]
+                components_list.append([int(x) - 1 for x in components])
+            else:
+                # in this case, the components are str
+                # eg: components=['1,2'] or components=['1,2', '2,3]
+                # More than one component can be given and is stored
+                # as a new item of components_list
+                for comp in components:
+                    components_list.append([int(x.strip()) - 1 for x in comp.split(',')])
+
         else:
             raise ValueError("Given components: '{}' are not valid. Please check. "
                              "A valid example is `components='2,3'`")
         # check if the components are present in the data
         try:
-            data_points = adata.obsm['X_' + basis][:, components_list]
+            data_points = []
+            for comp in components_list:
+                data_points.append(adata.obsm['X_' + basis][:, comp])
         except:
             raise ValueError("Given components: '{}' are not valid. Please check. "
                              "A valid example is `components='2,3'`")
 
     else:
-        data_points = adata.obsm['X_' + basis][:, :n_dims]
-        components_list = None
+        data_points = [adata.obsm['X_' + basis][:, :n_dims]]
+        components_list = []
     return data_points, components_list
 
 
 def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                            scatter_array, legend_fontweight, legend_fontsize, groups,
-                            multi_panel):
+                            scatter_array, legend_fontweight, legend_fontsize, groups):
     """
     Adds a color bar or a legend to the given ax. A legend is added when the
     data is categorical and a color bar is added when a continuous value was used.
@@ -386,11 +419,6 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 color = colors[idx]
                 # use empty scatter to set labels
                 ax.scatter([], [], c=color, label=label)
-            if multi_panel is True:
-                # Shrink current axis by 10% to fit legend and match
-                # size of plots that are not categorical
-                box = ax.get_position()
-                ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
             ax.legend(
                 frameon=False, loc='center left',
                 bbox_to_anchor=(1, 0.5),
