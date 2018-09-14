@@ -191,6 +191,10 @@ def plot_scatter(adata,
     else:
         args_3d = {}
 
+    if adata.raw is None and use_raw is True:
+        logg.warn("`use_raw` is set to True but annData object does not have raw. "
+                  "Setting `use_raw=False`.")
+        use_raw = False
     ####
     # get the points position and the components list (only if components is not 'None)
     data_points, components_list = _get_data_points(adata, basis, projection, components)
