@@ -4,8 +4,10 @@
 import os
 import sys
 import numpy as np
+import pandas as pd
 import time
 from pathlib import Path
+import anndata
 from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
 from anndata import read as read_h5ad
@@ -134,6 +136,43 @@ def read_10x_h5(filename, genome='mm10'):
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 
+
+def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+    """Read 10x-Genomics-formatted mtx directory.
+
+    Parameters
+    ----------
+    path : `str`
+        Path to directory for `.mtx` and `.tsv` files,
+        e.g. './filtered_gene_bc_matrices/hg19/'.
+    var_names : {'gene_symbols', 'gene_ids'}, optional (default: 'gene_symbols')
+        The variables index.
+    make_unique : `bool`, optional (default: `True`)
+        Whether to make the variables index unique by appending '-1',
+        '-2' etc. or not.
+    cache : `bool`, optional (default: `False`)
+        If `False`, read from source, if `True`, read from fast 'h5ad' cache.
+
+    Returns
+    -------
+    An :class:`~anndata.AnnData`.
+    """
+    adata = read(path + 'matrix.mtx', cache=cache).T  # transpose the data
+    genes = pd.read_csv(path + 'genes.tsv', header=None, sep='\t')
+    if var_names == 'gene_symbols':
+        var_names = genes[1]
+        adata.var['gene_ids'] = genes[0]
+        if make_unique:
+            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
+        adata.var_names = var_names
+    elif var_names == 'gene_ids':
+        adata.var_names = genes[0]
+        adata.var['gene_symbols'] = genes[1]
+    else:
+        raise ValueError('`var_names` needs to be \'gene_symbols\' or \'gene_ids\'')
+    adata.obs_names = pd.read_csv(path + 'barcodes.tsv', header=None)[0]
+    return adata
+        
 
 def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
     """Write :class:`~anndata.AnnData` objects to file.
