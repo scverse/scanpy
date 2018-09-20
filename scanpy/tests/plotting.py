@@ -15,6 +15,11 @@ tolerance = 13  # default matplotlib pixel difference tolerance
 
 sc.pl.set_rcParams_defaults()
 
+#####
+# To update the test images:
+# cd scanpy/test/_images/
+# python remake_test_images.py
+
 
 def test_heatmap():
     adata = sc.datasets.krumsiek11()
@@ -225,7 +230,7 @@ def test_scatterplots():
     assert res is None, res
 
     # test tsne
-    sc.tl.tsne(pbmc, random_state=2, n_pcs=30)
+    sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
     sc.pl.tsne(pbmc, color=['CD3D', 'louvain'])
     pl.savefig(outfile.name, dpi=80)
     pl.close()
@@ -276,5 +281,3 @@ def test_scatterplots():
 
     res = compare_images(ROOT + '/master_diffmap.png', outfile.name, tolerance)
     assert res is None, res
-
-
