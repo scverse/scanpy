@@ -30,7 +30,8 @@ def scatter(
         x=None,
         y=None,
         color=None,
-        use_raw=True,
+        use_raw=None,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -67,8 +68,12 @@ def scatter(
     color : string or list of strings, optional (default: `None`)
         Keys for annotations of observations/cells or variables/genes, e.g.,
         `'ann1'` or `['ann1', 'ann2']`.
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
+    layers : `str` or tuple of strings, optional (default: `X`)
+        Use the `layers` attribute of `adata` if present: specify the layer for
+        `x`, `y` and `color`. If `layers` is a string, then it is expanded to
+        `(layers, layers, layers)`.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
     {scatter_bulk}
@@ -85,6 +90,7 @@ def scatter(
             y=y,
             color=color,
             use_raw=use_raw,
+            layers=layers,
             sort_order=sort_order,
             alpha=alpha,
             basis=basis,
@@ -114,6 +120,7 @@ def scatter(
                 y=y,
                 color=color,
                 use_raw=use_raw,
+                layers=layers,
                 sort_order=sort_order,
                 alpha=alpha,
                 basis=basis,
@@ -142,6 +149,7 @@ def scatter(
                 y=y,
                 color=color,
                 use_raw=use_raw,
+                layers=layers,
                 sort_order=sort_order,
                 alpha=alpha,
                 basis=basis,
@@ -174,7 +182,8 @@ def _scatter_var(
         x=None,
         y=None,
         color=None,
-        use_raw=True,
+        use_raw=None,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -203,6 +212,7 @@ def _scatter_var(
         y=y,
         color=color,
         use_raw=use_raw,
+        layers=layers,
         sort_order=sort_order,
         alpha=alpha,
         basis=basis,
@@ -234,7 +244,8 @@ def _scatter_obs(
         x=None,
         y=None,
         color=None,
-        use_raw=True,
+        use_raw=None,
+        layers='X',
         sort_order=True,
         alpha=None,
         basis=None,
@@ -256,6 +267,23 @@ def _scatter_obs(
         ax=None):
     """See docstring of scatter."""
     sanitize_anndata(adata)
+    from scipy.sparse import issparse
+    if use_raw is None and adata.raw is not None: use_raw = True
+
+    # process layers
+    if layers is None:
+        layers = 'X'
+    if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
+        layers = (layers, layers, layers)
+    elif isinstance(layers, (tuple, list)) and len(layers) == 3:
+        for layer in layers:
+            if layer not in adata.layers.keys() and layer != 'X':
+                raise ValueError(
+                    '`layers` should have elements that are either \'X\' or in adata.layers.keys().')
+    else:
+        raise ValueError('`layers` should be a string or a list/tuple of length 3.')
+    if use_raw and (layers != ('X', 'X', 'X') or layers != ['X', 'X', 'X']):
+        ValueError('`use_raw` must be `False` if layers other than \'X\' are used.')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -278,8 +306,12 @@ def _scatter_obs(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_obs_array(x, use_raw=use_raw)
-        y_arr = adata._get_obs_array(y, use_raw=use_raw)
+        x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
+        y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
+
+        x_arr = x_arr.toarray().flatten() if issparse(x_arr) else x_arr
+        y_arr = y_arr.toarray().flatten() if issparse(y_arr) else y_arr
+
         Y = np.c_[x_arr[:, None], y_arr[:, None]]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
@@ -318,45 +350,41 @@ def _scatter_obs(
     axis_labels = (x, y) if component_name is None else None
     show_ticks = True if component_name is None else False
 
-    # the actual color ids, e.g. 'grey' or '#109482'
-    color_ids = [None if not is_color_like(key)
-                 else key for key in keys]
+    # generate the colors
+    color_ids = []
     categoricals = []
     colorbars = []
     for ikey, key in enumerate(keys):
-        if color_ids[ikey] is not None:
-            c = color_ids[ikey]
-            continuous = True
-            categorical = False
-            colorbars.append(False)
-        else:
-            c = 'white' if projection == '2d' else 'white'
-            categorical = False
-            continuous = False
-            # test whether we have categorial or continuous annotation
-            if key in adata.obs_keys():
-                if is_categorical_dtype(adata.obs[key]):
-                    categorical = True
-                else:
-                    continuous = True
-                    c = adata.obs[key]
-            # coloring according to gene expression
-            elif (use_raw
-                  and adata.raw is not None
-                  and key in adata.raw.var_names):
-                c = adata.raw[:, key].X
-                continuous = True
-            elif key in adata.var_names:
-                c = adata[:, key].X
-                continuous = True
+        c = 'white'
+        categorical = False  # by default, assume continuous or flat color
+        colorbar = None
+        # test whether we have categorial or continuous annotation
+        if key in adata.obs_keys():
+            if is_categorical_dtype(adata.obs[key]):
+                categorical = True
             else:
-                raise ValueError(
-                    'key \'{}\' is invalid! pass valid observation annotation, '
-                    'one of {} or a gene name {}'
-                    .format(key, adata.obs_keys(), adata.var_names))
-            colorbars.append(True if continuous else False)
+                c = adata.obs[key]
+        # coloring according to gene expression
+        elif (use_raw
+              and adata.raw is not None
+              and key in adata.raw.var_names):
+            c = adata.raw[:, key].X
+        elif key in adata.var_names:
+            c = adata[:, key].X if layers[2] == 'X' else adata[:, key].layers[layers[2]]
+            c = c.toarray().flatten() if issparse(c) else c
+        elif is_color_like(key):  # a flat color
+            c = key
+            colorbar = False
+        else:
+            raise ValueError(
+                'key \'{}\' is invalid! pass valid observation annotation, '
+                'one of {} or a gene name {}'
+                .format(key, adata.obs_keys(), adata.var_names))
+        if colorbar is None:
+            colorbar = not categorical
+        colorbars.append(colorbar)
         if categorical: categoricals.append(ikey)
-        color_ids[ikey] = c
+        color_ids.append(c)
 
     if right_margin is None and len(categoricals) > 0:
         if legend_loc == 'right margin': right_margin = 0.5
@@ -404,6 +432,7 @@ def _scatter_obs(
                     mask_remaining[mask] = False
                     if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
         else:
+            groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
                     raise ValueError('"' + name + '" is invalid!'
@@ -530,11 +559,11 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, jitter=True,
+def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, jitter=True,
            size=1, scale='width', order=None, multi_panel=None, show=None,
            xlabel='', rotation=None, save=None, ax=None, **kwds):
     """\
-    Violin plot [Waskom16]_.
+    Violin plot.
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
@@ -548,7 +577,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
         The key of the observation grouping to consider.
     log : `bool`, optional (default: `False`)
         Plot on logarithmic axis.
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     multi_panel : `bool`, optional (default: `False`)
         Display keys in multiple panels also when `groupby is not None`.
@@ -581,6 +610,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
     A `matplotlib.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
+    if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(keys, str): keys = [keys]
     obs_keys = False
     for key in keys:
@@ -652,9 +682,9 @@ def violin(adata, keys, groupby=None, log=False, use_raw=True, stripplot=True, j
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-        adata, obs_keys=None, use_raw=True, show=None, save=None, **kwds):
+        adata, obs_keys=None, use_raw=None, show=None, save=None, **kwds):
     """\
-    Hierarchically-clustered heatmap [Waskom16]_.
+    Hierarchically-clustered heatmap.
 
     Wraps `seaborn.clustermap
     <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for
@@ -667,7 +697,7 @@ def clustermap(
     obs_keys : `str`
         Categorical annotation to plot with a different color map.
         Currently, only a single key is supported.
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     {show_save_ax}
     **kwds : keyword arguments
@@ -700,7 +730,8 @@ def clustermap(
     if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
-    X = adata.raw.X if use_raw and adata.raw is not None else adata.X
+    if use_raw is None and adata.raw is not None: use_raw = True
+    X = adata.raw.X if use_raw else adata.X
     df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:
         row_colors = adata.obs[obs_keys]
@@ -719,7 +750,7 @@ def clustermap(
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_categories=7,
+def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
                    show=None, save=None, figsize=None, var_group_positions=None,
                    var_group_labels=None, var_group_rotation=None, swap_axes=False, **kwds):
@@ -741,7 +772,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
         The key of the observation grouping to consider.
     log : `bool`, optional (default: `False`)
         Plot on logarithmic axis.
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value
@@ -789,6 +820,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
     -------
     A list of `matplotlib.Axes` where each ax corresponds to each row in the image
     """
+    if use_raw is None and adata.raw is not None: use_raw = True
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
     from matplotlib import gridspec
@@ -915,7 +947,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=True, num_
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
@@ -939,7 +971,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         it would be subdivided into `num_categories`.
     log : `bool`, optional (default: `False`)
         Use the log of the values
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value
@@ -969,6 +1001,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     colorcode, the second axis is the heatmap and the third axis is the
     colorbar.
     """
+    if use_raw is None and adata.raw is not None: use_raw = True
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     if figsize is None:
@@ -1057,19 +1090,21 @@ def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            figsize=None, var_group_positions=None, var_group_labels=None,
+def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
+            color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, show=None, save=None, **kwds):
     """\
-    Makes a 'dot plot' of the expression values of `var_names`.
-    For each var_name and each groupby category a dot is plotted.
-    Each dot represents two values: mean expression within
-    each category (visualized by color) and fraction of cells expressing the
-    var_name in the category. (visualized by the size of the dot).
-    If groupby is not given, the dotplot assumes that all data belongs to a single
-    category. A gene is not considered expressed if the expression value in the adata
-    (or adata.raw) is equal to zero.
-    For example, for each marker gene, the mean value and the percentage of cells
+    Makes a _dot plot_ of the expression values of `var_names`.
+
+    For each var_name and each `groupby` category a dot is plotted. Each dot
+    represents two values: mean expression within each category (visualized by
+    color) and fraction of cells expressing the var_name in the
+    category. (visualized by the size of the dot).  If groupby is not given, the
+    dotplot assumes that all data belongs to a single category. A gene is not
+    considered expressed if the expression value in the adata (or adata.raw) is
+    equal to zero.
+
+    For instance, for each marker gene, the mean value and the percentage of cells
     expressing the gene can be visualized for each cluster.
 
     Parameters
@@ -1084,11 +1119,13 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
         subdivided into `num_categories`.
     log : `bool`, optional (default: `False`)
         Use the log of the values
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value determines
         the number of groups into which the groupby observation should be subdivided.
+    color_map : `str`, optional (default: `Reds`)
+        String denoting matplotlib color map.
     figsize : (float, float), optional (default: None)
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
@@ -1111,8 +1148,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     -------
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
-
     """
+    if use_raw is None and adata.raw is not None: use_raw = True
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     # for if category defined by groupby (if any) compute for each var_name
@@ -1202,7 +1239,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
     x = x.flatten()
     frac = fraction_obs.values.flatten()
     mean_flat = mean_obs.values.flatten()
-    cmap = pl.get_cmap('Reds')
+    cmap = pl.get_cmap(color_map)
 
     size = (frac * 10) ** 2
 
@@ -1270,7 +1307,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
+def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, var_group_positions=None, var_group_labels=None,
                var_group_rotation=None, show=None, save=None, **kwds):
     """\
@@ -1290,7 +1327,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
         subdivided into `num_categories`.
     log : `bool`, optional (default: `False`)
         Use the log of the values
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value determines
@@ -1317,8 +1354,8 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     -------
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
-
     """
+    if use_raw is None and adata.raw is not None: use_raw = True
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     mean_obs = obs_tidy.groupby(level=0).mean()
@@ -1384,7 +1421,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_cate
     return axs
 
 
-def _prepare_dataframe(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7):
+def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
     defined by group by and the columns correspond to var_names.
@@ -1401,7 +1438,7 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=True, log=False, 
         it would be subdivided into `num_categories`.
     log : `bool`, optional (default: `False`)
         Use the log of the values
-    use_raw : `bool`, optional (default: `True`)
+    use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     num_categories : `int`, optional (default: `7`)
         Only used if groupby observation is not categorical. This value
@@ -1410,12 +1447,11 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=True, log=False, 
 
     Returns
     -------
-    Tuple of `pandas.DataFrame` and list of categories
-
-
+    Tuple of `pandas.DataFrame` and list of categories.
     """
     from scipy.sparse import issparse
     sanitize_anndata(adata)
+    if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
 
@@ -1485,12 +1521,11 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     rotation : `float` (default None)
         rotation degrees for the labels. If not given, small labels (<4 characters) are not
         rotated, otherwise, they are rotated 90 degrees
+
     Returns
     -------
     None
-
     """
-
     import matplotlib.patches as patches
     from matplotlib.path import Path
 

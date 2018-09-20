@@ -158,12 +158,13 @@ Read common file formats using
 
    read
 
-Read 10x formatted hdf5 files using
+Read 10x formatted hdf5 files and directories containing `.mtx` files using
 
 .. autosummary::
    :toctree: .
 
-   read_10x_h5
+    read_10x_h5
+    read_10x_mtx
 
 Read other formats using functions borrowed from :mod:`anndata`
 

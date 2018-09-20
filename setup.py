@@ -4,11 +4,11 @@ import versioneer
 
 package_name = 'scanpy'
 
-req_path = Path('requires.txt')
-if not req_path.is_file():
-    req_path = Path(package_name + '.egg-info') / req_path
+req_path = Path('requirements.txt')
 with req_path.open() as requirements:
     requires = [l.strip() for l in requirements]
+
+print(requires)
 
 with open('README.rst', encoding='utf-8') as readme_f:
     readme = readme_f.read()
@@ -27,7 +27,7 @@ setup(
     license='BSD',
     install_requires=requires,
     extras_require=dict(
-        louvain=['python-igraph', 'louvain'],
+        louvain=['python-igraph', 'louvain>=0.6'],
         doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints'],
         test=['pytest'],
     ),
