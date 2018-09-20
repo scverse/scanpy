@@ -15,6 +15,9 @@ def louvain(
         adjacency=None,
         flavor='vtraag',
         directed=True,
+        use_weights=False,
+        partition_type=None,
+        partition_kwargs=None,
         copy=False):
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
@@ -44,19 +47,34 @@ def louvain(
         `adata.uns['neighbors']['connectivities']`.
     flavor : {'vtraag', 'igraph'}
         Choose between to packages for computing the clustering. 'vtraag' is
-        much more powerful.
+        much more powerful, and the default.
+    use_weights : `bool`, optional (default: `False`)
+        Use weights from knn graph.
+    partition_type : `~louvain.MutableVertexPartition`, optional (default: `None`)
+        Type of partition to use. Only a valid argument if `flavor` is 
+        `'vtraag'`.
+    partition_kwargs : `dict`, optional (default: `None`)
+        Key word arguments to pass to partitioning, if `vtraag` method is 
+        being used.
     copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
+    None
+        By default (`copy=False`), updates ``adata`` with the following fields:
 
-    louvain : `pd.Series` (``adata.obs``, dtype `category`)
-        Array of dim (number of samples) that stores the subgroup id ('0',
-        '1', ...) for each cell.
+        louvain : :class:`pandas.Series` (``adata.obs``, dtype `category`)
+            Array of dim (number of samples) that stores the subgroup id ('0',
+            '1', ...) for each cell.
+    
+    AnnData
+        When `copy=True` is set, a copy of ``adata`` with those fields is returned.
     """
     logg.info('running Louvain clustering', r=True)
+    if (flavor != 'vtraag') and (partition_type is not None):
+        raise ValueError(
+            '`partition_type` is only a valid argument when `flavour` is "vtraag"')
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
@@ -83,26 +101,27 @@ def louvain(
             directed = False
         if not directed: logg.m('    using the undirected graph', v=4)
         g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        if use_weights:
+            weights = np.array(g.es["weight"]).astype(np.float64)
+        else:
+            weights = None
         if flavor == 'vtraag':
             import louvain
-            if resolution is None: resolution = 1
-            try:
-                logg.info('    using the "louvain" package of Traag (2017)')
-                louvain.set_rng_seed(random_state)
-                part = louvain.find_partition(g, louvain.RBConfigurationVertexPartition,
-                                              resolution_parameter=resolution)
-                # adata.uns['louvain_quality'] = part.quality()
-            except AttributeError:
-                logg.warn('Did not find package louvain>=0.6, '
-                          'the clustering result will therefore not '
-                          'be 100% reproducible, '
-                          'but still meaningful. '
-                          'If you want 100% reproducible results, '
-                          'update via "pip install louvain --upgrade".')
-                part = louvain.find_partition(g, method='RBConfiguration',
-                                              resolution_parameter=resolution)
+            if partition_kwargs is None:
+                partition_kwargs = {}
+            if partition_type is None:
+                partition_type = louvain.RBConfigurationVertexPartition
+            if resolution is not None:
+                partition_kwargs["resolution_parameter"] = resolution
+            if use_weights:
+                partition_kwargs["weights"] = weights
+            logg.info('    using the "louvain" package of Traag (2017)')
+            louvain.set_rng_seed(random_state)
+            part = louvain.find_partition(g, partition_type,
+                                          **partition_kwargs)
+            # adata.uns['louvain_quality'] = part.quality()
         elif flavor == 'igraph':
-            part = g.community_multilevel()
+            part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
     elif flavor == 'taynaud':
         # this is deprecated

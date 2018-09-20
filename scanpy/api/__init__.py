@@ -9,7 +9,7 @@ from .. import __version__
 from . import tl
 from . import pl
 from . import pp
-from ..readwrite import read, read_10x_h5, write, read_params, write_params
+from ..readwrite import read, read_10x_h5, read_10x_mtx, write, read_params, write_params
 from . import datasets
 from . import export_to
 from . import logging

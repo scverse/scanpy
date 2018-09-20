@@ -6,17 +6,23 @@
 
 .. role:: smaller
 
-On master :small:`July 31, 2018`
---------------------------------
 
-Plotting of marker genes and quality control:
+Version 1.3 :small:`September 3, 2018`
+--------------------------------------
+
+RNA velocity in single cells [Manno18]_:
+
+- Scanpy and AnnData support loom's layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`thanks to S Rybakov and V Bergen`
+- the package `scvelo <https://github.com/theislab/scvelo>`__ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
+
+Plotting of marker genes and quality control, see this `section <https://scanpy.readthedocs.io/en/latest/api/plotting.html#generic>`__ and scroll down, a few examples are
 
 - :func:`~scanpy.api.pl.dotplot` for visualizing genes across conditions and clusters, see `here <https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c>`__ :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.api.pl.heatmap` for pretty heatmaps, see `here <https://github.com/theislab/scanpy/pull/175>`__ :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.api.pl.violin` now produces very compact overview figures with many panels, see `here <https://github.com/theislab/scanpy/pull/175>`__ :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.api.pl.highest_expr_genes` for quality control, see `here <https://github.com/theislab/scanpy/pull/169>`__; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :smaller:`thanks to F Ramirez`
 
-There now is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__ on imputation:
+There is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__ on imputation:
 
 - :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :smaller:`thanks to S Gigante`
 - :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
@@ -24,6 +30,8 @@ There now is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation
 Further changes:
 
 - `frameon=False` enables easy removal of frames in scatter plots and in :func:`~scanpy.api.set_figure_params`
+
+And several consistency fixes.
 
 
 Version 1.2 :small:`June 8, 2018`
