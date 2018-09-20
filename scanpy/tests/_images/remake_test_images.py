@@ -90,10 +90,50 @@ sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[
 pl.savefig("master_ranked_genes_violin.png", dpi=80)
 pl.close()
 
-sc.pl.umap(pbmc, color='louvain')
+# pca
+sc.pl.pca(pbmc, color='bulk_labels')
+pl.savefig("master_pca.png", dpi=80)
+pl.close()
+
+# 3d
+sc.pl.pca(pbmc, color='bulk_labels', projection='3d')
+pl.savefig("master_3dprojection.png", dpi=80)
+pl.close()
+
+# multipanel
+sc.pl.pca(pbmc, color=['CD3D', 'CD79A'], components=['1,2', '1,3'], vmax=5, use_raw=False, vmin=-5, cmap='seismic')
+pl.savefig("master_multipanel.png", dpi=80)
+pl.close()
+
+# tsne
+sc.tl.tsne(pbmc, random_state=2, n_pcs=30)
+sc.pl.tsne(pbmc, color=['CD3D', 'louvain'])
+pl.savefig("master_tsne.png", dpi=80)
+pl.close()
+
+sc.pl.umap(pbmc, color=['louvain'],
+           palette=['b', 'g', 'r', 'yellow', 'black', 'gray', 'lightblue'], frameon=False)
 pl.savefig("master_umap.png", dpi=80)
 pl.close()
 
-sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5)
+sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], s=20, alpha=0.5, frameon=False)
 pl.savefig("master_umap_gene_expr.png", dpi=80)
+pl.close()
+
+#  edges = True
+sc.pp.neighbors(pbmc)
+sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50)
+pl.savefig("master_umap_with_edges.png", dpi=80)
+pl.close()
+
+# phate
+sc.tl.phate(pbmc, k=10, random_state=0)
+sc.pl.phate(pbmc, color='louvain', legend_loc='on data', edges=True, legend_fontsize=20)
+pl.savefig("master_phate.png", dpi=80)
+pl.close()
+
+# diffmap
+sc.tl.diffmap(pbmc)
+sc.pl.diffmap(pbmc, components='all', color=['CD3D'])
+pl.savefig("master_diffmap.png", dpi=80)
 pl.close()

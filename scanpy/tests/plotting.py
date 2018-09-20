@@ -196,13 +196,46 @@ def test_rank_genes_groups():
     os.remove(outfile.name)
 
 
-def test_umap():
+def test_scatterplots():
 
     pbmc = sc.datasets.pbmc68k_reduced()
-    outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_scatter_', delete=False)
+    outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_scatter_', delete=False)
 
-    # test umap with louvain clusters
-    sc.pl.umap(pbmc, color='louvain', frameon=False)
+    # test pca
+    sc.pl.pca(pbmc, color='bulk_labels')
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_pca.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test projection='3d'
+    sc.pl.pca(pbmc, color='bulk_labels', projection='3d')
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_3dprojection.png', outfile.name, tolerance)
+    assert res is None, res
+
+    sc.pl.pca(pbmc, color=['CD3D', 'CD79A'], components=['1,2', '1,3'], vmax=5, use_raw=False, vmin=-5, cmap='seismic')
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_multipanel.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test tsne
+    sc.tl.tsne(pbmc, random_state=2, n_pcs=30)
+    sc.pl.tsne(pbmc, color=['CD3D', 'louvain'])
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_tsne.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test umap with louvain clusters and palette
+    sc.pl.umap(pbmc, color=['louvain'],
+               palette=['b', 'g', 'r', 'yellow', 'black', 'gray', 'lightblue'], frameon=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 
@@ -210,9 +243,38 @@ def test_umap():
     assert res is None, res
 
     # test umap with gene expression
-    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], size=20, alpha=0.5, frameon=False)
+    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], s=20, alpha=0.5, frameon=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 
     res = compare_images(ROOT + '/master_umap_gene_expr.png', outfile.name, tolerance)
     assert res is None, res
+
+    # test edges = True
+    sc.pp.neighbors(pbmc)
+    sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50)
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_umap_with_edges.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test phate
+    sc.tl.phate(pbmc, k=10, random_state=0)
+    sc.pl.phate(pbmc, color='louvain', legend_loc='on data', edges=True, legend_fontsize=20)
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_phate.png', outfile.name, tolerance)
+    assert res is None, res
+
+    # test diffmap
+    sc.tl.diffmap(pbmc)
+    sc.pl.diffmap(pbmc, components='all', color=['CD3D'])
+    pl.savefig(outfile.name, dpi=80)
+    pl.close()
+
+    res = compare_images(ROOT + '/master_diffmap.png', outfile.name, tolerance)
+    assert res is None, res
+
+
