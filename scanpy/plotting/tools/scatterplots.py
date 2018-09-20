@@ -151,7 +151,7 @@ def pca(adata, **kwargs):
 
 def plot_scatter(adata,
                  color=None,
-                 use_raw=True,
+                 use_raw=None,
                  sort_order=True,
                  edges=False,
                  edges_width=0.1,
@@ -191,16 +191,23 @@ def plot_scatter(adata,
     else:
         args_3d = {}
 
-    if adata.raw is None and use_raw is True:
-        logg.warn("`use_raw` is set to True but annData object does not have raw. "
-                  "Setting `use_raw=False`.")
+    if adata.raw is not None and use_raw is None:
+        use_raw = True
+    else:
         use_raw = False
+
+    if adata.raw is None and use_raw is True:
+        raise ValueError("`use_raw` is set to True but annData object does not have raw. "
+                  "Please check.")
+
     ####
     # get the points position and the components list (only if components is not 'None)
     data_points, components_list = _get_data_points(adata, basis, projection, components)
+
     ###
     # setup layout. Most of the code is for the case when multiple plots are required
-    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2']
+    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2'].
+    # component_list is a list of components [[0,1], [1,2]]
     if (isinstance(color, list) and len(color) > 1) or len(components_list) > 1:
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
@@ -493,8 +500,6 @@ def _get_color_values(adata, value_to_plot, groups, palette, use_raw):
 
     # check if value to plot is in var
     elif use_raw is False and value_to_plot in adata.var_names:
-        # TODO
-        # can this be done in a different, probably in a faster way?
         color_vector = adata[:, value_to_plot].X
 
     elif use_raw is True and value_to_plot in adata.raw.var_names:
