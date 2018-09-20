@@ -90,6 +90,8 @@ sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[
 pl.savefig("master_ranked_genes_violin.png", dpi=80)
 pl.close()
 
+pbmc = sc.datasets.pbmc68k_reduced()
+
 # pca
 sc.pl.pca(pbmc, color='bulk_labels')
 pl.savefig("master_pca.png", dpi=80)
@@ -106,7 +108,7 @@ pl.savefig("master_multipanel.png", dpi=80)
 pl.close()
 
 # tsne
-sc.tl.tsne(pbmc, random_state=2, n_pcs=30)
+sc.tl.tsne(pbmc, random_state=0, n_pcs=30)
 sc.pl.tsne(pbmc, color=['CD3D', 'louvain'])
 pl.savefig("master_tsne.png", dpi=80)
 pl.close()
