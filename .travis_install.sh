@@ -27,5 +27,5 @@ source activate testenv
 
 pip install -r requires.txt
 conda install -c conda-forge python-igraph louvain --yes
-pip install docutils
+pip install docutils phate
 python setup.py develop
