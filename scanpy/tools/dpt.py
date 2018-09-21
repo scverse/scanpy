@@ -327,6 +327,8 @@ class DPT(Neighbors):
             # find the third point on the segment that has maximal
             # added distance from the two tip points
             dseg = Dseg[tips[0]] + Dseg[tips[1]]
+            if not np.isfinite(dseg).any():
+                continue
             # add this point to tips, it's a third tip, we store it at the first
             # position in an array called tips3
             third_tip = np.argmax(dseg)
