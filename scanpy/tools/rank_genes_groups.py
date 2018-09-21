@@ -19,7 +19,7 @@ def rank_genes_groups(
         groups='all',
         reference='rest',
         n_genes=100,
-        only_positive=True,
+        rankby_abs=False,
         key_added=None,
         copy=False,
         method='t-test_overestim_var',
@@ -50,8 +50,9 @@ def rank_genes_groups(
         <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__, for
         why this is meaningful.
-    only_positive : bool, optional (default: `True`)
-        Only consider positive differences.
+    rankby_abs : `bool`, optional (default: `False`)
+        Rank genes by the absolute value of the score, not by the
+        score. The returned scores are never the absolute values.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
@@ -74,6 +75,9 @@ def rank_genes_groups(
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
     """
+    if 'only_positive' in kwds:
+        rankby_abs = not kwds.pop('only_positive')  # backwards compat
+        
     logg.info('ranking genes', r=True)
     avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
@@ -160,9 +164,9 @@ def rank_genes_groups(
             mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
             foldchanges = (means[igroup] + 1e-9) / mean_rest
             scores[np.isnan(scores)] = 0
-            scores = scores if only_positive else np.abs(scores)
-            partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
-            partial_indices = np.argsort(scores[partition])[::-1]
+            scores_sort = np.abs(scores) if rankby_abs else scores
+            partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
+            partial_indices = np.argsort(scores_sort[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
@@ -246,7 +250,7 @@ def rank_genes_groups(
                     left = right + 1
                 scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[partition])[::-1]
@@ -283,7 +287,7 @@ def rank_genes_groups(
             for imask, mask in enumerate(groups_masks):
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[imask, partition])[::-1]
