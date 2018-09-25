@@ -266,15 +266,6 @@ def test_scatterplots():
     res = compare_images(ROOT + '/master_umap_with_edges.png', outfile.name, tolerance)
     assert res is None, res
 
-    # test phate
-    sc.tl.phate(pbmc, k=10, random_state=0)
-    sc.pl.phate(pbmc, color='louvain', legend_loc='on data', edges=True, legend_fontsize=20)
-    pl.savefig(outfile.name, dpi=80)
-    pl.close()
-
-    res = compare_images(ROOT + '/master_phate.png', outfile.name, tolerance)
-    assert res is None, res
-
     # test diffmap
     sc.tl.diffmap(pbmc)
     sc.pl.diffmap(pbmc, components='all', color=['CD3D'])
