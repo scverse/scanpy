@@ -261,7 +261,8 @@ def plot_scatter(adata,
     #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
     for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
         color_vector, categorical = _get_color_values(adata, value_to_plot,
-                                                      groups, palette, use_raw)
+                                                      groups=groups, palette=palette,
+                                                      use_raw=use_raw)
 
         # check if higher value points should be plot on top
         if sort_order is True and value_to_plot is not None and categorical is False:
@@ -453,7 +454,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
         pl.colorbar(cax, ax=ax, pad=0.01)
 
 
-def _get_color_values(adata, value_to_plot, groups, palette, use_raw):
+def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False):
     """
     Returns the value or color associated to each data point.
     For categorical data, the return value is list of colors taken
