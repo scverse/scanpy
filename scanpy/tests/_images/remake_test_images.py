@@ -128,12 +128,6 @@ sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50)
 pl.savefig("master_umap_with_edges.png", dpi=80)
 pl.close()
 
-# phate
-sc.tl.phate(pbmc, k=10, random_state=0)
-sc.pl.phate(pbmc, color='louvain', legend_loc='on data', edges=True, legend_fontsize=20)
-pl.savefig("master_phate.png", dpi=80)
-pl.close()
-
 # diffmap
 sc.tl.diffmap(pbmc)
 sc.pl.diffmap(pbmc, components='all', color=['CD3D'])
