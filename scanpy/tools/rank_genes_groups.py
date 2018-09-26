@@ -141,6 +141,7 @@ def rank_genes_groups(
     rankings_gene_pvals_adj = []
     
     if method in {'t-test', 't-test_overestim_var'}:
+        from scipy import stats
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
@@ -162,10 +163,17 @@ def rank_genes_groups(
             
             denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
             denominator[np.flatnonzero(denominator == 0)] = np.nan
-            scores = (means[igroup] - mean_rest) / denominator
+            scores = (means[igroup] - mean_rest) / denominator #Welch t-test
             mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
             foldchanges = (means[igroup] + 1e-9) / mean_rest
             scores[np.isnan(scores)] = 0
+            denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
+                (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
+            denominator_dof[np.flatnonzero(denominator_dof == 0)] = np.nan
+            dof = np.square(vars[igroup]/ns_group + var_rest/ns_rest) / denominator_dof # dof calculation for Welch t-test
+            dof[np.isnan(dof)] = 0
+            pvals = stats.t.sf(abs(scores), dof)*2 # *2 because of two-tailed t-test
+            pvals_adj = pvals * n_genes
             scores_sort = np.abs(scores) if rankby_abs else scores
             partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
             partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -173,6 +181,8 @@ def rank_genes_groups(
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
             rankings_gene_names.append(adata_comp.var_names[global_indices])
+            rankings_gene_pvals.append(pvals[global_indices])
+            rankings_gene_pvals_adj.append(pvals_adj[global_indices])
             
     elif method == 'logreg':
         # if reference is not set, then the groups listed will be compared to the rest
@@ -252,92 +262,6 @@ def rank_genes_groups(
             rankings_gene_pvals.append(pvals[global_indices])
             rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
-        # # First loop: Loop over all genes
-        # if reference != 'rest':
-        #     for imask, mask in enumerate(groups_masks):
-        #         if imask == ireference: continue
-        #         else: mask_rest = groups_masks[ireference]
-        #         ns_rest[imask] = np.where(mask_rest)[0].size
-        #         if ns_rest[imask] <= 25 or ns[imask] <= 25:
-        #             logg.hint('Few observations in a group for '
-        #                       'normal approximation (<=25). Lower test accuracy.')
-        #         n_active = ns[imask]
-        #         m_active = ns_rest[imask]
-        #         # Now calculate gene expression ranking in chunkes:
-        #         chunk = []
-        #         # Calculate chunk frames
-        #         n_genes_max_chunk = floor(CONST_MAX_SIZE / (n_active + m_active))
-        #         if n_genes_max_chunk < n_genes - 1:
-        #             chunk_index = n_genes_max_chunk
-        #             while chunk_index < n_genes - 1:
-        #                 chunk.append(chunk_index)
-        #                 chunk_index = chunk_index + n_genes_max_chunk
-        #             chunk.append(n_genes - 1)
-        #         else:
-        #             chunk.append(n_genes - 1)
-        #         left = 0
-        #         # Calculate rank sums for each chunk for the current mask
-        #         for chunk_index, right in enumerate(chunk):
-        #             # Check if issparse is true: AnnData objects are currently sparse.csr or ndarray.
-        #             if issparse(X):
-        #                 df1 = pd.DataFrame(data=X[mask, left:right].todense())
-        #                 df2 = pd.DataFrame(data=X[mask_rest, left:right].todense(),
-        #                                    index=np.arange(start=n_active, stop=n_active + m_active))
-        #             else:
-        #                 df1 = pd.DataFrame(data=X[mask, left:right])
-        #                 df2 = pd.DataFrame(data=X[mask_rest, left:right],
-        #                                    index=np.arange(start=n_active, stop=n_active + m_active))
-        #             df1 = df1.append(df2)
-        #             ranks = df1.rank()
-        #             # sum up adjusted_ranks to calculate W_m,n
-        #             scores[left:right] = np.sum(ranks.loc[0:n_active, :])
-        #             left = right + 1
-        #         scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
-        #             (n_active * m_active * (n_active + m_active + 1) / 12))
-        #         scores = scores if not rankby_abs else np.abs(scores)
-        #         scores[np.isnan(scores)] = 0
-        #         partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
-        #         partial_indices = np.argsort(scores[partition])[::-1]
-        #         global_indices = reference_indices[partition][partial_indices]
-        #         rankings_gene_scores.append(scores[global_indices])
-        #         rankings_gene_names.append(adata_comp.var_names[global_indices])
-        # # If no reference group exists, ranking needs only to be done once (full mask)
-        # else:
-        #     scores = np.zeros((n_groups, n_genes))
-        #     chunk = []
-        #     n_cells = X.shape[0]
-        #     n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
-        #     if n_genes_max_chunk < n_genes - 1:
-        #         chunk_index = n_genes_max_chunk
-        #         while chunk_index < n_genes - 1:
-        #             chunk.append(chunk_index)
-        #             chunk_index = chunk_index + n_genes_max_chunk
-        #         chunk.append(n_genes - 1)
-        #     else:
-        #         chunk.append(n_genes - 1)
-        #     left = 0
-        #     for chunk_index, right in enumerate(chunk):
-        #         # Check if issparse is true
-        #         if issparse(X):
-        #             df1 = pd.DataFrame(data=X[:, left:right].todense())
-        #         else:
-        #             df1 = pd.DataFrame(data=X[:, left:right])
-        #         ranks = df1.rank()
-        #         # sum up adjusted_ranks to calculate W_m,n
-        #         for imask, mask in enumerate(groups_masks):
-        #             scores[imask, left:right] = np.sum(ranks.loc[mask, :])
-        #         left = right + 1
-        #
-        #     for imask, mask in enumerate(groups_masks):
-        #         scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
-        #             (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
-        #         scores = scores if not rankby_abs else np.abs(scores)
-        #         scores[np.isnan(scores)] = 0
-        #         partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
-        #         partial_indices = np.argsort(scores[imask, partition])[::-1]
-        #         global_indices = reference_indices[partition][partial_indices]
-        #         rankings_gene_scores.append(scores[imask, global_indices])
-        #         rankings_gene_names.append(adata_comp.var_names[global_indices])
 
     groups_order_save = [str(g) for g in groups_order]
     if (reference != 'rest' and method != 'logreg') or (method == 'logreg' and len(groups) == 2):
@@ -353,14 +277,20 @@ def rank_genes_groups(
         adata.uns[key_added]['logfoldchanges'] = np.rec.fromarrays(
             [n for n in rankings_gene_logfoldchanges],
             dtype=[(rn, 'float32') for rn in groups_order_save])
-
-    if method == 'wilcoxon':
         adata.uns[key_added]['pvals'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals],
             dtype=[(rn, 'float32') for rn in groups_order_save])
         adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals_adj],
             dtype=[(rn, 'float32') for rn in groups_order_save])
+
+    # if method == 'wilcoxon':
+    #     adata.uns[key_added]['pvals'] = np.rec.fromarrays(
+    #         [n for n in rankings_gene_pvals],
+    #         dtype=[(rn, 'float32') for rn in groups_order_save])
+    #     adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
+    #         [n for n in rankings_gene_pvals_adj],
+    #         dtype=[(rn, 'float32') for rn in groups_order_save])
     
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
