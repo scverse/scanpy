@@ -167,6 +167,7 @@ def rank_genes_groups(
             mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
             foldchanges = (means[igroup] + 1e-9) / mean_rest
             scores[np.isnan(scores)] = 0
+            #Get p-values
             denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
                 (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
             denominator_dof[np.flatnonzero(denominator_dof == 0)] = np.nan
@@ -244,8 +245,6 @@ def rank_genes_groups(
 
             # Loop over all genes
             for gene_idx in range(n_genes):
-                # if gene_idx % 20 == 0:
-                #     print('Group {}, Gene regressions:{:.2%}'.format(current_group, gene_idx / n_genes))
                 scores[gene_idx], pvals[gene_idx] = ranksums(X1[:,gene_idx],X2[:,gene_idx])
 
             mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
@@ -279,18 +278,10 @@ def rank_genes_groups(
             dtype=[(rn, 'float32') for rn in groups_order_save])
         adata.uns[key_added]['pvals'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals],
-            dtype=[(rn, 'float32') for rn in groups_order_save])
+            dtype=[(rn, 'float64') for rn in groups_order_save])
         adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals_adj],
-            dtype=[(rn, 'float32') for rn in groups_order_save])
-
-    # if method == 'wilcoxon':
-    #     adata.uns[key_added]['pvals'] = np.rec.fromarrays(
-    #         [n for n in rankings_gene_pvals],
-    #         dtype=[(rn, 'float32') for rn in groups_order_save])
-    #     adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
-    #         [n for n in rankings_gene_pvals_adj],
-    #         dtype=[(rn, 'float32') for rn in groups_order_save])
+            dtype=[(rn, 'float64') for rn in groups_order_save])
     
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
@@ -298,8 +289,8 @@ def rank_genes_groups(
         '    \'names\', sorted np.recarray to be indexed by group ids\n'
         '    \'scores\', sorted np.recarray to be indexed by group ids\n'
         .format(key_added)
-        + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids'
-           if method in {'t-test', 't-test_overestim_var'} else '')
-        + ('    \'pvals\', sorted np.recarray to be indexed by group ids'
-           if method in {'wilcoxon'} else ''))
+        + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids\n'
+           '    \'pvals\', sorted np.recarray to be indexed by group ids\n'
+           '    \'pvals_adj\', sorted np.recarray to be indexed by group ids'
+           if method in {'t-test', 't-test_overestim_var', 'wilcoxon'} else ''))
     return adata if copy else None
