@@ -424,6 +424,12 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
         categories = list(adata.obs[value_to_plot].cat.categories)
         colors = adata.uns[value_to_plot + '_colors']
 
+        if multi_panel is True:
+            # Shrink current axis by 10% to fit legend and match
+            # size of plots that are not categorical
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.84, box.height])
+
         if groups is not None:
             # only label groups with the respective color
             colors = [colors[categories.index(x)] for x in groups]
@@ -434,11 +440,6 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 color = colors[idx]
                 # use empty scatter to set labels
                 ax.scatter([], [], c=color, label=label)
-            if multi_panel is True:
-                # Shrink current axis by 10% to fit legend and match
-                # size of plots that are not categorical
-                box = ax.get_position()
-                ax.set_position([box.x0, box.y0, box.width * 0.85, box.height])
             ax.legend(
                 frameon=False, loc='center left',
                 bbox_to_anchor=(1, 0.5),
