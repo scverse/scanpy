@@ -175,7 +175,7 @@ def plot_scatter(adata,
                  title=None,
                  show=None,
                  save=None,
-                 ax=None, **kwargs):
+                 ax=None, return_fig=None, **kwargs):
 
     sanitize_anndata(adata)
     if color_map is not None:
@@ -332,8 +332,10 @@ def plot_scatter(adata,
             continue
 
         _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                                _data_points, legend_fontweight, legend_fontsize, groups)
+                                _data_points, legend_fontweight, legend_fontsize, groups, multi_panel)
 
+    if return_fig is True:
+        return fig
     axs = axs if multi_panel else ax
     utils.savefig_or_show(basis, show=show, save=save)
     if show is False:
@@ -409,7 +411,8 @@ def _get_data_points(adata, basis, projection, components):
 
 
 def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                            scatter_array, legend_fontweight, legend_fontsize, groups):
+                            scatter_array, legend_fontweight, legend_fontsize,
+                            groups, multi_panel):
     """
     Adds a color bar or a legend to the given ax. A legend is added when the
     data is categorical and a color bar is added when a continuous value was used.
@@ -431,6 +434,11 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 color = colors[idx]
                 # use empty scatter to set labels
                 ax.scatter([], [], c=color, label=label)
+            if multi_panel is True:
+                # Shrink current axis by 10% to fit legend and match
+                # size of plots that are not categorical
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0, box.width * 0.85, box.height])
             ax.legend(
                 frameon=False, loc='center left',
                 bbox_to_anchor=(1, 0.5),
@@ -452,6 +460,91 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax, pad=0.01)
+
+
+def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
+    """
+    Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
+
+    Parameters
+    ----------
+    adata : annData object
+    value_to_plot : name of a valid categorical observation
+    palette : Palette should be either a valid `matplotlib.pyplot.colormaps()` string,
+              a list of colors (in a format that can be understood by matplotlib,
+              eg. RGB, RGBS, hex, or a cycler object with key='color'
+
+    Returns
+    -------
+    None
+    """
+    from matplotlib.colors import to_hex
+    from cycler import Cycler, cycler
+
+    categories = adata.obs[value_to_plot].cat.categories
+    # check is palette is a valid color map
+    if isinstance(palette, str) and palette in pl.colormaps():
+        # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
+        cmap = pl.get_cmap(palette)
+        colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
+
+    else:
+        # check if palette is a list and convert it to a cycler, thus
+        # it doesnt matter if the list is shorter than the categories length:
+        if isinstance(palette, list):
+            if len(palette) < len(categories):
+                logg.warn("Length of palette colors is smaller than the number of "
+                          "categories (palette length: {}, categories length: {}. "
+                          "Some categories will have the same color."
+                          .format(len(palette), len(categories)))
+            palette = cycler(color=palette)
+        if not isinstance(palette, Cycler):
+            raise ValueError("Please check that the value of 'palette' is a "
+                             "valid matplotlib colormap string (eg. Set2), a "
+                             "list of color names or a cycler with a 'color' key.")
+        if 'color' not in palette.keys:
+            raise ValueError("Please set the palette key 'color'.")
+
+        cc = palette()
+        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
+
+    adata.uns[value_to_plot + '_colors'] = colors_list
+
+
+def _set_default_colors_for_categorical_obs(adata, value_to_plot):
+    """
+    Sets the adata.uns[value_to_plot + '_colors'] using default color palettes
+
+    Parameters
+    ----------
+    adata : annData object
+    value_to_plot : name of a valid categorical observation
+
+    Returns
+    -------
+    None
+    """
+    from .. import palettes
+
+    categories = adata.obs[value_to_plot].cat.categories
+    length = len(categories)
+
+    # check if default matplotlib palette has enough colors
+    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
+        cc = rcParams['axes.prop_cycle']()
+        palette = [next(cc)['color'] for _ in range(length)]
+
+    else:
+        if length <= 28:
+            palette = palettes.default_26
+        elif length <= len(palettes.default_64):  # 103 colors
+            palette = palettes.default_64
+        else:
+            palette = ['grey' for i in range(length)]
+            logg.info('the obs value: "{}" has more than 103 categories. Uniform '
+                      '\'grey\' color will be used for all categories.')
+
+    adata.uns[value_to_plot + '_colors'] = palette[:length]
 
 
 def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False):
@@ -476,15 +569,16 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
             categorical = True
 
             if palette:
-                utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot,
-                                                                   palette=palette, force_update_colors=True)
+                # use category colors base on given palette
+                _set_colors_for_categorical_obs(adata, value_to_plot, palette)
             else:
-                # it is a good idea to always run add_colors_for_categorical_sample_annotation not only updates
-                # as this will fix most problems with color and categories.
-                utils.add_colors_for_categorical_sample_annotation(adata, value_to_plot)
+                if value_to_plot + '_colors' not in adata.uns or \
+                    len(adata.uns[value_to_plot + '_colors']) < len(adata.obs[value_to_plot].cat.categories):
+                    #  set a default palette in case that no colors or few colors are found
+                    _set_default_colors_for_categorical_obs(adata, value_to_plot)
 
             # for categorical data, colors should be
-            # stored in adata.uns
+            # stored in adata.uns[value_to_plot + '_colors']
             # Obtain color vector by converting every category
             # into its respective color
 

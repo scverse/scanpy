@@ -46,8 +46,10 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `bold`)
      Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
      otherwise to 'normal'. Available are `['light', 'normal', 'medium',
      'semibold', 'bold', 'heavy', 'black']`.
-palette : list of `str`, optional (default: `None`)
-     Colors to use for plotting groups (categorical annotation).
+palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
+     Colors to use for plotting categorical annotation groups. The palette can
+     be a valid `matplotlib.pyplot.colormap` name like 'Set2' or 'tab20', a 
+     list of colors like ['red', '#ccdd11', (0.1, 0.2, 1)] or a Cycler object.
 frameon : `bool`, optional (default: `True`)
      Draw a frame around the scatter plot.
 wspace : `float` (default: 0.1)
