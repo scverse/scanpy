@@ -21,7 +21,7 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
         Standard deviation of clusters.
     n_observations : `int`, optional (default: 640)
         Number of observations. By default, this is the same observation number as in
-        ``sc.examples.krumsiek11()``.
+        ``sc.datasets.krumsiek11()``.
 
     Returns
     -------
