@@ -33,33 +33,37 @@ sort_order : `bool`, optional (default: `True`)
 groups : `str`, optional (default: `all groups`)
     Restrict to a few categories in categorical observation annotation.
 components : `str` or list of `str`, optional (default: '1,2')
-     For instance, ['1,2', '2,3']. To plot all available components 
-     use components='all'
+    For instance, ['1,2', '2,3']. To plot all available components 
+    use components='all'
 projection : {'2d', '3d'}, optional (default: '2d')
-     Projection of plot.
+    Projection of plot.
 legend_loc : str, optional (default: 'right margin')
-     Location of legend, either 'on data', 'right margin' or valid keywords
-     for matplotlib.legend.
+    Location of legend, either 'on data', 'right margin' or valid keywords
+    for matplotlib.legend.
 legend_fontsize : `int`, optional (default: `None`)
-     Legend font size.
+    Legend font size.
 legend_fontweight : {'normal', 'bold', ...}, optional (default: `bold`)
-     Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
-     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
-     'semibold', 'bold', 'heavy', 'black']`.
+    Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
+    otherwise to 'normal'. Available are `['light', 'normal', 'medium',
+    'semibold', 'bold', 'heavy', 'black']`.
 palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
-     Colors to use for plotting categorical annotation groups. The palette can
-     be a valid `matplotlib.pyplot.colormap` name like 'Set2' or 'tab20', a 
-     list of colors like ['red', '#ccdd11', (0.1, 0.2, 1)] or a Cycler object.
+    Colors to use for plotting categorical annotation groups. The palette can
+    be a valid `matplotlib.pyplot.colormap` name like 'Set2' or 'tab20', a 
+    list of colors like ['red', '#ccdd11', (0.1, 0.2, 1)] or a Cycler object.
 frameon : `bool`, optional (default: `True`)
-     Draw a frame around the scatter plot.
+    Draw a frame around the scatter plot.
+panels_per_row : `int` (default: 4)
+    Number of panels per row.
 wspace : `float` (default: 0.1)
-     Adjust the width of the space between multiple panels.
+    Adjust the width of the space between multiple panels.
 hspace : `float` (default: 0.25)
-     Adjust the height of the space between multiple panels.
+    Adjust the height of the space between multiple panels.
 title : `str`, optional (default: `None`)
-     Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
-**kwargs: Arguments to pass to `matplotlib.pyplot.scatter`, for example the color map (eg: cmap='viridis'),
-the marker size (s=10) the maximum and minimum values (eg. vmin=-2, vmax=5) etc. 
+    Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
+**kwargs : keyword arguments, optional
+    Arguments to pass to `matplotlib.pyplot.scatter`, for example the color map
+    (eg: cmap='viridis'), the marker size (s=10) the maximum and minimum values
+    (eg. vmin=-2, vmax=5) etc..
 """
 
 
