@@ -240,8 +240,14 @@ def rank_genes_groups(
             scores = np.zeros(n_genes)
             pvals = np.zeros(n_genes)
 
-            X1=X[mask].todense()
-            X2=X[mask_rest].todense()
+            X1 = X[mask]
+            X2 = X[mask_rest]
+            #Check if matrix is sparse
+            if issparse(X1):
+                X1 = X1.todense()
+
+            if issparse(X2):
+                X2 = X2.todense()
 
             # Loop over all genes
             for gene_idx in range(n_genes):
