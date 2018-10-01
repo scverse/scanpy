@@ -169,9 +169,9 @@ def plot_scatter(adata,
                  legend_fontsize=None,
                  legend_fontweight='bold',
                  legend_loc='right margin',
-                 panels_per_row=4,
+                 ncols=4,
                  hspace=0.25,
-                 wspace=0.1,
+                 wspace=None,
                  title=None,
                  show=None,
                  save=None,
@@ -196,9 +196,13 @@ def plot_scatter(adata,
     else:
         use_raw = False
 
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
     if adata.raw is None and use_raw is True:
         raise ValueError("`use_raw` is set to True but annData object does not have raw. "
-                  "Please check.")
+                         "Please check.")
 
     ####
     # get the points position and the components list (only if components is not 'None)
@@ -223,7 +227,7 @@ def plot_scatter(adata,
         from matplotlib import gridspec
         # set up the figure
         num_panels = len(color) * len(components_list)
-        n_panels_x = panels_per_row
+        n_panels_x = ncols
         n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
         # each panel will have the size of rcParams['figure.figsize']
         fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
@@ -428,7 +432,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
             # Shrink current axis by 10% to fit legend and match
             # size of plots that are not categorical
             box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.84, box.height])
+            ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
 
         if groups is not None:
             # only label groups with the respective color
@@ -442,10 +446,11 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 ax.scatter([], [], c=color, label=label)
             ax.legend(
                 frameon=False, loc='center left',
-                bbox_to_anchor=(1, 0.5),
+                bbox_to_anchor=(0.97, 0.5),
                 ncol=(1 if len(categories) <= 14
                       else 2 if len(categories) <= 30 else 3),
-                fontsize=legend_fontsize)
+                fontsize=legend_fontsize,
+                handletextpad=0.1)
 
         if legend_loc == 'on data':
             # identify centroids to put labels
@@ -460,7 +465,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                         fontsize=legend_fontsize)
     else:
         # add colorbar to figure
-        pl.colorbar(cax, ax=ax, pad=0.01)
+        pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
 
 def _set_colors_for_categorical_obs(adata, value_to_plot, palette):

@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
 
-sc.pl.set_rcParams_defaults()
+sc.set_figure_params(dpi=80, color_map='viridis')
 
 #####
 # To update the test images:
@@ -123,13 +123,17 @@ def test_stacked_violin():
 
 
 def test_violin():
+    sc.pl.set_rcParams_defaults()
+    sc.set_figure_params(dpi=80, color_map='viridis')
+
     pbmc = sc.datasets.pbmc68k_reduced()
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_violin_', delete=False)
-    sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], stripplot=True, multi_panel=True, jitter=True)
+    sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'],
+                 stripplot=True, multi_panel=True, jitter=True)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
 
-    res = compare_images(ROOT + '/master_violin_multi_panel.png', outfile.name, tolerance)
+    res = compare_images(ROOT + '/master_violin_multi_panel.png', outfile.name, 40)
 
     assert res is None, res
 

@@ -52,7 +52,7 @@ palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
     list of colors like ['red', '#ccdd11', (0.1, 0.2, 1)] or a Cycler object.
 frameon : `bool`, optional (default: `True`)
     Draw a frame around the scatter plot.
-panels_per_row : `int` (default: 4)
+ncols : `int` (default: 4)
     Number of panels per row.
 wspace : `float` (default: 0.1)
     Adjust the width of the space between multiple panels.
