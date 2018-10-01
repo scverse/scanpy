@@ -11,7 +11,7 @@ import scanpy.api as sc
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
-tolerance = 13  # default matplotlib pixel difference tolerance
+tolerance = 15
 
 sc.set_figure_params(dpi=80, color_map='viridis')
 
