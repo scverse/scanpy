@@ -23,7 +23,7 @@ def save_and_compare_images(basename):
     outname = './figures/' + basename + '.png'
     pl.savefig(outname, dpi=80)
     pl.close()
-    tolerance = 15
+    tolerance = 20
     res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
     assert res is None, res
 
