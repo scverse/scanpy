@@ -54,6 +54,7 @@ def test_dotplot():
     sc.pl.dotplot(adata, adata.var_names, 'cell_type', use_raw=False, show=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
+    tolerance = 15
     res = compare_images(ROOT + '/master_dotplot.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -79,6 +80,7 @@ def test_matrixplot():
     sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, show=False)
     pl.savefig(outfile.name, dpi=80)
     pl.close()
+    tolerance = 15
     res = compare_images(ROOT + '/master_matrixplot.png', outfile.name, tolerance)
 
     assert res is None, res
@@ -144,6 +146,7 @@ def test_violin():
 
 def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68k_reduced()
+    tolerance = 15
 
     # test ranked genes panels
     outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_genes_groups_', delete=False)
