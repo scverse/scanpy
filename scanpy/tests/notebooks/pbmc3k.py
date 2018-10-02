@@ -17,7 +17,6 @@ import scanpy.api as sc
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 
-tolerance = 13  # default matplotlib pixel difference tolerance
 
 
 def save_and_compare_images(basename):
@@ -30,6 +29,7 @@ def save_and_compare_images(basename):
 
 
 def test_pbmc3k():
+    tolerance = 15
 
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
