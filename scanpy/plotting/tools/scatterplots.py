@@ -179,10 +179,8 @@ def plot_scatter(adata,
 
     sanitize_anndata(adata)
     if color_map is not None:
-        print("instead of color_map use cmap")
         kwargs['cmap'] = color_map
     if size is not None:
-        print("instead of size use 's'")
         kwargs['s'] = size
 
     if projection == '3d':
