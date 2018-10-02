@@ -19,6 +19,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 
 tolerance = 13  # default matplotlib pixel difference tolerance
 
+
 def save_and_compare_images(basename):
     if not os.path.exists('./figures/'): os.makedirs('./figures/')
     outname = './figures/' + basename + '.png'
@@ -26,6 +27,7 @@ def save_and_compare_images(basename):
     pl.close()
     res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
     assert res is None, res
+
 
 def test_pbmc3k():
 
