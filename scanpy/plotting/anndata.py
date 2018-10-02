@@ -677,7 +677,13 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
             if rotation is not None:
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
-    if show == False: return axs[0] if len(axs) == 1 else axs
+    if show is False:
+        if multi_panel:
+            return g
+        elif len(axs) == 1:
+            return axs[0]
+        else:
+            return axs
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
