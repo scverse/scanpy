@@ -17,15 +17,16 @@ import scanpy.api as sc
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 
-tolerance = 13  # default matplotlib pixel difference tolerance
 
 def save_and_compare_images(basename):
     if not os.path.exists('./figures/'): os.makedirs('./figures/')
     outname = './figures/' + basename + '.png'
     pl.savefig(outname, dpi=80)
     pl.close()
+    tolerance = 20
     res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
     assert res is None, res
+
 
 def test_pbmc3k():
 
@@ -33,7 +34,7 @@ def test_pbmc3k():
 
     # Preprocessing
 
-    sc.pl.highest_expr_genes(adata, n_top=20)
+    sc.pl.highest_expr_genes(adata, n_top=20, show=False)
     save_and_compare_images('highest_expr_genes')
 
     sc.pp.filter_cells(adata, min_genes=200)
@@ -48,12 +49,12 @@ def test_pbmc3k():
     adata.obs['n_counts'] = adata.X.sum(axis=1).A1
 
     sc.pl.violin(adata, ['n_genes', 'n_counts', 'percent_mito'],
-                 jitter=False, multi_panel=True)
+                 jitter=False, multi_panel=True, show=False)
     save_and_compare_images('violin')
 
-    sc.pl.scatter(adata, x='n_counts', y='percent_mito')
+    sc.pl.scatter(adata, x='n_counts', y='percent_mito', show=False)
     save_and_compare_images('scatter_1')
-    sc.pl.scatter(adata, x='n_counts', y='n_genes')
+    sc.pl.scatter(adata, x='n_counts', y='n_genes', show=False)
     save_and_compare_images('scatter_2')
 
     adata = adata[adata.obs['n_genes'] < 2500, :]
@@ -65,7 +66,7 @@ def test_pbmc3k():
 
     filter_result = sc.pp.filter_genes_dispersion(
         adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5)
-    sc.pl.filter_genes_dispersion(filter_result)
+    sc.pl.filter_genes_dispersion(filter_result, show=False)
     save_and_compare_images('filter_genes_dispersion')
 
     adata = adata[:, filter_result.gene_subset]
@@ -76,10 +77,10 @@ def test_pbmc3k():
     # PCA
 
     sc.tl.pca(adata, svd_solver='arpack')
-    sc.pl.pca(adata, color='CST3')
+    sc.pl.pca(adata, color='CST3', show=False)
     save_and_compare_images('pca')
 
-    sc.pl.pca_variance_ratio(adata, log=True)
+    sc.pl.pca_variance_ratio(adata, log=True, show=False)
     save_and_compare_images('pca_variance_ratio')
 
     # UMAP
@@ -87,29 +88,29 @@ def test_pbmc3k():
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40)
     # sc.tl.umap(adata)  # umaps lead to slight variations
 
-    # sc.pl.umap(adata, color=['CST3', 'NKG7', 'PPBP'], use_raw=False)
+    # sc.pl.umap(adata, color=['CST3', 'NKG7', 'PPBP'], use_raw=False, show=False)
     # save_and_compare_images('umap_1')
 
     # Clustering the graph
 
     sc.tl.louvain(adata)
-    # sc.pl.umap(adata, color=['louvain', 'CST3', 'NKG7'])
+    # sc.pl.umap(adata, color=['louvain', 'CST3', 'NKG7'], show=False)
     # save_and_compare_images('umap_2')
-    sc.pl.scatter(adata, 'CST3', 'NKG7', color='louvain')
+    sc.pl.scatter(adata, 'CST3', 'NKG7', color='louvain', show=False)
     save_and_compare_images('scatter_3')
 
     # Finding marker genes
 
     sc.tl.rank_genes_groups(adata, 'louvain')
-    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False)
+    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images('rank_genes_groups_1')
 
     sc.tl.rank_genes_groups(adata, 'louvain', method='logreg')
-    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False)
+    sc.pl.rank_genes_groups(adata, n_genes=20, sharey=False, show=False)
     save_and_compare_images('rank_genes_groups_2')
 
     sc.tl.rank_genes_groups(adata, 'louvain', groups=['0'], reference='1')
-    sc.pl.rank_genes_groups(adata, groups='0', n_genes=20)
+    sc.pl.rank_genes_groups(adata, groups='0', n_genes=20, show=False)
     save_and_compare_images('rank_genes_groups_3')
 
     # gives a strange error, probably due to jitter or something
@@ -123,8 +124,8 @@ def test_pbmc3k():
         'Dendritic cells', 'Megakaryocytes']
     adata.rename_categories('louvain', new_cluster_names)
 
-    # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False)
+    # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False, show=False)
     # save_and_compare_images('umap_3')
-    
-    sc.pl.violin(adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90)
+
+    sc.pl.violin(adata, ['CST3', 'NKG7', 'PPBP'], groupby='louvain', rotation=90, show=False)
     save_and_compare_images('violin_2')

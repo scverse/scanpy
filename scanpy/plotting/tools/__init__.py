@@ -10,8 +10,7 @@ from ... import logging as logg
 from ..anndata import scatter, ranking
 from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from ..docs import doc_scatter_bulk, doc_show_save_ax
-
-
+from .scatterplots import pca
 # ------------------------------------------------------------------------------
 # PCA
 # ------------------------------------------------------------------------------
@@ -43,79 +42,9 @@ def pca_overview(adata, **params):
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
-    pca_scatter(adata, **params, show=False)
+    scatterplots.pca(adata, **params, show=False)
     pca_loadings(adata, show=False)
     pca_variance_ratio(adata, show=show)
-
-
-@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca(
-        adata,
-        color=None,
-        use_raw=True,
-        sort_order=True,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        color_map=None,
-        palette=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
-    """\
-    Scatter plot in PCA coordinates.
-
-    Parameters
-    ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
-    {scatter_bulk}
-    show : bool, optional (default: `None`)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-
-    Returns
-    -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
-    """
-    axs = scatter(
-        adata,
-        basis='pca',
-        color=color,
-        use_raw=use_raw,
-        sort_order=sort_order,
-        alpha=alpha,
-        groups=groups,
-        components=components,
-        projection=projection,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        color_map=color_map,
-        palette=palette,
-        right_margin=right_margin,
-        size=size,
-        title=title,
-        show=False,
-        save=False, ax=ax)
-    utils.savefig_or_show('pca_scatter', show=show, save=save)
-    if show == False: return axs
 
 
 # backwards compat

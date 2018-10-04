@@ -677,7 +677,13 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
             if rotation is not None:
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
-    if show == False: return axs[0] if len(axs) == 1 else axs
+    if show is False:
+        if multi_panel:
+            return g
+        elif len(axs) == 1:
+            return axs[0]
+        else:
+            return axs
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -823,10 +829,25 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     if use_raw is None and adata.raw is not None: use_raw = True
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+
     from matplotlib import gridspec
 
     if swap_axes is False:
         # plot image in which x = var_names and y = groupby categories
+        global count
+        count = 0
+
+        def rename_cols_to_int(value):
+            global count
+            count += 1
+            return count
+
+        # All columns should have a unique name, otherwise
+        # pd.melt object that is passed to seaborn will merge non-unique columns.
+        # Here, I simply rename the columns using a count from 1..n using the
+        # mapping function: `rename_cols_to_int`
+        obs_tidy.rename(rename_cols_to_int, axis='columns', inplace=True)
+
         if figsize is None:
             height = len(categories) * 0.2 + 3
             width = len(var_names) * 0.2 + 1
@@ -847,7 +868,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         axs = gridspec.GridSpec(nrows=num_rows, ncols=1, height_ratios=height_ratios)
 
         ax0 = None
-
         for idx in range(num_rows)[::-1]:  # iterate in reverse to start on the bottom plot
                                            # this facilitates adding the brackets plot (if
                                            # needed) by sharing the x axis with a previous
@@ -864,8 +884,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
                 continue
 
-            df = pd.melt(obs_tidy[obs_tidy.index == category], value_vars=var_names)
-
+            df = pd.melt(obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns)
             if ax0 is None:
                 ax = fig.add_subplot(axs[idx])
                 ax0 = ax
@@ -896,6 +915,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
                 # axis ticks and labels for each plot
                 ax.set_xticklabels([])
                 ax.tick_params(axis='x', bottom=False, top=False, labeltop=False, labelbottom=False)
+            else:
+                ax.set_xticklabels(var_names)
 
         ax0.tick_params(axis='x', labelrotation=90, labelsize='small')
 
