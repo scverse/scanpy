@@ -96,6 +96,7 @@ def rank_genes_groups(
         raise ValueError('reference = {} needs to be one of groupby = {}.'
                          .format(reference,
                                  adata.obs[groupby].cat.categories.tolist()))
+    
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
 
@@ -184,12 +185,12 @@ def rank_genes_groups(
         if adata.raw is not None and use_raw:
             adata_comp = adata_copy.raw
         X = adata_comp.X
-            
+
         clf = LogisticRegression(**kwds)
-        clf.fit(X, adata_copy.obs[groupby])
+        clf.fit(X, adata_copy.obs[groupby].cat.codes)
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
-            if len(groups) <= 2:  # binary logistic regression
+            if len(groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
             else:
                 scores = scores_all[igroup]
@@ -198,7 +199,7 @@ def rank_genes_groups(
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_names.append(adata_comp.var_names[global_indices])
-            if len(groups) <= 2:
+            if len(groups_order) <= 2:
                 break
 
     elif method == 'wilcoxon':
