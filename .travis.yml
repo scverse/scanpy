@@ -6,6 +6,6 @@ install: source .travis_install.sh
 env:
   - MPLBACKEND=Agg
 script:
-  - pytest
+  - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null

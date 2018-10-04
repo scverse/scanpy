@@ -265,8 +265,7 @@ def adjust_palette(palette, length):
         return palette
 
 
-def add_colors_for_categorical_sample_annotation(
-        adata, key, palette=None, force_update_colors=False):
+def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force_update_colors=False):
     if key + '_colors' in adata.uns and not force_update_colors:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
             logg.info('    number of colors in `.uns[{}\'_colors\']` smaller than number of categories,'
