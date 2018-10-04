@@ -448,7 +448,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 ncol=(1 if len(categories) <= 14
                       else 2 if len(categories) <= 30 else 3),
                 fontsize=legend_fontsize,
-                handletextpad=0.1)
+                handletextpad=None)  # make this respect the rcParams default
 
         if legend_loc == 'on data':
             # identify centroids to put labels
