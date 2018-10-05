@@ -278,10 +278,10 @@ def test_scatterplots():
     assert res is None, res
 
     # test diffmap
-    sc.tl.diffmap(pbmc)
-    sc.pl.diffmap(pbmc, components='all', color=['CD3D'], show=False)
-    pl.savefig(outfile.name, dpi=80)
-    pl.close()
+    # sc.tl.diffmap(pbmc)
+    # sc.pl.diffmap(pbmc, components='all', color=['CD3D'], show=False)
+    # pl.savefig(outfile.name, dpi=80)
+    # pl.close()
 
-    res = compare_images(ROOT + '/master_diffmap.png', outfile.name, tolerance)
-    assert res is None, res
+    # res = compare_images(ROOT + '/master_diffmap.png', outfile.name, tolerance)
+    # assert res is None, res
