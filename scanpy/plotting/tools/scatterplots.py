@@ -374,25 +374,27 @@ def _get_data_points(adata, basis, projection, components):
             for i in range(1, adata.obsm['X_{}'.format(basis)].shape[1])]
 
     components_list = []
+    offset = 0
+    if basis == 'diffmap': offset = 1
     if components is not None:
         # components have different formats, either a list with integers, a string
         # or a list of strings.
 
         if isinstance(components, str):
             # eg: components='1,2'
-            components_list.append([int(x.strip()) - 1 for x in components.split(',')])
+            components_list.append([int(x.strip()) - 1 + offset for x in components.split(',')])
 
         elif isinstance(components, list):
             if isinstance(components[0], int):
                 # components=[1,2]
-                components_list.append([int(x) - 1 for x in components])
+                components_list.append([int(x) - 1 + offset for x in components])
             else:
                 # in this case, the components are str
                 # eg: components=['1,2'] or components=['1,2', '2,3]
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append([int(x.strip()) - 1 for x in comp.split(',')])
+                    components_list.append([int(x.strip()) - 1 + offset for x in comp.split(',')])
 
         else:
             raise ValueError("Given components: '{}' are not valid. Please check. "
@@ -407,7 +409,7 @@ def _get_data_points(adata, basis, projection, components):
                              "A valid example is `components='2,3'`")
 
     else:
-        data_points = [adata.obsm['X_' + basis][:, :n_dims]]
+        data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
         components_list = []
     return data_points, components_list
 
