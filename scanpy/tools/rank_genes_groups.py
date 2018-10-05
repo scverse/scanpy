@@ -216,57 +216,96 @@ def rank_genes_groups(
                 break
 
     elif method == 'wilcoxon':
-        # Edited to use scicpy.stats.ranksum test and output p-values
-        from scipy.stats import ranksums
-        # loop over all masks and compute means, variances and sample numbers
-        means = np.zeros((n_groups, n_genes))
-        vars = np.zeros((n_groups, n_genes))
-        for imask, mask in enumerate(groups_masks):
-            means[imask], vars[imask] = simple._get_mean_var(X[mask])
-        # test each either against the union of all other groups or against a
-        # specific group
-            if reference == 'rest':
-                mask_rest = ~mask
-            else:
-                if imask == ireference:
-                    continue
+        CONST_MAX_SIZE = 10000000
+        ns_rest = np.zeros(n_groups, dtype=int)
+        # initialize space for z-scores
+        scores = np.zeros(n_genes)
+        # First loop: Loop over all genes
+        if reference != 'rest':
+            for imask, mask in enumerate(groups_masks):
+                if imask == ireference: continue
+                else: mask_rest = groups_masks[ireference]
+                ns_rest[imask] = np.where(mask_rest)[0].size
+                if ns_rest[imask] <= 25 or ns[imask] <= 25:
+                    logg.hint('Few observations in a group for '
+                              'normal approximation (<=25). Lower test accuracy.')
+                n_active = ns[imask]
+                m_active = ns_rest[imask]
+                # Now calculate gene expression ranking in chunkes:
+                chunk = []
+                # Calculate chunk frames
+                n_genes_max_chunk = floor(CONST_MAX_SIZE / (n_active + m_active))
+                if n_genes_max_chunk < n_genes - 1:
+                    chunk_index = n_genes_max_chunk
+                    while chunk_index < n_genes - 1:
+                        chunk.append(chunk_index)
+                        chunk_index = chunk_index + n_genes_max_chunk
+                    chunk.append(n_genes - 1)
                 else:
-                    mask_rest = groups_masks[ireference]
-            current_group = groups_order[imask]
-            mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
-            ns_group = ns[imask]  # number of observations in group
-            ns_rest = np.where(mask_rest)[0].size #number of observations in 'rest'
+                    chunk.append(n_genes - 1)
+                left = 0
+                # Calculate rank sums for each chunk for the current mask
+                for chunk_index, right in enumerate(chunk):
+                    # Check if issparse is true: AnnData objects are currently sparse.csr or ndarray.
+                    if issparse(X):
+                        df1 = pd.DataFrame(data=X[mask, left:right].todense())
+                        df2 = pd.DataFrame(data=X[mask_rest, left:right].todense(),
+                                           index=np.arange(start=n_active, stop=n_active + m_active))
+                    else:
+                        df1 = pd.DataFrame(data=X[mask, left:right])
+                        df2 = pd.DataFrame(data=X[mask_rest, left:right],
+                                           index=np.arange(start=n_active, stop=n_active + m_active))
+                    df1 = df1.append(df2)
+                    ranks = df1.rank()
+                    # sum up adjusted_ranks to calculate W_m,n
+                    scores[left:right] = np.sum(ranks.loc[0:n_active, :])
+                    left = right + 1
+                scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
+                    (n_active * m_active * (n_active + m_active + 1) / 12))
+                scores = scores if only_positive else np.abs(scores)
+                scores[np.isnan(scores)] = 0
+                partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
+                partial_indices = np.argsort(scores[partition])[::-1]
+                global_indices = reference_indices[partition][partial_indices]
+                rankings_gene_scores.append(scores[global_indices])
+                rankings_gene_names.append(adata_comp.var_names[global_indices])
+        # If no reference group exists, ranking needs only to be done once (full mask)
+        else:
+            scores = np.zeros((n_groups, n_genes))
+            chunk = []
+            n_cells = X.shape[0]
+            n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
+            if n_genes_max_chunk < n_genes - 1:
+                chunk_index = n_genes_max_chunk
+                while chunk_index < n_genes - 1:
+                    chunk.append(chunk_index)
+                    chunk_index = chunk_index + n_genes_max_chunk
+                chunk.append(n_genes - 1)
+            else:
+                chunk.append(n_genes - 1)
+            left = 0
+            for chunk_index, right in enumerate(chunk):
+                # Check if issparse is true
+                if issparse(X):
+                    df1 = pd.DataFrame(data=X[:, left:right].todense())
+                else:
+                    df1 = pd.DataFrame(data=X[:, left:right])
+                ranks = df1.rank()
+                # sum up adjusted_ranks to calculate W_m,n
+                for imask, mask in enumerate(groups_masks):
+                    scores[imask, left:right] = np.sum(ranks.loc[mask, :])
+                left = right + 1
 
-            #Initialize scores and p-values vectors
-            scores = np.zeros(n_genes)
-            pvals = np.zeros(n_genes)
-
-            X1 = X[mask]
-            X2 = X[mask_rest]
-            #Check if matrix is sparse
-            if issparse(X1):
-                X1 = X1.todense()
-
-            if issparse(X2):
-                X2 = X2.todense()
-
-            # Loop over all genes
-            for gene_idx in range(n_genes):
-                scores[gene_idx], pvals[gene_idx] = ranksums(X1[:,gene_idx],X2[:,gene_idx])
-
-            mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
-            foldchanges = (means[imask] + 1e-9) / mean_rest
-            scores[np.isnan(scores)] = 0
-            pvals_adj = pvals*n_genes
-            scores_sort = np.abs(scores) if rankby_abs else scores
-            partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
-            partial_indices = np.argsort(scores_sort[partition])[::-1]
-            global_indices = reference_indices[partition][partial_indices]
-            rankings_gene_scores.append(scores[global_indices])
-            rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
-            rankings_gene_names.append(adata_comp.var_names[global_indices])
-            rankings_gene_pvals.append(pvals[global_indices])
-            rankings_gene_pvals_adj.append(pvals_adj[global_indices])
+            for imask, mask in enumerate(groups_masks):
+                scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
+                    (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
+                scores = scores if only_positive else np.abs(scores)
+                scores[np.isnan(scores)] = 0
+                partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
+                partial_indices = np.argsort(scores[imask, partition])[::-1]
+                global_indices = reference_indices[partition][partial_indices]
+                rankings_gene_scores.append(scores[imask, global_indices])
+                rankings_gene_names.append(adata_comp.var_names[global_indices])
 
 
     groups_order_save = [str(g) for g in groups_order]
@@ -299,5 +338,5 @@ def rank_genes_groups(
         + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids\n'
            '    \'pvals\', sorted np.recarray to be indexed by group ids\n'
            '    \'pvals_adj\', sorted np.recarray to be indexed by group ids'
-           if method in {'t-test', 't-test_overestim_var', 'wilcoxon'} else ''))
+           if method in {'t-test', 't-test_overestim_var'} else ''))
     return adata if copy else None
