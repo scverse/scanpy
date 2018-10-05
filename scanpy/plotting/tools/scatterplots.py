@@ -1,0 +1,625 @@
+from matplotlib import pyplot as pl
+from pandas.api.types import is_categorical_dtype
+import numpy as np
+from matplotlib import rcParams
+from .. import utils
+from ...utils import sanitize_anndata, doc_params
+from ... import settings
+from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from ... import logging as logg
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def umap(adata, **kwargs):
+    """\
+    Scatter plot in UMAP basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    return plot_scatter(adata, basis='umap', **kwargs)
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def tsne(adata, **kwargs):
+    """\
+    Scatter plot in tSNE basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    return plot_scatter(adata, basis='tsne', **kwargs)
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def phate(adata, **kwargs):
+    """\
+    Scatter plot in PHATE basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    corresponds to the 'right margin' drawing area for color bars and legends.
+
+    Examples
+    --------
+    >>> import scanpy.api as sc
+    >>> import phate
+    >>> data, branches = phate.tree.gen_dla(n_dim=100,
+                                            n_branch=20,
+                                            branch_length=100)
+    >>> data.shape
+    (2000, 100)
+    >>> adata = sc.AnnData(data)
+    >>> adata.obs['branches'] = branches
+    >>> sc.tl.phate(adata, k=5, a=20, t=150)
+    >>> adata.obsm['X_phate'].shape
+    (2000, 2)
+    >>> sc.pl.phate(adata,
+                    color='branches',
+                    color_map='tab20')
+    """
+    return plot_scatter(adata, basis='phate', **kwargs)
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def diffmap(adata, **kwargs):
+    """\
+    Scatter plot in Diffusion Map basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    return plot_scatter(adata, basis='diffmap', **kwargs)
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def draw_graph(adata, layout=None, **kwargs):
+    """\
+    Scatter plot in graph-drawing basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    layout : {{'fa', 'fr', 'drl', ...}}, optional (default: last computed)
+        One of the `draw_graph` layouts, see
+        :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
+        is used.
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    if layout is None:
+        layout = str(adata.uns['draw_graph']['params']['layout'])
+    basis = 'draw_graph_' + layout
+    if 'X_' + basis not in adata.obsm_keys():
+        raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
+                         .format('draw_graph_' + layout, layout))
+
+    return plot_scatter(adata, basis=basis, **kwargs)
+
+
+@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def pca(adata, **kwargs):
+    """\
+    Scatter plot in PCA coordinates.
+
+    {adata_color_etc}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a `matplotlib.Axis` or a list of it.
+    """
+    return plot_scatter(adata, basis='pca', **kwargs)
+
+
+def plot_scatter(adata,
+                 color=None,
+                 use_raw=None,
+                 sort_order=True,
+                 edges=False,
+                 edges_width=0.1,
+                 edges_color='grey',
+                 arrows=False,
+                 arrows_kwds=None,
+                 basis=None,
+                 groups=None,
+                 components=None,
+                 projection='2d',
+                 color_map=None,
+                 palette=None,
+                 size=None,
+                 frameon=None,
+                 legend_fontsize=None,
+                 legend_fontweight='bold',
+                 legend_loc='right margin',
+                 ncols=4,
+                 hspace=0.25,
+                 wspace=None,
+                 title=None,
+                 show=None,
+                 save=None,
+                 ax=None, return_fig=None, **kwargs):
+
+    sanitize_anndata(adata)
+    if color_map is not None:
+        kwargs['cmap'] = color_map
+    if size is not None:
+        kwargs['s'] = size
+
+    if projection == '3d':
+        from mpl_toolkits.mplot3d import Axes3D
+        args_3d = {'projection': '3d'}
+    else:
+        args_3d = {}
+
+    if adata.raw is not None and use_raw is None:
+        use_raw = True
+    else:
+        use_raw = False
+
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
+    if adata.raw is None and use_raw is True:
+        raise ValueError("`use_raw` is set to True but annData object does not have raw. "
+                         "Please check.")
+
+    ####
+    # get the points position and the components list (only if components is not 'None)
+    data_points, components_list = _get_data_points(adata, basis, projection, components)
+
+    ###
+    # setup layout. Most of the code is for the case when multiple plots are required
+    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2'].
+    # component_list is a list of components [[0,1], [1,2]]
+    if (isinstance(color, list) and len(color) > 1) or len(components_list) > 1:
+        if ax is not None:
+            raise ValueError("When plotting multiple panels (each for a given value of 'color' "
+                             "a given ax can not be used")
+        # change from None to empty list
+        if isinstance(color, str) or color is None:
+            color = [color]
+        if len(components_list) == 0:
+            components_list = [None]
+
+        multi_panel = True
+        # each plot needs to be its own panel
+        from matplotlib import gridspec
+        # set up the figure
+        num_panels = len(color) * len(components_list)
+        n_panels_x = ncols
+        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
+        # each panel will have the size of rcParams['figure.figsize']
+        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
+                                 n_panels_y * rcParams['figure.figsize'][1]))
+        left = 0.2 / n_panels_x
+        bottom = 0.13 / n_panels_y
+        gs = gridspec.GridSpec(nrows=n_panels_y,
+                               ncols=n_panels_x,
+                               left=left,
+                               right=1-(n_panels_x-1)*left-0.01/n_panels_x,
+                               bottom=bottom,
+                               top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
+                               hspace=hspace,
+                               wspace=wspace)
+    else:
+        # this case handles color='variable' and color=['variable'], which are the same
+        if isinstance(color, str) or color is None:
+            color = [color]
+        if len(components_list) == 0:
+            components_list = [None]
+        multi_panel = False
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111, **args_3d)
+
+    ###
+    # make the plots
+    axs = []
+    import itertools
+    idx_components = range(len(components_list))
+
+    # use itertools.product to make a plot for each color and for each component
+    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
+    # The plots are: [color=gene1, components=[1,2], color=gene1, components=[2,3],
+    #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
+    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
+        color_vector, categorical = _get_color_values(adata, value_to_plot,
+                                                      groups=groups, palette=palette,
+                                                      use_raw=use_raw)
+
+        # check if higher value points should be plot on top
+        if sort_order is True and value_to_plot is not None and categorical is False:
+            order = np.argsort(color_vector)
+            color_vector = color_vector[order]
+            _data_points = data_points[component_idx][order, :]
+
+        else:
+            _data_points = data_points[component_idx]
+
+        # if plotting multiple panels, get the ax from the grid spec
+        # else use the ax value (either user given or created previously)
+        if multi_panel is True:
+            ax = pl.subplot(gs[count], **args_3d)
+            axs.append(ax)
+        if frameon is False:
+            ax.axis('off')
+        if title is None and value_to_plot is not None:
+            ax.set_title(value_to_plot)
+        else:
+            ax.set_title(title)
+
+        if 's' not in kwargs:
+            kwargs['s'] = 120000 / _data_points.shape[0]
+
+        # make the scatter plot
+        if projection == '3d':
+            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1], _data_points[:, 2],
+                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                            **kwargs)
+        else:
+            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1],
+                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                            **kwargs)
+
+        # remove y and x ticks
+        ax.set_yticks([])
+        ax.set_xticks([])
+        if projection == '3d':
+            ax.set_zticks([])
+
+        # set default axis_labels
+        name = _basis2name(basis)
+        if components is not None:
+            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
+        elif projection == '3d':
+            axis_labels = [name + str(x + 1) for x in range(3)]
+
+        else:
+            axis_labels = [name + str(x + 1) for x in range(2)]
+
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+        if projection == '3d':
+            # shift the label closer to the axis
+            ax.set_zlabel(axis_labels[2], labelpad=-7)
+        ax.autoscale_view()
+
+        if edges:
+            utils.plot_edges(ax, adata, basis, edges_width, edges_color)
+        if arrows:
+            utils.plot_arrows(ax, adata, basis, arrows_kwds)
+
+        if value_to_plot is None:
+            # if only dots were plotted without an associated value
+            # there is not need to plot a legend or a colorbar
+            continue
+
+        _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
+                                _data_points, legend_fontweight, legend_fontsize, groups, multi_panel)
+
+    if return_fig is True:
+        return fig
+    axs = axs if multi_panel else ax
+    utils.savefig_or_show(basis, show=show, save=save)
+    if show is False:
+        return axs
+
+
+def _get_data_points(adata, basis, projection, components):
+    """
+    Returns the data points corresponding to the selected basis, projection and/or components.
+
+    Because multiple components are given (eg components=['1,2', '2,3'] the
+    returned data are lists, containing each of the components. When only one component is plotted
+    the list length is 1.
+
+    Returns
+    -------
+    `tuple` of:
+        data_points : `list`. Each list is a numpy array containing the data points
+        components : `list` The cleaned list of components. Eg. [[0,1]] or [[0,1], [1,2]]
+                    for components = [1,2] and components=['1,2', '2,3'] respectively
+    """
+    n_dims = 2
+    if projection == '3d':
+        # check if the data has a third dimension
+        if adata.obsm['X_' + basis].shape[1] == 2:
+            if settings._low_resolution_warning:
+                logg.warn('Selected projections is "3d" but only two dimensions '
+                          'are available. Only these two dimensions will be plotted')
+        else:
+            n_dims = 3
+
+    if components == 'all':
+        components = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
+            for i in range(1, adata.obsm['X_{}'.format(basis)].shape[1])]
+
+    components_list = []
+    if components is not None:
+        # components have different formats, either a list with integers, a string
+        # or a list of strings.
+
+        if isinstance(components, str):
+            # eg: components='1,2'
+            components_list.append([int(x.strip()) - 1 for x in components.split(',')])
+
+        elif isinstance(components, list):
+            if isinstance(components[0], int):
+                # components=[1,2]
+                components_list.append([int(x) - 1 for x in components])
+            else:
+                # in this case, the components are str
+                # eg: components=['1,2'] or components=['1,2', '2,3]
+                # More than one component can be given and is stored
+                # as a new item of components_list
+                for comp in components:
+                    components_list.append([int(x.strip()) - 1 for x in comp.split(',')])
+
+        else:
+            raise ValueError("Given components: '{}' are not valid. Please check. "
+                             "A valid example is `components='2,3'`")
+        # check if the components are present in the data
+        try:
+            data_points = []
+            for comp in components_list:
+                data_points.append(adata.obsm['X_' + basis][:, comp])
+        except:
+            raise ValueError("Given components: '{}' are not valid. Please check. "
+                             "A valid example is `components='2,3'`")
+
+    else:
+        data_points = [adata.obsm['X_' + basis][:, :n_dims]]
+        components_list = []
+    return data_points, components_list
+
+
+def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
+                            scatter_array, legend_fontweight, legend_fontsize,
+                            groups, multi_panel):
+    """
+    Adds a color bar or a legend to the given ax. A legend is added when the
+    data is categorical and a color bar is added when a continuous value was used.
+
+    """
+    # add legends or colorbars
+    if categorical is True:
+        # add legend to figure
+        categories = list(adata.obs[value_to_plot].cat.categories)
+        colors = adata.uns[value_to_plot + '_colors']
+
+        if multi_panel is True:
+            # Shrink current axis by 10% to fit legend and match
+            # size of plots that are not categorical
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.91, box.height])
+
+        if groups is not None:
+            # only label groups with the respective color
+            colors = [colors[categories.index(x)] for x in groups]
+            categories = groups
+
+        if legend_loc == 'right margin':
+            for idx, label in enumerate(categories):
+                color = colors[idx]
+                # use empty scatter to set labels
+                ax.scatter([], [], c=color, label=label)
+            ax.legend(
+                frameon=False, loc='center left',
+                bbox_to_anchor=(0.97, 0.5),
+                ncol=(1 if len(categories) <= 14
+                      else 2 if len(categories) <= 30 else 3),
+                fontsize=legend_fontsize,
+                handletextpad=None)  # make this respect the rcParams default
+
+        if legend_loc == 'on data':
+            # identify centroids to put labels
+            for label in categories:
+                _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
+                x_pos, y_pos = np.median(_scatter, axis=0)
+
+                ax.text(x_pos, y_pos, label,
+                        weight=legend_fontweight,
+                        verticalalignment='center',
+                        horizontalalignment='center',
+                        fontsize=legend_fontsize)
+    else:
+        # add colorbar to figure
+        pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
+
+
+def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
+    """
+    Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
+
+    Parameters
+    ----------
+    adata : annData object
+    value_to_plot : name of a valid categorical observation
+    palette : Palette should be either a valid `matplotlib.pyplot.colormaps()` string,
+              a list of colors (in a format that can be understood by matplotlib,
+              eg. RGB, RGBS, hex, or a cycler object with key='color'
+
+    Returns
+    -------
+    None
+    """
+    from matplotlib.colors import to_hex
+    from cycler import Cycler, cycler
+
+    categories = adata.obs[value_to_plot].cat.categories
+    # check is palette is a valid color map
+    if isinstance(palette, str) and palette in pl.colormaps():
+        # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
+        cmap = pl.get_cmap(palette)
+        colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
+
+    else:
+        # check if palette is a list and convert it to a cycler, thus
+        # it doesnt matter if the list is shorter than the categories length:
+        if isinstance(palette, list):
+            if len(palette) < len(categories):
+                logg.warn("Length of palette colors is smaller than the number of "
+                          "categories (palette length: {}, categories length: {}. "
+                          "Some categories will have the same color."
+                          .format(len(palette), len(categories)))
+            palette = cycler(color=palette)
+        if not isinstance(palette, Cycler):
+            raise ValueError("Please check that the value of 'palette' is a "
+                             "valid matplotlib colormap string (eg. Set2), a "
+                             "list of color names or a cycler with a 'color' key.")
+        if 'color' not in palette.keys:
+            raise ValueError("Please set the palette key 'color'.")
+
+        cc = palette()
+        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
+
+    adata.uns[value_to_plot + '_colors'] = colors_list
+
+
+def _set_default_colors_for_categorical_obs(adata, value_to_plot):
+    """
+    Sets the adata.uns[value_to_plot + '_colors'] using default color palettes
+
+    Parameters
+    ----------
+    adata : annData object
+    value_to_plot : name of a valid categorical observation
+
+    Returns
+    -------
+    None
+    """
+    from .. import palettes
+
+    categories = adata.obs[value_to_plot].cat.categories
+    length = len(categories)
+
+    # check if default matplotlib palette has enough colors
+    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
+        cc = rcParams['axes.prop_cycle']()
+        palette = [next(cc)['color'] for _ in range(length)]
+
+    else:
+        if length <= 28:
+            palette = palettes.default_26
+        elif length <= len(palettes.default_64):  # 103 colors
+            palette = palettes.default_64
+        else:
+            palette = ['grey' for i in range(length)]
+            logg.info('the obs value: "{}" has more than 103 categories. Uniform '
+                      '\'grey\' color will be used for all categories.')
+
+    adata.uns[value_to_plot + '_colors'] = palette[:length]
+
+
+def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False):
+    """
+    Returns the value or color associated to each data point.
+    For categorical data, the return value is list of colors taken
+    from the category palette or from the given `palette` value.
+
+    For non-categorical data, the values are returned
+    """
+
+    ###
+    # when plotting, the color of the dots is determined for each plot
+    # the data is either categorical or continuous and the data could be in
+    # 'obs' or in 'var'
+    categorical = False
+    if value_to_plot is None:
+        color_vector = 'lightgray'
+    # check if value to plot is in obs
+    elif value_to_plot in adata.obs.columns:
+        if is_categorical_dtype(adata.obs[value_to_plot]):
+            categorical = True
+
+            if palette:
+                # use category colors base on given palette
+                _set_colors_for_categorical_obs(adata, value_to_plot, palette)
+            else:
+                if value_to_plot + '_colors' not in adata.uns or \
+                    len(adata.uns[value_to_plot + '_colors']) < len(adata.obs[value_to_plot].cat.categories):
+                    #  set a default palette in case that no colors or few colors are found
+                    _set_default_colors_for_categorical_obs(adata, value_to_plot)
+
+            # for categorical data, colors should be
+            # stored in adata.uns[value_to_plot + '_colors']
+            # Obtain color vector by converting every category
+            # into its respective color
+
+            color_vector = [adata.uns[value_to_plot + '_colors'][x] for x in adata.obs[value_to_plot].cat.codes]
+            if groups is not None:
+                if isinstance(groups, str):
+                    groups = [groups]
+                color_vector = np.array(color_vector, dtype='<U15')
+                # set color to 'light gray' for all values
+                # that are not in the groups
+                color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        else:
+            color_vector = adata.obs[value_to_plot]
+
+    # check if value to plot is in var
+    elif use_raw is False and value_to_plot in adata.var_names:
+        color_vector = adata[:, value_to_plot].X
+
+    elif use_raw is True and value_to_plot in adata.raw.var_names:
+        color_vector = adata.raw[:, value_to_plot].X
+    else:
+        raise ValueError("Given 'color': {} is not a valid observation "
+                         "or var. Valid observations are: {}".format(value_to_plot, adata.obs.columns))
+
+    return color_vector, categorical
+
+
+def _basis2name(basis):
+    """
+    converts the 'basis' into the proper name.
+    """
+
+    component_name = (
+        'DC' if basis == 'diffmap'
+        else 'tSNE' if basis == 'tsne'
+        else 'UMAP' if basis == 'umap'
+        else 'PC' if basis == 'pca'
+        else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+        else basis)
+    return component_name

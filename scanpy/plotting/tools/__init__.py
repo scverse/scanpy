@@ -47,76 +47,6 @@ def pca_overview(adata, **params):
     pca_variance_ratio(adata, show=show)
 
 
-@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca_prev(
-        adata,
-        color=None,
-        use_raw=True,
-        sort_order=True,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        color_map=None,
-        palette=None,
-        right_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
-    """\
-    Scatter plot in PCA coordinates.
-
-    Parameters
-    ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    color : string or list of strings, optional (default: `None`)
-        Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
-        string `"ann1,ann2,..."`.
-    use_raw : `bool`, optional (default: `True`)
-        Use `raw` attribute of `adata` if present.
-    {scatter_bulk}
-    show : bool, optional (default: `None`)
-         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    ax : matplotlib.Axes
-         A matplotlib axes object.
-
-    Returns
-    -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
-    """
-    axs = scatter(
-        adata,
-        basis='pca',
-        color=color,
-        use_raw=use_raw,
-        sort_order=sort_order,
-        alpha=alpha,
-        groups=groups,
-        components=components,
-        projection=projection,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        color_map=color_map,
-        palette=palette,
-        right_margin=right_margin,
-        size=size,
-        title=title,
-        show=False,
-        save=False, ax=ax)
-    utils.savefig_or_show('pca_scatter', show=show, save=save)
-    if show == False: return axs
-
-
 # backwards compat
 pca_scatter = pca
 
@@ -365,25 +295,23 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
     if plot_type == 'dotplot':
         from ..anndata import dotplot
-        res = dotplot(adata, gene_names, groupby, var_group_labels=group_names,
-                      var_group_positions=group_positions, show=show, save=save, **kwds)
+        dotplot(adata, gene_names, groupby, var_group_labels=group_names,
+                var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'heatmap':
         from ..anndata import heatmap
-        res = heatmap(adata, gene_names, groupby, var_group_labels=group_names,
-                      var_group_positions=group_positions, show=show, save=save, **kwds)
+        heatmap(adata, gene_names, groupby, var_group_labels=group_names,
+                var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'stacked_violin':
         from ..anndata import stacked_violin
-        res = stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
-                             var_group_positions=group_positions, show=show, save=save, **kwds)
+        stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+                       var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
         from ..anndata import matrixplot
-        res = matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
-                         var_group_positions=group_positions, show=show, save=save, **kwds)
-
-    return res
+        matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
+                   var_group_positions=group_positions, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -413,7 +341,7 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
     {show_save_ax}
     """
 
-    return _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
+    _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
@@ -444,8 +372,8 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=
         Are passed to `scanpy.api.pl.dotplot`.
     """
 
-    return _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
-                                   groupby=groupby, key=key, show=show, save=save, **kwds)
+    _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
+                            groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -475,8 +403,8 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
         Are passed to `scanpy.api.pl.stacked_violin`.
     """
 
-    return _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
-                                   groupby=groupby, key=key, show=show, save=save, **kwds)
+    _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
+                            groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
@@ -506,8 +434,8 @@ def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, k
         Are passed to `scanpy.api.pl.matrixplot`.
     """
 
-    return _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
-                                   groupby=groupby, key=key, show=show, save=save, **kwds)
+    _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
+                            groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
