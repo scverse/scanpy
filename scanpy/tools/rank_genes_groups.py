@@ -318,7 +318,7 @@ def rank_genes_groups(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
 
-    if method in {'t-test', 't-test_overestim_var', 'wilcoxon'}:
+    if method in {'t-test', 't-test_overestim_var'}:
         adata.uns[key_added]['logfoldchanges'] = np.rec.fromarrays(
             [n for n in rankings_gene_logfoldchanges],
             dtype=[(rn, 'float32') for rn in groups_order_save])
