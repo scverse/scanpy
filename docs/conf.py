@@ -54,6 +54,8 @@ autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
+napoleon_use_rtype = False
+napoleon_custom_sections = [('Params', 'Parameters')]
 
 intersphinx_mapping = dict(
     python=('https://docs.python.org/3', None),
