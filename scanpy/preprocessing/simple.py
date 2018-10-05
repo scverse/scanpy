@@ -169,13 +169,13 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_counts : `int`, optional (default: `None`)
-        Minimum number of counts required for a cell to pass filtering.
+        Minimum number of counts required for a gene to pass filtering.
     min_cells : `int`, optional (default: `None`)
-        Minimum number of cells expressed required for a cell to pass filtering.
+        Minimum number of cells expressed required for a gene to pass filtering.
     max_counts : `int`, optional (default: `None`)
-        Maximum number of counts required for a cell to pass filtering.
+        Maximum number of counts required for a gene to pass filtering.
     max_cells : `int`, optional (default: `None`)
-        Maximum number of cells expressed required for a cell to pass filtering.
+        Maximum number of cells expressed required for a gene to pass filtering.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -188,8 +188,8 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     gene_subset : `np.ndarray`
         Boolean index mask that does filtering. `True` means that the gene is
         kept. `False` means the gene is removed.
-    number_per_cell : `np.ndarray`
-        Either `n_counts` or `n_cells` per cell.
+    number_per_gene : `np.ndarray`
+        Either `n_counts` or `n_cells` per gene.
     """
     n_given_options = sum(
         option is not None for option in
