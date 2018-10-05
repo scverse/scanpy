@@ -454,7 +454,8 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
 
         if legend_loc == 'on data':
             # identify centroids to put labels
-            for label in categories:
+            all_pos = np.zeros((len(categories), 2))
+            for ilabel, label in enumerate(categories):
                 _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
                 x_pos, y_pos = np.median(_scatter, axis=0)
 
@@ -463,6 +464,10 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                         verticalalignment='center',
                         horizontalalignment='center',
                         fontsize=legend_fontsize)
+
+                all_pos[ilabel] = [x_pos, y_pos]
+            # this is temporary storage for access by other tools
+            utils._tmp_cluster_pos = all_pos
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
