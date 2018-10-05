@@ -4,8 +4,10 @@
 import os
 import sys
 import numpy as np
+import pandas as pd
 import time
 from pathlib import Path
+import anndata
 from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
 from anndata import read as read_h5ad
@@ -18,7 +20,7 @@ text_exts = {'csv',
              'tsv', 'tab', 'data', 'txt'} # these four are all equivalent
 avail_exts = {'anndata', 'xlsx',
               'h5', 'h5ad',
-              'soft.gz', 'mtx'} | text_exts
+              'soft.gz', 'mtx', 'loom'} | text_exts
 """Available file formats for reading data. """
 
 
@@ -28,7 +30,7 @@ avail_exts = {'anndata', 'xlsx',
 
 
 def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
-         first_column_names=False, backup_url=None, cache=False):
+         first_column_names=False, backup_url=None, cache=False, **kwargs):
     """Read file and return :class:`~anndata.AnnData` object.
 
     To speed up reading, consider passing `cache=True`, which creates an hdf5
@@ -72,7 +74,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     if is_valid_filename(filename):
         return _read(filename, backed=backed, sheet=sheet, ext=ext,
                      delimiter=delimiter, first_column_names=first_column_names,
-                     backup_url=backup_url, cache=cache)
+                     backup_url=backup_url, cache=cache, **kwargs)
     # generate filename and read to dict
     filekey = filename
     filename = settings.writedir + filekey + '.' + settings.file_format_data
@@ -134,6 +136,43 @@ def read_10x_h5(filename, genome='mm10'):
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 
+
+def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+    """Read 10x-Genomics-formatted mtx directory.
+
+    Parameters
+    ----------
+    path : `str`
+        Path to directory for `.mtx` and `.tsv` files,
+        e.g. './filtered_gene_bc_matrices/hg19/'.
+    var_names : {'gene_symbols', 'gene_ids'}, optional (default: 'gene_symbols')
+        The variables index.
+    make_unique : `bool`, optional (default: `True`)
+        Whether to make the variables index unique by appending '-1',
+        '-2' etc. or not.
+    cache : `bool`, optional (default: `False`)
+        If `False`, read from source, if `True`, read from fast 'h5ad' cache.
+
+    Returns
+    -------
+    An :class:`~anndata.AnnData`.
+    """
+    adata = read(path + 'matrix.mtx', cache=cache).T  # transpose the data
+    genes = pd.read_csv(path + 'genes.tsv', header=None, sep='\t')
+    if var_names == 'gene_symbols':
+        var_names = genes[1]
+        if make_unique:
+            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
+        adata.var_names = var_names
+        adata.var['gene_ids'] = genes[0].values
+    elif var_names == 'gene_ids':
+        adata.var_names = genes[0]
+        adata.var['gene_symbols'] = genes[1].values
+    else:
+        raise ValueError('`var_names` needs to be \'gene_symbols\' or \'gene_ids\'')
+    adata.obs_names = pd.read_csv(path + 'barcodes.tsv', header=None)[0]
+    return adata
+        
 
 def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
     """Write :class:`~anndata.AnnData` objects to file.
@@ -261,7 +300,7 @@ def get_params_from_list(params_list):
 
 def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
           first_column_names=None, backup_url=None, cache=False,
-          suppress_cache_warning=False):
+          suppress_cache_warning=False, **kwargs):
     if ext is not None and ext not in avail_exts:
         raise ValueError('Please provide one of the available extensions.\n'
                          + avail_exts)
@@ -309,6 +348,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             adata = read_text(filename, delimiter, first_column_names)
         elif ext == 'soft.gz':
             adata = _read_softgz(filename)
+        elif ext == 'loom':
+            adata = read_loom(filename=filename, **kwargs)
         else:
             raise ValueError('Unkown extension {}.'.format(ext))
         if cache:

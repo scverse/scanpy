@@ -19,7 +19,7 @@ def rank_genes_groups(
         groups='all',
         reference='rest',
         n_genes=100,
-        only_positive=True,
+        rankby_abs=False,
         key_added=None,
         copy=False,
         method='t-test_overestim_var',
@@ -50,8 +50,9 @@ def rank_genes_groups(
         <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__, for
         why this is meaningful.
-    only_positive : bool, optional (default: `True`)
-        Only consider positive differences.
+    rankby_abs : `bool`, optional (default: `False`)
+        Rank genes by the absolute value of the score, not by the
+        score. The returned scores are never the absolute values.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
@@ -69,8 +70,19 @@ def rank_genes_groups(
     scores : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the score for each
         gene for each group. Ordered according to scores.
+    logfoldchanges : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+        Structured array to be indexed by group id storing the log2
+        fold change for each gene for each group. Ordered according to
+        scores. Only provided if method is 't-test' like.
     """
+    if 'only_positive' in kwds:
+        rankby_abs = not kwds.pop('only_positive')  # backwards compat
+        
     logg.info('ranking genes', r=True)
+    avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
+    if method not in avail_methods:
+        raise ValueError('Method must be one of {}.'.format(avail_methods))
+    
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     # for clarity, rename variable
@@ -84,6 +96,7 @@ def rank_genes_groups(
         raise ValueError('reference = {} needs to be one of groupby = {}.'
                          .format(reference,
                                  adata.obs[groupby].cat.categories.tolist()))
+    
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
 
@@ -111,9 +124,7 @@ def rank_genes_groups(
         n_genes_user = X.shape[1]
     # in the following, n_genes is simply another name for the total number of genes
     n_genes = X.shape[1]
-
-    rankings_gene_scores = []
-    rankings_gene_names = []
+    
     n_groups = groups_masks.shape[0]
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
@@ -124,21 +135,11 @@ def rank_genes_groups(
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)
 
-    avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
-    if method not in avail_methods:
-        raise ValueError('Method must be one of {}.'.format(avail_methods))
-
-    # TODO: all of this is probably going to be removed
-    if method is 't-test_correction_factors':
-        if correction_factors is None:
-            raise ValueError('For this test type, you need to enter correction factors manually.')
-        if len(correction_factors) != 2:
-            raise ValueError('We need exactly 2 correction factors, accessible via correction_factors[i], i=0,1')
-        if correction_factors[0] < 0 or correction_factors[1] < 0:
-            raise ValueError('Correction factors need to be positive numbers!')
-
-    if method in {'t-test', 't-test_overestim_var',
-                  't-test_double_overestim_var', 't-test_correction_factors'}:
+    rankings_gene_scores = []
+    rankings_gene_names = []
+    rankings_gene_logfoldchanges = []
+    
+    if method in {'t-test', 't-test_overestim_var'}:
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
@@ -153,53 +154,43 @@ def rank_genes_groups(
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
             mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
-            if method == 't-test':
-                ns_rest = np.where(mask_rest)[0].size
-            elif method in {'t-test_overestim_var', 't-test_double_overestim_var'}:
-                ns_rest = ns[igroup]  # hack for overestimating the variance
-            elif method == 't-test_correction_factors':
-                # The tendency is as follows: For the comparison group (rest), overesimate variance --> smaller ns_rest
-                ns_rest = np.where(mask_rest)[0].size/correction_factors[1]
-
-            if method in {'t-test', 't-test_overestim_var'}:
-                ns_group = ns[igroup]
-            elif method == 't-test_correction_factors':
-                # We underestimate group variance by increasing denominator, i.e. ns_group
-                ns_group = ns[igroup] * correction_factors[0]
-            else:
-                # We do the opposite of t-test_overestim_var
-                ns_group = np.where(mask_rest)[0].size
-
+            ns_group = ns[igroup]  # number of observations in group
+            if method == 't-test': ns_rest = np.where(mask_rest)[0].size
+            elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
+            else: raise ValueError('Method does not exist.')
+            
             denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
             denominator[np.flatnonzero(denominator == 0)] = np.nan
             scores = (means[igroup] - mean_rest) / denominator
+            mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
+            foldchanges = (means[igroup] + 1e-9) / mean_rest
             scores[np.isnan(scores)] = 0
-            scores = scores if only_positive else np.abs(scores)
-            partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
-            partial_indices = np.argsort(scores[partition])[::-1]
+            scores_sort = np.abs(scores) if rankby_abs else scores
+            partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
+            partial_indices = np.argsort(scores_sort[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
+            rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
             rankings_gene_names.append(adata_comp.var_names[global_indices])
+            
     elif method == 'logreg':
-    #if reference is not set, then the groups listed will be compared to the rest
-    #if reference is set, then the groups listed will be compared only to the other groups listed
+        # if reference is not set, then the groups listed will be compared to the rest
+        # if reference is set, then the groups listed will be compared only to the other groups listed
         from sklearn.linear_model import LogisticRegression
         reference = groups_order[0]
         if len(groups) == 1:
-            raise Exception("Cannot perform logistic regression on a single cluster.")
-
-        adata_copy = adata[adata.obs[groupby].isin(groups_order)]
-        
+            raise Exception('Cannot perform logistic regression on a single cluster.')
+        adata_copy = adata[adata.obs[groupby].isin(groups_order)]        
         adata_comp = adata_copy
         if adata.raw is not None and use_raw:
             adata_comp = adata_copy.raw
         X = adata_comp.X
-            
+
         clf = LogisticRegression(**kwds)
-        clf.fit(X, adata_copy.obs[groupby])
+        clf.fit(X, adata_copy.obs[groupby].cat.codes)
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
-            if len(groups) <= 2: #binary logistic regression
+            if len(groups_order) <= 2:  # binary logistic regression
                 scores = scores_all[0]
             else:
                 scores = scores_all[igroup]
@@ -207,13 +198,13 @@ def rank_genes_groups(
             partial_indices = np.argsort(scores[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
-            rankings_gene_names.append(adata_copy.raw.var_names[global_indices])
-            if len(groups) <= 2:
+            rankings_gene_names.append(adata_comp.var_names[global_indices])
+            if len(groups_order) <= 2:
                 break
 
     elif method == 'wilcoxon':
-        # Wilcoxon-rank-sum test is usually more powerful in detecting marker genes
-        # Limit maximal RAM that is required by the calculation. Currently set fixed to roughly 100 MByte
+        # The whole thing below is an early draft by Tobias Callies and should be cleaned up at some point.
+
         CONST_MAX_SIZE = 10000000
         ns_rest = np.zeros(n_groups, dtype=int)
         # initialize space for z-scores
@@ -260,7 +251,7 @@ def rank_genes_groups(
                     left = right + 1
                 scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[partition])[::-1]
@@ -297,7 +288,7 @@ def rank_genes_groups(
             for imask, mask in enumerate(groups_masks):
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[imask, partition])[::-1]
@@ -314,10 +305,18 @@ def rank_genes_groups(
     adata.uns[key_added]['names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
+
+    if method in {'t-test', 't-test_overestim_var'}:
+        adata.uns[key_added]['logfoldchanges'] = np.rec.fromarrays(
+            [n for n in rankings_gene_logfoldchanges],
+            dtype=[(rn, 'float32') for rn in groups_order_save])
+    
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
         'added to `.uns[\'{}\']`\n'
         '    \'names\', sorted np.recarray to be indexed by group ids\n'
-        '    \'scores\', sorted np.recarray to be indexed by group ids'
-        .format(key_added))
+        '    \'scores\', sorted np.recarray to be indexed by group ids\n'
+        .format(key_added)
+        + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids'
+           if method in {'t-test', 't-test_overestim_var'} else ''))
     return adata if copy else None

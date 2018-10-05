@@ -278,7 +278,11 @@ https://img.shields.io/travis/warner/python-versioneer/master.svg
 
 """
 
-import configparser
+from __future__ import print_function
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 import errno
 import json
 import os

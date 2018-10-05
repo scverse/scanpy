@@ -1,13 +1,8 @@
 from setuptools import setup, find_packages
-from pathlib import Path
+from io import open
 import versioneer
 
-package_name = 'scanpy'
-
-req_path = Path('requires.txt')
-if not req_path.is_file():
-    req_path = Path(package_name + '.egg-info') / req_path
-with req_path.open() as requirements:
+with open('requirements.txt', encoding='utf-8') as requirements:
     requires = [l.strip() for l in requirements]
 
 with open('README.rst', encoding='utf-8') as readme_f:
@@ -16,7 +11,7 @@ with open('README.rst', encoding='utf-8') as readme_f:
 author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Fidel Ramirez, Tobias Callies'
 
 setup(
-    name=package_name,
+    name='scanpy',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Single-Cell Analysis in Python.',
@@ -25,9 +20,10 @@ setup(
     author=author,
     author_email='alex.wolf@helmholtz-muenchen.de',
     license='BSD',
+    python_requires='>=3.5',
     install_requires=requires,
     extras_require=dict(
-        louvain=['python-igraph', 'louvain'],
+        louvain=['python-igraph', 'louvain>=0.6'],
         doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints'],
         test=['pytest'],
     ),
