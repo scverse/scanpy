@@ -262,7 +262,7 @@ def rank_genes_groups(
                     left = right + 1
                 scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[partition])[::-1]
@@ -299,7 +299,7 @@ def rank_genes_groups(
             for imask, mask in enumerate(groups_masks):
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
-                scores = scores if only_positive else np.abs(scores)
+                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
                 partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[imask, partition])[::-1]
