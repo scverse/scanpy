@@ -19,7 +19,7 @@ from ..utils import matrix
 def paga_compare(
         adata,
         basis=None,
-        edges=False,
+        edges=True,
         color=None,
         alpha=None,
         groups=None,
@@ -27,7 +27,7 @@ def paga_compare(
         projection='2d',
         legend_loc='on data',
         legend_fontsize=None,
-        legend_fontweight=None,
+        legend_fontweight='bold',
         color_map=None,
         palette=None,
         frameon=None,
@@ -93,7 +93,6 @@ def paga_compare(
         color_map=color_map,
         palette=palette,
         frameon=frameon,
-        right_margin=None,
         size=size,
         title=title,
         ax=axs[0],
@@ -111,7 +110,7 @@ def paga_compare(
 def _paga_scatter(
         adata,
         basis='tsne',
-        edges=None,
+        edges=True,
         color=None,
         alpha=None,
         groups=None,
@@ -119,35 +118,24 @@ def _paga_scatter(
         projection='2d',
         legend_loc='right margin',
         legend_fontsize=None,
-        legend_fontweight=None,
+        legend_fontweight='bold',
         color_map=None,
         palette=None,
         frameon=None,
         size=None,
         title=None,
-        right_margin=None,
         show=None,
         save=None,
         ax=None):
     if color is None:
         color = [adata.uns['paga']['groups']]
     if not isinstance(color, list): color = [color]
-    kwds = {}
-    if 'draw_graph' in basis:
-        from .scatterplots import draw_graph
-        scatter_func = draw_graph
-        kwds['edges'] = True if edges is None else edges
-    elif basis == 'umap':
-        from .scatterplots import umap
-        scatter_func = umap
-        kwds['edges'] = True if edges is None else edges
-    else:
-        from ..anndata import scatter
-        scatter_func = scatter
-        kwds['basis'] = basis
-    axs = scatter_func(
+    from .scatterplots import plot_scatter
+    axs = plot_scatter(
         adata,
+        basis=basis,
         color=color,
+        edges=edges,
         alpha=alpha,
         groups=groups,
         components=components,
@@ -157,12 +145,10 @@ def _paga_scatter(
         color_map=color_map,
         palette=palette,
         frameon=frameon,
-        right_margin=right_margin,
         size=size,
         title=title,
         ax=ax,
-        show=False,
-        **kwds)
+        show=False)
     utils.savefig_or_show('paga_' + basis, show=show, save=save)
     if show == False: return axs
 
@@ -197,7 +183,7 @@ def paga(
         cax=None,
         colorbar=None,
         cb_kwds={},
-        frameon=True,
+        frameon=None,
         add_pos=True,
         export_to_gexf=False,
         use_raw=True,
@@ -293,7 +279,7 @@ def paga(
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
          Provide a title.
-    frameon : `bool`, optional (default: `False`)
+    frameon : `bool`, optional (default: `None`)
          Draw a frame around the PAGA graph.
     show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
@@ -332,6 +318,9 @@ def paga(
     if ((isinstance(colors, Iterable) and len(colors) == len(adata.obs[groups_key].cat.categories))
         or colors is None or isinstance(colors, str)):
         colors = [colors]
+        
+    if frameon is None:
+        frameon = settings._frameon
 
     # labels is a list that contains no lists
     if ((isinstance(labels, Iterable) and len(labels) == len(adata.obs[groups_key].cat.categories))
