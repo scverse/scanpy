@@ -244,6 +244,7 @@ def filter_genes_dispersion(data,
                             n_bins=20,
                             n_top_genes=None,
                             log=True,
+                            key_added=None,
                             copy=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -285,6 +286,9 @@ def filter_genes_dispersion(data,
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
+    key_added: `str`, optional (default: `None`)
+        Write a bool array for highly-variable genes while keeping all genes 
+        (if not None) else keep highly-variable genes only.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -320,7 +324,10 @@ def filter_genes_dispersion(data,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata._inplace_subset_var(result['gene_subset'])
+        if isinstance(key_added, str):
+            adata.var[key_added] = result['gene_subset']
+        else:
+            adata._inplace_subset_var(result['gene_subset'])
         return adata if copy else None
     logg.msg('extracting highly variable genes',
               r=True, v=4)
