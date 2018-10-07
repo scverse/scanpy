@@ -593,7 +593,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         logg.msg('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', adata.n_vars, v=4)
 
-    adata_hvg = adata[:, adata.var['highly_variable']] if use_hvg and 'highly_variable' in adata.var.keys() else adata
+    _adata = adata[:, adata.var['highly_variable']] if use_hvg and 'highly_variable' in adata.var.keys() else adata
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'auto':
@@ -601,28 +601,28 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
         from sklearn.decomposition import IncrementalPCA
 
-        X_pca = np.zeros((adata_hvg.X.shape[0], n_comps), adata_hvg.X.dtype)
+        X_pca = np.zeros((_adata.X.shape[0], n_comps), _adata.X.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps)
 
-        for chunk, _, _ in adata_hvg.chunked_X(chunk_size):
+        for chunk, _, _ in _adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             pca_.partial_fit(chunk)
 
-        for chunk, start, end in adata_hvg.chunked_X(chunk_size):
+        for chunk, start, end in _adata.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        zero_center = zero_center if zero_center is not None else False if issparse(adata_hvg.X) else True
+        zero_center = zero_center if zero_center is not None else False if issparse(_adata.X) else True
         if zero_center:
             from sklearn.decomposition import PCA
-            if issparse(adata_hvg.X):
+            if issparse(_adata.X):
                 logg.msg('    as `zero_center=True`, '
                        'sparse input is densified and may '
                        'lead to huge memory consumption', v=4)
-                X = adata_hvg.X.toarray()  # Copying the whole adata_hvg.X here, could cause memory problems
+                X = _adata.X.toarray()  # Copying the whole _adata.X here, could cause memory problems
             else:
-                X = adata_hvg.X
+                X = _adata.X
             pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
@@ -631,14 +631,14 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-            X = adata_hvg.X
+            X = _adata.X
         X_pca = pca_.fit_transform(X)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        if adata.shape[1] == adata_hvg.shape[1]:
+        if adata.shape[1] == _adata.shape[1]:
             adata.varm['PCs'] = pca_.components_.T
         else:
             hvg = adata.var['highly_variable']
