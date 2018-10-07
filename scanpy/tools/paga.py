@@ -44,7 +44,7 @@ def paga(
     use_rna_velocity : `bool` (default: `False`)
         Use RNA velocity to orient edges in the abstracted graph and estimate
         transitions. Requires that `adata.uns` contains a directed single-cell
-        graph with key `['velocyto_transitions']`. This feature might be subject
+        graph with key `['velocity_graph']`. This feature might be subject
         to change in the future.
     model : {{'v1.2', 'v1.0'}}, optional (default: 'v1.2')
         The PAGA connectivity model.
@@ -216,14 +216,19 @@ class PAGA():
         return connectivities_tree.tocsr()
 
     def compute_transitions(self):
-        if 'velocyto_transitions' not in self._adata.uns:
+        vkey = 'velocity_graph'
+        if vkey not in self._adata.uns:
+            if 'velocyto_transitions' in self._adata.uns:
+                self._adata.uns[vkey] = self._adata.uns['velocyto_transitions']
+                logg.msg('The key \'velocyto_transitions\' has been changed to \'velocity_graph\'.', v=5, no_indent=True)
+            else:
+                raise ValueError(
+                    'The passed AnnData needs to have an `uns` annotation '
+                    'with key \'velocity_graph\' - a sparse matrix from RNA velocity.')
+        if self._adata.uns[vkey].shape != (self._adata.n_obs, self._adata.n_obs):
             raise ValueError(
-                'The passed AnnData needs to have an `uns` annotation '
-                'with key \'velocyto_transitions\' - a sparse matrix from RNA velocity.')
-        if self._adata.uns['velocyto_transitions'].shape != (self._adata.n_obs, self._adata.n_obs):
-            raise ValueError(
-                'The passed \'velocyto_transitions\' have shape {} but shoud have shape {}'
-                .format(self._adata.uns['velocyto_transitions'].shape,
+                'The passed \'velocity_graph\' have shape {} but shoud have shape {}'
+                .format(self._adata.uns[vkey].shape,
                         (self._adata.n_obs, self._adata.n_obs)))
         # restore this at some point
         # if 'expected_n_edges_random' not in self._adata.uns['paga']:
@@ -231,7 +236,7 @@ class PAGA():
         #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
         import igraph
         g = utils.get_igraph_from_adjacency(
-            self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
+            self._adata.uns[vkey].astype('bool'), directed=True)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         # set combine_edges to False if you want self loops
