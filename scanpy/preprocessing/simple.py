@@ -244,7 +244,7 @@ def filter_genes_dispersion(data,
                             n_bins=20,
                             n_top_genes=None,
                             log=True,
-                            key_added=None,
+                            keep_all_genes=False,
                             copy=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -286,9 +286,9 @@ def filter_genes_dispersion(data,
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
-    key_added: `str`, optional (default: `None`)
+    keep_all_genes: `bool`, optional (default: `False`)
         Write a bool array for highly-variable genes while keeping all genes 
-        (if not None) else keep highly-variable genes only.
+        (if True) else keep highly-variable genes only.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -324,8 +324,8 @@ def filter_genes_dispersion(data,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        if isinstance(key_added, str):
-            adata.var[key_added] = result['gene_subset']
+        if keep_all_genes:
+            adata.var['highly_variable'] = result['gene_subset']
         else:
             adata._inplace_subset_var(result['gene_subset'])
         return adata if copy else None
@@ -514,7 +514,7 @@ def sqrt(data, copy=False, chunked=False, chunk_size=None):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
+        return_info=False, use_hvg=True, dtype='float32', copy=False, chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -541,6 +541,8 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     return_info : `bool`, optional (default: `False`)
         Only relevant when not passing an :class:`~anndata.AnnData`: see
         "Returns".
+    use_hvg: `bool`, optional (default: True)
+        Whether to use highly variable genes only, stored in .var['highly_variable'].
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
@@ -591,34 +593,36 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         logg.msg('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', adata.n_vars, v=4)
 
+    adata_hvg = adata[:, adata.var['highly_variable']] if use_hvg and 'highly_variable' in adata.var.keys() else adata
+
     if chunked:
         if not zero_center or random_state or svd_solver != 'auto':
             logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
 
         from sklearn.decomposition import IncrementalPCA
 
-        X_pca = np.zeros((adata.X.shape[0], n_comps), adata.X.dtype)
+        X_pca = np.zeros((adata_hvg.X.shape[0], n_comps), adata_hvg.X.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps)
 
-        for chunk, _, _ in adata.chunked_X(chunk_size):
+        for chunk, _, _ in adata_hvg.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             pca_.partial_fit(chunk)
 
-        for chunk, start, end in adata.chunked_X(chunk_size):
+        for chunk, start, end in adata_hvg.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        zero_center = zero_center if zero_center is not None else False if issparse(adata.X) else True
+        zero_center = zero_center if zero_center is not None else False if issparse(adata_hvg.X) else True
         if zero_center:
             from sklearn.decomposition import PCA
-            if issparse(adata.X):
+            if issparse(adata_hvg.X):
                 logg.msg('    as `zero_center=True`, '
                        'sparse input is densified and may '
                        'lead to huge memory consumption', v=4)
-                X = adata.X.toarray()  # Copying the whole adata.X here, could cause memory problems
+                X = adata_hvg.X.toarray()  # Copying the whole adata_hvg.X here, could cause memory problems
             else:
-                X = adata.X
+                X = adata_hvg.X
             pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
@@ -627,7 +631,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-            X = adata.X
+            X = adata_hvg.X
         X_pca = pca_.fit_transform(X)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
