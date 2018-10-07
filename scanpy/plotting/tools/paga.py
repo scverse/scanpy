@@ -687,12 +687,12 @@ def _paga_graph(
     # draw directed edges
     else:
         adjacency_transitions = adata.uns['paga'][transitions].copy()
-        if threshold is None: threshold = 0.005
+        if threshold is None: threshold = 0.01
         adjacency_transitions.data[adjacency_transitions.data < threshold] = 0
         adjacency_transitions.eliminate_zeros()
         g_dir = nx.DiGraph(adjacency_transitions.T)
         widths = [x[-1]['weight'] for x in g_dir.edges(data=True)]
-        widths = 100 * base_edge_width * np.array(widths)
+        widths = base_edge_width * np.array(widths)
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
         nx.draw_networkx_edges(g_dir, pos, ax=ax, width=widths, edge_color='black', arrowsize=arrowsize)
