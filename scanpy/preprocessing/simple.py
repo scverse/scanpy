@@ -638,7 +638,13 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        adata.varm['PCs'] = pca_.components_.T
+        if adata.shape[1] == adata_hvg.shape[1]:
+            adata.varm['PCs'] = pca_.components_.T
+        else:
+            hvg = adata.var['highly_variable']
+            PCs = np.zeros(shape=(n_comps, adata.shape[1]))
+            PCs[:, hvg] = pca_.components_
+            adata.varm['PCs'] = PCs.T
         adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
