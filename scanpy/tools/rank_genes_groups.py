@@ -216,21 +216,27 @@ def rank_genes_groups(
                 break
 
     elif method == 'wilcoxon':
+        from scipy import stats
         CONST_MAX_SIZE = 10000000
-        ns_rest = np.zeros(n_groups, dtype=int)
+        means = np.zeros((n_groups, n_genes))
+        vars = np.zeros((n_groups, n_genes))
+        # ns_rest = np.zeros(n_groups, dtype=int)
         # initialize space for z-scores
         scores = np.zeros(n_genes)
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
+                means[imask], vars[imask] = simple._get_mean_var(X[mask])  # for fold-change
                 if imask == ireference: continue
                 else: mask_rest = groups_masks[ireference]
-                ns_rest[imask] = np.where(mask_rest)[0].size
-                if ns_rest[imask] <= 25 or ns[imask] <= 25:
+                ns_rest = np.where(mask_rest)[0].size
+                mean_rest, var_rest = simple._get_mean_var(X[mask_rest]) # for fold-change
+                if ns_rest <= 25 or ns[imask] <= 25:
                     logg.hint('Few observations in a group for '
                               'normal approximation (<=25). Lower test accuracy.')
                 n_active = ns[imask]
-                m_active = ns_rest[imask]
+                m_active = ns_rest
+
                 # Now calculate gene expression ranking in chunkes:
                 chunk = []
                 # Calculate chunk frames
@@ -243,6 +249,7 @@ def rank_genes_groups(
                     chunk.append(n_genes - 1)
                 else:
                     chunk.append(n_genes - 1)
+
                 left = 0
                 # Calculate rank sums for each chunk for the current mask
                 for chunk_index, right in enumerate(chunk):
@@ -260,15 +267,25 @@ def rank_genes_groups(
                     # sum up adjusted_ranks to calculate W_m,n
                     scores[left:right] = np.sum(ranks.loc[0:n_active, :])
                     left = right + 1
+
                 scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
-                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
+                pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
+                pvals_adj = pvals * n_genes
+                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
+                foldchanges = (means[imask] + 1e-9) / mean_rest
+                scores = scores if not rankby_abs else np.abs(scores)
                 partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
+                rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
+                rankings_gene_pvals.append(pvals[global_indices])
+                rankings_gene_pvals_adj.append(pvals_adj[global_indices])
+
+
         # If no reference group exists, ranking needs only to be done once (full mask)
         else:
             scores = np.zeros((n_groups, n_genes))
@@ -297,15 +314,26 @@ def rank_genes_groups(
                 left = right + 1
 
             for imask, mask in enumerate(groups_masks):
+                means[imask], vars[imask] = simple._get_mean_var(X[mask]) #for fold-change
+                mask_rest = ~groups_masks[imask]
+                mean_rest, var_rest = simple._get_mean_var(X[mask_rest]) #for fold-change
+
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
-                scores = scores if not rankby_abs else np.abs(scores)
                 scores[np.isnan(scores)] = 0
+                pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
+                pvals_adj = pvals * n_genes
+                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
+                foldchanges = (means[imask] + 1e-9) / mean_rest
+                scores = scores if not rankby_abs else np.abs(scores)
                 partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores[imask, partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[imask, global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
+                rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
+                rankings_gene_pvals.append(pvals[global_indices])
+                rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
 
     groups_order_save = [str(g) for g in groups_order]
@@ -318,7 +346,7 @@ def rank_genes_groups(
         [n for n in rankings_gene_names],
         dtype=[(rn, 'U50') for rn in groups_order_save])
 
-    if method in {'t-test', 't-test_overestim_var'}:
+    if method in {'t-test', 't-test_overestim_var', 'wilcoxon'}:
         adata.uns[key_added]['logfoldchanges'] = np.rec.fromarrays(
             [n for n in rankings_gene_logfoldchanges],
             dtype=[(rn, 'float32') for rn in groups_order_save])
