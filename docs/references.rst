@@ -65,7 +65,7 @@ References
 
 .. [Haghverdi18] Haghverdi *et al.* (2018),
    *Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors*,
-   `Nature Biotechnology <10.1038/nbt.4091>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.4091>`__.
 
 .. [Huber15] Huber *et al.* (2015),
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
