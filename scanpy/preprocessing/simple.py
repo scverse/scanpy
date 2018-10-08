@@ -645,7 +645,7 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        if use_highly_variable:
+        if not use_highly_variable:
             adata.varm['PCs'] = pca_.components_.T
         else:
             PCs = np.empty(shape=(n_comps, adata.shape[1]))
