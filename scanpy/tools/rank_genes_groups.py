@@ -274,9 +274,9 @@ def rank_genes_groups(
                 pvals_adj = pvals * n_genes
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
-                scores = scores if not rankby_abs else np.abs(scores)
-                partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
-                partial_indices = np.argsort(scores[partition])[::-1]
+                scores_sort = np.abs(scores) if rankby_abs else scores
+                partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
+                partial_indices = np.argsort(scores_sort[partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
@@ -324,9 +324,9 @@ def rank_genes_groups(
                 pvals_adj = pvals * n_genes
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
-                scores = scores if not rankby_abs else np.abs(scores)
-                partition = np.argpartition(scores[imask, :], -n_genes_user)[-n_genes_user:]
-                partial_indices = np.argsort(scores[imask, partition])[::-1]
+                scores_sort = np.abs(scores) if rankby_abs else scores
+                partition = np.argpartition(scores_sort[imask, :], -n_genes_user)[-n_genes_user:]
+                partial_indices = np.argsort(scores_sort[imask, partition])[::-1]
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[imask, global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
