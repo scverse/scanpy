@@ -968,13 +968,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-<<<<<<< HEAD
-def heatmap(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            var_group_positions=None, var_group_labels=None, dendrogram=True,
-=======
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            var_group_positions=None, var_group_labels=None,
->>>>>>> 0ed304a64038f7d2c11b36fe5883ab9765ffba57
+            var_group_positions=None, var_group_labels=None, dendrogram=True,
             var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
@@ -1135,14 +1130,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-<<<<<<< HEAD
-def dotplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-            figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=True,
-=======
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
->>>>>>> 0ed304a64038f7d2c11b36fe5883ab9765ffba57
-            var_group_rotation=None, show=None, save=None, **kwds):
+            dendrogram=True, var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Makes a _dot plot_ of the expression values of `var_names`.
 
@@ -1377,13 +1367,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-<<<<<<< HEAD
-def matrixplot(adata, var_names, groupby=None, use_raw=True, log=False, num_categories=7,
-               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=True,
-=======
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-               figsize=None, var_group_positions=None, var_group_labels=None,
->>>>>>> 0ed304a64038f7d2c11b36fe5883ab9765ffba57
+               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=True,
                var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
