@@ -220,7 +220,6 @@ def rank_genes_groups(
         CONST_MAX_SIZE = 10000000
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
-        # ns_rest = np.zeros(n_groups, dtype=int)
         # initialize space for z-scores
         scores = np.zeros(n_genes)
         # First loop: Loop over all genes
