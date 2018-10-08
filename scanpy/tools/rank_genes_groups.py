@@ -366,5 +366,5 @@ def rank_genes_groups(
         + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids\n'
            '    \'pvals\', sorted np.recarray to be indexed by group ids\n'
            '    \'pvals_adj\', sorted np.recarray to be indexed by group ids'
-           if method in {'t-test', 't-test_overestim_var'} else ''))
+           if method in {'t-test', 't-test_overestim_var', 'wilcoxon'} else ''))
     return adata if copy else None
