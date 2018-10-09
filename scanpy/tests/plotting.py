@@ -164,7 +164,7 @@ def test_scatterplots():
     # test edges = True
     sc.pp.neighbors(pbmc)
     sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
-    save_and_compare_images('master_umap_with_edges', tolerance=tolerance)
+    save_and_compare_images('master_umap_with_edges', tolerance=20)
 
     # test diffmap
     # sc.tl.diffmap(pbmc)
