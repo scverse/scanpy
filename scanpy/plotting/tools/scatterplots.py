@@ -493,7 +493,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
     from cycler import Cycler, cycler
 
     categories = adata.obs[value_to_plot].cat.categories
-    # check is palette is a valid color map
+    # check is palette is a valid matplotlib colormap
     if isinstance(palette, str) and palette in pl.colormaps():
         # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
         cmap = pl.get_cmap(palette)
@@ -508,7 +508,20 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                           "categories (palette length: {}, categories length: {}. "
                           "Some categories will have the same color."
                           .format(len(palette), len(categories)))
-            palette = cycler(color=palette)
+            # check that colors are valid
+            from matplotlib.colors import is_color_like
+            _color_list = []
+            for color in palette:
+                if not is_color_like(color):
+                    # check if the color is a valid R color and translate it
+                    # to a valid hex color value
+                    if color in utils.additional_colors:
+                        color = utils.additional_colors[color]
+                    else:
+                        raise ValueError("The following color value of the given palette is not valid: {}".format(color))
+                _color_list.append(color)
+            
+            palette = cycler(color=_color_list)
         if not isinstance(palette, Cycler):
             raise ValueError("Please check that the value of 'palette' is a "
                              "valid matplotlib colormap string (eg. Set2), a "
