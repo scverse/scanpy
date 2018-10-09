@@ -520,7 +520,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                     else:
                         raise ValueError("The following color value of the given palette is not valid: {}".format(color))
                 _color_list.append(color)
-            
+
             palette = cycler(color=_color_list)
         if not isinstance(palette, Cycler):
             raise ValueError("Please check that the value of 'palette' is a "
