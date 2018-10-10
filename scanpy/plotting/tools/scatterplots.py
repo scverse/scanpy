@@ -374,25 +374,27 @@ def _get_data_points(adata, basis, projection, components):
             for i in range(1, adata.obsm['X_{}'.format(basis)].shape[1])]
 
     components_list = []
+    offset = 0
+    if basis == 'diffmap': offset = 1
     if components is not None:
         # components have different formats, either a list with integers, a string
         # or a list of strings.
 
         if isinstance(components, str):
             # eg: components='1,2'
-            components_list.append([int(x.strip()) - 1 for x in components.split(',')])
+            components_list.append([int(x.strip()) - 1 + offset for x in components.split(',')])
 
         elif isinstance(components, list):
             if isinstance(components[0], int):
                 # components=[1,2]
-                components_list.append([int(x) - 1 for x in components])
+                components_list.append([int(x) - 1 + offset for x in components])
             else:
                 # in this case, the components are str
                 # eg: components=['1,2'] or components=['1,2', '2,3]
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append([int(x.strip()) - 1 for x in comp.split(',')])
+                    components_list.append([int(x.strip()) - 1 + offset for x in comp.split(',')])
 
         else:
             raise ValueError("Given components: '{}' are not valid. Please check. "
@@ -407,7 +409,7 @@ def _get_data_points(adata, basis, projection, components):
                              "A valid example is `components='2,3'`")
 
     else:
-        data_points = [adata.obsm['X_' + basis][:, :n_dims]]
+        data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
         components_list = []
     return data_points, components_list
 
@@ -452,7 +454,8 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
 
         if legend_loc == 'on data':
             # identify centroids to put labels
-            for label in categories:
+            all_pos = np.zeros((len(categories), 2))
+            for ilabel, label in enumerate(categories):
                 _scatter = scatter_array[adata.obs[value_to_plot] == label, :]
                 x_pos, y_pos = np.median(_scatter, axis=0)
 
@@ -461,6 +464,10 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                         verticalalignment='center',
                         horizontalalignment='center',
                         fontsize=legend_fontsize)
+
+                all_pos[ilabel] = [x_pos, y_pos]
+            # this is temporary storage for access by other tools
+            utils._tmp_cluster_pos = all_pos
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
