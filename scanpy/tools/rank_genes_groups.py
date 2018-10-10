@@ -143,6 +143,7 @@ def rank_genes_groups(
     
     if method in {'t-test', 't-test_overestim_var'}:
         from scipy import stats
+        from statsmodels.stats.multitest import multipletests
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
@@ -175,7 +176,13 @@ def rank_genes_groups(
             dof = np.square(vars[igroup]/ns_group + var_rest/ns_rest) / denominator_dof # dof calculation for Welch t-test
             dof[np.isnan(dof)] = 0
             pvals = stats.t.sf(abs(scores), dof)*2 # *2 because of two-tailed t-test
-            pvals_adj = pvals * n_genes
+            ###########################################################################################################
+            # ## Bonferroni correction ##
+            # pvals_adj = pvals * n_genes # Bonferonni
+            ## Benjamini Hochberg correction ##
+            pvals[np.isnan(pvals)] = 1 #set Nan values to 1 to properly convert using Benhjamini Hochberg
+            _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+            ###########################################################################################################
             scores_sort = np.abs(scores) if rankby_abs else scores
             partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
             partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -217,6 +224,7 @@ def rank_genes_groups(
 
     elif method == 'wilcoxon':
         from scipy import stats
+        from statsmodels.stats.multitest import multipletests
         CONST_MAX_SIZE = 10000000
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
@@ -271,7 +279,13 @@ def rank_genes_groups(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
-                pvals_adj = pvals * n_genes
+                ###########################################################################################################
+                # ## Bonferroni correction ##
+                # pvals_adj = pvals * n_genes # Bonferonni
+                ## Benjamini-Hochberg correction ##
+                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini-Hochberg
+                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+                ###########################################################################################################
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
                 scores_sort = np.abs(scores) if rankby_abs else scores
@@ -321,7 +335,13 @@ def rank_genes_groups(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
-                pvals_adj = pvals * n_genes
+                ###########################################################################################################
+                # ## Bonferroni correction ##
+                # pvals_adj = pvals * n_genes
+                ## Benjamini Hochberg correction ##
+                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
+                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+                ###########################################################################################################
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
                 scores_sort = np.abs(scores) if rankby_abs else scores
