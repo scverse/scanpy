@@ -78,7 +78,7 @@ def paga(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    logg.info('running partition-based graph abstraction (PAGA)', reset=True)
+    logg.info('running PAGA', reset=True)
     paga = PAGA(adata, groups, model=model)
     # only add if not present
     if 'paga' not in adata.uns:

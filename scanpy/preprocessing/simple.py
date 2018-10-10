@@ -244,6 +244,7 @@ def filter_genes_dispersion(data,
                             n_bins=20,
                             n_top_genes=None,
                             log=True,
+                            subset=True,
                             copy=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
@@ -285,6 +286,9 @@ def filter_genes_dispersion(data,
         Number of highly-variable genes to keep.
     log : `bool`, optional (default: `True`)
         Use the logarithm of the mean to variance ratio.
+    subset : `bool`, optional (default: `True`)
+        Keep highly-variable genes only (if True) else write a bool array for h
+        ighly-variable genes while keeping all genes  
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -320,7 +324,10 @@ def filter_genes_dispersion(data,
         adata.var['means'] = result['means']
         adata.var['dispersions'] = result['dispersions']
         adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata._inplace_subset_var(result['gene_subset'])
+        if subset:
+            adata._inplace_subset_var(result['gene_subset'])
+        else:
+            adata.var['highly_variable'] = result['gene_subset']
         return adata if copy else None
     logg.msg('extracting highly variable genes',
               r=True, v=4)
@@ -507,7 +514,8 @@ def sqrt(data, copy=False, chunked=False, chunk_size=None):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=False, dtype='float32', copy=False, chunked=False, chunk_size=None):
+        return_info=False, use_highly_variable=None, dtype='float32', copy=False, 
+        chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -534,6 +542,8 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
     return_info : `bool`, optional (default: `False`)
         Only relevant when not passing an :class:`~anndata.AnnData`: see
         "Returns".
+    use_highly_variable : `bool`, optional (default: `None`)
+        Whether to use highly variable genes only, stored in .var['highly_variable'].
     dtype : `str` (default: 'float32')
         Numpy data type string to which to convert the result.
     copy : `bool`, optional (default: `False`)
@@ -584,34 +594,42 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         logg.msg('reducing number of computed PCs to',
                n_comps, 'as dim of data is only', adata.n_vars, v=4)
 
+    if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
+        raise ValueError('Did not find adata.var[\'highly_variable\']. '
+                         'Either your data already only consists of highly-variable genes '
+                         'or consider running `pp.filter_genes_dispersion` first.')
+    if use_highly_variable is None: 
+        use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
+    adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
+   
     if chunked:
         if not zero_center or random_state or svd_solver != 'auto':
             logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
 
         from sklearn.decomposition import IncrementalPCA
 
-        X_pca = np.zeros((adata.X.shape[0], n_comps), adata.X.dtype)
+        X_pca = np.zeros((adata_comp.X.shape[0], n_comps), adata_comp.X.dtype)
 
         pca_ = IncrementalPCA(n_components=n_comps)
 
-        for chunk, _, _ in adata.chunked_X(chunk_size):
+        for chunk, _, _ in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             pca_.partial_fit(chunk)
 
-        for chunk, start, end in adata.chunked_X(chunk_size):
+        for chunk, start, end in adata_comp.chunked_X(chunk_size):
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        zero_center = zero_center if zero_center is not None else False if issparse(adata.X) else True
+        zero_center = zero_center if zero_center is not None else False if issparse(adata_comp.X) else True
         if zero_center:
             from sklearn.decomposition import PCA
-            if issparse(adata.X):
+            if issparse(adata_comp.X):
                 logg.msg('    as `zero_center=True`, '
                        'sparse input is densified and may '
                        'lead to huge memory consumption', v=4)
-                X = adata.X.toarray()  # Copying the whole adata.X here, could cause memory problems
+                X = adata_comp.X.toarray()  # Copying the whole adata_comp.X here, could cause memory problems
             else:
-                X = adata.X
+                X = adata_comp.X
             pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
@@ -620,14 +638,20 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-            X = adata.X
+            X = adata_comp.X
         X_pca = pca_.fit_transform(X)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
-        adata.varm['PCs'] = pca_.components_.T
+        if not use_highly_variable:
+            adata.varm['PCs'] = pca_.components_.T
+        else:
+            PCs = np.empty(shape=(n_comps, adata.shape[1]))
+            PCs[:] = np.nan
+            PCs[:, adata.var['highly_variable']] = pca_.components_
+            adata.varm['PCs'] = PCs.T
         adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
