@@ -164,27 +164,40 @@ def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
 
 
 additional_colors = {
-    'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2': '#eee685',
-    'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c', 'tomato2': '#ee5c42',
-    'grey80': '#cccccc', 'grey90': '#e5e5e5', 'wheat4': '#8b7e66', 'grey65':
-    '#a6a6a6', 'grey10': '#1a1a1a', 'grey20': '#333333', 'grey50': '#7f7f7f',
-    'grey30': '#4d4d4d', 'grey40': '#666666', 'antiquewhite2': '#eedfcc',
-    'grey77': '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00',
-    'yellow4': '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
-    'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3': '#8968cd',
-    'purple4': '#551a8b', 'seagreen4': '#2e8b57', 'lightblue3': '#9ac0cd',
-    'orchid3': '#b452cd', 'indianred 3': '#cd5555', 'grey60': '#999999',
-    'mediumorchid1': '#e066ff', 'plum3': '#cd96cd', 'palevioletred3': '#cd6889',
-    'gold2': '#eec900', 'firebrick3': '#cd2626', 'khaki2': '#eee685',
-    'slategray3': '#9fb6cd', 'palegreen3': '#7ccd7c', 'tomato2': '#ee5c42',
-    'grey80': '#cccccc', 'grey90': '#e5e5e5', 'wheat4': '#8b7e66', 'grey65':
-    '#a6a6a6', 'grey10': '#1a1a1a', 'grey20': '#333333', 'grey50': '#7f7f7f',
-    'grey30': '#4d4d4d', 'grey40': '#666666', 'antiquewhite2': '#eedfcc',
-    'grey77': '#c4c4c4', 'snow4': '#8b8989', 'chartreuse3': '#66cd00',
-    'yellow4': '#8b8b00', 'darkolivegreen2': '#bcee68', 'olivedrab3': '#9acd32',
-    'azure3': '#c1cdcd', 'violetred': '#d02090', 'mediumpurple3': '#8968cd',
-    'purple4': '#551a8b', 'seagreen4': '#2e8b57'}
-
+     'gold2': '#eec900',
+     'firebrick3': '#cd2626',
+     'khaki2': '#eee685',
+     'slategray3': '#9fb6cd',
+     'palegreen3': '#7ccd7c',
+     'tomato2': '#ee5c42',
+     'grey80': '#cccccc',
+     'grey90': '#e5e5e5',
+     'wheat4': '#8b7e66',
+     'grey65': '#a6a6a6',
+     'grey10': '#1a1a1a',
+     'grey20': '#333333',
+     'grey50': '#7f7f7f',
+     'grey30': '#4d4d4d',
+     'grey40': '#666666',
+     'antiquewhite2': '#eedfcc',
+     'grey77': '#c4c4c4',
+     'snow4': '#8b8989',
+     'chartreuse3': '#66cd00',
+     'yellow4': '#8b8b00',
+     'darkolivegreen2': '#bcee68',
+     'olivedrab3': '#9acd32',
+     'azure3': '#c1cdcd',
+     'violetred': '#d02090',
+     'mediumpurple3': '#8968cd',
+     'purple4': '#551a8b',
+     'seagreen4': '#2e8b57',
+     'lightblue3': '#9ac0cd',
+     'orchid3': '#b452cd',
+     'indianred 3': '#cd5555',
+     'grey60': '#999999',
+     'mediumorchid1': '#e066ff',
+     'plum3': '#cd96cd',
+     'palevioletred3': '#cd6889'}
 
 # -------------------------------------------------------------------------------
 # Helper functions
