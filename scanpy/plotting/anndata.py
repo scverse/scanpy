@@ -1706,21 +1706,25 @@ def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None,
     categories_idx_ordered = z_var['leaves']
 
     # reorder var_groups (if any)
-
-    if has_var_groups and list(var_group_labels) == list(categories):
-        positions_ordered = []
-        labels_ordered = []
-        position_start = 0
-        var_names_idx_ordered = []
-        for idx in categories_idx_ordered:
-            position = var_group_positions[idx]
-            _var_names = var_names[position[0]:position[1] + 1]
-            var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-            positions_ordered.append((position_start, position_start + len(_var_names) -1))
-            position_start += len(_var_names)
-            labels_ordered.append(var_group_labels[idx])
-        var_group_labels = labels_ordered
-        var_group_positions = positions_ordered
+    if has_var_groups:
+        if list(var_group_labels) == list(categories):
+            print("are var groups reordered?")
+            positions_ordered = []
+            labels_ordered = []
+            position_start = 0
+            var_names_idx_ordered = []
+            for idx in categories_idx_ordered:
+                position = var_group_positions[idx]
+                _var_names = var_names[position[0]:position[1] + 1]
+                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+                positions_ordered.append((position_start, position_start + len(_var_names) -1))
+                position_start += len(_var_names)
+                labels_ordered.append(var_group_labels[idx])
+            var_group_labels = labels_ordered
+            var_group_positions = positions_ordered
+        else:
+            logg.warn("Gene order with respect to groups are not reordered because "
+                      "the groupby categories and  the `var_group_labels` are different. ")
     elif var_names is not None:
         var_names_idx_ordered = range(len(var_names))
     else:
