@@ -1708,7 +1708,6 @@ def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None,
     # reorder var_groups (if any)
     if has_var_groups:
         if list(var_group_labels) == list(categories):
-            print("are var groups reordered?")
             positions_ordered = []
             labels_ordered = []
             position_start = 0
