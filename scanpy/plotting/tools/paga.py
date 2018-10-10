@@ -19,7 +19,7 @@ from ..utils import matrix
 def paga_compare(
         adata,
         basis=None,
-        edges=True,
+        edges=False,
         color=None,
         alpha=None,
         groups=None,
@@ -30,7 +30,7 @@ def paga_compare(
         legend_fontweight='bold',
         color_map=None,
         palette=None,
-        frameon=None,
+        frameon=False,
         size=None,
         title=None,
         right_margin=None,
@@ -58,15 +58,19 @@ def paga_compare(
         Keywords for :func:`~scanpy.api.pl.scatter`.
     kwds_paga : `dict`
         Keywords for :func:`~scanpy.api.pl.paga`.
+
+    Returns
+    -------
+    A list of `matplotlib.axes.Axes` if `show` is `False`.
     """
     axs, _, _, _ = utils.setup_axes(panels=[0, 1],
-                                    right_margin=right_margin)  # dummy colors
-    # set a common title for the figure
-    suptitle = None
-    if title is not None and title_graph is None:
-        suptitle = title
-        title = ''
-        title_graph = ''
+                                    right_margin=right_margin)
+    if color is None:
+        color = adata.uns['paga']['groups']
+    suptitle = None  # common title for entire figure
+    if title_graph is None:
+        suptitle = color if title is None else title
+        title, title_graph = '', ''
     if basis is None:
         if 'X_draw_graph_fa' in adata.obsm.keys():
             basis = 'draw_graph_fa'
@@ -78,15 +82,16 @@ def paga_compare(
             basis = 'draw_graph_fr'
         else:
             basis = 'umap'
-    _paga_scatter(
+    from .scatterplots import plot_scatter
+    plot_scatter(
         adata,
+        ax=axs[0],
         basis=basis,
-        edges=edges,
         color=color,
+        edges=edges,
         alpha=alpha,
         groups=groups,
         components=components,
-        projection=projection,
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         legend_fontweight=legend_fontweight,
@@ -95,61 +100,28 @@ def paga_compare(
         frameon=frameon,
         size=size,
         title=title,
-        ax=axs[0],
         show=False,
         save=False)
     if 'pos' not in paga_graph_params:
-        paga_graph_params['pos'] = utils._tmp_cluster_pos
-    paga(adata, ax=axs[1], show=False, save=False, title=title_graph,
-         labels=groups_graph, colors=color, frameon=frameon, **paga_graph_params)
+        if color == adata.uns['paga']['groups']:
+            paga_graph_params['pos'] = utils._tmp_cluster_pos
+        else:
+            paga_graph_params['pos'] = adata.uns['paga']['pos']
+    xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
+    axs[1].set_xlim(xlim)
+    axs[1].set_ylim(ylim)
+    paga(
+        adata,
+        ax=axs[1],
+        show=False,
+        save=False,
+        title=title_graph,
+        labels=groups_graph,
+        colors=color,
+        frameon=frameon,
+        **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
     utils.savefig_or_show('paga_compare', show=show, save=save)
-    if show == False: return axs
-
-
-def _paga_scatter(
-        adata,
-        basis='tsne',
-        edges=True,
-        color=None,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight='bold',
-        color_map=None,
-        palette=None,
-        frameon=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
-    if color is None:
-        color = [adata.uns['paga']['groups']]
-    if not isinstance(color, list): color = [color]
-    from .scatterplots import plot_scatter
-    axs = plot_scatter(
-        adata,
-        basis=basis,
-        color=color,
-        edges=edges,
-        alpha=alpha,
-        groups=groups,
-        components=components,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        color_map=color_map,
-        palette=palette,
-        frameon=frameon,
-        size=size,
-        title=title,
-        ax=ax,
-        show=False)
-    utils.savefig_or_show('paga_' + basis, show=show, save=save)
     if show == False: return axs
 
 
@@ -179,6 +151,7 @@ def paga(
         left_margin=0.01,
         random_state=0,
         pos=None,
+        normalize_to_color=False,
         cmap=None,
         cax=None,
         colorbar=None,
@@ -267,6 +240,9 @@ def paga(
     export_to_gexf : `bool`, optional (default: `None`)
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
+    normalize_to_color : `bool`, optional (default: `False`)
+        Whether to normalize categorical plots to `color` or the underlying
+        grouping.
     cmap : color map
         The color map.
     cax : `matplotlib.Axes`
@@ -318,7 +294,7 @@ def paga(
     if ((isinstance(colors, Iterable) and len(colors) == len(adata.obs[groups_key].cat.categories))
         or colors is None or isinstance(colors, str)):
         colors = [colors]
-        
+
     if frameon is None:
         frameon = settings._frameon
 
@@ -373,6 +349,7 @@ def paga(
             edge_width_scale=edge_width_scale,
             min_edge_width=min_edge_width,
             max_edge_width=max_edge_width,
+            normalize_to_color=normalize_to_color,
             frameon=frameon,
             cmap=cmap,
             cax=cax,
@@ -422,6 +399,7 @@ def _paga_graph(
         node_size_scale=1,
         node_size_power=0.5,
         edge_width_scale=1,
+        normalize_to_color='reference',
         title=None,
         pos=None,
         cmap=None,
@@ -524,7 +502,8 @@ def _paga_graph(
         is_categorical_dtype(adata.obs[colors])):
         from ... import utils as sc_utils
         asso_names, asso_matrix = sc_utils.compute_association_matrix_of_groups(
-            adata, prediction=groups_key, reference=colors, normalization='reference')
+            adata, prediction=groups_key, reference=colors,
+            normalization='reference' if normalize_to_color else 'prediction')
         utils.add_colors_for_categorical_sample_annotation(adata, colors)
         asso_colors = sc_utils.get_associated_colors_of_groups(
             adata.uns[colors + '_colors'], asso_matrix)
@@ -730,13 +709,14 @@ def _paga_graph(
     groups_sizes = base_pie_size * np.power(
         groups_sizes / median_group_size, node_size_power)
 
+    if fontsize is None:
+        fontsize = rcParams['legend.fontsize']
+
     # usual scatter plot
     if not isinstance(colors[0], dict):
         sct = ax.scatter(
             pos_array[:, 0], pos_array[:, 1],
             c=colors, edgecolors='face', s=groups_sizes, cmap=cmap)
-        if fontsize is None:
-            fontsize = rcParams['legend.fontsize']
         for count, group in enumerate(node_labels):
             ax.text(pos_array[count, 0], pos_array[count, 1], group,
                     verticalalignment='center',
@@ -785,7 +765,8 @@ def _paga_graph(
                 a.text(0.5, 0.5, node_labels[ia],
                        verticalalignment='center',
                        horizontalalignment='center',
-                       transform=a.transAxes, size=fontsize)
+                       transform=a.transAxes,
+                       size=fontsize, fontweight=fontweight, **text_kwds)
     return pos_array, sct
 
 
