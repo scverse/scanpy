@@ -3,7 +3,6 @@
 Compositions of these functions are found in sc.preprocess.recipes.
 """
 
-import numpy as np
 import scipy as sp
 import warnings
 from scipy.sparse import issparse
@@ -14,7 +13,34 @@ from .. import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata
 
+# install dask if available
+try:
+    import dask.array as da
+except ImportError:
+    da = None
+
+# install zap (which wraps numpy), or fall back to plain numpy
+try:
+    import zap.base as np
+except ImportError:
+    import numpy as np
+
 N_PCS = 50  # default number of PCs
+
+
+def materialize_as_ndarray(a):
+    """Convert distributed arrays to ndarrays."""
+    if type(a) in (list, tuple):
+        if da is not None and any(isinstance(arr, da.Array) for arr in a):
+            return da.compute(*a, sync=True)
+        elif hasattr(np, 'asarray'): # zap case
+            return tuple(np.asarray(arr) for arr in a)
+    else:
+        if da is not None and isinstance(a, da.Array):
+            return a.compute()
+        elif hasattr(np, 'asarray'): # zap case
+            return np.asarray(a)
+    return a
 
 
 def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
@@ -96,7 +122,7 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
         raise ValueError('Provide one of min_counts, min_genes, max_counts or max_genes.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        cell_subset, number = filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes)
+        cell_subset, number = materialize_as_ndarray(filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes))
         if min_genes is None and max_genes is None: adata.obs['n_counts'] = number
         else: adata.obs['n_genes'] = number
         adata._inplace_subset_obs(cell_subset)
@@ -143,13 +169,13 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_counts : `int`, optional (default: `None`)
-        Minimum number of counts required for a cell to pass filtering.
+        Minimum number of counts required for a gene to pass filtering.
     min_cells : `int`, optional (default: `None`)
-        Minimum number of cells expressed required for a cell to pass filtering.
+        Minimum number of cells expressed required for a gene to pass filtering.
     max_counts : `int`, optional (default: `None`)
-        Maximum number of counts required for a cell to pass filtering.
+        Maximum number of counts required for a gene to pass filtering.
     max_cells : `int`, optional (default: `None`)
-        Maximum number of cells expressed required for a cell to pass filtering.
+        Maximum number of cells expressed required for a gene to pass filtering.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -162,8 +188,8 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     gene_subset : `np.ndarray`
         Boolean index mask that does filtering. `True` means that the gene is
         kept. `False` means the gene is removed.
-    number_per_cell : `np.ndarray`
-        Either `n_counts` or `n_cells` per cell.
+    number_per_gene : `np.ndarray`
+        Either `n_counts` or `n_cells` per gene.
     """
     n_given_options = sum(
         option is not None for option in
@@ -175,9 +201,9 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
 
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        gene_subset, number = filter_genes(adata.X, min_cells=min_cells,
+        gene_subset, number = materialize_as_ndarray(filter_genes(adata.X, min_cells=min_cells,
                                            min_counts=min_counts, max_cells=max_cells,
-                                           max_counts=max_counts)
+                                           max_counts=max_counts))
         if min_cells is None and max_cells is None:
             adata.var['n_counts'] = number
         else:
@@ -299,7 +325,7 @@ def filter_genes_dispersion(data,
     logg.msg('extracting highly variable genes',
               r=True, v=4)
     X = data  # no copy necessary, X remains unchanged in the following
-    mean, var = _get_mean_var(X)
+    mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
@@ -514,8 +540,8 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
     chunked : `bool`, optional (default: `False`)
-        If `True`, perform an incremental PCA on segments of `chunk_size`. The 
-        incremental PCA automatically zero centers and ignores settings of 
+        If `True`, perform an incremental PCA on segments of `chunk_size`. The
+        incremental PCA automatically zero centers and ignores settings of
         `random_seed` and `svd_solver`. If `False`, perform a full PCA.
     chunk_size : `int`, optional (default: `None`)
         Number of observations to include in each chunk. Required if `chunked`
@@ -679,7 +705,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     if isinstance(data, AnnData):
         logg.msg('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
-        cell_subset, counts_per_cell = filter_cells(adata.X, min_counts=1)
+        cell_subset, counts_per_cell = materialize_as_ndarray(filter_cells(adata.X, min_counts=1))
         adata.obs[key_n_counts] = counts_per_cell
         adata._inplace_subset_obs(cell_subset)
         normalize_per_cell(adata.X, counts_per_cell_after,
@@ -716,7 +742,7 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         counts_per_cell /= counts_per_cell_after
-        if not issparse(X): X /= counts_per_cell[:, np.newaxis]
+        if not issparse(X): X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
         else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
     return X if copy else None
 
