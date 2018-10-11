@@ -11,7 +11,7 @@ from scanpy.preprocessing.simple import materialize_as_ndarray
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
-@pytest.mark.skipif(not all((find_spec('dask'), find_spec('zap'), find_spec('zarr'))), reason='Dask, Zap, and Zarr all required')
+@pytest.mark.skipif(not all((find_spec('dask'), find_spec('zappy'), find_spec('zarr'))), reason='Dask, Zappy, and Zarr all required')
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):
@@ -25,9 +25,9 @@ class TestPreprocessingDistributed:
         a = ad.read_zarr(input_file)
         input_file_X = input_file + "/X"
         if request.param == "direct":
-            import zap.direct
+            import zappy.direct
 
-            a.X = zap.direct.from_zarr(input_file_X)
+            a.X = zappy.direct.from_zarr(input_file_X)
             yield a
         elif request.param == "dask":
             import dask.array as da
