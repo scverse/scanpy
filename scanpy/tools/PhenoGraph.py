@@ -93,3 +93,6 @@ def phenograph(
         nn_method=nn_method)
 
     logg.info('    finished', time=True)
+    
+    return communities, graph, Q 
+
