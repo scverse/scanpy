@@ -100,6 +100,8 @@ Clustering and trajectory inference
    tl.louvain
    tl.dpt
    tl.paga
+   tl.phenograph
+
 
 Marker genes
 ~~~~~~~~~~~~
