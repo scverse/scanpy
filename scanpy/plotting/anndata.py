@@ -1706,6 +1706,9 @@ def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None,
     categories_idx_ordered = z_var['leaves']
 
     # reorder var_groups (if any)
+    if var_names is not None:
+        var_names_idx_ordered = range(len(var_names))
+
     if has_var_groups:
         if list(var_group_labels) == list(categories):
             positions_ordered = []
@@ -1724,8 +1727,6 @@ def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None,
         else:
             logg.warn("Gene order with respect to groups are not reordered because "
                       "the groupby categories and  the `var_group_labels` are different. ")
-    elif var_names is not None:
-        var_names_idx_ordered = range(len(var_names))
     else:
         var_names_idx_ordered = None
 
