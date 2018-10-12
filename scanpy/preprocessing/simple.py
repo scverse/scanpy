@@ -19,9 +19,9 @@ try:
 except ImportError:
     da = None
 
-# install zap (which wraps numpy), or fall back to plain numpy
+# install zappy (which wraps numpy), or fall back to plain numpy
 try:
-    import zap.base as np
+    import zappy.base as np
 except ImportError:
     import numpy as np
 
@@ -33,12 +33,12 @@ def materialize_as_ndarray(a):
     if type(a) in (list, tuple):
         if da is not None and any(isinstance(arr, da.Array) for arr in a):
             return da.compute(*a, sync=True)
-        elif hasattr(np, 'asarray'): # zap case
+        elif hasattr(np, 'asarray'): # zappy case
             return tuple(np.asarray(arr) for arr in a)
     else:
         if da is not None and isinstance(a, da.Array):
             return a.compute()
-        elif hasattr(np, 'asarray'): # zap case
+        elif hasattr(np, 'asarray'): # zappy case
             return np.asarray(a)
     return a
 
@@ -288,7 +288,7 @@ def filter_genes_dispersion(data,
         Use the logarithm of the mean to variance ratio.
     subset : `bool`, optional (default: `True`)
         Keep highly-variable genes only (if True) else write a bool array for h
-        ighly-variable genes while keeping all genes  
+        ighly-variable genes while keeping all genes
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -514,7 +514,7 @@ def sqrt(data, copy=False, chunked=False, chunk_size=None):
 
 
 def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=False, use_highly_variable=None, dtype='float32', copy=False, 
+        return_info=False, use_highly_variable=None, dtype='float32', copy=False,
         chunked=False, chunk_size=None):
     """Principal component analysis [Pedregosa11]_.
 
@@ -598,10 +598,10 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
         raise ValueError('Did not find adata.var[\'highly_variable\']. '
                          'Either your data already only consists of highly-variable genes '
                          'or consider running `pp.filter_genes_dispersion` first.')
-    if use_highly_variable is None: 
+    if use_highly_variable is None:
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     adata_comp = adata[:, adata.var['highly_variable']] if use_highly_variable else adata
-   
+
     if chunked:
         if not zero_center or random_state or svd_solver != 'auto':
             logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
