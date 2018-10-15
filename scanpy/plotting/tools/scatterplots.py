@@ -207,10 +207,10 @@ def plot_scatter(adata,
     if adata.raw is None and use_raw is True:
         raise ValueError("`use_raw` is set to True but annData object does not have raw. "
                          "Please check.")
-    # make color is a python list
+    # turn color into a python list
     color = [color] if isinstance(color, str) or color is None else list(color)
     if title is not None:
-        # make title is a python list
+        # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
 
     ####
