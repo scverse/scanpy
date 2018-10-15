@@ -38,8 +38,7 @@ def phenograph( data,
                          If False, use a Gaussian kernel
         :param primary_metric:
                          Distance metric to define nearest neighbors
-                         Options include: {'euclidean', 'manhattan',
-                                           'correlation', 'cosine'}
+                         Options include: {'euclidean', 'manhattan','correlation', 'cosine'}.
                          Note that performance will be slower for correlation and cosine
         :param n_jobs:   Nearest Neighbors and Jaccard coefficients will be computed
                          in parallel using n_jobs. If n_jobs=-1, the number of jobs is
