@@ -158,7 +158,9 @@ def test_scatterplots():
     save_and_compare_images('master_umap', tolerance=tolerance)
 
     # test umap with gene expression
-    sc.pl.umap(pbmc, color=['LYZ', 'CD79A'], s=20, alpha=0.5, frameon=False, show=False)
+    import numpy as np
+    sc.pl.umap(pbmc, color=np.array(['LYZ', 'CD79A']), s=20, alpha=0.5, frameon=False,
+               title=['gene1', 'gene2'], show=False)
     save_and_compare_images('master_umap_gene_expr', tolerance=tolerance)
 
     # test edges = True
