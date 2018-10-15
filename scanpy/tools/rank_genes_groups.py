@@ -23,6 +23,7 @@ def rank_genes_groups(
         key_added=None,
         copy=False,
         method='t-test_overestim_var',
+        corr_method='benjamini-hochberg',
         **kwds):
     """Rank genes for characterizing groups.
 
@@ -50,6 +51,9 @@ def rank_genes_groups(
         <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__, for
         why this is meaningful.
+    corr_method : {'benjamini-hochberg', 'bonferroni'}, optional (default: 'benjamini-hochberg')
+        P-value correction method. Used only for 't-test', 't-test_overestim_var',
+        and 'wilcoxon' methods.
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
@@ -82,6 +86,11 @@ def rank_genes_groups(
     avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
         raise ValueError('Method must be one of {}.'.format(avail_methods))
+
+    avail_corr = {'benjamini-hochberg', 'bonferroni'}
+    if corr_method not in avail_corr:
+        raise ValueError('Correction method must be one of {}.'.format(avail_corr))
+
     
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
@@ -108,6 +117,7 @@ def rank_genes_groups(
         'reference': reference,
         'method': method,
         'use_raw': use_raw,
+        'corr_method': corr_method,
     }
 
     # adata_comp mocks an AnnData object if use_raw is True
@@ -176,13 +186,13 @@ def rank_genes_groups(
             dof = np.square(vars[igroup]/ns_group + var_rest/ns_rest) / denominator_dof # dof calculation for Welch t-test
             dof[np.isnan(dof)] = 0
             pvals = stats.t.sf(abs(scores), dof)*2 # *2 because of two-tailed t-test
-            ###########################################################################################################
-            # ## Bonferroni correction ##
-            # pvals_adj = pvals * n_genes # Bonferonni
-            ## Benjamini Hochberg correction ##
-            pvals[np.isnan(pvals)] = 1 #set Nan values to 1 to properly convert using Benhjamini Hochberg
-            _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-            ###########################################################################################################
+
+            if corr_method == 'benjamini-hochberg':
+                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
+                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+            elif corr_method == 'bonferroni':
+                pvals_adj = pvals * n_genes
+
             scores_sort = np.abs(scores) if rankby_abs else scores
             partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
             partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -279,13 +289,13 @@ def rank_genes_groups(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores))
-                ###########################################################################################################
-                # ## Bonferroni correction ##
-                # pvals_adj = pvals * n_genes # Bonferonni
-                ## Benjamini-Hochberg correction ##
-                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini-Hochberg
-                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-                ###########################################################################################################
+
+                if corr_method == 'benjamini-hochberg':
+                    pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
+                    _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+                elif corr_method == 'bonferroni':
+                    pvals_adj = pvals * n_genes
+
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
                 scores_sort = np.abs(scores) if rankby_abs else scores
@@ -335,13 +345,13 @@ def rank_genes_groups(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
-                ###########################################################################################################
-                # ## Bonferroni correction ##
-                # pvals_adj = pvals * n_genes
-                ## Benjamini Hochberg correction ##
-                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
-                _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
-                ###########################################################################################################
+
+                if corr_method == 'benjamini-hochberg':
+                    pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
+                    _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
+                elif corr_method == 'bonferroni':
+                    pvals_adj = pvals * n_genes
+
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
                 scores_sort = np.abs(scores) if rankby_abs else scores
