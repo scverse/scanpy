@@ -207,6 +207,11 @@ def plot_scatter(adata,
     if adata.raw is None and use_raw is True:
         raise ValueError("`use_raw` is set to True but annData object does not have raw. "
                          "Please check.")
+    # turn color into a python list
+    color = [color] if isinstance(color, str) or color is None else list(color)
+    if title is not None:
+        # turn title into a python list if not None
+        title = [title] if isinstance(title, str) else list(title)
 
     ####
     # get the points position and the components list (only if components is not 'None)
@@ -247,9 +252,6 @@ def plot_scatter(adata,
                                hspace=hspace,
                                wspace=wspace)
     else:
-        # this case handles color='variable' and color=['variable'], which are the same
-        if isinstance(color, str) or color is None:
-            color = [color]
         if len(components_list) == 0:
             components_list = [None]
         multi_panel = False
@@ -291,7 +293,12 @@ def plot_scatter(adata,
         if title is None and value_to_plot is not None:
             ax.set_title(value_to_plot)
         else:
-            ax.set_title(title)
+            try:
+                ax.set_title(title[count])
+            except IndexError:
+                logg.warn("The title list is shorter than the number of panels. Using 'color' value instead for"
+                          "some plots.")
+                ax.set_title(value_to_plot)
 
         if 's' not in kwargs:
             kwargs['s'] = 120000 / _data_points.shape[0]
