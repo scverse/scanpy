@@ -11,3 +11,11 @@ networkx
 natsort
 joblib
 numba
+magic
+dca
+pypairs
+phate
+fa2
+zappy
+dask
+bioservices
