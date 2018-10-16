@@ -1090,7 +1090,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         labels.append(label)
         value_sum += value
         label2code[label] = code
-
+        print(ticks[-1], label, code)
     groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
     if len(categories) > 1:
         groupby_ax.set_yticks(ticks)
@@ -1250,11 +1250,13 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if dendrogram is True:
         dendro_ax = fig.add_subplot(axs[1, 1])
 
-        dendro_data = _plot_dendrogram(dendro_ax, adata, groupby, var_names=var_names,
-                                       categories=categories,
-                                       var_group_labels=var_group_labels,
-                                       var_group_positions=var_group_positions,
-                                       use_raw=use_raw, log=log, num_categories=num_categories)
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
+
+        _plot_dendrogram(dendro_ax, adata)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1661,30 +1663,137 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     gene_groups_ax.tick_params(axis='x', bottom=False, labelbottom=False, labeltop=False)
 
 
-def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None, var_group_labels=None,
-                     var_group_positions=None, use_raw=True,
-                     log=False, num_categories=7, cor_method='pearson', linkage_method='ward',
-                     orientation='right', remove_labels=True):
-    """
-    Plots a dendrogram on the given ax,
-    """
-
-    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_group_labels=None,
+                        var_group_positions=None, use_raw=True, log=False, num_categories=7,
+                        cor_method='pearson', linkage_method='complete'):
 
     # compute a correlation matrix based on all the data in adata (or adata.raw if use_raw is true)
     # this is to avoid doing the computation only on the few genes that are being plotted
     # which could bias the results.
-    gene_names = adata.var_names if use_raw is False else adata.raw.var_names
-    cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+    if 'dendrogram' not in adata.uns or 'linkage' not in adata.uns['dendrogram']:
+        has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
-    mean_df = df.groupby(level=0).mean()
+        gene_names = adata.var_names if use_raw is False else adata.raw.var_names
+        cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
 
-    import scipy.cluster.hierarchy as sch
+        mean_df = df.groupby(level=0).mean()
 
-    corr_matrix = mean_df.T.corr(method=cor_method)
-    y_var = sch.linkage(corr_matrix, method=linkage_method)
-    z_var = sch.dendrogram(y_var, orientation=orientation, link_color_func=lambda k: 'darkred',
-                           ax=dendro_ax, labels=cat, leaf_rotation=90)
+        import scipy.cluster.hierarchy as sch
+
+        corr_matrix = mean_df.T.corr(method=cor_method)
+        z_var = sch.linkage(corr_matrix, method=linkage_method)
+        dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
+
+        # order of groupby categories
+        categories_idx_ordered = dendro_info['leaves']
+        # reorder var_groups (if any)
+        if var_names is not None:
+            var_names_idx_ordered = range(len(var_names))
+
+        if has_var_groups:
+            if list(var_group_labels) == list(categories):
+                positions_ordered = []
+                labels_ordered = []
+                position_start = 0
+                var_names_idx_ordered = []
+                for idx in categories_idx_ordered:
+                    position = var_group_positions[idx]
+                    _var_names = var_names[position[0]:position[1] + 1]
+                    var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+                    positions_ordered.append((position_start, position_start + len(_var_names) -1))
+                    position_start += len(_var_names)
+                    labels_ordered.append(var_group_labels[idx])
+                var_group_labels = labels_ordered
+                var_group_positions = positions_ordered
+            else:
+                logg.warn("Gene order with respect to groups are not reordered because "
+                          "the groupby categories and  the `var_group_labels` are different. ")
+        else:
+            var_names_idx_ordered = None
+
+        adata.uns['dendrogram'] = {'linkage': z_var,
+                                   'cor_method': cor_method,
+                                   'linkage_method': 'linkage_method',
+                                   'use_raw': use_raw,
+                                   'categories_idx_ordered': categories_idx_ordered,
+                                   'var_names_idx_ordered': var_names_idx_ordered,
+                                   'var_group_labels': var_group_labels,
+                                   'var_group_positions': var_group_positions,
+                                   'dendrogram_info': dendro_info}
+
+    return adata.uns['dendrogram']
+
+
+def _plot_dendrogram(dendro_ax, adata, orientation='right', remove_labels=True, ticks=None):
+    """
+    Plots a dendrogram on the given ax,
+    """
+    if 'dendrogram' not in adata.uns:
+        logg.error("'dendrogram' information not in adata.uns")
+        exit()
+
+    def translate_pos(pos_list, new_ticks, old_ticks):
+        """
+        transforms the dendrogram coordinates to a set. The xlabel_pos and orig_ticks should be of the same
+        length.
+
+        Parameters
+        ----------
+        pos_list :  list of dendrogram positions that should be translated
+        new_ticks : list of goal tick positions
+        old_ticks: list of original tick positions
+
+        Returns
+        -------
+        translated list of positions
+
+
+        """
+        # of given coordinates.
+
+        old_ticks = old_ticks.tolist()
+        new_xs = []
+        for x_val in pos_list:
+            if x_val in old_ticks:
+                new_x_val = new_ticks[old_ticks.index(x_val)]
+            else:
+                # find smaller and bigger indices
+                idx_next = np.searchsorted(old_ticks, x_val, side="left")
+                idx_prev = idx_next - 1
+                old_min = old_ticks[idx_prev]
+                old_max = old_ticks[idx_next]
+                new_min = new_ticks[idx_prev]
+                new_max = new_ticks[idx_next]
+                new_x_val = ((x_val - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+            new_xs.append(new_x_val)
+        return new_xs
+
+    dendro_info = adata.uns['dendrogram']['dendrogram_info']
+    leaves = dendro_info["ivl"]
+    icoord = np.array(dendro_info['icoord'])
+    dcoord = np.array(dendro_info['dcoord'])
+
+    orig_ticks = np.arange(5, len(leaves) * 10 + 5, 10).astype(float)
+    # check that ticks has the same length as orig_ticks
+    if ticks is not None and len(orig_ticks) != len(ticks):
+        logg.warn("ticks argument does not have the same size as orig_ticks. The argument will be ignored")
+        ticks = None
+
+    for xs, ys in zip(icoord, dcoord):
+        if ticks is not None:
+            xs = translate_pos(xs, ticks, orig_ticks)
+        if orientation in ['right', 'left']:
+            dendro_ax.plot(ys, xs)
+        else:
+            dendro_ax.plot(ys, xs)
+
+    ticks = ticks if ticks is not None else orig_ticks
+    if orientation in ['right', 'left']:
+        dendro_ax.set_yticks(ticks)
+        dendro_ax.set_yticklabels(leaves, fontsize='small', rotation=90)
+    else:
+        dendro_ax.set_xticks(ticks)
+        dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=0)
 
     if remove_labels is True:
         dendro_ax.set_xticks([])
@@ -1701,38 +1810,3 @@ def _plot_dendrogram(dendro_ax, adata, groupby, categories=None, var_names=None,
     dendro_ax.spines['top'].set_visible(False)
     dendro_ax.spines['left'].set_visible(False)
     dendro_ax.spines['bottom'].set_visible(False)
-
-    # order of groupby categories
-    categories_idx_ordered = z_var['leaves']
-
-    # reorder var_groups (if any)
-    if var_names is not None:
-        var_names_idx_ordered = range(len(var_names))
-
-    if has_var_groups:
-        if list(var_group_labels) == list(categories):
-            positions_ordered = []
-            labels_ordered = []
-            position_start = 0
-            var_names_idx_ordered = []
-            for idx in categories_idx_ordered:
-                position = var_group_positions[idx]
-                _var_names = var_names[position[0]:position[1] + 1]
-                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                positions_ordered.append((position_start, position_start + len(_var_names) -1))
-                position_start += len(_var_names)
-                labels_ordered.append(var_group_labels[idx])
-            var_group_labels = labels_ordered
-            var_group_positions = positions_ordered
-        else:
-            logg.warn("Gene order with respect to groups are not reordered because "
-                      "the groupby categories and  the `var_group_labels` are different. ")
-    else:
-        var_names_idx_ordered = None
-
-    result = {'categories_idx_ordered': categories_idx_ordered,
-              'var_names_idx_ordered': var_names_idx_ordered,
-              'var_group_labels': var_group_labels,
-              'var_group_positions': var_group_positions,
-              'linkage': y_var}
-    return result
