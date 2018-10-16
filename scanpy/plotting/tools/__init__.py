@@ -281,6 +281,8 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
     if key is None:
         key = 'rank_genes_groups'
 
+    if 'dendrogram' not in kwds:
+        kwds['dendrogram'] = True
     if groupby is None:
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = (adata.uns[key]['names'].dtype.names
@@ -305,7 +307,7 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
     elif plot_type == 'stacked_violin':
         from ..anndata import stacked_violin
-        stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+        return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':

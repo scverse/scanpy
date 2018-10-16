@@ -758,7 +758,7 @@ def clustermap(
 @doc_params(show_save_ax=doc_show_save_ax)
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
-                   show=None, save=None, figsize=None, var_group_positions=None,
+                   show=None, save=None, figsize=None, var_group_positions=None, dendrogram=False,
                    var_group_labels=None, var_group_rotation=None, swap_axes=False, **kwds):
     """\
     Stacked violin plots.
@@ -827,53 +827,83 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     A list of `matplotlib.Axes` where each ax corresponds to each row in the image
     """
     if use_raw is None and adata.raw is not None: use_raw = True
-
+    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+    if isinstance(var_names, str):
+        var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
+    if dendrogram is True:
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
+
+        var_group_labels = dendro_data['var_group_labels']
+        var_group_positions = dendro_data['var_group_positions']
+
+        # reorder obs_tidy
+        if dendro_data['var_names_idx_ordered'] is not None:
+            obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
+
+        obs_tidy.index = obs_tidy.index.reorder_categories(
+            [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
+        categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
+
     from matplotlib import gridspec
+    global count
+    count = 0
+
+    def rename_cols_to_int(value):
+        global count
+        count += 1
+        return count
+
+    # All columns should have a unique name, otherwise the
+    # pd.melt object that is passed to seaborn will merge non-unique columns.
+    # Here, I simply rename the columns using a count from 1..n using the
+    # mapping function `rename_cols_to_int` to solve the problem.
+    obs_tidy.rename(rename_cols_to_int, axis='columns', inplace=True)
 
     if swap_axes is False:
         # plot image in which x = var_names and y = groupby categories
-        global count
-        count = 0
 
-        def rename_cols_to_int(value):
-            global count
-            count += 1
-            return count
-
-        # All columns should have a unique name, otherwise
-        # pd.melt object that is passed to seaborn will merge non-unique columns.
-        # Here, I simply rename the columns using a count from 1..n using the
-        # mapping function: `rename_cols_to_int`
-        obs_tidy.rename(rename_cols_to_int, axis='columns', inplace=True)
+        dendro_width = 1.4 if dendrogram is True else 0
 
         if figsize is None:
             height = len(categories) * 0.2 + 3
-            width = len(var_names) * 0.2 + 1
+            width = len(var_names) * 0.2 + 1 + dendro_width
         else:
             width, height = figsize
 
         num_rows = len(categories)
         height_ratios = None
-        if var_group_positions is not None and len(var_group_positions) > 0:
+        if has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
             num_rows += 2  # +2 to add the row for the brackets and a spacer
             height_ratios = [0.2, 0.05] + [float(height) / len(categories)] * len(categories)
             categories = [None, None] + list(categories)
         fig = pl.figure(figsize=(width, height))
-        # define a layout of nrows = len(categories) rows x 1 column
-        # each row is one violin plot.
-        # if var_group_positions is defined, a new row is added
-        axs = gridspec.GridSpec(nrows=num_rows, ncols=1, height_ratios=height_ratios)
 
+        # define a layout of nrows = len(categories) rows x 2 columns
+        # each row is one violin plot. Second column is reserved for dendrogram (if any)
+        # if var_group_positions is defined, a new row is added
+        axs = gridspec.GridSpec(nrows=num_rows, ncols=2, height_ratios=height_ratios,
+                                width_ratios=[width, dendro_width], wspace=0.05)
+        axs_list = []
+        if dendrogram is True:
+            first_plot_idx = 1 if has_var_groups else 0
+            dendro_ax = fig.add_subplot(axs[first_plot_idx:, 1])
+            _plot_dendrogram(dendro_ax, adata)
+            axs_list.append(dendro_ax)
         ax0 = None
         for idx in range(num_rows)[::-1]:  # iterate in reverse to start on the bottom plot
                                            # this facilitates adding the brackets plot (if
                                            # needed) by sharing the x axis with a previous
                                            # violing plot.
             category = categories[idx]
-            if var_group_positions is not None and len(var_group_positions) > 0 and idx <= 1:
+            if has_var_groups and idx <= 1:
                 # if var_group_positions is given, axs[0] and axs[1] are the location for the
                 # brackets and a spacer (axs[1])
                 if idx == 0:
@@ -886,12 +916,13 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
             df = pd.melt(obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns)
             if ax0 is None:
-                ax = fig.add_subplot(axs[idx])
+                ax = fig.add_subplot(axs[idx, 0])
                 ax0 = ax
 
             else:
-                ax = fig.add_subplot(axs[idx], sharey=ax0)
+                ax = fig.add_subplot(axs[idx, 0], sharey=ax0)
 
+            axs_list.append(ax)
             ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, **kwds)
 
@@ -927,21 +958,47 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             width = len(categories) * 0.2 + 1
         else:
             width, height = figsize
-        fig, axs = pl.subplots(nrows=len(var_names), ncols=1, sharex=True, sharey=True,
-                               figsize=(width, height))
-        for idx, y in enumerate(var_names):
-            if len(var_names) > 1:
-                ax = axs[idx]
-            else:
-                ax = axs
+        fig = pl.figure(figsize=(width, height))
 
+        # define a layout of nrows = var_names x 1 columns
+        # if plot dendrogram a row is added
+        # each row is one violin plot.
+        num_rows = len(var_names)
+        height_ratios = [1] * num_rows
+        if dendrogram:
+            num_rows += 1
+            height_ratios = [3] + height_ratios
+
+        axs = gridspec.GridSpec(nrows=num_rows, ncols=1, height_ratios=height_ratios)
+
+        axs_list = []
+        if dendrogram is True:
+            dendro_ax = fig.add_subplot(axs[0])
+            _plot_dendrogram(dendro_ax, adata, orientation='top')
+            axs_list.append(dendro_ax)
+        first_ax = None
+        for idx, y in enumerate(obs_tidy.columns):
+            if dendrogram is True:
+                ax_idx = idx + 1
+            else:
+                ax_idx = idx
+            if first_ax is None:
+                ax = fig.add_subplot(axs[ax_idx])
+                first_ax = ax
+            else:
+                ax = fig.add_subplot(axs[ax_idx], sharey=first_ax)
+            axs_list.append(ax)
+            # else:
+            #     ax = fig.add_subplot(axs)
+            if idx==0:
+                obs_tidy.to_pickle('/tmp/obs_tidy2.pickle')
             ax = sns.violinplot(x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, **kwds)
             if stripplot:
                 ax = sns.stripplot(x=obs_tidy.index, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
 
-            ax.set_ylabel(y, rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
+            ax.set_ylabel(var_names[idx], rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
             ax.tick_params(axis='y', right=True, labelright=True,
@@ -952,7 +1009,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             # Because the plots share the x axis it is redundant and less compact to plot the
             # axis for each plot
             if idx < len(var_names) - 1:
-                ax.set_xticklabels([])
+                ax.tick_params(labelbottom=False, labeltop=False, bottom=False, top=False)
+                ax.set_xlabel('')
             if log:
                 ax.set_yscale('log')
 
@@ -964,12 +1022,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     utils.savefig_or_show('stacked_violin', show=show, save=save)
 
-    return axs
+    return axs_list
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            var_group_positions=None, var_group_labels=None, dendrogram=True,
+            var_group_positions=None, var_group_labels=None, dendrogram=False,
             var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
@@ -1023,6 +1081,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     colorbar.
     """
     if use_raw is None and adata.raw is not None: use_raw = True
+    if isinstance(var_names, str):
+        var_names = [var_names]
+
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     dendro_width = 1.8 if dendrogram is True else 0
@@ -1061,22 +1122,23 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
 
     if dendrogram is True:
-        dendro_ax = fig.add_subplot(axs[1, 2])
-
-        dendro_data = _plot_dendrogram(dendro_ax, adata, groupby, var_names=var_names,
-                                       categories=categories,
-                                       var_group_labels=var_group_labels,
-                                       var_group_positions=var_group_positions,
-                                       use_raw=use_raw, log=log, num_categories=num_categories)
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
 
         # reorder obs_tidy
-        obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
+        if dendro_data['var_names_idx_ordered'] is not None:
+            obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
+
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
-        var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
+
     if groupby:
         obs_tidy = obs_tidy.sort_index()
 
@@ -1090,7 +1152,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         labels.append(label)
         value_sum += value
         label2code[label] = code
-        print(ticks[-1], label, code)
     groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
     if len(categories) > 1:
         groupby_ax.set_yticks(ticks)
@@ -1117,6 +1178,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
     heatmap_ax.set_xticklabels(var_names)
 
+    if dendrogram is True:
+        dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
+        _plot_dendrogram(dendro_ax, adata, ticks=ticks)
+
     # plot group legends on top of heatmap_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
@@ -1132,7 +1197,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
-            dendrogram=True, var_group_rotation=None, show=None, save=None, **kwds):
+            dendrogram=False, var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Makes a _dot plot_ of the expression values of `var_names`.
 
@@ -1190,6 +1255,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     second axis is the heatmap and the third axis is the colorbar.
     """
     if use_raw is None and adata.raw is not None: use_raw = True
+    if isinstance(var_names, str):
+        var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     # for if category defined by groupby (if any) compute for each var_name
@@ -1244,29 +1311,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     #   fifth ax is to plot the size legend
     from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=5, left=0.05, right=0.48, wspace=0.05, hspace=0.04,
+    axs = gridspec.GridSpec(nrows=2, ncols=5, left=0.05, right=0.48, wspace=0.02, hspace=0.04,
                             width_ratios=[heatmap_width, dendro_width, colorbar_width, colorbar_width_spacer, size_legend_width],
                             height_ratios=height_ratios)
-    if dendrogram is True:
-        dendro_ax = fig.add_subplot(axs[1, 1])
-
-        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
-                                          categories=categories,
-                                          var_group_labels=var_group_labels,
-                                          var_group_positions=var_group_positions,
-                                          use_raw=use_raw, log=log, num_categories=num_categories)
-
-        _plot_dendrogram(dendro_ax, adata)
-
-        var_group_labels = dendro_data['var_group_labels']
-        var_group_positions = dendro_data['var_group_positions']
-
-        # reorder matrix
-        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'],
-                                 dendro_data['var_names_idx_ordered']]
-        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'],
-                                         dendro_data['var_names_idx_ordered']]
-
     if len(categories) < 4:
         # when few categories are shown, the colorbar and size legend
         # need to be larger than the main plot, otherwise they would look
@@ -1278,6 +1325,32 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         dot_ax = fig.add_subplot(axs[1, 0])
 
     color_legend = fig.add_subplot(axs[1, 2])
+
+    if dendrogram is True:
+
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
+
+        var_group_labels = dendro_data['var_group_labels']
+        var_group_positions = dendro_data['var_group_positions']
+
+        # reorder matrix
+        if dendro_data['var_names_idx_ordered'] is not None:
+            # reorder columns (usually genes) if needed. This only happens when
+            # var_group_positions and var_group_labels is set
+            mean_obs = mean_obs.iloc[:,dendro_data['var_names_idx_ordered']]
+            fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+
+        # reorder rows (categories) to match the dendrogram order
+        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
+
+        y_ticks = range(mean_obs.shape[0])
+        dendro_ax = fig.add_subplot(axs[1, 1], sharey=dot_ax)
+        _plot_dendrogram(dendro_ax, adata, ticks=y_ticks)
 
     # to keep the size_legen of about the same height, irrespective
     # of the number of categories, the fourth ax is subdivided into two parts
@@ -1370,7 +1443,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=True,
+               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=False,
                var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -1418,6 +1491,8 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     second axis is the heatmap and the third axis is the colorbar.
     """
     if use_raw is None and adata.raw is not None: use_raw = True
+    if isinstance(var_names, str):
+        var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     mean_obs = obs_tidy.groupby(level=0).mean()
@@ -1454,30 +1529,36 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
                             width_ratios=[heatmap_width, dendro_width, colorbar_width],
                             height_ratios=height_ratios)
 
-    if dendrogram is True:
-        dendro_ax = fig.add_subplot(axs[1, 1])
+    matrix_ax = fig.add_subplot(axs[1, 0])
+    y_ticks = np.arange(mean_obs.shape[0]) + 0.5
+    matrix_ax.set_yticks(y_ticks)
+    matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
 
-        dendro_data = _plot_dendrogram(dendro_ax, adata, groupby, var_names=var_names,
-                                       categories=categories,
-                                       var_group_labels=var_group_labels,
-                                       var_group_positions=var_group_positions,
-                                       use_raw=use_raw, log=log, num_categories=num_categories)
+    color_legend = fig.add_subplot(axs[1, 2])
+
+    if dendrogram is True:
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
 
         # reorder matrix
-        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'],
-                                 dendro_data['var_names_idx_ordered']]
+        if dendro_data['var_names_idx_ordered'] is not None:
+            # reorder columns (usually genes) if needed. This only happens when
+            # var_group_positions and var_group_labels is set
+            mean_obs = mean_obs.iloc[:,dendro_data['var_names_idx_ordered']]
 
-    matrix_ax = fig.add_subplot(axs[1, 0])
+        # reorder rows (categories) to match the dendrogram order
+        mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
 
-    color_legend = fig.add_subplot(axs[1, 2])
+        dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
+        _plot_dendrogram(dendro_ax, adata, ticks=y_ticks)
 
     pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
-    y_ticks = np.arange(mean_obs.shape[0]) + 0.5
-    matrix_ax.set_yticks(y_ticks)
-    matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
 
     # invert y axis to show categories ordered from top to bottom
     matrix_ax.set_ylim(mean_obs.shape[0], 0)
@@ -1670,56 +1751,56 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     # compute a correlation matrix based on all the data in adata (or adata.raw if use_raw is true)
     # this is to avoid doing the computation only on the few genes that are being plotted
     # which could bias the results.
-    if 'dendrogram' not in adata.uns or 'linkage' not in adata.uns['dendrogram']:
-        has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
-        gene_names = adata.var_names if use_raw is False else adata.raw.var_names
-        cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+    gene_names = adata.var_names if use_raw is False else adata.raw.var_names
+    cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
 
-        mean_df = df.groupby(level=0).mean()
+    mean_df = df.groupby(level=0).mean()
 
-        import scipy.cluster.hierarchy as sch
+    import scipy.cluster.hierarchy as sch
 
-        corr_matrix = mean_df.T.corr(method=cor_method)
-        z_var = sch.linkage(corr_matrix, method=linkage_method)
-        dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
+    corr_matrix = mean_df.T.corr(method=cor_method)
+    z_var = sch.linkage(corr_matrix, method=linkage_method)
+    dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
 
-        # order of groupby categories
-        categories_idx_ordered = dendro_info['leaves']
-        # reorder var_groups (if any)
-        if var_names is not None:
-            var_names_idx_ordered = range(len(var_names))
+    # order of groupby categories
+    categories_idx_ordered = dendro_info['leaves']
+    # reorder var_groups (if any)
+    if var_names is not None:
+        var_names_idx_ordered = list(range(len(var_names)))
 
-        if has_var_groups:
-            if list(var_group_labels) == list(categories):
-                positions_ordered = []
-                labels_ordered = []
-                position_start = 0
-                var_names_idx_ordered = []
-                for idx in categories_idx_ordered:
-                    position = var_group_positions[idx]
-                    _var_names = var_names[position[0]:position[1] + 1]
-                    var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                    positions_ordered.append((position_start, position_start + len(_var_names) -1))
-                    position_start += len(_var_names)
-                    labels_ordered.append(var_group_labels[idx])
-                var_group_labels = labels_ordered
-                var_group_positions = positions_ordered
-            else:
-                logg.warn("Gene order with respect to groups are not reordered because "
-                          "the groupby categories and  the `var_group_labels` are different. ")
+    if has_var_groups:
+        if list(var_group_labels) == list(categories):
+            positions_ordered = []
+            labels_ordered = []
+            position_start = 0
+            var_names_idx_ordered = []
+            for idx in categories_idx_ordered:
+                position = var_group_positions[idx]
+                _var_names = var_names[position[0]:position[1] + 1]
+                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
+                positions_ordered.append((position_start, position_start + len(_var_names) -1))
+                position_start += len(_var_names)
+                labels_ordered.append(var_group_labels[idx])
+            var_group_labels = labels_ordered
+            var_group_positions = positions_ordered
         else:
-            var_names_idx_ordered = None
+            logg.warn("Gene order with respect to groups are not reordered because "
+                      "the groupby categories and  the `var_group_labels` are different. ")
+    else:
+        var_names_idx_ordered = None
 
-        adata.uns['dendrogram'] = {'linkage': z_var,
-                                   'cor_method': cor_method,
-                                   'linkage_method': 'linkage_method',
-                                   'use_raw': use_raw,
-                                   'categories_idx_ordered': categories_idx_ordered,
-                                   'var_names_idx_ordered': var_names_idx_ordered,
-                                   'var_group_labels': var_group_labels,
-                                   'var_group_positions': var_group_positions,
-                                   'dendrogram_info': dendro_info}
+    adata.uns['dendrogram'] = {'linkage': z_var,
+                               'groupby': groupby,
+                               'cor_method': cor_method,
+                               'linkage_method': 'linkage_method',
+                               'use_raw': use_raw,
+                               'categories_idx_ordered': categories_idx_ordered,
+                               'var_names_idx_ordered': var_names_idx_ordered,
+                               'var_group_labels': var_group_labels,
+                               'var_group_positions': var_group_positions,
+                               'dendrogram_info': dendro_info}
 
     return adata.uns['dendrogram']
 
@@ -1734,24 +1815,31 @@ def _plot_dendrogram(dendro_ax, adata, orientation='right', remove_labels=True, 
 
     def translate_pos(pos_list, new_ticks, old_ticks):
         """
-        transforms the dendrogram coordinates to a set. The xlabel_pos and orig_ticks should be of the same
+        transforms the dendrogram coordinates to a given new position. The xlabel_pos and orig_ticks should be of the same
         length.
 
         Parameters
         ----------
         pos_list :  list of dendrogram positions that should be translated
-        new_ticks : list of goal tick positions
-        old_ticks: list of original tick positions
+        new_ticks : sorted list of goal tick positions (e.g. [0,1,2,3] )
+        old_ticks: sorted list of original tick positions (e.g. [5, 15, 25, 35]), This list is
+                   usually the default position used by  scipy.cluster.hiearchy.dendrogram`
 
         Returns
         -------
         translated list of positions
 
+        Examples
+        --------
+        >>> translate([5, 15, 20, 21 ], [0, 1, 2, 3], [5, 15, 25, 35])
+        ... [0, 1, 1.5, 1.6]
 
         """
         # of given coordinates.
 
-        old_ticks = old_ticks.tolist()
+        if not isinstance(old_ticks, list):
+            # assume that the list is a numpy array
+            old_ticks = old_ticks.tolist()
         new_xs = []
         for x_val in pos_list:
             if x_val in old_ticks:
@@ -1783,28 +1871,28 @@ def _plot_dendrogram(dendro_ax, adata, orientation='right', remove_labels=True, 
         if ticks is not None:
             xs = translate_pos(xs, ticks, orig_ticks)
         if orientation in ['right', 'left']:
-            dendro_ax.plot(ys, xs)
+            dendro_ax.plot(ys, xs, color='#555555')
         else:
-            dendro_ax.plot(ys, xs)
+            dendro_ax.plot(xs, ys, color='#555555')
 
     ticks = ticks if ticks is not None else orig_ticks
     if orientation in ['right', 'left']:
         dendro_ax.set_yticks(ticks)
-        dendro_ax.set_yticklabels(leaves, fontsize='small', rotation=90)
+        dendro_ax.set_yticklabels(leaves, fontsize='small', rotation=0)
     else:
         dendro_ax.set_xticks(ticks)
-        dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=0)
+        dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=90)
 
     if remove_labels is True:
-        dendro_ax.set_xticks([])
-        dendro_ax.set_yticks([])
+        dendro_ax.tick_params(labelbottom=False, labeltop=False, labelleft=False, labelright=False,
+                              bottom=False, top=False, left=False, right=False)
 
     dendro_ax.grid(False)
 
     # invert y-axe to match main matrix plot
-    if orientation in ['left', 'right']:
-        ymin, ymax = dendro_ax.get_ylim()
-        dendro_ax.set_ylim(ymax, ymin)
+    # if orientation in ['left', 'right']:
+    #     ymin, ymax = dendro_ax.get_ylim()
+    #     dendro_ax.set_ylim(ymax, ymin)
 
     dendro_ax.spines['right'].set_visible(False)
     dendro_ax.spines['top'].set_visible(False)
