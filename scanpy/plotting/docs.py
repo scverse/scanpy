@@ -61,11 +61,11 @@ wspace : `float` (default: 0.1)
 hspace : `float` (default: 0.25)
     Adjust the height of the space between multiple panels.
 title : `str` or list of `str`, optional (default: `None`)
-    Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
-**kwargs : keyword arguments, optional
-    Arguments to pass to `matplotlib.pyplot.scatter`, for example the color map
-    (e.g. `cmap='viridis'`), the maximum and minimum values (e.g. `vmin=-2,
-    vmax=5`)...
+    Provide title for panels either as, e.g. `['title1', 'title2', ...]`.
+**kwargs : further keyword arguments, optional
+    Arguments to pass to `matplotlib.pyplot.scatter`, for instance, the color
+    map (e.g. `cmap='viridis'`) or the maximum and minimum values
+    (e.g. `vmin=-2, vmax=5`).\
 """
 
 
