@@ -8,7 +8,7 @@ with open('requirements.txt', encoding='utf-8') as requirements:
 with open('README.rst', encoding='utf-8') as readme_f:
     readme = readme_f.read()
 
-author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Davide Cittaro, Gokcen Eraslan, Tobias Callies'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Davide Cittaro, Gokcen Eraslan, Tobias Callies, Andrés R. Muñoz-Rojas'
 
 setup(
     name='scanpy',
