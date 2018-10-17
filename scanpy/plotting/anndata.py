@@ -759,7 +759,8 @@ def clustermap(
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
                    show=None, save=None, figsize=None, var_group_positions=None, dendrogram=False,
-                   var_group_labels=None, var_group_rotation=None, swap_axes=False, **kwds):
+                   var_group_labels=None, var_group_rotation=None, swap_axes=False,
+                   row_palette='muted', **kwds):
     """\
     Stacked violin plots.
 
@@ -818,6 +819,11 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
          axes var_group_positions are no longer used
     var_group_rotation : `float` (default: `None`)
         Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    row_palette: `str` (default: `muted`)
+        The row palette determines the colors to use in each of the stacked violin plots. The value
+        should be a valid seaborn palette name or a valic matplotlib colormap
+        (see https://seaborn.pydata.org/generated/seaborn.color_palette.html). Alternatively,
+        a single color name or hex value can be passed. E.g. 'red' or '#cc33ff'
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
@@ -898,6 +904,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             _plot_dendrogram(dendro_ax, adata)
             axs_list.append(dendro_ax)
         ax0 = None
+        if is_color_like(row_palette):
+            row_colors = [row_palette] * len(var_names)
+        else:
+            row_colors = sns.color_palette(row_palette, n_colors=len(var_names))
         for idx in range(num_rows)[::-1]:  # iterate in reverse to start on the bottom plot
                                            # this facilitates adding the brackets plot (if
                                            # needed) by sharing the x axis with a previous
@@ -924,7 +934,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
             axs_list.append(ax)
             ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, **kwds)
+                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
 
             if stripplot:
                 ax = sns.stripplot('variable', y='value', data=df, order=order,
@@ -977,6 +987,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             _plot_dendrogram(dendro_ax, adata, orientation='top')
             axs_list.append(dendro_ax)
         first_ax = None
+        if is_color_like(row_palette):
+            row_colors = [row_palette] * len(var_names)
+        else:
+            row_colors = sns.color_palette(row_palette, n_colors=len(var_names))
         for idx, y in enumerate(obs_tidy.columns):
             if dendrogram is True:
                 ax_idx = idx + 1
@@ -993,7 +1007,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             if idx==0:
                 obs_tidy.to_pickle('/tmp/obs_tidy2.pickle')
             ax = sns.violinplot(x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, **kwds)
+                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
             if stripplot:
                 ax = sns.stripplot(x=obs_tidy.index, y=y, data=obs_tidy, order=order,
                                    jitter=jitter, color='black', size=size, ax=ax)
@@ -1083,6 +1097,22 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
+    if use_raw is False:
+        # this most likely will used a scaled version of the data
+        # and thus is better to use a diverging scale
+        param_set = False
+        if 'vmin' not in kwds:
+            kwds['vmin'] = -3
+            param_set = True
+        if 'vmax' not in kwds:
+            kwds['vmax'] = 3
+            param_set = True
+        if 'cmap' not in kwds:
+            kwds['cmap'] = 'bwr'
+            param_set = True
+        if param_set is True:
+            logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
+                      '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
@@ -1490,9 +1520,28 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
     """
+    from matplotlib.colors import is_color_like
+
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
+    if use_raw is False:
+        # this most likely will used a scaled version of the data
+        # and thus is better to use a diverging scale
+        param_set = False
+        if 'vmin' not in kwds:
+            kwds['vmin'] = -3
+            param_set = True
+        if 'vmax' not in kwds:
+            kwds['vmax'] = 3
+            param_set = True
+        if 'cmap' not in kwds:
+            kwds['cmap'] = 'bwr'
+            param_set = True
+        if param_set is True:
+            logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
+                      '`vmin`, `vmax` and `cmap` to adjust the plot.')
+
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
     mean_obs = obs_tidy.groupby(level=0).mean()
