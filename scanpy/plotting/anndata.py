@@ -845,6 +845,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
+    if groupby is None or len(categories) <= 1:
+        # dendrogram can only be computed  between groupby categories
+        dendrogram = False
+
     if dendrogram is True:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
                                           categories=categories,
@@ -1165,6 +1169,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     heatmap_cbar_ax = fig.add_subplot(axs[1, 3])
     heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
 
+    if groupby is None or len(categories) <= 1:
+        # dendrogram can only be computed  between groupby categories
+        dendrogram = False
+
     if dendrogram is True:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
                                           categories=categories,
@@ -1376,6 +1384,10 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         dot_ax = fig.add_subplot(axs[1, 0])
 
     color_legend = fig.add_subplot(axs[1, 2])
+
+    if groupby is None or len(categories) <= 1:
+        # dendrogram can only be computed  between groupby categories
+        dendrogram = False
 
     if dendrogram is True:
 
@@ -1612,6 +1624,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
 
     color_legend = fig.add_subplot(axs[1, 2])
+
+    if groupby is None or len(categories) <= 1:
+        # dendrogram can only be computed  between groupby categories
+        dendrogram = False
 
     if dendrogram is True:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
@@ -1863,8 +1879,8 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
             var_group_labels = labels_ordered
             var_group_positions = positions_ordered
         else:
-            logg.warn("Gene order with respect to groups are not reordered because "
-                      "the groupby categories and  the `var_group_labels` are different. ")
+            logg.warn("Groups are not reordered because the `groupby` categories "
+                      "and the `var_group_labels` are different. ")
     else:
         var_names_idx_ordered = None
 
