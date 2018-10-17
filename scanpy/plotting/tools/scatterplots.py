@@ -2,6 +2,7 @@ from matplotlib import pyplot as pl
 from pandas.api.types import is_categorical_dtype
 import numpy as np
 from matplotlib import rcParams
+from matplotlib.colors import is_color_like
 from .. import utils
 from ...utils import sanitize_anndata, doc_params
 from ... import settings
@@ -182,6 +183,11 @@ def plot_scatter(adata,
         kwargs['cmap'] = color_map
     if size is not None:
         kwargs['s'] = size
+    if 'edgecolor' not in kwargs:
+        # by default turn off edge color. Otherwise, for
+        # very small sizes the edge will not reduce its size
+        # (https://github.com/theislab/scanpy/issues/293)
+        kwargs['edgecolor'] = 'none'
 
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
@@ -201,6 +207,11 @@ def plot_scatter(adata,
     if adata.raw is None and use_raw is True:
         raise ValueError("`use_raw` is set to True but annData object does not have raw. "
                          "Please check.")
+    # turn color into a python list
+    color = [color] if isinstance(color, str) or color is None else list(color)
+    if title is not None:
+        # turn title into a python list if not None
+        title = [title] if isinstance(title, str) else list(title)
 
     ####
     # get the points position and the components list (only if components is not 'None)
@@ -241,9 +252,6 @@ def plot_scatter(adata,
                                hspace=hspace,
                                wspace=wspace)
     else:
-        # this case handles color='variable' and color=['variable'], which are the same
-        if isinstance(color, str) or color is None:
-            color = [color]
         if len(components_list) == 0:
             components_list = [None]
         multi_panel = False
@@ -285,7 +293,12 @@ def plot_scatter(adata,
         if title is None and value_to_plot is not None:
             ax.set_title(value_to_plot)
         else:
-            ax.set_title(title)
+            try:
+                ax.set_title(title[count])
+            except IndexError:
+                logg.warn("The title list is shorter than the number of panels. Using 'color' value instead for"
+                          "some plots.")
+                ax.set_title(value_to_plot)
 
         if 's' not in kwargs:
             kwargs['s'] = 120000 / _data_points.shape[0]
@@ -509,7 +522,6 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                           "Some categories will have the same color."
                           .format(len(palette), len(categories)))
             # check that colors are valid
-            from matplotlib.colors import is_color_like
             _color_list = []
             for color in palette:
                 if not is_color_like(color):
@@ -600,7 +612,24 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                     len(adata.uns[value_to_plot + '_colors']) < len(adata.obs[value_to_plot].cat.categories):
                     #  set a default palette in case that no colors or few colors are found
                     _set_default_colors_for_categorical_obs(adata, value_to_plot)
-
+                else:
+                    # check that the colors in 'uns' are valid
+                    _palette = []
+                    for color in adata.uns[value_to_plot + '_colors']:
+                        if not is_color_like(color):
+                            # check if the color is a valid R color and translate it
+                            # to a valid hex color value
+                            if color in utils.additional_colors:
+                                color = utils.additional_colors[color]
+                            else:
+                                logg.warn("The following color value found in adata.uns['{}'] "
+                                          " is not valid: '{}'. Default colors are used.".format(value_to_plot + '_colors', color))
+                                _set_default_colors_for_categorical_obs(adata, value_to_plot)
+                                _palette = None
+                                break
+                        _palette.append(color)
+                    if _palette is not None:
+                        adata.uns[value_to_plot + '_colors'] = _palette
             # for categorical data, colors should be
             # stored in adata.uns[value_to_plot + '_colors']
             # Obtain color vector by converting every category
