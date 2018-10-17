@@ -96,9 +96,6 @@ def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68k_reduced()
     tolerance = 15
 
-    # test ranked genes panels
-    outfile = NamedTemporaryFile(suffix='.png', prefix='scanpy_test_rank_genes_groups_', delete=False)
-
     sc.pl.rank_genes_groups(pbmc, n_genes=12, n_panels_per_row=3, show=False)
     save_and_compare_images('master_ranked_genes_sharey', tolerance=tolerance)
 

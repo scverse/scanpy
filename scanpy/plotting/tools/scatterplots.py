@@ -290,9 +290,13 @@ def plot_scatter(adata,
             axs.append(ax)
         if frameon is False:
             ax.axis('off')
-        if title is None and value_to_plot is not None:
-            ax.set_title(value_to_plot)
+        if title is None:
+            if value_to_plot is not None:
+                ax.set_title(value_to_plot)
+            else:
+                ax.set_title('')
         else:
+
             try:
                 ax.set_title(title[count])
             except IndexError:
