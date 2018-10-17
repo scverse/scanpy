@@ -845,6 +845,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
 
+    if 'color' in kwds:
+        row_palette = kwds['color']
+        # remove color from kwds in case is set to avoid an error caused by
+        # double parameters
+        del (kwds['color'])
+
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
