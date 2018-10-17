@@ -70,7 +70,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Davide Cittaro, Gokcen Eraslan, Tobias Callies'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Davide Cittaro, Gokcen Eraslan, Tobias Callies, Andrés R. Muñoz-Rojas'
 copyright = f'{datetime.now():%Y}, {author}'
 
 version = scanpy.__version__.replace('.dirty', '')
