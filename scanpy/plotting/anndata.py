@@ -758,7 +758,7 @@ def clustermap(
 @doc_params(show_save_ax=doc_show_save_ax)
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
-                   show=None, save=None, figsize=None, var_group_positions=None, dendrogram=False,
+                   show=None, save=None, figsize=None,  dendrogram=False, var_group_positions=None,
                    var_group_labels=None, var_group_rotation=None, swap_axes=False,
                    row_palette='muted', **kwds):
     """\
@@ -803,6 +803,13 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     figsize : (float, float), optional (default: None)
         Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
         Format is (width, height)
+    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        the dendrogram order. If groups of var_names are set and those groups correspond
+        to the `groupby` categories, those groups are also reordered. The 'person' method
+        is used to compute the pairwise correlation between categories using all var_names in
+        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+        used is `complete`.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names` (only when swap_axes=False).
         This will draw a 'bracket'
@@ -1041,7 +1048,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            var_group_positions=None, var_group_labels=None, dendrogram=False,
+            dendrogram=False, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
@@ -1073,6 +1080,13 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     figsize : (float, float), optional (default: None)
         Figure size (width, height). If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
+    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        the dendrogram order. If groups of var_names are set and those groups correspond
+        to the `groupby` categories, those groups are also reordered. The 'person' method
+        is used to compute the pairwise correlation between categories using all var_names in
+        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+        used is `complete`.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
         on top of the plot between the given start and end positions. If the
@@ -1226,8 +1240,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            color_map='Reds', figsize=None, var_group_positions=None, var_group_labels=None,
-            dendrogram=False, var_group_rotation=None, show=None, save=None, **kwds):
+            color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
+            var_group_labels=None, var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Makes a _dot plot_ of the expression values of `var_names`.
 
@@ -1264,7 +1278,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     figsize : (float, float), optional (default: None)
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
-    var_group_positions :  list of `tuples`.
+   dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        the dendrogram order. If groups of var_names are set and those groups correspond
+        to the `groupby` categories, those groups are also reordered. The 'person' method
+        is used to compute the pairwise correlation between categories using all var_names in
+        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+        used is `complete`.
+     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
         on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
@@ -1473,7 +1494,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-               figsize=None, var_group_positions=None, var_group_labels=None, dendrogram=False,
+               figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
                var_group_rotation=None, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -1500,6 +1521,13 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     figsize : (float, float), optional (default: None)
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
+    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        the dendrogram order. If groups of var_names are set and those groups correspond
+        to the `groupby` categories, those groups are also reordered. The 'person' method
+        is used to compute the pairwise correlation between categories using all var_names in
+        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+        used is `complete`.
     var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
         on top of the plot between the given start and end positions. If the
