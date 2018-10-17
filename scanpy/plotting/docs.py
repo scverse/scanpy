@@ -46,6 +46,8 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `bold`)
     Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
+size : `float` (default: `None`)
+    Point size. If `None`, is automatically computed.
 palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
     Colors to use for plotting categorical annotation groups. The palette can
     be a valid `matplotlib.pyplot.colormap` name like 'Set2' or 'tab20', a 
