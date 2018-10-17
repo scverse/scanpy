@@ -9,8 +9,8 @@ color : string or list of strings, optional (default: `None`)
     Keys for annotations of observations/cells or variables/genes, e.g.,
     `'ann1'` or `['ann1', 'ann2']`.
 use_raw : `bool`, optional (default: `None`)
-    Use `raw` attribute of `adata` if present. By default, if `adata.raw` is present
-    this will be used.\
+    Use `.raw` attribute of `adata` for coloring with gene expression. If
+    `None`, uses `.raw` if present.\
 """
 
 
@@ -33,25 +33,25 @@ sort_order : `bool`, optional (default: `True`)
 groups : `str`, optional (default: `all groups`)
     Restrict to a few categories in categorical observation annotation.
 components : `str` or list of `str`, optional (default: '1,2')
-    For instance, ['1,2', '2,3']. To plot all available components 
-    use components='all'
+    For instance, `['1,2', '2,3']`. To plot all available components use
+    `components='all'`.
 projection : {'2d', '3d'}, optional (default: '2d')
     Projection of plot.
-legend_loc : str, optional (default: 'right margin')
-    Location of legend, either 'on data', 'right margin' or valid keywords
-    for matplotlib.legend.
+legend_loc : `str`, optional (default: 'right margin')
+    Location of legend, either 'on data', 'right margin' or valid keywords for
+    `matplotlib.legend`.
 legend_fontsize : `int`, optional (default: `None`)
     Legend font size.
-legend_fontweight : {'normal', 'bold', ...}, optional (default: `bold`)
-    Legend font weight. Defaults to 'bold' if `legend_loc = 'on data'`,
+legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
+    Legend font weight. Defaults to 'bold' if `legend_loc == 'on data'`,
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
 size : `float` (default: `None`)
     Point size. If `None`, is automatically computed.
 palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
-    Colors to use for plotting categorical annotation groups. The palette can
-    be a valid `matplotlib.pyplot.colormap` name like 'Set2' or 'tab20', a 
-    list of colors like ['red', '#ccdd11', (0.1, 0.2, 1)] or a Cycler object.
+    Colors to use for plotting categorical annotation groups. The palette can be
+    a valid `matplotlib.pyplot.colormap` name like `'Set2'` or `'tab20'`, a list
+    of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a Cycler object.
 frameon : `bool`, optional (default: `True`)
     Draw a frame around the scatter plot.
 ncols : `int` (default: 4)
@@ -64,8 +64,8 @@ title : `str` or list of `str`, optional (default: `None`)
     Provide title for panels either as, e.g. `["title1", "title2", ...]`.\
 **kwargs : keyword arguments, optional
     Arguments to pass to `matplotlib.pyplot.scatter`, for example the color map
-    (eg: cmap='viridis'), the marker size (s=10) the maximum and minimum values
-    (eg. vmin=-2, vmax=5) etc..
+    (e.g. `cmap='viridis'`), the maximum and minimum values (e.g. `vmin=-2,
+    vmax=5`)...
 """
 
 
