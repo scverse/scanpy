@@ -657,8 +657,9 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     elif use_raw is True and value_to_plot in adata.raw.var_names:
         color_vector = adata.raw[:, value_to_plot].X
     else:
-        raise ValueError("Given 'color': {} is not a valid observation "
-                         "or var. Valid observations are: {}".format(value_to_plot, adata.obs.columns))
+        raise ValueError("The passed `color` {} is not a valid observation annotation "
+                         "or variable name. Valid observation annotation keys are: {}"
+                         .format(value_to_plot, adata.obs.columns))
 
     return color_vector, categorical
 
