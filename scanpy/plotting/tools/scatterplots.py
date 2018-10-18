@@ -288,7 +288,7 @@ def plot_scatter(adata,
         if multi_panel is True:
             ax = pl.subplot(gs[count], **args_3d)
             axs.append(ax)
-        if frameon is False:
+        if not (settings._frameon if frameon is None else frameon):
             ax.axis('off')
         if title is None:
             if value_to_plot is not None:
