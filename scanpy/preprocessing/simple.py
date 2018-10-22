@@ -7,8 +7,10 @@ import scipy as sp
 import warnings
 from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import sparsefuncs
+import pandas as pd
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
+from .qc import top_segment_proportions
 from .. import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata
@@ -1082,6 +1084,51 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
             adata.X[icell] = cell_profile
     logg.msg('finished', t=True)
     return adata if copy else None
+
+
+def calculate_qc_metrics(adata, exprs_values="counts", percent_top=(50, 100, 200, 500), inplace=False):
+    """
+    Calculate qc metrics like scater does.
+    
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    exprs_values : `str` (default: "counts")
+        Name of kind of values in X.
+    percent_top : `List[int]` (default: (50, 100, 200, 500)) # TODO: Just needs to work with np.array
+        Which proportions of top genes to cover. If empty or `None` don't
+        calculate.
+    inplace : bool (default: `False`) # TODO: Should this be `True`?
+        Whether to place calculated metrics in `.obs` and `.var`
+
+    Returns
+    -------
+    Depending on `inplace` returns calculated metrics or updates `adata`'s 
+    `obs` and `var`
+    """
+    obs_metrics = pd.DataFrame(index=adata.obs_names)
+    var_metrics = pd.DataFrame(index=adata.var_names)
+    # Calculate obs metrics
+    obs_metrics[f"total_features_by_{exprs_values}"] = (
+        adata.X != 0).sum(axis=1)
+    obs_metrics[f"total_{exprs_values}"] = adata.X.sum(axis=1)
+    proportions = top_segment_proportions(adata.X, percent_top)
+    for i, n in enumerate(percent_top):
+        obs_metrics[f"pct_{exprs_values}_in_top_{n}_features"] = proportions[:, i] * 100
+    # Calculate var metrics
+    var_metrics[f"mean_{exprs_values}"] = np.ravel(adata.X.mean(axis=0))
+    var_metrics[f"n_cells_by_{exprs_values}"] = np.ravel(
+        (adata.X != 0).sum(axis=0))
+    var_metrics[f"pct_dropout_by_{exprs_values}"] = (1 - var_metrics[f"n_cells_by_{exprs_values}"] /
+                                                     adata.X.shape[0]) * 100
+    var_metrics[f"total_{exprs_values}"] = np.ravel(adata.X.sum(axis=0))
+    # Return
+    if inplace:
+        adata.obs = adata.obs.join(obs_metrics)
+        adata.var = adata.var.join(var_metrics)
+    else:
+        return obs_metrics, var_metrics
 
 
 def zscore_deprecated(X):
