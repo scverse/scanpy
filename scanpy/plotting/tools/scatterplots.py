@@ -236,7 +236,7 @@ def plot_scatter(adata,
         from matplotlib import gridspec
         # set up the figure
         num_panels = len(color) * len(components_list)
-        n_panels_x = ncols
+        n_panels_x = min(ncols, num_panels)
         n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
         # each panel will have the size of rcParams['figure.figsize']
         fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
