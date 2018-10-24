@@ -7,7 +7,6 @@ def top_proportions(mtx, n):
     if sparse.issparse(mtx):
         if not sparse.isspmatrix_csr(mtx):
             mtx = sparse.csr_matrix(mtx)
-        #         return top_proportions_sparse(mtx, n) # Assumes csr sparse for now
         # Allowing numba to do more
         return top_proportions_sparse_csr(mtx.data, mtx.indptr, n)
     else:
@@ -33,7 +32,7 @@ def top_proportions_sparse_csr(data, indptr, n):
         start, end = indptr[i], indptr[i+1]
         vec = np.zeros(n, dtype=np.float64)
         if end - start <= n:
-            vec[:end-start] = data[start:end]  # Could this be data[:]?
+            vec[:end-start] = data[start:end]
             total = vec.sum()
         else:
             vec[:] = -(np.partition(-data[start:end], n-1)[:n])

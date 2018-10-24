@@ -52,7 +52,6 @@ def test_segments_binary():
 def test_top_segments_sparse():
     a_dense = np.ones((300, 100))
     for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
-        print(fmt)
         a = fmt(a_dense)
         seg = top_segment_proportions(a, [50, 100])
         assert (seg[:, 0] == .5).all()
@@ -68,12 +67,10 @@ def test_qc_metrics():
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
     sc.pp.calculate_qc_metrics(adata, feature_controls=["mito"], inplace=True)
-    assert (adata.obs["total_features_by_counts"] > 0).all()
     assert (adata.obs["total_features_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["total_features_by_counts"] >= adata.obs["log1p_total_features_by_counts"]).all()
     assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
     assert (adata.obs["total_counts"] >= adata.obs["log1p_total_counts"]).all()
-    assert (adata.obs["total_counts_mito"] > 0).all()
     assert (adata.obs["total_counts_mito"] >=
             adata.obs["log1p_total_counts_mito"]).all()
     for col in adata.obs.columns:
