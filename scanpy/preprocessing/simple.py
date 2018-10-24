@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 import scipy as sp
 import warnings
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, isspmatrix_coo, csr_matrix
 from sklearn.utils import sparsefuncs
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -1086,7 +1086,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     return adata if copy else None
 
 
-def calculate_qc_metrics(adata, exprs_values="counts", percent_top=(50, 100, 200, 500), inplace=False):
+def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(), percent_top=(50, 100, 200, 500), inplace=False):
     """
     Calculate qc metrics like scater does.
     
@@ -1096,6 +1096,9 @@ def calculate_qc_metrics(adata, exprs_values="counts", percent_top=(50, 100, 200
         Annotated data matrix.
     exprs_values : `str` (default: "counts")
         Name of kind of values in X.
+    feature_controls : `Container` (default: `()`)
+        Keys for boolean columns of `.var` which identify feature controls, 
+        e.g. "ERCC" or "mito".
     percent_top : `List[int]` (default: (50, 100, 200, 500)) # TODO: Just needs to work with np.array
         Which proportions of top genes to cover. If empty or `None` don't
         calculate.
@@ -1107,22 +1110,40 @@ def calculate_qc_metrics(adata, exprs_values="counts", percent_top=(50, 100, 200
     Depending on `inplace` returns calculated metrics or updates `adata`'s 
     `obs` and `var`
     """
+    if isspmatrix_coo(adata.X):
+        X = csr_matrix(adata.X) # COO not subscriptable
+    else:
+        X = adata.X
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     var_metrics = pd.DataFrame(index=adata.var_names)
     # Calculate obs metrics
     obs_metrics[f"total_features_by_{exprs_values}"] = (
-        adata.X != 0).sum(axis=1)
-    obs_metrics[f"total_{exprs_values}"] = adata.X.sum(axis=1)
-    proportions = top_segment_proportions(adata.X, percent_top)
+        X != 0).sum(axis=1)
+    obs_metrics[f"log1p_total_features_by_{exprs_values}"] = np.log1p(
+        obs_metrics[f"total_features_by_{exprs_values}"])
+    obs_metrics[f"total_{exprs_values}"] = X.sum(axis=1)
+    obs_metrics[f"log1p_total_{exprs_values}"] = np.log1p(
+        obs_metrics[f"total_{exprs_values}"])
+    proportions = top_segment_proportions(X, percent_top)
     for i, n in enumerate(percent_top):
         obs_metrics[f"pct_{exprs_values}_in_top_{n}_features"] = proportions[:, i] * 100
+    for feature_control in feature_controls:
+        obs_metrics[f"total_{exprs_values}_{feature_control}"] = \
+            X[:, adata.var[feature_control].values].sum(axis=1)
+        obs_metrics[f"log1p_total_{exprs_values}_{feature_control}"] = \
+            np.log1p(obs_metrics[f"total_{exprs_values}_{feature_control}"])
+        obs_metrics[f"pct_{exprs_values}_{feature_control}"] = \
+            obs_metrics[f"total_{exprs_values}"] / obs_metrics[f"total_{exprs_values}_{feature_control}"]
     # Calculate var metrics
-    var_metrics[f"mean_{exprs_values}"] = np.ravel(adata.X.mean(axis=0))
+    var_metrics[f"mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
+    var_metrics[f"log1p_mean_{exprs_values}"] = np.log1p(var_metrics[f"mean_{exprs_values}"])
     var_metrics[f"n_cells_by_{exprs_values}"] = np.ravel(
-        (adata.X != 0).sum(axis=0))
+        (X != 0).sum(axis=0))
     var_metrics[f"pct_dropout_by_{exprs_values}"] = (1 - var_metrics[f"n_cells_by_{exprs_values}"] /
-                                                     adata.X.shape[0]) * 100
-    var_metrics[f"total_{exprs_values}"] = np.ravel(adata.X.sum(axis=0))
+                                                     X.shape[0]) * 100
+    var_metrics[f"total_{exprs_values}"] = np.ravel(X.sum(axis=0))
+    var_metrics[f"log1p_total_{exprs_values}"] = np.log1p(
+        var_metrics[f"total_{exprs_values}"])
     # Return
     if inplace:
         adata.obs = adata.obs.join(obs_metrics)
