@@ -50,7 +50,7 @@ def test_segments_binary():
 
 def test_top_segments_sparse():
     a_dense = np.ones((300, 100))
-    for fmt in [sparse.csr_matrix]:  # , sparse.csc_matrix, sparse.coo_matrix]:
+    for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
         print(fmt)
         a = fmt(a_dense)
         seg = top_segment_proportions(a, [50, 100])
@@ -66,8 +66,22 @@ def test_qc_metrics():
         np.random.binomial(100, .005, (1000, 1000))))
     sc.pp.calculate_qc_metrics(adata, inplace=True)
     assert (adata.obs["total_features_by_counts"] > 0).all()
+    assert (adata.obs["total_features_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
     for col in adata.obs.columns:
         if col.startswith("pct_counts_in_top"):
             assert (adata.obs[col] <= 100).all()
             assert (adata.obs[col] >= 0).all()
+    for col in adata.var.columns:
+        assert (adata.var[col] >= 0).all()
+    assert (adata.var["mean_counts"] < np.ravel(adata.X.max(axis=0).todense())).all()
+
+def test_qc_metrics_format():
+    a = np.random.binomial(100, .005, (1000, 1000))
+    adata_dense = sc.AnnData(X=a)
+    sc.pp.calculate_qc_metrics(adata_dense, inplace=True)
+    for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
+        adata = sc.AnnData(X=fmt(a))
+        sc.pp.calculate_qc_metrics(adata, inplace=True)
+        assert np.allclose(adata.obs, adata_dense.obs)
+        assert np.allclose(adata.var, adata_dense.var)

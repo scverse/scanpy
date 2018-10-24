@@ -5,6 +5,8 @@ import numba
 def top_proportions(mtx, n):
     """Calculates cumulative proportions up to value n"""
     if sparse.issparse(mtx):
+        if not sparse.isspmatrix_csr(mtx):
+            mtx = sparse.csr_matrix(mtx)
         #         return top_proportions_sparse(mtx, n) # Assumes csr sparse for now
         # Allowing numba to do more
         return top_proportions_sparse_csr(mtx.data, mtx.indptr, n)
@@ -44,7 +46,9 @@ def top_proportions_sparse_csr(data, indptr, n):
 def top_segment_proportions(mtx, ns):
     """Calculates total percentage of counts in top ns genes"""
     # Pretty much just does dispatch
-    if isinstance(mtx, sparse.csr_matrix):
+    if sparse.issparse(mtx):
+        if not sparse.isspmatrix_csr(mtx):
+            mtx = sparse.csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, ns)
     else:
         return top_segment_proportions_dense(mtx, ns)
