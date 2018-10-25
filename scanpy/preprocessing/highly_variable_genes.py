@@ -74,21 +74,17 @@ def highly_variable_genes(data,
     if min_disp is None: min_disp = 0.5
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
+
     if isinstance(data, AnnData):
+        data_is_AnnData = True
         adata = data.copy() if copy else data
-        result = highly_variable_genes(adata.X,
-                                       min_disp=min_disp, max_disp=max_disp,
-                                       min_mean=min_mean, max_mean=max_mean,
-                                       n_top_genes=n_top_genes,
-                                       flavor=flavor)
-        adata.var['means'] = result['means']
-        adata.var['dispersions'] = result['dispersions']
-        adata.var['dispersions_norm'] = result['dispersions_norm']
-        adata.var['highly_variable'] = result['gene_subset']
-        return adata if copy else None
+        X = np.expm1(adata.X) if flavor=='seurat' else adata.X
+    else:
+        data_is_AnnData = False
+        X = np.expm1(data) if flavor=='seurat' else data
+
     logg.msg('extracting highly variable genes',
               r=True, v=4)
-    X = np.expm1(data) if flavor=='seurat' else data  # no copy necessary, X remains unchanged in the following
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
@@ -155,11 +151,19 @@ def highly_variable_genes(data,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
     logg.msg('    finished', time=True, v=4)
-    return np.rec.fromarrays((gene_subset,
-                              df['mean'].values,
-                              df['dispersion'].values,
-                              df['dispersion_norm'].values.astype('float32', copy=False)),
-                              dtype=[('gene_subset', bool),
-                                     ('means', 'float32'),
-                                     ('dispersions', 'float32'),
-                                     ('dispersions_norm', 'float32')])
+
+    if data_is_AnnData:
+        adata.var['means'] = df['mean'].values
+        adata.var['dispersions'] = df['dispersion'].values
+        adata.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
+        adata.var['highly_variable'] = gene_subset
+        return adata if copy else None
+    else:
+        return np.rec.fromarrays((gene_subset,
+                                  df['mean'].values,
+                                  df['dispersion'].values,
+                                  df['dispersion_norm'].values.astype('float32', copy=False)),
+                                  dtype=[('gene_subset', bool),
+                                         ('means', 'float32'),
+                                         ('dispersions', 'float32'),
+                                         ('dispersions_norm', 'float32')])
