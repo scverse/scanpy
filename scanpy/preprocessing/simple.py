@@ -1086,10 +1086,11 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     return adata if copy else None
 
 
-def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(), percent_top=(50, 100, 200, 500), inplace=False):
+def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(), 
+                         percent_top=(50, 100, 200, 500), inplace=False):
     """
     Calculate qc metrics like scater does.
-    
+
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
@@ -1111,39 +1112,52 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(), perc
     `obs` and `var`
     """
     if isspmatrix_coo(adata.X):
-        X = csr_matrix(adata.X) # COO not subscriptable
+        X = csr_matrix(adata.X)  # COO not subscriptable
     else:
         X = adata.X
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     var_metrics = pd.DataFrame(index=adata.var_names)
     # Calculate obs metrics
-    obs_metrics[f"total_features_by_{exprs_values}"] = (
+    obs_metrics["total_features_by_{exprs_values}"] = (
         X != 0).sum(axis=1)
-    obs_metrics[f"log1p_total_features_by_{exprs_values}"] = np.log1p(
-        obs_metrics[f"total_features_by_{exprs_values}"])
-    obs_metrics[f"total_{exprs_values}"] = X.sum(axis=1)
-    obs_metrics[f"log1p_total_{exprs_values}"] = np.log1p(
-        obs_metrics[f"total_{exprs_values}"])
+    obs_metrics["log1p_total_features_by_{exprs_values}"] = np.log1p(
+        obs_metrics["total_features_by_{exprs_values}"])
+    obs_metrics["total_{exprs_values}"] = X.sum(axis=1)
+    obs_metrics["log1p_total_{exprs_values}"] = np.log1p(
+        obs_metrics["total_{exprs_values}"])
     proportions = top_segment_proportions(X, percent_top)
+    # Since there are local loop variables, formatting must occur in their scope
+    # Probably worth looking into a python3.5 compatable way to make this better
     for i, n in enumerate(percent_top):
-        obs_metrics[f"pct_{exprs_values}_in_top_{n}_features"] = proportions[:, i] * 100
+        obs_metrics["pct_{exprs_values}_in_top_{n}_features".format(**locals())] = \
+            proportions[:, i] * 100
     for feature_control in feature_controls:
-        obs_metrics[f"total_{exprs_values}_{feature_control}"] = \
+        obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())] = \
             X[:, adata.var[feature_control].values].sum(axis=1)
-        obs_metrics[f"log1p_total_{exprs_values}_{feature_control}"] = \
-            np.log1p(obs_metrics[f"total_{exprs_values}_{feature_control}"])
-        obs_metrics[f"pct_{exprs_values}_{feature_control}"] = \
-            obs_metrics[f"total_{exprs_values}"] / obs_metrics[f"total_{exprs_values}_{feature_control}"]
+        obs_metrics["log1p_total_{exprs_values}_{feature_control}".format(**locals())] = \
+            np.log1p(
+                obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())])
+        # "total_{exprs_values}" not formatted yet
+        obs_metrics["pct_{exprs_values}_{feature_control}".format(**locals())] = \
+            obs_metrics["total_{exprs_values}"] / \
+            obs_metrics["total_{exprs_values}_{feature_control}".format(
+                **locals())]
     # Calculate var metrics
-    var_metrics[f"mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
-    var_metrics[f"log1p_mean_{exprs_values}"] = np.log1p(var_metrics[f"mean_{exprs_values}"])
-    var_metrics[f"n_cells_by_{exprs_values}"] = np.ravel(
-        (X != 0).sum(axis=0))
-    var_metrics[f"pct_dropout_by_{exprs_values}"] = (1 - var_metrics[f"n_cells_by_{exprs_values}"] /
-                                                     X.shape[0]) * 100
-    var_metrics[f"total_{exprs_values}"] = np.ravel(X.sum(axis=0))
-    var_metrics[f"log1p_total_{exprs_values}"] = np.log1p(
-        var_metrics[f"total_{exprs_values}"])
+    var_metrics["mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
+    var_metrics["log1p_mean_{exprs_values}"] = np.log1p(
+        var_metrics["mean_{exprs_values}"])
+    var_metrics["n_cells_by_{exprs_values}"] = np.ravel((X != 0).sum(axis=0))
+    var_metrics["pct_dropout_by_{exprs_values}"] = \
+        (1 - var_metrics["n_cells_by_{exprs_values}"] / X.shape[0]) * 100
+    var_metrics["total_{exprs_values}"] = np.ravel(X.sum(axis=0))
+    var_metrics["log1p_total_{exprs_values}"] = np.log1p(
+        var_metrics["total_{exprs_values}"])
+    # Format strings
+    for df in obs_metrics, var_metrics:
+        new_colnames = []
+        for col in df.columns:
+            new_colnames.append(col.format(**locals()))
+        df.columns = new_colnames
     # Return
     if inplace:
         adata.obs = adata.obs.join(obs_metrics)

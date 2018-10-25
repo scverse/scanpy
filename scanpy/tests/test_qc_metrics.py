@@ -66,14 +66,19 @@ def test_qc_metrics():
         np.random.binomial(100, .005, (1000, 1000))))
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
-    sc.pp.calculate_qc_metrics(adata, feature_controls=["mito"], inplace=True)
+    adata.var["negative"] = False
+    sc.pp.calculate_qc_metrics(adata, feature_controls=[
+                               "mito", "negative"], inplace=True)
     assert (adata.obs["total_features_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["total_features_by_counts"] >= adata.obs["log1p_total_features_by_counts"]).all()
     assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
     assert (adata.obs["total_counts"] >= adata.obs["log1p_total_counts"]).all()
     assert (adata.obs["total_counts_mito"] >=
             adata.obs["log1p_total_counts_mito"]).all()
-    for col in adata.obs.columns:
+    assert (adata.obs["total_counts_negative"] == 0).all()
+    assert (adata.obs["pct_counts_in_top_50_features"] <=
+            adata.obs["pct_counts_in_top_100_features"]).all()
+    for col in filter(lambda x: "negative" not in x, adata.obs.columns):
         assert (adata.obs[col] >= 0).all() # Values should be positive or zero
         assert (adata.obs[col] != 0).any().all() # Nothing should be all zeros
         if col.startswith("pct_counts_in_top"):
