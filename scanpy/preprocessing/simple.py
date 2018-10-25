@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 import scipy as sp
 import warnings
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
@@ -806,9 +806,9 @@ def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
     counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
     gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
     if issparse(X): gene_subset = gene_subset.A1
-    tc_include = X[:, included].sum(1).A1 if issparse(X) else X[:, included].sum(1)
+    tc_include = X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
 
-    X_norm = X / tc_include[:, None]
+    X_norm = X.multiply(csr_matrix(1/tc_include[:, None])) if issparse(X) else X / tc_include[:, None]
     if mult_with_mean:
         X_norm *= np.mean(counts_per_cell)
 
