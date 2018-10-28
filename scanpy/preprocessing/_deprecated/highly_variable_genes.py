@@ -16,6 +16,8 @@ def filter_genes_dispersion(data,
                             copy=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
+    This is a deprecated function. Use scanpy.api.highly_variable_genes instead.
+
     If trying out parameters, pass the data matrix instead of AnnData.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
