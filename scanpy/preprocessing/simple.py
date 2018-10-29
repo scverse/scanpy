@@ -1089,27 +1089,47 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
 def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(), 
                          percent_top=(50, 100, 200, 500), inplace=False):
     """
-    Calculate qc metrics like scater does.
+    Calculate quality control metrics.
+
+    Calculates a number of qc metrics for an AnnData object, largely based on
+    `calculateQCMetrics` from scater [McCarthy17]. Currently is most efficient
+    on a sparse CSR or dense matrix.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    exprs_values : `str` (default: "counts")
+    exprs_values : `str`, optional (default: "counts")
         Name of kind of values in X.
-    feature_controls : `Container` (default: `()`)
-        Keys for boolean columns of `.var` which identify feature controls, 
+    feature_controls : `Container`, optional (default: `()`)
+        Keys for boolean columns of `.var` which identify feature controls,
         e.g. "ERCC" or "mito".
-    percent_top : `List[int]` (default: (50, 100, 200, 500)) # TODO: Just needs to work with np.array
+    percent_top : `Collection[int]`, optional (default: (50, 100, 200, 500))
         Which proportions of top genes to cover. If empty or `None` don't
         calculate.
-    inplace : bool (default: `False`) # TODO: Should this be `True`?
+    inplace : bool, optional (default: `False`)
         Whether to place calculated metrics in `.obs` and `.var`
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics or updates `adata`'s 
-    `obs` and `var`
+    Union[NoneType, Tuple[pd.DataFrame, pd.DataFrame]]
+        Depending on `inplace` returns calculated metrics (`pd.DataFrame`) or
+        updates `adata`'s `obs` and `var`.
+
+        Observation level metrics include:
+
+        * `total_features_by_{exprs_values}`
+        * `total_{expr_values}`
+        * `pct_{expr_values}_in_top_{n}_features` - for `n` in `percent_top`
+        * `total_{exprs_values}_{feature_control}` - for each `feature_control`
+        * `pct_{exprs_values}_{feature_control}` - for each `feature_control`
+
+        Variable level metrics include:
+
+        * `total_{expr_values}`
+        * `mean_{expr_values}`
+        * `n_cells_by_{expr_values}`
+        * `pct_dropout_by_{expr_values}`
     """
     if isspmatrix_coo(adata.X):
         X = csr_matrix(adata.X)  # COO not subscriptable

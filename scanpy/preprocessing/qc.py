@@ -3,7 +3,18 @@ from scipy import sparse
 import numba
 
 def top_proportions(mtx, n):
-    """Calculates cumulative proportions up to value n"""
+    """
+    Calculates cumulative proportions of top expressed genes
+
+    Parameters
+    ----------
+    mtx : `Union[np.array, sparse.spmatrix]`
+        Matrix, where each row is a sample, each column a feature.
+    n : `int`
+        Rank to calculate proportions up to. Value is treated as 1-indexed
+        `n=50` will calculate cumulative proportions up to the 50th most
+        expressed gene.
+    """
     if sparse.issparse(mtx):
         if not sparse.isspmatrix_csr(mtx):
             mtx = sparse.csr_matrix(mtx)
@@ -43,7 +54,18 @@ def top_proportions_sparse_csr(data, indptr, n):
 
 
 def top_segment_proportions(mtx, ns):
-    """Calculates total percentage of counts in top ns genes"""
+    """
+    Calculates total percentage of counts in top ns genes.
+
+    Parameters
+    ----------
+    mtx : `Union[np.array, sparse.spmatrix]`
+        Matrix, where each row is a sample, each column a feature.
+    ns : `Container[Int]`
+        Positions to calculate cumulative proportion at. Values are considered
+        1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
+        the 50th most expressed gene.
+    """
     # Pretty much just does dispatch
     if sparse.issparse(mtx):
         if not sparse.isspmatrix_csr(mtx):
