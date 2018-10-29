@@ -425,6 +425,10 @@ def _get_data_points(adata, basis, projection, components):
             raise ValueError("Given components: '{}' are not valid. Please check. "
                              "A valid example is `components='2,3'`")
 
+        if basis == 'diffmap':
+            # remove the offset added in the case of diffmap, such that
+            # plot_scatter can print the labels correctly.
+            components_list = [[number-1 for number in comp] for comp in components_list]
     else:
         data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
         components_list = []
