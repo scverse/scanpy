@@ -2,7 +2,7 @@
 """
 
 from . import simple as pp
-from ._deprecated.highly_variable_genes import filter_genes_dispersion
+from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from .. import logging as logg
 
 
@@ -28,7 +28,7 @@ def recipe_weinreb17(adata, log=True, mean_threshold=0.01, cv_threshold=2,
     adata.X = pp.normalize_per_cell_weinreb16_deprecated(adata.X,
                                                          max_fraction=0.05,
                                                          mult_with_mean=True)
-    gene_subset = pp.filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
+    gene_subset = filter_genes_cv_deprecated(adata.X, mean_threshold, cv_threshold)
     adata._inplace_subset_var(gene_subset)  # this modifies the object itself
     X_pca = pp.pca(pp.zscore_deprecated(adata.X),
                    n_comps=n_pcs, svd_solver=svd_solver, random_state=random_state)
