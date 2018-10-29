@@ -5,7 +5,7 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 import scipy as sp
 import warnings
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
@@ -800,24 +800,18 @@ def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
     X_norm : np.ndarray
         Normalized version of the original expression matrix.
     """
-    if issparse(X):
-        raise ValueError('Sparse input not allowed. '
-                         'Consider `sc.pp.normalize_per_cell` instead.')
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
-    counts_per_cell = np.sum(X, axis=1)
-    if max_fraction == 1:
-        X_norm = X / counts_per_cell[:, np.newaxis]
-        return X_norm
-    # restrict computation of counts to genes that make up less than
-    # constrain_theshold of the total reads
-    tc_tiled = np.tile(counts_per_cell[:, np.newaxis], (1, X.shape[1]))
-    included = np.all(X <= tc_tiled * max_fraction, axis=0)
-    tc_include = np.sum(X[:, included], axis=1)
-    tc_tiled = np.tile(tc_include[:, np.newaxis], (1, X.shape[1])) + 1e-6
-    X_norm = X / tc_tiled
+        
+    counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
+    gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
+    if issparse(X): gene_subset = gene_subset.A1
+    tc_include = X[:, gene_subset].sum(1).A1 if issparse(X) else X[:, gene_subset].sum(1)
+
+    X_norm = X.multiply(csr_matrix(1/tc_include[:, None])) if issparse(X) else X / tc_include[:, None]
     if mult_with_mean:
         X_norm *= np.mean(counts_per_cell)
+
     return X_norm
 
 
