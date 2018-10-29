@@ -7,6 +7,12 @@
 .. role:: smaller
 
 
+On master
+---------
+
+- read from Cell Ranger 3.0 outputs `(PR) <https://github.com/theislab/scanpy/pull/334>`__  :smaller:`thanks to Q. Gong`
+   
+
 Version 1.3 :small:`September 3, 2018`
 --------------------------------------
 
