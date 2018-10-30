@@ -89,6 +89,17 @@ def test_qc_metrics():
     assert (adata.var["mean_counts"] < np.ravel(adata.X.max(axis=0).todense())).all()
     assert (adata.var["mean_counts"] >= adata.var["log1p_mean_counts"]).all()
     assert (adata.var["total_counts"] >= adata.var["log1p_total_counts"]).all()
+    # Should return the same thing if run again
+    old_obs, old_var = adata.obs.copy(), adata.var.copy()
+    sc.pp.calculate_qc_metrics(adata, feature_controls=[
+                               "mito", "negative"], inplace=True)
+    assert set(adata.obs.columns) == set(old_obs.columns)
+    assert set(adata.var.columns) == set(old_var.columns)
+    for col in adata.obs:
+        assert np.allclose(adata.obs[col], old_obs[col])
+    for col in adata.var:
+        assert np.allclose(adata.var[col], old_var[col])
+
 
 def test_qc_metrics_format():
     a = np.random.binomial(100, .005, (1000, 1000))
