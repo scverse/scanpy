@@ -10,19 +10,19 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
     Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, largely based on
-    `calculateQCMetrics` from scater [McCarthy17]. Currently is most efficient
+    `calculateQCMetrics` from scater [McCarthy17]_. Currently is most efficient
     on a sparse CSR or dense matrix.
 
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    exprs_values : `str`, optional (default: "counts")
+    exprs_values : `str`, optional (default: `"counts"`)
         Name of kind of values in X.
     feature_controls : `Container`, optional (default: `()`)
         Keys for boolean columns of `.var` which identify feature controls,
         e.g. "ERCC" or "mito".
-    percent_top : `Collection[int]`, optional (default: (50, 100, 200, 500))
+    percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
         Which proportions of top genes to cover. If empty or `None` don't
         calculate.
     inplace : bool, optional (default: `False`)

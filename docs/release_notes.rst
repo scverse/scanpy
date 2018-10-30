@@ -6,6 +6,11 @@
 
 .. role:: smaller
 
+On master, :small:`October 30, 2018`
+------------------------------------
+
+- :func:`~scanpy.api.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`thanks to I Virshup`
+
 
 Version 1.3 :small:`September 3, 2018`
 --------------------------------------
