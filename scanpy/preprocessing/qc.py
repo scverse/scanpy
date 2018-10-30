@@ -77,9 +77,8 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
                 obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())])
         # "total_{exprs_values}" not formatted yet
         obs_metrics["pct_{exprs_values}_{feature_control}".format(**locals())] = \
-            obs_metrics["total_{exprs_values}"] / \
-            obs_metrics["total_{exprs_values}_{feature_control}".format(
-                **locals())]
+            obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())] / \
+            obs_metrics["total_{exprs_values}"] * 100
     # Calculate var metrics
     var_metrics["mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
     var_metrics["log1p_mean_{exprs_values}"] = np.log1p(
@@ -98,8 +97,8 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
         df.columns = new_colnames
     # Return
     if inplace:
-        adata.obs = adata.obs.join(obs_metrics)
-        adata.var = adata.var.join(var_metrics)
+        adata.obs[obs_metrics.columns] = obs_metrics
+        adata.var[var_metrics.columns] = var_metrics
     else:
         return obs_metrics, var_metrics
 
