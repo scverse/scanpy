@@ -5,8 +5,9 @@ Compositions of these functions are found in sc.preprocess.recipes.
 
 import scipy as sp
 import warnings
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 from sklearn.utils import sparsefuncs
+import numba
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 from .. import settings as sett
@@ -1058,30 +1059,57 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     -------
     Depending on `copy` returns or updates an `adata` with downsampled `.X`.
     """
-    if target_counts < 1:
-        raise ValueError('`target_counts` must be a positive integer'
-                         .format(target_counts))
-    if not isinstance(adata, AnnData):
-        raise ValueError('`adata` must be an `AnnData` object'.format(adata))
-    logg.msg('downsampling to {} counts'.format(target_counts), r=True)
-    adata = adata.copy() if copy else adata
+    if copy:
+        adata = adata.copy()
+    # Numba doesn't want floats for this. Should I check?
+    adata.X = adata.X.astype(np.integer)
+    if issparse(adata.X):
+        X = adata.X
+        if not isspmatrix_csr(X):
+            X = csr_matrix(X)
+        totals = np.ravel(X.sum(axis=1))
+        under_target = np.nonzero(totals > target_counts)[0]
+        cols = np.split(X.data.view(), X.indptr[1:-1])
+        for colidx in under_target:
+            col = cols[colidx]
+            downsample_cell(col, target_counts, random_state=random_state,
+                            inplace=True)
+        if not isspmatrix_csr(adata.X):  # Put it back
+            adata.X = type(adata.X)(X)
+    else:
+        totals = np.ravel(adata.X.sum(axis=1))
+        under_target = np.nonzero(totals > target_counts)[0]
+        adata.X[under_target, :] = \
+            np.apply_along_axis(downsample_cell, 1, adata.X[under_target, :],
+                                target_counts, random_state=random_state)
+    if copy: return adata
+
+@numba.njit
+def downsample_cell(col: np.array, target: int, random_state: int=0, inplace: bool=False):
+    """
+    Evenly reduce counts in cell to target amount.
+    
+    This is an internal function and has some restrictions:
+    
+    * `dtype` of col must be an integer (i.e. satisfy issubclass(col.dtype.type, np.integer))
+    * total counts in cell must be less than target
+    """
     np.random.seed(random_state)
-    counts = adata.X.sum(axis=1)
-    adata.obs['n_counts'] = counts
-    for icell, _ in enumerate(adata.obs_names):
-        if counts[icell] > target_counts:
-            idx_vec = []
-            for ix, i in enumerate(adata.X[icell].astype(int)):
-                idx_vec.extend([ix]*i)
-            # idx_vec = np.array(idx_vec)
-            downsamp = np.random.choice(idx_vec, target_counts)
-            cell_profile = np.zeros(adata.n_vars)
-            indices, values = np.unique(downsamp, return_counts=True)
-            for i in range(len(indices)):
-                cell_profile[indices[i]] = values[i]
-            adata.X[icell] = cell_profile
-    logg.msg('finished', t=True)
-    return adata if copy else None
+    cumcounts = col.cumsum()
+    if inplace:
+        col[:] = 0
+    else:
+        col = np.zeros_like(col)
+    total = cumcounts[-1]
+    sample = np.random.choice(
+        total, target, replace=False)  # Should I replace?
+    sample.sort()
+    geneptr = 0
+    for count in sample:
+        while count >= cumcounts[geneptr]:
+            geneptr += 1
+        col[geneptr] += 1
+    return col
 
 
 def zscore_deprecated(X):
