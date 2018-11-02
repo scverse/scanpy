@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 from scipy import sparse as sp
 import scanpy.api as sc
@@ -94,9 +95,9 @@ def test_downsample_counts():
     adata_dense = AnnData(X=X.copy())
     adata_csr = AnnData(X=sp.csr_matrix(X))
     adata_csc = AnnData(X=sp.csc_matrix(X))
-    for adata in [adata_dense, adata_csr, adata_csc]:
+    for adata, replace in product((adata_dense, adata_csr, adata_csc), (True, False)):
         initial_totals = np.ravel(adata.X.sum(axis=1))
-        sc.pp.downsample_counts(adata, target_counts=TARGET)
+        adata = sc.pp.downsample_counts(adata, target_counts=TARGET, replace=replace, copy=True)
         new_totals = np.ravel(adata.X.sum(axis=1))
         if sp.issparse(adata.X):
             assert all(adata.X.toarray()[X == 0] == 0)
@@ -106,3 +107,5 @@ def test_downsample_counts():
         assert all(initial_totals >= new_totals)
         assert all(initial_totals[initial_totals <= TARGET]
                     == new_totals[initial_totals <= TARGET])
+        if not replace:
+            assert np.all(X >= adata.X)

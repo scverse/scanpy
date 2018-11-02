@@ -1036,7 +1036,8 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
         return X[obs_indices], obs_indices
 
 
-def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
+def downsample_counts(adata, target_counts=20000, random_state=0, 
+                      replace=True, copy=False):
     """Downsample counts so that each cell has no more than `target_counts`.
 
     Cells with fewer counts than `target_counts` are unaffected by this. This
@@ -1051,6 +1052,8 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
         'target_counts' will be downsampled to have 'target_counts' counts.
     random_state : `int` or `None`, optional (default: 0)
         Random seed to change subsampling.
+    replace : `bool`, optional (default: `True`)
+        Whether to sample the counts with replacement.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
@@ -1061,8 +1064,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
     """
     if copy:
         adata = adata.copy()
-    # Numba doesn't want floats for this. Should I check?
-    adata.X = adata.X.astype(np.integer)
+    adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
     if issparse(adata.X):
         X = adata.X
         if not isspmatrix_csr(X):
@@ -1073,7 +1075,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
         for colidx in under_target:
             col = cols[colidx]
             downsample_cell(col, target_counts, random_state=random_state,
-                            inplace=True)
+                            replace=replace, inplace=True)
         if not isspmatrix_csr(adata.X):  # Put it back
             adata.X = type(adata.X)(X)
     else:
@@ -1081,11 +1083,12 @@ def downsample_counts(adata, target_counts=20000, random_state=0, copy=False):
         under_target = np.nonzero(totals > target_counts)[0]
         adata.X[under_target, :] = \
             np.apply_along_axis(downsample_cell, 1, adata.X[under_target, :],
-                                target_counts, random_state=random_state)
+                                target_counts, random_state=random_state, replace=replace)
     if copy: return adata
 
 @numba.njit
-def downsample_cell(col: np.array, target: int, random_state: int=0, inplace: bool=False):
+def downsample_cell(col: np.array, target: int, random_state: int=0, 
+                    replace: bool=True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
     
@@ -1101,8 +1104,7 @@ def downsample_cell(col: np.array, target: int, random_state: int=0, inplace: bo
     else:
         col = np.zeros_like(col)
     total = cumcounts[-1]
-    sample = np.random.choice(
-        total, target, replace=False)  # Should I replace?
+    sample = np.random.choice(total, target, replace=replace)
     sample.sort()
     geneptr = 0
     for count in sample:
