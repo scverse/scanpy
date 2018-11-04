@@ -6,21 +6,19 @@
 
 import matplotlib as mpl
 mpl.use('agg')
-import numpy as np
-import pandas as pd
+from matplotlib.testing.compare import compare_images
 import matplotlib.pyplot as pl
-from matplotlib import rcParams
+import numpy as np
 import os
 import scanpy.api as sc
-from matplotlib.testing.compare import compare_images
 
-ROOT = os.path.dirname(os.path.abspath(__file__)) + '/paga-paul15-subsampled-images'
+ROOT = os.path.dirname(os.path.abspath(__file__)) + '/paga-paul15-subsampled-images/'
 
 
 def save_and_compare_images(basename):
     if not os.path.exists('./figures/'): os.makedirs('./figures/')
     outname = './figures/' + basename + '.png'
-    pl.savefig(outname, dpi=80)
+    pl.savefig(outname, dpi=40)
     pl.close()
     tolerance = 20
     res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
