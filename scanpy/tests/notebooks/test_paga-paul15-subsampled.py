@@ -3,6 +3,9 @@
 #
 # This is the subsampled notebook for testing.
 
+
+import matplotlib as mpl
+mpl.use('agg')
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as pl
@@ -10,8 +13,6 @@ from matplotlib import rcParams
 import os
 import scanpy.api as sc
 from matplotlib.testing.compare import compare_images
-from matplotlib.testing import setup
-setup()
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/paga-paul15-subsampled-images'
 
