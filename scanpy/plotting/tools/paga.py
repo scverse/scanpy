@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import scipy
+import warnings
 from pandas.api.types import is_categorical_dtype
 import networkx as nx
 from matplotlib import pyplot as pl
@@ -662,7 +663,9 @@ def _paga_graph(
         widths = base_edge_width * np.array(widths)
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
-        nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
     # draw directed edges
     else:
         adjacency_transitions = adata.uns['paga'][transitions].copy()
