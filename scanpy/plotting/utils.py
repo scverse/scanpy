@@ -6,6 +6,7 @@ from matplotlib import rcParams, ticker
 from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
+import warnings
 from .. import logging as logg
 from .. import settings
 from . import palettes
@@ -314,12 +315,14 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
     if 'neighbors' not in adata.uns:
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
     g = nx.Graph(adata.uns['neighbors']['connectivities'])
-    for ax in axs:
-        edge_collection = nx.draw_networkx_edges(
-            g, adata.obsm['X_' + basis],
-            ax=ax, width=edges_width, edge_color=edges_color)
-        edge_collection.set_zorder(-2)
-        edge_collection.set_rasterized(settings._vector_friendly)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for ax in axs:
+            edge_collection = nx.draw_networkx_edges(
+                g, adata.obsm['X_' + basis],
+                ax=ax, width=edges_width, edge_color=edges_color)
+            edge_collection.set_zorder(-2)
+            edge_collection.set_rasterized(settings._vector_friendly)
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):

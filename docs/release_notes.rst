@@ -12,6 +12,12 @@ On master, :small:`October 30, 2018`
 - :func:`~scanpy.api.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`thanks to I Virshup`
 
 
+On master
+---------
+
+- read from Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__  :smaller:`thanks to Q. Gong`
+   
+
 Version 1.3 :small:`September 3, 2018`
 --------------------------------------
 
