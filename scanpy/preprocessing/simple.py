@@ -7,6 +7,7 @@ import scipy as sp
 import warnings
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
 from sklearn.utils import sparsefuncs
+import pandas as pd
 import numba
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
