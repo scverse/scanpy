@@ -866,6 +866,11 @@ def paga_path(
         groups_key = adata.uns['paga']['groups']
     groups_names = adata.obs[groups_key].cat.categories
 
+    if 'dpt_pseudotime' is not adata.obs.keys():
+        raise ValueError(
+            '`pl.paga_path` requires computation of a pseudotime `tl.dpt` '
+            'for ordering at single-cell resolution')
+
     if palette_groups is None:
         utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         palette_groups = adata.uns[groups_key + '_colors']
