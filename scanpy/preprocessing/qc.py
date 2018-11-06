@@ -2,6 +2,7 @@ import numba
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
+from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
 def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
@@ -49,15 +50,15 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
         * `n_cells_by_{expr_values}`
         * `pct_dropout_by_{expr_values}`
     """
-    if isspmatrix_coo(adata.X):
-        X = csr_matrix(adata.X)  # COO not subscriptable
-    else:
-        X = adata.X
+    X = adata.X
+    if issparse(X):
+        X.eliminate_zeros()
+    if isspmatrix_coo(X):
+        X = csr_matrix(X)  # COO not subscriptable
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     var_metrics = pd.DataFrame(index=adata.var_names)
     # Calculate obs metrics
-    obs_metrics["total_features_by_{exprs_values}"] = (
-        X != 0).sum(axis=1)
+    obs_metrics["total_features_by_{exprs_values}"] = X.getnnz(axis=1)
     obs_metrics["log1p_total_features_by_{exprs_values}"] = np.log1p(
         obs_metrics["total_features_by_{exprs_values}"])
     obs_metrics["total_{exprs_values}"] = X.sum(axis=1)
@@ -80,10 +81,10 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
             obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())] / \
             obs_metrics["total_{exprs_values}"] * 100
     # Calculate var metrics
-    var_metrics["mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
+    var_metrics["mean_{exprs_values}"] = mean_variance_axis(X, axis=0)[0]
     var_metrics["log1p_mean_{exprs_values}"] = np.log1p(
         var_metrics["mean_{exprs_values}"])
-    var_metrics["n_cells_by_{exprs_values}"] = np.ravel((X != 0).sum(axis=0))
+    var_metrics["n_cells_by_{exprs_values}"] = X.getnnz(axis=0) # Current memory bottleneck for csr matrices
     var_metrics["pct_dropout_by_{exprs_values}"] = \
         (1 - var_metrics["n_cells_by_{exprs_values}"] / X.shape[0]) * 100
     var_metrics["total_{exprs_values}"] = np.ravel(X.sum(axis=0))
