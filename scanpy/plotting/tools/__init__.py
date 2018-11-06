@@ -149,7 +149,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
-                      n_panels_per_row=4, sharey=True, show=None, save=None, ax=None):
+                      ncols=4, sharey=True, show=None, save=None, ax=None, **kwds):
     """\
     Plot ranking of genes.
 
@@ -166,16 +166,16 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         Number of genes to show.
     fontsize : `int`, optional (default: 8)
         Fontsize for gene names.
-    n_panels_per_row: `int`, optional (default: 4)
+    ncols : `int`, optional (default: 4)
         Number of panels shown per row.
     sharey: `bool`, optional (default: True)
-        Controls if the y-axis of each panels should be shared. But setting
-        sharey=False, each panel has its own y-axis range.
-
+        Controls if the y-axis of each panels should be shared. But passing
+        `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
     """
-    if key is None:
-        key = 'rank_genes_groups'
+    if n_panels_per_row in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
+    else: n_panels_per_row = ncols
+    if key is None: key = 'rank_genes_groups'
     groups_key = str(adata.uns[key]['params']['groupby'])
     reference = str(adata.uns[key]['params']['reference'])
     group_names = (adata.uns[key]['names'].dtype.names
