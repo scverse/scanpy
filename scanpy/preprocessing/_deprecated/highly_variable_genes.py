@@ -16,7 +16,7 @@ def filter_genes_dispersion(data,
                             copy=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
-    This is a deprecated function. Use scanpy.api.highly_variable_genes instead.
+    This is a deprecated function.
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
@@ -77,6 +77,10 @@ def filter_genes_dispersion(data,
 
     If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+
+    Notes
+    -----
+    This function was deprecated. Use :func:`~scanpy.api.pp.highly_variable_genes` instead.
     """
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
