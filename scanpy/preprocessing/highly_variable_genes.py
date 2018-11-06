@@ -7,17 +7,15 @@ from .simple import materialize_as_ndarray, _get_mean_var
 
 
 def highly_variable_genes(data,
-                          flavor='seurat',
                           min_disp=None, max_disp=None,
                           min_mean=None, max_mean=None,
-                          n_bins=20,
                           n_top_genes=None,
-                          copy=False):
+                          n_bins=20,
+                          flavor='seurat',
+                          inplace=False):
     """Extract highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
-
-    If trying out parameters, pass the data matrix instead of AnnData.
 
     Depending on `flavor`, this reproduces the R-implementations of Seurat
     [Satija15]_ and Cell Ranger [Zheng17]_.
@@ -27,51 +25,45 @@ def highly_variable_genes(data,
     expression of genes. This means that for each bin of mean expression, highly
     variable genes are selected.
 
-    Use `flavor='cell_ranger'` with care and in the same way as in
-    :func:`~scanpy.api.pp.recipe_zheng17`.
-
     Parameters
     ----------
     data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
-        Choose the flavor for computing normalized dispersion. In their default
-        workflows, Seurat passes the cutoffs whereas Cell Ranger passes
-        `n_top_genes`.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
         If `n_top_genes` unequals `None`, these cutoffs for the means and the
         normalized dispersions are ignored.
+    n_top_genes : `int` or `None` (default: `None`)
+        Number of highly-variable genes to keep.
     n_bins : `int` (default: 20)
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
-    n_top_genes : `int` or `None` (default: `None`)
-        Number of highly-variable genes to keep.
-    copy : `bool`, optional (default: `False`)
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
+    flavor : {'seurat', 'cell_ranger'}, optional (default: 'seurat')
+        Choose the flavor for computing normalized dispersion. In their default
+        workflows, Seurat passes the cutoffs whereas Cell Ranger passes
+        `n_top_genes`.
+    inplace : `bool`, optional (default: `False`)
+        Whether to place calculated metrics in `.var` or return them.
 
     Returns
     -------
-    If an AnnData `adata` is passed, returns or updates `adata` depending on \
-    `copy`. It filters the `adata` and adds the annotations
+    Union[NoneType, Tuple[pd.DataFrame, pd.DataFrame]]
+        Depending on `inplace` returns calculated metrics (`np.recarray`) or
+        updates `adata`'s `var` with the following fields
 
-    means : adata.var
-        Means per gene.
-    dispersions : adata.var
-        Dispersions per gene.
-    dispersions_norm : adata.var
-        Normalized dispersions per gene.
-
-    If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
-    with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+        * highly_variable - boolean indicator
+        * means - means per gene
+        * dispersions - dispersions per gene
+        * dispersions_norm - normalized dispersions per gene
 
     Notes
     -----
     This function replaces :func:`~scanpy.api.pp.filter_genes_dispersion`.
     """
+    logg.msg('extracting highly variable genes', r=True, v=4)
+
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
@@ -81,14 +73,11 @@ def highly_variable_genes(data,
 
     if isinstance(data, AnnData):
         data_is_AnnData = True
-        adata = data.copy() if copy else data
-        X = np.expm1(adata.X) if flavor=='seurat' else adata.X
+        X = np.expm1(data.X) if flavor=='seurat' else data.X
     else:
         data_is_AnnData = False
         X = np.expm1(data) if flavor=='seurat' else data
 
-    logg.msg('extracting highly variable genes',
-              r=True, v=4)
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
@@ -156,18 +145,18 @@ def highly_variable_genes(data,
                                              dispersion_norm < max_disp))
     logg.msg('    finished', time=True, v=4)
 
-    if data_is_AnnData:
-        adata.var['means'] = df['mean'].values
-        adata.var['dispersions'] = df['dispersion'].values
-        adata.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
-        adata.var['highly_variable'] = gene_subset
-        return adata if copy else None
+    if data_is_AnnData and inplace:
+        data.var['highly_variable'] = gene_subset
+        data.var['means'] = df['mean'].values
+        data.var['dispersions'] = df['dispersion'].values
+        data.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
     else:
-        return np.rec.fromarrays((gene_subset,
-                                  df['mean'].values,
-                                  df['dispersion'].values,
-                                  df['dispersion_norm'].values.astype('float32', copy=False)),
-                                  dtype=[('gene_subset', bool),
-                                         ('means', 'float32'),
-                                         ('dispersions', 'float32'),
-                                         ('dispersions_norm', 'float32')])
+        return np.rec.fromarrays(
+             (gene_subset,
+             df['mean'].values,
+             df['dispersion'].values,
+             df['dispersion_norm'].values.astype('float32', copy=False)),
+             dtype=[('highly_variable', bool),
+                    ('means', 'float32'),
+                    ('dispersions', 'float32'),
+                    ('dispersions_norm', 'float32')])
