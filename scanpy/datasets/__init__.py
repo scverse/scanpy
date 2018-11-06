@@ -194,7 +194,8 @@ def toggleswitch():
 
 
 def pbmc68k_reduced():
-    """
+    """Subsampled and processed 68k PBMCs.
+
     10x PBMC 68k dataset from
     https://support.10xgenomics.com/single-cell-gene-expression/datasets
 
@@ -212,3 +213,21 @@ def pbmc68k_reduced():
 
     filename = os.path.dirname(__file__) + '/10x_pbmc68k_reduced.h5ad'
     return sc.read(filename)
+
+
+def pbmc3k():
+    """3k PBMCs from 10x Genomics.
+
+    The data consists in 3k PBMCs from a Healthy Donor and is freely available
+    from 10x Genomics (`here
+    <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
+    from this `webpage
+    <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
+
+    Returns
+    -------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    """
+    adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
+    return adata

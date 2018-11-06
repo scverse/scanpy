@@ -258,9 +258,10 @@ Datasets
    datasets.blobs
    datasets.krumsiek11
    datasets.moignard15
+   datasets.pbmc3k
+   datasets.pbmc68k_reduced	     
    datasets.paul15
    datasets.toggleswitch
-   datasets.pbmc68k_reduced
 
 Exporting
 ---------
