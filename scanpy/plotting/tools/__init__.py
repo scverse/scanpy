@@ -173,7 +173,7 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
     """
-    if n_panels_per_row in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
+    if 'n_panels_per_row' in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
     else: n_panels_per_row = ncols
     if key is None: key = 'rank_genes_groups'
     groups_key = str(adata.uns[key]['params']['groupby'])
