@@ -26,6 +26,7 @@ For visual quality control, see :func:`~scanpy.api.pl.highest_expr_gens` and
    pp.calculate_qc_metrics
    pp.filter_cells
    pp.filter_genes
+   pp.highly_variable_genes
    pp.filter_genes_dispersion
    pp.log1p
    pp.pca

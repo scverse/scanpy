@@ -67,6 +67,10 @@ def highly_variable_genes(data,
 
     If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
+
+    Notes
+    -----
+    This function replaces :func:`~scanpy.api.pp.filter_genes_dispersion`.
     """
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
