@@ -6,7 +6,7 @@ from .. import logging as logg
 from .simple import materialize_as_ndarray, _get_mean_var
 
 
-def highly_variable_genes(data,
+def highly_variable_genes(adata,
                           min_disp=None, max_disp=None,
                           min_mean=None, max_mean=None,
                           n_top_genes=None,
@@ -27,8 +27,8 @@ def highly_variable_genes(data,
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+    adata : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_mean=0.0125, max_mean=3, min_disp=0.5, max_disp=`None` : `float`, optional
         If `n_top_genes` unequals `None`, these cutoffs for the means and the
@@ -49,14 +49,14 @@ def highly_variable_genes(data,
 
     Returns
     -------
-    Union[NoneType, Tuple[pd.DataFrame, pd.DataFrame]]
+    Union[None, np.recarray]
         Depending on `inplace` returns calculated metrics (`np.recarray`) or
-        updates `adata`'s `var` with the following fields
+        updates `.var` with the following fields
 
-        * highly_variable - boolean indicator
-        * means - means per gene
-        * dispersions - dispersions per gene
-        * dispersions_norm - normalized dispersions per gene
+        * `highly_variable` - boolean indicator of highly-variable genes
+        * `means` - means per gene
+        * `dispersions` - dispersions per gene
+        * `dispersions_norm` - normalized dispersions per gene
 
     Notes
     -----
@@ -71,12 +71,7 @@ def highly_variable_genes(data,
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
 
-    if isinstance(data, AnnData):
-        data_is_AnnData = True
-        X = np.expm1(data.X) if flavor=='seurat' else data.X
-    else:
-        data_is_AnnData = False
-        X = np.expm1(data) if flavor=='seurat' else data
+    X = np.expm1(adata.X) if flavor=='seurat' else adata.X
 
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
@@ -143,13 +138,14 @@ def highly_variable_genes(data,
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
+
     logg.msg('    finished', time=True, v=4)
 
-    if data_is_AnnData and inplace:
-        data.var['highly_variable'] = gene_subset
-        data.var['means'] = df['mean'].values
-        data.var['dispersions'] = df['dispersion'].values
-        data.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
+    if inplace:
+        adata.var['highly_variable'] = gene_subset
+        adata.var['means'] = df['mean'].values
+        adata.var['dispersions'] = df['dispersion'].values
+        adata.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
     else:
         return np.rec.fromarrays(
              (gene_subset,
