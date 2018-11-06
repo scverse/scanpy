@@ -14,7 +14,7 @@ def test_higly_variable_genes_compare_to_seurat():
 
     sc.pp.normalize_per_cell(pbmc, counts_per_cell_after=1e4)
     sc.pp.log1p(pbmc)
-    sc.pp.highly_variable_genes(pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5)
+    sc.pp.highly_variable_genes(pbmc, flavor='seurat', min_mean=0.0125, max_mean=3, min_disp=0.5, inplace=True)
 
     np.testing.assert_array_equal(seurat_hvg_info['highly_variable'], pbmc.var['highly_variable'])
 
