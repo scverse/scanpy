@@ -9,15 +9,10 @@
 
 On master, :small:`November 5, 2018`
 ------------------------------------
-- :func:`~scanpy.api.pp.highly_variable_genes` replaces :func:`~scanpy.api.pp.filter_genes_dispersion`. It extracts highly variable genes in the same manner, but now requires logarithmized data.
-- :func:`~scanpy.api.pp.filter_genes_dispersion` has been deprecated.
-
-
-On master, :small:`October 30, 2018`
-------------------------------------
 
 - :func:`~scanpy.api.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`thanks to I Virshup`
 - :func:`~scanpy.api.pp.read_10x_h5` and :func:`~scanpy.api.pp.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__  :smaller:`thanks to Q. Gong`
+- :func:`~scanpy.api.pp.highly_variable_genes` replaces :func:`~scanpy.api.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset :smaller:`thanks to S. Rybakov`
 
 
 Version 1.3 :small:`September 3, 2018`
