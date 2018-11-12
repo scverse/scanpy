@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
-def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", control_vars=(),
+def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=(),
                          percent_top=(50, 100, 200, 500), inplace=False):
     """
     Calculate quality control metrics.
@@ -22,9 +22,9 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", control_va
         Name of kind of values in X.
     var_type : `str`, optional (default: `"genes"`)
         The kind of thing the variables are.
-    control_vars : `Container`, optional (default: `()`)
-        Keys for boolean columns of `.var` which identify controls,
-        e.g. "ERCC" or "mito".
+    qc_vars : `Container`, optional (default: `()`)
+        Keys for boolean columns of `.var` which identify variables you could 
+        want to control for (e.g. "ERCC" or "mito").
     percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
         Which proportions of top genes to cover. If empty or `None` don't
         calculate.
@@ -42,8 +42,8 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", control_va
         * `total_{var_type}_by_{expr_type}`
         * `total_{expr_type}`
         * `pct_{expr_type}_in_top_{n}_{var_type}` - for `n` in `percent_top`
-        * `total_{expr_type}_{control_var}` - for `control_var` in `control_vars`
-        * `pct_{expr_type}_{control_var}` - for `control_var` in `control_vars`
+        * `total_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+        * `pct_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
 
         Variable level metrics include:
 
@@ -75,15 +75,15 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", control_va
     for i, n in enumerate(percent_top):
         obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
             proportions[:, i] * 100
-    for ctrl_var in control_vars:
-        obs_metrics["total_{expr_type}_{ctrl_var}".format(**locals())] = \
-            X[:, adata.var[ctrl_var].values].sum(axis=1)
-        obs_metrics["log1p_total_{expr_type}_{ctrl_var}".format(**locals())] = \
+    for qc_var in qc_vars:
+        obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
+            X[:, adata.var[qc_var].values].sum(axis=1)
+        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = \
             np.log1p(
-                obs_metrics["total_{expr_type}_{ctrl_var}".format(**locals())])
+                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())])
         # "total_{expr_type}" not formatted yet
-        obs_metrics["pct_{expr_type}_{ctrl_var}".format(**locals())] = \
-            obs_metrics["total_{expr_type}_{ctrl_var}".format(**locals())] / \
+        obs_metrics["pct_{expr_type}_{qc_var}".format(**locals())] = \
+            obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] / \
             obs_metrics["total_{expr_type}"] * 100
     # Calculate var metrics
     if issparse(X):

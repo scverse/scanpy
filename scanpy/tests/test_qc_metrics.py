@@ -67,8 +67,8 @@ def test_qc_metrics():
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
     adata.var["negative"] = False
-    sc.pp.calculate_qc_metrics(adata, control_vars=[
-                               "mito", "negative"], inplace=True)
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], 
+                               inplace=True)
     assert (adata.obs["n_genes_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]).all()
     assert (adata.obs["total_counts"] == np.ravel(adata.X.sum(axis=1))).all()
@@ -91,7 +91,7 @@ def test_qc_metrics():
     assert (adata.var["total_counts"] >= adata.var["log1p_total_counts"]).all()
     # Should return the same thing if run again
     old_obs, old_var = adata.obs.copy(), adata.var.copy()
-    sc.pp.calculate_qc_metrics(adata, control_vars=[
+    sc.pp.calculate_qc_metrics(adata, qc_vars=[
                                "mito", "negative"], inplace=True)
     assert set(adata.obs.columns) == set(old_obs.columns)
     assert set(adata.var.columns) == set(old_var.columns)
@@ -106,11 +106,11 @@ def test_qc_metrics_format():
     init_var = pd.DataFrame({"mito": np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
     adata_dense = sc.AnnData(X=a, var=init_var.copy())
-    sc.pp.calculate_qc_metrics(adata_dense, control_vars=["mito"], 
+    sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], 
         inplace=True)
     for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
         adata = sc.AnnData(X=fmt(a), var=init_var.copy())
-        sc.pp.calculate_qc_metrics(adata, control_vars=["mito"], 
+        sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], 
             inplace=True)
         assert np.allclose(adata.obs, adata_dense.obs)
         for col in adata.var: # np.allclose doesn't like mix of types
