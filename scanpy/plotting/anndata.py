@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
+from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.colors import is_color_like
@@ -738,6 +739,8 @@ def clustermap(
     sanitize_anndata(adata)
     if use_raw is None and adata.raw is not None: use_raw = True
     X = adata.raw.X if use_raw else adata.X
+    if issparse(X):
+        X = X.toarray()
     df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:
         row_colors = adata.obs[obs_keys]
