@@ -11,7 +11,7 @@ def _normalize_data(X, after=None, counts, copy=False):
     if issparse(X):
         X = sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
-        X = X/counts
+        X /= counts
     return X if copy else None
 
 def normalize_quantile(data, counts_per_cell_after=None, quantile=1, min_counts=1,
@@ -48,4 +48,4 @@ def normalize_quantile(data, counts_per_cell_after=None, quantile=1, min_counts=
     for layer in layers:
         L = adata.layers[layer]
         counts = L.sum(1).A1 if issparse(L) else L.sum(1)
-        adata.layers[layer] = _normalize_data(L, after, counts, copy=True)
+        _normalize_data(L, after, counts)
