@@ -488,7 +488,7 @@ def _scatter_obs(
 
     # draw a frame around the scatter
     frameon = settings._frameon if frameon is None else frameon
-    if not frameon:
+    if not frameon and x is None and y is None:
         for ax in axs:
             ax.set_xlabel('')
             ax.set_ylabel('')
