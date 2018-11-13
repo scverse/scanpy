@@ -1855,7 +1855,7 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     # which could bias the results.
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
-    gene_names = adata.var_names if use_raw is False else adata.raw.var_names
+    gene_names = adata.var_names if use_raw else adata.raw.var_names
     cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
 
     mean_df = df.groupby(level=0).mean()
