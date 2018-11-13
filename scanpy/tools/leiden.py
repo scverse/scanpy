@@ -1,4 +1,3 @@
-import leidenalg
 import numpy as np
 import pandas as pd
 from natsort import natsorted
@@ -20,13 +19,13 @@ def leiden(
         **partition_kwargs):
     '''
     Cluster cells into subgroups [Traag2018]_ [Levine15]_
-    
+
     Cluster cells using the Leiden algorithm [Traag2018]_, an improved version of the
     Louvain algorithm [Blonde08]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
-    
+
     This requires having ran :func:`~scanpy.api.pp.neighbors` or :func:`~scanpy.api.pp.bbknn` first.
-    
+
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
@@ -53,13 +52,14 @@ def leiden(
         `adata.uns['neighbors']['connectivities']`.
     partition_type : `~leidenalg.MutableVertexPartition`, optional (default: `None`)
         Type of partition to use. Defaults to `~leidenalg.RBConfigurationVertexPartition`.
-        For the available options, consult the Leidenalg 
+        For the available options, consult the Leidenalg
         `reference <https://leidenalg.readthedocs.io/en/latest/reference.html>`__.
     copy : `bool` (default: `False`)
         Copy adata or modify it inplace.
     **partition_kwargs
         Any further arguments to pass to the partitioning function directly.
     '''
+    import leidenalg
     logg.info('running Leiden clustering', r=True)
     adata = adata.copy() if copy else adata
     #are we clustering a user-provided graph or the default AnnData one?
