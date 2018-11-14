@@ -1062,7 +1062,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, show=None, save=None, figsize=None, **kwds):
+            var_group_rotation=None, show=None, save=None, figsize=None, layer=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -1141,7 +1141,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                              layer=layer)
 
     dendro_width = 1.8 if dendrogram is True else 0
     if figsize is None:
@@ -1688,7 +1689,8 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     return axs
 
 
-def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7):
+def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
+                       num_categories=7, layer=None):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
     defined by group by and the columns correspond to var_names.
@@ -1730,8 +1732,14 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False, 
     if use_raw:
         matrix = adata.raw[:, var_names].X
     else:
-        matrix = adata[:, var_names].X
-
+        if layer is None:
+            matrix = adata[:, var_names].X
+        else:
+            if layer not in adata.layers.keys():
+                raise KeyError('Selected layer: {} is not in the layers list. The list of '
+                               'valid layers is: {}'.format(layer, adata.layers.keys()))
+            else:
+                matrix = adata[:, var_names].layers[layer]
     if issparse(matrix):
         matrix = matrix.toarray()
     if log:
