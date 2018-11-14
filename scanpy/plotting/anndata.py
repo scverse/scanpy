@@ -1260,7 +1260,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, show=None, save=None, **kwds):
     """\
-    Makes a _dot plot_ of the expression values of `var_names`.
+    Makes a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted. Each dot
     represents two values: mean expression within each category (visualized by
@@ -1295,14 +1295,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     figsize : (float, float), optional (default: None)
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
-   dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
         computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
         the dendrogram order. If groups of var_names are set and those groups correspond
         to the `groupby` categories, those groups are also reordered. The 'person' method
         is used to compute the pairwise correlation between categories using all var_names in
         `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
         used is `complete`.
-     var_group_positions :  list of `tuples`.
+    var_group_positions :  list of `tuples`.
         Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
         on top of the plot between the given start and end positions. If the
         parameter `var_group_labels` is set, the corresponding labels is added on
