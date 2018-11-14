@@ -112,6 +112,14 @@ Gene scores, Cell cycle
    tl.score_genes
    tl.score_genes_cell_cycle
 
+Cluster scores
+~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.kbet
+
 Simulations
 ~~~~~~~~~~~
 
