@@ -14,7 +14,7 @@ def kbet(
     *,
     alpha: float = .05,
     adjacency: spmatrix = None,
-    copy: bool = False,
+    copy: bool = False
 ) -> Union[AnnData, float]:
     """kBET: k-nearest neighbour batch effect test.
 
