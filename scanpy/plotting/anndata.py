@@ -1062,7 +1062,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, swap_axes=False, show_gene_labels=None, show=None, save=None, figsize=None, layer=None, **kwds):
+            var_group_rotation=None, swap_axes=False, show_gene_labels=None, layer=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -1116,6 +1116,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
          categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
     show_gene_labels: `bool`, optional (default: `None`).
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
+    layer: `str`, (default `None`)
+         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
@@ -1129,7 +1133,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    if use_raw is False:
+    if not use_raw and layer is None:
         # this most likely will used a scaled version of the data
         # and thus is better to use a diverging scale
         param_set = False
@@ -1142,12 +1146,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         if 'cmap' not in kwds:
             kwds['cmap'] = 'bwr'
             param_set = True
-        if param_set is True:
+        if param_set:
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                              layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1706,7 +1709,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         if 'cmap' not in kwds:
             kwds['cmap'] = 'bwr'
             param_set = True
-        if param_set is True:
+        if param_set:
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
@@ -1847,17 +1850,16 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
             raise ValueError('groupby has to be a valid observation. Given value: {}, '
                              'valid observations: {}'.format(groupby, adata.obs_keys()))
 
-    if use_raw:
+    if layer is not None:
+        if layer not in adata.layers.keys():
+            raise KeyError('Selected layer: {} is not in the layers list. The list of '
+                           'valid layers is: {}'.format(layer, adata.layers.keys()))
+        matrix = adata[:, var_names].layers[layer]
+    elif use_raw:
         matrix = adata.raw[:, var_names].X
     else:
-        if layer is None:
-            matrix = adata[:, var_names].X
-        else:
-            if layer not in adata.layers.keys():
-                raise KeyError('Selected layer: {} is not in the layers list. The list of '
-                               'valid layers is: {}'.format(layer, adata.layers.keys()))
-            else:
-                matrix = adata[:, var_names].layers[layer]
+        matrix = adata[:, var_names].X
+
     if issparse(matrix):
         matrix = matrix.toarray()
     if log:
@@ -2111,7 +2113,7 @@ def _plot_dendrogram(dendro_ax, adata, orientation='right', remove_labels=True, 
         dendro_ax.set_xticks(ticks)
         dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=90)
 
-    if remove_labels is True:
+    if remove_labels:
         dendro_ax.tick_params(labelbottom=False, labeltop=False, labelleft=False, labelright=False,
                               bottom=False, top=False, left=False, right=False)
 
