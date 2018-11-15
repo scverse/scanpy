@@ -9,7 +9,7 @@ _mock_ones = np.ones(2, dtype=np.float64)
 
 @numba.njit()
 def euclidean(x, y):
-    """Standard euclidean distance.
+    r"""Standard euclidean distance.
 
     ..math::
         D(x, y) = \sqrt{\sum_i (x_i - y_i)^2}
@@ -22,7 +22,7 @@ def euclidean(x, y):
 
 @numba.njit()
 def standardised_euclidean(x, y, sigma=_mock_ones):
-    """Euclidean distance standardised against a vector of standard
+    r"""Euclidean distance standardised against a vector of standard
     deviations per coordinate.
 
     ..math::
@@ -37,7 +37,7 @@ def standardised_euclidean(x, y, sigma=_mock_ones):
 
 @numba.njit()
 def manhattan(x, y):
-    """Manhatten, taxicab, or l1 distance.
+    r"""Manhatten, taxicab, or l1 distance.
 
     ..math::
         D(x, y) = \sum_i |x_i - y_i|
@@ -51,7 +51,7 @@ def manhattan(x, y):
 
 @numba.njit()
 def chebyshev(x, y):
-    """Chebyshev or l-infinity distance.
+    r"""Chebyshev or l-infinity distance.
 
     ..math::
         D(x, y) = \max_i |x_i - y_i|
@@ -65,7 +65,7 @@ def chebyshev(x, y):
 
 @numba.njit()
 def minkowski(x, y, p=2):
-    """Minkowski distance.
+    r"""Minkowski distance.
 
     ..math::
         D(x, y) = \left(\sum_i |x_i - y_i|^p\right)^{\frac{1}{p}}
@@ -84,7 +84,7 @@ def minkowski(x, y, p=2):
 
 @numba.njit()
 def weighted_minkowski(x, y, w=_mock_identity, p=2):
-    """A weighted version of Minkowski distance.
+    r"""A weighted version of Minkowski distance.
 
     ..math::
         D(x, y) = \left(\sum_i w_i |x_i - y_i|^p\right)^{\frac{1}{p}}

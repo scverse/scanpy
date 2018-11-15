@@ -166,7 +166,7 @@ def paga(
         show=None,
         save=None,
         ax=None):
-    """Plot the abstracted graph through thresholding low-connectivity edges.
+    r"""Plot the abstracted graph through thresholding low-connectivity edges.
 
     This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
 
@@ -800,7 +800,7 @@ def paga_path(
         show=None,
         save=None,
         ax=None):
-    """Gene expression and annotation changes along paths in the abstracted graph.
+    r"""Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
