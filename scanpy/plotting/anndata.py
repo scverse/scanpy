@@ -823,10 +823,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         positions, more brackets are drawn.
     var_group_labels : list of `str`
         Labels for each of the var_group_positions that want to be highlighted.
-    swap_axes: `bool`, optional (default: `False`)
-         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby `categories.
-         By setting `swap_axes` then y are the `groupby` categories and x the `var_names`. When swapping
-         axes var_group_positions are no longer used
     var_group_rotation : `float` (default: `None`)
         Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
     row_palette: `str` (default: `muted`)
@@ -834,6 +830,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         should be a valid seaborn palette name or a valic matplotlib colormap
         (see https://seaborn.pydata.org/generated/seaborn.color_palette.html). Alternatively,
         a single color name or hex value can be passed. E.g. 'red' or '#cc33ff'
+    swap_axes: `bool`, optional (default: `False`)
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
+         By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
+         axes var_group_positions are no longer used
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
@@ -1062,7 +1062,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 @doc_params(show_save_ax=doc_show_save_ax)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, swap_axes=False, show=None, save=None, figsize=None, layer=None, **kwds):
+            var_group_rotation=None, swap_axes=False, show_gene_labels=None, show=None, save=None, figsize=None, layer=None, **kwds):
     """\
     Heatmap of the expression values of set of genes..
 
@@ -1111,6 +1111,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         Labels for each of the var_group_positions that want to be highlighted.
     var_group_rotation : `float` (default: `None`)
         Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    swap_axes: `bool`, optional (default: `False`)
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
+         categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
+    show_gene_labels: `bool`, optional (default: `None`).
+         By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
@@ -1145,9 +1150,14 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                               layer=layer)
 
     if groupby is None or len(categories) <= 1:
+        categorical = False
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
+    else:
+        categorical = True
 
+    colors = None
+    groupby_cmap = None
     if dendrogram:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
                                           categories=categories,
@@ -1166,12 +1176,29 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
 
-    if groupby:
-        obs_tidy = obs_tidy.sort_index()
+        # reorder groupby colors
+        if groupby + "_colors" in adata.uns:
+            colors = [adata.uns[groupby + "_colors"][x] for x in dendro_data['categories_idx_ordered']]
 
-    # determine groupby label positions
+    if show_gene_labels is None:
+        show_gene_labels = True if len(var_names) <= 50 else False
+
+    if categorical:
+        obs_tidy = obs_tidy.sort_index()
+        from matplotlib.colors import LinearSegmentedColormap
+        if colors is None:
+            if groupby + "_colors" in adata.uns:
+                colors = adata.uns[groupby + "_colors"]
+                groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+            else:
+                groupby_cmap = pl.get_cmap('tab20')
+        else:
+            groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+
+    # determine groupby label positions such that they appear
+    # centered next to the color code rectangle asigned to the category
     value_sum = 0
-    ticks = []
+    ticks = []  # contains the centered position of the label
     labels = []
     label2code = {}
     for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
@@ -1191,12 +1218,17 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         #   fourth ax is for colorbar
 
         dendro_width = 1.8 if dendrogram else 0
+        groupby_width = 0.25 if categorical else 0
         if figsize is None:
             height = 6
-            heatmap_width = len(var_names) * 0.3
-            width = heatmap_width + dendro_width + 3  # +3 to account for the colorbar and labels
+            if show_gene_labels:
+                heatmap_width = 10
+            else:
+                heatmap_width = len(var_names) * 0.3
+            width = heatmap_width + dendro_width + groupby_width
         else:
             width, height = figsize
+            heatmap_width = width - (dendro_width + groupby_width)
         ax_frac2width = 0.25
 
         if var_group_positions is not None and len(var_group_positions) > 0:
@@ -1208,40 +1240,43 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=2, ncols=4, left=0.05, right=0.48, wspace=0.5 / width,
                                 hspace=0.13 / height,
-                                width_ratios=[ax_frac2width, width, dendro_width, ax_frac2width],
+                                width_ratios=[groupby_width, heatmap_width, dendro_width, ax_frac2width],
                                 height_ratios=height_ratios)
 
-        groupby_ax = fig.add_subplot(axs[1, 0])
         heatmap_ax = fig.add_subplot(axs[1, 1])
         heatmap_cbar_ax = fig.add_subplot(axs[1, 3])
         heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
 
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto')
-        if len(categories) > 1:
-            groupby_ax.set_yticks(ticks)
-            groupby_ax.set_yticklabels(labels)
-
-        # remove y ticks
-        groupby_ax.tick_params(axis='y', left=False, labelsize='small')
-        # remove x ticks and labels
-        groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
-
-        # remove surrounding lines
-        groupby_ax.spines['right'].set_visible(False)
-        groupby_ax.spines['top'].set_visible(False)
-        groupby_ax.spines['left'].set_visible(False)
-        groupby_ax.spines['bottom'].set_visible(False)
-
-        groupby_ax.set_ylabel(groupby)
-        groupby_ax.grid(False)
-
-        sns.heatmap(obs_tidy, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
+        sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
+        if show_gene_labels:
+            heatmap_ax.tick_params(axis='x', labelsize='small')
+            heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
+            heatmap_ax.set_xticklabels(var_names)
+        else:
+            heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
         heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
-        heatmap_ax.tick_params(axis='x', labelsize='small')
         heatmap_ax.set_ylabel('')
-        heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
-        heatmap_ax.set_xticklabels(var_names)
 
+        if categorical:
+            groupby_ax = fig.add_subplot(axs[1, 0])
+            groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap)
+            if len(categories) > 1:
+                groupby_ax.set_yticks(ticks)
+                groupby_ax.set_yticklabels(labels)
+
+            # remove y ticks
+            groupby_ax.tick_params(axis='y', left=False, labelsize='small')
+            # remove x ticks and labels
+            groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
+
+            # remove surrounding lines
+            groupby_ax.spines['right'].set_visible(False)
+            groupby_ax.spines['top'].set_visible(False)
+            groupby_ax.spines['left'].set_visible(False)
+            groupby_ax.spines['bottom'].set_visible(False)
+
+            groupby_ax.set_ylabel(groupby)
+            groupby_ax.grid(False)
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(dendro_ax, adata, ticks=ticks)
@@ -1252,6 +1287,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
                                        group_labels=var_group_labels, rotation=var_group_rotation,
                                        left_adjustment=0.2, right_adjustment=0.8)
+
     # swap axes case
     else:
         # define a layout of 3 rows x 3 columns
@@ -1261,68 +1297,77 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         #   second ax is for 'brackets' if any (othwerise width is zero)
         #   third ax is for colorbar
 
-        dendro_height = 1.8 if dendrogram else 0
+        dendro_height = 0.5 if dendrogram else 0
+        groupby_height = 0.13 if categorical else 0
         if figsize is None:
-            width = 6
-            heatmap_height = len(var_names) * 0.3
-            height = heatmap_height + dendro_height + 2  # +2 to account for labels
+            width = 8
+            heatmap_height = len(var_names) * 0.14
+            height = heatmap_height + dendro_height + groupby_height  # +2 to account for labels
         else:
             width, height = figsize
-        height_ratios = [dendro_height, heatmap_height, 0.25]
+            heatmap_height = height - (dendro_height + groupby_height)
+
+        height_ratios = [dendro_height, heatmap_height, groupby_height]
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
-            width_ratios = [width, 0.15, 0.25]
+            width_ratios = [width, 0.3, 0.25]
         else:
             width_ratios = [width, 0., 0.25]
 
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=3, ncols=3, left=0.05, right=0.48, wspace=0.5 / width,
-                                hspace=0.13 / height,
+                                hspace=0.3 / height,
                                 width_ratios=width_ratios,
                                 height_ratios=height_ratios)
 
         heatmap_ax = fig.add_subplot(axs[1, 0])
-        groupby_ax = fig.add_subplot(axs[2, 0])
         heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
         heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
+        if categorical:
+            groupby_ax = fig.add_subplot(axs[2, 0])
+            groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
+            if len(categories) > 1:
+                groupby_ax.set_xticks(ticks)
+                groupby_ax.set_xticklabels(labels, rotation=90)
 
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto')
-        if len(categories) > 1:
-            groupby_ax.set_xticks(ticks)
-            groupby_ax.set_xticklabels(labels)
+            # remove x ticks
+            groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
+            # remove y ticks and labels
+            groupby_ax.tick_params(axis='y', left=False, labelleft=False)
 
-        # remove y ticks
-        groupby_ax.tick_params(axis='x', left=False, labelsize='small')
-        # remove x ticks and labels
-        groupby_ax.tick_params(axis='y', bottom=False, labelbottom=False)
+            # remove surrounding lines
+            groupby_ax.spines['right'].set_visible(False)
+            groupby_ax.spines['top'].set_visible(False)
+            groupby_ax.spines['left'].set_visible(False)
+            groupby_ax.spines['bottom'].set_visible(False)
 
-        # remove surrounding lines
-        groupby_ax.spines['right'].set_visible(False)
-        groupby_ax.spines['top'].set_visible(False)
-        groupby_ax.spines['left'].set_visible(False)
-        groupby_ax.spines['bottom'].set_visible(False)
-
-        groupby_ax.set_xlabel(groupby)
-        groupby_ax.grid(False)
+            groupby_ax.set_xlabel(groupby)
+            groupby_ax.grid(False)
 
         sns.heatmap(obs_tidy.T, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
-        heatmap_ax.tick_params(axis='x', left=False, labelleft=False)
-        heatmap_ax.tick_params(axis='y', labelsize='small')
+        heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
-        heatmap_ax.set_yticks(np.arange(len(var_names)) + 0.5)
-        heatmap_ax.set_yticklabels(var_names)
+        if show_gene_labels:
+            heatmap_ax.tick_params(axis='y', labelsize='x-small')
+            heatmap_ax.set_yticks(np.arange(len(var_names)) + 0.5)
+            heatmap_ax.set_yticklabels(var_names, rotation=0)
+        else:
+            heatmap_ax.tick_params(axis='y', labelleft=False, left=False)
 
         if dendrogram:
-            dendro_ax = fig.add_subplot(axs[0, 0], sharey=heatmap_ax)
+            dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
             _plot_dendrogram(dendro_ax, adata, ticks=ticks, orientation='top')
 
         # plot group legends on top of heatmap_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
-            gene_groups_ax = fig.add_subplot(axs[1, 1], sharex=heatmap_ax)
-            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                       group_labels=var_group_labels, rotation=var_group_rotation,
-                                       left_adjustment=0.2, right_adjustment=0.8)
+            gene_groups_ax = fig.add_subplot(axs[1, 1])
+            arr = []
+            for idx, pos in enumerate(var_group_positions):
+                arr += [idx] * (pos[1]+1 - pos[0])
+
+            gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
+            gene_groups_ax.axis('off')
 
     utils.savefig_or_show('heatmap', show=show, save=save)
 
