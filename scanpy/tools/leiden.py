@@ -5,6 +5,9 @@ from .. import utils
 from .. import settings
 from .. import logging as logg
 
+from anndata import AnnData
+from scipy import sparse
+
 def leiden(
         adata: AnnData,
         key_added: str = 'leiden',
