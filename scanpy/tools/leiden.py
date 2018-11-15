@@ -7,6 +7,7 @@ from .. import logging as logg
 
 from anndata import AnnData
 from scipy import sparse
+from typing import Optional
 
 def leiden(
         adata: AnnData,
