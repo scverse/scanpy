@@ -24,5 +24,5 @@ def test_kbet_basic(adata_kbet_sim):
     # Heuristic gives: k=75
     sc.pp.neighbors(adata_kbet_sim, n_neighbors=75)
     alpha = .05
-    acceptance = sc.tl.kbet(adata_kbet_sim, alpha=alpha)
+    acceptance, _ = sc.tl.kbet(adata_kbet_sim, alpha=alpha)
     assert acceptance > 1 - alpha
