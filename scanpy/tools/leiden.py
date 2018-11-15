@@ -1,3 +1,4 @@
+import leidenalg
 import numpy as np
 import pandas as pd
 from natsort import natsorted
@@ -63,7 +64,6 @@ def leiden(
     **partition_kwargs
         Any further arguments to pass to the partitioning function directly.
     """
-    import leidenalg
     logg.info('running Leiden clustering', r=True)
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
