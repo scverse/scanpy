@@ -1184,8 +1184,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             colors = [adata.uns[groupby + "_colors"][x] for x in dendro_data['categories_idx_ordered']]
 
     if show_gene_labels is None:
-        show_gene_labels = True if len(var_names) <= 50 else False
-
+        if len(var_names) <= 50:
+            show_gene_labels = True
+        else:
+            show_gene_labels = False
+            logg.warn('Gene labels are not shown when more than 50 genes are visualized. To show '
+                      'gene labels set `show_gene_labels=True`')
     if categorical:
         obs_tidy = obs_tidy.sort_index()
         from matplotlib.colors import LinearSegmentedColormap
@@ -1225,9 +1229,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         if figsize is None:
             height = 6
             if show_gene_labels:
-                heatmap_width = 10
-            else:
                 heatmap_width = len(var_names) * 0.3
+            else:
+                heatmap_width = 8
             width = heatmap_width + dendro_width + groupby_width
         else:
             width, height = figsize
@@ -1247,18 +1251,29 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                 height_ratios=height_ratios)
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
-        heatmap_cbar_ax = fig.add_subplot(axs[1, 3])
-        heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
-
-        sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
-        if show_gene_labels:
-            heatmap_ax.tick_params(axis='x', labelsize='small')
-            heatmap_ax.set_xticks(np.arange(len(var_names)) + 0.5)
-            heatmap_ax.set_xticklabels(var_names)
-        else:
-            heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
+        im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
+        heatmap_ax.set_ylim(obs_tidy.shape[0], 0)
+        heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
         heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
         heatmap_ax.set_ylabel('')
+
+        # sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
+        if show_gene_labels:
+            heatmap_ax.tick_params(axis='x', labelsize='small')
+            heatmap_ax.set_xticks(np.arange(len(var_names)))
+            heatmap_ax.set_xticklabels(var_names, rotation=90)
+        else:
+            heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
+
+        # plot colorbar
+        cmap_height = 4
+        if height > cmap_height:
+            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 3],
+                                                    height_ratios=[height - cmap_height, cmap_height])
+            heatmap_cbar_ax = fig.add_subplot(axs2[1])
+        else:
+            heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
+        pl.colorbar(im, cax=heatmap_cbar_ax)
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
@@ -1280,6 +1295,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
             groupby_ax.set_ylabel(groupby)
             groupby_ax.grid(False)
+
+            # add lines to main heatmap
+            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
+            heatmap_ax.hlines(line_positions, -1, len(var_names) + 1, lw=0.5)
+
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
             _plot_dendrogram(dendro_ax, adata, ticks=ticks)
@@ -1303,8 +1323,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         dendro_height = 0.5 if dendrogram else 0
         groupby_height = 0.13 if categorical else 0
         if figsize is None:
-            width = 8
-            heatmap_height = len(var_names) * 0.14
+            if show_gene_labels:
+                heatmap_height = len(var_names) * 0.12
+            else:
+                heatmap_height = 8
+            width = 20
             height = heatmap_height + dendro_height + groupby_height  # +2 to account for labels
         else:
             width, height = figsize
@@ -1324,9 +1347,20 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                 width_ratios=width_ratios,
                                 height_ratios=height_ratios)
 
+        # plot heatmap
         heatmap_ax = fig.add_subplot(axs[1, 0])
-        heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
-        heatmap_cbar_ax.tick_params(axis='y', labelsize='small')
+        im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
+        heatmap_ax.set_xlim(0, obs_tidy.shape[0])
+        heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
+        heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
+        heatmap_ax.set_xlabel('')
+        if show_gene_labels:
+            heatmap_ax.tick_params(axis='y', labelsize='x-small', length=1)
+            heatmap_ax.set_yticks(np.arange(len(var_names)))
+            heatmap_ax.set_yticklabels(var_names, rotation=0)
+        else:
+            heatmap_ax.tick_params(axis='y', labelleft=False, left=False)
+
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
             groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
@@ -1347,16 +1381,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
             groupby_ax.set_xlabel(groupby)
             groupby_ax.grid(False)
-
-        sns.heatmap(obs_tidy.T, yticklabels='none', ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
-        heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
-        heatmap_ax.set_xlabel('')
-        if show_gene_labels:
-            heatmap_ax.tick_params(axis='y', labelsize='x-small')
-            heatmap_ax.set_yticks(np.arange(len(var_names)) + 0.5)
-            heatmap_ax.set_yticklabels(var_names, rotation=0)
-        else:
-            heatmap_ax.tick_params(axis='y', labelleft=False, left=False)
+            # add lines to main heatmap
+            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
+            heatmap_ax.vlines(line_positions, -1, len(var_names) + 1, lw=0.5)
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
@@ -1371,6 +1398,16 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
             gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
             gene_groups_ax.axis('off')
+
+        # plot colorbar
+        cmap_height = 4
+        if height > cmap_height:
+            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 2],
+                                                    height_ratios=[height - cmap_height, cmap_height])
+            heatmap_cbar_ax = fig.add_subplot(axs2[1])
+        else:
+            heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
+        pl.colorbar(im, cax=heatmap_cbar_ax)
 
     utils.savefig_or_show('heatmap', show=show, save=save)
 
