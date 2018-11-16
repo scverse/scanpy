@@ -314,6 +314,11 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
         return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
+    elif plot_type == 'tracksplot':
+        from ..anndata import tracksplot
+        return tracksplot(adata, gene_names, groupby, var_group_labels=group_names,
+                       var_group_positions=group_positions, show=show, save=save, **kwds)
+
     elif plot_type == 'matrixplot':
         from ..anndata import matrixplot
         matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
@@ -348,6 +353,37 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
     """
 
     _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
+                            groupby=groupby, key=key, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, key=None,
+                              show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using heatmap plot (see `scanpy.api.pl.heatmap`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. By default,
+        the groupby is chosen from the rank genes groups parameter but
+        other groupby options can be used.  It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories` (see `scanpy.api.pl.heatmap`).
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.tracksplot`.
+    {show_save_ax}
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='tracksplot', groups=groups, n_genes=n_genes,
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
