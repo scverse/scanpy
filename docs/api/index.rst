@@ -51,9 +51,12 @@ Batch effect correction
 
 Note that a simple batch correction method is available via :func:`pp.regress_out`.
 
+``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
+
 .. autosummary::
    :toctree: .
 
+   pp.bbknn
    pp.mnn_correct
 
 Imputation

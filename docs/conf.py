@@ -64,6 +64,7 @@ intersphinx_mapping = dict(
     pandas=('http://pandas.pydata.org/pandas-docs/stable/', None),
     matplotlib=('https://matplotlib.org/', None),
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
+    bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
 )
 
