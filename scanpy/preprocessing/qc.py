@@ -2,9 +2,10 @@ import numba
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
+from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
-def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
+def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=(),
                          percent_top=(50, 100, 200, 500), inplace=False):
     """
     Calculate quality control metrics.
@@ -17,11 +18,13 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
     ----------
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
-    exprs_values : `str`, optional (default: `"counts"`)
+    expr_type : `str`, optional (default: `"counts"`)
         Name of kind of values in X.
-    feature_controls : `Container`, optional (default: `()`)
-        Keys for boolean columns of `.var` which identify feature controls,
-        e.g. "ERCC" or "mito".
+    var_type : `str`, optional (default: `"genes"`)
+        The kind of thing the variables are.
+    qc_vars : `Container`, optional (default: `()`)
+        Keys for boolean columns of `.var` which identify variables you could 
+        want to control for (e.g. "ERCC" or "mito").
     percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
         Which proportions of top genes to cover. If empty or `None` don't
         calculate.
@@ -36,59 +39,67 @@ def calculate_qc_metrics(adata, exprs_values="counts", feature_controls=(),
 
         Observation level metrics include:
 
-        * `total_features_by_{exprs_values}`
-        * `total_{expr_values}`
-        * `pct_{expr_values}_in_top_{n}_features` - for `n` in `percent_top`
-        * `total_{exprs_values}_{feature_control}` - for each `feature_control`
-        * `pct_{exprs_values}_{feature_control}` - for each `feature_control`
+        * `total_{var_type}_by_{expr_type}`
+        * `total_{expr_type}`
+        * `pct_{expr_type}_in_top_{n}_{var_type}` - for `n` in `percent_top`
+        * `total_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+        * `pct_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
 
         Variable level metrics include:
 
-        * `total_{expr_values}`
-        * `mean_{expr_values}`
-        * `n_cells_by_{expr_values}`
-        * `pct_dropout_by_{expr_values}`
+        * `total_{expr_type}`
+        * `mean_{expr_type}`
+        * `n_cells_by_{expr_type}`
+        * `pct_dropout_by_{expr_type}`
     """
-    if isspmatrix_coo(adata.X):
-        X = csr_matrix(adata.X)  # COO not subscriptable
-    else:
-        X = adata.X
+    X = adata.X
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     var_metrics = pd.DataFrame(index=adata.var_names)
+    if isspmatrix_coo(X):
+        X = csr_matrix(X)  # COO not subscriptable
+    if issparse(X):
+        X.eliminate_zeros()
     # Calculate obs metrics
-    obs_metrics["total_features_by_{exprs_values}"] = (
-        X != 0).sum(axis=1)
-    obs_metrics["log1p_total_features_by_{exprs_values}"] = np.log1p(
-        obs_metrics["total_features_by_{exprs_values}"])
-    obs_metrics["total_{exprs_values}"] = X.sum(axis=1)
-    obs_metrics["log1p_total_{exprs_values}"] = np.log1p(
-        obs_metrics["total_{exprs_values}"])
+    if issparse(X):
+        obs_metrics["n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
+    else:
+        obs_metrics["n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
+    obs_metrics["log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
+        obs_metrics["n_{var_type}_by_{expr_type}"])
+    obs_metrics["total_{expr_type}"] = X.sum(axis=1)
+    obs_metrics["log1p_total_{expr_type}"] = np.log1p(
+        obs_metrics["total_{expr_type}"])
     proportions = top_segment_proportions(X, percent_top)
     # Since there are local loop variables, formatting must occur in their scope
     # Probably worth looking into a python3.5 compatable way to make this better
     for i, n in enumerate(percent_top):
-        obs_metrics["pct_{exprs_values}_in_top_{n}_features".format(**locals())] = \
+        obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
             proportions[:, i] * 100
-    for feature_control in feature_controls:
-        obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())] = \
-            X[:, adata.var[feature_control].values].sum(axis=1)
-        obs_metrics["log1p_total_{exprs_values}_{feature_control}".format(**locals())] = \
+    for qc_var in qc_vars:
+        obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
+            X[:, adata.var[qc_var].values].sum(axis=1)
+        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = \
             np.log1p(
-                obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())])
-        # "total_{exprs_values}" not formatted yet
-        obs_metrics["pct_{exprs_values}_{feature_control}".format(**locals())] = \
-            obs_metrics["total_{exprs_values}_{feature_control}".format(**locals())] / \
-            obs_metrics["total_{exprs_values}"] * 100
+                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())])
+        # "total_{expr_type}" not formatted yet
+        obs_metrics["pct_{expr_type}_{qc_var}".format(**locals())] = \
+            obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] / \
+            obs_metrics["total_{expr_type}"] * 100
     # Calculate var metrics
-    var_metrics["mean_{exprs_values}"] = np.ravel(X.mean(axis=0))
-    var_metrics["log1p_mean_{exprs_values}"] = np.log1p(
-        var_metrics["mean_{exprs_values}"])
-    var_metrics["n_cells_by_{exprs_values}"] = np.ravel((X != 0).sum(axis=0))
-    var_metrics["pct_dropout_by_{exprs_values}"] = \
-        (1 - var_metrics["n_cells_by_{exprs_values}"] / X.shape[0]) * 100
-    var_metrics["total_{exprs_values}"] = np.ravel(X.sum(axis=0))
-    var_metrics["log1p_total_{exprs_values}"] = np.log1p(
-        var_metrics["total_{exprs_values}"])
+    if issparse(X):
+        # Current memory bottleneck for csr matrices:
+        var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
+        var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
+    else:
+        var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
+        var_metrics["mean_{expr_type}"] = X.mean(axis=0)
+    var_metrics["log1p_mean_{expr_type}"] = np.log1p(
+        var_metrics["mean_{expr_type}"])
+    var_metrics["pct_dropout_by_{expr_type}"] = \
+        (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
+    var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
+    var_metrics["log1p_total_{expr_type}"] = np.log1p(
+        var_metrics["total_{expr_type}"])
     # Format strings
     for df in obs_metrics, var_metrics:
         new_colnames = []

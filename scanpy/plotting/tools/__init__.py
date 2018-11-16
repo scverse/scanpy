@@ -65,7 +65,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -74,18 +74,22 @@ def pca_loadings(adata, components=None, show=None, save=None):
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
-def pca_variance_ratio(adata, log=False, show=None, save=None):
+def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
     """Plot the variance ratio.
 
     Parameters
     ----------
-    show : bool, optional (default: `None`)
+    n_pcs : `int`, optional (default: `30`)
+         Number of PCs to show.
+    log : `bool`, optional (default: `False`)
+         Plot on logarithmic scale..
+    show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
     """
-    ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
+    ranking(adata, 'uns', 'variance_ratio', n_points=n_pcs, dictionary='pca', labels='PC', log=log)
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 

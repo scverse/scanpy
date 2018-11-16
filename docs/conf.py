@@ -64,6 +64,8 @@ intersphinx_mapping = dict(
     pandas=('http://pandas.pydata.org/pandas-docs/stable/', None),
     matplotlib=('https://matplotlib.org/', None),
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
+    bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
 )
 
 templates_path = ['_templates']
@@ -228,6 +230,29 @@ from jinja2.defaults import DEFAULT_FILTERS
 DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
+# -- Override some classnames in autodoc --------------------------------------------
+
+
+import sphinx_autodoc_typehints
+
+qualname_overrides = {
+    'anndata.base.AnnData': 'anndata.AnnData',
+    'scipy.sparse.base.spmatrix': 'scipy.sparse.spmatrix',
+    'scipy.sparse.csr.csr_matrix': 'scipy.sparse.csr_matrix',
+    'scipy.sparse.csc.csc_matrix': 'scipy.sparse.csc_matrix',
+}
+
+fa_orig = sphinx_autodoc_typehints.format_annotation
+def format_annotation(annotation):
+    if inspect.isclass(annotation):
+        full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
+        override = qualname_overrides.get(full_name)
+        if override is not None:
+            return ':py:class:`~{}`'.format(qualname_overrides[full_name])
+    return fa_orig(annotation)
+sphinx_autodoc_typehints.format_annotation = format_annotation
+
+
 # -- Prettier Param docs --------------------------------------------
 
 
@@ -259,8 +284,8 @@ class PrettyTypedField(PyTypedField):
             if fieldtype is not None:
                 head += nodes.Text(' : ')
                 if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
-                    typename = ''.join(n.astext() for n in fieldtype)
-                    head += makerefs(self.typerolename, typename, addnodes.literal_emphasis)
+                    text_node, = fieldtype  # type: nodes.Text
+                    head += makerefs(self.typerolename, text_node.astext(), addnodes.literal_emphasis)
                 else:
                     head += fieldtype
 

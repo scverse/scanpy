@@ -412,6 +412,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     # read other file types
     filename_cache = (settings.cachedir + filename.lstrip(
         './').replace('/', '-').replace('.' + ext, '.h5ad'))
+    if filename_cache.endswith('.gz'): filename_cache = filename_cache[:-3]
+    if filename_cache.endswith('.bz2'): filename_cache = filename_cache[:-4]
     if cache and os.path.exists(filename_cache):
         logg.info('... reading from cache file', filename_cache)
         adata = read_h5ad(filename_cache, backed=False)
