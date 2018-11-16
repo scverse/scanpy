@@ -2,8 +2,7 @@ Tutorials
 =========
 
 
-------------
-
+----------
 Clustering
 ----------
 
@@ -16,8 +15,7 @@ You might compare this to `clustering 68K PBMCs <https://nbviewer.jupyter.org/gi
    <img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/filter_genes_dispersion.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/louvain.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/NKG7.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/violin.png" style="width: 100px"><img src="http://falexwolf.de/img/scanpy_usage/170505_seurat/cell_types.png" style="width: 200px">
 
 
-------------
-
+--------------------
 Trajectory Inference
 --------------------
 
@@ -36,8 +34,7 @@ You can extend this to multi-resolution analyses of whole animals, such as `here
 The PAGA method behind this is described `here <https://rawgit.com/falexwolf/paga_paper/master/paga.pdf>`__ and can be cited using this `doi <https://doi.org/10.1101/208819>`__. As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_ for two hematopoiesis datasets: `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`__ for [Paul15]_ and `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`__ for [Moignard15]_.
 
 
-------------
-
+-----------------
 Further Tutorials
 -----------------
 
@@ -76,9 +73,9 @@ Images
 See a pseudotime-based vs. deep-learning based reconstruction of cell cycle from image data `here <https://github.com/theislab/scanpy_usage/tree/master/170529_images>`__ [Eulenberg17]_.
 
 
-.. 
+..
     User Examples
     ~~~~~~~~~~~~~
-    
+
     January 12, 2018: `Exploring the mouse cell atlas <https://github.com/dpcook/fun_analysis/blob/master/tabula_muris/mouse_atlas_scanpy.ipynb>`__ by `David P. Cook <https://twitter.com/DavidPCook>`__. Data by `Tabula Muris Consortium <https://www.biorxiv.org/content/early/2017/12/20/237446>`__.
-    
+
