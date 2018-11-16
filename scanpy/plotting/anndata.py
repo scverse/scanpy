@@ -1920,6 +1920,111 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     return axs
 
 
+def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categories=7,
+               dendrogram=False, var_group_positions=None, var_group_labels=None,
+            var_group_rotation=None, layer=None, show=None, save=None, figsize=None, **kwds):
+
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+
+    if dendrogram:
+        dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
+                                          categories=categories,
+                                          var_group_labels=var_group_labels,
+                                          var_group_positions=var_group_positions,
+                                          use_raw=use_raw, log=log, num_categories=num_categories)
+        # reorder obs_tidy
+        if dendro_data['var_names_idx_ordered'] is not None:
+            obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
+            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
+
+        obs_tidy.index = obs_tidy.index.reorder_categories(
+            [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
+        categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
+
+    if groupby + "_colors" not in adata.uns:
+        from scanpy.plotting.tools.scatterplots import _set_default_colors_for_categorical_obs
+        _set_default_colors_for_categorical_obs(adata, groupby)
+
+    colors = adata.uns[groupby + "_colors"]
+    obs_tidy = obs_tidy.sort_index()
+    # obtain the start and end of each category and make
+    # a list of ranges that will be used to plot a different
+    # color
+    cumsum = [0] + list(np.cumsum(obs_tidy.index.value_counts(sort=False)))
+    x_values = [(x, y) for x, y in zip(cumsum[:-1], cumsum[1:])]
+
+    # determine groupby label positions such that they appear
+    # centered next to the color code rectangle asigned to the category
+    value_sum = 0
+    ticks = []  # contains the centered position of the label
+    labels = []
+    label2code = {}
+    for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
+        ticks.append(value_sum + (value / 2))
+        labels.append(label)
+        value_sum += value
+        label2code[label] = code
+
+    if dendrogram:
+        dendro_height = 1
+    else:
+        dendro_height = 0
+    num_rows = len(var_names) + 1  # +1 because of dendrogram on top
+    height_ratios = [dendro_height] + [0.5] * len(var_names)
+
+    width = 20
+    height = sum(height_ratios)
+
+    groupby_height = 0.13
+
+    obs_tidy = obs_tidy.T
+
+    fig = pl.figure(figsize=(width, height))
+    from matplotlib import gridspec
+    axs = gridspec.GridSpec(ncols=1, nrows=num_rows, left=0.05, right=0.48, wspace=0.5 / width,
+                            hspace=0, height_ratios=height_ratios)
+    axs_list = []
+
+    first_ax = None
+    for idx, var in enumerate(var_names):
+        ax_idx = idx + 1  # this is because of the dendrogram
+        if first_ax is None:
+            ax = fig.add_subplot(axs[ax_idx])
+            first_ax = ax
+        else:
+            ax = fig.add_subplot(axs[ax_idx], sharex=first_ax)
+        axs_list.append(ax)
+        for cat_idx, category in enumerate(categories):
+            x_start, x_end = x_values[cat_idx]
+            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=colors[cat_idx])
+            ax.text(1.01, 0.5, var, ha='left', va='center', transform=ax.transAxes,
+                    fontsize='small', weight='normal')
+
+        # remove the xticks labels except for the last processed plot (first from bottom-up).
+        # Because the plots share the x axis it is redundant and less compact to plot the
+        # axis for each plot
+        if idx < len(var_names) - 1:
+            ax.tick_params(labelbottom=False, labeltop=False, bottom=False, top=False)
+            ax.set_xlabel('')
+        if log:
+            ax.set_yscale('log')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ymin, ymax = ax.get_ylim()
+        ymax = int(ymax)
+        ax.set_yticks([ymax])
+        ax.tick_params(axis='y', labelsize='small')
+
+    ax.set_xlim(0, x_end)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(labels, rotation=90)
+    if dendrogram:
+        dendro_ax = fig.add_subplot(axs[0], sharex=first_ax)
+        _plot_dendrogram(dendro_ax, adata, orientation='top', ticks=ticks)
+        axs_list.append(dendro_ax)
+
+
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
                        num_categories=7, layer=None):
     """
