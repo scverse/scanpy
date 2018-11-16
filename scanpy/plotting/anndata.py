@@ -1638,7 +1638,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
-               var_group_rotation=None, show=None, save=None, **kwds):
+               var_group_rotation=None, swap_axes=False, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1714,51 +1714,14 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
-
-    mean_obs = obs_tidy.groupby(level=0).mean()
-
-    dendro_width = 1.8 if dendrogram else 0
-    if figsize is None:
-        height = len(categories) * 0.2 + 1  # +1 for labels
-        heatmap_width = len(var_names) * 0.6
-        width = heatmap_width + dendro_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
-    else:
-        width, height = figsize
-        heatmap_width = width * 0.75
-
-    # colorbar ax width should not change with differences in the width of the image
-    colorbar_width = 0.4
-
-    if var_group_positions is not None and len(var_group_positions) > 0:
-        # add some space in case 'brackets' want to be plotted on top of the image
-        height_ratios = [0.5, 10]
-        height += 0.5
-    else:
-        height_ratios = [0, 10.5]
-
-    # define a layout of 2 rows x 3 columns
-    # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
-    # second row is for main content. This second row
-    # is divided into three axes:
-    #   first ax is for the main matrix figure
-    #   second ax is for the dendrogram
-    #   third ax is for the color bar legend
-    from matplotlib import gridspec
-    fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.01, hspace=0.04,
-                            width_ratios=[heatmap_width, dendro_width, colorbar_width],
-                            height_ratios=height_ratios)
-
-    matrix_ax = fig.add_subplot(axs[1, 0])
-    y_ticks = np.arange(mean_obs.shape[0]) + 0.5
-    matrix_ax.set_yticks(y_ticks)
-    matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
-
-    color_legend = fig.add_subplot(axs[1, 2])
-
     if groupby is None or len(categories) <= 1:
+        categorical = False
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
+    else:
+        categorical = True
+
+    mean_obs = obs_tidy.groupby(level=0).mean()
 
     if dendrogram:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
@@ -1779,32 +1742,142 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         # reorder rows (categories) to match the dendrogram order
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
 
-        dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-        _plot_dendrogram(dendro_ax, adata, ticks=y_ticks)
+    if not swap_axes:
+        dendro_width = 1.8 if dendrogram else 0
+        if figsize is None:
+            height = len(categories) * 0.2 + 1  # +1 for labels
+            heatmap_width = len(var_names) * 0.6
+            width = heatmap_width + dendro_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+        else:
+            width, height = figsize
+            heatmap_width = width * 0.75
 
-    pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
+        # colorbar ax width should not change with differences in the width of the image
+        colorbar_width = 0.4
 
-    # invert y axis to show categories ordered from top to bottom
-    matrix_ax.set_ylim(mean_obs.shape[0], 0)
+        if var_group_positions is not None and len(var_group_positions) > 0:
+            # add some space in case 'brackets' want to be plotted on top of the image
+            height_ratios = [0.5, 10]
+            height += 0.5
+        else:
+            height_ratios = [0, 10.5]
 
-    x_ticks = np.arange(mean_obs.shape[1]) + 0.5
-    matrix_ax.set_xticks(x_ticks)
-    matrix_ax.set_xticklabels([mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90)
-    matrix_ax.tick_params(axis='both', labelsize='small')
-    matrix_ax.grid(False)
-    matrix_ax.set_xlim(-0.5, len(var_names) + 0.5)
-    matrix_ax.set_ylabel(groupby)
-    matrix_ax.set_xlim(0, mean_obs.shape[1])
+        # define a layout of 2 rows x 3 columns
+        # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
+        # second row is for main content. This second row
+        # is divided into three axes:
+        #   first ax is for the main matrix figure
+        #   second ax is for the dendrogram
+        #   third ax is for the color bar legend
+        from matplotlib import gridspec
+        fig = pl.figure(figsize=(width, height))
+        axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.01, hspace=0.04,
+                                width_ratios=[heatmap_width, dendro_width, colorbar_width],
+                                height_ratios=height_ratios)
 
-    # plot group legends on top of matrix_ax (if given)
-    if var_group_positions is not None and len(var_group_positions) > 0:
-        gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
-        _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                   group_labels=var_group_labels, rotation=var_group_rotation,
-                                   left_adjustment=0.2, right_adjustment=0.8)
+        matrix_ax = fig.add_subplot(axs[1, 0])
+        y_ticks = np.arange(mean_obs.shape[0]) + 0.5
+        matrix_ax.set_yticks(y_ticks)
+        matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
 
-    # plot colorbar
-    pl.colorbar(pc, cax=color_legend)
+        color_legend = fig.add_subplot(axs[1, 2])
+
+        if dendrogram:
+            dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
+            _plot_dendrogram(dendro_ax, adata, ticks=y_ticks)
+
+        pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
+
+        # invert y axis to show categories ordered from top to bottom
+        matrix_ax.set_ylim(mean_obs.shape[0], 0)
+
+        x_ticks = np.arange(mean_obs.shape[1]) + 0.5
+        matrix_ax.set_xticks(x_ticks)
+        matrix_ax.set_xticklabels([mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90)
+        matrix_ax.tick_params(axis='both', labelsize='small')
+        matrix_ax.grid(False)
+        matrix_ax.set_xlim(-0.5, len(var_names) + 0.5)
+        matrix_ax.set_ylabel(groupby)
+        matrix_ax.set_xlim(0, mean_obs.shape[1])
+
+        # plot group legends on top of matrix_ax (if given)
+        if var_group_positions is not None and len(var_group_positions) > 0:
+            gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
+            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
+                                       group_labels=var_group_labels, rotation=var_group_rotation,
+                                       left_adjustment=0.2, right_adjustment=0.8)
+
+        # plot colorbar
+        pl.colorbar(pc, cax=color_legend)
+    else:
+        dendro_height = 0.5 if dendrogram else 0
+        colorbar_width = 0.3
+        if var_group_positions is not None and len(var_group_positions) > 0:
+            # add some space in case 'brackets' want to be plotted on top of the image
+            groupby_width = 0.8
+        else:
+            groupby_width = 0
+
+        if figsize is None:
+            heatmap_height = len(var_names) * 0.2
+            height = dendro_height + heatmap_height + 1  # +1 for labels
+            heatmap_width = len(categories) * 0.5
+            width = heatmap_width + groupby_width + colorbar_width
+        else:
+            width, height = figsize
+            heatmap_width = width - (groupby_width + colorbar_width)
+            heatmap_height = height - dendro_height
+
+        # define a layout of 2 rows x 3 columns
+        # first row is for 'dendrogram' (if no dendrogram is plotted, the height of this row is zero)
+        # second row is for main content. This row
+        # is divided into three axes:
+        #   first ax is for the main matrix figure
+        #   second ax is for the groupby categories (eg. brackets)
+        #   third ax is for the color bar legend
+        from matplotlib import gridspec
+        fig = pl.figure(figsize=(width, height))
+        axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.05, hspace=0.005,
+                                width_ratios=[heatmap_width, groupby_width, colorbar_width],
+                                height_ratios=[dendro_height, heatmap_height])
+
+        mean_obs = mean_obs.T
+        matrix_ax = fig.add_subplot(axs[1, 0])
+        pc = matrix_ax.pcolor(mean_obs, edgecolor='gray', **kwds)
+        y_ticks = np.arange(mean_obs.shape[0]) + 0.5
+        matrix_ax.set_yticks(y_ticks)
+        matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
+
+        x_ticks = np.arange(mean_obs.shape[1]) + 0.5
+        matrix_ax.set_xticks(x_ticks)
+        matrix_ax.set_xticklabels([mean_obs.columns[idx] for idx in range(mean_obs.shape[1])], rotation=90)
+        matrix_ax.tick_params(axis='both', labelsize='small')
+        matrix_ax.grid(False)
+        matrix_ax.set_xlim(0, len(categories))
+        matrix_ax.set_xlabel(groupby)
+        # invert y axis to show var_names ordered from top to bottom
+        matrix_ax.set_ylim(mean_obs.shape[0], 0)
+
+        if dendrogram:
+            dendro_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
+            _plot_dendrogram(dendro_ax, adata, ticks=x_ticks, orientation='top')
+
+        # plot group legends on top of matrix_ax (if given)
+        if var_group_positions is not None and len(var_group_positions) > 0:
+            gene_groups_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
+            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
+                                       group_labels=var_group_labels, rotation=var_group_rotation,
+                                       left_adjustment=0.2, right_adjustment=0.8, orientation='right')
+
+        # plot colorbar
+        cmap_height = 4
+        if height > cmap_height:
+            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 2],
+                                                    height_ratios=[height - cmap_height, cmap_height])
+            color_legend = fig.add_subplot(axs2[1])
+        else:
+            color_legend = fig.add_subplot(axs[1, 2])
+        pl.colorbar(pc, cax=color_legend)
 
     utils.savefig_or_show('matrixplot', show=show, save=save)
     return axs
@@ -1884,7 +1957,7 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
 
 
 def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
-                               left_adjustment=-0.3, right_adjustment=0.3, rotation=None):
+                               left_adjustment=-0.3, right_adjustment=0.3, rotation=None, orientation='top'):
     """
     Draws brackets that represent groups of genes on the give axis.
     For best results, this axis is located on top of an image whose
@@ -1916,7 +1989,8 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     rotation : `float` (default None)
         rotation degrees for the labels. If not given, small labels (<4 characters) are not
         rotated, otherwise, they are rotated 90 degrees
-
+    orientation : `str` (default `top`)
+        location of the brackets. Either `top` or `right`
     Returns
     -------
     None
@@ -1932,30 +2006,55 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     # verts and codes are used by PathPatch to make the brackets
     verts = []
     codes = []
+    if orientation == 'top':
+        # rotate labels if any of them is longer than 4 characters
+        if rotation is None and group_labels is not None and len(group_labels) > 0:
+            if max([len(x) for x in group_labels]) > 4:
+                rotation = 90
+            else:
+                rotation = 0
+        for idx in range(len(left)):
+            verts.append((left[idx], 0))  # lower-left
+            verts.append((left[idx], 0.6))  # upper-left
+            verts.append((right[idx], 0.6))  # upper-right
+            verts.append((right[idx], 0))  # lower-right
 
-    # rotate labels if any of them is longer than 4 characters
-    if rotation is None and group_labels is not None and len(group_labels) > 0:
-        if max([len(x) for x in group_labels]) > 4:
-            rotation = 90
-        else:
-            rotation = 0
-    for idx in range(len(left)):
-        verts.append((left[idx], 0))  # lower-left
-        verts.append((left[idx], 0.6))  # upper-left
-        verts.append((right[idx], 0.6))  # upper-right
-        verts.append((right[idx], 0))  # lower-right
+            codes.append(Path.MOVETO)
+            codes.append(Path.LINETO)
+            codes.append(Path.LINETO)
+            codes.append(Path.LINETO)
 
-        codes.append(Path.MOVETO)
-        codes.append(Path.LINETO)
-        codes.append(Path.LINETO)
-        codes.append(Path.LINETO)
+            try:
+                group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
+                gene_groups_ax.text(group_x_center, 1.1, group_labels[idx], ha='center',
+                                    va='bottom', rotation=rotation)
+            except:
+                pass
+    else:
+        top = left
+        bottom = right
+        for idx in range(len(top)):
+            verts.append((0, top[idx]))    # upper-left
+            verts.append((0.15, top[idx]))  # upper-right
+            verts.append((0.15, bottom[idx]))  # lower-right
+            verts.append((0, bottom[idx]))  # lower-left
 
-        try:
-            group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-            gene_groups_ax.text(group_x_center, 1.1, group_labels[idx], ha='center',
-                                va='bottom', rotation=rotation)
-        except:
-            pass
+            codes.append(Path.MOVETO)
+            codes.append(Path.LINETO)
+            codes.append(Path.LINETO)
+            codes.append(Path.LINETO)
+
+            try:
+                diff = bottom[idx] - top[idx]
+                group_y_center = top[idx] + float(diff) / 2
+                if diff * 2 < len(group_labels[idx]):
+                    # cut label to fit available space
+                    group_labels[idx] = group_labels[idx][:int(diff * 2)] + "."
+                gene_groups_ax.text(0.6, group_y_center,  group_labels[idx], ha='right',
+                                    va='center', rotation=270, fontsize='small')
+            except Exception as e:
+                print('problems {}'.format(e))
+                pass
 
     path = Path(verts, codes)
 
