@@ -99,6 +99,7 @@ Clustering and trajectory inference
 .. autosummary::
    :toctree: .
 
+   tl.leiden
    tl.louvain
    tl.dpt
    tl.paga
@@ -259,7 +260,7 @@ Datasets
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
-   datasets.pbmc68k_reduced	     
+   datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
 
