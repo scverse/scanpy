@@ -5,6 +5,7 @@ from ..preprocessing.highly_variable_genes import highly_variable_genes
 from ..preprocessing.simple import log1p, sqrt, pca, normalize_per_cell, regress_out, scale, subsample, downsample_counts
 from ..preprocessing.qc import calculate_qc_metrics
 from ..preprocessing.mnn_correct import mnn_correct
+from ..preprocessing.bbknn import bbknn
 from ..preprocessing.dca import dca
 from ..preprocessing.magic import magic
 from ..neighbors import neighbors
