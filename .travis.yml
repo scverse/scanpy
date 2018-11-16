@@ -5,7 +5,7 @@ python:
 cache: pip
 install:
   - pip install docutils
-  - pip install -e .[louvain,test]
+  - pip install -e .[test,louvain,leiden]
 env:
   - MPLBACKEND=Agg
 script:
