@@ -8,7 +8,7 @@ from . import utils
 # --------------------------------------------------------------------------------
 
 
-def filter_genes_dispersion(result, log=False, show=None, save=None):
+def highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=True):
     """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
@@ -25,7 +25,10 @@ def filter_genes_dispersion(result, log=False, show=None, save=None):
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
-    gene_subset = result.gene_subset
+    if highly_variable_genes:
+        gene_subset = result.highly_variable
+    else:
+        gene_subset = result.gene_subset        
     means = result.means
     dispersions = result.dispersions
     dispersions_norm = result.dispersions_norm
@@ -52,3 +55,25 @@ def filter_genes_dispersion(result, log=False, show=None, save=None):
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersions of genes'
                   + (' (normalized)' if idx == 0 else ' (not normalized)'))
     utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
+
+
+# backwards compat
+def filter_genes_dispersion(result, log=False, show=None, save=None):
+    """Plot dispersions versus means for genes.
+
+    Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
+
+    Parameters
+    ----------
+    result : `np.recarray`
+        Result of :func:`~scanpy.api.pp.filter_genes_dispersion`.
+    log : `bool`
+        Plot on logarithmic axes.
+    show : bool, optional (default: `None`)
+         Show the plot, do not return axis.
+    save : `bool` or `str`, optional (default: `None`)
+        If `True` or a `str`, save the figure. A string is appended to the
+        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+    """    
+    highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=False)
+    

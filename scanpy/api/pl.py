@@ -1,6 +1,6 @@
 from ..plotting.anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot
 
-from ..plotting.preprocessing import filter_genes_dispersion
+from ..plotting.preprocessing import filter_genes_dispersion, highly_variable_genes
 
 from ..plotting.tools.scatterplots import pca, diffmap, draw_graph, tsne, phate, umap
 from ..plotting.tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
