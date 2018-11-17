@@ -17,7 +17,61 @@ def _normalize_data(X, counts, after=None, copy=False):
 def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
                        quantile=1, min_counts=1, key_n_counts=None, copy=False,
                        layers=[], use_rep=None):
+    """Normalize total counts per cell.
 
+    Normalize each cell by total counts over genes, so that every cell has
+    the same total count after normalization.
+
+    Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
+    [Zheng17]_ or SPRING [Weinreb17]_.
+
+    Parameters
+    ----------
+    data : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
+    counts_per_cell_after : `float` or `None`, optional (default: `None`)
+        If `None`, after normalization, each cell has a total count equal
+        to the median of the *counts_per_cell* before normalization.
+    counts_per_cell : `np.array`, optional (default: `None`)
+        Precomputed counts per cell.
+    quantile : `float`, optional (default: 1)
+        Only use genes are less than fraction (specified by *quantile*) of the total
+        reads in every cell.
+    min_counts : `int`, optional (default: 1)
+        Cells with counts less than `min_counts` are filtered out during
+        normalization.
+    key_n_counts : `str`, optional (default: `'n_counts'`)
+        Name of the field in `adata.obs` where the total counts per cell are
+        stored.
+    copy : `bool`, optional (default: `False`)
+        If an :class:`~anndata.AnnData` is passed, determines whether a copy
+        is returned.
+    layers : `str` or list of `str`, optional (default: `[]`)
+        List of layers to normalize. Set to `'all'` to normalize all layers.
+    use_rep : `str` or `None`, optional (default: `None`)
+        Specifies how to normalize layers.
+        If `None`, after normalization, for each layer in *layers* each cell has a total count equal
+        to the median of the *counts_per_cell* before normalization of the layer.
+        If `'after'`, for each layer in *layers* each cell has a total count equal
+        to counts_per_cell_after.
+        If `'X'`, for each layer in *layers* each cell has a total count equal
+        to the median of the *counts_per_cell* of data.X before normalization.
+
+    Returns
+    -------
+    Returns or updates `adata` with normalized version of the original
+    `adata.X`, depending on `copy`.
+
+    Examples
+    --------
+    >>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
+    >>> sc.pp.normalize_quantile(adata, quantile=0.7)
+    >>> print(adata.X)
+    [[0.         1.        ]
+     [0.         1.        ]
+     [0.85714287 0.14285715]]
+    """
     if quantile < 0 or quantile > 1:
         raise ValueError('Choose quantile between 0 and 1.')
 
@@ -36,6 +90,7 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
         gene_subset = (X>counts_per_cell[:, None]*quantile).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
         adata._inplace_subset_var(gene_subset)
+        del gene_subset
     else:
         logg.msg('normalizing by total count per cell', r=True)
 
@@ -85,8 +140,8 @@ def normalize_total(data, counts_per_cell_after=None, counts_per_cell=None,
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+    data : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     counts_per_cell_after : `float` or `None`, optional (default: `None`)
         If `None`, after normalization, each cell has a total count equal
@@ -99,6 +154,16 @@ def normalize_total(data, counts_per_cell_after=None, counts_per_cell=None,
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
+    layers : `str` or list of `str`, optional (default: `[]`)
+        List of layers to normalize. Set to `'all'` to normalize all layers.
+    use_rep : `str` or `None`, optional (default: `None`)
+        Specifies how to normalize layers.
+        If `None`, after normalization, for each layer in *layers* each cell has a total count equal
+        to the median of the *counts_per_cell* before normalization of the layer.
+        If `'after'`, for each layer in *layers* each cell has a total count equal
+        to counts_per_cell_after.
+        If `'X'`, for each layer in *layers* each cell has a total count equal
+        to the median of the *counts_per_cell* of data.X before normalization.
     min_counts : `int`, optional (default: 1)
         Cells with counts less than `min_counts` are filtered out during
         normalization.
@@ -110,8 +175,7 @@ def normalize_total(data, counts_per_cell_after=None, counts_per_cell=None,
 
     Examples
     --------
-    >>> adata = AnnData(
-    >>>     data=np.array([[1, 0], [3, 0], [5, 6]]))
+    >>> adata = AnnData(data=np.array([[1, 0], [3, 0], [5, 6]]))
     >>> print(adata.X.sum(axis=1))
     [  1.   3.  11.]
     >>> sc.pp.normalize_per_cell(adata)
