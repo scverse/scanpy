@@ -2,15 +2,16 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
-
-import scipy as sp
 import warnings
-from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
-from sklearn.utils import sparsefuncs
-import pandas as pd
+from typing import Union, Optional
+
 import numba
+import scipy as sp
+from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
+from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
+
 from .. import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata
@@ -303,9 +304,19 @@ def sqrt(data, copy=False, chunked=False, chunk_size=None):
         return X.sqrt()
 
 
-def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=False, use_highly_variable=None, dtype='float32', copy=False,
-        chunked=False, chunk_size=None):
+def pca(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    n_comps: int = N_PCS,
+    zero_center: Optional[bool] = True,
+    svd_solver: str = 'auto',
+    random_state: int = 0,
+    return_info: bool = False,
+    use_highly_variable: Optional[bool] = None,
+    dtype: str = 'float32',
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, np.ndarray, spmatrix]:
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -313,52 +324,71 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    n_comps : `int`, optional (default: 50)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    n_comps
         Number of principal components to compute.
-    zero_center : `bool` or `None`, optional (default: `True`)
-        If `True`, compute standard PCA from covariance matrix. If `False`, omit
-        zero-centering variables (uses *TruncatedSVD* from scikit-learn), which
-        allows to handle sparse input efficiently.
-    svd_solver : `str`, optional (default: 'auto')
-        SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
-        (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
-        due to Halko (2009). 'auto' chooses automatically depending on the size
-        of the problem.
-    random_state : `int`, optional (default: 0)
-        Change to use different intial states for the optimization.
-    return_info : `bool`, optional (default: `False`)
-        Only relevant when not passing an :class:`~anndata.AnnData`: see
-        "Returns".
-    use_highly_variable : `bool`, optional (default: `None`)
-        Whether to use highly variable genes only, stored in .var['highly_variable'].
-    dtype : `str` (default: 'float32')
+    zero_center
+        If `True`, compute standard PCA from covariance matrix.
+        If ``False``, omit zero-centering variables
+        (uses :class:`~sklearn.decomposition.TruncatedSVD`),
+        which allows to handle sparse input efficiently.
+        Passing ``None`` decides automatically based on sparseness of the data.
+    svd_solver
+        SVD solver to use:
+
+        ``'arpack'``
+          for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
+
+        ``'randomized'``
+          for the randomized algorithm due to Halko (2009).
+
+        ``'auto'`` (the default)
+          chooses automatically depending on the size of the problem.
+
+    random_state
+        Change to use different initial states for the optimization.
+    return_info
+        Only relevant when not passing an :class:`~anndata.AnnData`:
+        see “**Returns**”.
+    use_highly_variable
+        Whether to use highly variable genes only, stored in
+        ``.var['highly_variable']``.
+        By default uses them if they have been determined beforehand.
+    dtype
         Numpy data type string to which to convert the result.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
-    chunked : `bool`, optional (default: `False`)
-        If `True`, perform an incremental PCA on segments of `chunk_size`. The
-        incremental PCA automatically zero centers and ignores settings of
-        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
-    chunk_size : `int`, optional (default: `None`)
-        Number of observations to include in each chunk. Required if `chunked`
-        is `True`.
+    chunked
+        If ``True``, perform an incremental PCA on segments of ``chunk_size``.
+        The incremental PCA automatically zero centers and ignores settings of
+        ``random_seed`` and ``svd_solver``. If ``False``, perform a full PCA.
+    chunk_size
+        Number of observations to include in each chunk.
+        Required if ``chunked=True`` was passed.
 
     Returns
     -------
-    If `data` is array-like and `return_info == False`, only returns `X_pca`,\
-    otherwise returns or adds to `adata`:
-    X_pca : `.obsm`
-         PCA representation of data.
-    PCs : `.varm`
-         The principal components containing the loadings.
-    variance_ratio : `.uns['pca']`
-         Ratio of explained variance.
-    variance : `.uns['pca']`
-         Explained variance, equivalent to the eigenvalues of the covariance matrix.
+
+    X_pca : :class:`scipy.sparse.spmatrix` or :class:`numpy.ndarray`
+        If `data` is array-like and ``return_info=False`` was passed,
+        this function only returns `X_pca`…
+    adata : :class:`~anndata.AnnData`
+        …otherwise if ``copy=True`` it returns or else adds fields to ``adata``:
+
+        ``.obsm['X_pca']``
+             PCA representation of data.
+
+        ``.varm['PCs']``
+             The principal components containing the loadings.
+
+        ``.uns['pca']['variance_ratio']``)
+             Ratio of explained variance.
+
+        ``.uns['pca']['variance']``
+             Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
@@ -368,13 +398,10 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
             'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
             'become the Scanpy default in the future.')
 
-    if n_comps is None: n_comps = N_PCS
-
-    if isinstance(data, AnnData):
-        data_is_AnnData = True
+    data_is_AnnData = isinstance(data, AnnData)
+    if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        data_is_AnnData = False
         adata = AnnData(data)
 
     logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
@@ -410,7 +437,8 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        zero_center = zero_center if zero_center is not None else False if issparse(adata_comp.X) else True
+        if zero_center is not None:
+            zero_center = not issparse(adata_comp.X)
         if zero_center:
             from sklearn.decomposition import PCA
             if issparse(adata_comp.X):
@@ -825,7 +853,7 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
         return X[obs_indices], obs_indices
 
 
-def downsample_counts(adata, target_counts=20000, random_state=0, 
+def downsample_counts(adata, target_counts=20000, random_state=0,
                       replace=True, copy=False):
     """Downsample counts so that each cell has no more than `target_counts`.
 
@@ -876,7 +904,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0,
     if copy: return adata
 
 @numba.njit
-def downsample_cell(col: np.array, target: int, random_state: int=0, 
+def downsample_cell(col: np.array, target: int, random_state: int=0,
                     replace: bool=True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
