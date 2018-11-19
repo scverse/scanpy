@@ -104,9 +104,7 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
     adata._inplace_subset_obs(cell_subset)
     del X
     counts_per_cell = counts_per_cell[cell_subset]
-    _normalize_data(adata.X, counts_per_cell, counts_per_cell_after)
 
-    layers = adata.layers.keys() if layers == 'all' else layers
     if use_rep == 'after':
         after = counts_per_cell_after
     elif use_rep == 'X':
@@ -115,6 +113,9 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
         after = None
     else: raise ValueError('use_rep should be "after", "X" or None')
 
+    _normalize_data(adata.X, counts_per_cell, counts_per_cell_after)
+
+    layers = adata.layers.keys() if layers == 'all' else layers
     for layer in layers:
         L = adata.layers[layer]
         counts = np.ravel(L.sum(1))
