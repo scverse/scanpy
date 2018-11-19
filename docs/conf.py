@@ -122,7 +122,8 @@ texinfo_documents = [
 
 
 # -- generate_options override ------------------------------------------
-# TODO: why?
+# The only thing changed here is that we specify imported_members=True
+# in the generate_autosummary_docs call.
 
 
 def process_generate_options(app: Sphinx):
@@ -138,11 +139,9 @@ def process_generate_options(app: Sphinx):
     if not genfiles:
         return
 
-    from sphinx.ext.autosummary.generate import generate_autosummary_docs
-
     ext = app.config.source_suffix
     genfiles = [
-        genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
+        genfile + ('' if genfile.endswith(tuple(ext)) else ext[0])
         for genfile in genfiles
     ]
 
@@ -150,6 +149,7 @@ def process_generate_options(app: Sphinx):
     if suffix is None:
         return
 
+    from sphinx.ext.autosummary.generate import generate_autosummary_docs
     generate_autosummary_docs(
         genfiles, builder=app.builder,
         warn=logger.warning, info=logger.info,
@@ -231,6 +231,8 @@ DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
 # -- Override some classnames in autodoc --------------------------------------------
+# This makes sure that automatically documented links actually
+# end up being links instead of pointing nowhere.
 
 
 import sphinx_autodoc_typehints
@@ -254,7 +256,9 @@ sphinx_autodoc_typehints.format_annotation = format_annotation
 
 
 # -- Prettier Param docs --------------------------------------------
-
+# Our PrettyTypedField is the same as the default PyTypedField,
+# except that the items (e.g. function parameters) get rendered as
+# definition list instead of paragraphs with some formatting.
 
 from typing import Dict, List, Tuple
 
