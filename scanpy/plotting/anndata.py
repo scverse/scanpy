@@ -1391,7 +1391,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
             _plot_dendrogram(dendro_ax, adata, ticks=ticks, orientation='top')
 
-        # plot group legends on top of heatmap_ax (if given)
+        # plot group legends next to the heatmap_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1])
             arr = []
@@ -2018,6 +2018,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
         _set_default_colors_for_categorical_obs(adata, groupby)
 
     colors = adata.uns[groupby + "_colors"]
+    from matplotlib.colors import LinearSegmentedColormap
+    groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+
     obs_tidy = obs_tidy.sort_index()
 
     goal_points = 500
@@ -2057,22 +2060,20 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
     fig = pl.figure(figsize=(width, height))
     from matplotlib import gridspec
     axs = gridspec.GridSpec(ncols=2, nrows=num_rows, left=0.05, right=0.48, wspace=0.5 / width,
-                            hspace=0, height_ratios=height_ratios, width_ratios=[0.9, 0.1])
+                            hspace=0, height_ratios=height_ratios, width_ratios=[width, 0.25])
     axs_list = []
     first_ax = None
     for idx, var in enumerate(var_names):
         ax_idx = idx + 1  # this is because of the dendrogram
         if first_ax is None:
-            ax = fig.add_subplot(axs[0, ax_idx])
+            ax = fig.add_subplot(axs[ax_idx, 0])
             first_ax = ax
         else:
-            ax = fig.add_subplot(axs[0, ax_idx], sharex=first_ax)
+            ax = fig.add_subplot(axs[ax_idx,0], sharex=first_ax)
         axs_list.append(ax)
         for cat_idx, category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
             ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=colors[cat_idx])
-            ax.text(1.01, 0.5, var, ha='left', va='center', transform=ax.transAxes,
-                    fontsize='small', weight='normal')
 
         # remove the xticks labels except for the last processed plot (first from bottom-up).
         # Because the plots share the x axis it is redundant and less compact to plot the
@@ -2082,22 +2083,56 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
             ax.set_xlabel('')
         if log:
             ax.set_yscale('log')
-        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        ax.tick_params(axis='y', labelsize='small')
+        ax.set_yticklabels([str(ymax)], verticalalignment='top', ha='right')
 
+        ax.tick_params(axis='y', labelsize='x-small', right=True, left=False, pad=-5,
+                       which='both', labelright=True, labelleft=False, direction='in')
+        ax.set_ylabel(var, rotation=0, fontsize='small', ha='right', va='bottom')
+        ax.yaxis.set_label_coords(-0.005, 0.1)
     ax.set_xlim(0, x_end)
-    ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, rotation=90)
+    ax.tick_params(axis='x', bottom=False, labelbottom=False)
+
+    categorical = True
+    if categorical:
+        groupby_ax = fig.add_subplot(axs[num_rows - 1, 0])
+        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.T.index]), aspect='auto', cmap=groupby_cmap)
+        if len(categories) > 1:
+            groupby_ax.set_xticks(ticks)
+            groupby_ax.set_xticklabels(labels, rotation=90)
+
+        # remove x ticks
+        groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
+        # remove y ticks and labels
+        groupby_ax.tick_params(axis='y', left=False, labelleft=False)
+
+        # remove surrounding lines
+        groupby_ax.spines['right'].set_visible(False)
+        groupby_ax.spines['top'].set_visible(False)
+        groupby_ax.spines['left'].set_visible(False)
+        groupby_ax.spines['bottom'].set_visible(False)
+
+        groupby_ax.set_xlabel(groupby)
+        groupby_ax.grid(False)
+
     if dendrogram:
         dendro_ax = fig.add_subplot(axs[0], sharex=first_ax)
         _plot_dendrogram(dendro_ax, adata, orientation='top', ticks=ticks)
         axs_list.append(dendro_ax)
 
+    if var_group_positions is not None and len(var_group_positions) > 0:
+        gene_groups_ax = fig.add_subplot(axs[1:-1, 1])
+        arr = []
+        for idx, pos in enumerate(var_group_positions):
+            arr += [idx] * (pos[1]+1 - pos[0])
+
+        gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
+        gene_groups_ax.axis('off')
 
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
                        num_categories=7, layer=None):
