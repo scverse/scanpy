@@ -762,7 +762,7 @@ def clustermap(
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    stripplot=False, jitter=False, size=1, scale='width', order=None,
                    show=None, save=None, figsize=None,  dendrogram=False, var_group_positions=None,
-                   var_group_labels=None, var_group_rotation=None, swap_axes=False,
+                   var_group_labels=None, var_group_rotation=None, layer=None, swap_axes=False,
                    row_palette='muted', **kwds):
     """\
     Stacked violin plots.
@@ -834,6 +834,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
+    layer: `str`, (default `None`)
+         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
@@ -846,7 +850,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     if 'color' in kwds:
         row_palette = kwds['color']
@@ -1035,7 +1039,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             ax.set_ylabel(var_names[idx], rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
-            ax.tick_params(axis='y', right=True, labelright=True,
+            ax.tick_params(axis='y', right=True, labelright=True, left=False,
                            labelleft=False, labelrotation=0, labelsize='x-small')
             ax.tick_params(axis='x', labelsize='small')
 
@@ -1200,7 +1204,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         else:
             groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
 
-    goal_points = 500
+    goal_points = 1000
     obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
 
     # determine groupby label positions such that they appear
@@ -1225,7 +1229,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         #   third ax is for the dendrogram
         #   fourth ax is for colorbar
 
-        dendro_width = 1.8 if dendrogram else 0
+        dendro_width = 1 if dendrogram else 0
         groupby_width = 0.25 if categorical else 0
         if figsize is None:
             height = 6
@@ -1245,18 +1249,19 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         else:
             height_ratios = [0, height]
 
+        width_ratios = [groupby_width, heatmap_width, dendro_width, ax_frac2width]
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=2, ncols=4, left=0.05, right=0.48, wspace=0.5 / width,
-                                hspace=0.13 / height,
-                                width_ratios=[groupby_width, heatmap_width, dendro_width, ax_frac2width],
-                                height_ratios=height_ratios)
+
+        axs = gridspec.GridSpec(nrows=2, ncols=4, width_ratios=width_ratios, wspace=0.15 / width,
+                                hspace=0.13 / height, height_ratios=height_ratios)
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
         im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
-        heatmap_ax.set_ylim(obs_tidy.shape[0], 0)
+        heatmap_ax.set_ylim(obs_tidy.shape[0] - 0.5, -0.5)
         heatmap_ax.set_xlim(-0.5, obs_tidy.shape[1] - 0.5)
         heatmap_ax.tick_params(axis='y', left=False, labelleft=False)
         heatmap_ax.set_ylabel('')
+        heatmap_ax.grid(False)
 
         # sns.heatmap(obs_tidy, yticklabels="auto", ax=heatmap_ax, cbar_ax=heatmap_cbar_ax, **kwds)
         if show_gene_labels:
@@ -1272,6 +1277,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 3],
                                                     height_ratios=[height - cmap_height, cmap_height])
             heatmap_cbar_ax = fig.add_subplot(axs2[1])
+
         else:
             heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
         pl.colorbar(im, cax=heatmap_cbar_ax)
@@ -1310,7 +1316,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
             _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
                                        group_labels=var_group_labels, rotation=var_group_rotation,
-                                       left_adjustment=0.2, right_adjustment=0.8)
+                                       left_adjustment=-0.3, right_adjustment=0.3)
 
     # swap axes case
     else:
@@ -1321,14 +1327,14 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         #   second ax is for 'brackets' if any (othwerise width is zero)
         #   third ax is for colorbar
 
-        dendro_height = 0.5 if dendrogram else 0
+        dendro_height = 0.8 if dendrogram else 0
         groupby_height = 0.13 if categorical else 0
         if figsize is None:
             if show_gene_labels:
-                heatmap_height = len(var_names) * 0.12
+                heatmap_height = len(var_names) * 0.18
             else:
-                heatmap_height = 8
-            width = 20
+                heatmap_height = 4
+            width = 10
             height = heatmap_height + dendro_height + groupby_height  # +2 to account for labels
         else:
             width, height = figsize
@@ -1338,12 +1344,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
-            width_ratios = [width, 0.3, 0.25]
+            width_ratios = [width, 0.2, 0.2]
         else:
-            width_ratios = [width, 0., 0.25]
+            width_ratios = [width, 0., 0.18]
 
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=3, ncols=3, left=0.05, right=0.48, wspace=0.5 / width,
+        axs = gridspec.GridSpec(nrows=3, ncols=3, wspace=0.25 / width,
                                 hspace=0.3 / height,
                                 width_ratios=width_ratios,
                                 height_ratios=height_ratios)
@@ -1357,7 +1363,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
         if show_gene_labels:
-            heatmap_ax.tick_params(axis='y', labelsize='x-small', length=1)
+            heatmap_ax.tick_params(axis='y', labelsize='small', length=1)
             heatmap_ax.set_yticks(np.arange(len(var_names)))
             heatmap_ax.set_yticklabels(var_names, rotation=0)
         else:
@@ -1419,7 +1425,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
-            var_group_labels=None, var_group_rotation=None, show=None, save=None, **kwds):
+            var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a _dot plot_ of the expression values of `var_names`.
 
@@ -1474,6 +1480,10 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         Labels for each of the var_group_positions that want to be highlighted.
     var_group_rotation : `float` (default: `None`)
         Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    layer: `str`, (default `None`)
+         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
@@ -1482,11 +1492,17 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     -------
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
+
+    Examples
+    -------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.pl.heatmap(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels',
+    ...               dendrogram=True, swap_axes=True)
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     # for if category defined by groupby (if any) compute for each var_name
     # 1. the mean value over the category
@@ -1504,23 +1520,23 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     # (given by `count()`)
     fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
-    dendro_width = 1.8 if dendrogram else 0
+    dendro_width = 0.8 if dendrogram else 0
+    colorbar_width = 0.2
+    colorbar_width_spacer = 0.5
+    size_legend_width = 0.25
     if figsize is None:
         height = len(categories) * 0.3 + 1  # +1 for labels
         # if the number of categories is small (eg 1 or 2) use
         # a larger height
         height = max([1.5, height])
-        heatmap_width = len(var_names) * 0.5
-        width = heatmap_width + 1.6 + 1 + dendro_width # +1.6 to account for the colorbar and  + 1 to account for labels
+        heatmap_width = len(var_names) * 0.35
+        width = heatmap_width + colorbar_width + size_legend_width + dendro_width + colorbar_width_spacer
     else:
         width, height = figsize
-        heatmap_width = width * 0.75
+        heatmap_width = width - (colorbar_width + size_legend_width + dendro_width + colorbar_width_spacer)
 
     # colorbar ax width should not change with differences in the width of the image
     # otherwise can become too small
-    colorbar_width = 0.4
-    colorbar_width_spacer = 0.7
-    size_legend_width = 0.5
 
     if var_group_positions is not None and len(var_group_positions) > 0:
         # add some space in case 'brackets' want to be plotted on top of the image
@@ -1540,7 +1556,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     #   fifth ax is to plot the size legend
     from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=5, left=0.05, right=0.48, wspace=0.02, hspace=0.04,
+    axs = gridspec.GridSpec(nrows=2, ncols=5, wspace=0.02, hspace=0.04,
                             width_ratios=[heatmap_width, dendro_width, colorbar_width, colorbar_width_spacer, size_legend_width],
                             height_ratios=height_ratios)
     if len(categories) < 4:
@@ -1634,7 +1650,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     ymin, ymax = dot_ax.get_ylim()
     dot_ax.set_ylim(ymax+0.5, ymin - 0.5)
 
-    dot_ax.set_xlim(-1, len(var_names) + 0.5)
+    dot_ax.set_xlim(-1, len(var_names))
 
     # plot group legends on top of dot_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
@@ -1677,7 +1693,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
-               var_group_rotation=None, swap_axes=False, show=None, save=None, **kwds):
+               var_group_rotation=None, layer=None, swap_axes=False, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1721,6 +1737,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         Labels for each of the var_group_positions that want to be highlighted.
     var_group_rotation : `float` (default: `None`)
         Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    layer: `str`, (default `None`)
+         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.pcolor`.
@@ -1730,7 +1750,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
     second axis is the heatmap and the third axis is the colorbar.
     """
-    from matplotlib.colors import is_color_like
 
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
@@ -1752,13 +1771,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
     if groupby is None or len(categories) <= 1:
-        categorical = False
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
-    else:
-        categorical = True
 
     mean_obs = obs_tidy.groupby(level=0).mean()
 
@@ -1782,17 +1798,15 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
 
     if not swap_axes:
-        dendro_width = 1.8 if dendrogram else 0
+        dendro_width = 0.8 if dendrogram else 0
+        colorbar_width = 0.2
         if figsize is None:
             height = len(categories) * 0.2 + 1  # +1 for labels
-            heatmap_width = len(var_names) * 0.6
-            width = heatmap_width + dendro_width + 1.6 + 1  # +1.6 to account for the colorbar and  + 1 to account for labels
+            heatmap_width = len(var_names) * 0.32
+            width = heatmap_width + dendro_width + colorbar_width  # +1.6 to account for the colorbar and  + 1 to account for labels
         else:
             width, height = figsize
-            heatmap_width = width * 0.75
-
-        # colorbar ax width should not change with differences in the width of the image
-        colorbar_width = 0.4
+            heatmap_width = width - (dendro_width + colorbar_width)
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
@@ -1810,7 +1824,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         #   third ax is for the color bar legend
         from matplotlib import gridspec
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.01, hspace=0.04,
+        axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.02, hspace=0.04,
                                 width_ratios=[heatmap_width, dendro_width, colorbar_width],
                                 height_ratios=height_ratios)
 
@@ -1850,17 +1864,17 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         pl.colorbar(pc, cax=color_legend)
     else:
         dendro_height = 0.5 if dendrogram else 0
-        colorbar_width = 0.3
+        colorbar_width = 0.15
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
-            groupby_width = 0.8
+            groupby_width = 0.4
         else:
             groupby_width = 0
 
         if figsize is None:
             heatmap_height = len(var_names) * 0.2
             height = dendro_height + heatmap_height + 1  # +1 for labels
-            heatmap_width = len(categories) * 0.5
+            heatmap_width = len(categories) * 0.3
             width = heatmap_width + groupby_width + colorbar_width
         else:
             width, height = figsize
@@ -1876,7 +1890,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         #   third ax is for the color bar legend
         from matplotlib import gridspec
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=2, ncols=3, left=0.05, right=0.48, wspace=0.05, hspace=0.005,
+        axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.05, hspace=0.005,
                                 width_ratios=[heatmap_width, groupby_width, colorbar_width],
                                 height_ratios=[dendro_height, heatmap_height])
 
@@ -1980,10 +1994,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     Examples
     --------
     >>> adata = sc.datasets.pbmc68k_reduced()
-
-    raw values are in log but ouput is better when using non log counts
-    >>> adata.raw.X.data = np.exp(adata.raw.X.data)
-    >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels', dendrogram=True)
+    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels', dendrogram=True)
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
@@ -2020,7 +2031,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     obs_tidy = obs_tidy.sort_index()
 
-    goal_points = 500
+    goal_points = 1000
     obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
     # obtain the start and end of each category and make
     # a list of ranges that will be used to plot a different
@@ -2048,8 +2059,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     groupby_height = 0.13
     num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
     if figsize is None:
-        width = 20
-        track_height = 0.4
+        width = 10
+        track_height = 0.25
     else:
         width, height = figsize
         track_height = (height - (dendro_height + groupby_height)) / len(var_names)
@@ -2061,7 +2072,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     fig = pl.figure(figsize=(width, height))
     from matplotlib import gridspec
-    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, left=0.05, right=0.48, wspace=0.5 / width,
+    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=0.5 / width,
                             hspace=0, height_ratios=height_ratios, width_ratios=[width, 0.25])
     axs_list = []
     first_ax = None
