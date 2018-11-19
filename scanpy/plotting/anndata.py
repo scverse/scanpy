@@ -1923,17 +1923,16 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categories=7,
+def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                dendrogram=False, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, layer=None, show=None, save=None, figsize=None, **kwds):
+               layer=None, show=None, save=None, figsize=None, **kwds):
     """\
-    Heatmap of the expression values of set of genes..
+    In this type of plot, each var_name is plotted as a filled line plot where the
+    y values correspond to the var_name values and x is each of the cells. Best results
+    are obtained when using raw counts that are not log.
 
-    If `groupby` is given, the heatmap is ordered by the respective group. For
-    example, a list of marker genes can be plotted, ordered by clustering. If
-    the `groupby` observation annotation is not categorical the observation
-    annotation is turned into a categorical by binning the data into the number
-    specified in `num_categories`.
+    `groupby` is required to sort and order the values using the respective group
+    and should be a categorical value.
 
     Parameters
     ----------
@@ -1941,25 +1940,19 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
         Annotated data matrix.
     var_names : `str` or list of `str`
         `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories`.
+    groupby : `str`
+        The key of the observation grouping to consider. groupby must be a categorical.
     log : `bool`, optional (default: `False`)
         Use the log of the values
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
     figsize : (float, float), optional (default: None)
         Figure size (width, height). If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
     dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        computed and a dendrogram is plotted. `groupby` categories are reordered according to
         the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'person' method
+        to the `groupby` categories, those groups are also reordered. The 'pearson' method
         is used to compute the pairwise correlation between categories using all var_names in
         `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
         used is `complete`.
@@ -1972,13 +1965,6 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
         positions, more brackets are drawn.
     var_group_labels : list of `str`
         Labels for each of the var_group_positions that want to be highlighted.
-    var_group_rotation : `float` (default: `None`)
-        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
-    swap_axes: `bool`, optional (default: `False`)
-         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
-         categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
-    show_gene_labels: `bool`, optional (default: `None`).
-         By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     layer: `str`, (default `None`)
          Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
          If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
@@ -1989,12 +1975,23 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
 
     Returns
     -------
-    A list of `matplotlib.Axes` where the first ax is the groupby categories
-    colorcode, the second axis is the heatmap and the third axis is the
-    colorbar.
+    A list of `matplotlib.Axes`.
+
+    Examples
+    --------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+
+    raw values are in log but ouput is better when using non log counts
+    >>> adata.raw.X.data = np.exp(adata.raw.X.data)
+    >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels', dendrogram=True)
     """
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
+        raise ValueError('groupby has to be a valid categorical observation. Given value: {}, '
+                         'valid categorical observations: {}'.
+                         format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
+
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
 
     if dendrogram:
         # compute dendrogram if needed and reorder
@@ -2003,7 +2000,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
                                           categories=categories,
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
-                                          use_raw=use_raw, log=log, num_categories=num_categories)
+                                          use_raw=use_raw, log=log)
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
@@ -2050,9 +2047,14 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
 
     groupby_height = 0.13
     num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
-    height_ratios = [dendro_height] + [0.4] * len(var_names) + [groupby_height]
+    if figsize is None:
+        width = 20
+        track_height = 0.4
+    else:
+        width, height = figsize
+        track_height = (height - (dendro_height + groupby_height)) / len(var_names)
 
-    width = 20
+    height_ratios = [dendro_height] + [track_height] * len(var_names) + [groupby_height]
     height = sum(height_ratios)
 
     obs_tidy = obs_tidy.T
@@ -2075,7 +2077,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
             x_start, x_end = x_values[cat_idx]
             ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=colors[cat_idx])
 
-        # remove the xticks labels except for the last processed plot (first from bottom-up).
+        # remove the xticks labels except for the last processed plot.
         # Because the plots share the x axis it is redundant and less compact to plot the
         # axis for each plot
         if idx < len(var_names) - 1:
@@ -2089,7 +2091,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        ax.set_yticklabels([str(ymax)], verticalalignment='top', ha='right')
+        tt = ax.set_yticklabels([str(ymax)], ha='right', va='top')
 
         ax.tick_params(axis='y', labelsize='x-small', right=True, left=False, pad=-5,
                        which='both', labelright=True, labelleft=False, direction='in')
@@ -2098,27 +2100,31 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
     ax.set_xlim(0, x_end)
     ax.tick_params(axis='x', bottom=False, labelbottom=False)
 
-    categorical = True
-    if categorical:
-        groupby_ax = fig.add_subplot(axs[num_rows - 1, 0])
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.T.index]), aspect='auto', cmap=groupby_cmap)
-        if len(categories) > 1:
-            groupby_ax.set_xticks(ticks)
-            groupby_ax.set_xticklabels(labels, rotation=90)
+    groupby_ax = fig.add_subplot(axs[num_rows - 1, 0])
+    groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.T.index]), aspect='auto', cmap=groupby_cmap)
+    if len(categories) > 1:
+        groupby_ax.set_xticks(ticks)
+        groupby_ax.set_xticklabels(labels, rotation=90)
 
-        # remove x ticks
-        groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
-        # remove y ticks and labels
-        groupby_ax.tick_params(axis='y', left=False, labelleft=False)
+    # remove x ticks
+    groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
+    # remove y ticks and labels
+    groupby_ax.tick_params(axis='y', left=False, labelleft=False)
 
-        # remove surrounding lines
-        groupby_ax.spines['right'].set_visible(False)
-        groupby_ax.spines['top'].set_visible(False)
-        groupby_ax.spines['left'].set_visible(False)
-        groupby_ax.spines['bottom'].set_visible(False)
+    # remove surrounding lines
+    groupby_ax.spines['right'].set_visible(False)
+    groupby_ax.spines['top'].set_visible(False)
+    groupby_ax.spines['left'].set_visible(False)
+    groupby_ax.spines['bottom'].set_visible(False)
 
-        groupby_ax.set_xlabel(groupby)
-        groupby_ax.grid(False)
+    groupby_ax.set_xlabel(groupby)
+    groupby_ax.grid(False)
+    # add lines to plot
+    overlay_ax = fig.add_subplot(axs[1:-1, 0], sharex=first_ax)
+    line_positions = np.cumsum(obs_tidy.T.index.value_counts(sort=False))[:-1]
+    overlay_ax.vlines(line_positions, 0, 1, lw=0.5, linestyle="--")
+    overlay_ax.axis('off')
+    overlay_ax.set_ylim(0, 1)
 
     if dendrogram:
         dendro_ax = fig.add_subplot(axs[0], sharex=first_ax)
@@ -2133,6 +2139,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
 
         gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
         gene_groups_ax.axis('off')
+
 
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
                        num_categories=7, layer=None):
