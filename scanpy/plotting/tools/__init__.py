@@ -180,29 +180,21 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
     if 'n_panels_per_row' in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
     else: n_panels_per_row = ncols
     if key is None: key = 'rank_genes_groups'
-    groups_key = str(adata.uns[key]['params']['groupby'])
     reference = str(adata.uns[key]['params']['reference'])
     group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
     # one panel for each group
-    n_panels = len(group_names)
     # set up the figure
-    n_panels_x = n_panels_per_row
+    n_panels_x = min(n_panels_per_row, len(group_names))
     n_panels_y = np.ceil(len(group_names) / n_panels_x).astype(int)
 
     from matplotlib import gridspec
     fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
                              n_panels_y * rcParams['figure.figsize'][1]))
-    left = 0.2/n_panels_x
-    bottom = 0.13/n_panels_y
     gs = gridspec.GridSpec(nrows=n_panels_y,
                            ncols=n_panels_x,
-                           left=left,
-                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-                           bottom=bottom,
-                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
                            wspace=0.22,
-                           hspace=0.4)
+                           hspace=0.3)
 
     ax0 = None
     ymin = np.Inf
