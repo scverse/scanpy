@@ -1126,9 +1126,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Returns
     -------
-    A list of `matplotlib.Axes` where the first ax is the groupby categories
-    colorcode, the second axis is the heatmap and the third axis is the
-    colorbar.
+    A list of `matplotlib.Axes`
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
@@ -1201,6 +1199,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                 groupby_cmap = pl.get_cmap('tab20')
         else:
             groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+
+    goal_points = 500
+    obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
 
     # determine groupby label positions such that they appear
     # centered next to the color code rectangle asigned to the category
@@ -1349,6 +1350,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         # plot heatmap
         heatmap_ax = fig.add_subplot(axs[1, 0])
+
         im = heatmap_ax.imshow(obs_tidy.T.values, aspect='auto', **kwds)
         heatmap_ax.set_xlim(0, obs_tidy.shape[0])
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
@@ -1920,13 +1922,83 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     return axs
 
 
+@doc_params(show_save_ax=doc_show_save_ax)
 def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categories=7,
                dendrogram=False, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, layer=None, show=None, save=None, figsize=None, **kwds):
+    """\
+    Heatmap of the expression values of set of genes..
+
+    If `groupby` is given, the heatmap is ordered by the respective group. For
+    example, a list of marker genes can be plotted, ordered by clustering. If
+    the `groupby` observation annotation is not categorical the observation
+    annotation is turned into a categorical by binning the data into the number
+    specified in `num_categories`.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        `var_names` should be a valid subset of  `adata.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `None`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value
+        determines the number of groups into which the groupby observation
+        should be subdivided.
+    figsize : (float, float), optional (default: None)
+        Figure size (width, height). If not set, the figure width is set based on the
+        number of  `var_names` and the height is set to 10.
+    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
+        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        the dendrogram order. If groups of var_names are set and those groups correspond
+        to the `groupby` categories, those groups are also reordered. The 'person' method
+        is used to compute the pairwise correlation between categories using all var_names in
+        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+        used is `complete`.
+    var_group_positions :  list of `tuples`.
+        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
+        on top of the plot between the given start and end positions. If the
+        parameter `var_group_labels` is set, the corresponding labels is added on
+        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
+        between the fourth var_name and the tenth var_name. By giving more
+        positions, more brackets are drawn.
+    var_group_labels : list of `str`
+        Labels for each of the var_group_positions that want to be highlighted.
+    var_group_rotation : `float` (default: `None`)
+        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    swap_axes: `bool`, optional (default: `False`)
+         By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
+         categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
+    show_gene_labels: `bool`, optional (default: `None`).
+         By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
+    layer: `str`, (default `None`)
+         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+         then the layer is plotted.
+    {show_save_ax}
+    **kwds : keyword arguments
+        Are passed to `seaborn.heatmap`.
+
+    Returns
+    -------
+    A list of `matplotlib.Axes` where the first ax is the groupby categories
+    colorcode, the second axis is the heatmap and the third axis is the
+    colorbar.
+    """
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     if dendrogram:
+        # compute dendrogram if needed and reorder
+        # rows and columns to match leaves order.
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
                                           categories=categories,
                                           var_group_labels=var_group_labels,
@@ -1947,6 +2019,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
 
     colors = adata.uns[groupby + "_colors"]
     obs_tidy = obs_tidy.sort_index()
+
+    goal_points = 500
+    obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
     # obtain the start and end of each category and make
     # a list of ranges that will be used to plot a different
     # color
@@ -1969,30 +2044,29 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False, num_categorie
         dendro_height = 1
     else:
         dendro_height = 0
-    num_rows = len(var_names) + 1  # +1 because of dendrogram on top
-    height_ratios = [dendro_height] + [0.5] * len(var_names)
+
+    groupby_height = 0.13
+    num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
+    height_ratios = [dendro_height] + [0.4] * len(var_names) + [groupby_height]
 
     width = 20
     height = sum(height_ratios)
-
-    groupby_height = 0.13
 
     obs_tidy = obs_tidy.T
 
     fig = pl.figure(figsize=(width, height))
     from matplotlib import gridspec
-    axs = gridspec.GridSpec(ncols=1, nrows=num_rows, left=0.05, right=0.48, wspace=0.5 / width,
-                            hspace=0, height_ratios=height_ratios)
+    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, left=0.05, right=0.48, wspace=0.5 / width,
+                            hspace=0, height_ratios=height_ratios, width_ratios=[0.9, 0.1])
     axs_list = []
-
     first_ax = None
     for idx, var in enumerate(var_names):
         ax_idx = idx + 1  # this is because of the dendrogram
         if first_ax is None:
-            ax = fig.add_subplot(axs[ax_idx])
+            ax = fig.add_subplot(axs[0, ax_idx])
             first_ax = ax
         else:
-            ax = fig.add_subplot(axs[ax_idx], sharex=first_ax)
+            ax = fig.add_subplot(axs[0, ax_idx], sharex=first_ax)
         axs_list.append(ax)
         for cat_idx, category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
@@ -2369,3 +2443,36 @@ def _plot_dendrogram(dendro_ax, adata, orientation='right', remove_labels=True, 
     dendro_ax.spines['top'].set_visible(False)
     dendro_ax.spines['left'].set_visible(False)
     dendro_ax.spines['bottom'].set_visible(False)
+
+
+def _reduce_and_smooth(obs_tidy, goal_size):
+    """
+    Uses interpolation to reduce the number of observations (cells).
+    This is useful for plotting functions that otherwise will ignore
+    most of the cells' values.
+
+    The reduction and smoothing is only done per column
+
+    Parameters
+    ----------
+    obs_tidy : Pandas DataFrame. rows = obs (eg. cells), cols = vars (eg. genes)
+    goal_size : number of cells to keep
+
+    Returns
+    -------
+
+    """
+    if obs_tidy.shape[0] < goal_size:
+        return obs_tidy
+    else:
+        # usually, a large number of cells can not be plotted, thus
+        # it is useful to reduce the number of cells plotted
+        from scipy.interpolate import UnivariateSpline
+        x = range(obs_tidy.shape[0])
+        # maximum number of cells to keep
+        new_x = np.linspace(0, len(x), num=goal_size, endpoint=False)
+        new_df = obs_tidy.iloc[new_x, :].copy()
+        for index, col in obs_tidy.iteritems():
+            spl = UnivariateSpline(x, col.values, s=20)
+            new_df[index] = spl(new_x)
+        return new_df.copy()
