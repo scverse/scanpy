@@ -7,8 +7,8 @@
 # The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz) from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 
 
-import matplotlib as mpl
-mpl.use('agg')
+from matplotlib.testing import setup
+setup()
 from matplotlib.testing.compare import compare_images
 import matplotlib.pyplot as pl
 import numpy as np
@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
 def save_and_compare_images(basename):
     if not os.path.exists('./figures/'): os.makedirs('./figures/')
     outname = './figures/' + basename + '.png'
-    pl.savefig(outname, dpi=80)
+    pl.savefig(outname, dpi=40)
     pl.close()
     tolerance = 20
     res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
