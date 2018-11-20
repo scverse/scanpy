@@ -74,6 +74,22 @@ def leiden(
     **partition_kwargs
         Any further arguments to pass to `~leidenalg.find_partition`
         (which in turn passes arguments to the ``partition_type``).
+
+    Returns
+    -------
+    :obj:`None`
+        By default (``copy=False``), updates ``adata`` with the following fields:
+
+        ``adata.obs[key_added]`` (:class:`pandas.Series`, dtype ``category``)
+            Array of dim (number of samples) that stores the subgroup id
+            (``'0'``, ``'1'``, ...) for each cell.
+
+        ``adata.uns['leiden']['params']``
+            A dict with the values for the parameters ``resolution``,
+            ``random_state``, and ``n_iterations``.
+
+    :class:`~anndata.AnnData`
+        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
     if leidenalg is None:
         raise ImportError('Please install the leiden algorithm: `pip3 install leidenalg`.')

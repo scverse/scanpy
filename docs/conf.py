@@ -67,6 +67,7 @@ intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
+    louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
 )
 
 templates_path = ['_templates']
@@ -251,7 +252,7 @@ def format_annotation(annotation):
         full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
         override = qualname_overrides.get(full_name)
         if override is not None:
-            return ':py:class:`~{}`'.format(qualname_overrides[full_name])
+            return f':py:class:`~{qualname_overrides[full_name]}`'
     return fa_orig(annotation)
 sphinx_autodoc_typehints.format_annotation = format_annotation
 
