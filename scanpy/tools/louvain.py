@@ -30,7 +30,7 @@ def louvain(
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     partition_kwargs: Optional[Mapping[str, Any]]=None,
     copy: bool = False,
-):
+) -> Optional[AnnData]:
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
     Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation

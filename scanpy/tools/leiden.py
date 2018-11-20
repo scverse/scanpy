@@ -30,7 +30,7 @@ def leiden(
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     copy: bool = False,
     **partition_kwargs
-):
+) -> Optional[AnnData]:
     """
     Cluster cells into subgroups [Traag18]_ [Levine15]_
 
