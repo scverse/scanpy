@@ -5,18 +5,16 @@ import pandas as pd
 from natsort import natsorted
 from anndata import AnnData
 from scipy import sparse
-try:
-    import leidenalg
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
-    leidenalg = None
-
-    class MutableVertexPartition:
-        pass
 
 from .. import utils
 from .. import settings
 from .. import logging as logg
+
+try:
+    from leidenalg.VertexPartition import MutableVertexPartition
+except ImportError:
+    class MutableVertexPartition: pass
+    MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
 
 
 def leiden(
@@ -91,7 +89,9 @@ def leiden(
     :class:`~anndata.AnnData`
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
-    if leidenalg is None:
+    try:
+        import leidenalg
+    except ImportError:
         raise ImportError('Please install the leiden algorithm: `pip3 install leidenalg`.')
 
     logg.info('running Leiden clustering', r=True)

@@ -17,5 +17,3 @@ networkx
 natsort
 joblib
 numba
-louvain
-leidenalg

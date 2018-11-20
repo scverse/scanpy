@@ -10,11 +10,11 @@ from .. import utils
 from .. import settings
 from .. import logging as logg
 
-
 try:
     from louvain.VertexPartition import MutableVertexPartition
 except ImportError:
     class MutableVertexPartition: pass
+    MutableVertexPartition.__module__ = 'louvain.VertexPartition'
 
 
 def louvain(
