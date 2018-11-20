@@ -68,9 +68,9 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
     >>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
     >>> sc.pp.normalize_quantile(adata, quantile=0.7)
     >>> print(adata.X)
-    [[0.         1.        ]
-     [0.         1.        ]
-     [0.85714287 0.14285715]]
+    [[1.         0.         1.        ]
+     [3.         0.         1.        ]
+     [0.71428573 0.85714287 0.14285715]]
     """
     if quantile < 0 or quantile > 1:
         raise ValueError('Choose quantile between 0 and 1.')
@@ -78,6 +78,8 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
     if key_n_counts is None: key_n_counts = 'n_counts'
 
     adata = data.copy() if copy else data
+    X = adata.X
+    gene_subset = None
 
     if quantile < 1:
         logg.msg('normalizing by count per cell for \
@@ -89,20 +91,19 @@ def normalize_quantile(data, counts_per_cell_after=None, counts_per_cell=None,
 
         gene_subset = (X>counts_per_cell[:, None]*quantile).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
-        adata._inplace_subset_var(gene_subset)
-        del gene_subset
     else:
         logg.msg('normalizing by total count per cell', r=True)
 
-    X = adata.X
-
-    counts_per_cell = counts_per_cell if (counts_per_cell is not None and quantile == 1) else X.sum(1)
-    counts_per_cell = np.ravel(counts_per_cell)
+    if counts_per_cell is None or quantile < 1:
+        X = X if gene_subset is None else adata[:, gene_subset].X
+        counts_per_cell = X.sum(1)
+        counts_per_cell = np.ravel(counts_per_cell)
+    del X
+    del gene_subset
 
     adata.obs[key_n_counts] = counts_per_cell
     cell_subset = counts_per_cell >= min_counts
     adata._inplace_subset_obs(cell_subset)
-    del X
     counts_per_cell = counts_per_cell[cell_subset]
 
     if use_rep == 'after':
