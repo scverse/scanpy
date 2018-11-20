@@ -1362,6 +1362,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         heatmap_ax.set_ylim(obs_tidy.shape[1] - 0.5, -0.5)
         heatmap_ax.tick_params(axis='x', bottom=False, labelbottom=False)
         heatmap_ax.set_xlabel('')
+        heatmap_ax.grid(False)
         if show_gene_labels:
             heatmap_ax.tick_params(axis='y', labelsize='small', length=1)
             heatmap_ax.set_yticks(np.arange(len(var_names)))
