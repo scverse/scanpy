@@ -82,7 +82,7 @@ def test_stacked_violin():
     sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, color='blue', show=False)
 
     pl.title("image may have cut labels.\nThis is ok for test")
-    save_and_compare_images('master_stacked_violin', tolerance=15)
+    save_and_compare_images('master_stacked_violin', tolerance=20)
 
     # test swapped axes
     sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False,
