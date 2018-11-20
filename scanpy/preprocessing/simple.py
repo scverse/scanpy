@@ -3,7 +3,7 @@
 Compositions of these functions are found in sc.preprocess.recipes.
 """
 import warnings
-from typing import Union, Optional
+from typing import Union, Optional, Tuple
 
 import numba
 import scipy as sp
@@ -36,44 +36,57 @@ N_PCS = 50  # default number of PCs
 from ._deprecated.highly_variable_genes import filter_genes_dispersion
 
 
-def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
-                 max_genes=None, copy=False):
+def filter_cells(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    min_counts: Optional[int] = None,
+    min_genes:  Optional[int] = None,
+    max_counts: Optional[int] = None,
+    max_genes:  Optional[int] = None,
+    copy: bool = False,
+) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
     """Filter cell outliers based on counts and numbers of genes expressed.
 
-    For instance, only keep cells with at least `min_counts` counts or
-    `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
-    "unreliable" observations.
+    For instance, only keep cells with at least ``min_counts`` counts or
+    ``min_genes`` genes expressed. This is to filter measurement outliers,
+    i.e. “unreliable” observations.
 
-    Only provide one of the optional parameters `min_counts`, `min_genes`,
-    `max_counts`, `max_genes` per call.
+    Only provide one of the optional parameters ``min_counts``, ``min_genes``,
+    ``max_counts``, ``max_genes`` per call.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.spmatrix`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    min_counts : `int`, optional (default: `None`)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    min_counts
         Minimum number of counts required for a cell to pass filtering.
-    min_genes : `int`, optional (default: `None`)
+    min_genes
         Minimum number of genes expressed required for a cell to pass filtering.
-    max_counts : `int`, optional (default: `None`)
+    max_counts
         Maximum number of counts required for a cell to pass filtering.
-    max_genes : `int`, optional (default: `None`)
+    max_genes
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
-    either `n_genes` or `n_counts` to `adata.obs`. Otherwise a tuple
+    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
+        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
+        object with ``n_genes`` or ``n_counts`` added to its ``.obs``.
 
-    cell_subset : `np.ndarray`
-        Boolean index mask that does filtering. `True` means that the cell is
-        kept. `False` means the cell is removed.
-    number_per_cell : `np.ndarray`
-        Either `n_counts` or `n_genes` per cell.
+        If ``copy=False`` is set, ``data`` is filtered and above fields
+        are added to ``data.obs``. (``None`` is returned)
+    ``cell_subset``, ``number_per_cell``
+        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
+
+        cell_subset (:class:`~numpy.ndarray`)
+            Boolean index mask that does filtering. ``True`` means that the
+            cell is kept. ``False`` means the cell is removed.
+
+        number_per_cell (:class:`~numpy.ndarray`)
+            Either ``n_counts`` or ``n_genes`` per cell.
 
     Examples
     --------
@@ -145,44 +158,57 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     return cell_subset, number_per_cell
 
 
-def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
-                 max_cells=None, copy=False):
+def filter_genes(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    min_counts: Optional[int] = None,
+    min_cells:  Optional[int] = None,
+    max_counts: Optional[int] = None,
+    max_cells:  Optional[int] = None,
+    copy: bool = False,
+):
     """Filter genes based on number of cells or counts.
 
-    Keep genes that have at least `min_counts` counts or are expressed in at
-    least `min_cells` cells or have at most `max_counts` counts or are expressed
-    in at most `max_cells` cells.
+    Keep genes that have at least ``min_counts`` counts or are expressed in at
+    least ``min_cells`` cells or have at most ``max_counts`` counts or are expressed
+    in at most ``max_cells`` cells.
 
-    Only provide one of the optional parameters `min_counts`, `min_cells`,
-    `max_counts`, `max_cells` per call.
+    Only provide one of the optional parameters ``min_counts``, ``min_cells``,
+    ``max_counts``, ``max_cells`` per call.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.spmatrix`
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    min_counts : `int`, optional (default: `None`)
+    min_counts
         Minimum number of counts required for a gene to pass filtering.
-    min_cells : `int`, optional (default: `None`)
+    min_cells
         Minimum number of cells expressed required for a gene to pass filtering.
-    max_counts : `int`, optional (default: `None`)
+    max_counts
         Maximum number of counts required for a gene to pass filtering.
-    max_cells : `int`, optional (default: `None`)
+    max_cells
         Maximum number of cells expressed required for a gene to pass filtering.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
-    either `n_cells` or `n_counts` to `adata.var`. Otherwise a tuple
+    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
+        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
+        object with ``n_cells`` or ``n_counts`` added to its ``.var``.
 
-    gene_subset : `np.ndarray`
-        Boolean index mask that does filtering. `True` means that the gene is
-        kept. `False` means the gene is removed.
-    number_per_gene : `np.ndarray`
-        Either `n_counts` or `n_cells` per gene.
+        If ``copy=False`` is set, ``data`` is filtered and above fields
+        are added to ``data.var``. (``None`` is returned)
+    ``gene_subset``, ``number_per_gene``
+        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
+
+        gene_subset (:class:`~numpy.ndarray`)
+            Boolean index mask that does filtering. ``True`` means that the
+            gene is kept. ``False`` means the gene is removed.
+
+        number_per_gene (:class:`~numpy.ndarray`)
+            Either ``n_counts`` or ``n_cells`` per gene.
     """
     n_given_options = sum(
         option is not None for option in
@@ -230,23 +256,33 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     return gene_subset, number_per_gene
 
 
-def log1p(data, copy=False, chunked=False, chunk_size=None):
+def log1p(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, None, np.ndarray, spmatrix]:
     """Logarithmize the data matrix.
 
-    Computes `X = log(X + 1)`, where `log` denotes the natural logarithm.
+    Computes :math:`X = \\log(X + 1)`, where ``log`` denotes the natural logarithm.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    copy : `bool`, optional (default: `False`)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
+    chunked
+        Process the data matrix in chunks, which will save memory.
+        Applies only to :class:`~anndata.AnnData`.
+    chunk_size
+        ``n_obs`` of the chunks to process the data in.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns or updates ``data``, depending on ``copy``.
     """
     if copy:
         data = data.copy()
@@ -271,23 +307,33 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
     return data if copy else None
 
 
-def sqrt(data, copy=False, chunked=False, chunk_size=None):
+def sqrt(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, None, np.ndarray, spmatrix]:
     """Square root the data matrix.
 
-    Computes `X = sqrt(X)`.
+    Computes :math:`X = \\sqrt(X)`.
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
-        is returned.
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    copy
+        If an :class:`~scanpy.api.AnnData` is passed,
+        determines whether a copy is returned.
+    chunked
+        Process the data matrix in chunks, which will save memory.
+        Applies only to :class:`~anndata.AnnData`.
+    chunk_size
+        ``n_obs`` of the chunks to process the data in.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns or updates ``data``, depending on ``copy``.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data

@@ -166,7 +166,7 @@ def paga(
         show=None,
         save=None,
         ax=None):
-    r"""Plot the abstracted graph through thresholding low-connectivity edges.
+    """Plot the abstracted graph through thresholding low-connectivity edges.
 
     This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
 
@@ -262,7 +262,7 @@ def paga(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
@@ -800,7 +800,7 @@ def paga_path(
         show=None,
         save=None,
         ax=None):
-    r"""Gene expression and annotation changes along paths in the abstracted graph.
+    """Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
@@ -847,7 +847,7 @@ def paga_path(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 

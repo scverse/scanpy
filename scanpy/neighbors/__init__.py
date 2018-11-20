@@ -869,10 +869,10 @@ class Neighbors:
                       for i in range(1, self.eigen_values.size)])
 
     def _compute_C_matrix(self):
-        r"""See Fouss et al. (2006) and von Luxburg et al. (2007).
+        """See Fouss et al. (2006) and von Luxburg et al. (2007).
 
         This is the commute-time matrix. It's a squared-euclidian distance
-        matrix in \mathbb{R}^n.
+        matrix in :math:`\\mathbb{R}^n`.
         """
         self.C = np.repeat(np.diag(self.Lp)[:, np.newaxis],
                            self.Lp.shape[0], axis=1)
