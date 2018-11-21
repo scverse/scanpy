@@ -825,7 +825,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         # remove color from kwds in case is set to avoid an error caused by
         # double parameters
         del (kwds['color'])
-
+    if 'linewidth' not in kwds:
+        # for the tiny violin plots used, is best
+        # to use a thin lindwidth.
+        kwds['linewidth'] = 0.5
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -864,7 +867,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     # mapping function `rename_cols_to_int` to solve the problem.
     obs_tidy.rename(rename_cols_to_int, axis='columns', inplace=True)
 
-    if swap_axes is False:
+    if not swap_axes:
         # plot image in which x = var_names and y = groupby categories
 
         dendro_width = 1.4 if dendrogram else 0
@@ -888,7 +891,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
         axs = gridspec.GridSpec(nrows=num_rows, ncols=2, height_ratios=height_ratios,
-                                width_ratios=[width, dendro_width], wspace=0.05)
+                                width_ratios=[width, dendro_width], wspace=0.1)
         axs_list = []
         if dendrogram:
             first_plot_idx = 1 if has_var_groups else 0
@@ -936,7 +939,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             ax.grid(False)
 
             ax.tick_params(axis='y', left=False, right=True, labelright=True,
-                           labelleft=False, labelsize='x-small')
+                           labelleft=False, labelsize='x-small', length=1)
             ax.set_ylabel(category, rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             ax.set_xlabel('')
             if log:
@@ -955,23 +958,25 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     else:
         # plot image in which x = group by and y = var_names
+        dendro_height = 3 if dendrogram else 0
+        vargroups_width = 0.45 if has_var_groups else 0
         if figsize is None:
-            height = len(var_names) * 0.2 + 3
-            width = len(categories) * 0.2 + 1
+            height = len(var_names) * 0.3 + dendro_height
+            width = len(categories) * 0.4 + vargroups_width
         else:
             width, height = figsize
+
         fig = pl.figure(figsize=(width, height))
 
         # define a layout of nrows = var_names x 1 columns
         # if plot dendrogram a row is added
         # each row is one violin plot.
-        num_rows = len(var_names)
-        height_ratios = [1] * num_rows
-        if dendrogram:
-            num_rows += 1
-            height_ratios = [3] + height_ratios
+        num_rows = len(var_names) + 1 # +1 to account for dendrogram
+        height_ratios = [dendro_height] + ([1] * len(var_names))
 
-        axs = gridspec.GridSpec(nrows=num_rows, ncols=1, height_ratios=height_ratios)
+        axs = gridspec.GridSpec(nrows=num_rows, ncols=2,
+                                height_ratios=height_ratios, wspace=0.2,
+                                width_ratios=[width - vargroups_width, vargroups_width])
 
         axs_list = []
         if dendrogram:
@@ -984,20 +989,13 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         else:
             row_colors = sns.color_palette(row_palette, n_colors=len(var_names))
         for idx, y in enumerate(obs_tidy.columns):
-            if dendrogram:
-                ax_idx = idx + 1
-            else:
-                ax_idx = idx
+            ax_idx = idx + 1  # +1 to account that idx 0 is the dendrogram
             if first_ax is None:
-                ax = fig.add_subplot(axs[ax_idx])
+                ax = fig.add_subplot(axs[ax_idx, 0])
                 first_ax = ax
             else:
-                ax = fig.add_subplot(axs[ax_idx], sharey=first_ax)
+                ax = fig.add_subplot(axs[ax_idx, 0], sharey=first_ax)
             axs_list.append(ax)
-            # else:
-            #     ax = fig.add_subplot(axs)
-            if idx==0:
-                obs_tidy.to_pickle('/tmp/obs_tidy2.pickle')
             ax = sns.violinplot(x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
             if stripplot:
@@ -1022,6 +1020,17 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
             if max([len(x) for x in categories]) > 1:
                 ax.tick_params(axis='x', labelrotation=90)
+
+        if has_var_groups:
+            start = 1 if dendrogram else 0
+            gene_groups_ax = fig.add_subplot(axs[start:, 1])
+            arr = []
+            for idx, pos in enumerate(var_group_positions):
+                arr += [idx] * (pos[1]+1 - pos[0])
+            _plot_gene_groups_brackets(gene_groups_ax, var_group_positions, var_group_labels,
+                                       left_adjustment=0.3, right_adjustment=0.7, orientation='right')
+            gene_groups_ax.set_ylim(len(var_names), 0)
+            axs_list.append(gene_groups_ax)
 
     # remove the spacing between subplots
     pl.subplots_adjust(wspace=0, hspace=0)
@@ -1054,7 +1063,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `seaborn.heatmap`.
+        Are passed to `matplotlib.imshow`.
 
     Returns
     -------
@@ -1678,19 +1687,19 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         dendro_height = 0.5 if dendrogram else 0
         colorbar_width = 0.15
         if var_group_positions is not None and len(var_group_positions) > 0:
-            # add some space in case 'brackets' want to be plotted on top of the image
-            groupby_width = 0.4
+            # add some space in case 'color blocks' want to be plotted on the right of the image
+            vargroups_width = 0.4
         else:
-            groupby_width = 0
+            vargroups_width = 0
 
         if figsize is None:
             heatmap_height = len(var_names) * 0.2
             height = dendro_height + heatmap_height + 1  # +1 for labels
             heatmap_width = len(categories) * 0.3
-            width = heatmap_width + groupby_width + colorbar_width
+            width = heatmap_width + vargroups_width + colorbar_width
         else:
             width, height = figsize
-            heatmap_width = width - (groupby_width + colorbar_width)
+            heatmap_width = width - (vargroups_width + colorbar_width)
             heatmap_height = height - dendro_height
 
         # define a layout of 2 rows x 3 columns
@@ -1703,7 +1712,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         from matplotlib import gridspec
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.05, hspace=0.005,
-                                width_ratios=[heatmap_width, groupby_width, colorbar_width],
+                                width_ratios=[heatmap_width, vargroups_width, colorbar_width],
                                 height_ratios=[dendro_height, heatmap_height])
 
         mean_obs = mean_obs.T
