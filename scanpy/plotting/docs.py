@@ -108,11 +108,11 @@ dendrogram: `bool` If True, hierarchical clustering between the `groupby` catego
     used is `complete`.
 var_group_positions :  list of `tuples`.
     Use this parameter to highlight groups of `var_names`.
-    This will draw a 'bracket' between the given start and end positions. If the
+    This will draw a 'bracket' or a color block between the given start and end positions. If the
     parameter `var_group_labels` is set, the corresponding labels are added on
     top/left. E.g. var_group_positions = [(4,10)] will add a bracket
     between the fourth var_name and the tenth var_name. By giving more
-    positions, more brackets are drawn.
+    positions, more brackets/color blocks are drawn.
 var_group_labels : list of `str`
     Labels for each of the var_group_positions that want to be highlighted.
 var_group_rotation : `float` (default: `None`)
