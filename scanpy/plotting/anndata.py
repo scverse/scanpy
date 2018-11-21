@@ -16,7 +16,7 @@ from .. import logging as logg
 from . import utils
 from .utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from .docs import doc_scatter_bulk, doc_show_save_ax
+from .docs import doc_scatter_bulk, doc_show_save_ax, doc_common_plot_args
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -758,11 +758,11 @@ def clustermap(
     else: return g
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
-                   stripplot=False, jitter=False, size=1, scale='width', order=None,
-                   show=None, save=None, figsize=None,  dendrogram=False, var_group_positions=None,
-                   var_group_labels=None, var_group_rotation=None, layer=None, swap_axes=False,
+                   figsize=None,  dendrogram=False, var_group_positions=None, var_group_labels=None,
+                   var_group_rotation=None, layer=None, stripplot=False, jitter=False, size=1,
+                   scale='width', order=None, swap_axes=False, show=None, save=None,
                    row_palette='muted', **kwds):
     """\
     Stacked violin plots.
@@ -774,20 +774,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider.
-    log : `bool`, optional (default: `False`)
-        Plot on logarithmic axis.
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
+    {common_plot_args}
     stripplot : `bool` optional (default: `True`)
         Add a stripplot on top of the violin plot.
         See `seaborn.stripplot`.
@@ -803,28 +790,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
         each violin will have the same width.
-    figsize : (float, float), optional (default: None)
-        Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
-        Format is (width, height)
-    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
-        the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'person' method
-        is used to compute the pairwise correlation between categories using all var_names in
-        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-        used is `complete`.
-    var_group_positions :  list of `tuples`.
-        Use this parameter to highlight groups of `var_names` (only when swap_axes=False).
-        This will draw a 'bracket'
-        on top of the plot between the given start and end positions. If the
-        parameter `var_group_labels` is set, the corresponding labels is added on
-        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
-        between the fourth var_name and the tenth var_name. By giving more
-        positions, more brackets are drawn.
-    var_group_labels : list of `str`
-        Labels for each of the var_group_positions that want to be highlighted.
-    var_group_rotation : `float` (default: `None`)
-        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
     row_palette: `str` (default: `muted`)
         The row palette determines the colors to use in each of the stacked violin plots. The value
         should be a valid seaborn palette name or a valic matplotlib colormap
@@ -834,17 +799,20 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
-    layer: `str`, (default `None`)
-         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
-         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
-         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.violinplot`.
 
     Returns
     -------
-    A list of `matplotlib.Axes` where each ax corresponds to each row in the image
+    List of `matplotlib.Axes`
+
+    Examples
+    -------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.pl.stacked_violin(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...                      groupby='bulk_labels', dendrogram=True)
+
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
@@ -1063,12 +1031,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     return axs_list
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, swap_axes=False, show_gene_labels=None, layer=None, show=None, save=None, figsize=None, **kwds):
+            var_group_rotation=None, layer=None, swap_axes=False, show_gene_labels=None, show=None, save=None, figsize=None, **kwds):
     """\
-    Heatmap of the expression values of set of genes..
+    Heatmap of the expression values of genes.
 
     If `groupby` is given, the heatmap is ordered by the respective group. For
     example, a list of marker genes can be plotted, ordered by clustering. If
@@ -1078,59 +1046,25 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories`.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
-    figsize : (float, float), optional (default: None)
-        Figure size (width, height). If not set, the figure width is set based on the
-        number of  `var_names` and the height is set to 10.
-    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
-        the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'person' method
-        is used to compute the pairwise correlation between categories using all var_names in
-        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-        used is `complete`.
-    var_group_positions :  list of `tuples`.
-        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the plot between the given start and end positions. If the
-        parameter `var_group_labels` is set, the corresponding labels is added on
-        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
-        between the fourth var_name and the tenth var_name. By giving more
-        positions, more brackets are drawn.
-    var_group_labels : list of `str`
-        Labels for each of the var_group_positions that want to be highlighted.
-    var_group_rotation : `float` (default: `None`)
-        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+    {common_plot_args}
     swap_axes: `bool`, optional (default: `False`)
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
          categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
     show_gene_labels: `bool`, optional (default: `None`).
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
-    layer: `str`, (default `None`)
-         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
-         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
-         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
 
     Returns
     -------
-    A list of `matplotlib.Axes`
+    List of `matplotlib.Axes`
+
+    Examples
+    -------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.pl.heatmap(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...               groupby='bulk_labels', dendrogram=True, swap_axes=True)
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
@@ -1373,7 +1307,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
@@ -1393,62 +1327,22 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        var_names should be a valid subset of  `.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that groupby is
-        a categorical. If groupby is not a categorical observation, it would be
-        subdivided into `num_categories`.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value determines
-        the number of groups into which the groupby observation should be subdivided.
+    {common_plot_args}
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
-    figsize : (float, float), optional (default: None)
-        Figure size (width, height. If not set, the figure width is set based on the
-        number of  `var_names` and the height is set to 10.
-   dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
-        the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'person' method
-        is used to compute the pairwise correlation between categories using all var_names in
-        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-        used is `complete`.
-     var_group_positions :  list of `tuples`.
-        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the plot between the given start and end positions. If the
-        parameter `var_group_labels` is set, the corresponding labels is added on
-        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
-        between the fourth var_name and the tenth var_name. By giving more
-        positions, more brackets are drawn.
-    var_group_labels : list of `str`
-        Labels for each of the var_group_positions that want to be highlighted.
-    var_group_rotation : `float` (default: `None`)
-        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
-    layer: `str`, (default `None`)
-         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
-         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
-         then the layer is plotted.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
 
     Returns
     -------
-    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
-    second axis is the heatmap and the third axis is the colorbar.
+    List of `matplotlib.Axes`
 
     Examples
     -------
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.heatmap(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels',
-    ...               dendrogram=True, swap_axes=True)
+    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...               groupby='bulk_labels', dendrogram=True)
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
@@ -1641,7 +1535,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
                var_group_rotation=None, layer=None, swap_axes=False, show=None, save=None, **kwds):
@@ -1652,54 +1546,21 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        var_names should be a valid subset of  `.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that groupby is
-        a categorical. If groupby is not a categorical observation, it would be
-        subdivided into `num_categories`.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value determines
-        the number of groups into which the groupby observation should be subdivided.
-    figsize : (float, float), optional (default: None)
-        Figure size (width, height. If not set, the figure width is set based on the
-        number of  `var_names` and the height is set to 10.
-    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered according to
-        the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'person' method
-        is used to compute the pairwise correlation between categories using all var_names in
-        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-        used is `complete`.
-    var_group_positions :  list of `tuples`.
-        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the plot between the given start and end positions. If the
-        parameter `var_group_labels` is set, the corresponding labels is added on
-        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
-        between the fourth var_name and the tenth var_name. By giving more
-        positions, more brackets are drawn.
-    var_group_labels : list of `str`
-        Labels for each of the var_group_positions that want to be highlighted.
-    var_group_rotation : `float` (default: `None`)
-        Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
-    layer: `str`, (default `None`)
-         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
-         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
-         then the layer is plotted.
+    {common_plot_args}
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.pcolor`.
 
     Returns
     -------
-    A list of `matplotlib.Axes` where the first ax is the groupby categories colorcode, the
-    second axis is the heatmap and the third axis is the colorbar.
+    List of `matplotlib.Axes`
+
+    Examples
+    --------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.pl.matrixplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ... groupby='bulk_labels', dendrogram=True)
+
     """
 
     if use_raw is None and adata.raw is not None: use_raw = True
@@ -1887,12 +1748,12 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                dendrogram=False, var_group_positions=None, var_group_labels=None,
                layer=None, show=None, save=None, figsize=None, **kwds):
     """\
-    In this type of plot, each var_name is plotted as a filled line plot where the
+    In this type of plot each var_name is plotted as a filled line plot where the
     y values correspond to the var_name values and x is each of the cells. Best results
     are obtained when using raw counts that are not log.
 
@@ -1901,39 +1762,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str`
-        The key of the observation grouping to consider. groupby must be a categorical.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    figsize : (float, float), optional (default: None)
-        Figure size (width, height). If not set, the figure width is set based on the
-        number of  `var_names` and the height is set to 10.
-    dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered according to
-        the dendrogram order. If groups of var_names are set and those groups correspond
-        to the `groupby` categories, those groups are also reordered. The 'pearson' method
-        is used to compute the pairwise correlation between categories using all var_names in
-        `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-        used is `complete`.
-    var_group_positions :  list of `tuples`.
-        Use this parameter to highlight groups of `var_names`. This will draw a 'bracket'
-        on top of the plot between the given start and end positions. If the
-        parameter `var_group_labels` is set, the corresponding labels is added on
-        top of the bracket. E.g. var_group_positions = [(4,10)] will add a bracket
-        between the fourth var_name and the tenth var_name. By giving more
-        positions, more brackets are drawn.
-    var_group_labels : list of `str`
-        Labels for each of the var_group_positions that want to be highlighted.
-    layer: `str`, (default `None`)
-         Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
-         If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
-         then the layer is plotted.
+    {common_plot_args}
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `seaborn.heatmap`.
@@ -1945,7 +1774,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     Examples
     --------
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'], 'bulk_labels', dendrogram=True)
+    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...               'bulk_labels', dendrogram=True)
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
@@ -2071,6 +1901,10 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
         gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
         gene_groups_ax.axis('off')
+        axs_list.append(gene_groups_ax)
+
+    utils.savefig_or_show('tracksplot', show=show, save=save)
+    return axs_list
 
 
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
