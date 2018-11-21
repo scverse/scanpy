@@ -1160,9 +1160,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         dendrogram = False
     else:
         categorical = True
+        # get categories colors:
+        if groupby + "_colors" in adata.uns:
+            groupby_colors = adata.uns[groupby + "_colors"]
+        else:
+            groupby_colors = None
 
-    colors = None
-    groupby_cmap = None
     if dendrogram:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
                                           categories=categories,
@@ -1182,8 +1185,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
 
         # reorder groupby colors
-        if groupby + "_colors" in adata.uns:
-            colors = [adata.uns[groupby + "_colors"][x] for x in dendro_data['categories_idx_ordered']]
+        if groupby_colors is not None:
+            groupby_colors = [groupby_colors[x] for x in dendro_data['categories_idx_ordered']]
 
     if show_gene_labels is None:
         if len(var_names) <= 50:
@@ -1194,30 +1197,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                       'gene labels set `show_gene_labels=True`')
     if categorical:
         obs_tidy = obs_tidy.sort_index()
-        from matplotlib.colors import LinearSegmentedColormap
-        if colors is None:
-            if groupby + "_colors" in adata.uns:
-                colors = adata.uns[groupby + "_colors"]
-                groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
-            else:
-                groupby_cmap = pl.get_cmap('tab20')
-        else:
-            groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
 
     goal_points = 1000
     obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
-
-    # determine groupby label positions such that they appear
-    # centered next to the color code rectangle asigned to the category
-    value_sum = 0
-    ticks = []  # contains the centered position of the label
-    labels = []
-    label2code = {}
-    for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
-        ticks.append(value_sum + (value / 2))
-        labels.append(label)
-        value_sum += value
-        label2code[label] = code
 
     from matplotlib import gridspec
     if not swap_axes:
@@ -1284,24 +1266,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap)
-            if len(categories) > 1:
-                groupby_ax.set_yticks(ticks)
-                groupby_ax.set_yticklabels(labels)
-
-            # remove y ticks
-            groupby_ax.tick_params(axis='y', left=False, labelsize='small')
-            # remove x ticks and labels
-            groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
-
-            # remove surrounding lines
-            groupby_ax.spines['right'].set_visible(False)
-            groupby_ax.spines['top'].set_visible(False)
-            groupby_ax.spines['left'].set_visible(False)
-            groupby_ax.spines['bottom'].set_visible(False)
-
-            groupby_ax.set_ylabel(groupby)
-            groupby_ax.grid(False)
+            ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy,
+                                                                          colors=groupby_colors, orientation='left')
 
             # add lines to main heatmap
             line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
@@ -1372,24 +1338,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
-            if len(categories) > 1:
-                groupby_ax.set_xticks(ticks)
-                groupby_ax.set_xticklabels(labels, rotation=90)
-
-            # remove x ticks
-            groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
-            # remove y ticks and labels
-            groupby_ax.tick_params(axis='y', left=False, labelleft=False)
-
-            # remove surrounding lines
-            groupby_ax.spines['right'].set_visible(False)
-            groupby_ax.spines['top'].set_visible(False)
-            groupby_ax.spines['left'].set_visible(False)
-            groupby_ax.spines['bottom'].set_visible(False)
-
-            groupby_ax.set_xlabel(groupby)
-            groupby_ax.grid(False)
+            ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=groupby_colors,
+                                                                          orientation='bottom')
             # add lines to main heatmap
             line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
             heatmap_ax.vlines(line_positions, -1, len(var_names) + 1, lw=0.5)
@@ -1721,7 +1671,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         Figure size (width, height. If not set, the figure width is set based on the
         number of  `var_names` and the height is set to 10.
     dendrogram: `bool` If True, hiearchical clustering between the `groupby` categories is
-        computed and a dendrogram is plotted. `groupby` categories are reordered accoring to
+        computed and a dendrogram is plotted. `groupby` categories are reordered according to
         the dendrogram order. If groups of var_names are set and those groups correspond
         to the `groupby` categories, those groups are also reordered. The 'person' method
         is used to compute the pairwise correlation between categories using all var_names in
@@ -2005,6 +1955,13 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
 
+    # get categories colors:
+    if groupby + "_colors" not in adata.uns:
+        from scanpy.plotting.tools.scatterplots import _set_default_colors_for_categorical_obs
+        _set_default_colors_for_categorical_obs(adata, groupby)
+
+    groupby_colors = adata.uns[groupby + "_colors"]
+
     if dendrogram:
         # compute dendrogram if needed and reorder
         # rows and columns to match leaves order.
@@ -2022,13 +1979,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
         categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
-    if groupby + "_colors" not in adata.uns:
-        from scanpy.plotting.tools.scatterplots import _set_default_colors_for_categorical_obs
-        _set_default_colors_for_categorical_obs(adata, groupby)
-
-    colors = adata.uns[groupby + "_colors"]
-    from matplotlib.colors import LinearSegmentedColormap
-    groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+        groupby_colors = [groupby_colors[x] for x in dendro_data['categories_idx_ordered']]
 
     obs_tidy = obs_tidy.sort_index()
 
@@ -2040,22 +1991,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     cumsum = [0] + list(np.cumsum(obs_tidy.index.value_counts(sort=False)))
     x_values = [(x, y) for x, y in zip(cumsum[:-1], cumsum[1:])]
 
-    # determine groupby label positions such that they appear
-    # centered next to the color code rectangle asigned to the category
-    value_sum = 0
-    ticks = []  # contains the centered position of the label
-    labels = []
-    label2code = {}
-    for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
-        ticks.append(value_sum + (value / 2))
-        labels.append(label)
-        value_sum += value
-        label2code[label] = code
-
-    if dendrogram:
-        dendro_height = 1
-    else:
-        dendro_height = 0
+    dendro_height = 1 if dendrogram else 0
 
     groupby_height = 0.13
     num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
@@ -2087,7 +2023,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         axs_list.append(ax)
         for cat_idx, category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
-            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=colors[cat_idx])
+            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=groupby_colors[cat_idx])
 
         # remove the xticks labels except for the last processed plot.
         # Because the plots share the x axis it is redundant and less compact to plot the
@@ -2113,24 +2049,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     ax.tick_params(axis='x', bottom=False, labelbottom=False)
 
     groupby_ax = fig.add_subplot(axs[num_rows - 1, 0])
-    groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.T.index]), aspect='auto', cmap=groupby_cmap)
-    if len(categories) > 1:
-        groupby_ax.set_xticks(ticks)
-        groupby_ax.set_xticklabels(labels, rotation=90)
-
-    # remove x ticks
-    groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
-    # remove y ticks and labels
-    groupby_ax.tick_params(axis='y', left=False, labelleft=False)
-
-    # remove surrounding lines
-    groupby_ax.spines['right'].set_visible(False)
-    groupby_ax.spines['top'].set_visible(False)
-    groupby_ax.spines['left'].set_visible(False)
-    groupby_ax.spines['bottom'].set_visible(False)
-
-    groupby_ax.set_xlabel(groupby)
-    groupby_ax.grid(False)
+    ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy.T, colors=groupby_colors,
+                                                                  orientation='bottom')
     # add lines to plot
     overlay_ax = fig.add_subplot(axs[1:-1, 0], sharex=first_ax)
     line_positions = np.cumsum(obs_tidy.T.index.value_counts(sort=False))[:-1]
@@ -2520,7 +2440,9 @@ def _reduce_and_smooth(obs_tidy, goal_size):
         return obs_tidy
     else:
         # usually, a large number of cells can not be plotted, thus
-        # it is useful to reduce the number of cells plotted
+        # it is useful to reduce the number of cells plotted while
+        # smoothing the values. This should be similar to an interpolation
+        # but done per row and not for the entire image.
         from scipy.interpolate import UnivariateSpline
         x = range(obs_tidy.shape[0])
         # maximum number of cells to keep
@@ -2530,3 +2452,84 @@ def _reduce_and_smooth(obs_tidy, goal_size):
             spl = UnivariateSpline(x, col.values, s=20)
             new_df[index] = spl(new_x)
         return new_df.copy()
+
+
+def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientation='left', cmap_name='tab20'):
+    """
+    Plots categories as colored blocks. If orientation is 'left', the categories are plotted vertically, otherwise
+    they are plotted horizontally.
+
+    Parameters
+    ----------
+    groupby_ax : matplotlib ax
+    obs_tidy
+    colors : list of valid color names optional (default: `None`)
+        Color to use for each category.
+    orientation : `str`, optional (default: `left`)
+    cmap_name : `str`
+        Name of colormap to use, in case colors is None
+
+    Returns
+    -------
+    ticks position, labels, colormap
+    """
+
+    groupby = obs_tidy.index.name
+    from matplotlib.colors import LinearSegmentedColormap
+    if colors is None:
+        groupby_cmap = pl.get_cmap(cmap_name)
+    else:
+        groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+
+    # determine groupby label positions such that they appear
+    # centered next/below to the color code rectangle assigned to the category
+    value_sum = 0
+    ticks = []  # list of centered position of the labels
+    labels = []
+    label2code = {}  # dictionary of numerical values asigned to each label
+    for code, (label, value) in enumerate(obs_tidy.index.value_counts(sort=False).iteritems()):
+        ticks.append(value_sum + (value / 2))
+        labels.append(label)
+        value_sum += value
+        label2code[label] = code
+
+    groupby_ax.grid(False)
+
+    if orientation == 'left':
+        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap)
+        if len(labels) > 1:
+            groupby_ax.set_yticks(ticks)
+            groupby_ax.set_yticklabels(labels)
+
+        # remove y ticks
+        groupby_ax.tick_params(axis='y', left=False, labelsize='small')
+        # remove x ticks and labels
+        groupby_ax.tick_params(axis='x', bottom=False, labelbottom=False)
+
+        # remove surrounding lines
+        groupby_ax.spines['right'].set_visible(False)
+        groupby_ax.spines['top'].set_visible(False)
+        groupby_ax.spines['left'].set_visible(False)
+        groupby_ax.spines['bottom'].set_visible(False)
+
+        groupby_ax.set_ylabel(groupby)
+    else:
+        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
+        if len(labels) > 1:
+            groupby_ax.set_xticks(ticks)
+            groupby_ax.set_xticklabels(labels, rotation=90)
+
+        # remove x ticks
+        groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
+        # remove y ticks and labels
+        groupby_ax.tick_params(axis='y', left=False, labelleft=False)
+
+        # remove surrounding lines
+        groupby_ax.spines['right'].set_visible(False)
+        groupby_ax.spines['top'].set_visible(False)
+        groupby_ax.spines['left'].set_visible(False)
+        groupby_ax.spines['bottom'].set_visible(False)
+
+        groupby_ax.set_xlabel(groupby)
+
+    return ticks, labels, groupby_cmap
