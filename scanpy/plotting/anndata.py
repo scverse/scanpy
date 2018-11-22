@@ -891,7 +891,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         # each row is one violin plot. Second column is reserved for dendrogram (if any)
         # if var_group_positions is defined, a new row is added
         axs = gridspec.GridSpec(nrows=num_rows, ncols=2, height_ratios=height_ratios,
-                                width_ratios=[width, dendro_width], wspace=0.1)
+                                width_ratios=[width, dendro_width], wspace=0.08)
         axs_list = []
         if dendrogram:
             first_plot_idx = 1 if has_var_groups else 0
@@ -925,7 +925,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
                 ax0 = ax
 
             else:
-                ax = fig.add_subplot(axs[idx, 0], sharey=ax0)
+                ax = fig.add_subplot(axs[idx, 0])
 
             axs_list.append(ax)
             ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
@@ -939,7 +939,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             ax.grid(False)
 
             ax.tick_params(axis='y', left=False, right=True, labelright=True,
-                           labelleft=False, labelsize='x-small', length=1)
+                           labelleft=False, labelsize='x-small', length=1, pad=1)
+
             ax.set_ylabel(category, rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
             ax.set_xlabel('')
             if log:
@@ -994,7 +995,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
                 ax = fig.add_subplot(axs[ax_idx, 0])
                 first_ax = ax
             else:
-                ax = fig.add_subplot(axs[ax_idx, 0], sharey=first_ax)
+                ax = fig.add_subplot(axs[ax_idx, 0])
             axs_list.append(ax)
             ax = sns.violinplot(x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
                                 orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
@@ -1253,7 +1254,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
-            width_ratios = [width, 0.2, 0.2]
+            width_ratios = [width, 0.14, 0.2]
         else:
             width_ratios = [width, 0., 0.18]
 
@@ -1832,7 +1833,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     dendro_height = 1 if dendrogram else 0
 
-    groupby_height = 0.13
+    groupby_height = 0.24
     num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
     if figsize is None:
         width = 10
@@ -1848,8 +1849,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     fig = pl.figure(figsize=(width, height))
     from matplotlib import gridspec
-    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=0.5 / width,
-                            hspace=0, height_ratios=height_ratios, width_ratios=[width, 0.25])
+    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=0.3 / width,
+                            hspace=0, height_ratios=height_ratios,
+                            width_ratios=[width, 0.14])
     axs_list = []
     first_ax = None
     for idx, var in enumerate(var_names):
@@ -1875,6 +1877,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         ax.spines['left'].set_visible(False)
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
+        ax.grid(False)
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
@@ -1887,7 +1890,13 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     ax.set_xlim(0, x_end)
     ax.tick_params(axis='x', bottom=False, labelbottom=False)
 
-    groupby_ax = fig.add_subplot(axs[num_rows - 1, 0])
+    # the ax to plot the groupby categories is split to add a small space
+    # between the rest of the plot and the categories
+    axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[num_rows - 1, 0],
+                                            height_ratios=[1, 1])
+
+    groupby_ax = fig.add_subplot(axs2[1])
+
     ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy.T, colors=groupby_colors,
                                                                   orientation='bottom')
     # add lines to plot
@@ -2360,7 +2369,12 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
         groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
-            groupby_ax.set_xticklabels(labels, rotation=90)
+            if max([len(x) for x in labels]) < 3:
+                # if the labels are small do not rotate them
+                rotation = 0
+            else:
+                rotation = 90
+            groupby_ax.set_xticklabels(labels, rotation=rotation)
 
         # remove x ticks
         groupby_ax.tick_params(axis='x', bottom=False, labelsize='small')
