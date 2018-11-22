@@ -2297,11 +2297,12 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
     """
 
     groupby = obs_tidy.index.name
-    from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib.colors import ListedColormap, BoundaryNorm
     if colors is None:
         groupby_cmap = pl.get_cmap(cmap_name)
     else:
-        groupby_cmap = LinearSegmentedColormap.from_list(groupby + '_cmap', colors, N=len(colors))
+        groupby_cmap = ListedColormap(colors, groupby + '_cmap')
+    norm = BoundaryNorm(np.arange(groupby_cmap.N+1)-.5, groupby_cmap.N)
 
     # determine groupby label positions such that they appear
     # centered next/below to the color code rectangle assigned to the category
@@ -2318,7 +2319,7 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
     groupby_ax.grid(False)
 
     if orientation == 'left':
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap)
+        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap, norm=norm)
         if len(labels) > 1:
             groupby_ax.set_yticks(ticks)
             groupby_ax.set_yticklabels(labels)
@@ -2336,7 +2337,7 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
 
         groupby_ax.set_ylabel(groupby)
     else:
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap)
+        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap, norm=norm)
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
             if max([len(x) for x in labels]) < 3:
