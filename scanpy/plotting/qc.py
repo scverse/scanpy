@@ -8,8 +8,10 @@ from .docs import doc_show_save_ax
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def highest_expr_genes(adata, n_top=30, show=None, save=None,
-                       annot_col=None, ax=None, **kwds):
+def highest_expr_genes(
+        adata, n_top=30, show=None, save=None,
+        ax=None, gene_symbols=None, **kwds
+    ):
     """\
     Fraction of counts assigned to each gene over all cells.
 
@@ -35,10 +37,9 @@ def highest_expr_genes(adata, n_top=30, show=None, save=None,
         Annotated data matrix.
     n_top : `int`, optional (default:30)
         Number of top
-    annot_col : `str`, optional (default:None)
-        Use gene names from this column as axis labels.
-        If None, use `adata.var_names`.
     {show_save_ax}
+    gene_symbols : `str`, optional (default:None)
+        Key for field in .var that stores gene symbols if you do not want to use .var_names.
     **kwds : keyword arguments
         Are passed to `seaborn.boxplot`.
 
