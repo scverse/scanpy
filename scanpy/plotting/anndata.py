@@ -8,6 +8,7 @@ from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
+from matplotlib import gridspec
 from matplotlib.colors import is_color_like
 import seaborn as sns
 
@@ -533,7 +534,6 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
         labels = adata.var_names if attr in {'var', 'varm'} else np.arange(scores.shape[0]).astype(str)
     if isinstance(labels, str):
         labels = [labels + str(i+1) for i in range(scores.shape[0])]
-    from matplotlib import gridspec
     if n_panels <= 5: n_rows, n_cols = 1, n_panels
     else: n_rows, n_cols = 2, int(n_panels/2 + 0.5)
     fig = pl.figure(figsize=(n_cols * rcParams['figure.figsize'][0],
@@ -852,7 +852,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
         categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
-    from matplotlib import gridspec
     global count
     count = 0
 
@@ -1144,8 +1143,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     goal_points = 1000
     obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
+    colorbar_width = 0.2
 
-    from matplotlib import gridspec
     if not swap_axes:
         # define a layout of 2 rows x 4 columns
         # first row is for 'brackets' (if no brackets needed, the height of this row is zero)
@@ -1156,7 +1155,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         #   fourth ax is for colorbar
 
         dendro_width = 1 if dendrogram else 0
-        groupby_width = 0.25 if categorical else 0
+        groupby_width = 0.2 if categorical else 0
         if figsize is None:
             height = 6
             if show_gene_labels:
@@ -1167,7 +1166,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         else:
             width, height = figsize
             heatmap_width = width - (dendro_width + groupby_width)
-        ax_frac2width = 0.25
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
@@ -1175,7 +1173,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         else:
             height_ratios = [0, height]
 
-        width_ratios = [groupby_width, heatmap_width, dendro_width, ax_frac2width]
+        width_ratios = [groupby_width, heatmap_width, dendro_width, colorbar_width]
         fig = pl.figure(figsize=(width, height))
 
         axs = gridspec.GridSpec(nrows=2, ncols=4, width_ratios=width_ratios, wspace=0.15 / width,
@@ -1198,15 +1196,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             heatmap_ax.tick_params(axis='x', labelbottom=False, bottom=False)
 
         # plot colorbar
-        cmap_height = 4
-        if height > cmap_height:
-            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 3],
-                                                    height_ratios=[height - cmap_height, cmap_height])
-            heatmap_cbar_ax = fig.add_subplot(axs2[1])
-
-        else:
-            heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
-        pl.colorbar(im, cax=heatmap_cbar_ax)
+        _plot_colorbar(im, fig, axs[1, 3])
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
@@ -1254,9 +1244,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'brackets' want to be plotted on top of the image
-            width_ratios = [width, 0.14, 0.2]
+            width_ratios = [width, 0.14, colorbar_width]
         else:
-            width_ratios = [width, 0., 0.18]
+            width_ratios = [width, 0, colorbar_width]
 
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=3, ncols=3, wspace=0.25 / width,
@@ -1303,14 +1293,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             gene_groups_ax.axis('off')
 
         # plot colorbar
-        cmap_height = 4
-        if height > cmap_height:
-            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 2],
-                                                    height_ratios=[height - cmap_height, cmap_height])
-            heatmap_cbar_ax = fig.add_subplot(axs2[1])
-        else:
-            heatmap_cbar_ax = fig.add_subplot(axs[1, 2])
-        pl.colorbar(im, cax=heatmap_cbar_ax)
+        _plot_colorbar(im, fig, axs[1, 2])
 
     utils.savefig_or_show('heatmap', show=show, save=save)
 
@@ -1409,7 +1392,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     #   fourth ax is for an spacer that avoids the ticks
     #             from the color bar to be hidden beneath the size lengend axis
     #   fifth ax is to plot the size legend
-    from matplotlib import gridspec
     fig = pl.figure(figsize=(width, height))
     axs = gridspec.GridSpec(nrows=2, ncols=5, wspace=0.02, hspace=0.04,
                             width_ratios=[heatmap_width, dendro_width, colorbar_width, colorbar_width_spacer, size_legend_width],
@@ -1619,9 +1601,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         # reorder rows (categories) to match the dendrogram order
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
 
+    colorbar_width = 0.2
+
     if not swap_axes:
         dendro_width = 0.8 if dendrogram else 0
-        colorbar_width = 0.2
         if figsize is None:
             height = len(categories) * 0.2 + 1  # +1 for labels
             heatmap_width = len(var_names) * 0.32
@@ -1644,7 +1627,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         #   first ax is for the main matrix figure
         #   second ax is for the dendrogram
         #   third ax is for the color bar legend
-        from matplotlib import gridspec
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.02, hspace=0.04,
                                 width_ratios=[heatmap_width, dendro_width, colorbar_width],
@@ -1654,8 +1636,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         y_ticks = np.arange(mean_obs.shape[0]) + 0.5
         matrix_ax.set_yticks(y_ticks)
         matrix_ax.set_yticklabels([mean_obs.index[idx] for idx in range(mean_obs.shape[0])])
-
-        color_legend = fig.add_subplot(axs[1, 2])
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
@@ -1683,10 +1663,9 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
                                        left_adjustment=0.2, right_adjustment=0.8)
 
         # plot colorbar
-        pl.colorbar(pc, cax=color_legend)
+        _plot_colorbar(pc, fig, axs[1, 2])
     else:
         dendro_height = 0.5 if dendrogram else 0
-        colorbar_width = 0.15
         if var_group_positions is not None and len(var_group_positions) > 0:
             # add some space in case 'color blocks' want to be plotted on the right of the image
             vargroups_width = 0.4
@@ -1710,7 +1689,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         #   first ax is for the main matrix figure
         #   second ax is for the groupby categories (eg. brackets)
         #   third ax is for the color bar legend
-        from matplotlib import gridspec
         fig = pl.figure(figsize=(width, height))
         axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.05, hspace=0.005,
                                 width_ratios=[heatmap_width, vargroups_width, colorbar_width],
@@ -1745,14 +1723,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
                                        left_adjustment=0.2, right_adjustment=0.8, orientation='right')
 
         # plot colorbar
-        cmap_height = 4
-        if height > cmap_height:
-            axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 2],
-                                                    height_ratios=[height - cmap_height, cmap_height])
-            color_legend = fig.add_subplot(axs2[1])
-        else:
-            color_legend = fig.add_subplot(axs[1, 2])
-        pl.colorbar(pc, cax=color_legend)
+        _plot_colorbar(pc, fig, axs[1, 2])
 
     utils.savefig_or_show('matrixplot', show=show, save=save)
     return axs
@@ -1848,7 +1819,6 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     obs_tidy = obs_tidy.T
 
     fig = pl.figure(figsize=(width, height))
-    from matplotlib import gridspec
     axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=0.3 / width,
                             hspace=0, height_ratios=height_ratios,
                             width_ratios=[width, 0.14])
@@ -2390,3 +2360,33 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
         groupby_ax.set_xlabel(groupby)
 
     return ticks, labels, groupby_cmap
+
+
+def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height=4):
+    """
+    Plots a vertical color bar based on mappable.
+    The height of the colorbar is min(figure-height, max_cmap_height)
+
+    Parameters
+    ----------
+    mappable : The image to which the colorbar applies.
+    fig ; The figure object
+    subplot_spec : the gridspec subplot. Eg. axs[1,2]
+    max_cbar_height : `float`
+        The maximum colorbar height
+
+    Returns
+    -------
+    color bar ax
+    """
+    width, height = fig.get_size_inches()
+    if height > max_cbar_height:
+        # to make the colorbar shorter, the
+        # ax is split and the lower portion is used.
+        axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=subplot_spec,
+                                                height_ratios=[height - max_cbar_height, max_cbar_height])
+        heatmap_cbar_ax = fig.add_subplot(axs2[1])
+    else:
+        heatmap_cbar_ax = fig.add_subplot(subplot_spec)
+    pl.colorbar(mappable, cax=heatmap_cbar_ax)
+    return heatmap_cbar_ax
