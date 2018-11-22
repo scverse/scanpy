@@ -60,7 +60,7 @@ def highest_expr_genes(
 
     top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
     dat = dat[:, top]
-    columns = dat.var_names if annot_col is None else dat.var[annot_col]
+    columns = dat.var_names if gene_symbols is None else dat.var[gene_symbols]
     dat = pd.DataFrame(dat.X.toarray(), index=dat.obs_names, columns=columns)
 
     if not ax:
