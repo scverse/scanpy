@@ -27,3 +27,8 @@
 .rst-content dl:not(.docutils) dl dt a.reference>code {
     text-decoration: underline;
 }
+
+/* No narrow parameter lists for plot functions with images */
+.rst-content .docutils.field-list {
+    clear: right;
+}
