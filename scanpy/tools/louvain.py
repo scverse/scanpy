@@ -1,75 +1,89 @@
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any
+
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from natsort import natsorted
+from scipy.sparse import spmatrix
+
 from .. import utils
 from .. import settings
 from .. import logging as logg
 
+try:
+    from louvain.VertexPartition import MutableVertexPartition
+except ImportError:
+    class MutableVertexPartition: pass
+    MutableVertexPartition.__module__ = 'louvain.VertexPartition'
+
 
 def louvain(
-        adata,
-        resolution=None,
-        random_state=0,
-        restrict_to=None,
-        key_added=None,
-        adjacency=None,
-        flavor='vtraag',
-        directed=True,
-        use_weights=False,
-        partition_type=None,
-        partition_kwargs=None,
-        copy=False):
+    adata: AnnData,
+    resolution: Optional[float] = None,
+    random_state: int = 0,
+    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    key_added: Optional[str] = None,
+    adjacency: Optional[spmatrix] = None,
+    flavor: str = 'vtraag',
+    directed: bool = True,
+    use_weights: bool = False,
+    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_kwargs: Optional[Mapping[str, Any]]=None,
+    copy: bool = False,
+) -> Optional[AnnData]:
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
     Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
     of [Traag17]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
-    This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+    This requires to run :func:`~scanpy.api.pp.neighbors` first.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    resolution : `float` or `None`, optional (default: 1)
-        For the default flavor ('vtraag'), you can provide a resolution (higher
-        resolution means finding more and smaller clusters), which defaults to
-        1.0. See “Time as a resolution parameter” in [Lambiotte09]_.
-    random_state : `int`, optional (default: 0)
+    resolution
+        For the default flavor (``'vtraag'``), you can provide a resolution
+        (higher resolution means finding more and smaller clusters),
+        which defaults to 1.0. See “Time as a resolution parameter” in [Lambiotte09]_.
+    random_state
         Change the initialization of the optimization.
-    restrict_to : `tuple`, optional (default: None)
+    restrict_to
         Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain (obs key, list of categories).
-    key_added : `str`, optional (default: 'louvain')
-        Key under which to add the cluster labels.
-    adjacency : sparse matrix or `None`, optional (default: `None`)
+        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
+    key_added
+        Key under which to add the cluster labels. (default: ``'louvain'``)
+    adjacency
         Sparse adjacency matrix of the graph, defaults to
-        `adata.uns['neighbors']['connectivities']`.
-    flavor : {'vtraag', 'igraph'}
-        Choose between to packages for computing the clustering. 'vtraag' is
-        much more powerful, and the default.
-    use_weights : `bool`, optional (default: `False`)
+        ``adata.uns['neighbors']['connectivities']``.
+    flavor : {``'vtraag'``, ``'igraph'``}
+        Choose between to packages for computing the clustering.
+        ``'vtraag'`` is much more powerful, and the default.
+    directed
+        Interpret the ``adjacency`` matrix as directed graph?
+    use_weights
         Use weights from knn graph.
-    partition_type : `~louvain.MutableVertexPartition`, optional (default: `None`)
-        Type of partition to use. Only a valid argument if `flavor` is 
-        `'vtraag'`.
-    partition_kwargs : `dict`, optional (default: `None`)
-        Key word arguments to pass to partitioning, if `vtraag` method is 
-        being used.
-    copy : `bool` (default: `False`)
+    partition_type
+        Type of partition to use.
+        Only a valid argument if ``flavor`` is ``'vtraag'``.
+    partition_kwargs
+        Key word arguments to pass to partitioning,
+        if ``vtraag`` method is being used.
+    copy
         Copy adata or modify it inplace.
 
     Returns
     -------
-    None
-        By default (`copy=False`), updates ``adata`` with the following fields:
+    :obj:`None`
+        By default (``copy=False``), updates ``adata`` with the following fields:
 
-        louvain : :class:`pandas.Series` (``adata.obs``, dtype `category`)
-            Array of dim (number of samples) that stores the subgroup id ('0',
-            '1', ...) for each cell.
-    
-    AnnData
-        When `copy=True` is set, a copy of ``adata`` with those fields is returned.
+        ``adata.obs['louvain']`` (:class:`pandas.Series`, dtype ``category``)
+            Array of dim (number of samples) that stores the subgroup id
+            (``'0'``, ``'1'``, ...) for each cell.
+
+    :class:`~anndata.AnnData`
+        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
     logg.info('running Louvain clustering', r=True)
     if (flavor != 'vtraag') and (partition_type is not None):
@@ -117,10 +131,12 @@ def louvain(
                 partition_kwargs["weights"] = weights
             logg.info('    using the "louvain" package of Traag (2017)')
             louvain.set_rng_seed(random_state)
-            part = louvain.find_partition(g, partition_type,
-                                          **partition_kwargs)
+            part = louvain.find_partition(
+                g, partition_type,
+                **partition_kwargs,
+            )
             # adata.uns['louvain_quality'] = part.quality()
-        elif flavor == 'igraph':
+        else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
     elif flavor == 'taynaud':
