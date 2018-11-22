@@ -5,18 +5,16 @@ import pandas as pd
 from natsort import natsorted
 from anndata import AnnData
 from scipy import sparse
-try:
-    import leidenalg
-    from leidenalg.VertexPartition import MutableVertexPartition
-except ImportError:
-    leidenalg = None
-
-    class MutableVertexPartition:
-        pass
 
 from .. import utils
 from .. import settings
 from .. import logging as logg
+
+try:
+    from leidenalg.VertexPartition import MutableVertexPartition
+except ImportError:
+    class MutableVertexPartition: pass
+    MutableVertexPartition.__module__ = 'leidenalg.VertexPartition'
 
 
 def leiden(
@@ -32,7 +30,7 @@ def leiden(
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     copy: bool = False,
     **partition_kwargs
-):
+) -> Optional[AnnData]:
     """
     Cluster cells into subgroups [Traag18]_ [Levine15]_
 
@@ -74,8 +72,26 @@ def leiden(
     **partition_kwargs
         Any further arguments to pass to `~leidenalg.find_partition`
         (which in turn passes arguments to the ``partition_type``).
+
+    Returns
+    -------
+    :obj:`None`
+        By default (``copy=False``), updates ``adata`` with the following fields:
+
+        ``adata.obs[key_added]`` (:class:`pandas.Series`, dtype ``category``)
+            Array of dim (number of samples) that stores the subgroup id
+            (``'0'``, ``'1'``, ...) for each cell.
+
+        ``adata.uns['leiden']['params']``
+            A dict with the values for the parameters ``resolution``,
+            ``random_state``, and ``n_iterations``.
+
+    :class:`~anndata.AnnData`
+        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
-    if leidenalg is None:
+    try:
+        import leidenalg
+    except ImportError:
         raise ImportError('Please install the leiden algorithm: `pip3 install leidenalg`.')
 
     logg.info('running Leiden clustering', r=True)

@@ -61,11 +61,13 @@ intersphinx_mapping = dict(
     python=('https://docs.python.org/3', None),
     numpy=('https://docs.scipy.org/doc/numpy/', None),
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    sklearn=('https://scikit-learn.org/stable/', None),
     pandas=('http://pandas.pydata.org/pandas-docs/stable/', None),
     matplotlib=('https://matplotlib.org/', None),
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
+    louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
 )
 
 templates_path = ['_templates']
@@ -122,7 +124,8 @@ texinfo_documents = [
 
 
 # -- generate_options override ------------------------------------------
-# TODO: why?
+# The only thing changed here is that we specify imported_members=True
+# in the generate_autosummary_docs call.
 
 
 def process_generate_options(app: Sphinx):
@@ -138,11 +141,9 @@ def process_generate_options(app: Sphinx):
     if not genfiles:
         return
 
-    from sphinx.ext.autosummary.generate import generate_autosummary_docs
-
     ext = app.config.source_suffix
     genfiles = [
-        genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
+        genfile + ('' if genfile.endswith(tuple(ext)) else ext[0])
         for genfile in genfiles
     ]
 
@@ -150,6 +151,7 @@ def process_generate_options(app: Sphinx):
     if suffix is None:
         return
 
+    from sphinx.ext.autosummary.generate import generate_autosummary_docs
     generate_autosummary_docs(
         genfiles, builder=app.builder,
         warn=logger.warning, info=logger.info,
@@ -231,6 +233,8 @@ DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
 # -- Override some classnames in autodoc --------------------------------------------
+# This makes sure that automatically documented links actually
+# end up being links instead of pointing nowhere.
 
 
 import sphinx_autodoc_typehints
@@ -248,13 +252,15 @@ def format_annotation(annotation):
         full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
         override = qualname_overrides.get(full_name)
         if override is not None:
-            return ':py:class:`~{}`'.format(qualname_overrides[full_name])
+            return f':py:class:`~{qualname_overrides[full_name]}`'
     return fa_orig(annotation)
 sphinx_autodoc_typehints.format_annotation = format_annotation
 
 
 # -- Prettier Param docs --------------------------------------------
-
+# Our PrettyTypedField is the same as the default PyTypedField,
+# except that the items (e.g. function parameters) get rendered as
+# definition list instead of paragraphs with some formatting.
 
 from typing import Dict, List, Tuple
 
