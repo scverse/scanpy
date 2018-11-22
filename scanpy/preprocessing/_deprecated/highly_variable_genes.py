@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import warnings
 from ... import logging as logg
-from ..simple import materialize_as_ndarray, _get_mean_var
+from ..distributed import materialize_as_ndarray
+from ..utils import _get_mean_var
 from scipy.sparse import issparse
 
 

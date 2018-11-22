@@ -117,7 +117,7 @@ References
 
 .. [Manno18] La Manno *et al.* (2018),
    *RNA velocity of single cells*,
-   `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.   
+   `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.
 
 .. [McInnes18] McInnes & Healy (2018),
    *UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction*,
@@ -136,6 +136,10 @@ References
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
    `bioRxiv <https://doi.org/10.1101/258566>`__.
 
+.. [Park18] Park *et al.* (2018),
+   *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
+   `bioRxiv <https://doi.org/10.1101/397042>`__.
+
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
@@ -151,6 +155,10 @@ References
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
+
+.. [Traag18] Traag *et al.* (2018),
+   *From Louvain to Leiden: guaranteeing well-connected communities*
+   `arXiv <https://arxiv.org/abs/1810.08473>`__.
 
 .. [Ulyanov16] Ulyanov (2016),
    *Multicore t-SNE*,

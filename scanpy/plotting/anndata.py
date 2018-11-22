@@ -489,7 +489,7 @@ def _scatter_obs(
 
     # draw a frame around the scatter
     frameon = settings._frameon if frameon is None else frameon
-    if not frameon:
+    if not frameon and x is None and y is None:
         for ax in axs:
             ax.set_xlabel('')
             ax.set_ylabel('')
@@ -1305,7 +1305,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
-    Makes a _dot plot_ of the expression values of `var_names`.
+    Makes a *dot plot* of the expression values of `var_names`.
 
     For each var_name and each `groupby` category a dot is plotted. Each dot
     represents two values: mean expression within each category (visualized by
@@ -2094,7 +2094,7 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     # which could bias the results.
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
-    gene_names = adata.var_names if use_raw is False else adata.raw.var_names
+    gene_names = adata.raw.var_names if use_raw else adata.var_names
     cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
 
     mean_df = df.groupby(level=0).mean()

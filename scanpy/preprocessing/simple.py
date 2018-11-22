@@ -2,18 +2,21 @@
 
 Compositions of these functions are found in sc.preprocess.recipes.
 """
-
-import scipy as sp
 import warnings
-from scipy.sparse import issparse, isspmatrix_csr, csr_matrix
-from sklearn.utils import sparsefuncs
-import pandas as pd
+from typing import Union, Optional, Tuple
+
 import numba
+import scipy as sp
+from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
+from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
+
 from .. import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata
+from .distributed import materialize_as_ndarray
+from .utils import _get_mean_var
 
 # install dask if available
 try:
@@ -29,60 +32,61 @@ except ImportError:
 
 N_PCS = 50  # default number of PCs
 
-
-def materialize_as_ndarray(a):
-    """Convert distributed arrays to ndarrays."""
-    if type(a) in (list, tuple):
-        if da is not None and any(isinstance(arr, da.Array) for arr in a):
-            return da.compute(*a, sync=True)
-        elif hasattr(np, 'asarray'): # zappy case
-            return tuple(np.asarray(arr) for arr in a)
-    else:
-        if da is not None and isinstance(a, da.Array):
-            return a.compute()
-        elif hasattr(np, 'asarray'): # zappy case
-            return np.asarray(a)
-    return a
+# backwards compat
+from ._deprecated.highly_variable_genes import filter_genes_dispersion
 
 
-def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
-                 max_genes=None, copy=False):
+def filter_cells(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    min_counts: Optional[int] = None,
+    min_genes:  Optional[int] = None,
+    max_counts: Optional[int] = None,
+    max_genes:  Optional[int] = None,
+    copy: bool = False,
+) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
     """Filter cell outliers based on counts and numbers of genes expressed.
 
-    For instance, only keep cells with at least `min_counts` counts or
-    `min_genes` genes expressed. This is to filter measurement outliers, i.e.,
-    "unreliable" observations.
+    For instance, only keep cells with at least ``min_counts`` counts or
+    ``min_genes`` genes expressed. This is to filter measurement outliers,
+    i.e. “unreliable” observations.
 
-    Only provide one of the optional parameters `min_counts`, `min_genes`,
-    `max_counts`, `max_genes` per call.
+    Only provide one of the optional parameters ``min_counts``, ``min_genes``,
+    ``max_counts``, ``max_genes`` per call.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.spmatrix`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    min_counts : `int`, optional (default: `None`)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    min_counts
         Minimum number of counts required for a cell to pass filtering.
-    min_genes : `int`, optional (default: `None`)
+    min_genes
         Minimum number of genes expressed required for a cell to pass filtering.
-    max_counts : `int`, optional (default: `None`)
+    max_counts
         Maximum number of counts required for a cell to pass filtering.
-    max_genes : `int`, optional (default: `None`)
+    max_genes
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
-    either `n_genes` or `n_counts` to `adata.obs`. Otherwise a tuple
+    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
+        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
+        object with ``n_genes`` or ``n_counts`` added to its ``.obs``.
 
-    cell_subset : `np.ndarray`
-        Boolean index mask that does filtering. `True` means that the cell is
-        kept. `False` means the cell is removed.
-    number_per_cell : `np.ndarray`
-        Either `n_counts` or `n_genes` per cell.
+        If ``copy=False`` is set, ``data`` is filtered and above fields
+        are added to ``data.obs``. (``None`` is returned)
+    ``cell_subset``, ``number_per_cell``
+        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
+
+        cell_subset (:class:`~numpy.ndarray`)
+            Boolean index mask that does filtering. ``True`` means that the
+            cell is kept. ``False`` means the cell is removed.
+
+        number_per_cell (:class:`~numpy.ndarray`)
+            Either ``n_counts`` or ``n_genes`` per cell.
 
     Examples
     --------
@@ -154,44 +158,57 @@ def filter_cells(data, min_counts=None, min_genes=None, max_counts=None,
     return cell_subset, number_per_cell
 
 
-def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
-                 max_cells=None, copy=False):
+def filter_genes(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    min_counts: Optional[int] = None,
+    min_cells:  Optional[int] = None,
+    max_counts: Optional[int] = None,
+    max_cells:  Optional[int] = None,
+    copy: bool = False,
+):
     """Filter genes based on number of cells or counts.
 
-    Keep genes that have at least `min_counts` counts or are expressed in at
-    least `min_cells` cells or have at most `max_counts` counts or are expressed
-    in at most `max_cells` cells.
+    Keep genes that have at least ``min_counts`` counts or are expressed in at
+    least ``min_cells`` cells or have at most ``max_counts`` counts or are expressed
+    in at most ``max_cells`` cells.
 
-    Only provide one of the optional parameters `min_counts`, `min_cells`,
-    `max_counts`, `max_cells` per call.
+    Only provide one of the optional parameters ``min_counts``, ``min_cells``,
+    ``max_counts``, ``max_cells`` per call.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.spmatrix`
+    data
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    min_counts : `int`, optional (default: `None`)
+    min_counts
         Minimum number of counts required for a gene to pass filtering.
-    min_cells : `int`, optional (default: `None`)
+    min_cells
         Minimum number of cells expressed required for a gene to pass filtering.
-    max_counts : `int`, optional (default: `None`)
+    max_counts
         Maximum number of counts required for a gene to pass filtering.
-    max_cells : `int`, optional (default: `None`)
+    max_cells
         Maximum number of cells expressed required for a gene to pass filtering.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
     Returns
     -------
-    If `data` is an :class:`~anndata.AnnData`, filters the object and adds\
-    either `n_cells` or `n_counts` to `adata.var`. Otherwise a tuple
+    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
+        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
+        object with ``n_cells`` or ``n_counts`` added to its ``.var``.
 
-    gene_subset : `np.ndarray`
-        Boolean index mask that does filtering. `True` means that the gene is
-        kept. `False` means the gene is removed.
-    number_per_gene : `np.ndarray`
-        Either `n_counts` or `n_cells` per gene.
+        If ``copy=False`` is set, ``data`` is filtered and above fields
+        are added to ``data.var``. (``None`` is returned)
+    ``gene_subset``, ``number_per_gene``
+        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
+
+        gene_subset (:class:`~numpy.ndarray`)
+            Boolean index mask that does filtering. ``True`` means that the
+            gene is kept. ``False`` means the gene is removed.
+
+        number_per_gene (:class:`~numpy.ndarray`)
+            Either ``n_counts`` or ``n_cells`` per gene.
     """
     n_given_options = sum(
         option is not None for option in
@@ -239,23 +256,33 @@ def filter_genes(data, min_counts=None, min_cells=None, max_counts=None,
     return gene_subset, number_per_gene
 
 
-def log1p(data, copy=False, chunked=False, chunk_size=None):
+def log1p(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, None, np.ndarray, spmatrix]:
     """Logarithmize the data matrix.
 
-    Computes `X = log(X + 1)`, where `log` denotes the natural logarithm.
+    Computes :math:`X = \\log(X + 1)`, where ``log`` denotes the natural logarithm.
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    copy : `bool`, optional (default: `False`)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
+    chunked
+        Process the data matrix in chunks, which will save memory.
+        Applies only to :class:`~anndata.AnnData`.
+    chunk_size
+        ``n_obs`` of the chunks to process the data in.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns or updates ``data``, depending on ``copy``.
     """
     if copy:
         data = data.copy()
@@ -280,23 +307,33 @@ def log1p(data, copy=False, chunked=False, chunk_size=None):
     return data if copy else None
 
 
-def sqrt(data, copy=False, chunked=False, chunk_size=None):
+def sqrt(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, None, np.ndarray, spmatrix]:
     """Square root the data matrix.
 
-    Computes `X = sqrt(X)`.
+    Computes :math:`X = \\sqrt(X)`.
 
     Parameters
     ----------
-    data : :class:`~scanpy.api.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    copy : `bool`, optional (default: `False`)
-        If an :class:`~scanpy.api.AnnData` is passed, determines whether a copy
-        is returned.
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    copy
+        If an :class:`~scanpy.api.AnnData` is passed,
+        determines whether a copy is returned.
+    chunked
+        Process the data matrix in chunks, which will save memory.
+        Applies only to :class:`~anndata.AnnData`.
+    chunk_size
+        ``n_obs`` of the chunks to process the data in.
 
     Returns
     -------
-    Returns or updates `data`, depending on `copy`.
+    Returns or updates ``data``, depending on ``copy``.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -313,9 +350,19 @@ def sqrt(data, copy=False, chunked=False, chunk_size=None):
         return X.sqrt()
 
 
-def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
-        return_info=False, use_highly_variable=None, dtype='float32', copy=False,
-        chunked=False, chunk_size=None):
+def pca(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    n_comps: int = N_PCS,
+    zero_center: Optional[bool] = True,
+    svd_solver: str = 'auto',
+    random_state: int = 0,
+    return_info: bool = False,
+    use_highly_variable: Optional[bool] = None,
+    dtype: str = 'float32',
+    copy: bool = False,
+    chunked: bool = False,
+    chunk_size: Optional[int] = None,
+) -> Union[AnnData, np.ndarray, spmatrix]:
     """Principal component analysis [Pedregosa11]_.
 
     Computes PCA coordinates, loadings and variance decomposition. Uses the
@@ -323,52 +370,71 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
 
     Parameters
     ----------
-    data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    n_comps : `int`, optional (default: 50)
+    data
+        The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
+        Rows correspond to cells and columns to genes.
+    n_comps
         Number of principal components to compute.
-    zero_center : `bool` or `None`, optional (default: `True`)
-        If `True`, compute standard PCA from covariance matrix. If `False`, omit
-        zero-centering variables (uses *TruncatedSVD* from scikit-learn), which
-        allows to handle sparse input efficiently.
-    svd_solver : `str`, optional (default: 'auto')
-        SVD solver to use. Either 'arpack' for the ARPACK wrapper in SciPy
-        (scipy.sparse.linalg.svds), or 'randomized' for the randomized algorithm
-        due to Halko (2009). 'auto' chooses automatically depending on the size
-        of the problem.
-    random_state : `int`, optional (default: 0)
-        Change to use different intial states for the optimization.
-    return_info : `bool`, optional (default: `False`)
-        Only relevant when not passing an :class:`~anndata.AnnData`: see
-        "Returns".
-    use_highly_variable : `bool`, optional (default: `None`)
-        Whether to use highly variable genes only, stored in .var['highly_variable'].
-    dtype : `str` (default: 'float32')
+    zero_center
+        If `True`, compute standard PCA from covariance matrix.
+        If ``False``, omit zero-centering variables
+        (uses :class:`~sklearn.decomposition.TruncatedSVD`),
+        which allows to handle sparse input efficiently.
+        Passing ``None`` decides automatically based on sparseness of the data.
+    svd_solver
+        SVD solver to use:
+
+        ``'arpack'``
+          for the ARPACK wrapper in SciPy (:func:`~scipy.sparse.linalg.svds`)
+
+        ``'randomized'``
+          for the randomized algorithm due to Halko (2009).
+
+        ``'auto'`` (the default)
+          chooses automatically depending on the size of the problem.
+
+    random_state
+        Change to use different initial states for the optimization.
+    return_info
+        Only relevant when not passing an :class:`~anndata.AnnData`:
+        see “**Returns**”.
+    use_highly_variable
+        Whether to use highly variable genes only, stored in
+        ``.var['highly_variable']``.
+        By default uses them if they have been determined beforehand.
+    dtype
         Numpy data type string to which to convert the result.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned. Is ignored otherwise.
-    chunked : `bool`, optional (default: `False`)
-        If `True`, perform an incremental PCA on segments of `chunk_size`. The
-        incremental PCA automatically zero centers and ignores settings of
-        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
-    chunk_size : `int`, optional (default: `None`)
-        Number of observations to include in each chunk. Required if `chunked`
-        is `True`.
+    chunked
+        If ``True``, perform an incremental PCA on segments of ``chunk_size``.
+        The incremental PCA automatically zero centers and ignores settings of
+        ``random_seed`` and ``svd_solver``. If ``False``, perform a full PCA.
+    chunk_size
+        Number of observations to include in each chunk.
+        Required if ``chunked=True`` was passed.
 
     Returns
     -------
-    If `data` is array-like and `return_info == False`, only returns `X_pca`,\
-    otherwise returns or adds to `adata`:
-    X_pca : `.obsm`
-         PCA representation of data.
-    PCs : `.varm`
-         The principal components containing the loadings.
-    variance_ratio : `.uns['pca']`
-         Ratio of explained variance.
-    variance : `.uns['pca']`
-         Explained variance, equivalent to the eigenvalues of the covariance matrix.
+
+    X_pca : :class:`scipy.sparse.spmatrix` or :class:`numpy.ndarray`
+        If `data` is array-like and ``return_info=False`` was passed,
+        this function only returns `X_pca`…
+    adata : :class:`~anndata.AnnData`
+        …otherwise if ``copy=True`` it returns or else adds fields to ``adata``:
+
+        ``.obsm['X_pca']``
+             PCA representation of data.
+
+        ``.varm['PCs']``
+             The principal components containing the loadings.
+
+        ``.uns['pca']['variance_ratio']``)
+             Ratio of explained variance.
+
+        ``.uns['pca']['variance']``
+             Explained variance, equivalent to the eigenvalues of the covariance matrix.
     """
     # chunked calculation is not randomized, anyways
     if svd_solver in {'auto', 'randomized'} and not chunked:
@@ -378,13 +444,10 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
             'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
             'become the Scanpy default in the future.')
 
-    if n_comps is None: n_comps = N_PCS
-
-    if isinstance(data, AnnData):
-        data_is_AnnData = True
+    data_is_AnnData = isinstance(data, AnnData)
+    if data_is_AnnData:
         adata = data.copy() if copy else data
     else:
-        data_is_AnnData = False
         adata = AnnData(data)
 
     logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
@@ -420,7 +483,8 @@ def pca(data, n_comps=None, zero_center=True, svd_solver='auto', random_state=0,
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        zero_center = zero_center if zero_center is not None else False if issparse(adata_comp.X) else True
+        if zero_center is not None:
+            zero_center = not issparse(adata_comp.X)
         if zero_center:
             from sklearn.decomposition import PCA
             if issparse(adata_comp.X):
@@ -835,7 +899,7 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
         return X[obs_indices], obs_indices
 
 
-def downsample_counts(adata, target_counts=20000, random_state=0, 
+def downsample_counts(adata, target_counts=20000, random_state=0,
                       replace=True, copy=False):
     """Downsample counts so that each cell has no more than `target_counts`.
 
@@ -886,7 +950,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0,
     if copy: return adata
 
 @numba.njit
-def downsample_cell(col: np.array, target: int, random_state: int=0, 
+def downsample_cell(col: np.array, target: int, random_state: int=0,
                     replace: bool=True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
@@ -959,29 +1023,6 @@ def _pca_fallback(data, n_comps=2):
     evecs = evecs[:, :n_comps]
     # project data points on eigenvectors
     return np.dot(evecs.T, data.T).T
-
-
-def _get_mean_var(X):
-    # - using sklearn.StandardScaler throws an error related to
-    #   int to long trafo for very large matrices
-    # - using X.multiply is slower
-    if True:
-        mean = X.mean(axis=0)
-        if issparse(X):
-            mean_sq = X.multiply(X).mean(axis=0)
-            mean = mean.A1
-            mean_sq = mean_sq.A1
-        else:
-            mean_sq = np.multiply(X, X).mean(axis=0)
-        # enforece R convention (unbiased estimator) for variance
-        var = (mean_sq - mean**2) * (X.shape[0]/(X.shape[0]-1))
-    else:
-        from sklearn.preprocessing import StandardScaler
-        scaler = StandardScaler(with_mean=False).partial_fit(X)
-        mean = scaler.mean_
-        # enforce R convention (unbiased estimator)
-        var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))
-    return mean, var
 
 
 def _scale(X, zero_center=True):

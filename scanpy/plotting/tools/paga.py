@@ -262,7 +262,7 @@ def paga(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
@@ -847,7 +847,7 @@ def paga_path(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
