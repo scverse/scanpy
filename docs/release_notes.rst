@@ -7,8 +7,8 @@
 .. role:: smaller
 
 
-On master, :small:`November 5, 2018`
-------------------------------------
+On master :small:`November 5, 2018`
+-----------------------------------
 
 - :func:`~scanpy.api.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`thanks to I Virshup`
 - :func:`~scanpy.api.pp.read_10x_h5` and :func:`~scanpy.api.pp.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__  :smaller:`thanks to Q. Gong`
