@@ -195,10 +195,12 @@ def plot_scatter(adata,
     else:
         args_3d = {}
 
-    if adata.raw is not None and use_raw is None:
-        use_raw = True
-    else:
-        use_raw = False
+    if use_raw is None:
+        # check if adata.raw is set
+        if adata.raw is None:
+            use_raw = False
+        else:
+            use_raw = True
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
