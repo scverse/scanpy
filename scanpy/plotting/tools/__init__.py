@@ -505,11 +505,14 @@ def rank_genes_groups_violin(
         for g in gene_names:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, g].X
+                if gene_symbols:
+                    g = adata.raw.var[gene_symbols][g]
             else:
                 X_col = adata[:, g].X
+                if gene_symbols:
+                    g = adata.var[gene_symbols][g]
             if issparse(X_col): X_col = X_col.toarray().flatten()
-            new_gene_names.append(
-                g if gene_symbols is None else adata.var[gene_symbols][g])
+            new_gene_names.append(g)
             df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
