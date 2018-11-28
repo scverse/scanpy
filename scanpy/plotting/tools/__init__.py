@@ -536,7 +536,7 @@ def rank_genes_groups_violin(
         _ax.set_title('{} vs. {}'.format(group_name, reference))
         _ax.legend_.remove()
         _ax.set_ylabel('expression')
-        _ax.set_xticklabels(gene_names, rotation='vertical')
+        _ax.set_xticklabels(new_gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
                     + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)
