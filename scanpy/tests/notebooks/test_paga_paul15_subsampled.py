@@ -3,6 +3,8 @@
 #
 # This is the subsampled notebook for testing.
 
+from matplotlib.testing import setup
+setup()
 
 import matplotlib as mpl
 mpl.use('agg')
@@ -51,7 +53,7 @@ def test_paga_paul15_subsampled():
     sc.tl.paga(adata, groups='louvain')
     # sc.pl.paga(adata, color=['louvain', 'Hba-a2', 'Elane', 'Irf8'])
     # sc.pl.paga(adata, color=['louvain', 'Itga2b', 'Prss34'])
-    
+
     adata.obs['louvain_anno'] = adata.obs['louvain']
     sc.tl.paga(adata, groups='louvain_anno')
 
@@ -62,12 +64,12 @@ def test_paga_paul15_subsampled():
     assert np.allclose(
         adata.uns['paga']['connectivities'].toarray()[:2],
         PAGA_CONNECTIVITIES, atol=1e-4)
-    
+
     sc.pl.paga(adata, threshold=0.03)
 
     # !!!! no clue why it doesn't produce images with the same shape
     # save_and_compare_images('paga')
-    
+
     sc.tl.draw_graph(adata, init_pos='paga')
     sc.pl.paga_compare(
         adata, threshold=0.03, title='', right_margin=0.2, size=10, edge_width_scale=0.5,
