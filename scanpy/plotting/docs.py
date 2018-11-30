@@ -79,3 +79,46 @@ save : `bool` or `str`, optional (default: `None`)
 ax : `matplotlib.Axes`, optional (default: `None`)
     A matplotlib axes object. Only works if plotting a single component.\
 """
+
+
+doc_common_plot_args = """\
+adata : :class:`~anndata.AnnData`
+    Annotated data matrix.
+var_names : `str` or list of `str`
+    `var_names` should be a valid subset of  `adata.var_names`.
+groupby : `str` or `None`, optional (default: `None`)
+    The key of the observation grouping to consider.
+log : `bool`, optional (default: `False`)
+    Plot on logarithmic axis.
+use_raw : `bool`, optional (default: `None`)
+    Use `raw` attribute of `adata` if present.
+num_categories : `int`, optional (default: `7`)
+    Only used if groupby observation is not categorical. This value
+    determines the number of groups into which the groupby observation
+    should be subdivided.
+figsize : (`float`, `float`), optional (default: `None`)
+    Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
+    Format is (width, height)
+dendrogram: `bool` If True, hierarchical clustering between the `groupby` categories is
+    computed and a dendrogram is plotted. `groupby` categories are reordered according to
+    the dendrogram order. If groups of `var_names` (see next arguments) are set and those groups correspond
+    to the `groupby` categories, those groups are also reordered. The 'pearson' method
+    is used to compute the pairwise correlation between categories using all var_names in
+    `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
+    used is `complete`.
+var_group_positions :  list of `tuples`.
+    Use this parameter to highlight groups of `var_names`.
+    This will draw a 'bracket' or a color block between the given start and end positions. If the
+    parameter `var_group_labels` is set, the corresponding labels are added on
+    top/left. E.g. var_group_positions = [(4,10)] will add a bracket
+    between the fourth var_name and the tenth var_name. By giving more
+    positions, more brackets/color blocks are drawn.
+var_group_labels : list of `str`
+    Labels for each of the var_group_positions that want to be highlighted.
+var_group_rotation : `float` (default: `None`)
+    Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
+layer: `str`, (default `None`)
+    Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
+    If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
+    then the layer is plotted. `layer` takes precedence over `use_raw`.\
+"""
