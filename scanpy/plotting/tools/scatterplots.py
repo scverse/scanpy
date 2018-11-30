@@ -469,11 +469,10 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                 ax.scatter([], [], c=color, label=label)
             ax.legend(
                 frameon=False, loc='center left',
-                bbox_to_anchor=(0.97, 0.5),
+                bbox_to_anchor=(1, 0.5),
                 ncol=(1 if len(categories) <= 14
                       else 2 if len(categories) <= 30 else 3),
-                fontsize=legend_fontsize,
-                handletextpad=None)  # make this respect the rcParams default
+                fontsize=legend_fontsize)
 
         if legend_loc == 'on data':
             # identify centroids to put labels

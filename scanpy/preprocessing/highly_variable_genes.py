@@ -7,14 +7,16 @@ from .distributed import materialize_as_ndarray
 from .utils import _get_mean_var
 
 
-def highly_variable_genes(adata,
-                          min_disp=None, max_disp=None,
-                          min_mean=None, max_mean=None,
-                          n_top_genes=None,
-                          n_bins=20,
-                          flavor='seurat',
-                          inplace=False):
-    """Extract highly variable genes [Satija15]_ [Zheng17]_.
+def highly_variable_genes(
+        adata,
+        min_disp=None, max_disp=None,
+        min_mean=None, max_mean=None,
+        n_top_genes=None,
+        n_bins=20,
+        flavor='seurat',
+        subset=False,
+        inplace=False):
+    """Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
 
@@ -45,6 +47,9 @@ def highly_variable_genes(adata,
         Choose the flavor for computing normalized dispersion. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
+    subset : `bool`, optional (default: `False`)
+        Inplace subset to highly-variable genes if `True` otherwise merely indicate
+        highly variable genes.
     inplace : `bool`, optional (default: `False`)
         Whether to place calculated metrics in `.var` or return them.
 
@@ -72,7 +77,7 @@ def highly_variable_genes(adata,
     if min_mean is None: min_mean = 0.0125
     if max_mean is None: max_mean = 3
 
-    X = np.expm1(adata.X) if flavor=='seurat' else adata.X
+    X = np.expm1(adata.X) if flavor == 'seurat' else adata.X
 
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
@@ -142,11 +147,13 @@ def highly_variable_genes(adata,
 
     logg.msg('    finished', time=True, v=4)
 
-    if inplace:
+    if inplace or subset:
         adata.var['highly_variable'] = gene_subset
         adata.var['means'] = df['mean'].values
         adata.var['dispersions'] = df['dispersion'].values
         adata.var['dispersions_norm'] = df['dispersion_norm'].values.astype('float32', copy=False)
+        if subset:
+            adata._inplace_subset_var(gene_subset)
     else:
         return np.rec.fromarrays(
              (gene_subset,
