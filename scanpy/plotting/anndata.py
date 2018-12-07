@@ -1467,13 +1467,17 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     import matplotlib.colors
 
     #if user defined, then use the vmax, vmin keywords, else use data to generate them...
-    if ('vmax' in kwds) and ('vmin' in kwds):
+    if 'vmax' in kwds:
         _vmax = kwds['vmax']
-        _vmin = kwds['vmin']
-    else:
-        _vmax = max(mean_flat)
-        _vmin = min(mean_flat)
+    else:    
+        _vmax = max(mean_flat) 
 
+    if 'vmin' in kwds:
+        _vmin = kwds['vmin']
+    else:    
+        _vmin = min(mean_flat)  
+
+    #normalize = matplotlib.colors.Normalize(vmin=min(mean_flat), vmax=max(mean_flat))
     normalize = matplotlib.colors.Normalize(vmin=_vmin, vmax=_vmax)
     colors = [cmap(normalize(value)) for value in mean_flat]
 
