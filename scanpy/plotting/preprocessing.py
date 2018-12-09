@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
+from anndata import AnnData
 from . import utils
 
 # --------------------------------------------------------------------------------
@@ -8,15 +9,15 @@ from . import utils
 # --------------------------------------------------------------------------------
 
 
-def highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=True):
+def highly_variable_genes(adata_or_result, log=False, show=None, save=None, highly_variable_genes=True):
     """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
     Parameters
     ----------
-    result : `np.recarray`
-        Result of :func:`~scanpy.api.pp.filter_genes_dispersion`.
+    adata : :class:`~anndata.AnnData`, `np.recarray`
+        Result of :func:`~scanpy.api.pp.highly_variable_genes`.
     log : `bool`
         Plot on logarithmic axes.
     show : bool, optional (default: `None`)
@@ -25,6 +26,10 @@ def highly_variable_genes(result, log=False, show=None, save=None, highly_variab
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
     """
+    if isinstance(adata_or_result, AnnData):
+        result = adata_or_result.var
+    else:
+        result = adata_or_result
     if highly_variable_genes:
         gene_subset = result.highly_variable
     else:

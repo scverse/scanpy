@@ -15,7 +15,7 @@ def highly_variable_genes(
         n_bins=20,
         flavor='seurat',
         subset=False,
-        inplace=False):
+        inplace=True):
     """Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
@@ -50,12 +50,12 @@ def highly_variable_genes(
     subset : `bool`, optional (default: `False`)
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    inplace : `bool`, optional (default: `False`)
+    inplace : `bool`, optional (default: `True`)
         Whether to place calculated metrics in `.var` or return them.
 
     Returns
     -------
-    Union[None, np.recarray]
+    `None`, `np.recarray`
         Depending on `inplace` returns calculated metrics (`np.recarray`) or
         updates `.var` with the following fields
 
@@ -69,6 +69,11 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.api.pp.filter_genes_dispersion`.
     """
     logg.msg('extracting highly variable genes', r=True, v=4)
+
+    if not isinstance(adata, AnnData):
+        raise ValueError(
+            '`pp.highly_variable_genes` expects an `AnnData` argument, '
+            'pass `inplace=False` if you want to return a `np.recarray`.')
 
     if n_top_genes is not None and not all([
             min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
@@ -135,7 +140,7 @@ def highly_variable_genes(
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
-        gene_subset = df['dispersion_norm'].values >= disp_cut_off
+        gene_subset = np.nan_to_num(df['dispersion_norm'].values) >= disp_cut_off
         logg.msg('the {} top genes correspond to a normalized dispersion cutoff of'
                  .format(n_top_genes, disp_cut_off), v=5)
     else:
@@ -148,6 +153,11 @@ def highly_variable_genes(
     logg.msg('    finished', time=True, v=4)
 
     if inplace or subset:
+        logg.hint('added\n'
+                  '    \'highly_variable\', boolean vector (adata.var)\n'
+                  '    \'means\', boolean vector (adata.var)\n'
+                  '    \'dispersions\', boolean vector (adata.var)\n'
+                  '    \'dispersions_norm\', boolean vector (adata.var)')
         adata.var['highly_variable'] = gene_subset
         adata.var['means'] = df['mean'].values
         adata.var['dispersions'] = df['dispersion'].values
@@ -160,7 +170,7 @@ def highly_variable_genes(
              df['mean'].values,
              df['dispersion'].values,
              df['dispersion_norm'].values.astype('float32', copy=False)),
-             dtype=[('highly_variable', bool),
+             dtype=[('highly_variable', np.bool_),
                     ('means', 'float32'),
                     ('dispersions', 'float32'),
                     ('dispersions_norm', 'float32')])
