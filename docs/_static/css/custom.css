@@ -16,17 +16,17 @@
     font-size: 100%;
 }
 
-.rst-content dl:not(.docutils) dl dt code {
-    font-size: 100%;
-    font-weight: normal;
-    background: none transparent;
-    border: none;
-    padding: 0 2px;
-}
+/* .rst-content dl:not(.docutils) dl dt code { */
+/*     font-size: 100%; */
+/*     font-weight: normal; */
+/*     background: none transparent; */
+/*     border: none; */
+/*     padding: 0 2px; */
+/* } */
 
-.rst-content dl:not(.docutils) dl dt a.reference>code {
-    text-decoration: underline;
-}
+/* .rst-content dl:not(.docutils) dl dt a.reference>code { */
+/*     text-decoration: underline; */
+/* } */
 
 /* No narrow parameter lists for plot functions with images */
 .rst-content .docutils.field-list {
