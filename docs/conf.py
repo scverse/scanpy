@@ -3,7 +3,7 @@ import inspect
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Union
+from typing import Optional, Union, Mapping
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
@@ -250,9 +250,9 @@ fa_orig = sphinx_autodoc_typehints.format_annotation
 def format_annotation(annotation):
     if getattr(annotation, '__origin__', None) is Union or hasattr(annotation, '__union_params__'):
         params = getattr(annotation, '__union_params__', None) or getattr(annotation, '__args__', None)
-        if len(params or []) == 2 and getattr(params[1], '__qualname__', None) == 'NoneType':
-            return fa_orig(annotation)  # Optional[...]
         return ', '.join(map(format_annotation, params))
+    if getattr(annotation, '__origin__', None) is Mapping:
+        return ':class:`~typing.Mapping`'
     if inspect.isclass(annotation):
         full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
         override = qualname_overrides.get(full_name)
