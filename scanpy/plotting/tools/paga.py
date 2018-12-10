@@ -111,13 +111,17 @@ def paga_compare(
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
     axs[1].set_xlim(xlim)
     axs[1].set_ylim(ylim)
+    if 'labels' in paga_graph_params:
+        labels = paga_graph_params.pop('labels')
+    else:
+        labels = groups_graph
     paga(
         adata,
         ax=axs[1],
         show=False,
         save=False,
         title=title_graph,
-        labels=groups_graph,
+        labels=labels,
         colors=color,
         frameon=frameon,
         **paga_graph_params)
