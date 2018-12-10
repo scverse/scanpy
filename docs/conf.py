@@ -262,6 +262,13 @@ def format_annotation(annotation):
 sphinx_autodoc_typehints.format_annotation = format_annotation
 
 
+# -- Change default role --------------------------------------------
+
+from docutils.parsers.rst import roles
+
+roles.DEFAULT_INTERPRETED_ROLE = 'literal'
+
+
 # -- Prettier Param docs --------------------------------------------
 # Our PrettyTypedField is the same as the default PyTypedField,
 # except that the items (e.g. function parameters) get rendered as
