@@ -7,6 +7,11 @@
 .. role:: smaller
 
 
+.. warning::
+
+   In version 1.3.4, a bug was introduced: :func:`~scanpy.api.pp.pca` produced a `TruncatedSVD` instead of a `PCA` when sparse data was passed. The bug is present in 1.3.4 and 1.3.5 and was corrected in 1.3.6.
+
+
 On master :small:`November 5, 2018`
 -----------------------------------
 
