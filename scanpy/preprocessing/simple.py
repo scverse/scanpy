@@ -483,7 +483,7 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        if zero_center is not None:
+        if zero_center is None:
             zero_center = not issparse(adata_comp.X)
         if zero_center:
             from sklearn.decomposition import PCA
