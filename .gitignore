@@ -37,7 +37,6 @@ scripts/paths.py
 scripts/test_private.sh
 scripts/tgdyn.py
 scripts/tgdyn_simple.py
-scanpy/api/pp.py
 .spyproject/
 scanpy/.spyproject/
 
