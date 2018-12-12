@@ -64,6 +64,7 @@ Neighbors
    :toctree: .
 
    pp.neighbors
+   pp.kbet_neighbors
 
 
 Tools: TL

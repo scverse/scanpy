@@ -1,4 +1,5 @@
 from typing import Union, Tuple
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,8 @@ from scipy.sparse import spmatrix
 from scipy.stats import chisquare
 from statsmodels.stats.multitest import multipletests
 from anndata import AnnData
+
+from ..neighbors import neighbors
 
 
 def kbet(
@@ -18,8 +21,8 @@ def kbet(
 ) -> Union[AnnData, Tuple[float, np.ndarray]]:
     """kBET: k-nearest neighbour batch effect test.
 
-    Use the heuristic :func:`sc.pp.kbet_n_neighbors` to find the ideal
-    neighborhood size to pass to :func:`sc.pp.neighbors`.
+    Use the heuristic :func:`scanpy.api.pp.kbet_neighbors` to use the ideal
+    neighborhood size in :func:`scanpy.api.pp.neighbors`.
 
     Parameters
     ----------
@@ -40,18 +43,26 @@ def kbet(
 
     Returns
     -------
-    adata
+    ``adata``
         If ``copy == True``, a copy of the input ``adata`` will be returned.
         Else, ``adata.uns['kbet']`` will be a tuple, see below:
-    acceptance
+    ``acceptance``
         If ``copy == False``, the acceptance rate (1-rejection) is returned.
-    p_values
+    ``p_values``
         If ``copy == False``, the second returned value is the per-cell corrected p-values.
     """
     if adjacency is None:
-        if 'neighbors' not in adata.uns:
+        nbs = adata.uns.get('neighbors')
+        if nbs is None:
             raise ValueError('No neighbors found. Provide the `adjacency` parameter or run `sc.pp.neighbors(adata)`')
-        adjacency = adata.uns['neighbors']['connectivities']  # type: spmatrix
+        n_heuristic = kbet_neighbors(adata, batch_key, return_n=True)
+        if nbs['params']['n_neighbors'] < n_heuristic:
+            warn(
+                'Neighborhood size probably not suitable for kBET: `kbet_n_neighbors` returned {}, '
+                'but `adata.uns["neighbors"]` only contains {} neighbors.'
+                .format(n_heuristic, nbs['params']['n_neighbors'])
+            )
+        adjacency = nbs['connectivities']  # type: spmatrix
     adjacency = adjacency.tocsr()
 
     n_obs = adata.n_obs
@@ -81,3 +92,53 @@ def kbet(
         return ad_ret
     else:
         return rate_acc, p_vals
+
+
+def kbet_neighbors(
+    adata: AnnData,
+    batch_key: str = 'batch',
+    *,
+    return_n: bool = False,
+    copy: bool = False,
+    **neighbors_args,
+) -> Union[int, AnnData, None]:
+    """A heuristic for kBET neighborhood based on batch sizes.
+
+    Parameters
+    ----------
+    adata
+        Annotated data object
+    batch_key
+        The column in :attr:`anndata.AnnData.uns` to use as batch ID.
+    return_n
+        Return the neighborhood size instead of calling :func:`scanpy.api.pp.neighbors`.
+    copy
+        If ``return_n == False``, return a copy of ``adata`` with the new neighbors set or
+        just set ``adata.uns['neighbors']`` and return ``None``?
+    neighbors_args
+        Arguments passed to :func:`scanpy.api.pp.neighbors`.
+
+    Returns
+    -------
+    ``n_neighbors``
+        If ``return_n=True`` is set, return an :class:`int` with the
+        heuristically determined neighborhood size.
+    ``adata`` or ``None``
+        Depends on ``copy``. See :func:`scanpy.api.pp.neighbors`.
+    """
+    if return_n and copy:
+        raise ValueError(
+            'You passed both return_n=True and copy=True to `kbet_neighbors`. '
+            'I don’t know what to make of that.'
+        )
+
+    batch_ids = pd.Categorical(adata.obs[batch_key])
+    batch_sizes = batch_ids.value_counts()
+    n = np.floor(np.mean(batch_sizes) / 4)
+    if return_n:
+        return n
+
+    if 'neighbors' in adata.uns:
+        warn('`adata.uns` already contains neighbors. `kbet_neighbors` will overwrite them.')
+
+    return neighbors(adata, n, **neighbors_args, copy=copy)

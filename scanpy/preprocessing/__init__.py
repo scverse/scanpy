@@ -7,3 +7,4 @@ from ._qc import calculate_qc_metrics
 from ._combat import combat
 
 from ..neighbors import neighbors
+from ..tools._kbet import kbet_neighbors

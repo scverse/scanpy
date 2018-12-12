@@ -10,7 +10,7 @@ HERE = Path(__file__).parent
 
 
 @pytest.fixture
-def adata_kbet_sim():
+def adata_kbet_sim() -> anndata.AnnData:
     return anndata.read_h5ad(HERE / '_data' / 'kbet-sim.h5ad')
 
 
@@ -26,3 +26,7 @@ def test_kbet_basic(adata_kbet_sim):
     alpha = .05
     acceptance, _ = sc.tl.kbet(adata_kbet_sim, alpha=alpha)
     assert acceptance > 1 - alpha
+
+
+def test_kbet_heuristic(adata_kbet_sim):
+    pass
