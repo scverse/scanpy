@@ -29,4 +29,9 @@ def test_kbet_basic(adata_kbet_sim):
 
 
 def test_kbet_heuristic(adata_kbet_sim):
-    pass
+    sc.pp.pca(adata_kbet_sim)
+    sc.pp.kbet_neighbors(adata_kbet_sim)
+    assert 72 < adata_kbet_sim.uns['neighbors']['params']['n_neighbors'] < 78
+    alpha = .05
+    acceptance, _ = sc.tl.kbet(adata_kbet_sim, alpha=alpha)
+    assert acceptance > 1 - alpha

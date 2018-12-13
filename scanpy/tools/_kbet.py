@@ -3,12 +3,13 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize_scalar, OptimizeResult
 from scipy.sparse import spmatrix
 from scipy.stats import chisquare
 from statsmodels.stats.multitest import multipletests
 from anndata import AnnData
 
-from ..neighbors import neighbors
+from ..neighbors import neighbors, Neighbors
 
 
 def kbet(
@@ -55,13 +56,6 @@ def kbet(
         nbs = adata.uns.get('neighbors')
         if nbs is None:
             raise ValueError('No neighbors found. Provide the `adjacency` parameter or run `sc.pp.neighbors(adata)`')
-        n_heuristic = kbet_neighbors(adata, batch_key, return_n=True)
-        if nbs['params']['n_neighbors'] < n_heuristic:
-            warn(
-                'Neighborhood size probably not suitable for kBET: `kbet_n_neighbors` returned {}, '
-                'but `adata.uns["neighbors"]` only contains {} neighbors.'
-                .format(n_heuristic, nbs['params']['n_neighbors'])
-            )
         adjacency = nbs['connectivities']  # type: spmatrix
     adjacency = adjacency.tocsr()
 
@@ -98,7 +92,7 @@ def kbet_neighbors(
     adata: AnnData,
     batch_key: str = 'batch',
     *,
-    return_n: bool = False,
+    return_k: bool = False,
     copy: bool = False,
     **neighbors_args,
 ) -> Union[int, AnnData, None]:
@@ -110,7 +104,7 @@ def kbet_neighbors(
         Annotated data object
     batch_key
         The column in :attr:`anndata.AnnData.uns` to use as batch ID.
-    return_n
+    return_k
         Return the neighborhood size instead of calling :func:`scanpy.api.pp.neighbors`.
     copy
         If ``return_n == False``, return a copy of ``adata`` with the new neighbors set or
@@ -126,7 +120,7 @@ def kbet_neighbors(
     ``adata`` or ``None``
         Depends on ``copy``. See :func:`scanpy.api.pp.neighbors`.
     """
-    if return_n and copy:
+    if return_k and copy:
         raise ValueError(
             'You passed both return_n=True and copy=True to `kbet_neighbors`. '
             'I don’t know what to make of that.'
@@ -134,11 +128,32 @@ def kbet_neighbors(
 
     batch_ids = pd.Categorical(adata.obs[batch_key])
     batch_sizes = batch_ids.value_counts()
-    n = np.floor(np.mean(batch_sizes) / 4)
-    if return_n:
-        return n
+
+    k0 = np.floor(np.mean(batch_sizes) * (3/4))
+    res = minimize_scalar(
+        _kbet_step,
+        bounds=[10, k0],
+        args=(adata, batch_key),
+        method='Bounded',
+        # tol=.5,  # IDK how to minimize step size
+    )  # type: OptimizeResult
+    if res.success:
+        k = int(res.x)
+    else:
+        warn('Could not find a good neighborhood size: %s', res)
+        k = np.floor(np.mean(batch_sizes) / 4)
+
+    if return_k:
+        return k
 
     if 'neighbors' in adata.uns:
         warn('`adata.uns` already contains neighbors. `kbet_neighbors` will overwrite them.')
 
-    return neighbors(adata, n, **neighbors_args, copy=copy)
+    return neighbors(adata, k, **neighbors_args, copy=copy)
+
+
+def _kbet_step(k: int, adata: AnnData, batch_key: str):
+    neighs = Neighbors(adata)
+    neighs.compute_neighbors(n_neighbors=int(k))
+    acc, _ = kbet(adata, batch_key, adjacency=neighs.connectivities)
+    return acc
