@@ -94,7 +94,7 @@ def kbet_neighbors(
     *,
     return_k: bool = False,
     copy: bool = False,
-    **neighbors_args,
+    **neighbors_args
 ) -> Union[int, AnnData, None]:
     """A heuristic for kBET neighborhood based on batch sizes.
 
