@@ -8,7 +8,7 @@ Clustering
 
 For getting started, we recommend `Scanpy's reimplementation <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__ of Seurat's [Satija15]_ clustering tutorial for 3K PBMCs from 10x Genomics, containing preprocessing, clustering and the identification of cell types via known marker genes.
 
-You might compare this to `clustering 68K PBMCs <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170503_zheng17/zheng17.ipynb>`__ as it would be done in Cell Ranger [Zheng17]_.
+For more possibilities on visualizing marker genes, see this `plotting gallery <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__.
 
 .. raw:: html
 
