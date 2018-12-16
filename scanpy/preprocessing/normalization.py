@@ -5,16 +5,11 @@ from .. import logging as logg
 from ..utils import doc_params
 from .docs import doc_norm_bulk, doc_norm_quant, doc_ret, doc_ex_quant, doc_ex_total
 
-def _normalize_data(X, counts, after=None, cell_subset=None, copy=False):
+def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
-    if after is None:
-        after = np.median(counts[cell_subset]) if cell_subset is not None else np.median(counts)
-    if cell_subset is None:
-        counts /= after
-    else:
-        counts[np.logical_not(cell_subset)] = 1
-        counts[cell_subset] = counts[cell_subset]/after
+    after = np.median(counts[counts>0]) if after is None else after
     counts += (counts == 0)
+    counts /= after
     if issparse(X):
         X = sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
@@ -22,7 +17,7 @@ def _normalize_data(X, counts, after=None, cell_subset=None, copy=False):
     return X if copy else None
 
 @doc_params(norm_bulk=doc_norm_bulk, norm_quant=doc_norm_quant, ret=doc_ret, ex_quant=doc_ex_quant)
-def normalize_quantile(data, cell_sum_after=None, quantile=1, min_counts=1, key_n_counts=None,
+def normalize_quantile(data, cell_sum_after=None, quantile=1, key_n_counts=None,
                        inplace=True, layers=[], layer_norm=None):
     """\
     {norm_bulk}
@@ -63,20 +58,19 @@ def normalize_quantile(data, cell_sum_after=None, quantile=1, min_counts=1, key_
 
     if key_n_counts is not None:
         data.obs[key_n_counts] = counts_per_cell
-    cell_subset = counts_per_cell >= min_counts
 
     if layer_norm == 'after':
         after = cell_sum_after
     elif layer_norm == 'X':
-        after = np.median(counts_per_cell[cell_subset])
+        after = np.median(counts_per_cell[counts_per_cell>0])
     elif layer_norm is None:
         after = None
     else: raise ValueError('layer_norm should be "after", "X" or None')
 
     if inplace:
-        _normalize_data(data.X, counts_per_cell, cell_sum_after, cell_subset)
+        _normalize_data(data.X, counts_per_cell, cell_sum_after)
     else:
-        dat['X'] = _normalize_data(data.X, counts_per_cell, cell_sum_after, cell_subset, True)
+        dat['X'] = _normalize_data(data.X, counts_per_cell, cell_sum_after, copy=True)
 
     layers = data.layers.keys() if layers == 'all' else layers
     for layer in layers:
@@ -96,8 +90,8 @@ def normalize_quantile(data, cell_sum_after=None, quantile=1, min_counts=1, key_
     return dat if not inplace else None
 
 @doc_params(norm_bulk=doc_norm_bulk, ret=doc_ret, ex_total=doc_ex_total)
-def normalize_total(data, cell_sum_after=None, counts_per_cell=None, key_n_counts=None,
-                    inplace=True, layers=[], layer_norm=None, min_counts=1):
+def normalize_total(data, cell_sum_after=None, key_n_counts=None, inplace=True, layers=[],
+                    layer_norm=None, min_counts=1):
     """\
     {norm_bulk}
 
@@ -107,4 +101,4 @@ def normalize_total(data, cell_sum_after=None, counts_per_cell=None, key_n_count
     """
     return normalize_quantile(data=data, cell_sum_after=cell_sum_after,
                               key_n_counts=key_n_counts, inplace=inplace, layers=layers,
-                              layer_norm=layer_norm, min_counts=min_counts, quantile=1)
+                              layer_norm=layer_norm, quantile=1)
