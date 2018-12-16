@@ -59,13 +59,18 @@ def normalize_quantile(data, cell_sum_after=None, quantile=1, key_n_counts=None,
     if key_n_counts is not None:
         data.obs[key_n_counts] = counts_per_cell
 
+    cell_subset = counts_per_cell>0
+    if not np.all(cell_subset):
+        logg.warning('Some cells have total count of genes equal to zero')
+
     if layer_norm == 'after':
         after = cell_sum_after
     elif layer_norm == 'X':
-        after = np.median(counts_per_cell[counts_per_cell>0])
+        after = np.median(counts_per_cell[cell_subset])
     elif layer_norm is None:
         after = None
     else: raise ValueError('layer_norm should be "after", "X" or None')
+    del cell_subset
 
     if inplace:
         _normalize_data(data.X, counts_per_cell, cell_sum_after)
