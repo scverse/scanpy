@@ -4,6 +4,7 @@ import pandas as pd
 import sys
 from numpy import linalg as la
 import patsy
+import numba
 import pdb
 
 def design_mat(model, batch_levels):
@@ -173,8 +174,8 @@ def combat(adata, key = 'batch', inplace = True):
         # temp stores our estimates for the batch effect parameters.
         # temp[0] is the additive batch effect
         # temp[1] is the multiplicative batch effect
-        temp = _it_sol(s_data[batch_idxs], gamma_hat[i],
-            delta_hat[i], gamma_bar[i], t2[i], a_prior[i], b_prior[i])
+        temp = _it_sol(s_data[batch_idxs].values, gamma_hat[i],
+            delta_hat[i].values, gamma_bar[i], t2[i], a_prior[i], b_prior[i])
 
         gamma_star.append(temp[0])
         delta_star.append(temp[1])
@@ -206,7 +207,7 @@ def combat(adata, key = 'batch', inplace = True):
     else:
         return bayesdata.values.transpose()
  
-    
+@numba.jit
 def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     """
     Iteratively compute the conditional posterior means for gamma and delta.
@@ -245,16 +246,17 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     # we place a normally distributed prior on gamma and and inverse gamma prior on delta
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
-        g_new = postmean(g_hat, g_bar, n, d_old, t2)
-        sum2 = s_data - g_new.values.reshape((g_new.shape[0], 1)) @ np.ones((1, s_data.shape[1]))
+        g_new = (t2*n*g_hat + d_old*g_bar) / (t2*n + d_old)
+        sum2 = s_data - g_new.reshape((g_new.shape[0], 1)) @ np.ones((1, s_data.shape[1]))
         sum2 = sum2 ** 2
         sum2 = sum2.sum(axis = 1)
-        d_new = postvar(sum2, n, a, b)
+        d_new = (0.5*sum2 + b) / (n/2.0 + a-1.0)
        
         change = max((abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max())
         g_old = g_new #.copy()
         d_old = d_new #.copy()
         count = count + 1
+
     adjust = (g_new, d_new)
     return adjust 
 
@@ -269,13 +271,3 @@ def bprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
     return (m*s2+m**3)/s2
-
-
-def postmean(g_hat, g_bar, n, d_star, t2):
-    return (t2*n*g_hat + d_star*g_bar) / (t2*n + d_star)
-
-
-def postvar(sum2, n, a, b):
-    return (0.5*sum2 + b) / (n/2.0 + a-1.0)
-
-
