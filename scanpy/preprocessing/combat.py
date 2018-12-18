@@ -96,8 +96,6 @@ def stand_data(model, data):
         ((data - stand_mean) / np.dot(np.sqrt(var_pooled), np.ones((1, int(n_array))))))
     s_data = pd.DataFrame(s_data, index=data.index, columns=data.columns)
     
-    pdb.set_trace()
-    
     return s_data, design, var_pooled, stand_mean
 
 
@@ -176,7 +174,7 @@ def combat(adata, key = 'batch', inplace = True):
         # temp[0] is the additive batch effect
         # temp[1] is the multiplicative batch effect
         temp = _it_sol(s_data[batch_idxs], gamma_hat[i],
-                      delta_hat[i], gamma_bar[i], t2[i], a_prior[i], b_prior[i])
+            delta_hat[i], gamma_bar[i], t2[i], a_prior[i], b_prior[i])
 
         gamma_star.append(temp[0])
         delta_star.append(temp[1])
@@ -248,7 +246,9 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
         g_new = postmean(g_hat, g_bar, n, d_old, t2)
-        sum2 = ((s_data - np.dot(g_new.values.reshape((g_new.shape[0], 1)), np.ones((1, s_data.shape[1])))) ** 2).sum(axis=1)
+        sum2 = s_data - g_new.values.reshape((g_new.shape[0], 1)) @ np.ones((1, s_data.shape[1]))
+        sum2 = sum2 ** 2
+        sum2 = sum2.sum(axis = 1)
         d_new = postvar(sum2, n, a, b)
        
         change = max((abs(g_new - g_old) / g_old).max(), (abs(d_new - d_old) / d_old).max())
