@@ -1,11 +1,16 @@
 from scipy.sparse import csr_matrix
+from sklearn.utils.sparsefuncs_fast import csr_mean_variance_axis0
 import numpy as np
 
 #need to pass issparse check
 class CentSparse(csr_matrix):
-    def __init__(self, A, m=None):
+    def __init__(self, A, m=None, var=None):
         self.A = A
-        self.m = A.mean(0) if m is None else m
+        if m is not None:
+            self.m = m
+            self.var = var
+        else:
+            self.m, self.var = csr_mean_variance_axis0(A) #needs sklearn version 0.20.1 to be efficient
         self.c_r = self.m.shape[0] == 1
     def __mul__(self, B):
         AB = self.A * B
