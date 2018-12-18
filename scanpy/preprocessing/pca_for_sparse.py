@@ -1,7 +1,8 @@
 from scipy.sparse import csr_matrix
 import numpy as np
 
-class CentSparse(sp.sparse.csr_matrix):
+#need to pass issparse check
+class CentSparse(csr_matrix):
     def __init__(self, A, m=None):
         self.A = A
         self.m = A.mean(0) if m is None else m
@@ -16,6 +17,10 @@ class CentSparse(sp.sparse.csr_matrix):
         return BA - Bm
     def toarray(self):
         return self.A - self.m
+    def astype(self, dtype):
+        if dtype == self.dtype:
+            return self
+        return CentSparse(self.A.astype(dtype), self.m.astype(dtype))
     @property
     def dtype(self):
         return self.A.dtype
@@ -25,3 +30,9 @@ class CentSparse(sp.sparse.csr_matrix):
     @property
     def T(self):
         return CentSparse(self.A.T, self.m.T)
+    @property
+    def data(self):
+        return self.A.data
+    @property
+    def indices(self):
+        return self.A.indices

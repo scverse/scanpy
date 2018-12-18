@@ -483,18 +483,16 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
-        if zero_center is None:
-            zero_center = not issparse(adata_comp.X)
         if zero_center:
-            from sklearn.decomposition import PCA
             if issparse(adata_comp.X):
-                logg.msg('    as `zero_center=True`, '
-                       'sparse input is densified and may '
-                       'lead to huge memory consumption', v=4)
-                X = adata_comp.X.toarray()  # Copying the whole adata_comp.X here, could cause memory problems
+                from sklearn.decomposition import TruncatedSVD
+                from .pca_for_sparse import CentSparse
+                X = CentSparse(adata_comp.X)
+                pca_ = TruncatedSVD(n_components=n_comps, algorithm='randomized', random_state=random_state)
             else:
+                from sklearn.decomposition import PCA
                 X = adata_comp.X
-            pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
+                pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
             logg.msg('    without zero-centering: \n'
@@ -666,7 +664,7 @@ def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
     """
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
-        
+
     counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
     gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
     if issparse(X): gene_subset = gene_subset.A1
@@ -954,9 +952,9 @@ def downsample_cell(col: np.array, target: int, random_state: int=0,
                     replace: bool=True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
-    
+
     This is an internal function and has some restrictions:
-    
+
     * `dtype` of col must be an integer (i.e. satisfy issubclass(col.dtype.type, np.integer))
     * total counts in cell must be less than target
     """
