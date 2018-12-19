@@ -1302,7 +1302,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
+            color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1323,6 +1323,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     {common_plot_args}
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
+    dot_max : `float`
+    dot_min : `float`
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
@@ -1447,8 +1449,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     axs3 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 4], wspace=wspace,
                                             height_ratios=[size_legend_height / height,
                                                            (height - size_legend_height) / height])
-    size_legend = fig.add_subplot(axs3[0])
-
     # make scatter plot in which
     # x = var_names
     # y = groupby category
@@ -1461,9 +1461,23 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     frac = fraction_obs.values.flatten()
     mean_flat = mean_obs.values.flatten()
     cmap = pl.get_cmap(color_map)
+    if dot_max is None:
+        dot_max = np.ceil(max(frac) * 10) / 10
+    else:
+        if dot_max < 0 or dot_max > 1:
+            raise ValueError("`dot_max` value has to be between 0 and 1")
+    if dot_min is None:
+        dot_min = 0
+    else:
+        if dot_min < 0 or dot_min > 1:
+            raise ValueError("`dot_min` value has to be between 0 and 1")
 
-    size = (frac * 10) ** 2
+    # clip frac between dot_min and  dot_max
+    frac = np.clip(frac, 0, dot_max)
 
+    # frac = np.clip(frac, dot_min, dot_max)
+
+    size = (dot_min * 10) + (frac * 10/dot_max) ** 2
     import matplotlib.colors
 
     normalize = matplotlib.colors.Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
@@ -1502,9 +1516,19 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
 
     # plot size bar
-    fracs_legend = np.array([0.25, 0.50, 0.75, 1])
-    size = (fracs_legend * 10) ** 2
+    diff = dot_max - dot_min
+    if 0.3 < diff <= 0.6:
+        step = 0.1
+    elif diff <= 0.3:
+        step = 0.05
+    else:
+        step = 0.2
+    fracs_legend = np.arange(dot_min + 0.1, dot_max + 0.1, step)
+    size = (dot_min * 10) + (fracs_legend * 10/dot_max) ** 2
     color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
+
+    size_legend = fig.add_subplot(axs3[0])
+
     size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
     size_legend.set_yticks(range(len(size)))
     size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legend])
