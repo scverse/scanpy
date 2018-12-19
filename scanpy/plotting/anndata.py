@@ -1756,8 +1756,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     Examples
     --------
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...               'bulk_labels', dendrogram=True)
+    >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...                  'bulk_labels', dendrogram=True)
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
