@@ -1479,7 +1479,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         if dot_min < 0 or dot_min > 1:
             raise ValueError("`dot_min` value has to be between 0 and 1")
 
-    if dot_min != 0 or dot_max != 0:
+    if dot_min != 0 or dot_max != 1:
         # clip frac between dot_min and  dot_max
         frac = np.clip(frac, dot_min, dot_max)
         old_range = dot_max - dot_min
@@ -1523,7 +1523,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     import matplotlib.colorbar
     matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
 
-    # plot size bar
+    # for the dot size legend, use step between dot_max and dot_min
+    # based on how different they are.
     diff = dot_max - dot_min
     if 0.3 < diff <= 0.6:
         step = 0.1
@@ -1534,13 +1535,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     # a descending range that is afterwards inverted is used
     # to guarantee that dot_max is in the legend.
     fracs_legends = np.arange(dot_max, dot_min, step * -1)[::-1]
-    if dot_min != 0 or dot_max != 0:
+    if dot_min != 0 or dot_max != 1:
         fracs_values = ((fracs_legends - dot_min) / old_range)
     else:
         fracs_values = fracs_legends
     size = (fracs_values * 10) ** 2
     color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
 
+    # plot size bar
     size_legend = fig.add_subplot(axs3[0])
 
     size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
