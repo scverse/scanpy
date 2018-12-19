@@ -1323,8 +1323,15 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     {common_plot_args}
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
-    dot_max : `float`
-    dot_min : `float`
+    dot_max : `float` optional (default: `None`)
+        If none, the maximum dot size is set to the maximum fraction value found (e.g. 0.6). If given,
+        the value should be a number between 0 and 1. All fractions larger than dot_max are clipped to
+        this value.
+    dot_min : `float` optional (default: `None`)
+        If none, the minimum dot size is set to 0. If given,
+        the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
+        this value.
+
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
@@ -1472,17 +1479,18 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         if dot_min < 0 or dot_min > 1:
             raise ValueError("`dot_min` value has to be between 0 and 1")
 
-    # clip frac between dot_min and  dot_max
-    frac = np.clip(frac, 0, dot_max)
+    if dot_min != 0 or dot_max != 0:
+        # clip frac between dot_min and  dot_max
+        frac = np.clip(frac, dot_min, dot_max)
+        old_range = dot_max - dot_min
+        # re-scale frac between 0 and 1
+        frac = ((frac - dot_min) / old_range)
 
-    # frac = np.clip(frac, dot_min, dot_max)
-
-    size = (dot_min * 10) + (frac * 10/dot_max) ** 2
+    size = (frac * 10) ** 2
     import matplotlib.colors
 
     normalize = matplotlib.colors.Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
     colors = cmap(normalize(mean_flat))
-
     dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwds)
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
@@ -1523,15 +1531,21 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         step = 0.05
     else:
         step = 0.2
-    fracs_legend = np.arange(dot_min + 0.1, dot_max + 0.1, step)
-    size = (dot_min * 10) + (fracs_legend * 10/dot_max) ** 2
+    # a descending range that is afterwards inverted is used
+    # to guarantee that dot_max is in the legend.
+    fracs_legends = np.arange(dot_max, dot_min, step * -1)[::-1]
+    if dot_min != 0 or dot_max != 0:
+        fracs_values = ((fracs_legends - dot_min) / old_range)
+    else:
+        fracs_values = fracs_legends
+    size = (fracs_values * 10) ** 2
     color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
 
     size_legend = fig.add_subplot(axs3[0])
 
     size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
     size_legend.set_yticks(range(len(size)))
-    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legend])
+    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legends])
 
     size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
 
