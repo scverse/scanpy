@@ -60,6 +60,17 @@ def test_dotplot():
                   num_categories=7, figsize=(7, 2.5), show=False)
     save_and_compare_images('master_dotplot2', tolerance=15)
 
+    # test dotplot dot_min, dot_max, color_map, and var_groups
+    pbmc = sc.datasets.pbmc68k_reduced()
+    marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ', 'LGALS3', 'S100A8', 'GNLY', 'NKG7', 'KLRB1',
+                    'FCGR3A', 'FCER1A', 'CST3']
+    sc.pl.dotplot(pbmc, marker_genes, groupby='louvain',
+                  dot_max=0.7, dot_min=0.1, color_map='hot_r',
+                  var_group_positions=[(0, 1), (11, 12)],
+                  var_group_labels=['B cells', 'dendritic'],
+                  figsize=(7, 2.5), dendrogram=True, show=False)
+    save_and_compare_images('master_dotplot3', tolerance=15)
+
 
 def test_matrixplot():
     adata = sc.datasets.krumsiek11()
