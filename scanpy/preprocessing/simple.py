@@ -483,15 +483,13 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
+        X = adata_comp.X
         if zero_center:
-            if issparse(adata_comp.X):
-                from sklearn.decomposition import TruncatedSVD
-                from .pca_for_sparse import CentSparse
-                X = CentSparse(adata_comp.X)
-                pca_ = TruncatedSVD(n_components=n_comps, algorithm='randomized', random_state=random_state)
+            if issparse(X):
+                from .pca_for_sparse import SparseDataPCA
+                pca_ = SparseDataPCA(n_components=n_comps, random_state=random_state)
             else:
                 from sklearn.decomposition import PCA
-                X = adata_comp.X
                 pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
@@ -500,7 +498,6 @@ def pca(
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
-            X = adata_comp.X
         X_pca = pca_.fit_transform(X)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
