@@ -355,6 +355,7 @@ def pca(
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'auto',
+    n_iter: str = 'auto',
     random_state: int = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
@@ -389,10 +390,16 @@ def pca(
 
         ``'randomized'``
           for the randomized algorithm due to Halko (2009).
+          Always used when ``data.X`` is sparse and ``zero_center`` is `True`
 
         ``'auto'`` (the default)
           chooses automatically depending on the size of the problem.
-
+    n_iter
+        Number of iterations if ``svd_solver`` ``'randomized'`` is used.
+        Not used by ``'arpack'``. When ``'auto'``, it is set to 4,
+        unless n_components is small (< .1 * min(X.shape)),
+        n_iter in which case is set to 7.
+        This improves precision with few components.
     random_state
         Change to use different initial states for the optimization.
     return_info
@@ -487,17 +494,20 @@ def pca(
         if zero_center:
             if issparse(X):
                 from .pca_for_sparse import SparseDataPCA
-                pca_ = SparseDataPCA(n_components=n_comps, random_state=random_state)
+                pca_ = SparseDataPCA(n_components=n_comps, n_iter=n_iter, random_state=random_state)
             else:
                 from sklearn.decomposition import PCA
-                pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
+                pca_ = PCA(n_components=n_comps, svd_solver=svd_solver,
+                           iterated_power=n_iter, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
             logg.msg('    without zero-centering: \n'
                    '    the explained variance does not correspond to the exact statistical defintion\n'
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
-            pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
+            svd_solver = 'randomized' if svd_solver == 'auto' else svd_solver
+            pca_ = TruncatedSVD(n_components=n_comps, algorithm=svd_solver,
+                                n_iter=n_iter, random_state=random_state)
         X_pca = pca_.fit_transform(X)
 
     if X_pca.dtype.descr != np.dtype(dtype).descr: X_pca = X_pca.astype(dtype)
