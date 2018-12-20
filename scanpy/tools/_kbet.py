@@ -63,19 +63,23 @@ def kbet(
     batch_ids = pd.Categorical(adata.obs[batch_key])
     # dof = len(batch_ids.unique()) - 1
 
-    freqs_all = batch_ids.value_counts().sort_index() / len(batch_ids)
+    mask = adjacency != 0
+    # TODO: trim mask to neighborhood size
+
+    freqs_exp = batch_ids.value_counts().sort_index() / len(batch_ids) * mask[0, :].sum()
     freqs_neighbors = np.ndarray((n_obs, len(batch_ids.categories)))
 
-    mask = adjacency != 0
     # cat_2d = np.tile(batch_ids, (n_obs, 1))
     # mapped = np.where(mask.A, cat_2d, None)
     for obs_i in range(n_obs):
-        row_idx = mask[:, obs_i].A.flatten()
-        freqs_obs = batch_ids[row_idx].value_counts().sort_index() / row_idx.sum()
+        row_idx = mask[obs_i, :].A.flatten()
+        row_idx[obs_i] = True
+        freqs_obs = batch_ids[row_idx].value_counts().sort_index()  # / row_idx.sum()
         freqs_neighbors[obs_i, :] = freqs_obs
 
-    _, p_vals_uncor = chisquare(freqs_neighbors, freqs_all, axis=1)
-    rejected, p_vals, *_ = multipletests(p_vals_uncor, alpha)
+    _, p_vals_uncor = chisquare(freqs_neighbors, freqs_exp, axis=1)
+    # alpha is actually not used. TODO: use two-stage?
+    rejected, p_vals, *_ = multipletests(p_vals_uncor, alpha, 'fdr_bh')
     rate_rej = rejected.sum() / len(p_vals)
 
     rate_acc = 1 - rate_rej

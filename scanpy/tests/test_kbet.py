@@ -28,6 +28,15 @@ def test_kbet_basic(adata_kbet_sim):
     assert acceptance > 1 - alpha
 
 
+def test_kbet_with_adj(adata_kbet_sim):
+    import numpy as np
+    from scipy import sparse
+    adj = sparse.csr_matrix(np.loadtxt(HERE / '_data' / 'adj.tsv', delimiter='\t'))
+    alpha = .05
+    acceptance, _ = sc.tl.kbet(adata_kbet_sim, alpha=alpha, adjacency=adj)
+    assert acceptance > 1 - alpha
+
+
 def test_kbet_heuristic(adata_kbet_sim):
     sc.pp.pca(adata_kbet_sim)
     sc.pp.kbet_neighbors(adata_kbet_sim)
