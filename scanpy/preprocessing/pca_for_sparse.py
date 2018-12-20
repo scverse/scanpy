@@ -4,6 +4,7 @@ from packaging import version
 from scipy.sparse import csr_matrix
 from sklearn import __version__ as sklearn_version
 from sklearn.utils import check_random_state
+from sklearn.utils.extmath import randomized_svd
 
 # In older versions sklearn csr_mean_variance_axis0 always copies the whole sparse matrix
 # if its dtype is float64
