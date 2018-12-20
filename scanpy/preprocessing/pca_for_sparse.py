@@ -43,7 +43,7 @@ class CentSparse(csr_matrix):
         return CentSparse(self.A.T, self.m.T)
 
 class SparseDataPCA:
-    def __init__(self, n_components=2, n_iter=5, random_state=None):
+    def __init__(self, n_components=2, n_iter='auto', random_state=None):
         self.n_components = n_components
         self.n_iter = n_iter
         self.random_state = random_state
@@ -60,7 +60,8 @@ class SparseDataPCA:
         if k >= n_features:
             raise ValueError('n_components must be < n_features;'
                              ' got %d >= %d' % (k, n_features))
-        U, Sigma, VT = randomized_svd(C, k, n_iter=self.n_iter, random_state=r_s)
+        U, Sigma, VT = randomized_svd(C, k, n_iter=self.n_iter,
+                                      flip_sign=True, random_state=r_s)
         self.components_ = VT
         X_transformed = U * Sigma
         self.explained_variance_ = exp_var = np.var(X_transformed, axis=0)
