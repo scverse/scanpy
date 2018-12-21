@@ -61,35 +61,29 @@ def kbet(
 
     n_obs = adata.n_obs
     batch_ids = pd.Categorical(adata.obs[batch_key])
-    # dof = len(batch_ids.unique()) - 1
 
-    mask = adjacency != 0
-    # TODO: trim mask to neighborhood size
+    mask, n_neighbors = _get_asym_mask(adjacency)
+    mask.setdiag(True)
+    n_neighbors += 1
 
-    freqs_exp = batch_ids.value_counts().sort_index() / len(batch_ids) * mask[0, :].sum()
+    freqs_exp = batch_ids.value_counts().sort_index() / len(batch_ids) * n_neighbors
     freqs_neighbors = np.ndarray((n_obs, len(batch_ids.categories)))
 
-    # cat_2d = np.tile(batch_ids, (n_obs, 1))
-    # mapped = np.where(mask.A, cat_2d, None)
     for obs_i in range(n_obs):
         row_idx = mask[obs_i, :].A.flatten()
-        row_idx[obs_i] = True
-        freqs_obs = batch_ids[row_idx].value_counts().sort_index()  # / row_idx.sum()
+        freqs_obs = batch_ids[row_idx].value_counts().sort_index()
         freqs_neighbors[obs_i, :] = freqs_obs
 
     _, p_vals_uncor = chisquare(freqs_neighbors, freqs_exp, axis=1)
-    # alpha is actually not used. TODO: use two-stage?
-    rejected, p_vals, *_ = multipletests(p_vals_uncor, alpha, 'fdr_bh')
+    rejected, p_vals, *_ = multipletests(p_vals_uncor, alpha, 'fdr_tsbh')
     rate_rej = rejected.sum() / len(p_vals)
 
     rate_acc = 1 - rate_rej
     if copy:
-        ad_ret = adata.copy()
-        ad_ret.uns['kbet'] = rate_acc
-        ad_ret.obs['kbet'] = p_vals
-        return ad_ret
-    else:
-        return rate_acc, p_vals
+        adata = adata.copy()
+    adata.uns['kbet'] = rate_acc
+    adata.obs['kbet'] = p_vals
+    return adata if copy else rate_acc, p_vals
 
 
 def kbet_neighbors(
@@ -161,3 +155,21 @@ def _kbet_step(k: int, adata: AnnData, batch_key: str):
     neighs.compute_neighbors(n_neighbors=int(k))
     acc, _ = kbet(adata, batch_key, adjacency=neighs.connectivities)
     return acc
+
+
+def _get_asym_mask(adj: spmatrix) -> Tuple[spmatrix, int]:
+    """
+    Get asymmetric mask with the same number of items in each row.
+    the diagonal is left unset and therefore missing from n_neighbors
+    """
+    mask = adj != 0
+    mask.setdiag(False)  # don’t include self with neighbors
+    n_neighbors = mask.sum(axis=1).min()
+    for r in range(mask.shape[0]):
+        row = adj[r, :]
+        vals = np.asarray(row.data)
+        vals.sort()
+        max = vals[n_neighbors-1]
+        mask[r, (row > max).A.flatten()] = False
+    assert np.all(mask.sum(axis=1) == n_neighbors), mask.sum(axis=1)
+    return mask, n_neighbors
