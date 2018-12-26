@@ -1302,7 +1302,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            color_map='Reds', figsize=None, dendrogram=False, var_group_positions=None,
+            color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1323,6 +1323,15 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     {common_plot_args}
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
+    dot_max : `float` optional (default: `None`)
+        If none, the maximum dot size is set to the maximum fraction value found (e.g. 0.6). If given,
+        the value should be a number between 0 and 1. All fractions larger than dot_max are clipped to
+        this value.
+    dot_min : `float` optional (default: `None`)
+        If none, the minimum dot size is set to 0. If given,
+        the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
+        this value.
+
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.scatter`.
@@ -1447,8 +1456,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     axs3 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 4], wspace=wspace,
                                             height_ratios=[size_legend_height / height,
                                                            (height - size_legend_height) / height])
-    size_legend = fig.add_subplot(axs3[0])
-
     # make scatter plot in which
     # x = var_names
     # y = groupby category
@@ -1461,14 +1468,29 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     frac = fraction_obs.values.flatten()
     mean_flat = mean_obs.values.flatten()
     cmap = pl.get_cmap(color_map)
+    if dot_max is None:
+        dot_max = np.ceil(max(frac) * 10) / 10
+    else:
+        if dot_max < 0 or dot_max > 1:
+            raise ValueError("`dot_max` value has to be between 0 and 1")
+    if dot_min is None:
+        dot_min = 0
+    else:
+        if dot_min < 0 or dot_min > 1:
+            raise ValueError("`dot_min` value has to be between 0 and 1")
+
+    if dot_min != 0 or dot_max != 1:
+        # clip frac between dot_min and  dot_max
+        frac = np.clip(frac, dot_min, dot_max)
+        old_range = dot_max - dot_min
+        # re-scale frac between 0 and 1
+        frac = ((frac - dot_min) / old_range)
 
     size = (frac * 10) ** 2
-
     import matplotlib.colors
 
     normalize = matplotlib.colors.Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
     colors = cmap(normalize(mean_flat))
-
     dot_ax.scatter(x, y, color=colors, s=size, cmap=cmap, norm=None, edgecolor='none', **kwds)
     y_ticks = range(mean_obs.shape[0])
     dot_ax.set_yticks(y_ticks)
@@ -1501,13 +1523,31 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     import matplotlib.colorbar
     matplotlib.colorbar.ColorbarBase(color_legend, cmap=cmap, norm=normalize)
 
-    # plot size bar
-    fracs_legend = np.array([0.25, 0.50, 0.75, 1])
-    size = (fracs_legend * 10) ** 2
+    # for the dot size legend, use step between dot_max and dot_min
+    # based on how different they are.
+    diff = dot_max - dot_min
+    if 0.3 < diff <= 0.6:
+        step = 0.1
+    elif diff <= 0.3:
+        step = 0.05
+    else:
+        step = 0.2
+    # a descending range that is afterwards inverted is used
+    # to guarantee that dot_max is in the legend.
+    fracs_legends = np.arange(dot_max, dot_min, step * -1)[::-1]
+    if dot_min != 0 or dot_max != 1:
+        fracs_values = ((fracs_legends - dot_min) / old_range)
+    else:
+        fracs_values = fracs_legends
+    size = (fracs_values * 10) ** 2
     color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
+
+    # plot size bar
+    size_legend = fig.add_subplot(axs3[0])
+
     size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
     size_legend.set_yticks(range(len(size)))
-    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legend])
+    size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legends])
 
     size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
 
@@ -1756,8 +1796,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     Examples
     --------
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...               'bulk_labels', dendrogram=True)
+    >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
+    ...                  'bulk_labels', dendrogram=True)
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
