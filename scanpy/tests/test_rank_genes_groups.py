@@ -7,7 +7,7 @@ from scipy import sparse as sp
 from numpy.random import negative_binomial, binomial, seed
 
 from anndata import AnnData
-from scanpy.api.tl import rank_genes_groups
+from scanpy.tools import rank_genes_groups
 
 
 HERE = Path(__file__).parent / Path('_data/')
