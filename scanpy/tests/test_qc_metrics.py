@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import scanpy.api as sc
+import scanpy as sc
 import scanpy
 from scipy import sparse
 

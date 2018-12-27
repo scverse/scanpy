@@ -1,6 +1,6 @@
 import numpy as np
 from anndata import AnnData
-from scanpy.api import Neighbors
+from scanpy import Neighbors
 import pytest
 
 # the input data

@@ -1,4 +1,4 @@
-import scanpy.api as sc
+import scanpy as sc
 import os
 
 ROOT = os.path.dirname(os.path.abspath(__file__))

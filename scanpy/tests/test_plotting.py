@@ -6,7 +6,7 @@ from matplotlib.testing.compare import compare_images
 
 import os.path
 
-import scanpy.api as sc
+import scanpy as sc
 
 ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images/'
 
