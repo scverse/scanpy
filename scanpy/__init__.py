@@ -1,8 +1,3 @@
-"""Scanpy - Single-Cell Analysis in Python
-
-See scanpy.api for the API.
-"""
-
 import sys
 import warnings
 from distutils.version import LooseVersion
@@ -29,3 +24,8 @@ if anndata.__version__ != '0+unknown':
         raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
                           'Run `pip install anndata -U --no-deps`.'
                           .format(__version__, anndata.__version__))
+
+
+from . import tools as tl
+from . import preprocessing as pp
+from . import plotting as pl
