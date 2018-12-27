@@ -29,3 +29,17 @@ if anndata.__version__ != '0+unknown':
 from . import tools as tl
 from . import preprocessing as pp
 from . import plotting as pl
+
+from anndata import AnnData
+from .neighbors import Neighbors
+
+from anndata import read as read_h5ad
+from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
+
+from .readwrite import read, read_10x_h5, read_10x_mtx, write, read_params, write_params
+from .settings import set_figure_params
+
+
+import sys
+utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
+del sys
