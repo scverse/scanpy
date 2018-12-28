@@ -6,6 +6,14 @@
     font-size:60%;
 }
 
+.rst-content dl:not(.docutils) tt.xref, .rst-content dl:not(.docutils) code.xref {
+    font-weight: bold;  /* restore bold for hyperref literals */
+}
+
+.rst-content dl:not(.docutils) tt, .rst-content dl:not(.docutils) code {
+    font-weight: normal;  /* ovewrite bold for default literals */
+}
+
 .rst-content dl:not(.docutils) dl dt {
     /* mimick numpydoc’s blockquote style */
     font-weight: normal;
