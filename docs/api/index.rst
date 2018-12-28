@@ -1,12 +1,28 @@
-.. automodule:: scanpy.api
+.. automodule:: scanpy
 
 API
 ===
 
 
-Import Scanpy's high-level API as::
+Import Scanpy as::
 
-   import scanpy.api as sc
+   import scanpy as sc
+
+
+Submodules
+----------
+
+.. note::
+
+   Wrappers to external functionality are found in :class:`scanpy.external`. Previously, both core and external functionality were available through :class:`scanpy.api` (deprecated since 1.3.7).
+
+.. autosummary::
+   :toctree: .
+
+   external
+   api
+   plotting
+
 
 Preprocessing: PP
 ------------------
@@ -49,27 +65,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that a simple batch correction method is available via :func:`pp.regress_out`.
-
-``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
-
-.. autosummary::
-   :toctree: .
-
-   pp.bbknn
-   pp.mnn_correct
-
-Imputation
-~~~~~~~~~~
-
-Note that the fundamental limitations of imputation are still under `debate
-<https://github.com/theislab/scanpy/issues/189>`__.
-
-.. autosummary::
-   :toctree: .
-
-   pp.dca
-   pp.magic
+Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout the :class:`scanpy.external` for more.
 
 Neighbors
 ~~~~~~~~~
@@ -94,7 +90,6 @@ Embeddings
    tl.umap
    tl.draw_graph
    tl.diffmap
-   tl.phate
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,8 +118,6 @@ Gene scores, Cell cycle
 
    tl.score_genes
    tl.score_genes_cell_cycle
-   tl.sandbag
-   tl.cyclone
 
 Simulations
 ~~~~~~~~~~~
@@ -266,11 +259,3 @@ Datasets
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
-
-Exporting
----------
-
-.. autosummary::
-   :toctree: .
-
-   export_to.spring_project

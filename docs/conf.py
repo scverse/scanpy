@@ -178,7 +178,10 @@ def get_obj_module(qualname):
     # retrieve object and find original module name
     if classname:
         cls = getattr(sys.modules[modname], classname)
-        modname = cls.__module__
+        try:
+            modname = cls.__module__
+        except AttributeError as e:
+            print(e)
         obj = getattr(cls, attrname) if attrname else cls
     else:
         obj = None
