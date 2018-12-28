@@ -20,10 +20,10 @@ from .qc import highest_expr_genes
 
 
 __doc__ = """\
-.. automodule:: scanpy
-
 Plotting: PL
 ============
+
+.. automodule:: scanpy
 
 .. note::
 

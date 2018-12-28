@@ -8,20 +8,9 @@ Import Scanpy as::
 
    import scanpy as sc
 
-
-Submodules
-----------
-
 .. note::
 
    Wrappers to external functionality are found in :class:`scanpy.external`. Previously, both core and external functionality were available through :class:`scanpy.api` (deprecated since 1.3.7).
-
-.. autosummary::
-   :toctree: .
-
-   external
-   api
-   plotting
 
 
 Preprocessing: PP
@@ -29,12 +18,13 @@ Preprocessing: PP
 
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
+Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
+
 Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
-For visual quality control, see :func:`~scanpy.api.pl.highest_expr_gens` and
-:func:`~scanpy.api.pl.filter_genes_dispersion` in the :doc:`plotting API
-<plotting>`.
+For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
+:func:`~scanpy.pl.filter_genes_dispersion` in :class:`scanpy.plotting`.
 
 .. autosummary::
    :toctree: .
@@ -65,7 +55,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout the :class:`scanpy.external` for more.
+Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :class:`scanpy.external` for more.
 
 Neighbors
 ~~~~~~~~~
@@ -78,6 +68,8 @@ Neighbors
 
 Tools: TL
 ----------
+
+Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
 Embeddings
 ~~~~~~~~~~
@@ -131,9 +123,7 @@ Simulations
 Plotting: PL
 ------------
 
-The plotting :doc:`plotting API <plotting>` largely parallels the ``tl.*`` and
-``pp.*`` functions. For most tools and for some preprocessing functions, you'll
-find a plotting function with the same name.
+The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions. For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
 .. toctree::
    :hidden:
@@ -259,3 +249,14 @@ Datasets
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
+
+
+Further Modules
+---------------
+
+.. autosummary::
+   :toctree: .
+
+   external
+   api
+   plotting
