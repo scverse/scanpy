@@ -37,17 +37,18 @@ from ._deprecated.highly_variable_genes import filter_genes_dispersion
 
 
 def filter_cells(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    data: AnnData,
     min_counts: Optional[int] = None,
     min_genes:  Optional[int] = None,
     max_counts: Optional[int] = None,
     max_genes:  Optional[int] = None,
+    inplace: bool = True,
     copy: bool = False,
-) -> Union[AnnData, None, Tuple[np.ndarray, np.ndarray]]:
+):
     """Filter cell outliers based on counts and numbers of genes expressed.
 
-    For instance, only keep cells with at least ``min_counts`` counts or
-    ``min_genes`` genes expressed. This is to filter measurement outliers,
+    For instance, only keep cells with at least `min_counts` counts or
+    `min_genes` genes expressed. This is to filter measurement outliers,
     i.e. “unreliable” observations.
 
     Only provide one of the optional parameters ``min_counts``, ``min_genes``,
@@ -66,27 +67,21 @@ def filter_cells(
         Maximum number of counts required for a cell to pass filtering.
     max_genes
         Maximum number of genes expressed required for a cell to pass filtering.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
+    inplace
+        Perform computation inplace or return result.
 
     Returns
     -------
-    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
-        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
-        object with ``n_genes`` or ``n_counts`` added to its ``.obs``.
+    `tuple`, `None`
+        Depending on `inplace`, returns the following arrays or directly subsets
+        and annotates the data matrix
 
-        If ``copy=False`` is set, ``data`` is filtered and above fields
-        are added to ``data.obs``. (``None`` is returned)
-    ``cell_subset``, ``number_per_cell``
-        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
-
-        cell_subset (:class:`~numpy.ndarray`)
-            Boolean index mask that does filtering. ``True`` means that the
-            cell is kept. ``False`` means the cell is removed.
-
-        number_per_cell (:class:`~numpy.ndarray`)
-            Either ``n_counts`` or ``n_genes`` per cell.
+        cells_subset : :class:`~numpy.ndarray`
+            Boolean index mask that does filtering. `True` means that the
+            cell is kept. `False` means the cell is removed.
+        number_per_cell : :class:`~numpy.ndarray`
+            Depending on what was tresholded (`counts` or `genes`), the array stores
+            `n_counts` or `n_cells` per gene.
 
     Examples
     --------
@@ -118,17 +113,20 @@ def filter_cells(
     >>> adata.obs['n_genes'].min()
     3
     """
-    if min_genes is not None and min_counts is not None:
-        raise ValueError('Either provide min_counts or min_genes, but not both.')
-    if min_genes is not None and max_genes is not None:
-        raise ValueError('Either provide min_genes or max_genes, but not both.')
-    if min_counts is not None and max_counts is not None:
-        raise ValueError('Either provide min_counts or max_counts, but not both.')
-    if min_genes is None and min_counts is None and max_genes is None and max_counts is None:
-        raise ValueError('Provide one of min_counts, min_genes, max_counts or max_genes.')
+    if copy:
+       logg.warn('`copy` is deprecated, use `inplace` instead.')
+    n_given_options = sum(
+        option is not None for option in
+        [min_genes, min_counts, max_genes, max_counts])
+    if n_given_options != 1:
+        raise ValueError(
+            'Only provide one of the optional parameters `min_counts`,'
+            '`min_genes`, `max_counts`, `max_genes` per call.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes))
+        if not inplace:
+            return gene_subset, number
         if min_genes is None and max_genes is None: adata.obs['n_counts'] = number
         else: adata.obs['n_genes'] = number
         adata._inplace_subset_obs(cell_subset)
@@ -159,11 +157,12 @@ def filter_cells(
 
 
 def filter_genes(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    data: AnnData,
     min_counts: Optional[int] = None,
     min_cells:  Optional[int] = None,
     max_counts: Optional[int] = None,
     max_cells:  Optional[int] = None,
+    inplace: bool = True,
     copy: bool = False,
 ):
     """Filter genes based on number of cells or counts.
@@ -178,7 +177,7 @@ def filter_genes(
     Parameters
     ----------
     data
-        The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        An annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_counts
         Minimum number of counts required for a gene to pass filtering.
@@ -188,28 +187,24 @@ def filter_genes(
         Maximum number of counts required for a gene to pass filtering.
     max_cells
         Maximum number of cells expressed required for a gene to pass filtering.
-    copy
-        If an :class:`~anndata.AnnData` is passed, determines whether a copy
-        is returned.
+    inplace
+        Perform computation inplace or return result.
 
     Returns
     -------
-    ``adata`` or ``None`` (if ``data`` is an :class:`~anndata.AnnData` object)
-        If ``copy=True`` is set, returns a filtered :class:`~anndata.AnnData`
-        object with ``n_cells`` or ``n_counts`` added to its ``.var``.
+    `tuple`, `None`
+        Depending on `inplace`, returns the following arrays or directly subsets
+        and annotates the data matrix
 
-        If ``copy=False`` is set, ``data`` is filtered and above fields
-        are added to ``data.var``. (``None`` is returned)
-    ``gene_subset``, ``number_per_gene``
-        If ``data`` is an :class:`~numpy.ndarray`, a 2-tuple is returned:
-
-        gene_subset (:class:`~numpy.ndarray`)
-            Boolean index mask that does filtering. ``True`` means that the
-            gene is kept. ``False`` means the gene is removed.
-
-        number_per_gene (:class:`~numpy.ndarray`)
-            Either ``n_counts`` or ``n_cells`` per gene.
+        gene_subset : :class:`~numpy.ndarray`
+            Boolean index mask that does filtering. `True` means that the
+            gene is kept. `False` means the gene is removed.
+        number_per_gene : :class:`~numpy.ndarray`
+            Depending on what was tresholded (`counts` or `cells`), the array stores
+            `n_counts` or `n_cells` per gene.
     """
+    if copy:
+       logg.warn('`copy` is deprecated, use `inplace` instead.') 
     n_given_options = sum(
         option is not None for option in
         [min_cells, min_counts, max_cells, max_counts])
@@ -220,9 +215,12 @@ def filter_genes(
 
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        gene_subset, number = materialize_as_ndarray(filter_genes(adata.X, min_cells=min_cells,
-                                           min_counts=min_counts, max_cells=max_cells,
-                                           max_counts=max_counts))
+        gene_subset, number = materialize_as_ndarray(
+            filter_genes(adata.X, min_cells=min_cells,
+                         min_counts=min_counts, max_cells=max_cells,
+                         max_counts=max_counts))
+        if not inplace:
+            return gene_subset, number
         if min_cells is None and max_cells is None:
             adata.var['n_counts'] = number
         else:
@@ -261,10 +259,10 @@ def log1p(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
-) -> Union[AnnData, None, np.ndarray, spmatrix]:
+):
     """Logarithmize the data matrix.
 
-    Computes :math:`X = \\log(X + 1)`, where ``log`` denotes the natural logarithm.
+    Computes :math:`X = \\log(X + 1)`, where :math:`log` denotes the natural logarithm.
 
     Parameters
     ----------
@@ -282,7 +280,8 @@ def log1p(
 
     Returns
     -------
-    Returns or updates ``data``, depending on ``copy``.
+    AnnData, `None`
+        Returns or updates ``data``, depending on ``copy``.
     """
     if copy:
         data = data.copy()
@@ -308,11 +307,11 @@ def log1p(
 
 
 def sqrt(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    data: AnnData,
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
-) -> Union[AnnData, None, np.ndarray, spmatrix]:
+):
     """Square root the data matrix.
 
     Computes :math:`X = \\sqrt(X)`.
@@ -333,7 +332,8 @@ def sqrt(
 
     Returns
     -------
-    Returns or updates ``data``, depending on ``copy``.
+    AnnData, None
+        Returns or updates `data`, depending on `copy`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -564,8 +564,9 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
 
     Returns
     -------
-    Returns or updates `adata` with normalized version of the original
-    `adata.X`, depending on `copy`.
+    AnnData, `None`
+        Returns or updates `adata` with normalized version of the original
+        `adata.X`, depending on `copy`.
 
     Examples
     --------
@@ -699,7 +700,8 @@ def regress_out(adata, keys, n_jobs=None, copy=False):
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with the corrected data matrix.
+    AnnData, None
+        Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
     logg.info('regressing out', keys, r=True)
     if issparse(adata.X):
@@ -822,7 +824,8 @@ def scale(data, zero_center=True, max_value=None, copy=False):
 
     Returns
     -------
-    Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
+    AnnData, None
+        Depending on `copy` returns or updates `adata` with a scaled `adata.X`.
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -873,9 +876,10 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
 
     Returns
     -------
-    Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
-    subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
-    returns a subsampled copy of it (`copy == True`).
+    AnnData, None
+        Returns `X[obs_indices], obs_indices` if data is array-like, otherwise
+        subsamples the passed :class:`~anndata.AnnData` (`copy == False`) or
+        returns a subsampled copy of it (`copy == True`).
     """
     np.random.seed(random_state)
     old_n_obs = data.n_obs if isinstance(data, AnnData) else data.shape[0]
@@ -923,7 +927,8 @@ def downsample_counts(adata, target_counts=20000, random_state=0,
 
     Returns
     -------
-    Depending on `copy` returns or updates an `adata` with downsampled `.X`.
+    AnnData, None
+        Depending on `copy` returns or updates an `adata` with downsampled `.X`.
     """
     if copy:
         adata = adata.copy()
@@ -948,6 +953,7 @@ def downsample_counts(adata, target_counts=20000, random_state=0,
             np.apply_along_axis(downsample_cell, 1, adata.X[under_target, :],
                                 target_counts, random_state=random_state, replace=replace)
     if copy: return adata
+
 
 @numba.njit
 def downsample_cell(col: np.array, target: int, random_state: int=0,

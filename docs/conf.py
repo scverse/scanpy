@@ -54,7 +54,8 @@ autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
-napoleon_use_rtype = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 
 intersphinx_mapping = dict(
@@ -74,8 +75,8 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas.'
-copyright = f'{datetime.now():%Y}, {author}'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas'
+copyright = f'{datetime.now():%Y}, {author}.'
 
 version = scanpy.__version__.replace('.dirty', '')
 release = version
