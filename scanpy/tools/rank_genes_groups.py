@@ -44,15 +44,15 @@ def rank_genes_groups(
         a group identifier, compare with respect to this group.
     n_genes : `int`, optional (default: 100)
         The number of genes that appear in the returned tables.
-    method : {'logreg', 't-test', 'wilcoxon', 't-test_overestim_var'}, optional (default: 't-test_overestim_var')
+    method : `{'logreg', 't-test', 'wilcoxon', 't-test_overestim_var'}`, optional (default: 't-test_overestim_var')
         If 't-test', uses t-test, if 'wilcoxon', uses Wilcoxon-Rank-Sum. If
         't-test_overestim_var', overestimates variance of each group. If
         'logreg' uses logistic regression, see [Ntranos18]_, `here
         <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__, for
         why this is meaningful.
-    corr_method : {'benjamini-hochberg', 'bonferroni'}, optional (default: 'benjamini-hochberg')
-        P-value correction method. Used only for 't-test', 't-test_overestim_var',
+    corr_method : `{'benjamini-hochberg', 'bonferroni'}`, optional (default: 'benjamini-hochberg')
+        p-value correction method. Used only for 't-test', 't-test_overestim_var',
         and 'wilcoxon' methods.
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
@@ -67,7 +67,6 @@ def rank_genes_groups(
 
     Returns
     -------
-    Updates `adata` with the following fields.
     names : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the gene
         names. Ordered according to scores.
@@ -78,6 +77,15 @@ def rank_genes_groups(
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
+    pvals : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+        p-values.
+    pvals_adj : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+        Corrected p-values.
+
+    Notes
+    -----
+    There are slight inconsistencies depending on whether sparse
+    or dense data are passed. See `here <https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_rank_genes_groups.py>`__.
     """
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
