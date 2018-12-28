@@ -244,6 +244,7 @@ import sphinx_autodoc_typehints
 
 qualname_overrides = {
     'anndata.base.AnnData': 'anndata.AnnData',
+    'pandas.core.frame.DataFrame': 'pandas.DataFrame',
     'scipy.sparse.base.spmatrix': 'scipy.sparse.spmatrix',
     'scipy.sparse.csr.csr_matrix': 'scipy.sparse.csr_matrix',
     'scipy.sparse.csc.csc_matrix': 'scipy.sparse.csc_matrix',
