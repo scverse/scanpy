@@ -2,6 +2,7 @@
 .pytest_cache/
 .scanpy
 .coverage
+figures/
 cache/
 coverage.xml
 test.h5ad
@@ -9,6 +10,7 @@ test_compr.h5ad
 test_no_compr.h5ad
 docs/_build
 docs/api/scanpy.api.*.rst
+docs/api/scanpy.*.rst
 !docs/api/scanpy.api.AnnData.rst
 archive/
 data/
