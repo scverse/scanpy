@@ -32,13 +32,13 @@ def leiden(
     **partition_kwargs
 ) -> Optional[AnnData]:
     """
-    Cluster cells into subgroups [Traag18]_ [Levine15]_
+    Cluster cells into subgroups [Traag18]_.
 
     Cluster cells using the Leiden algorithm [Traag18]_, an improved version of the
     Louvain algorithm [Blondel08]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
-    This requires having ran :func:`~scanpy.api.pp.neighbors` or :func:`~scanpy.api.pp.bbknn` first.
+    This requires having ran :func:`~scanpy.pp.neighbors` or :func:`~scanpy.external.pp.bbknn` first.
 
     Parameters
     ----------
