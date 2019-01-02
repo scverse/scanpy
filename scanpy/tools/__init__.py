@@ -11,5 +11,3 @@ from .leiden import leiden
 from .louvain import louvain
 from .sim import sim
 from .score_genes import score_genes, score_genes_cell_cycle
-
-
