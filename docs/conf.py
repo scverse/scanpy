@@ -253,9 +253,15 @@ qualname_overrides = {
 
 fa_orig = sphinx_autodoc_typehints.format_annotation
 def format_annotation(annotation):
+    # display `Union[A, B]` as `A, B`
     if getattr(annotation, '__origin__', None) is Union or hasattr(annotation, '__union_params__'):
         params = getattr(annotation, '__union_params__', None) or getattr(annotation, '__args__', None)
+        # never use the `Optional` keyword in the displayed docs, instead, use the more verbose `, None`
+        # as is the convention in the other large numerical packages
+        # if len(params or []) == 2 and getattr(params[1], '__qualname__', None) == 'NoneType':
+        #     return fa_orig(annotation)  # Optional[...]
         return ', '.join(map(format_annotation, params))
+    # do not show the arguments of Mapping
     if getattr(annotation, '__origin__', None) is Mapping:
         return ':class:`~typing.Mapping`'
     if inspect.isclass(annotation):
