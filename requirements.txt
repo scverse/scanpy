@@ -1,4 +1,4 @@
-anndata>=0.6.10
+anndata>=0.6.15
 matplotlib>=2.2
 pandas>=0.21
 scipy
@@ -10,4 +10,4 @@ statsmodels
 networkx
 natsort
 joblib
-numba
+numba>=0.40.0

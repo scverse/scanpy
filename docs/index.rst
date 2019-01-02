@@ -12,7 +12,7 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018) <h
    :maxdepth: 1
    :hidden:
 
-   examples
+   tutorials
    basic_usage
    installation
    api/index

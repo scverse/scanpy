@@ -1,6 +1,7 @@
 """Utility functions and classes
 """
 
+import sys
 import inspect
 from collections import namedtuple
 from functools import partial
@@ -17,6 +18,25 @@ from . import settings
 from . import logging as logg
 
 EPS = 1e-15
+
+
+def check_versions():
+    import warnings
+    from distutils.version import LooseVersion
+
+    if sys.version_info < (3, 0):
+        warnings.warn('Scanpy only runs reliably with Python 3, preferrably >=3.5.')
+
+    import anndata
+    # NOTE: pytest does not correctly retrieve anndata's version? why?
+    #       use the following hack...
+    if anndata.__version__ != '0+unknown':
+        if anndata.__version__ < LooseVersion('0.6.10'):
+            raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
+                              'Run `pip install anndata -U --no-deps`.'
+                              .format(__version__, anndata.__version__))
+
+
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     if getattr(c_or_f, '__doc__', None) is None:

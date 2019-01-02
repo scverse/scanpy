@@ -358,12 +358,12 @@ def paga_expression_entropies(adata):
         adata, key=adata.uns['paga']['groups'])
     entropies = []
     for mask in groups_masks:
-        X_mask = adata.X[mask]
-        x_median = np.median(X_mask, axis=0)
-        x_probs = (x_median - np.min(x_median)) / (np.max(x_median) - np.min(x_median))
+        X_mask = adata.X[mask].todense()
+        x_median = np.nanmedian(X_mask, axis=1,overwrite_input=True)
+        x_probs = (x_median - np.nanmin(x_median)) / (np.nanmax(x_median) - np.nanmin(x_median))
         entropies.append(entropy(x_probs))
     return entropies
-
+    
 
 def paga_compare_paths(adata1, adata2,
                        adjacency_key='connectivities', adjacency_key2=None):

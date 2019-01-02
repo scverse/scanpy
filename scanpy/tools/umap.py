@@ -63,11 +63,12 @@ def umap(
         How to initialize the low dimensional embedding. Called `init` in the
         original UMAP.
         Options are:
-            * Any key for `adata.obsm`.
-            * 'paga': positions from :func:`~scanpy.api.pl.paga`.
-            * 'spectral': use a spectral embedding of the graph.
-            * 'random': assign initial embedding positions at random.
-            * A numpy array of initial embedding positions.
+
+        * Any key for `adata.obsm`.
+        * 'paga': positions from :func:`~scanpy.api.pl.paga`.
+        * 'spectral': use a spectral embedding of the graph.
+        * 'random': assign initial embedding positions at random.
+        * A numpy array of initial embedding positions.
     random_state : `int`, `RandomState` or `None`, optional (default: 0)
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState`, `random_state` is the random number generator;

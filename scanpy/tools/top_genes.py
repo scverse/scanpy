@@ -13,7 +13,7 @@ from .. import logging as logg
 def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=20, data='Complete', method='pearson', annotation_key=None):
     """Calculate correlation matrix.
 
-        Calculate a correlation matrix for genes strored in sample annotation using rank_genes_groups.py
+        Calculate a correlation matrix for genes strored in sample annotation using :func:`~scanpy.api.tl.rank_genes_groups`.
 
         Parameters
         ----------

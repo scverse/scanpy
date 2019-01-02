@@ -15,7 +15,7 @@
 Scanpy – Single-Cell Analysis in Python
 =======================================
 
-.. image:: http://falexwolf.de/img/tsne_1.3M.png
+.. image:: https://falexwolf.de/img/tsne_1.3M.png
    :width: 90px
    :align: left
 

@@ -1,6 +1,7 @@
+from itertools import product
 import numpy as np
 from scipy import sparse as sp
-import scanpy.api as sc
+import scanpy as sc
 from anndata import AnnData
 
 
@@ -86,3 +87,25 @@ def test_regress_out_categorical():
 
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
+
+def test_downsample_counts():
+    TARGET = 1000
+    X = np.random.randint(0, 100, (1000, 100)) * \
+        np.random.binomial(1, .3, (1000, 100))
+    adata_dense = AnnData(X=X.copy())
+    adata_csr = AnnData(X=sp.csr_matrix(X))
+    adata_csc = AnnData(X=sp.csc_matrix(X))
+    for adata, replace in product((adata_dense, adata_csr, adata_csc), (True, False)):
+        initial_totals = np.ravel(adata.X.sum(axis=1))
+        adata = sc.pp.downsample_counts(adata, target_counts=TARGET, replace=replace, copy=True)
+        new_totals = np.ravel(adata.X.sum(axis=1))
+        if sp.issparse(adata.X):
+            assert all(adata.X.toarray()[X == 0] == 0)
+        else:
+            assert all(adata.X[X == 0] == 0)
+        assert all(new_totals <= TARGET)
+        assert all(initial_totals >= new_totals)
+        assert all(initial_totals[initial_totals <= TARGET]
+                    == new_totals[initial_totals <= TARGET])
+        if not replace:
+            assert np.all(X >= adata.X)

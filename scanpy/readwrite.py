@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 import time
+import tables
 from pathlib import Path
 import anndata
 from anndata import AnnData, read_loom, \
@@ -17,10 +18,10 @@ from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
 text_exts = {'csv',
-             'tsv', 'tab', 'data', 'txt'} # these four are all equivalent
+             'tsv', 'tab', 'data', 'txt'}  # these four are all equivalent
 avail_exts = {'anndata', 'xlsx',
-              'h5', 'h5ad',
-              'soft.gz', 'mtx', 'loom'} | text_exts
+              'h5', 'h5ad', 'mtx', 'mtx.gz',
+              'soft.gz', 'loom'} | text_exts
 """Available file formats for reading data. """
 
 
@@ -88,15 +89,18 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     return read_h5ad(filename, backed=backed)
 
 
-def read_10x_h5(filename, genome='mm10'):
+def read_10x_h5(filename, genome='mm10', gex_only=True):
     """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------
-    filename : :class:`str` | :class:`~pathlib.Path`
+    filename : `str` | :class:`~pathlib.Path`
         Filename.
-    genome : :class:`str`, optional (default: ``'mm10'``)
+    genome : `str`, optional (default: ``'mm10'``)
         Genome group in hdf5 file.
+    gex_only : `bool`, optional (default: `True`)
+        Only keep 'Gene Expression' data and ignore other feature types,
+        e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
 
     Returns
     -------
@@ -105,9 +109,26 @@ def read_10x_h5(filename, genome='mm10'):
         barcode and variables/genes by gene name. The data matrix is stored in
         `adata.X`, cell names in `adata.obs_names` and gene names in
         `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
+        The feature types are stored in `adata.var['feature_types']`
     """
     logg.info('reading', filename, r=True, end=' ')
-    import tables
+    with tables.open_file(str(filename), 'r') as f:
+        if '/matrix' in f:
+            adata = _read_v3_10x_h5(filename)
+            if not gex_only:
+                return adata    # ignore the `genome` argument
+            else:
+                adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+                adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+                return adata
+        else:
+            return _read_legacy_10x_h5(filename, genome=genome)
+
+
+def _read_legacy_10x_h5(filename, genome='mm10'):
+    """
+    Read hdf5 file from Cell Ranger v2 or earlier versions.
+    """
     with tables.open_file(str(filename), 'r') as f:
         try:
             dsets = {}
@@ -137,7 +158,36 @@ def read_10x_h5(filename, genome='mm10'):
             raise Exception('File is missing one or more required datasets.')
 
 
-def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+def _read_v3_10x_h5(filename):
+    """
+    Read hdf5 file from Cell Ranger v3 or later versions.
+    """
+    with tables.open_file(str(filename), 'r') as f:
+        try:
+            dsets = {}
+            for node in f.walk_nodes('/matrix', 'Array'):
+                dsets[node.name] = node.read()
+            from scipy.sparse import csr_matrix
+            M, N = dsets['shape']
+            data = dsets['data']
+            if dsets['data'].dtype == np.dtype('int32'):
+                data = dsets['data'].view('float32')
+                data[:] = dsets['data']
+            matrix = csr_matrix((data, dsets['indices'], dsets['indptr']),
+                                shape=(N, M))
+            adata = AnnData(matrix,
+                            {'obs_names': dsets['barcodes'].astype(str)},
+                            {'var_names': dsets['name'].astype(str),
+                             'gene_ids': dsets['id'].astype(str),
+                             'feature_types': dsets['feature_type'].astype(str),
+                             'genome': dsets['genome'].astype(str)})
+            logg.info(t=True)
+            return adata
+        except KeyError:
+            raise Exception('File is missing one or more required datasets.')
+
+
+def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False, gex_only=True):
     """Read 10x-Genomics-formatted mtx directory.
 
     Parameters
@@ -152,13 +202,34 @@ def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
         '-2' etc. or not.
     cache : `bool`, optional (default: `False`)
         If `False`, read from source, if `True`, read from fast 'h5ad' cache.
+    gex_only : `bool`, optional (default: `True`)
+        Only keep 'Gene Expression' data and ignore other feature types,
+        e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
 
     Returns
     -------
     An :class:`~anndata.AnnData`.
     """
-    adata = read(path + 'matrix.mtx', cache=cache).T  # transpose the data
-    genes = pd.read_csv(path + 'genes.tsv', header=None, sep='\t')
+    path = str(path)
+    if os.path.exists(os.path.join(path, 'genes.tsv')):
+        return _read_legacy_10x_mtx(path, var_names=var_names,
+                                    make_unique=make_unique, cache=cache)
+    else:
+        adata = _read_v3_10x_mtx(path, var_names=var_names,
+                                 make_unique=make_unique, cache=cache)
+        if not gex_only:
+            return adata
+        else:
+            gex_rows = list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))
+            return adata[:, gex_rows]
+
+
+def _read_legacy_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+    """
+    Read mex from output from Cell Ranger v2 or earlier versions
+    """
+    adata = read(os.path.join(path, 'matrix.mtx'), cache=cache).T  # transpose the data
+    genes = pd.read_csv(os.path.join(path, 'genes.tsv'), header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1]
         if make_unique:
@@ -170,9 +241,31 @@ def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
         adata.var['gene_symbols'] = genes[1].values
     else:
         raise ValueError('`var_names` needs to be \'gene_symbols\' or \'gene_ids\'')
-    adata.obs_names = pd.read_csv(path + 'barcodes.tsv', header=None)[0]
+    adata.obs_names = pd.read_csv(os.path.join(path, 'barcodes.tsv'), header=None)[0]
     return adata
-        
+
+
+def _read_v3_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+    """
+    Read mex from output from Cell Ranger v3 or later versions
+    """
+    adata = read(os.path.join(path, 'matrix.mtx.gz'), cache=cache).T  # transpose the data
+    genes = pd.read_csv(os.path.join(path, 'features.tsv.gz'), header=None, sep='\t')
+    if var_names == 'gene_symbols':
+        var_names = genes[1]
+        if make_unique:
+            var_names = anndata.utils.make_index_unique(pd.Index(var_names))
+        adata.var_names = var_names
+        adata.var['gene_ids'] = genes[0].values
+    elif var_names == 'gene_ids':
+        adata.var_names = genes[0]
+        adata.var['gene_symbols'] = genes[1].values
+    else:
+        raise ValueError('`var_names` needs to be \'gene_symbols\' or \'gene_ids\'')
+    adata.var['feature_types'] = genes[2].values
+    adata.obs_names = pd.read_csv(os.path.join(path, 'barcodes.tsv.gz'), header=None)[0]
+    return adata
+
 
 def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
     """Write :class:`~anndata.AnnData` objects to file.
@@ -319,6 +412,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     # read other file types
     filename_cache = (settings.cachedir + filename.lstrip(
         './').replace('/', '-').replace('.' + ext, '.h5ad'))
+    if filename_cache.endswith('.gz'): filename_cache = filename_cache[:-3]
+    if filename_cache.endswith('.bz2'): filename_cache = filename_cache[:-4]
     if cache and os.path.exists(filename_cache):
         logg.info('... reading from cache file', filename_cache)
         adata = read_h5ad(filename_cache, backed=False)
@@ -336,7 +431,7 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
                     'Provide `sheet` parameter when reading \'.xlsx\' files.')
             else:
                 adata = read_excel(filename, sheet)
-        elif ext == 'mtx':
+        elif ext in {'mtx', 'mtx.gz'}:
             adata = read_mtx(filename)
         elif ext == 'csv':
             adata = read_csv(filename, first_column_names=first_column_names)
@@ -552,6 +647,8 @@ def is_valid_filename(filename, return_ext=False):
         return ext[-1][1:] if return_ext else True
     elif ''.join(ext) == '.soft.gz':
         return 'soft.gz' if return_ext else True
+    elif ''.join(ext) == '.mtx.gz':
+        return 'mtx.gz' if return_ext else True
     else:
         if return_ext:
             raise ValueError('"{}" does not end on a valid extension.\n'

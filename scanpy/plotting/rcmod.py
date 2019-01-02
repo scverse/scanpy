@@ -7,6 +7,7 @@ from cycler import cycler
 
 from . import palettes
 
+
 def set_rcParams_scanpy(fontsize=14, color_map=None):
     """Set matplotlib.rcParams to Scanpy defaults."""
 
@@ -22,11 +23,13 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams['lines.markeredgewidth'] = 1
 
     # font
-    rcParams['font.sans-serif'] = ['Arial',
-                                   'Helvetica',
-                                   'DejaVu Sans',
-                                   'Bitstream Vera Sans',
-                                   'sans-serif']
+    rcParams['font.sans-serif'] = [
+        'Arial',
+        'Helvetica',
+        'DejaVu Sans',
+        'Bitstream Vera Sans',
+        'sans-serif',
+    ]
     fontsize = fontsize
     rcParams['font.size'] = fontsize
     rcParams['legend.fontsize'] = 0.92 * fontsize

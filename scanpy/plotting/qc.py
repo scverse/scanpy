@@ -8,7 +8,10 @@ from .docs import doc_show_save_ax
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
+def highest_expr_genes(
+        adata, n_top=30, show=None, save=None,
+        ax=None, gene_symbols=None, **kwds
+    ):
     """\
     Fraction of counts assigned to each gene over all cells.
 
@@ -35,6 +38,8 @@ def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
     n_top : `int`, optional (default:30)
         Number of top
     {show_save_ax}
+    gene_symbols : `str`, optional (default:None)
+        Key for field in .var that stores gene symbols if you do not want to use .var_names.
     **kwds : keyword arguments
         Are passed to `seaborn.boxplot`.
 
@@ -50,15 +55,13 @@ def highest_expr_genes(adata, n_top=30, show=None, save=None, ax=None, **kwds):
     # identify the genes with the highest mean
     if issparse(dat.X):
         dat.var['mean_percent'] = dat.X.mean(axis=0).A1
-        top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
-        dat = dat[:, top]
-        dat = pd.DataFrame(dat.X.toarray(), index=dat.obs_names, columns=dat.var_names)
-
     else:
         dat.var['mean_percent'] = dat.X.mean(axis=0)
-        top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
-        dat = dat[:, top]
-        dat = pd.DataFrame(dat.X, index=dat.obs_names, columns=dat.var_names)
+
+    top = dat.var.sort_values('mean_percent', ascending=False).index[:n_top]
+    dat = dat[:, top]
+    columns = dat.var_names if gene_symbols is None else dat.var[gene_symbols]
+    dat = pd.DataFrame(dat.X.toarray(), index=dat.obs_names, columns=columns)
 
     if not ax:
         # figsize is hardcoded to produce a tall image. To change the fig size,

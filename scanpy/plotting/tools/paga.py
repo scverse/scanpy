@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import scipy
+import warnings
 from pandas.api.types import is_categorical_dtype
 import networkx as nx
 from matplotlib import pyplot as pl
@@ -110,19 +111,114 @@ def paga_compare(
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
     axs[1].set_xlim(xlim)
     axs[1].set_ylim(ylim)
+    if 'labels' in paga_graph_params:
+        labels = paga_graph_params.pop('labels')
+    else:
+        labels = groups_graph
     paga(
         adata,
         ax=axs[1],
         show=False,
         save=False,
         title=title_graph,
-        labels=groups_graph,
+        labels=labels,
         colors=color,
         frameon=frameon,
         **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
     utils.savefig_or_show('paga_compare', show=show, save=save)
     if show == False: return axs
+
+
+def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, layout_kwds={}):
+    nx_g_solid = nx.Graph(adjacency_solid)
+    if layout is None:
+        layout = 'fr'
+    if layout == 'fa':
+        try:
+            from fa2 import ForceAtlas2
+        except:
+            logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
+                      'To use the faster and better ForceAtlas2 layout, '
+                      'install package \'fa2\' (`pip install fa2`).')
+            layout = 'fr'
+    if layout == 'fa':
+        np.random.seed(random_state)
+        if init_pos is None:
+            init_coords = np.random.random((adjacency_solid.shape[0], 2))
+        else:
+            init_coords = init_pos.copy()
+        forceatlas2 = ForceAtlas2(
+            # Behavior alternatives
+            outboundAttractionDistribution=False,  # Dissuade hubs
+            linLogMode=False,  # NOT IMPLEMENTED
+            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+            edgeWeightInfluence=1.0,
+            # Performance
+            jitterTolerance=1.0,  # Tolerance
+            barnesHutOptimize=True,
+            barnesHutTheta=1.2,
+            multiThreaded=False,  # NOT IMPLEMENTED
+            # Tuning
+            scalingRatio=2.0,
+            strongGravityMode=False,
+            gravity=1.0,
+            # Log
+            verbose=False)
+        if 'maxiter' in layout_kwds:
+            iterations = layout_kwds['maxiter']
+        elif 'iterations' in layout_kwds:
+            iterations = layout_kwds['iterations']
+        else:
+            iterations = 500
+        pos_list = forceatlas2.forceatlas2(
+            adjacency_solid, pos=init_coords, iterations=iterations)
+        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+    elif layout == 'eq_tree':
+        nx_g_tree = nx_g_solid
+        if solid_edges == 'connectivities':
+            adj_tree = adata.uns['paga']['connectivities_tree']
+            nx_g_tree = nx.Graph(adj_tree)
+        pos = utils.hierarchy_pos(nx_g_tree, root)
+        if len(pos) < adjacency_solid.shape[0]:
+            raise ValueError('This is a forest and not a single tree. '
+                             'Try another `layout`, e.g., {\'fr\'}.')
+    else:
+        # igraph layouts
+        from ... import utils as sc_utils
+        g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        if 'rt' in layout:
+            g_tree = g
+            if solid_edges == 'connectivities':
+                adj_tree = adata.uns['paga']['connectivities_tree']
+                g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
+            pos_list = g_tree.layout(
+                layout, root=root if isinstance(root, list) else [root]).coords
+        elif layout == 'circle':
+            pos_list = g.layout(layout).coords
+        else:
+            # I don't know why this is necessary
+            np.random.seed(random_state)
+            if init_pos is None:
+                init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
+            else:
+                init_pos = init_pos.copy()
+                # this is a super-weird hack that is necessary as igraphs layout function
+                # seems to do some strange stuff, here
+                init_pos[:, 1] *= -1
+                init_coords = init_pos.tolist()
+            try:
+                pos_list = g.layout(
+                    layout, seed=init_coords,
+                    weights='weight', **layout_kwds).coords
+            except:  # hack for excepting attribute error for empty graphs...
+                pos_list = g.layout(
+                    layout, seed=init_coords,
+                    **layout_kwds).coords
+        pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
+    if len(pos) == 1: pos[0] = (0.5, 0.5)
+    pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
+    return pos_array
 
 
 def paga(
@@ -162,10 +258,16 @@ def paga(
         use_raw=True,
         colors=None,   # backwards compat
         groups=None,  # backwards compat
+        plot=True,
         show=None,
         save=None,
         ax=None):
-    """Plot the abstracted graph through thresholding low-connectivity edges.
+    """Plot the PAGA graph through thresholding low-connectivity edges.
+
+    Compute a coarse-grained layout of the data. Reuse this by passing
+    `init_pos='paga'` to :func:`~scanpy.api.tl.umap` or
+    :func:`~scanpy.api.tl.draw_graph` and obtain embeddings with more meaningful
+    global topology [Wolf17i]_.
 
     This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
 
@@ -183,8 +285,12 @@ def paga(
     labels : `None`, `str`, `list`, `dict`, optional (default: `None`)
         The node labels. If `None`, this defaults to the group labels stored in
         the categorical for which :func:`~scanpy.api.tl.paga` has been computed.
+    pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
+        Two-column array-like storing the x and y coordinates for drawing.
+        Otherwise, path to a `.gdf` file that has been exported from Gephi or
+        a similar graph visualization software.
     layout : {'fa', 'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
-        Plotting layout. 'fa' stands for ForceAtlas2, 'fr' stands for
+        Plotting layout that computes positions. 'fa' stands for ForceAtlas2, 'fr' stands for
         Fruchterman-Reingold, 'rt' stands for Reingold Tilford. 'eq_tree' stands
         for 'eqally spaced tree'. All but 'fa' and 'eq_tree' are igraph
         layouts. All other igraph layouts are also permitted. See also parameter
@@ -233,10 +339,6 @@ def paga(
        For directed graphs, choose the size of the arrow head head's length and
        width. See :py:class: `matplotlib.patches.FancyArrowPatch` for attribute
        `mutation_scale` for more info.
-    pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
-        Two-column array/list storing the x and y coordinates for drawing.
-        Otherwise, path to a `.gdf` file that has been exported from Gephi or
-        a similar graph visualization software.
     export_to_gexf : `bool`, optional (default: `None`)
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
@@ -254,26 +356,27 @@ def paga(
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.
     title : `str`, optional (default: `None`)
-         Provide a title.
+        Provide a title.
     frameon : `bool`, optional (default: `None`)
-         Draw a frame around the PAGA graph.
-    show : `bool`, optional (default: `None`)
-         Show the plot, do not return axis.
+        Draw a frame around the PAGA graph.
+    hide : `bool`, optional (default: `False`)
+        Do not create a plot.
+    plot : `bool`, optional (default: `True`)
+        If `False`, do not create the figure, simply compute the layout.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
-         A matplotlib axes object.
+        A matplotlib axes object.
 
     Returns
     -------
-    If `show==False`, one or more `matplotlib.Axis` objects.
-
-    Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
+    `None`, `axs`
+        If `show==False`, one or more `matplotlib.Axis` objects.
+        Adds `'pos'` to `adata.uns['paga']` if `add_pos` is `True`.
 
     Notes
     -----
-
     When initializing the positions, note that - for some reason - igraph
     mirrors coordinates along the x axis... that is, you should increase the
     `maxiter` parameter by 1 if the layout is flipped.
@@ -316,78 +419,106 @@ def paga(
     else:
         colorbars = [False for c in colors]
 
-    if ax is None:
-        axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
-            panels=colors, colorbars=colorbars)
-    else:
-        axs = ax
+    if isinstance(root, str):
+        if root in node_labels:
+            root = list(node_labels).index(root)
+        else:
+            raise ValueError(
+                'If `root` is a string, it needs to be one of {} not \'{}\'.'
+                .format(node_labels.tolist(), root))
+    if isinstance(root, list) and root[0] in node_labels:
+        root = [list(node_labels).index(r) for r in root]
 
-    if len(colors) == 1 and not isinstance(axs, list):
-        axs = [axs]
+    # define the adjacency matrices
+    adjacency_solid = adata.uns['paga'][solid_edges].copy()
+    adjacency_dashed = None
+    if threshold is None:
+        threshold = 0.01  # default threshold
+    if threshold > 0:
+        adjacency_solid.data[adjacency_solid.data < threshold] = 0
+        adjacency_solid.eliminate_zeros()
+    if dashed_edges is not None:
+        adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
+        if threshold > 0:
+            adjacency_dashed.data[adjacency_dashed.data < threshold] = 0
+            adjacency_dashed.eliminate_zeros()
 
-    for icolor, c in enumerate(colors):
-        if title[icolor] is not None:
-            axs[icolor].set_title(title[icolor])
-        pos, sct = _paga_graph(
-            adata,
-            axs[icolor],
-            layout=layout,
-            colors=c,
-            layout_kwds=layout_kwds,
-            init_pos=init_pos,
-            solid_edges=solid_edges,
-            dashed_edges=dashed_edges,
-            transitions=transitions,
-            threshold=threshold,
-            root=root,
-            labels=labels[icolor],
-            fontsize=fontsize,
-            fontweight=fontweight,
-            text_kwds=text_kwds,
-            node_size_scale=node_size_scale,
-            node_size_power=node_size_power,
-            edge_width_scale=edge_width_scale,
-            min_edge_width=min_edge_width,
-            max_edge_width=max_edge_width,
-            normalize_to_color=normalize_to_color,
-            frameon=frameon,
-            cmap=cmap,
-            cax=cax,
-            colorbar=colorbars[icolor],
-            cb_kwds=cb_kwds,
-            use_raw=use_raw,
-            title=title[icolor],
-            random_state=random_state,
-            export_to_gexf=export_to_gexf,
-            single_component=single_component,
-            arrowsize=arrowsize,
-            pos=pos)
-        if colorbars[icolor]:
-            bottom = panel_pos[0][0]
-            height = panel_pos[1][0] - bottom
-            width = 0.006 * draw_region_width / len(colors)
-            left = panel_pos[2][2*icolor+1] + 0.2 * width
-            rectangle = [left, bottom, width, height]
-            fig = pl.gcf()
-            ax_cb = fig.add_axes(rectangle)
-            cb = pl.colorbar(sct, format=ticker.FuncFormatter(utils.ticks_formatter),
-                             cax=ax_cb)
+    # compute positions
+    if pos is None:
+        pos = _compute_pos(
+            adjacency_solid, layout=layout, random_state=random_state, init_pos=init_pos, layout_kwds=layout_kwds)
+
+    if plot:
+        if ax is None:
+            axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
+                panels=colors, colorbars=colorbars)
+        else:
+            axs = ax
+
+        if len(colors) == 1 and not isinstance(axs, list):
+            axs = [axs]
+        
+        for icolor, c in enumerate(colors):
+            if title[icolor] is not None:
+                axs[icolor].set_title(title[icolor])
+            sct = _paga_graph(
+                adata,
+                axs[icolor],
+                colors=c,
+                solid_edges=solid_edges,
+                dashed_edges=dashed_edges,
+                transitions=transitions,
+                threshold=threshold,
+                adjacency_solid=adjacency_solid,
+                adjacency_dashed=adjacency_dashed,
+                root=root,
+                labels=labels[icolor],
+                fontsize=fontsize,
+                fontweight=fontweight,
+                text_kwds=text_kwds,
+                node_size_scale=node_size_scale,
+                node_size_power=node_size_power,
+                edge_width_scale=edge_width_scale,
+                min_edge_width=min_edge_width,
+                max_edge_width=max_edge_width,
+                normalize_to_color=normalize_to_color,
+                frameon=frameon,
+                cmap=cmap,
+                cax=cax,
+                colorbar=colorbars[icolor],
+                cb_kwds=cb_kwds,
+                use_raw=use_raw,
+                title=title[icolor],
+                export_to_gexf=export_to_gexf,
+                single_component=single_component,
+                arrowsize=arrowsize,
+                pos=pos)
+            if colorbars[icolor]:
+                bottom = panel_pos[0][0]
+                height = panel_pos[1][0] - bottom
+                width = 0.006 * draw_region_width / len(colors)
+                left = panel_pos[2][2*icolor+1] + 0.2 * width
+                rectangle = [left, bottom, width, height]
+                fig = pl.gcf()
+                ax_cb = fig.add_axes(rectangle)
+                cb = pl.colorbar(sct, format=ticker.FuncFormatter(utils.ticks_formatter),
+                                 cax=ax_cb)
     if add_pos:
         adata.uns['paga']['pos'] = pos
         logg.hint('added \'pos\', the PAGA positions (adata.uns[\'paga\'])')
-    utils.savefig_or_show('paga', show=show, save=save)
-    if len(colors) == 1 and isinstance(axs, list): axs = axs[0]
-    return axs if show == False else None
+    if plot:
+        utils.savefig_or_show('paga', show=show, save=save)
+        if len(colors) == 1 and isinstance(axs, list): axs = axs[0]
+        return axs if show == False else None
 
 
 def _paga_graph(
         adata,
         ax,
-        layout=None,
-        layout_kwds={},
-        init_pos=None,
         solid_edges=None,
         dashed_edges=None,
+        adjacency_solid=None,
+        adjacency_dashed=None,
         transitions=None,
         threshold=None,
         root=0,
@@ -412,8 +543,7 @@ def _paga_graph(
         use_raw=True,
         cb_kwds={},
         single_component=False,
-        arrowsize=30,
-        random_state=0):
+        arrowsize=30):
     node_labels = labels  # rename for clarity
     if (node_labels is not None
         and isinstance(node_labels, str)
@@ -433,30 +563,28 @@ def _paga_graph(
         for iname, name in enumerate(adata.obs[groups_key].cat.categories):
             if name in settings.categories_to_ignore: colors[iname] = 'grey'
 
-    if isinstance(root, str):
-        if root in node_labels:
-            root = list(node_labels).index(root)
-        else:
-            raise ValueError(
-                'If `root` is a string, it needs to be one of {} not \'{}\'.'
-                .format(node_labels.tolist(), root))
-    if isinstance(root, list) and root[0] in node_labels:
-        root = [list(node_labels).index(r) for r in root]
-
-    # define the adjacency matrices
-    adjacency_solid = adata.uns['paga'][solid_edges].copy()
-    if threshold is None:
-        threshold = 0.01  # default threshold
-    if threshold > 0:
-        adjacency_solid.data[adjacency_solid.data < threshold] = 0
-        adjacency_solid.eliminate_zeros()
     nx_g_solid = nx.Graph(adjacency_solid)
     if dashed_edges is not None:
-        adjacency_dashed = adata.uns['paga'][dashed_edges].copy()
-        if threshold > 0:
-            adjacency_dashed.data[adjacency_dashed.data < threshold] = 0
-            adjacency_dashed.eliminate_zeros()
         nx_g_dashed = nx.Graph(adjacency_dashed)
+
+    # convert pos to dict
+    if isinstance(pos, str):
+        if not pos.endswith('.gdf'):
+            raise ValueError('Currently only supporting reading positions from .gdf files.'
+                             'Consider generating them using, for instance, Gephi.')
+        s = ''  # read the node definition from the file
+        with open(pos) as f:
+            f.readline()
+            for line in f:
+                if line.startswith('edgedef>'):
+                    break
+                s += line
+        from io import StringIO
+        df = pd.read_csv(StringIO(s), header=-1)
+        pos = df[[4, 5]].values
+    pos_array = pos
+    # convert to dictionary
+    pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
 
     # uniform color
     if isinstance(colors, str) and is_color_like(colors):
@@ -536,114 +664,6 @@ def _paga_graph(
         if dashed_edges is not None:
             raise ValueError('`single_component` only if `dashed_edges` is `None`.')
 
-    # node positions from adjacency_solid
-    if pos is None:
-        if layout is None:
-            layout = 'fr'
-        if layout == 'fa':
-            try:
-                from fa2 import ForceAtlas2
-            except:
-                logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
-                          'To use the faster and better ForceAtlas2 layout, '
-                          'install package \'fa2\' (`pip install fa2`).')
-                layout = 'fr'
-        if layout == 'fa':
-            np.random.seed(random_state)
-            if init_pos is None:
-                init_coords = np.random.random((adjacency_solid.shape[0], 2))
-            else:
-                init_coords = init_pos.copy()
-            forceatlas2 = ForceAtlas2(
-                # Behavior alternatives
-                outboundAttractionDistribution=False,  # Dissuade hubs
-                linLogMode=False,  # NOT IMPLEMENTED
-                adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-                edgeWeightInfluence=1.0,
-                # Performance
-                jitterTolerance=1.0,  # Tolerance
-                barnesHutOptimize=True,
-                barnesHutTheta=1.2,
-                multiThreaded=False,  # NOT IMPLEMENTED
-                # Tuning
-                scalingRatio=2.0,
-                strongGravityMode=False,
-                gravity=1.0,
-                # Log
-                verbose=False)
-            if 'maxiter' in layout_kwds:
-                iterations = layout_kwds['maxiter']
-            elif 'iterations' in layout_kwds:
-                iterations = layout_kwds['iterations']
-            else:
-                iterations = 500
-            pos_list = forceatlas2.forceatlas2(
-                adjacency_solid, pos=init_coords, iterations=iterations)
-            pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
-        elif layout == 'eq_tree':
-            nx_g_tree = nx_g_solid
-            if solid_edges == 'connectivities':
-                adj_tree = adata.uns['paga']['connectivities_tree']
-                nx_g_tree = nx.Graph(adj_tree)
-            pos = utils.hierarchy_pos(nx_g_tree, root)
-            if len(pos) < adjacency_solid.shape[0]:
-                raise ValueError('This is a forest and not a single tree. '
-                                 'Try another `layout`, e.g., {\'fr\'}.')
-        else:
-            # igraph layouts
-            from ... import utils as sc_utils
-            g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
-            if 'rt' in layout:
-                g_tree = g
-                if solid_edges == 'connectivities':
-                    adj_tree = adata.uns['paga']['connectivities_tree']
-                    g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
-                pos_list = g_tree.layout(
-                    layout, root=root if isinstance(root, list) else [root]).coords
-            elif layout == 'circle':
-                pos_list = g.layout(layout).coords
-            else:
-                # I don't know why this is necessary
-                np.random.seed(random_state)
-                if init_pos is None:
-                    init_coords = np.random.random((adjacency_solid.shape[0], 2)).tolist()
-                else:
-                    init_pos = init_pos.copy()
-                    # this is a super-weird hack that is necessary as igraphs layout function
-                    # seems to do some strange stuff, here
-                    init_pos[:, 1] *= -1
-                    init_coords = init_pos.tolist()
-                try:
-                    pos_list = g.layout(
-                        layout, seed=init_coords,
-                        weights='weight', **layout_kwds).coords
-                except:  # hack for excepting attribute error for empty graphs...
-                    pos_list = g.layout(
-                        layout, seed=init_coords,
-                        **layout_kwds).coords
-            pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
-        pos_array = np.array([pos[n] for count, n in enumerate(nx_g_solid)])
-    else:
-        if isinstance(pos, str):
-            if not pos.endswith('.gdf'):
-                raise ValueError('Currently only supporting reading positions from .gdf files.'
-                                 'Consider generating them using, for instance, Gephi.')
-            s = ''  # read the node definition from the file
-            with open(pos) as f:
-                f.readline()
-                for line in f:
-                    if line.startswith('edgedef>'):
-                        break
-                    s += line
-            from io import StringIO
-            df = pd.read_csv(StringIO(s), header=-1)
-            pos = df[[4, 5]].values
-        pos_array = pos
-        # convert to dictionary
-        pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
-
-    if len(pos) == 1: pos[0] = (0.5, 0.5)
-
     # edge widths
     base_edge_width = edge_width_scale * 5 * rcParams['lines.linewidth']
 
@@ -662,7 +682,9 @@ def _paga_graph(
         widths = base_edge_width * np.array(widths)
         if min_edge_width is not None or max_edge_width is not None:
             widths = np.clip(widths, min_edge_width, max_edge_width)
-        nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nx.draw_networkx_edges(nx_g_solid, pos, ax=ax, width=widths, edge_color='black')
     # draw directed edges
     else:
         adjacency_transitions = adata.uns['paga'][transitions].copy()
@@ -767,7 +789,7 @@ def _paga_graph(
                        horizontalalignment='center',
                        transform=a.transAxes,
                        size=fontsize, fontweight=fontweight, **text_kwds)
-    return pos_array, sct
+    return sct
 
 
 def paga_path(
@@ -844,7 +866,7 @@ def paga_path(
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \{'.pdf', '.png', '.svg'\}.
+        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
     ax : `matplotlib.Axes`
          A matplotlib axes object.
 
@@ -862,6 +884,11 @@ def paga_path(
                 'using the parameter `groups_key`.')
         groups_key = adata.uns['paga']['groups']
     groups_names = adata.obs[groups_key].cat.categories
+
+    if 'dpt_pseudotime' not in adata.obs.keys():
+        raise ValueError(
+            '`pl.paga_path` requires computation of a pseudotime `tl.dpt` '
+            'for ordering at single-cell resolution')
 
     if palette_groups is None:
         utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
