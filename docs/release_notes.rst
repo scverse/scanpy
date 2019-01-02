@@ -29,7 +29,7 @@ Two new possibilities for interactive exploration of Scanpy analysis results:
 Further updates:
 
 - :func:`~scanpy.pp.highly_variable_genes` replaces :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset (1.3.6) :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.tl.leidenalg` wraps the recent graph clustering package by [Traag18]_ (1.3.4) :smaller:`thanks to K Polanski`
+- :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ (1.3.4) :smaller:`thanks to K Polanski`
 - :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Park18]_ (1.3.4) :smaller:`thanks to K Polanski`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  (1.3.7) :smaller:`thanks to A Mousa`
 - :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ (1.3.4) :smaller:`thanks to I Virshup` 
