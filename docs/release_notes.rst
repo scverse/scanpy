@@ -19,7 +19,7 @@ Major updates:
 
 - one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ (1.3.7)
 - a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ (1.3.6) :smaller:`thanks to F Ramirez`
-- changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical (anndata v0.6.16)
+- changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical (anndata 0.6.16)
 
 Two new possibilities for interactive exploration of Scanpy analysis results:
 
