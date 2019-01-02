@@ -11,7 +11,6 @@ import logging as logg
 from pandas.api.types import is_categorical
 
 
-
 def spring_project(
         adata, project_dir, embedding_method,
         subplot_name = None,
@@ -217,6 +216,7 @@ def get_mean_var(X):
 
     return mean, var
 
+
 def get_edges(adata):
     if 'distances' in adata.uns['neighbors']:  # these are sparse matrices
         matrix = adata.uns['neighbors']['distances']
@@ -226,6 +226,7 @@ def get_edges(adata):
     edges = [(i,j) for i, j in zip(matrix.row, matrix.col)]
 
     return edges
+
 
 def write_hdf5_genes(E, gene_list, filename):
     '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_genes.hdf5"'''
@@ -248,6 +249,7 @@ def write_hdf5_genes(E, gene_list, filename):
 
     hf.close()
 
+
 def write_hdf5_cells(E, filename):
     '''SPRING standard: filename = main_spring_dir + "counts_norm_sparse_cells.hdf5" '''
 
@@ -269,10 +271,12 @@ def write_hdf5_cells(E, filename):
 
     hf.close()
 
+
 def write_sparse_npz(E, filename, compressed = False):
     ''' SPRING standard: filename = main_spring_dir + "/counts_norm.npz"'''
     E = E.tocsc()
     scipy.sparse.save_npz(filename, E, compressed = compressed)
+
 
 def write_graph(filename, n_nodes, edges):
     nodes = [{'name':int(i),'number':int(i)} for i in range(n_nodes)]
@@ -280,10 +284,12 @@ def write_graph(filename, n_nodes, edges):
     out = {'nodes':nodes,'links':edges}
     open(filename,'w').write(json.dumps(out,indent=4, separators=(',', ': ')))
 
+
 def write_edges(filename, edges):
     with open(filename, 'w') as f:
         for e in edges:
             f.write('%i;%i\n' %(e[0], e[1]))
+
 
 def write_color_tracks(ctracks, fname):
     out = []
@@ -293,9 +299,11 @@ def write_color_tracks(ctracks, fname):
     out = sorted(out,key=lambda x: x.split(',')[0])
     open(fname,'w').write('\n'.join(out))
 
+
 def frac_to_hex(frac):
     rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3])*255,dtype=int))
     return '#%02x%02x%02x' % rgb
+
 
 def get_color_stats_genes(color_stats, E, gene_list):
     means, variances = get_mean_var(E)
@@ -316,14 +324,17 @@ def get_color_stats_genes(color_stats, E, gene_list):
         color_stats[gene_list[iG]] = tuple(map(float, (means[iG], stdevs[iG], mins[iG], maxes[iG], pctls[iG])))
     return color_stats
 
+
 def get_color_stats_custom(color_stats, custom_colors):
     for k,v in custom_colors.items():
         color_stats[k] = tuple(map(float, (np.mean(v),np.std(v),np.min(v),np.max(v),np.percentile(v,99))))
     return color_stats
 
+
 def write_color_stats(filename, color_stats):
     with open(filename,'w') as f:
         f.write(json.dumps(color_stats,indent=4, sort_keys=True))#.decode('utf-8'))
+
 
 def build_categ_colors(categorical_coloring_data, cell_groupings):
     for k,labels in cell_groupings.items():
@@ -331,9 +342,11 @@ def build_categ_colors(categorical_coloring_data, cell_groupings):
         categorical_coloring_data[k] = {'label_colors':label_colors, 'label_list':labels}
     return categorical_coloring_data
 
+
 def write_cell_groupings(filename, categorical_coloring_data):
     with open(filename,'w') as f:
         f.write(json.dumps(categorical_coloring_data,indent=4, sort_keys=True))#.decode('utf-8'))
+
 
 def export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
@@ -392,17 +405,18 @@ def export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
     return None
 
+
 def cellbrowser(
-        adata, data_dir, data_name,
-        embedding_keys = None,
-        annot_keys = ["louvain", "percent_mito", "n_genes", "n_counts"],
-        cluster_field = "louvain",
-        nb_marker=50,
-        skip_matrix = False,
-        html_dir = None,
-        port = None,
-        do_debug = False
-        ):
+    adata, data_dir, data_name,
+    embedding_keys = None,
+    annot_keys = ["louvain", "percent_mito", "n_genes", "n_counts"],
+    cluster_field = "louvain",
+    nb_marker = 50,
+    skip_matrix = False,
+    html_dir = None,
+    port = None,
+    do_debug = False
+):
     """
     Export adata to a UCSC Cell Browser project directory. If `html_dir` is
     set, subsequently build the html files from the project directory into
@@ -422,45 +436,57 @@ def cellbrowser(
     adata : :class:`~anndata.AnnData`
         Annotated data matrix
     data_dir : `str`
-        Path to directory for exported Cell Browser files. Usually these are
-        the files `exprMatrix.tsv.gz`, `meta.tsv`, coordinate files like
-        `tsne.coords.tsv`, and cluster marker gene lists like `markers.tsv`. A
-        file `cellbrowser.conf` is also created with pointers to these files.
+        Path to directory for exported Cell Browser files.
+        Usually these are the files `exprMatrix.tsv.gz`, `meta.tsv`,
+        coordinate files like `tsne.coords.tsv`,
+        and cluster marker gene lists like `markers.tsv`.
+        A file `cellbrowser.conf` is also created with pointers to these files.
         As a result, each adata object should have its own project_dir.
     data_name : `str`
         Name of dataset in Cell Browser, a string without special characters.
-        This is written to `data_dir`/cellbrowser.conf. Ideally this is a short
-        unique name for the dataset, like "pbmc3k" or "tabulamuris".
-        embedding_keys: `list` of `str` or `dict` of `key (str)`->`display
-        label (str)` 2-D embeddings in `adata.obsm` to export. The prefix "X_"
-        or "X_draw_graph_" is not necessary. Coordinates missing from `adata`
-        are skipped. By default, these keys are tried: ["tsne", "umap",
-        "pagaFa", "pagaFr", "pagaUmap", "phate", "fa", "fr", "kk", "drl",
-        "rt"]. For these, default display labels are automatically used. For
-        other values, you can specify a dictionary instead of a list, the
-        values of the dictionary are then the display labels for the
-        coordinates, e.g.  {'tsne' : "t-SNE by Scanpy"} annot_keys: `list` of
-        `str` or `dict` of `key (str)`->`display label (str)` Annotations in
-        `adata.obsm` to export. Can be a dictionary with key -> display label.
-        skip_matrix: `boolean` Do not export the matrix. If you had previously
-        exported this adata into the same `data_dir`, then there is no need to
-        export the whole matrix again. This option will make the export a lot
-        faster, e.g. when only coordinates or meta data were changed.
-        html_dir: `str` If this variable is set, the export will build html
+        This is written to `data_dir`/cellbrowser.conf.
+        Ideally this is a short unique name for the dataset,
+        like "pbmc3k" or "tabulamuris".
+    embedding_keys: `list` of `str` or `dict` of `key (str)`->`display label (str)`
+        2-D embeddings in `adata.obsm` to export.
+        The prefix "`X_`" or "`X_draw_graph_`" is not necessary.
+        Coordinates missing from `adata` are skipped.
+        By default, these keys are tried: ["tsne", "umap", "pagaFa", "pagaFr",
+        "pagaUmap", "phate", "fa", "fr", "kk", "drl", "rt"].
+        For these, default display labels are automatically used.
+        For other values, you can specify a dictionary instead of a list,
+        the values of the dictionary are then the display labels for the
+        coordinates, e.g. `{'tsne' : "t-SNE by Scanpy"}`
+    annot_keys: `list` of `str` or `dict` of `key (str)`->`display label (str)`
+        Annotations in `adata.obsm` to export.
+        Can be a dictionary with key -> display label.
+    skip_matrix: `boolean`
+        Do not export the matrix.
+        If you had previously exported this adata into the same `data_dir`,
+        then there is no need to export the whole matrix again.
+        This option will make the export a lot faster,
+        e.g. when only coordinates or meta data were changed.
+    html_dir: `str`
+        If this variable is set, the export will build html
         files from `data_dir` to `html_dir`, creating html/js/json files.
         Usually there is one global html output directory for all datasets.
-        Often, `html_dir` is located under a webserver's (like Apache) htdocs
-        directory or is copied to one. A directory `html_dir`/`project_name`
-        will be created and an index.html will be created under `html_dir` for
-        all subdirectories.  Existing files will be overwritten. If do not to
-        use html_dir, you can use the command line tool `cbBuild` to build the
-        html directory.  port: `int` If this variable and html_dir are set,
+        Often, `html_dir` is located under a webserver's (like Apache)
+        htdocs directory or is copied to one.
+        A directory `html_dir`/`project_name` will be created and
+        an index.html will be created under `html_dir` for all subdirectories.
+        Existing files will be overwritten.
+        If do not to use html_dir,
+        you can use the command line tool `cbBuild` to build the html directory.
+    port: `int`
+        If this variable and `html_dir` are set,
         Python's built-in web server will be spawned as a daemon in the
-        background and serve the files under html_dir. To kill the process,
-        call cellbrowser.cellbrowser.stop().  do_debug: `boolean` Activate
-        debugging output
+        background and serve the files under `html_dir`.
+        To kill the process, call `cellbrowser.cellbrowser.stop()`.
+    do_debug: `boolean`
+        Activate debugging output
 
-    Examples --------
+    Examples
+    --------
     See this
     `tutorial <https://github.com/theislab/scanpy_usage/tree/master/181126_Cellbrowser_exports>`__.
     """
