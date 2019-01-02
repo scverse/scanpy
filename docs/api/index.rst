@@ -1,30 +1,38 @@
-.. automodule:: scanpy.api
+.. automodule:: scanpy
 
 API
 ===
 
 
-Import Scanpy's high-level API as::
+Import Scanpy as::
 
-   import scanpy.api as sc
+   import scanpy as sc
+
+.. note::
+
+   Wrappers to external functionality are found in :class:`scanpy.external`. Previously, both core and external functionality were available through :class:`scanpy.api` (deprecated since 1.3.7).
+
 
 Preprocessing: PP
 ------------------
 
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
+Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
+
 Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
-For visual quality control, see :func:`~scanpy.api.pl.highest_expr_gens` and
-:func:`~scanpy.api.pl.filter_genes_dispersion` in the :doc:`plotting API
-<plotting>`.
+For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
+:func:`~scanpy.pl.filter_genes_dispersion` in :class:`scanpy.plotting`.
 
 .. autosummary::
    :toctree: .
 
+   pp.calculate_qc_metrics
    pp.filter_cells
    pp.filter_genes
+   pp.highly_variable_genes
    pp.filter_genes_dispersion
    pp.log1p
    pp.pca
@@ -47,24 +55,7 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that a simple batch correction method is available via :func:`pp.regress_out`.
-
-.. autosummary::
-   :toctree: .
-
-   pp.mnn_correct
-
-Imputation
-~~~~~~~~~~
-
-Note that the fundamental limitations of imputation are still under `debate
-<https://github.com/theislab/scanpy/issues/189>`__.
-
-.. autosummary::
-   :toctree: .
-
-   pp.dca
-   pp.magic
+Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :class:`scanpy.external` for more.
 
 Neighbors
 ~~~~~~~~~
@@ -78,6 +69,8 @@ Neighbors
 Tools: TL
 ----------
 
+Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
+
 Embeddings
 ~~~~~~~~~~
 
@@ -89,7 +82,6 @@ Embeddings
    tl.umap
    tl.draw_graph
    tl.diffmap
-   tl.phate
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,6 +89,7 @@ Clustering and trajectory inference
 .. autosummary::
    :toctree: .
 
+   tl.leiden
    tl.louvain
    tl.dpt
    tl.paga
@@ -119,8 +112,6 @@ Gene scores, Cell cycle
 
    tl.score_genes
    tl.score_genes_cell_cycle
-   tl.sandbag
-   tl.cyclone
 
 Simulations
 ~~~~~~~~~~~
@@ -134,9 +125,7 @@ Simulations
 Plotting: PL
 ------------
 
-The plotting :doc:`plotting API <plotting>` largely parallels the ``tl.*`` and
-``pp.*`` functions. For most tools and for some preprocessing functions, you'll
-find a plotting function with the same name.
+The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions. For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
 .. toctree::
    :hidden:
@@ -258,14 +247,18 @@ Datasets
    datasets.blobs
    datasets.krumsiek11
    datasets.moignard15
+   datasets.pbmc3k
+   datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
-   datasets.pbmc68k_reduced
 
-Exporting
----------
+
+Further Modules
+---------------
 
 .. autosummary::
    :toctree: .
 
-   export_to.spring_project
+   external
+   api
+   plotting

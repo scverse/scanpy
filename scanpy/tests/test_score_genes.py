@@ -1,5 +1,5 @@
 import numpy as np
-import scanpy.api as sc
+import scanpy as sc
 from anndata import AnnData
 
 def test_add_score():

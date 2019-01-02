@@ -3,7 +3,7 @@ import inspect
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union, Mapping
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
@@ -54,24 +54,29 @@ autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
-napoleon_use_rtype = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 
 intersphinx_mapping = dict(
     python=('https://docs.python.org/3', None),
     numpy=('https://docs.scipy.org/doc/numpy/', None),
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    sklearn=('https://scikit-learn.org/stable/', None),
     pandas=('http://pandas.pydata.org/pandas-docs/stable/', None),
     matplotlib=('https://matplotlib.org/', None),
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
+    bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
+    louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
 )
 
 templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Fidel Ramirez, Tobias Callies'
-copyright = f'{datetime.now():%Y}, {author}'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas'
+copyright = f'{datetime.now():%Y}, {author}.'
 
 version = scanpy.__version__.replace('.dirty', '')
 release = version
@@ -120,7 +125,8 @@ texinfo_documents = [
 
 
 # -- generate_options override ------------------------------------------
-# TODO: why?
+# The only thing changed here is that we specify imported_members=True
+# in the generate_autosummary_docs call.
 
 
 def process_generate_options(app: Sphinx):
@@ -136,11 +142,9 @@ def process_generate_options(app: Sphinx):
     if not genfiles:
         return
 
-    from sphinx.ext.autosummary.generate import generate_autosummary_docs
-
     ext = app.config.source_suffix
     genfiles = [
-        genfile + (not genfile.endswith(tuple(ext)) and ext[0] or '')
+        genfile + ('' if genfile.endswith(tuple(ext)) else ext[0])
         for genfile in genfiles
     ]
 
@@ -148,6 +152,7 @@ def process_generate_options(app: Sphinx):
     if suffix is None:
         return
 
+    from sphinx.ext.autosummary.generate import generate_autosummary_docs
     generate_autosummary_docs(
         genfiles, builder=app.builder,
         warn=logger.warning, info=logger.info,
@@ -174,7 +179,10 @@ def get_obj_module(qualname):
     # retrieve object and find original module name
     if classname:
         cls = getattr(sys.modules[modname], classname)
-        modname = cls.__module__
+        try:
+            modname = cls.__module__
+        except AttributeError as e:
+            print(e)
         obj = getattr(cls, attrname) if attrname else cls
     else:
         obj = None
@@ -228,8 +236,48 @@ from jinja2.defaults import DEFAULT_FILTERS
 DEFAULT_FILTERS.update(modurl=modurl, api_image=api_image)
 
 
-# -- Prettier Param docs --------------------------------------------
+# -- Override some classnames in autodoc --------------------------------------------
+# This makes sure that automatically documented links actually
+# end up being links instead of pointing nowhere.
 
+
+import sphinx_autodoc_typehints
+
+qualname_overrides = {
+    'anndata.base.AnnData': 'anndata.AnnData',
+    'pandas.core.frame.DataFrame': 'pandas.DataFrame',
+    'scipy.sparse.base.spmatrix': 'scipy.sparse.spmatrix',
+    'scipy.sparse.csr.csr_matrix': 'scipy.sparse.csr_matrix',
+    'scipy.sparse.csc.csc_matrix': 'scipy.sparse.csc_matrix',
+}
+
+fa_orig = sphinx_autodoc_typehints.format_annotation
+def format_annotation(annotation):
+    if getattr(annotation, '__origin__', None) is Union or hasattr(annotation, '__union_params__'):
+        params = getattr(annotation, '__union_params__', None) or getattr(annotation, '__args__', None)
+        return ', '.join(map(format_annotation, params))
+    if getattr(annotation, '__origin__', None) is Mapping:
+        return ':class:`~typing.Mapping`'
+    if inspect.isclass(annotation):
+        full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
+        override = qualname_overrides.get(full_name)
+        if override is not None:
+            return f':py:class:`~{qualname_overrides[full_name]}`'
+    return fa_orig(annotation)
+sphinx_autodoc_typehints.format_annotation = format_annotation
+
+
+# -- Change default role --------------------------------------------
+
+from docutils.parsers.rst import roles
+
+roles.DEFAULT_INTERPRETED_ROLE = 'literal'
+
+
+# -- Prettier Param docs --------------------------------------------
+# Our PrettyTypedField is the same as the default PyTypedField,
+# except that the items (e.g. function parameters) get rendered as
+# definition list instead of paragraphs with some formatting.
 
 from typing import Dict, List, Tuple
 
@@ -259,8 +307,8 @@ class PrettyTypedField(PyTypedField):
             if fieldtype is not None:
                 head += nodes.Text(' : ')
                 if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
-                    typename = ''.join(n.astext() for n in fieldtype)
-                    head += makerefs(self.typerolename, typename, addnodes.literal_emphasis)
+                    text_node, = fieldtype  # type: nodes.Text
+                    head += makerefs(self.typerolename, text_node.astext(), addnodes.literal_emphasis)
                 else:
                     head += fieldtype
 

@@ -1,23 +1,29 @@
 """Color palettes in addition to matplotlib's palettes."""
 
+from matplotlib import cm, colors
+
+# Colorblindness adjusted vega_10
+# See https://github.com/theislab/scanpy/issues/387
+vega_10 = list(map(colors.to_hex, cm.tab10.colors))
+vega_10_scanpy = vega_10.copy()
+vega_10_scanpy[2] = '#279e68'  # green
+vega_10_scanpy[4] = '#aa40fc'  # purple
+vega_10_scanpy[8] = '#b5bd61'  # kakhi
+
 # default matplotlib 2.0 palette
 # see 'category20' on https://github.com/vega/vega/wiki/Scales#scale-range-literals
-# or matplotlib/_cm.py
-vega_20 = [
-    '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c', '#98df8a', '#d62728',
-    '#ff9896', '#9467bd', '#c5b0d5', '#8c564b', '#c49c94', '#e377c2', '#f7b6d2',
-    '#7f7f7f', '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5',
-]
+vega_20 = list(map(colors.to_hex, cm.tab20.colors))
 
 # reorderd, some removed, some added
 vega_20_scanpy = [
-    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-    '#9467bd', '#8c564b', '#e377c2',  # '#7f7f7f' removed grey
-    '#bcbd22', '#17becf',
-    '#aec7e8', '#ffbb78', '#98df8a', '#ff9896',
-    '#c5b0d5', '#c49c94', '#f7b6d2',  # '#c7c7c7' removed grey
-    '#dbdb8d', '#9edae5',
-    '#ad494a', '#8c6d31']  # manual additions
+    *vega_20[0:14:2], *vega_20[16::2],  # dark without grey
+    *vega_20[1:15:2], *vega_20[17::2],  # light without grey
+    '#ad494a', '#8c6d31',  # manual additions
+]
+vega_20_scanpy[2] = vega_10_scanpy[2]
+vega_20_scanpy[4] = vega_10_scanpy[4]
+vega_20_scanpy[7] = vega_10_scanpy[8]  # kakhi shifted by missing grey
+# TODO: also replace pale colors if necessary
 
 default_20 = vega_20_scanpy
 
@@ -52,3 +58,42 @@ godsnot_64 = [
     "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"]
 
 default_64 = godsnot_64
+
+
+from typing import Mapping, Sequence
+
+
+def _plot_color_cylce(clists: Mapping[str, Sequence[str]]):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+
+    fig, axes = plt.subplots(nrows=len(clists))  # type: plt.Figure, plt.Axes
+    fig.subplots_adjust(top=.95, bottom=.01, left=.3, right=.99)
+    axes[0].set_title('Color Maps/Cycles', fontsize=14)
+
+    for ax, (name, clist) in zip(axes, clists.items()):
+        n = len(clist)
+        ax.imshow(
+            np.arange(n)[None, :].repeat(2, 0),
+            aspect='auto',
+            cmap=ListedColormap(clist),
+            norm=BoundaryNorm(np.arange(n+1)-.5, n),
+        )
+        pos = list(ax.get_position().bounds)
+        x_text = pos[0] - .01
+        y_text = pos[1] + pos[3] / 2.
+        fig.text(x_text, y_text, name, va='center', ha='right', fontsize=10)
+
+    # Turn off all ticks & spines
+    for ax in axes:
+        ax.set_axis_off()
+    fig.show()
+
+
+if __name__ == '__main__':
+    _plot_color_cylce({
+        name: colors
+        for name, colors in globals().items()
+        if isinstance(colors, list)
+    })

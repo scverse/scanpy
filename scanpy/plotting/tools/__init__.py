@@ -65,7 +65,7 @@ def pca_loadings(adata, components=None, show=None, save=None):
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -74,18 +74,22 @@ def pca_loadings(adata, components=None, show=None, save=None):
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
-def pca_variance_ratio(adata, log=False, show=None, save=None):
+def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
     """Plot the variance ratio.
 
     Parameters
     ----------
-    show : bool, optional (default: `None`)
+    n_pcs : `int`, optional (default: `30`)
+         Number of PCs to show.
+    log : `bool`, optional (default: `False`)
+         Plot on logarithmic scale..
+    show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
     """
-    ranking(adata, 'uns', 'variance_ratio', dictionary='pca', labels='PC', log=log)
+    ranking(adata, 'uns', 'variance_ratio', n_points=n_pcs, dictionary='pca', labels='PC', log=log)
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
@@ -149,7 +153,7 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
-                      n_panels_per_row=4, sharey=True, show=None, save=None, ax=None):
+                      ncols=4, sharey=True, show=None, save=None, ax=None, **kwds):
     """\
     Plot ranking of genes.
 
@@ -166,39 +170,31 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
         Number of genes to show.
     fontsize : `int`, optional (default: 8)
         Fontsize for gene names.
-    n_panels_per_row: `int`, optional (default: 4)
+    ncols : `int`, optional (default: 4)
         Number of panels shown per row.
     sharey: `bool`, optional (default: True)
-        Controls if the y-axis of each panels should be shared. But setting
-        sharey=False, each panel has its own y-axis range.
-
+        Controls if the y-axis of each panels should be shared. But passing
+        `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
     """
-    if key is None:
-        key = 'rank_genes_groups'
-    groups_key = str(adata.uns[key]['params']['groupby'])
+    if 'n_panels_per_row' in kwds:  n_panels_per_row  = kwds['n_panels_per_row']
+    else: n_panels_per_row = ncols
+    if key is None: key = 'rank_genes_groups'
     reference = str(adata.uns[key]['params']['reference'])
     group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
     # one panel for each group
-    n_panels = len(group_names)
     # set up the figure
-    n_panels_x = n_panels_per_row
+    n_panels_x = min(n_panels_per_row, len(group_names))
     n_panels_y = np.ceil(len(group_names) / n_panels_x).astype(int)
 
     from matplotlib import gridspec
     fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0],
                              n_panels_y * rcParams['figure.figsize'][1]))
-    left = 0.2/n_panels_x
-    bottom = 0.13/n_panels_y
     gs = gridspec.GridSpec(nrows=n_panels_y,
                            ncols=n_panels_x,
-                           left=left,
-                           right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-                           bottom=bottom,
-                           top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
                            wspace=0.22,
-                           hspace=0.4)
+                           hspace=0.3)
 
     ax0 = None
     ymin = np.Inf
@@ -281,6 +277,8 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
     if key is None:
         key = 'rank_genes_groups'
 
+    if 'dendrogram' not in kwds:
+        kwds['dendrogram'] = True
     if groupby is None:
         groupby = str(adata.uns[key]['params']['groupby'])
     group_names = (adata.uns[key]['names'].dtype.names
@@ -305,7 +303,12 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
     elif plot_type == 'stacked_violin':
         from ..anndata import stacked_violin
-        stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+        return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
+                       var_group_positions=group_positions, show=show, save=save, **kwds)
+
+    elif plot_type == 'tracksplot':
+        from ..anndata import tracksplot
+        return tracksplot(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
@@ -342,6 +345,37 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
     """
 
     _rank_genes_groups_plot(adata, plot_type='heatmap', groups=groups, n_genes=n_genes,
+                            groupby=groupby, key=key, show=show, save=save, **kwds)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, key=None,
+                              show=None, save=None, **kwds):
+    """\
+    Plot ranking of genes using heatmap plot (see `scanpy.api.pl.heatmap`)
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    groups : `str` or `list` of `str`
+        The groups for which to show the gene ranking.
+    n_genes : `int`, optional (default: 10)
+        Number of genes to show.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. By default,
+        the groupby is chosen from the rank genes groups parameter but
+        other groupby options can be used.  It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories` (see `scanpy.api.pl.heatmap`).
+    key : `str`
+        Key used to store the ranking results in `adata.uns`.
+    **kwds : keyword arguments
+        Are passed to `scanpy.api.pl.tracksplot`.
+    {show_save_ax}
+    """
+
+    _rank_genes_groups_plot(adata, plot_type='tracksplot', groups=groups, n_genes=n_genes,
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
@@ -499,11 +533,14 @@ def rank_genes_groups_violin(
         for g in gene_names:
             if adata.raw is not None and use_raw:
                 X_col = adata.raw[:, g].X
+                if gene_symbols:
+                    g = adata.raw.var[gene_symbols][g]
             else:
                 X_col = adata[:, g].X
+                if gene_symbols:
+                    g = adata.var[gene_symbols][g]
             if issparse(X_col): X_col = X_col.toarray().flatten()
-            new_gene_names.append(
-                g if gene_symbols is None else adata.var[gene_symbols][g])
+            new_gene_names.append(g)
             df[g] = X_col
         df['hue'] = adata.obs[groups_key].astype(str).values
         if reference == 'rest':
@@ -527,7 +564,7 @@ def rank_genes_groups_violin(
         _ax.set_title('{} vs. {}'.format(group_name, reference))
         _ax.legend_.remove()
         _ax.set_ylabel('expression')
-        _ax.set_xticklabels(gene_names, rotation='vertical')
+        _ax.set_xticklabels(new_gene_names, rotation='vertical')
         writekey = ('rank_genes_groups_'
                     + str(adata.uns[key]['params']['groupby'])
                     + '_' + group_name)

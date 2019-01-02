@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import scipy.sparse
+from scipy.sparse import issparse
 from .. import settings
 from .. import logging as logg
 
@@ -83,7 +84,7 @@ def score_genes(
 
     _adata = adata.raw if use_raw else adata
     # TODO: this densifies the whole data matrix for `gene_pool`
-    if scipy.sparse.issparse(_adata.X):
+    if issparse(_adata.X):
         obs_avg = pd.Series(
             np.nanmean(
                 _adata[:, gene_pool].X.toarray(), axis=0), index=gene_pool)  # average expression of genes
@@ -107,15 +108,24 @@ def score_genes(
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
 
+
+    X_list = _adata[:, gene_list].X
+    if issparse(X_list): X_list = X_list.toarray()
+    X_control = _adata[:, control_genes].X
+    if issparse(X_control): X_control = X_control.toarray()
+    X_control = np.nanmean(X_control, axis=1)
+
     if len(gene_list) == 0:
         # We shouldn't even get here, but just in case
-        logg.hint('could not add \n'
-              '    \'{}\', score of gene set (adata.obs)'.format(score_name))
+        logg.hint(
+            'could not add \n'
+            '    \'{}\', score of gene set (adata.obs)'.format(score_name))
         return adata if copy else None
     elif len(gene_list) == 1:
-        score = _adata[:, gene_list].X - np.nanmean(_adata[:, control_genes].X.toarray(), axis=1)
+        score = _adata[:, gene_list].X - X_control
     else:
-        score = np.nanmean(_adata[:, gene_list].X.toarray(), axis=1) - np.nanmean(_adata[:, control_genes].X.toarray(), axis=1)
+        score = np.nanmean(X_list, axis=1) - X_control
+
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
