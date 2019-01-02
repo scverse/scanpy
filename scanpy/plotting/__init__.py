@@ -1,5 +1,5 @@
 """\
-Plotting: PL
+Plotting API
 ============
 
 .. automodule:: scanpy
@@ -7,7 +7,6 @@ Plotting: PL
 .. note::
 
     See the :ref:`settings` section for all important plotting configurations.
-
 
 Generic
 -------

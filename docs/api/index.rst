@@ -24,7 +24,7 @@ Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
 For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
-:func:`~scanpy.pl.filter_genes_dispersion` in :class:`scanpy.plotting`.
+:func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.plotting`.
 
 .. autosummary::
    :toctree: .
@@ -124,7 +124,8 @@ Simulations
 Plotting: PL
 ------------
 
-The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions. For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
+The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
+For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
 .. toctree::
    :hidden:
@@ -136,10 +137,9 @@ The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and 
 Reading
 -------
 
-*Note:* For reading annotation use
-:ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>` and add
-it to your `AnnData` object. The following read functions are intended for
-the numeric data in the data matrix `X`.
+*Note:* For reading annotation use :ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>`
+and add it to your :class:`anndata.AnnData` object.
+The following read functions are intended for the numeric data in the data matrix `X`.
 
 Read common file formats using
 
@@ -198,7 +198,7 @@ Represent data as a neighborhood structure, usually a knn graph.
 Settings
 --------
 
-A convenience function for setting some default ``matplotlib.rcParams`` and a
+A convenience function for setting some default :obj:`matplotlib.rcParams` and a
 high-resolution jupyter display backend useful for use in notebooks.
 
 .. autosummary::

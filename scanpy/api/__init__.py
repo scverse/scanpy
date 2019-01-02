@@ -40,14 +40,14 @@ __doc__ = """\
 Global API (deprecated)
 =======================
 
-.. note::
+.. deprecated:: 1.3.6
 
-   This high level API is deprecated. See :doc:`here <index>` instead.
+   Use the top level module :mod:`scanpy` instead::
+
+       import scanpy as sc
 
 
-Import Scanpy's high-level API as::
-
-   import scanpy.api as sc
+For the deprecated high-level API, use `import scanpy.api as sc`.
 
 Preprocessing: PP
 ------------------
@@ -182,12 +182,6 @@ Plotting: PL
 The plotting :doc:`plotting API <plotting>` largely parallels the ``tl.*`` and
 ``pp.*`` functions. For most tools and for some preprocessing functions, you'll
 find a plotting function with the same name.
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-
-   plotting
 
 
 Reading

@@ -11,7 +11,9 @@ test_no_compr.h5ad
 docs/_build
 docs/api/scanpy.api.*.rst
 docs/api/scanpy.*.rst
+!docs/api/scanpy.api.rst
 !docs/api/scanpy.api.AnnData.rst
+!docs/api/scanpy.plotting.rst
 archive/
 data/
 figs/
