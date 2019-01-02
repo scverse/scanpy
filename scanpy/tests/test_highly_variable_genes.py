@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import scanpy.api as sc
+import scanpy as sc
 from pathlib import Path
 
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')

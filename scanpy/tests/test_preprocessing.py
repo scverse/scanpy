@@ -1,7 +1,7 @@
 from itertools import product
 import numpy as np
 from scipy import sparse as sp
-import scanpy.api as sc
+import scanpy as sc
 from anndata import AnnData
 
 

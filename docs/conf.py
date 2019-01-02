@@ -54,7 +54,8 @@ autosummary_generate = True
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
-napoleon_use_rtype = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 
 intersphinx_mapping = dict(
@@ -74,8 +75,8 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas.'
-copyright = f'{datetime.now():%Y}, {author}'
+author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas'
+copyright = f'{datetime.now():%Y}, {author}.'
 
 version = scanpy.__version__.replace('.dirty', '')
 release = version
@@ -178,7 +179,10 @@ def get_obj_module(qualname):
     # retrieve object and find original module name
     if classname:
         cls = getattr(sys.modules[modname], classname)
-        modname = cls.__module__
+        try:
+            modname = cls.__module__
+        except AttributeError as e:
+            print(e)
         obj = getattr(cls, attrname) if attrname else cls
     else:
         obj = None
@@ -241,6 +245,7 @@ import sphinx_autodoc_typehints
 
 qualname_overrides = {
     'anndata.base.AnnData': 'anndata.AnnData',
+    'pandas.core.frame.DataFrame': 'pandas.DataFrame',
     'scipy.sparse.base.spmatrix': 'scipy.sparse.spmatrix',
     'scipy.sparse.csr.csr_matrix': 'scipy.sparse.csr_matrix',
     'scipy.sparse.csc.csc_matrix': 'scipy.sparse.csc_matrix',
