@@ -9,15 +9,31 @@
 
 .. warning::
 
-   In version 1.3.4, a bug was introduced: :func:`~scanpy.api.pp.pca` produced a `TruncatedSVD` instead of a `PCA` when sparse data was passed. The bug is present in 1.3.4 and 1.3.5 and was corrected in 1.3.6.
+   In version 1.3.4, a bug was introduced: :func:`~scanpy.api.pp.pca` produced a `TruncatedSVD` instead of a `PCA` when sparse data was passed. The bug is present in 1.3.4 and 1.3.5 and was corrected in 1.3.6. It should not affect many users as typically, dense data is passed when computing a PCA.
 
 
-On master :small:`November 5, 2018`
------------------------------------
+On master :small:`January 1, 2019`
+----------------------------------
 
-- :func:`~scanpy.api.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :smaller:`thanks to I Virshup`
-- :func:`~scanpy.api.pp.read_10x_h5` and :func:`~scanpy.api.pp.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__  :smaller:`thanks to Q. Gong`
-- :func:`~scanpy.api.pp.highly_variable_genes` replaces :func:`~scanpy.api.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset :smaller:`thanks to S. Rybakov`
+Major updates:
+
+- one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ (v1.3.7)
+- a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ (v1.3.6) :smaller:`thanks to F Ramirez`
+- changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical (anndata v0.6.16)
+
+Two new possibilities for interactive exploration of Scanpy analysis results:
+
+- CZI's `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ directly reads `.h5ad` files
+- the `UCSC Single Cell Browser <https://github.com/maximilianh/cellBrowser>`__ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` (v1.3.6) :smaller:`thanks to M Haeussler`
+
+Further updates:
+
+- :func:`~scanpy.pp.highly_variable_genes` replaces :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset (v1.3.6) :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.tl.leidenalg` wraps the recent graph clustering package by [Traag18]_ (v1.3.4) :smaller:`thanks to K Polanski`
+- :func:`~scanpy.external.bbknn` wraps the recent batch correction package [Park18]_ (v1.3.4) :smaller:`thanks to K Polanski`
+- :func:`~scanpy.external.phenograph` wraps the graph clustering package Phenograph [Levine15]_  (v1.3.7) :smaller:`thanks to A Mousa`
+- :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ (v1.3.4) :smaller:`thanks to I Virshup` 
+- :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__ (v1.3.3)  :smaller:`thanks to Q Gong`
 
 
 Version 1.3 :small:`September 3, 2018`
@@ -39,12 +55,6 @@ There is a `section <https://scanpy.readthedocs.io/en/latest/api/#imputation>`__
 
 - :func:`~scanpy.api.pp.magic` for imputation using data diffusion [vanDijk18]_ :smaller:`thanks to S Gigante`
 - :func:`~scanpy.api.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
-
-Further changes:
-
-- `frameon=False` enables easy removal of frames in scatter plots and in :func:`~scanpy.api.set_figure_params`
-
-And several consistency fixes.
 
 
 Version 1.2 :small:`June 8, 2018`
