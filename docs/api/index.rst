@@ -10,7 +10,7 @@ Import Scanpy as::
 
 .. note::
 
-   Wrappers to external functionality are found in :class:`scanpy.external`. Previously, both core and external functionality were available through :class:`scanpy.api` (deprecated since 1.3.7).
+   Wrappers to external functionality are found in :mod:`scanpy.external`. Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 
 Preprocessing: PP
