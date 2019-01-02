@@ -1,7 +1,7 @@
 import sys
 import inspect
 import logging
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from datetime import datetime
 from typing import Optional, Union, Mapping
 
@@ -210,7 +210,7 @@ def modurl(qualname: str) -> str:
     obj, module = get_obj_module(qualname)
     github_url = github_url1
     try:
-        path = Path(module.__file__).relative_to(project_dir)
+        path = PurePosixPath(Path(module.__file__).resolve().relative_to(project_dir))
     except ValueError:
         # trying to document something from another package
         github_url = github_url2
@@ -265,7 +265,7 @@ def format_annotation(annotation):
     if getattr(annotation, '__origin__', None) is Mapping:
         return ':class:`~typing.Mapping`'
     if inspect.isclass(annotation):
-        full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
+        full_name = f'{annotation.__module__}.{annotation.__qualname__}'
         override = qualname_overrides.get(full_name)
         if override is not None:
             return f':py:class:`~{override}`'
