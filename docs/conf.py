@@ -262,7 +262,7 @@ def format_annotation(annotation):
         full_name = '{}.{}'.format(annotation.__module__, annotation.__qualname__)
         override = qualname_overrides.get(full_name)
         if override is not None:
-            return f':py:class:`~{qualname_overrides[full_name]}`'
+            return f':py:class:`~{override}`'
     return fa_orig(annotation)
 sphinx_autodoc_typehints.format_annotation = format_annotation
 
