@@ -15,6 +15,8 @@ from . import export_to
 from . import logging
 from . import queries
 
+from .. import plotting
+
 # unfortunately, we cannot put this here as long as we have simple global
 # variables in settings... they couldn't be set in this case...
 # the main drawback is that we have to import set_figure_params
