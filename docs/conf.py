@@ -3,18 +3,10 @@ import inspect
 import logging
 from pathlib import Path, PurePosixPath
 from datetime import datetime
-from typing import Optional, Union, Mapping
+from typing import Union, Mapping
 
 from sphinx.application import Sphinx
 from sphinx.ext import autosummary
-
-# remove PyCharm’s old six module
-if 'six' in sys.modules:
-    print(*sys.path, sep='\n')
-    for pypath in list(sys.path):
-        if any(p in pypath for p in ['PyCharm', 'pycharm']) and 'helpers' in pypath:
-            sys.path.remove(pypath)
-    del sys.modules['six']
 
 import matplotlib  # noqa
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -22,7 +14,7 @@ matplotlib.use('agg')
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
-import scanpy.api  # noqa
+import scanpy  # noqa
 
 
 logger = logging.getLogger(__name__)
@@ -220,7 +212,7 @@ def modurl(qualname: str) -> str:
     return f'{github_url}/{path}{fragment}'
 
 
-def api_image(qualname: str) -> Optional[str]:
+def api_image(qualname: str) -> str:
     # I’d like to make this a contextfilter, but the jinja context doesn’t contain the path,
     # so no chance to not hardcode “api/” here.
     path = Path(__file__).parent / 'api' / f'{qualname}.png'
