@@ -40,14 +40,11 @@ __doc__ = """\
 Global API (deprecated)
 =======================
 
-.. deprecated:: 1.3.6
+.. deprecated:: 1.3.7
 
-   Use the top level module :mod:`scanpy` instead::
+   Use the top level module :mod:`scanpy` instead: `import scanpy as sc`.
 
-       import scanpy as sc
-
-
-For the deprecated high-level API, use `import scanpy.api as sc`.
+For the deprecated high-level API documented on this page, use `import scanpy.api as sc`.
 
 Preprocessing: PP
 ------------------
