@@ -42,7 +42,7 @@ Global API (deprecated)
 
 .. deprecated:: 1.3.7
 
-   Use the top level module :mod:`scanpy` instead: `import scanpy as sc`.
+   Use the top level module instead: `import scanpy as sc`.
 
 For the deprecated high-level API documented on this page, use `import scanpy.api as sc`.
 
