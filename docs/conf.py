@@ -39,9 +39,7 @@ extensions = [
 
 # Generate the API documentation when building
 autosummary_generate = True
-# both of the following two lines don't work
-# see falexwolf's issue for numpydoc
-# autodoc_member_order = 'bysource'
+autodoc_member_order = 'bysource'
 # autodoc_default_flags = ['members']
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
