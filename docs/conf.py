@@ -3,6 +3,7 @@ import inspect
 import logging
 from pathlib import Path, PurePosixPath
 from datetime import datetime
+from types import ModuleType
 from typing import Union, Mapping
 
 from sphinx.application import Sphinx
@@ -158,24 +159,22 @@ autosummary.process_generate_options = process_generate_options
 def get_obj_module(qualname):
     """Get a module/class/attribute and its original module by qualname"""
     modname = qualname
-    classname = None
-    attrname = None
+    attr_path = []
     while modname not in sys.modules:
-        attrname = classname
-        modname, classname = modname.rsplit('.', 1)
+        modname, leaf = modname.rsplit('.', 1)
+        attr_path.insert(0, leaf)
 
     # retrieve object and find original module name
-    if classname:
-        cls = getattr(sys.modules[modname], classname)
-        try:
-            modname = cls.__module__
-        except AttributeError as e:
-            print(e)
-        obj = getattr(cls, attrname) if attrname else cls
-    else:
-        obj = None
+    mod = sys.modules[modname]
+    obj = None
+    for attr_name in attr_path:
+        thing = getattr(mod if obj is None else obj, attr_name)
+        if isinstance(thing, ModuleType):
+            mod = thing
+        else:
+            obj = thing
 
-    return obj, sys.modules[modname]
+    return obj, mod
 
 
 def get_linenos(obj):
@@ -195,7 +194,11 @@ github_url2 = 'https://github.com/theislab/anndata/tree/master'
 
 def modurl(qualname: str) -> str:
     """Get the full GitHub URL for some object’s qualname."""
-    obj, module = get_obj_module(qualname)
+    try:
+        obj, module = get_obj_module(qualname)
+    except Exception:
+        print(f'Error in modurl({qualname!r}):', file=sys.stderr)
+        raise
     github_url = github_url1
     try:
         path = PurePosixPath(Path(module.__file__).resolve().relative_to(project_dir))
