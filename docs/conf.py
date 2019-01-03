@@ -77,6 +77,7 @@ todo_include_todos = False
 
 # -- Options for HTML output ----------------------------------------------
 
+
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = dict(
     navigation_depth=2,
@@ -98,19 +99,16 @@ def setup(app):
 # -- Options for other output formats ------------------------------------------
 
 
-htmlhelp_basename = 'Scanpydoc'
+htmlhelp_basename = f'{project}doc'
+doc_title = f'{project} Documentation'
 latex_documents = [
-    (master_doc, 'Scanpy.tex', 'Scanpy Documentation',
-     'Alex Wolf, Philipp Angerer', 'manual'),
+    (master_doc, f'{project}.tex', doc_title, author, 'manual'),
 ]
 man_pages = [
-    (master_doc, 'scanpy', 'Scanpy Documentation',
-     [author], 1)
+    (master_doc, project, doc_title, [author], 1)
 ]
 texinfo_documents = [
-    (master_doc, 'Scanpy', 'Scanpy Documentation',
-     author, 'Scanpy', 'One line description of project.',
-     'Miscellaneous'),
+    (master_doc, project, doc_title, author, project, 'One line description of project.', 'Miscellaneous'),
 ]
 
 
