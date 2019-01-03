@@ -24,15 +24,15 @@ logger = logging.getLogger(__name__)
 needs_sphinx = '1.7'  # autosummary bugfix
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
     # 'plot_generator',
     # 'plot_directive',
-    'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
-    'sphinx.ext.intersphinx',
+    'sphinx_autodoc_typehints',  # needs to be after napoleon
     # 'ipython_directive',
     # 'ipython_console_highlighting',
 ]
