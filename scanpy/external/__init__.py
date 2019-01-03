@@ -13,8 +13,6 @@ Preprocessing: PP
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
-
 .. autosummary::
    :toctree: .
 
