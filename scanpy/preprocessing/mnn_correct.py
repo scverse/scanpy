@@ -7,7 +7,7 @@ def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', inde
                 do_concatenate=True, save_raw=False, n_jobs=None, **kwargs):
     """Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
 
-    This uses the implementatino of `mnnpy
+    This uses the implementation of `mnnpy
     <https://github.com/chriscainx/mnnpy>`__ [Kang18]_.
 
     Depending on `do_concatenate`, returns matrices or `AnnData` objects in the
