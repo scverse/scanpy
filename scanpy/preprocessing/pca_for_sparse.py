@@ -1,6 +1,6 @@
 
 import numpy as np
-from packaging import version
+from distutils.version import StrictVersion
 from scipy.sparse import csr_matrix
 from sklearn import __version__ as sklearn_version
 from sklearn.utils import check_random_state
@@ -10,13 +10,13 @@ from sklearn.utils.extmath import randomized_svd
 # if its dtype is float64
 # https://github.com/scikit-learn/scikit-learn/blob/f0ab589f1541b1ca4570177d93fd7979613497e3/sklearn/utils/sparsefuncs_fast.pyx#L72
 
-if version.parse(sklearn_version) < version.parse('0.20.0'):
+if StrictVersion(sklearn_version) < StrictVersion('0.20.0'):
     from sklearn.utils.sparsefuncs_fast import _csr_mean_variance_axis0
     mean_variance = lambda X: _csr_mean_variance_axis0(X.data, X.shape, X.indices)
 else:
     from sklearn.utils.sparsefuncs_fast import csr_mean_variance_axis0 as mean_variance
 
-#need to pass issparse check
+# need to pass issparse check
 class CentSparse(csr_matrix):
     def __init__(self, A, m=None, var=None):
         self.A = A
