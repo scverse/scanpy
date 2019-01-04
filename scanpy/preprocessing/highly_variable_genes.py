@@ -164,9 +164,9 @@ def highly_variable_genes(
     if inplace or subset:
         logg.hint('added\n'
                   '    \'highly_variable\', boolean vector (adata.var)\n'
-                  '    \'means\', boolean vector (adata.var)\n'
-                  '    \'dispersions\', boolean vector (adata.var)\n'
-                  '    \'dispersions_norm\', boolean vector (adata.var)')
+                  '    \'means\', float vector (adata.var)\n'
+                  '    \'dispersions\', float vector (adata.var)\n'
+                  '    \'dispersions_norm\', float vector (adata.var)')
         adata.var['highly_variable'] = gene_subset
         adata.var['means'] = df['mean'].values
         adata.var['dispersions'] = df['dispersion'].values
