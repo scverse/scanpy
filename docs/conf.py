@@ -95,7 +95,7 @@ intersphinx_mapping = dict(
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = dict(
-    navigation_depth=2,
+    navigation_depth=4,
 )
 html_context = dict(
     display_github=True,      # Integrate GitHub
