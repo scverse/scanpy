@@ -18,7 +18,7 @@ def _normalize_data(X, counts, after=None, copy=False):
 
 @doc_params(norm_bulk=doc_norm_bulk, norm_quant=doc_norm_quant, norm_return=doc_norm_return, ex_quant=doc_ex_quant)
 def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
-                       layers=[], layer_norm=None, inplace=True):
+                       layers=None, layer_norm=None, inplace=True):
     """\
     {norm_bulk}
     {norm_quant}
@@ -61,7 +61,7 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
 
     cell_subset = counts_per_cell>0
     if not np.all(cell_subset):
-        logg.warning('Some cells have total count of genes equal to zero')
+        logg.warn('Some cells have total count of genes equal to zero')
 
     if layer_norm == 'after':
         after = target_sum
@@ -69,7 +69,8 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
         after = np.median(counts_per_cell[cell_subset])
     elif layer_norm is None:
         after = None
-    else: raise ValueError('layer_norm should be "after", "X" or None')
+    else:
+        raise ValueError('layer_norm should be "after", "X" or None')
     del cell_subset
 
     if inplace:
@@ -78,13 +79,14 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
         dat['X'] = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
 
     layers = adata.layers.keys() if layers == 'all' else layers
-    for layer in layers:
-        L = adata.layers[layer]
-        counts = np.ravel(L.sum(1))
-        if inplace:
-            _normalize_data(L, counts, after)
-        else:
-            dat[layer] = _normalize_data(L, counts, after, copy=True)
+    if layers is not None:
+        for layer in layers:
+            L = adata.layers[layer]
+            counts = np.ravel(L.sum(1))
+            if inplace:
+                _normalize_data(L, counts, after)
+            else:
+                dat[layer] = _normalize_data(L, counts, after, copy=True)
 
     logg.msg('    finished', t=True, end=': ')
     logg.msg('normalized adata.X')
@@ -95,7 +97,7 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
     return dat if not inplace else None
 
 @doc_params(norm_bulk=doc_norm_bulk, norm_return=doc_norm_return, ex_total=doc_ex_total)
-def normalize_total(adata, target_sum=None, key_added=None, layers=[], layer_norm=None, inplace=True):
+def normalize_total(adata, target_sum=None, key_added=None, layers=None, layer_norm=None, inplace=True):
     """\
     {norm_bulk}
 

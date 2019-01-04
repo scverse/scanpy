@@ -19,7 +19,7 @@ target_sum : `float` or `None`, optional (default: `None`)
 key_added : `str`, optional (default: `None`)
     Name of the field in `adata.obs` where the total counts per cell are
     stored.
-layers : `str` or list of `str`, optional (default: `[]`)
+layers : `str` or list of `str`, optional (default: `None`)
     List of layers to normalize. Set to `'all'` to normalize all layers.
 layer_norm : `str` or `None`, optional (default: `None`)
     Specifies how to normalize layers:
