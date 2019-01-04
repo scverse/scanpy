@@ -354,6 +354,7 @@ def pca(
     data: Union[AnnData, np.ndarray, spmatrix],
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
+    sparse_pca: Optional[bool] = False,
     svd_solver: str = 'auto',
     n_iter: str = 'auto',
     random_state: int = 0,
@@ -382,6 +383,10 @@ def pca(
         (uses :class:`~sklearn.decomposition.TruncatedSVD`),
         which allows to handle sparse input efficiently.
         Passing ``None`` decides automatically based on sparseness of the data.
+    sparse_pca
+        If ``False``, densifies ``data.X`` if it is sparse and
+        ``zero_center`` is ``True``. May lead to huge memory consumption.
+        If ``True``, computes PCA without densification.
     svd_solver
         SVD solver to use:
 
@@ -396,10 +401,12 @@ def pca(
           chooses automatically depending on the size of the problem.
     n_iter
         Number of iterations if ``svd_solver`` ``'randomized'`` is used.
-        Not used by ``'arpack'``. When ``'auto'``, it is set to 4,
+        Not used by ``'arpack'``.
+        When ``'auto'`` and ``zero_center=True``, it is set to 4,
         unless n_components is small (< .1 * min(X.shape)),
         n_iter in which case is set to 7.
         This improves precision with few components.
+        When ``'auto'`` and ``zero_center=False``, it is set to 5.
     random_state
         Change to use different initial states for the optimization.
     return_info
@@ -490,11 +497,22 @@ def pca(
             chunk = chunk.toarray() if issparse(chunk) else chunk
             X_pca[start:end] = pca_.transform(chunk)
     else:
+        if zero_center is None:
+            zero_center = not issparse(adata_comp.X)
         X = adata_comp.X
         if zero_center:
             if issparse(X):
-                from .pca_for_sparse import SparseDataPCA
-                pca_ = SparseDataPCA(n_components=n_comps, n_iter=n_iter, random_state=random_state)
+                if sparse_pca:
+                    from .pca_for_sparse import SparseDataPCA
+                    pca_ = SparseDataPCA(n_components=n_comps, n_iter=n_iter, random_state=random_state)
+                else:
+                    from sklearn.decomposition import PCA
+                    pca_ = PCA(n_components=n_comps, svd_solver=svd_solver,
+                               iterated_power=n_iter, random_state=random_state)
+                    logg.msg('    as `zero_center=True`, '
+                             'sparse input is densified and may '
+                             'lead to huge memory consumption', v=4)
+                    X = X.toarray()
             else:
                 from sklearn.decomposition import PCA
                 pca_ = PCA(n_components=n_comps, svd_solver=svd_solver,
@@ -506,6 +524,7 @@ def pca(
                    '    the first component, e.g., might be heavily influenced by different means\n'
                    '    the following components often resemble the exact PCA very closely', v=4)
             svd_solver = 'randomized' if svd_solver == 'auto' else svd_solver
+            n_iter = 5 if n_iter == 'auto' else n_iter
             pca_ = TruncatedSVD(n_components=n_comps, algorithm=svd_solver,
                                 n_iter=n_iter, random_state=random_state)
         X_pca = pca_.fit_transform(X)
