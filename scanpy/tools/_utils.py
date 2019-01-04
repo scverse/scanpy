@@ -1,6 +1,6 @@
 import numpy as np
 from .. import logging as logg
-from .pca import pca
+from ._pca import pca
 from ..preprocessing.simple import N_PCS
 
 doc_use_rep = """\
