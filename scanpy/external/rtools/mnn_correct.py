@@ -1,4 +1,5 @@
-
+# This is not actually used as we have a wrapper for a Python package in the meanwhile...
+# It might just serve as a template for future integrations...
 
 def mnn_concatenate(*adatas, geneset=None, k=20, sigma=1, n_jobs=None, **kwds):
     """Merge AnnData objects and correct batch effects using the MNN method.
