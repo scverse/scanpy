@@ -199,7 +199,7 @@ def rank_genes_groups(
                 pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
                 _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
             elif corr_method == 'bonferroni':
-                pvals_adj = pvals * n_genes
+                pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
             scores_sort = np.abs(scores) if rankby_abs else scores
             partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
@@ -302,7 +302,7 @@ def rank_genes_groups(
                     pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
                     _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
                 elif corr_method == 'bonferroni':
-                    pvals_adj = pvals * n_genes
+                    pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
@@ -358,7 +358,7 @@ def rank_genes_groups(
                     pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
                     _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
                 elif corr_method == 'bonferroni':
-                    pvals_adj = pvals * n_genes
+                    pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
                 foldchanges = (means[imask] + 1e-9) / mean_rest
