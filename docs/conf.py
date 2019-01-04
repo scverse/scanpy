@@ -20,9 +20,38 @@ import scanpy  # noqa
 
 logger = logging.getLogger(__name__)
 
+
 # -- General configuration ------------------------------------------------
 
+
 needs_sphinx = '1.7'  # autosummary bugfix
+
+# General information
+project = 'Scanpy'
+author = ', '.join([
+    'Alex Wolf',
+    'Philipp Angerer',
+    'Fidel Ramirez',
+    'Isaac Virshup',
+    'Sergei Rybakov',
+    'Davide Cittaro',
+    'Gokcen Eraslan',
+    'Tom White',
+    'Tobias Callies',
+    'Andrés R. Muñoz-Rojas',
+])
+copyright = f'{datetime.now():%Y}, {author}.'
+version = scanpy.__version__.replace('.dirty', '')
+release = version
+
+# default settings
+templates_path = ['_templates']
+source_suffix = '.rst'
+master_doc = 'index'
+default_role = 'literal'
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+pygments_style = 'sphinx'
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
@@ -48,6 +77,7 @@ napoleon_include_init_with_doc = False
 napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
+todo_include_todos = False
 
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
@@ -61,19 +91,6 @@ intersphinx_mapping = dict(
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
 )
-
-templates_path = ['_templates']
-source_suffix = '.rst'
-master_doc = 'index'
-project = 'Scanpy'
-author = 'Alex Wolf, Philipp Angerer, Fidel Ramirez, Isaac Virshup, Sergei Rybakov, Davide Cittaro, Gokcen Eraslan, Tom White, Tobias Callies, Andrés R. Muñoz-Rojas'
-copyright = f'{datetime.now():%Y}, {author}.'
-
-version = scanpy.__version__.replace('.dirty', '')
-release = version
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-pygments_style = 'sphinx'
-todo_include_todos = False
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -262,13 +279,6 @@ def format_annotation(annotation):
             return f':py:class:`~{override}`'
     return fa_orig(annotation)
 sphinx_autodoc_typehints.format_annotation = format_annotation
-
-
-# -- Change default role --------------------------------------------
-
-from docutils.parsers.rst import roles
-
-roles.DEFAULT_INTERPRETED_ROLE = 'literal'
 
 
 # -- Prettier Param docs --------------------------------------------
