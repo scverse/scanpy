@@ -1,4 +1,4 @@
-from .dpt import _diffmap
+from ._dpt import _diffmap
 
 
 def diffmap(adata, n_comps=15, copy=False):
