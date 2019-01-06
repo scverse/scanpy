@@ -1,7 +1,7 @@
 """Preprocessing recipes from the literature
 """
 
-from . import simple as pp
+from . import _simple as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from .. import logging as logg
 

@@ -6,7 +6,7 @@ import numpy.testing as npt
 import pytest
 
 from scanpy.preprocessing import *
-from scanpy.preprocessing.simple import materialize_as_ndarray
+from scanpy.preprocessing._simple import materialize_as_ndarray
 
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
