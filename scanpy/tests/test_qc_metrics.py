@@ -4,7 +4,7 @@ import scanpy as sc
 import scanpy
 from scipy import sparse
 
-from scanpy.preprocessing.qc import top_proportions, top_segment_proportions
+from scanpy.preprocessing._qc import top_proportions, top_segment_proportions
 
 def test_proportions():
     a_dense = np.ones((100, 100))

@@ -1,7 +1,7 @@
 import numpy as np
 from .. import logging as logg
-from .pca import pca
-from ..preprocessing.simple import N_PCS
+from ._pca import pca
+from ..preprocessing._simple import N_PCS
 
 doc_use_rep = """\
 use_rep : {`None`, 'X'} or any key for `.obsm`, optional (default: `None`)

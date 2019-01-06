@@ -14,10 +14,10 @@ import seaborn as sns
 
 from .. import settings
 from .. import logging as logg
-from . import utils
-from .utils import scatter_base, scatter_group, setup_axes
+from . import _utils as utils
+from ._utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from .docs import doc_scatter_bulk, doc_show_save_ax, doc_common_plot_args
+from ._docs import doc_scatter_bulk, doc_show_save_ax, doc_common_plot_args
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -1809,7 +1809,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
-        from scanpy.plotting.tools.scatterplots import _set_default_colors_for_categorical_obs
+        from scanpy.plotting._tools._scatterplots import _set_default_colors_for_categorical_obs
         _set_default_colors_for_categorical_obs(adata, groupby)
 
     groupby_colors = adata.uns[groupby + "_colors"]

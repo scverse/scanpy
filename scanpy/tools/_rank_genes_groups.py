@@ -9,7 +9,7 @@ from scipy.sparse import issparse
 from .. import utils
 from .. import settings
 from .. import logging as logg
-from ..preprocessing import simple
+from ..preprocessing._simple import _get_mean_var
 
 
 def rank_genes_groups(
@@ -166,7 +166,7 @@ def rank_genes_groups(
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
         for imask, mask in enumerate(groups_masks):
-            means[imask], vars[imask] = simple._get_mean_var(X[mask])
+            means[imask], vars[imask] = _get_mean_var(X[mask])
         # test each either against the union of all other groups or against a
         # specific group
         for igroup in range(n_groups):
@@ -175,7 +175,7 @@ def rank_genes_groups(
             else:
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
-            mean_rest, var_rest = simple._get_mean_var(X[mask_rest])
+            mean_rest, var_rest = _get_mean_var(X[mask_rest])
             ns_group = ns[igroup]  # number of observations in group
             if method == 't-test': ns_rest = np.where(mask_rest)[0].size
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
@@ -251,11 +251,11 @@ def rank_genes_groups(
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = simple._get_mean_var(X[mask])  # for fold-change
+                means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
                 if imask == ireference: continue
                 else: mask_rest = groups_masks[ireference]
                 ns_rest = np.where(mask_rest)[0].size
-                mean_rest, var_rest = simple._get_mean_var(X[mask_rest]) # for fold-change
+                mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change
                 if ns_rest <= 25 or ns[imask] <= 25:
                     logg.hint('Few observations in a group for '
                               'normal approximation (<=25). Lower test accuracy.')
@@ -345,9 +345,9 @@ def rank_genes_groups(
                 left = right + 1
 
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = simple._get_mean_var(X[mask]) #for fold-change
+                means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
                 mask_rest = ~groups_masks[imask]
-                mean_rest, var_rest = simple._get_mean_var(X[mask_rest]) #for fold-change
+                mean_rest, var_rest = _get_mean_var(X[mask_rest]) #for fold-change
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
