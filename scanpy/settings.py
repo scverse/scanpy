@@ -127,7 +127,7 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, frameon=True, vector_fr
     if transparent is not None:
         rcParams['savefig.transparent'] = transparent
     if scanpy:
-        from .plotting.rcmod import set_rcParams_scanpy
+        from .plotting._rcmod import set_rcParams_scanpy
         set_rcParams_scanpy(color_map=color_map)
     global _frameon
     _frameon = frameon
