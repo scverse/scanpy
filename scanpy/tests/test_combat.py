@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scanpy
 from sklearn.metrics import silhouette_score
-from sc.preprocessing._combat import stand_data
+from scanpy.preprocessing._combat import stand_data
 
 
 def test_norm():
