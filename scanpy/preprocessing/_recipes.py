@@ -1,7 +1,7 @@
 """Preprocessing recipes from the literature
 """
 
-from . import simple as pp
+from . import _simple as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from .. import logging as logg
 
@@ -51,7 +51,7 @@ def recipe_seurat(adata, log=True, plot=False, copy=False):
     filter_result = filter_genes_dispersion(
         adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log)
     if plot:
-        from ..plotting import preprocessing as ppp  # should not import at the top of the file
+        from ..plotting import _preprocessing as ppp  # should not import at the top of the file
         ppp.filter_genes_dispersion(filter_result, log=not log)
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
     if log: pp.log1p(adata)
@@ -107,7 +107,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     filter_result = filter_genes_dispersion(
         adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
     if plot:
-        from ..plotting import preprocessing as ppp  # should not import at the top of the file
+        from ..plotting import _preprocessing as ppp  # should not import at the top of the file
         ppp.filter_genes_dispersion(filter_result, log=True)
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter_result.gene_subset]

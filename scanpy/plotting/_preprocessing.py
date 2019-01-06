@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from anndata import AnnData
-from . import utils
+from . import _utils as utils
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions

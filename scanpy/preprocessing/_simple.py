@@ -15,8 +15,8 @@ from anndata import AnnData
 from .. import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata
-from .distributed import materialize_as_ndarray
-from .utils import _get_mean_var
+from ._distributed import materialize_as_ndarray
+from ._utils import _get_mean_var
 
 # install dask if available
 try:

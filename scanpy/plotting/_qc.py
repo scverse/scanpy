@@ -1,10 +1,10 @@
 import seaborn as sns
 from matplotlib import pyplot as plt
 import pandas as pd
-from . import utils
-from ..preprocessing.simple import normalize_per_cell
+from . import _utils as utils
+from ..preprocessing._simple import normalize_per_cell
 from ..utils import doc_params
-from .docs import doc_show_save_ax
+from ._docs import doc_show_save_ax
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
