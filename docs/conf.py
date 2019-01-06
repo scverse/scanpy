@@ -30,6 +30,7 @@ author = ', '.join([
     'Fidel Ramirez',
     'Isaac Virshup',
     'Sergei Rybakov',
+    'Marius Lange',
     'Davide Cittaro',
     'Gokcen Eraslan',
     'Tom White',
