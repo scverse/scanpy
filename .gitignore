@@ -41,6 +41,9 @@ scripts/paths.py
 scripts/test_private.sh
 scripts/tgdyn.py
 scripts/tgdyn_simple.py
+.spyproject/
+scanpy/.spyproject/
+
 
 
 # always-ignore extensions
