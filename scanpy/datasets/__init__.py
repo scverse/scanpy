@@ -4,8 +4,8 @@
 import os
 import numpy as np
 import pandas as pd
-from . import api_without_datasets as sc
 from .. import logging as logg
+import scanpy as sc
 
 
 def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
@@ -223,6 +223,10 @@ def pbmc3k():
     <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
     from this `webpage
     <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
+
+    .. note:
+
+        This downloads about 10 MB of data upon the first call of the function.
 
     Returns
     -------
