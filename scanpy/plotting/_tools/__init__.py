@@ -4,13 +4,14 @@ from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 
-from .. import utils
+from .. import _utils as utils
 from ...utils import doc_params
 from ... import logging as logg
-from ..anndata import scatter, ranking
-from ..utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from ..docs import doc_scatter_bulk, doc_show_save_ax
+from .._anndata import scatter, ranking
+from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from .._docs import doc_scatter_bulk, doc_show_save_ax
 from .scatterplots import pca
+
 # ------------------------------------------------------------------------------
 # PCA
 # ------------------------------------------------------------------------------
@@ -292,27 +293,27 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
     gene_names = sum([list(adata.uns[key]['names'][x][:n_genes]) for x in group_names], [])
 
     if plot_type == 'dotplot':
-        from ..anndata import dotplot
+        from .._anndata import dotplot
         dotplot(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'heatmap':
-        from ..anndata import heatmap
+        from .._anndata import heatmap
         heatmap(adata, gene_names, groupby, var_group_labels=group_names,
                 var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'stacked_violin':
-        from ..anndata import stacked_violin
+        from .._anndata import stacked_violin
         return stacked_violin(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'tracksplot':
-        from ..anndata import tracksplot
+        from .._anndata import tracksplot
         return tracksplot(adata, gene_names, groupby, var_group_labels=group_names,
                        var_group_positions=group_positions, show=show, save=save, **kwds)
 
     elif plot_type == 'matrixplot':
-        from ..anndata import matrixplot
+        from .._anndata import matrixplot
         matrixplot(adata, gene_names, groupby, var_group_labels=group_names,
                    var_group_positions=group_positions, show=show, save=save, **kwds)
 

@@ -3,10 +3,10 @@ from pandas.api.types import is_categorical_dtype
 import numpy as np
 from matplotlib import rcParams
 from matplotlib.colors import is_color_like
-from .. import utils
+from .. import _utils as utils
 from ...utils import sanitize_anndata, doc_params
 from ... import settings
-from ..docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
 from ... import logging as logg
 
 

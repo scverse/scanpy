@@ -10,11 +10,11 @@ from matplotlib.colors import is_color_like
 from matplotlib import rcParams, ticker
 from collections import Iterable
 
-from .. import utils
+from .. import _utils as utils
 from ... import utils as sc_utils
 from ... import settings
 from ... import logging as logg
-from ..utils import matrix
+from .._utils import matrix
 
 
 def paga_compare(
