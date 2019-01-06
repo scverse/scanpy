@@ -79,6 +79,10 @@ References
    *ForceAtlas2, a Continuous Graph Layout Algorithm for Handy Network Visualization Designed for the Gephi Software*
    `PLOS One <https://doi.org/10.1371/journal.pone.0098679>`__.
 
+.. [Johnson07] Johnson, Li & Rabinovic (2007),
+   *Adjusting batch effects in microarray expression data using empirical Bayes methods*,
+   `Biostatistics <https://doi.org/10.1093/biostatistics/kxj037>`__.
+
 .. [Kang18] Kang *et al.* (2018),
    *Python Implementation of MNN correct*,
    `GitHub <https://github.com/chriscainx/mnnpy>`__.
@@ -94,6 +98,10 @@ References
 .. [Lambiotte09] Lambiotte *et al.* (2009)
    *Laplacian Dynamics and Multiscale Modular Structure in Networks*
    `arXiv <https://arxiv.org/abs/0812.1770>`__.
+   
+.. [Leek12] Leek *et al.* (2012),
+   *sva: Surrogate Variable Analysis. R package*
+   `Bioconductor <https://doi.org/10.18129/B9.bioc.sva>`__.
 
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
@@ -139,7 +147,11 @@ References
 .. [Park18] Park *et al.* (2018),
    *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
    `bioRxiv <https://doi.org/10.1101/397042>`__.
-
+   
+.. [Pedersen12] Pedersen (2012),
+   *Python implementation of ComBat*
+   `GitHub <https://github.com/brentp/combat.py>`__.
+   
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
