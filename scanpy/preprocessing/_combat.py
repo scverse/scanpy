@@ -7,6 +7,7 @@ import patsy
 import numba
 import pdb
 
+
 def design_mat(model, batch_levels):
     """
     Computes a simple design matrix. 

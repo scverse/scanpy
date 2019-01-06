@@ -9,5 +9,5 @@ from ..preprocessing._bbknn import bbknn
 from ..preprocessing._dca import dca
 from ..preprocessing._magic import magic
 from ..neighbors import neighbors
-from ..preprocessing.combat import combat
+from ..preprocessing._combat import combat
 
