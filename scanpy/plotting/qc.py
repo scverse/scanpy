@@ -2,7 +2,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 import pandas as pd
 from . import utils
-from ..preprocessing.simple import normalize_per_cell
+from ..preprocessing._simple import normalize_per_cell
 from ..utils import doc_params
 from .docs import doc_show_save_ax
 
