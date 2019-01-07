@@ -39,8 +39,8 @@ inplace : `bool`, optional (default: `True`)
 
 doc_norm_quant = """\
 quantile : `float`, optional (default: 1)
-    Only use genes are less than fraction (specified by *quantile*)
-    of the total reads in every cell. So only these genes will sum up
+    Only use genes that make up less than fraction (specified by *quantile*)
+    of the total count in every cell. So only these genes will sum up
     to *target_sum*.\
 """
 
