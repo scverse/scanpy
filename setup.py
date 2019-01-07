@@ -1,39 +1,32 @@
+import sys
+if sys.version_info < (3,):
+    sys.exit('scanpy requires Python >= 3.5')
+from pathlib import Path
+
 from setuptools import setup, find_packages
-from io import open
 import versioneer
 
-with open('requirements.txt', encoding='utf-8') as requirements:
-    requires = [l.strip() for l in requirements]
 
-with open('README.rst', encoding='utf-8') as readme_f:
-    readme = readme_f.read()
-
-author = ', '.join([
-    'Alex Wolf',
-    'Philipp Angerer',
-    'Fidel Ramirez',
-    'Isaac Virshup',
-    'Sergei Rybakov',
-    'Marius Lange',
-    'Davide Cittaro',
-    'Gokcen Eraslan',
-    'Tom White',
-    'Tobias Callies',
-    'Andrés R. Muñoz-Rojas',
-])
+try:
+    from scanpy import __author__, __email__
+except ImportError:  # Deps not yet installed
+    __author__ = __email__ = ''
 
 setup(
     name='scanpy',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Single-Cell Analysis in Python.',
-    long_description=readme,
+    long_description=Path('README.rst').read_text('utf-8'),
     url='http://github.com/theislab/scanpy',
-    author=author,
-    author_email='alex.wolf@helmholtz-muenchen.de',
+    author=__author__,
+    author_email=__email__,
     license='BSD',
     python_requires='>=3.5',
-    install_requires=requires,
+    install_requires=[
+        l.strip() for l in
+        Path('requirements.txt').read_text('utf-8').splitlines()
+    ],
     extras_require=dict(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],

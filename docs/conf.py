@@ -24,19 +24,7 @@ needs_sphinx = '1.7'  # autosummary bugfix
 
 # General information
 project = 'Scanpy'
-author = ', '.join([
-    'Alex Wolf',
-    'Philipp Angerer',
-    'Fidel Ramirez',
-    'Isaac Virshup',
-    'Sergei Rybakov',
-    'Marius Lange',
-    'Davide Cittaro',
-    'Gokcen Eraslan',
-    'Tom White',
-    'Tobias Callies',
-    'Andrés R. Muñoz-Rojas',
-])
+author = scanpy.__author__
 copyright = f'{datetime.now():%Y}, {author}.'
 version = scanpy.__version__.replace('.dirty', '')
 release = version
