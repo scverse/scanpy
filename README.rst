@@ -2,7 +2,7 @@
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
     :target: https://pypi.org/project/scanpy
-.. |Docs| image:: https://readthedocs.org/projects/scanpy/badge/?version=latest
+.. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
