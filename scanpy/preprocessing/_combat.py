@@ -1,18 +1,17 @@
-import numpy as np
-from scipy.sparse import issparse
-import pandas as pd
 import sys
-from numpy import linalg as la
-import patsy
+
 import numba
-import pdb
+import pandas as pd
+import numpy as np
+from numpy import linalg as la
+from scipy.sparse import issparse
 
 
 def design_mat(model, batch_levels):
     """
     Computes a simple design matrix. 
     
-    At the moment, only includes the categorical annotations passed with the 'key' argument 
+    At the moment, only includes the categorical annotations passed with the 'key' argument
     to the combat function
     
     Parameters
@@ -27,9 +26,13 @@ def design_mat(model, batch_levels):
     design : pd.DataFrame
         The design matrix for the regression problem
     """
+    import patsy
 
-    design = patsy.dmatrix("~ 0 + C(batch, levels={})".format(batch_levels),
-                                                  model, return_type="dataframe")
+    design = patsy.dmatrix(
+        "~ 0 + C(batch, levels={})".format(batch_levels),
+        model,
+        return_type="dataframe",
+    )
     model = model.drop(["batch"], axis=1)
     sys.stderr.write("found %i batches\n" % design.shape[1])
     other_cols = [c for i, c in enumerate(model.columns)]
