@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from numpy import linalg as la
 from scipy.sparse import issparse
+from anndata import AnnData
 
 
 def design_mat(model, batch_levels):
