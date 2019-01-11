@@ -22,6 +22,7 @@ Generic
    pl.matrixplot
    pl.clustermap
    pl.ranking
+   pl.dendrogram
 
 
 Preprocessing
@@ -98,7 +99,7 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    pl.sim
 """
 
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot
+from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram
 
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
@@ -111,7 +112,7 @@ from ._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_g
 from ._tools import sim
 
 from ._rcmod import set_rcParams_scanpy, set_rcParams_defaults
-from . import palettes 
+from . import palettes
 
 from ._utils import matrix
 from ._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
