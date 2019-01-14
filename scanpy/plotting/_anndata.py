@@ -1198,7 +1198,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy,
+            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy,
                                                                           colors=groupby_colors, orientation='left')
 
             # add lines to main heatmap
@@ -1270,7 +1270,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=groupby_colors,
+            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=groupby_colors,
                                                                           orientation='bottom')
             # add lines to main heatmap
             line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
@@ -1287,7 +1287,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             for idx, pos in enumerate(var_group_positions):
                 arr += [idx] * (pos[1]+1 - pos[0])
 
-            gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
+            gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm)
             gene_groups_ax.axis('off')
 
         # plot colorbar
@@ -1902,7 +1902,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap = _plot_categories_as_colorblocks(groupby_ax, obs_tidy.T, colors=groupby_colors,
+    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy.T, colors=groupby_colors,
                                                                   orientation='bottom')
     # add lines to plot
     overlay_ax = fig.add_subplot(axs[1:-1, 0], sharex=first_ax)
@@ -1922,7 +1922,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         for idx, pos in enumerate(var_group_positions):
             arr += [idx] * (pos[1]+1 - pos[0])
 
-        gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap)
+        gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm)
         gene_groups_ax.axis('off')
         axs_list.append(gene_groups_ax)
 
@@ -2615,7 +2615,7 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
 
         groupby_ax.set_xlabel(groupby)
 
-    return ticks, labels, groupby_cmap
+    return ticks, labels, groupby_cmap, norm
 
 
 def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height=4):
