@@ -5,7 +5,7 @@ from ._diffmap import diffmap
 from ._draw_graph import draw_graph
 
 from ._paga import paga, paga_degrees, paga_expression_entropies, paga_compare_paths
-from ._rank_genes_groups import rank_genes_groups
+from ._rank_genes_groups import rank_genes_groups, filter_rank_genes_groups
 from ._dpt import dpt
 from ._leiden import leiden
 from ._louvain import louvain
