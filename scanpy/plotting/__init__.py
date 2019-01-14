@@ -23,6 +23,7 @@ Generic
    pl.clustermap
    pl.ranking
    pl.dendrogram
+   pl.correlation
 
 
 Preprocessing
@@ -99,7 +100,7 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    pl.sim
 """
 
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram
+from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation
 
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
