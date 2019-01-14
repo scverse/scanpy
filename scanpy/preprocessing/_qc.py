@@ -27,7 +27,8 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
         want to control for (e.g. "ERCC" or "mito").
     percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
         Which proportions of top genes to cover. If empty or `None` don't
-        calculate.
+        calculate. Values are considered 1-indexed, `percent_top=[50]` finds
+        cumulative proportion to the 50th most expressed gene.
     inplace : bool, optional (default: `False`)
         Whether to place calculated metrics in `.obs` and `.var`
 
@@ -147,7 +148,7 @@ def top_proportions(mtx, n):
     mtx : `Union[np.array, sparse.spmatrix]`
         Matrix, where each row is a sample, each column a feature.
     n : `int`
-        Rank to calculate proportions up to. Value is treated as 1-indexed
+        Rank to calculate proportions up to. Value is treated as 1-indexed,
         `n=50` will calculate cumulative proportions up to the 50th most
         expressed gene.
     """
