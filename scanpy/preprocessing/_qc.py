@@ -95,6 +95,7 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
     obs_metrics["log1p_total_{expr_type}"] = np.log1p(
         obs_metrics["total_{expr_type}"])
     if percent_top:
+        percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
         # Since there are local loop variables, formatting must occur in their scope
         # Probably worth looking into a python3.5 compatable way to make this better
