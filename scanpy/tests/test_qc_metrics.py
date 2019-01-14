@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import scanpy as sc
 import scanpy
 from scipy import sparse
@@ -126,3 +127,7 @@ def test_qc_metrics_percentage(): # In response to #421
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=(None))
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1,2,3,10])
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1])
+    with pytest.raises(IndexError):
+        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
+    with pytest.raises(IndexError):
+        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])
