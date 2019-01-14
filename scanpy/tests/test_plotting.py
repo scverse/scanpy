@@ -117,6 +117,18 @@ def test_violin():
     save_and_compare_images('master_violin_multi_panel', tolerance=40)
 
 
+def test_dendrogram():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.dendrogram(pbmc, 'bulk_labels')
+    save_and_compare_images('dendrogram', tolerance=10)
+
+
+def test_correlation():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.correlation(pbmc, 'bulk_labels')
+    save_and_compare_images('correlation', tolerance=10)
+
+
 def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68k_reduced()
     tolerance = 15
