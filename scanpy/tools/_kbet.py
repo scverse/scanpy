@@ -56,7 +56,7 @@ def kbet(
         nbs = adata.uns.get('neighbors')
         if nbs is None:
             raise ValueError('No neighbors found. Provide the `adjacency` parameter or run `sc.pp.neighbors(adata)`')
-        adjacency = nbs['connectivities']  # type: spmatrix
+        adjacency = nbs['distances']  # type: spmatrix
     adjacency = adjacency.tocsr()
 
     n_obs = adata.n_obs
