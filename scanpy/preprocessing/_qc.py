@@ -179,6 +179,7 @@ def top_segment_proportions(mtx, ns):
         the 50th most expressed gene.
     """
     # Pretty much just does dispatch
+    assert max(ns) <= mtx.shape[1], "Cumulative proportions can only be calculated to the number of given features"
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
