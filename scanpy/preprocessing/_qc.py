@@ -69,12 +69,13 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
     obs_metrics["total_{expr_type}"] = X.sum(axis=1)
     obs_metrics["log1p_total_{expr_type}"] = np.log1p(
         obs_metrics["total_{expr_type}"])
-    proportions = top_segment_proportions(X, percent_top)
-    # Since there are local loop variables, formatting must occur in their scope
-    # Probably worth looking into a python3.5 compatable way to make this better
-    for i, n in enumerate(percent_top):
-        obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
-            proportions[:, i] * 100
+    if percent_top:
+        proportions = top_segment_proportions(X, percent_top)
+        # Since there are local loop variables, formatting must occur in their scope
+        # Probably worth looking into a python3.5 compatable way to make this better
+        for i, n in enumerate(percent_top):
+            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
+                proportions[:, i] * 100
     for qc_var in qc_vars:
         obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
             X[:, adata.var[qc_var].values].sum(axis=1)
