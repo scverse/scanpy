@@ -203,11 +203,13 @@ def top_segment_proportions(mtx, ns):
         the 50th most expressed gene.
     """
     # Pretty much just does dispatch
-    assert max(ns) <= mtx.shape[1], "Cumulative proportions can only be calculated to the number of given features"
+    if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
+        raise IndexError("Positions outside range of features.")
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
-        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, ns)
+        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr,
+                                                  np.array(ns, dtype=np.int))
     else:
         return top_segment_proportions_dense(mtx, ns)
 
