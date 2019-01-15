@@ -227,9 +227,6 @@ def plot_scatter(adata,
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
                              "a given ax can not be used")
-        # change from None to empty list
-        if isinstance(color, str) or color is None:
-            color = [color]
         if len(components_list) == 0:
             components_list = [None]
 
