@@ -2033,10 +2033,12 @@ def correlation(adata, groupby, show_correlation_numbers=False, dendrogram=True,
                            height_ratios=[corr_matrix_height, colorbar_height], wspace=0.01, hspace=0.05)
 
     axs = []
+    corr_matrix_ax = fig.add_subplot(gs[1])
     if dendrogram:
-        dendro_ax = fig.add_subplot(gs[0])
+        dendro_ax = fig.add_subplot(gs[0], sharey=corr_matrix_ax)
         _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram_key,
-                         remove_labels=True, orientation='left')
+                         remove_labels=True, orientation='left',
+                         ticks=np.arange(corr_matrix .shape[0]) + 0.5)
         axs.append(dendro_ax)
     # define some default pcolormesh parameters
     if 'edge_color' not in kwds:
@@ -2054,7 +2056,6 @@ def correlation(adata, groupby, show_correlation_numbers=False, dendrogram=True,
         # by default use a diverget color map
         kwds['cmap'] = 'bwr'
 
-    corr_matrix_ax = fig.add_subplot(gs[1])
     img_mat = corr_matrix_ax.pcolormesh(corr_matrix, **kwds)
     corr_matrix_ax.set_xlim(0, num_rows)
     corr_matrix_ax.set_ylim(0, num_rows)
@@ -2079,6 +2080,7 @@ def correlation(adata, groupby, show_correlation_numbers=False, dendrogram=True,
         which='both',
         left=False,
         right=False)
+    print(corr_matrix_ax.get_ylim())
 
     if show_correlation_numbers:
         for row in range(num_rows):
@@ -2484,11 +2486,6 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
         dendro_ax.tick_params(labelbottom=False, labeltop=False, labelleft=False, labelright=False)
 
     dendro_ax.grid(False)
-
-    # invert y-axe to match main matrix plot
-    # if orientation in ['left', 'right']:
-    #     ymin, ymax = dendro_ax.get_ylim()
-    #     dendro_ax.set_ylim(ymax, ymin)
 
     dendro_ax.spines['right'].set_visible(False)
     dendro_ax.spines['top'].set_visible(False)
