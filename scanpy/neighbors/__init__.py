@@ -35,7 +35,7 @@ def neighbors(
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='diffmap'`,
+    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
     connectivities are computed according to [Coifman05]_, in the adaption of
     [Haghverdi16]_.
 
