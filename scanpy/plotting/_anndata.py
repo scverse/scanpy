@@ -2409,7 +2409,7 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
         pos_list :  list of dendrogram positions that should be translated
         new_ticks : sorted list of goal tick positions (e.g. [0,1,2,3] )
         old_ticks: sorted list of original tick positions (e.g. [5, 15, 25, 35]), This list is
-                   usually the default position used by  scipy.cluster.hiearchy.dendrogram`
+                   usually the default position used by scipy.cluster.hierarchy.dendrogram`
 
         Returns
         -------
