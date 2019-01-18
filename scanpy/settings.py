@@ -83,7 +83,8 @@ _frameon = True
 
 
 def set_figure_params(scanpy=True, dpi=80, dpi_save=150, frameon=True, vector_friendly=True,
-                      color_map=None, format='pdf', transparent=False, ipython_format='png2x'):
+                      fontsize=14, color_map=None, format='pdf',
+                      transparent=False, ipython_format='png2x'):
     """Set resolution/size, styling and format of figures.
 
     Parameters
@@ -99,8 +100,10 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, frameon=True, vector_fr
         Add frames and axes labels to scatter plots.
     vector_friendly : `bool`, optional (default: `True`)
         Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
+    fontsize : `int`, optional (default: 14)
+        Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
     color_map : `str`, optional (default: `None`)
-        Convenience method for setting the default color map.
+        Convenience method for setting the default color map. Ignored if `scanpy=False`.
     format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
         This sets the default format for saving figures: `file_format_figs`.
     transparent : `bool`, optional (default: `True`)
@@ -128,7 +131,7 @@ def set_figure_params(scanpy=True, dpi=80, dpi_save=150, frameon=True, vector_fr
         rcParams['savefig.transparent'] = transparent
     if scanpy:
         from .plotting._rcmod import set_rcParams_scanpy
-        set_rcParams_scanpy(color_map=color_map)
+        set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
     global _frameon
     _frameon = frameon
 
