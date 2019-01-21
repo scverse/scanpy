@@ -152,6 +152,7 @@ def pca(adata, **kwargs):
 
 def plot_scatter(adata,
                  color=None,
+                 gene_symbols=None,
                  use_raw=None,
                  sort_order=True,
                  edges=False,
@@ -227,9 +228,6 @@ def plot_scatter(adata,
         if ax is not None:
             raise ValueError("When plotting multiple panels (each for a given value of 'color' "
                              "a given ax can not be used")
-        # change from None to empty list
-        if isinstance(color, str) or color is None:
-            color = [color]
         if len(components_list) == 0:
             components_list = [None]
 
@@ -274,7 +272,7 @@ def plot_scatter(adata,
     for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
         color_vector, categorical = _get_color_values(adata, value_to_plot,
                                                       groups=groups, palette=palette,
-                                                      use_raw=use_raw)
+                                                      use_raw=use_raw, gene_symbols=gene_symbols)
 
         # check if higher value points should be plot on top
         if sort_order is True and value_to_plot is not None and categorical is False:
@@ -592,7 +590,7 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     adata.uns[value_to_plot + '_colors'] = palette[:length]
 
 
-def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False):
+def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False, gene_symbols=None):
     """
     Returns the value or color associated to each data point.
     For categorical data, the return value is list of colors taken
@@ -654,7 +652,12 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                 color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         else:
             color_vector = adata.obs[value_to_plot]
-
+    elif gene_symbols in adata.var.columns:
+        gene_id = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
+        if use_raw:
+            color_vector = adata.raw[:, gene_id].X
+        else:
+            color_vector = adata[:, gene_id].X
     # check if value to plot is in var
     elif use_raw is False and value_to_plot in adata.var_names:
         color_vector = adata[:, value_to_plot].X
