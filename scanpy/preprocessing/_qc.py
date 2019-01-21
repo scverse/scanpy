@@ -10,9 +10,9 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
     """
     Calculate quality control metrics.
 
-    Calculates a number of qc metrics for an AnnData object, largely based on
-    `calculateQCMetrics` from scater [McCarthy17]_. Currently is most efficient
-    on a sparse CSR or dense matrix.
+    Calculates a number of qc metrics for an AnnData object, see section
+    `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
+    [McCarthy17]_. Currently is most efficient on a sparse CSR or dense matrix.
 
     Parameters
     ----------
@@ -27,7 +27,8 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
         want to control for (e.g. "ERCC" or "mito").
     percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
         Which proportions of top genes to cover. If empty or `None` don't
-        calculate.
+        calculate. Values are considered 1-indexed, `percent_top=[50]` finds
+        cumulative proportion to the 50th most expressed gene.
     inplace : bool, optional (default: `False`)
         Whether to place calculated metrics in `.obs` and `.var`
 
@@ -40,17 +41,41 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
         Observation level metrics include:
 
         * `total_{var_type}_by_{expr_type}`
+            E.g. "total_genes_by_counts". Number of genes with positive counts
+            in a cell.
         * `total_{expr_type}`
+            E.g. "total_counts". Total number of counts for a cell.
         * `pct_{expr_type}_in_top_{n}_{var_type}` - for `n` in `percent_top`
+            E.g. "pct_counts_in_top_50_genes". Cumulative percentage of counts
+            for 50 most expressed genes in a cell.
         * `total_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+            E.g. "total_counts_mito". Total number of counts for variabes in
+            `qc_vars`.
         * `pct_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+            E.g. "pct_counts_mito". Proportion of total counts for a cell which
+            are mitochondrial.
 
         Variable level metrics include:
 
         * `total_{expr_type}`
+            E.g. "total_counts". Sum of counts for a gene.
         * `mean_{expr_type}`
+            E.g. "mean counts". Mean expression over all cells.
         * `n_cells_by_{expr_type}`
+            E.g. "n_cells_by_counts". Number of cells this expression is
+            measured in.
         * `pct_dropout_by_{expr_type}`
+            E.g. "pct_dropout_by_counts". Percentage of cells this feature does
+            not appear in.
+
+
+    Example
+    -------
+    Calculate qc metrics for visualization.
+
+    >>> adata = sc.datasets.pbmc3k()
+    >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
+    >>> sns.jointplot(adata.obs, "log1p_total_counts", "log1p_n_genes_by_counts", kind="hex")
     """
     X = adata.X
     obs_metrics = pd.DataFrame(index=adata.obs_names)
@@ -69,12 +94,14 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
     obs_metrics["total_{expr_type}"] = X.sum(axis=1)
     obs_metrics["log1p_total_{expr_type}"] = np.log1p(
         obs_metrics["total_{expr_type}"])
-    proportions = top_segment_proportions(X, percent_top)
-    # Since there are local loop variables, formatting must occur in their scope
-    # Probably worth looking into a python3.5 compatable way to make this better
-    for i, n in enumerate(percent_top):
-        obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
-            proportions[:, i] * 100
+    if percent_top:
+        percent_top = sorted(percent_top)
+        proportions = top_segment_proportions(X, percent_top)
+        # Since there are local loop variables, formatting must occur in their scope
+        # Probably worth looking into a python3.5 compatable way to make this better
+        for i, n in enumerate(percent_top):
+            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
+                proportions[:, i] * 100
     for qc_var in qc_vars:
         obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
             X[:, adata.var[qc_var].values].sum(axis=1)
@@ -122,7 +149,7 @@ def top_proportions(mtx, n):
     mtx : `Union[np.array, sparse.spmatrix]`
         Matrix, where each row is a sample, each column a feature.
     n : `int`
-        Rank to calculate proportions up to. Value is treated as 1-indexed
+        Rank to calculate proportions up to. Value is treated as 1-indexed,
         `n=50` will calculate cumulative proportions up to the 50th most
         expressed gene.
     """
@@ -178,10 +205,13 @@ def top_segment_proportions(mtx, ns):
         the 50th most expressed gene.
     """
     # Pretty much just does dispatch
+    if not (max(ns) <= mtx.shape[1] and min(ns) > 0):
+        raise IndexError("Positions outside range of features.")
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
-        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr, ns)
+        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr,
+                                                  np.array(ns, dtype=np.int))
     else:
         return top_segment_proportions_dense(mtx, ns)
 
