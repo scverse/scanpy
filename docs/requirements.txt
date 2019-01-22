@@ -3,7 +3,7 @@ sphinx_rtd_theme>=0.3.1
 # sphinx-autodoc-typehints needs at least sphinx 1.8
 sphinx>=1.8
 sphinx-autodoc-typehints
-scanpydoc
+scanpydoc>=0.3.1
 # same as ../requires.txt, but omitting the c++ packages
 anndata>=0.6.16
 matplotlib>=2.2
