@@ -114,15 +114,16 @@ def read_10x_h5(filename, genome=None, gex_only=True):
     """
     logg.info('reading', filename, r=True, end=' ')
     with tables.open_file(str(filename), 'r') as f:
-        if '/matrix' in f:
-            adata = _read_v3_10x_h5(filename)
-            if genome:
-                adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
-            if gex_only:
-                adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
-            return adata
-        else:
-            return _read_legacy_10x_h5(filename, genome=genome)
+        v3 = '/matrix' in f
+    if v3:
+        adata = _read_v3_10x_h5(filename)
+        if genome:
+            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+        if gex_only:
+            adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+        return adata
+    else:
+        return _read_legacy_10x_h5(filename, genome=genome)
 
 
 def _read_legacy_10x_h5(filename, genome=None):
