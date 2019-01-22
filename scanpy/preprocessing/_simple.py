@@ -6,6 +6,7 @@ import warnings
 from typing import Union, Optional, Tuple
 
 import numba
+import numpy as np
 import scipy as sp
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs
@@ -23,12 +24,6 @@ try:
     import dask.array as da
 except ImportError:
     da = None
-
-# install zappy (which wraps numpy), or fall back to plain numpy
-try:
-    import zappy.base as np
-except ImportError:
-    import numpy as np
 
 N_PCS = 50  # default number of PCs
 
@@ -204,7 +199,7 @@ def filter_genes(
             `n_counts` or `n_cells` per gene.
     """
     if copy:
-       logg.warn('`copy` is deprecated, use `inplace` instead.') 
+       logg.warn('`copy` is deprecated, use `inplace` instead.')
     n_given_options = sum(
         option is not None for option in
         [min_cells, min_counts, max_cells, max_counts])
@@ -667,7 +662,7 @@ def normalize_per_cell_weinreb16_deprecated(X, max_fraction=1,
     """
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
-        
+
     counts_per_cell = X.sum(1).A1 if issparse(X) else X.sum(1)
     gene_subset = np.all(X <= counts_per_cell[:, None] * max_fraction, axis=0)
     if issparse(X): gene_subset = gene_subset.A1
@@ -960,9 +955,9 @@ def downsample_cell(col: np.array, target: int, random_state: int=0,
                     replace: bool=True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
-    
+
     This is an internal function and has some restrictions:
-    
+
     * `dtype` of col must be an integer (i.e. satisfy issubclass(col.dtype.type, np.integer))
     * total counts in cell must be less than target
     """
