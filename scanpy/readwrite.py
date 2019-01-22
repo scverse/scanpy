@@ -89,15 +89,16 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     return read_h5ad(filename, backed=backed)
 
 
-def read_10x_h5(filename, genome='mm10', gex_only=True):
+def read_10x_h5(filename, genome=None, gex_only=True):
     """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------
     filename : `str` | :class:`~pathlib.Path`
         Filename.
-    genome : `str`, optional (default: ``'mm10'``)
-        Genome group in hdf5 file.
+    genome : `str`, optional (default: ``None``)
+        Filter expression to this genes within this genome. For legacy 10x h5
+        files, this must be provided if the data contains more than one genome.
     gex_only : `bool`, optional (default: `True`)
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
@@ -115,22 +116,28 @@ def read_10x_h5(filename, genome='mm10', gex_only=True):
     with tables.open_file(str(filename), 'r') as f:
         if '/matrix' in f:
             adata = _read_v3_10x_h5(filename)
-            if not gex_only:
-                return adata    # ignore the `genome` argument
-            else:
-                adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+            if genome:
                 adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
-                return adata
+            if gex_only:
+                adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+            return adata
         else:
             return _read_legacy_10x_h5(filename, genome=genome)
 
 
-def _read_legacy_10x_h5(filename, genome='mm10'):
+def _read_legacy_10x_h5(filename, genome=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
     with tables.open_file(str(filename), 'r') as f:
         try:
+            if not genome:
+                children = f.list_nodes(f.root)
+                if len(children) > 1:
+                    raise ValueError("This file contains more than one genome."
+                                    " For legacy 10x h5 files you must specify"
+                                    " the genome if more than one is present.")
+                genome = children[0]._v_name
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
                 dsets[node.name] = node.read()
