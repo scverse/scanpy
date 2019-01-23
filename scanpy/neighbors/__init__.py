@@ -96,7 +96,7 @@ def neighbors(
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
-        '    \'distances\', weighted adjacency matrix\n'
+        '    \'distances\', distances for each pair of neighbors\n'
         '    \'connectivities\', weighted adjacency matrix')
     return adata if copy else None
 
