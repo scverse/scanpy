@@ -141,10 +141,12 @@ def _read_legacy_10x_h5(filename, genome=None):
             children = [x._v_name for x in f.list_nodes(f.root)]
             if not genome:
                 if len(children) > 1:
-                    raise ValueError("This file contains more than one genome."
-                                    " For legacy 10x h5 files you must specify"
-                                    " the genome if more than one is present. "
-                                    "Available genomes are: {}".format(children))
+                    raise ValueError("'{filename}' contains more than one "
+                                     "genome. For legacy 10x h5 files you must"
+                                     " specify the genome if more than one is "
+                                     "present. Available genomes are: {avail}"
+                                     .format(filename=filename, 
+                                             avail=children))
                 genome = children[0]
             elif genome not in children:
                 raise ValueError("Could not find genome '{genome}' in "
