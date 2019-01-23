@@ -41,3 +41,8 @@ def test_error_10x_h5_legacy(tmp_path):
     with pytest.raises(ValueError):
         sc.read_10x_h5(twopth)
     sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
+
+def test_error_missing_genome():
+    legacy_pth = os.path.join(ROOT, '1.2.0', 'filtered_gene_bc_matrices_h5.h5')
+    with pytest.raises(ValueError, match=r".*hg19_chr21.*"):
+        sc.read_10x_h5(legacy_pth, genome="not a genome")
