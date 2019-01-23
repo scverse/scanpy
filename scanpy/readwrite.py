@@ -119,11 +119,14 @@ def read_10x_h5(filename, genome=None, gex_only=True):
         adata = _read_v3_10x_h5(filename)
         if genome:
             if genome not in adata.var['genome'].values:
-                raise ValueError("Could not find data corresponding to genome "
-                                 "'{genome}' in '{filename}'. Available "
-                                 "genomes are: {avail}.".format(
-                                     genome=genome, filename=filename,
-                                     avail=list(adata.var["genome"].unique())))
+                raise ValueError(
+                    "Could not find data corresponding to genome '{genome}' in '{filename}'. "
+                    "Available genomes are: {avail}."
+                    .format(
+                        genome=genome, filename=filename,
+                        avail=list(adata.var["genome"].unique()),
+                    )
+                )
             adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
         if gex_only:
             adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
@@ -141,19 +144,22 @@ def _read_legacy_10x_h5(filename, genome=None):
             children = [x._v_name for x in f.list_nodes(f.root)]
             if not genome:
                 if len(children) > 1:
-                    raise ValueError("'{filename}' contains more than one "
-                                     "genome. For legacy 10x h5 files you must"
-                                     " specify the genome if more than one is "
-                                     "present. Available genomes are: {avail}"
-                                     .format(filename=filename, 
-                                             avail=children))
+                    raise ValueError(
+                        "'{filename}' contains more than one genome. For legacy 10x h5 "
+                        "files you must specify the genome if more than one is present. "
+                        "Available genomes are: {avail}"
+                        .format(filename=filename, avail=children)
+                    )
                 genome = children[0]
             elif genome not in children:
-                raise ValueError("Could not find genome '{genome}' in "
-                                 "'{filename}'. Available genomes are:"
-                                 " {avail}".format(
-                                     genome=genome, filename=str(filename), 
-                                     avail=children))
+                raise ValueError(
+                    "Could not find genome '{genome}' in '{filename}'. "
+                    "Available genomes are: {avail}"
+                    .format(
+                        genome=genome, filename=str(filename),
+                        avail=children,
+                    )
+                )
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
                 dsets[node.name] = node.read()
