@@ -173,8 +173,6 @@ def _read_legacy_10x_h5(filename, genome=None):
                              'gene_ids': dsets['genes'].astype(str)})
             logg.info(t=True)
             return adata
-        except tables.NoSuchNodeError:
-            raise Exception('Genome %s does not exist in this file.' % genome)
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 
