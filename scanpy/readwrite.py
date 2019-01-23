@@ -133,12 +133,13 @@ def _read_legacy_10x_h5(filename, genome=None):
     with tables.open_file(str(filename), 'r') as f:
         try:
             if not genome:
-                children = f.list_nodes(f.root)
+                children = [x._v_name for x in f.list_nodes(f.root)]
                 if len(children) > 1:
                     raise ValueError("This file contains more than one genome."
                                     " For legacy 10x h5 files you must specify"
-                                    " the genome if more than one is present.")
-                genome = children[0]._v_name
+                                    " the genome if more than one is present. "
+                                    "Available genomes are: {}".format(children))
+                genome = children[0]
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
                 dsets[node.name] = node.read()
