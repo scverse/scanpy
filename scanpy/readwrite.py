@@ -118,6 +118,12 @@ def read_10x_h5(filename, genome=None, gex_only=True):
     if v3:
         adata = _read_v3_10x_h5(filename)
         if genome:
+            if genome not in adata.var['genome'].values:
+                raise ValueError("Could not find data corresponding to genome "
+                                 "'{genome}' in '{filename}'. Available "
+                                 "genomes are: {avail}.".format(
+                                     genome=genome, filename=filename,
+                                     avail=list(adata.var["genome"].unique())))
             adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
         if gex_only:
             adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
