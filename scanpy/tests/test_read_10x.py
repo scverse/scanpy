@@ -1,6 +1,9 @@
-import scanpy as sc
+import h5py
 import numpy as np
 import os
+import pytest
+import scanpy as sc
+
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(ROOT, '_data', '10x_data')
@@ -28,3 +31,13 @@ def test_read_10x_h5():
                                     genome='GRCh38_chr21')
     nospec_genome_v3 = sc.read_10x_h5(os.path.join(ROOT, '3.0.0', 'filtered_feature_bc_matrix.h5'))
     assert_anndata_equal(spec_genome_v3, nospec_genome_v3)
+
+def test_error_10x_h5_legacy(tmp_path):
+    onepth = os.path.join(ROOT, '1.2.0', 'filtered_gene_bc_matrices_h5.h5')
+    twopth = str(tmp_path / "two_genomes.h5")
+    with h5py.File(onepth, "r") as one, h5py.File(twopth, "w") as two:
+        one.copy("hg19_chr21", two)
+        one.copy("hg19_chr21", two, name="hg19_chr21_copy")
+    with pytest.raises(ValueError):
+        sc.read_10x_h5(twopth)
+    sc.read_10x_h5(twopth, genome="hg19_chr21_copy")
