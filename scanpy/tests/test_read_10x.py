@@ -44,5 +44,8 @@ def test_error_10x_h5_legacy(tmp_path):
 
 def test_error_missing_genome():
     legacy_pth = os.path.join(ROOT, '1.2.0', 'filtered_gene_bc_matrices_h5.h5')
+    v3_pth = os.path.join(ROOT, '3.0.0', 'filtered_feature_bc_matrix.h5')
     with pytest.raises(ValueError, match=r".*hg19_chr21.*"):
         sc.read_10x_h5(legacy_pth, genome="not a genome")
+    with pytest.raises(ValueError, match=r".*GRCh38_chr21.*"):
+        sc.read_10x_h5(v3_pth, genome="not a genome")
