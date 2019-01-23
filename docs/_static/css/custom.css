@@ -1,8 +1,8 @@
-.version {
+.noteversion {
     font-size:70%;
 }
 
-.version:after {
+.noteversion:after {
     content: "/";
 }
 
