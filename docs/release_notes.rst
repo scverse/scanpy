@@ -75,9 +75,9 @@ Version 1.1 :small:`May 31, 2018`
 - :func:`~scanpy.api.pp.regress_out` is back to multiprocessing :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.api.read` reads compressed text files :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes :smaller:`thanks to FG Brundu`
-- :func:`~scanpy.api.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
-- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_ :smaller:`thanks to S Gigante`
-- :func:`~scanpy.api.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
+- :func:`~scanpy.external.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
+- :func:`~scanpy.external.tl.phate` for low-dimensional embedding [Moon17]_ :smaller:`thanks to S Gigante`
+- :func:`~scanpy.external.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
 Version 1.0 :small:`March 28, 2018`

@@ -1,3 +1,3 @@
-from ..tools.pypairs import cyclone, sandbag
-from ..tools.phate import phate
-from ..tools.phenograph import phenograph
+from ..tools._pypairs import cyclone, sandbag
+from ..tools._phate import phate
+from ..tools._phenograph import phenograph
