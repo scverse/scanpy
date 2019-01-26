@@ -35,6 +35,7 @@ Further updates:
 - :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Park18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  :noteversion:`1.3.7` :smaller:`thanks to A Mousa`
 - :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :noteversion:`1.3.4` :smaller:`thanks to I Virshup`
+- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn't require speciying default genomes anymore, see `here <https://github.com/theislab/scanpy/pull/442>`__ and `here <https://github.com/theislab/scanpy/pull/444>`__ :noteversion:`1.3.?`  :smaller:`thanks to I Vishrup`
 - :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__ :noteversion:`1.3.3`  :smaller:`thanks to Q Gong`
 
 
