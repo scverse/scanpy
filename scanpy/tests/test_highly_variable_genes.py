@@ -6,6 +6,11 @@ from pathlib import Path
 FILE = Path(__file__).parent / Path('_scripts/seurat_hvg.csv')
 
 
+def test_highly_variable_genes_basic():
+    adata = sc.datasets.blobs()
+    sc.pp.highly_variable_genes(adata)
+
+
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
