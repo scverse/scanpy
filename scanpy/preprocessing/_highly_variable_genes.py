@@ -115,7 +115,7 @@ def highly_variable_genes(
         # only a single gene fell in the bin and implicitly set them to have
         # a normalized disperion of 1
         one_gene_per_bin = disp_std_bin.isnull()
-        gen_indices = np.where(one_gene_per_bin[df['mean_bin']])[0].tolist()
+        gen_indices = np.where(one_gene_per_bin[df['mean_bin'].values])[0].tolist()
         if len(gen_indices) > 0:
             logg.msg(
                 'Gene indices {} fell into a single bin: their '
@@ -126,14 +126,14 @@ def highly_variable_genes(
             )
         # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
         # but there’s still a dtype error without “.value”.
-        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin].values
-        disp_mean_bin[one_gene_per_bin] = 0
+        disp_std_bin[one_gene_per_bin.values] = disp_mean_bin[one_gene_per_bin.values].values
+        disp_mean_bin[one_gene_per_bin.values] = 0
         # actually do the normalization
         df['dispersion_norm'] = (
             (
                 df['dispersion'].values  # use values here as index differs
-                - disp_mean_bin[df['mean_bin']].values
-            ) / disp_std_bin[df['mean_bin']].values
+                - disp_mean_bin[df['mean_bin'].values].values
+            ) / disp_std_bin[df['mean_bin'].values].values
         )
     elif flavor == 'cell_ranger':
         from statsmodels import robust
@@ -151,8 +151,8 @@ def highly_variable_genes(
         df['dispersion_norm'] = (
             np.abs(
                 df['dispersion'].values
-                - disp_median_bin[df['mean_bin']].values
-            ) / disp_mad_bin[df['mean_bin']].values
+                - disp_median_bin[df['mean_bin'].values].values
+            ) / disp_mad_bin[df['mean_bin'].values].values
         )
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
