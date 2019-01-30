@@ -850,6 +850,11 @@ class Neighbors:
                      * (self.eigen_basis[i, l] - self.eigen_basis[:, l]))**2
                    # account for float32 precision
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] < 0.9994])
+        # thanks to Marius Lange for pointing Alex to this:
+        # we will likely remove the contributions from the stationary state below when making
+        # backwards compat breaking changes, they originate from an early implementation in 2015
+        # they never seem to have deteriorated results, but also other distance measures (see e.g.
+        # PAGA paper) don't have it, which makes sense
         row += sum([(self.eigen_basis[i, l] - self.eigen_basis[:, l])**2
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] >= 0.9994])
         if not use_mask:
