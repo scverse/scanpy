@@ -6,6 +6,7 @@
 
 .. role:: smaller
 
+.. role:: noteversion
 
 .. warning::
 
@@ -17,23 +18,25 @@ On master :small:`January 1, 2019`
 
 Major updates:
 
-- one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ (1.3.7)
-- a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ (1.3.6) :smaller:`thanks to F Ramirez`
-- changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical (anndata 0.6.16)
+- one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ :noteversion:`1.3.7`
+- a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ :noteversion:`1.3.6` :smaller:`thanks to F Ramirez`
+- a fully distributed preprocessing backend :noteversion:`1.3.3` :smaller:`thanks to T White`
+- changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
 
 Two new possibilities for interactive exploration of Scanpy analysis results:
 
 - CZI's `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ directly reads `.h5ad` files
-- the `UCSC Single Cell Browser <https://github.com/maximilianh/cellBrowser>`__ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` (1.3.6) :smaller:`thanks to M Haeussler`
+- the `UCSC Single Cell Browser <https://github.com/maximilianh/cellBrowser>`__ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` :noteversion:`1.3.6` :smaller:`thanks to M Haeussler`
 
 Further updates:
 
-- :func:`~scanpy.pp.highly_variable_genes` replaces :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset (1.3.6) :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ (1.3.4) :smaller:`thanks to K Polanski`
-- :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Park18]_ (1.3.4) :smaller:`thanks to K Polanski`
-- :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  (1.3.7) :smaller:`thanks to A Mousa`
-- :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ (1.3.4) :smaller:`thanks to I Virshup` 
-- :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__ (1.3.3)  :smaller:`thanks to Q Gong`
+- :func:`~scanpy.pp.highly_variable_genes` replaces :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset :noteversion:`1.3.6` :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
+- :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Park18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
+- :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  :noteversion:`1.3.7` :smaller:`thanks to A Mousa`
+- :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :noteversion:`1.3.4` :smaller:`thanks to I Virshup`
+- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn't require speciying default genomes anymore, see `here <https://github.com/theislab/scanpy/pull/442>`__ and `here <https://github.com/theislab/scanpy/pull/444>`__ :noteversion:`1.3.?`  :smaller:`thanks to I Vishrup`
+- :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see `here <https://github.com/theislab/scanpy/pull/334>`__ :noteversion:`1.3.3`  :smaller:`thanks to Q Gong`
 
 
 Version 1.3 :small:`September 3, 2018`
@@ -73,9 +76,9 @@ Version 1.1 :small:`May 31, 2018`
 - :func:`~scanpy.api.pp.regress_out` is back to multiprocessing :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.api.read` reads compressed text files :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.api.queries.mitochondrial_genes` for querying mito genes :smaller:`thanks to FG Brundu`
-- :func:`~scanpy.api.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
-- :func:`~scanpy.api.tl.phate` for low-dimensional embedding [Moon17]_ :smaller:`thanks to S Gigante`
-- :func:`~scanpy.api.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
+- :func:`~scanpy.external.pp.mnn_correct` for batch correction [Haghverdi18]_ [Kang18]_
+- :func:`~scanpy.external.tl.phate` for low-dimensional embedding [Moon17]_ :smaller:`thanks to S Gigante`
+- :func:`~scanpy.external.tl.sandbag`, :func:`~scanpy.api.tl.cyclone` for scoring genes [Scialdone15]_ [Fechtner18]_
 
 
 Version 1.0 :small:`March 28, 2018`

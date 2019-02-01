@@ -1,1 +1,1 @@
-from ..plotting.tools.scatterplots import phate
+from ..plotting._tools.scatterplots import phate

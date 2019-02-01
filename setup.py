@@ -31,9 +31,8 @@ setup(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
-        combat=['patsy'],
         doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints', 'scanpydoc'],
-        test=['pytest'],
+        test=['pytest>=3.9'],
     ),
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!
@@ -55,6 +54,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Visualization',
     ],

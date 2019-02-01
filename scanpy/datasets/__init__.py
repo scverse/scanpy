@@ -223,10 +223,25 @@ def pbmc3k():
     <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
     from this `webpage
     <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
+    
+    The exact same data is also used in Seurat's 
+    `basic clustering tutorial <https://satijalab.org/seurat/pbmc3k_tutorial.html>`__.
 
-    .. note:
+    .. note::
 
-        This downloads about 10 MB of data upon the first call of the function.
+        This downloads 5.9 MB of data upon the first call of the function and stores it in `./data/pbmc3k_raw.h5ad`.
+        
+    The following code was run to produce the file.    
+    
+    .. code:: python
+    
+        adata = sc.read_10x_mtx(
+        './data/filtered_gene_bc_matrices/hg19/',  # the directory with the `.mtx` file
+        var_names='gene_symbols',                  # use gene symbols for the variable names (variables-axis index)
+        cache=True)                                # write a cache file for faster subsequent reading
+       
+        adata.var_names_make_unique()  # this is unnecessary if using 'gene_ids'
+        adata.write('write/pbmc3k_raw.h5ad', compression='gzip')    
 
     Returns
     -------

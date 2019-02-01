@@ -35,7 +35,7 @@ def neighbors(
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='diffmap'`,
+    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
     connectivities are computed according to [Coifman05]_, in the adaption of
     [Haghverdi16]_.
 
@@ -96,7 +96,7 @@ def neighbors(
     logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
-        '    \'distances\', weighted adjacency matrix\n'
+        '    \'distances\', distances for each pair of neighbors\n'
         '    \'connectivities\', weighted adjacency matrix')
     return adata if copy else None
 
@@ -850,6 +850,11 @@ class Neighbors:
                      * (self.eigen_basis[i, l] - self.eigen_basis[:, l]))**2
                    # account for float32 precision
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] < 0.9994])
+        # thanks to Marius Lange for pointing Alex to this:
+        # we will likely remove the contributions from the stationary state below when making
+        # backwards compat breaking changes, they originate from an early implementation in 2015
+        # they never seem to have deteriorated results, but also other distance measures (see e.g.
+        # PAGA paper) don't have it, which makes sense
         row += sum([(self.eigen_basis[i, l] - self.eigen_basis[:, l])**2
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] >= 0.9994])
         if not use_mask:

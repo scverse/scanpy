@@ -1,9 +1,17 @@
+.noteversion {
+    font-size:70%;
+}
+
+.noteversion:after {
+    content: "/";
+}
+
 .small {
     font-size:40%;
 }
 
 .smaller {
-    font-size:60%;
+    font-size:70%;
 }
 
 .rst-content dl:not(.docutils) tt.xref, .rst-content dl:not(.docutils) code.xref {

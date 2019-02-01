@@ -227,3 +227,8 @@ def test_scatterplots():
     # sc.tl.diffmap(pbmc)
     # sc.pl.diffmap(pbmc, components='all', color=['CD3D'], show=False)
     # save_and_compare_images('master_diffmap', tolerance=tolerance)
+
+    # test gene_symbols
+    pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
+    sc.pl.umap(pbmc, color=['1', '2', '3'], gene_symbols="numbers", show=False)
+    save_and_compare_images('master_umap_symbols', tolerance=tolerance)

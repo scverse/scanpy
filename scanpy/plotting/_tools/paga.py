@@ -736,9 +736,10 @@ def _paga_graph(
 
     # usual scatter plot
     if not isinstance(colors[0], dict):
+        n_groups = len(pos_array)
         sct = ax.scatter(
             pos_array[:, 0], pos_array[:, 1],
-            c=colors, edgecolors='face', s=groups_sizes, cmap=cmap)
+            c=colors[:n_groups], edgecolors='face', s=groups_sizes, cmap=cmap)
         for count, group in enumerate(node_labels):
             ax.text(pos_array[count, 0], pos_array[count, 1], group,
                     verticalalignment='center',

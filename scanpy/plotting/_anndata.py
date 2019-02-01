@@ -551,7 +551,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=8)
         pl.title(keys[iscore].replace('_', ' '))
-        if n_panels <= 5 or count > n_cols: pl.xlabel('ranking')
+        if n_panels <= 5 or iscore > n_cols: pl.xlabel('ranking')
         pl.xlim(-0.9, ig + 0.9)
         score_min, score_max = np.min(score[indices]), np.max(score[indices])
         pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
