@@ -33,6 +33,11 @@ def dendrogram(adata: AnnData, groupby: str,
     The hierarchical clustering can be visualized using `sc.pl.dendrogram` or multiple other
     visualizations that can include a dendrogram: `matrixplot`, `heatmap`, `dotplot` and `stacked_violin`
 
+    .. note::
+        The computation of the hierarchical clustering is based on predefined groups and not
+        per cell. The correlation matrix is computed using by default pearson but other methods
+        are available.
+
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`
@@ -45,7 +50,7 @@ def dendrogram(adata: AnnData, groupby: str,
     use_raw : `bool`, optional (default: None)
         Only when `var_names` is not None. Use `raw` attribute of `adata` if present.
     cor_method : `str`, optional (default: `"pearson"`)
-        correlation method to use.
+        correlation method to use. Options are 'pearson', 'kendall', and 'spearman'
     linkage_method : `str`, optional (default: `"complete"`)
         linkage method to use. See https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
         for more information.

@@ -1,4 +1,4 @@
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation
+from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation_matrix
 
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 

@@ -125,7 +125,7 @@ def test_dendrogram():
 
 def test_correlation():
     pbmc = sc.datasets.pbmc68k_reduced()
-    sc.pl.correlation(pbmc, 'bulk_labels')
+    sc.pl.correlation_matrix(pbmc, 'bulk_labels')
     save_and_compare_images('correlation', tolerance=10)
 
 
