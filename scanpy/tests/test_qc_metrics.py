@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 import scanpy as sc
 import scanpy
 from scipy import sparse
@@ -115,3 +116,18 @@ def test_qc_metrics_format():
         assert np.allclose(adata.obs, adata_dense.obs)
         for col in adata.var: # np.allclose doesn't like mix of types
             assert np.allclose(adata.var[col], adata_dense.var[col])
+
+def test_qc_metrics_percentage(): # In response to #421
+    a = np.random.binomial(100, .005, (1000, 1000))
+    init_var = pd.DataFrame({"mito": np.concatenate(
+        (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
+    adata_dense = sc.AnnData(X=a, var=init_var.copy())
+    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[])
+    sc.pp.calculate_qc_metrics(adata_dense, percent_top=())
+    sc.pp.calculate_qc_metrics(adata_dense, percent_top=(None))
+    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1,2,3,10])
+    sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1])
+    with pytest.raises(IndexError):
+        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
+    with pytest.raises(IndexError):
+        sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])

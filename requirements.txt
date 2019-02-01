@@ -7,6 +7,7 @@ h5py
 tables
 scikit-learn>=0.19.1
 statsmodels
+patsy
 networkx
 natsort
 joblib

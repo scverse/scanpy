@@ -89,15 +89,16 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     return read_h5ad(filename, backed=backed)
 
 
-def read_10x_h5(filename, genome='mm10', gex_only=True):
+def read_10x_h5(filename, genome=None, gex_only=True):
     """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
     ----------
     filename : `str` | :class:`~pathlib.Path`
         Filename.
-    genome : `str`, optional (default: ``'mm10'``)
-        Genome group in hdf5 file.
+    genome : `str`, optional (default: ``None``)
+        Filter expression to this genes within this genome. For legacy 10x h5
+        files, this must be provided if the data contains more than one genome.
     gex_only : `bool`, optional (default: `True`)
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
@@ -113,24 +114,52 @@ def read_10x_h5(filename, genome='mm10', gex_only=True):
     """
     logg.info('reading', filename, r=True, end=' ')
     with tables.open_file(str(filename), 'r') as f:
-        if '/matrix' in f:
-            adata = _read_v3_10x_h5(filename)
-            if not gex_only:
-                return adata    # ignore the `genome` argument
-            else:
-                adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
-                adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
-                return adata
-        else:
-            return _read_legacy_10x_h5(filename, genome=genome)
+        v3 = '/matrix' in f
+    if v3:
+        adata = _read_v3_10x_h5(filename)
+        if genome:
+            if genome not in adata.var['genome'].values:
+                raise ValueError(
+                    "Could not find data corresponding to genome '{genome}' in '{filename}'. "
+                    "Available genomes are: {avail}."
+                    .format(
+                        genome=genome, filename=filename,
+                        avail=list(adata.var["genome"].unique()),
+                    )
+                )
+            adata = adata[:, list(map(lambda x: x == str(genome), adata.var['genome']))]
+        if gex_only:
+            adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
+        return adata
+    else:
+        return _read_legacy_10x_h5(filename, genome=genome)
 
 
-def _read_legacy_10x_h5(filename, genome='mm10'):
+def _read_legacy_10x_h5(filename, genome=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
     with tables.open_file(str(filename), 'r') as f:
         try:
+            children = [x._v_name for x in f.list_nodes(f.root)]
+            if not genome:
+                if len(children) > 1:
+                    raise ValueError(
+                        "'{filename}' contains more than one genome. For legacy 10x h5 "
+                        "files you must specify the genome if more than one is present. "
+                        "Available genomes are: {avail}"
+                        .format(filename=filename, avail=children)
+                    )
+                genome = children[0]
+            elif genome not in children:
+                raise ValueError(
+                    "Could not find genome '{genome}' in '{filename}'. "
+                    "Available genomes are: {avail}"
+                    .format(
+                        genome=genome, filename=str(filename),
+                        avail=children,
+                    )
+                )
             dsets = {}
             for node in f.walk_nodes('/' + genome, 'Array'):
                 dsets[node.name] = node.read()
@@ -152,8 +181,6 @@ def _read_legacy_10x_h5(filename, genome='mm10'):
                              'gene_ids': dsets['genes'].astype(str)})
             logg.info(t=True)
             return adata
-        except tables.NoSuchNodeError:
-            raise Exception('Genome %s does not exist in this file.' % genome)
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 

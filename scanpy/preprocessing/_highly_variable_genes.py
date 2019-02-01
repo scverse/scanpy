@@ -8,14 +8,15 @@ from ._utils import _get_mean_var
 
 
 def highly_variable_genes(
-        adata,
-        min_disp=None, max_disp=None,
-        min_mean=None, max_mean=None,
-        n_top_genes=None,
-        n_bins=20,
-        flavor='seurat',
-        subset=False,
-        inplace=True):
+    adata,
+    min_disp=None, max_disp=None,
+    min_mean=None, max_mean=None,
+    n_top_genes=None,
+    n_bins=20,
+    flavor='seurat',
+    subset=False,
+    inplace=True
+):
     """Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
@@ -97,7 +98,7 @@ def highly_variable_genes(
     # now actually compute the dispersion
     mean[mean == 0] = 1e-12  # set entries equal to zero to small value
     dispersion = var / mean
-    if flavor=='seurat':  # logarithmized mean as in Seurat
+    if flavor == 'seurat':  # logarithmized mean as in Seurat
         dispersion[dispersion == 0] = np.nan
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
@@ -114,34 +115,45 @@ def highly_variable_genes(
         # only a single gene fell in the bin and implicitly set them to have
         # a normalized disperion of 1
         one_gene_per_bin = disp_std_bin.isnull()
-        gen_indices = np.where(one_gene_per_bin[df['mean_bin']])[0].tolist()
+        gen_indices = np.where(one_gene_per_bin[df['mean_bin'].values])[0].tolist()
         if len(gen_indices) > 0:
             logg.msg(
                 'Gene indices {} fell into a single bin: their '
                 'normalized dispersion was set to 1.\n    '
                 'Decreasing `n_bins` will likely avoid this effect.'
-                .format(gen_indices), v=4)
+                .format(gen_indices),
+                v=4
+            )
         # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
         # but there’s still a dtype error without “.value”.
-        disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin].values
-        disp_mean_bin[one_gene_per_bin] = 0
+        disp_std_bin[one_gene_per_bin.values] = disp_mean_bin[one_gene_per_bin.values].values
+        disp_mean_bin[one_gene_per_bin.values] = 0
         # actually do the normalization
-        df['dispersion_norm'] = (df['dispersion'].values  # use values here as index differs
-                                 - disp_mean_bin[df['mean_bin']].values) \
-                                 / disp_std_bin[df['mean_bin']].values
+        df['dispersion_norm'] = (
+            (
+                df['dispersion'].values  # use values here as index differs
+                - disp_mean_bin[df['mean_bin'].values].values
+            ) / disp_std_bin[df['mean_bin'].values].values
+        )
     elif flavor == 'cell_ranger':
         from statsmodels import robust
-        df['mean_bin'] = pd.cut(df['mean'], np.r_[-np.inf,
-            np.percentile(df['mean'], np.arange(10, 105, 5)), np.inf])
+        df['mean_bin'] = pd.cut(df['mean'], np.r_[
+            -np.inf,
+            np.percentile(df['mean'], np.arange(10, 105, 5)),
+            np.inf
+        ])
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_median_bin = disp_grouped.median()
         # the next line raises the warning: "Mean of empty slice"
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        df['dispersion_norm'] = np.abs((df['dispersion'].values
-                                 - disp_median_bin[df['mean_bin']].values)) \
-                                / disp_mad_bin[df['mean_bin']].values
+        df['dispersion_norm'] = (
+            np.abs(
+                df['dispersion'].values
+                - disp_median_bin[df['mean_bin'].values].values
+            ) / disp_mad_bin[df['mean_bin'].values].values
+        )
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersion_norm'].values.astype('float32')
@@ -150,23 +162,30 @@ def highly_variable_genes(
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = np.nan_to_num(df['dispersion_norm'].values) >= disp_cut_off
-        logg.msg('the {} top genes correspond to a normalized dispersion cutoff of'
-                 .format(n_top_genes, disp_cut_off), v=5)
+        logg.msg(
+            'the {} top genes correspond to a normalized dispersion cutoff of'
+            .format(n_top_genes, disp_cut_off),
+            v=5,
+        )
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
-        gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
-                                             dispersion_norm > min_disp,
-                                             dispersion_norm < max_disp))
+        gene_subset = np.logical_and.reduce((
+            mean > min_mean, mean < max_mean,
+            dispersion_norm > min_disp,
+            dispersion_norm < max_disp,
+        ))
 
     logg.msg('    finished', time=True, v=4)
 
     if inplace or subset:
-        logg.hint('added\n'
-                  '    \'highly_variable\', boolean vector (adata.var)\n'
-                  '    \'means\', float vector (adata.var)\n'
-                  '    \'dispersions\', float vector (adata.var)\n'
-                  '    \'dispersions_norm\', float vector (adata.var)')
+        logg.hint(
+            'added\n'
+            '    \'highly_variable\', boolean vector (adata.var)\n'
+            '    \'means\', float vector (adata.var)\n'
+            '    \'dispersions\', float vector (adata.var)\n'
+            '    \'dispersions_norm\', float vector (adata.var)'
+        )
         adata.var['highly_variable'] = gene_subset
         adata.var['means'] = df['mean'].values
         adata.var['dispersions'] = df['dispersion'].values
@@ -174,12 +193,16 @@ def highly_variable_genes(
         if subset:
             adata._inplace_subset_var(gene_subset)
     else:
-        return np.rec.fromarrays(
-             (gene_subset,
+        arrays = (
+             gene_subset,
              df['mean'].values,
              df['dispersion'].values,
-             df['dispersion_norm'].values.astype('float32', copy=False)),
-             dtype=[('highly_variable', np.bool_),
-                    ('means', 'float32'),
-                    ('dispersions', 'float32'),
-                    ('dispersions_norm', 'float32')])
+             df['dispersion_norm'].values.astype('float32', copy=False)
+        )
+        dtypes = [
+            ('highly_variable', np.bool_),
+            ('means', 'float32'),
+            ('dispersions', 'float32'),
+            ('dispersions_norm', 'float32'),
+        ]
+        return np.rec.fromarrays(arrays, dtype=dtypes)

@@ -1,4 +1,16 @@
-"""\
+from . import tl
+from . import pl
+from . import pp
+
+from .. import _exporting as exporting
+
+import sys
+from .. import utils
+utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
+del sys, utils
+
+
+__doc__ = """\
 External API
 ============
 
@@ -79,14 +91,3 @@ Exporting
    exporting.spring_project
    exporting.cellbrowser
 """
-
-from . import tl
-from . import pl
-from . import pp
-
-from .. import _exporting as exporting
-
-import sys
-from .. import utils
-utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
-del sys, utils
