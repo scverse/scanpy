@@ -6,12 +6,12 @@ from ._tools.scatterplots import pca, diffmap, draw_graph, tsne, umap
 from ._tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
 from ._tools.paga import paga, paga_adjacency, paga_compare, paga_path
 from ._tools import dpt_timeseries, dpt_groups_pseudotime
-from ._tools import rank_genes_groups, rank_genes_groups_violin, filter_rank_genes_groups
+from ._tools import rank_genes_groups, rank_genes_groups_violin
 from ._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_genes_groups_stacked_violin, rank_genes_groups_matrixplot, rank_genes_groups_tracksplot
 from ._tools import sim
 
 from ._rcmod import set_rcParams_scanpy, set_rcParams_defaults
-from . import palettes 
+from . import palettes
 
 from ._utils import matrix
 from ._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
