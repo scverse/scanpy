@@ -667,6 +667,11 @@ def is_valid_filename(filename, return_ext=False):
     """Check whether the argument is a filename."""
     ext = Path(filename).suffixes
 
+    if len(ext) > 2:
+        logg.warn('Your filename has more than two extensions: {}.\n'
+                  'Only considering the two last: {}.'.format(ext, ext[-2:]))
+        ext = ext[-2:]
+
     # cases for gzipped/bzipped text files
     if len(ext) == 2 and ext[0][1:] in text_exts and ext[1][1:] in ('gz', 'bz2'):
         return ext[0][1:] if return_ext else True
