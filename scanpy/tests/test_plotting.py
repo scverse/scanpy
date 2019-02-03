@@ -126,7 +126,7 @@ def test_dendrogram():
 def test_correlation():
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.pl.correlation_matrix(pbmc, 'bulk_labels')
-    save_and_compare_images('correlation', tolerance=10)
+    save_and_compare_images('correlation', tolerance=15)
 
 
 def test_rank_genes_groups():
@@ -221,7 +221,7 @@ def test_scatterplots():
     # test edges = True
     sc.pp.neighbors(pbmc)
     sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
-    save_and_compare_images('master_umap_with_edges', tolerance=20)
+    save_and_compare_images('master_umap_with_edges', tolerance=35)
 
     # test diffmap
     # sc.tl.diffmap(pbmc)
