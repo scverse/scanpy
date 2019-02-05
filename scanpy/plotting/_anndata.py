@@ -760,7 +760,8 @@ def clustermap(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
-                   figsize=None,  dendrogram=False, var_group_positions=None, var_group_labels=None,
+                   figsize=None,  dendrogram=False, gene_symbols=None,
+                   var_group_positions=None, var_group_labels=None,
                    var_group_rotation=None, layer=None, stripplot=False, jitter=False, size=1,
                    scale='width', order=None, swap_axes=False, show=None, save=None,
                    row_palette='muted', **kwds):
@@ -818,7 +819,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                              gene_symbols=gene_symbols, layer=layer)
 
     if 'color' in kwds:
         row_palette = kwds['color']
@@ -1043,7 +1045,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            dendrogram=False, var_group_positions=None, var_group_labels=None,
+            dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, layer=None, swap_axes=False, show_gene_labels=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of genes.
@@ -1096,7 +1098,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                              gene_symbols=gene_symbols, layer=layer)
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1302,7 +1305,8 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False, var_group_positions=None,
+            color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False,
+            gene_symbols=None, var_group_positions=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1349,7 +1353,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                              layer=layer, gene_symbols=gene_symbols)
 
     # for if category defined by groupby (if any) compute for each var_name
     # 1. the mean value over the category
@@ -1568,7 +1573,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-               figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
+               figsize=None, dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
                var_group_rotation=None, layer=None, swap_axes=False, show=None, save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -1614,7 +1619,8 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                              gene_symbols=gene_symbols, layer=layer)
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1769,7 +1775,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
-               dendrogram=False, var_group_positions=None, var_group_labels=None,
+               dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
                layer=None, show=None, save=None, figsize=None, **kwds):
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
@@ -1802,7 +1808,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                          'valid categorical observations: {}'.
                          format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None,
+                                              gene_symbols=gene_symbols, layer=layer)
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
@@ -2103,7 +2110,7 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
 
 
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
-                       num_categories=7, layer=None):
+                       num_categories=7, layer=None, gene_symbols=None):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
     defined by group by and the columns correspond to var_names.
@@ -2126,6 +2133,8 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
         should be subdivided.
+    gene_symbols : string, optional (default: `None`)
+        Key for field in .var that stores gene symbols.
 
     Returns
     -------
@@ -2142,6 +2151,17 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
             raise ValueError('groupby has to be a valid observation. Given value: {}, '
                              'valid observations: {}'.format(groupby, adata.obs_keys()))
 
+    if gene_symbols is not None and gene_symbols in adata.var.columns:
+        # translate gene_symbols to var_names
+        # slow method but gives a meaningful error en case no gene symbol is found:
+        translated_var_names = []
+        for symbol in var_names:
+            if symbol not in adata.var[gene_symbols].values:
+                logg.error("Gene symbol {!r} not found in given gene_symbols column: {!r}".format(symbol, gene_symbols))
+                return
+            translated_var_names.append(adata.var[adata.var[gene_symbols] == symbol].index[0])
+        symbols = var_names
+        var_names = translated_var_names
     if layer is not None:
         if layer not in adata.layers.keys():
             raise KeyError('Selected layer: {} is not in the layers list. The list of '
@@ -2170,6 +2190,9 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
             categorical = adata.obs[groupby]
 
     obs_tidy.set_index(categorical, groupby, inplace=True)
+    if gene_symbols is not None:
+        # translate the column names to the symbol names
+        obs_tidy.rename(columns=dict([(var_names[x], symbols[x]) for x in range(len(var_names))]), inplace=True)
     categories = obs_tidy.index.categories
 
     return categories, obs_tidy

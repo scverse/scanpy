@@ -183,6 +183,35 @@ def test_rank_genes_groups():
     # save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
 
 
+def test_rank_genes_symbols():
+    adata = sc.datasets.krumsiek11()
+
+    # add a 'symbols' column
+    adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
+    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    sc.pl.heatmap(adata, symbols, 'cell_type', use_raw=False, show=False, dendrogram=True,
+                  gene_symbols='symbols')
+    save_and_compare_images('master_heatmap_gene_symbols')
+
+    sc.pl.dotplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  gene_symbols='symbols')
+
+    save_and_compare_images('master_dotplot_gene_symbols', tolerance=15)
+
+    sc.pl.matrixplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                     gene_symbols='symbols')
+
+    save_and_compare_images('master_matrixplot_gene_symbols', tolerance=15)
+
+    sc.pl.stacked_violin(adata, symbols, 'cell_type', use_raw=False, color='blue', show=False,
+                         gene_symbols='symbols')
+    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=20)
+
+    sc.pl.tracksplot(adata, symbols, 'cell_type', dendrogram=True, use_raw=False,
+                     gene_symbols='symbols')
+    save_and_compare_images('master_tracksplot_gene_symbols')
+
+
 def test_scatterplots():
 
     pbmc = sc.datasets.pbmc68k_reduced()
