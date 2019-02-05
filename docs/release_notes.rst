@@ -3,18 +3,12 @@
     Also see the `release notes <https://anndata.readthedocs.io>`__ of :mod:`anndata`.
 
 .. role:: small
-
 .. role:: smaller
-
 .. role:: noteversion
 
-.. warning::
 
-   In version 1.3.4, a bug was introduced: :func:`~scanpy.api.pp.pca` produced a `TruncatedSVD` instead of a `PCA` when sparse data was passed. The bug is present in 1.3.4 and 1.3.5 and was corrected in 1.3.6. It should not affect many users as typically, dense data is passed when computing a PCA.
-
-
-On master :small:`January 1, 2019`
-----------------------------------
+Version 1.4 :small:`February 5, 2019`
+-------------------------------------
 
 Major updates:
 
