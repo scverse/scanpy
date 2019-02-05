@@ -9,6 +9,7 @@ def tsne(
         adata,
         n_pcs=None,
         use_rep=None,
+        n_components=2,
         perplexity=30,
         early_exaggeration=12,
         learning_rate=1000,
@@ -32,6 +33,8 @@ def tsne(
         Annotated data matrix.
     {doc_n_pcs}
     {use_rep}
+    n_components : `int`, optional (default: 2)
+        The number of dimensions of the embedding.
     perplexity : `float`, optional (default: 30)
         The perplexity is related to the number of nearest neighbors that
         is used in other manifold learning algorithms. Larger datasets
@@ -73,7 +76,8 @@ def tsne(
     adata = adata.copy() if copy else adata
     X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
-    params_sklearn = {'perplexity': perplexity,
+    params_sklearn = {'n_components': n_components,
+                      'perplexity': perplexity,
                       'random_state': random_state,
                       'verbose': max(0, settings.verbosity-3),
                       'early_exaggeration': early_exaggeration,
