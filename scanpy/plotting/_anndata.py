@@ -925,9 +925,11 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             else:
                 ax = fig.add_subplot(axs[idx, 0])
 
+            color_idx = idx - (num_rows - len(var_names))
             axs_list.append(ax)
+
             ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
+                                orient='vertical', scale=scale, ax=ax, color=row_colors[color_idx], **kwds)
 
             if stripplot:
                 ax = sns.stripplot('variable', y='value', data=df, order=order,
@@ -2326,6 +2328,15 @@ def _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
 
     # order of groupby categories
     categories_idx_ordered = dendro_info['categories_idx_ordered']
+
+    if len(categories) != len(categories_idx_ordered):
+        raise ValueError("Incompatible observations. Dendrogram data has {} categories but "
+                         "current groupby observation {!r} contains {} categories. Most likely "
+                         "the underlying groupby observation changed after the initial "
+                         "computation of `sc.tl.dendrogram`. Please run sc.tl.dendrogram "
+                         "again.'".format(len(categories_idx_ordered),
+                                          groupby, len(categories)))
+
     # reorder var_groups (if any)
     if var_names is not None:
         var_names_idx_ordered = list(range(len(var_names)))
