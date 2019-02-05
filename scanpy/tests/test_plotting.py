@@ -155,7 +155,7 @@ def test_rank_genes_groups():
 
     # test ranked genes using stacked violin plots
     sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3, show=False)
-    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=20)
 
     # test ranked genes using dotplot
     sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4, show=False)
