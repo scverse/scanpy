@@ -1,7 +1,7 @@
 |PyPI| |bioconda| |Docs| |Build Status|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
-    :target: https://pypi.org/project/scanpy
+   :target: https://pypi.org/project/scanpy
 .. |bioconda| image:: https://img.shields.io/badge/bioconda-🐍-blue.svg
    :target: http://bioconda.github.io/recipes/scanpy/README.html
 .. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
