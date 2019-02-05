@@ -1,3 +1,4 @@
+import pytest
 import scanpy as sc
 
 myColors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
@@ -14,6 +15,8 @@ def pre_preprocessing(path):
 def clustering(adata, resolution=0.8):
     sc.tl.leiden(adata, resolution=resolution)
 
+
+@pytest.fixture
 def test_tSNE(adata, palette, random_state=10, n_components=3):
     sc.tl.tsne(adata, random_state=random_state, n_components=n_components)
     sc.pl.tsne(adata, color='leiden', components=['1,2', '2,3'], palette=palette)
