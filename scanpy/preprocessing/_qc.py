@@ -161,7 +161,7 @@ def top_proportions(mtx, n):
     else:
         return top_proportions_dense(mtx, n)
 
-@numba.jit
+
 def top_proportions_dense(mtx, n):
     sums = mtx.sum(axis=1)
     partitioned = np.apply_along_axis(np.argpartition, 1, -mtx, n-1)
@@ -174,7 +174,7 @@ def top_proportions_dense(mtx, n):
         values[i, :] = vec
     return values
 
-@numba.jit(parallel=True)
+
 def top_proportions_sparse_csr(data, indptr, n):
     values = np.zeros((indptr.size-1, n), dtype=np.float64)
     for i in numba.prange(indptr.size-1):
