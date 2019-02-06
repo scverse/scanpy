@@ -111,7 +111,7 @@ def stand_data(model, data):
 
 def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     """
-    ComBat function for batch effect correction [Johnson07]_ [Leek12]_.
+    ComBat function for batch effect correction [Johnson07]_ [Leek12]_ [Pedersen12]_.
 
     Corrects for batch effects by fitting linear models, gains statistical power
     via an EB framework where information is borrowed across genes. This uses the
