@@ -157,7 +157,7 @@ def top_proportions(mtx, n):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         # Allowing numba to do more
-        return top_proportions_sparse_csr(mtx.data, mtx.indptr, n)
+        return top_proportions_sparse_csr(mtx.data, mtx.indptr, np.array(n))
     else:
         return top_proportions_dense(mtx, n)
 
@@ -230,7 +230,7 @@ def top_segment_proportions_dense(mtx, ns):
         prev = n
     return values / sums[:, None]
 
-@numba.jit(parallel=True)
+@numba.njit(parallel=True)
 def top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = np.sort(ns)
     maxidx = ns[-1]
@@ -246,12 +246,12 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
         elif (end - start) > maxidx:
             partitioned[i, :] = - \
                 (np.partition(-data[start:end], maxidx))[:maxidx]
-    partitioned = np.apply_along_axis(
-        np.partition, 1, partitioned, maxidx - ns)[:, ::-1][:, :ns[-1]]
+        partitioned[i, :] = np.partition(partitioned[i, :], maxidx-ns)
+    partitioned = partitioned[:, ::-1][:, :ns[-1]]
     acc = np.zeros((indptr.size-1), dtype=data.dtype)
     prev = 0
     for j, n in enumerate(ns):
         acc += partitioned[:, prev:n].sum(axis=1)
         values[:, j] = acc
         prev = n
-    return values / sums[:, None]
+    return values / sums.reshape((indptr.size - 1, 1))
