@@ -14,7 +14,7 @@ Major updates:
 
 - one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ :noteversion:`1.3.7`
 - a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ :noteversion:`1.3.6` :smaller:`thanks to F Ramirez`
-- tutorials are integrated on ReadTheDocs, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ :noteversion:`1.3.6`  
+- tutorials are integrated on ReadTheDocs, see simple `clustering <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__ and simple `trajectory inference <https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html>`__ :noteversion:`1.3.6`  
 - a fully distributed preprocessing backend :noteversion:`1.3.3` :smaller:`thanks to T White and the Laserson Lab`
 - changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
 - performance gains in :func:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`thanks to S Rybakov`
