@@ -900,9 +900,9 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             axs_list.append(dendro_ax)
         ax0 = None
         if is_color_like(row_palette):
-            row_colors = [row_palette] * len(var_names)
+            row_colors = [row_palette] * len(categories)
         else:
-            row_colors = sns.color_palette(row_palette, n_colors=len(var_names))
+            row_colors = sns.color_palette(row_palette, n_colors=len(categories))
         for idx in range(num_rows)[::-1]:  # iterate in reverse to start on the bottom plot
                                            # this facilitates adding the brackets plot (if
                                            # needed) by sharing the x axis with a previous
@@ -927,11 +927,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
             else:
                 ax = fig.add_subplot(axs[idx, 0])
 
-            color_idx = idx - (num_rows - len(var_names))
             axs_list.append(ax)
 
             ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, color=row_colors[color_idx], **kwds)
+                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
 
             if stripplot:
                 ax = sns.stripplot('variable', y='value', data=df, order=order,
