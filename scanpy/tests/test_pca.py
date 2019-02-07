@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-A = [
+A_list = [
     [0, 0, 7, 0, 0],
     [8, 5, 0, 2, 0],
     [6, 0, 0, 2, 5],
@@ -32,7 +32,7 @@ A_svd = np.array([
 
 @pytest.mark.parametrize('typ', [np.array, csr_matrix])
 def test_pca_transform(typ):
-    A = typ(A, dtype='float32')
+    A = typ(A_list, dtype='float32')
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
 
