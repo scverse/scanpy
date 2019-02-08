@@ -74,7 +74,10 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
     del cell_subset
 
     if inplace:
-        _normalize_data(adata.X, counts_per_cell, target_sum)
+        if hasattr(adata.X, '__itruediv__'):
+            _normalize_data(adata.X, counts_per_cell, target_sum)
+        else:
+            adata.X = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
     else:
         dat['X'] = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
 
@@ -84,7 +87,10 @@ def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
             L = adata.layers[layer]
             counts = np.ravel(L.sum(1))
             if inplace:
-                _normalize_data(L, counts, after)
+                if hasattr(L, '__itruediv__'):
+                    _normalize_data(L, counts, after)
+                else:
+                    adata.layers[layer] = _normalize_data(L, counts, after, copy=True)
             else:
                 dat[layer] = _normalize_data(L, counts, after, copy=True)
 
