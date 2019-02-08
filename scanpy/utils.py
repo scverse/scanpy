@@ -3,6 +3,7 @@
 
 import sys
 import inspect
+from weakref import WeakSet
 from collections import namedtuple
 from functools import partial
 from types import ModuleType
@@ -61,7 +62,9 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     )
 
 
-def descend_classes_and_funcs(mod: ModuleType, root: str):
+def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
+    if encountered is None:
+        encountered = WeakSet()
     for obj in vars(mod).values():
         if not getattr(obj, '__module__', getattr(obj, '__qualname__', getattr(obj, '__name__', ''))).startswith(root):
             continue
@@ -69,8 +72,9 @@ def descend_classes_and_funcs(mod: ModuleType, root: str):
             yield obj
             if isinstance(obj, type):
                 yield from (m for m in vars(obj).values() if isinstance(m, Callable))
-        elif isinstance(obj, ModuleType):
-            yield from descend_classes_and_funcs(obj, root)
+        elif isinstance(obj, ModuleType) and obj not in encountered:
+            encountered.add(obj)
+            yield from descend_classes_and_funcs(obj, root, encountered)
 
 
 def annotate_doc_types(mod: ModuleType, root: str):
