@@ -3,7 +3,7 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 from .. import logging as logg
 from ..utils import doc_params
-from .docs import doc_norm_bulk, doc_norm_quant, doc_norm_return, doc_ex_quant, doc_ex_total
+from ._docs import doc_norm_bulk, doc_norm_quant, doc_norm_return, doc_ex_quant, doc_ex_total
 
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X

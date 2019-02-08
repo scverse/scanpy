@@ -10,4 +10,4 @@ from ..preprocessing._dca import dca
 from ..preprocessing._magic import magic
 from ..neighbors import neighbors
 from ..preprocessing._combat import combat
-from ..preprocessing.normalization import normalize_quantile, normalize_total
+from ..preprocessing._normalization import normalize_quantile, normalize_total
