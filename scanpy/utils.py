@@ -663,8 +663,22 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     if groups_order_subset != 'all':
         groups_ids = []
         for name in groups_order_subset:
-            groups_ids.append(
-                np.where(adata.obs[key].cat.categories.values == name)[0][0])
+            # deal with case that all group names were originally integers,
+            # since these are automatically converted to strings at the start 
+            # of the rank_gene_groups function
+            if ( 
+                np.issubdtype(
+                    adata.obs[key].cat.categories.values.dtype, np.number 
+                )
+            ):
+                groups_ids.append(
+                    np.where(
+                        adata.obs[key].cat.categories.values == float(name)
+                    )[0][0]
+                )
+            else:
+                groups_ids.append(
+                    np.where(adata.obs[key].cat.categories.values == name)[0][0])
         if len(groups_ids) == 0:
             # fallback to index retrieval
             groups_ids = np.where(

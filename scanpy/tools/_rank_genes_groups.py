@@ -233,8 +233,9 @@ def rank_genes_groups(
                 scores = scores_all[0]
             else:
                 scores = scores_all[igroup]
-            partition = np.argpartition(scores, -n_genes_user)[-n_genes_user:]
-            partial_indices = np.argsort(scores[partition])[::-1]
+            scores_sort = np.abs(scores) if rankby_abs else scores
+            partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
+            partial_indices = np.argsort(scores_sort[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
             rankings_gene_names.append(adata_comp.var_names[global_indices])
@@ -267,14 +268,14 @@ def rank_genes_groups(
                 chunk = []
                 # Calculate chunk frames
                 n_genes_max_chunk = floor(CONST_MAX_SIZE / (n_active + m_active))
-                if n_genes_max_chunk < n_genes - 1:
+                if n_genes_max_chunk < n_genes:
                     chunk_index = n_genes_max_chunk
-                    while chunk_index < n_genes - 1:
+                    while chunk_index < n_genes:
                         chunk.append(chunk_index)
                         chunk_index = chunk_index + n_genes_max_chunk
-                    chunk.append(n_genes - 1)
+                    chunk.append(n_genes)
                 else:
-                    chunk.append(n_genes - 1)
+                    chunk.append(n_genes)
 
                 left = 0
                 # Calculate rank sums for each chunk for the current mask
@@ -292,7 +293,7 @@ def rank_genes_groups(
                     ranks = df1.rank()
                     # sum up adjusted_ranks to calculate W_m,n
                     scores[left:right] = np.sum(ranks.loc[0:n_active, :])
-                    left = right + 1
+                    left = right
 
                 scores = (scores - (n_active * (n_active + m_active + 1) / 2)) / sqrt(
                     (n_active * m_active * (n_active + m_active + 1) / 12))
@@ -324,14 +325,17 @@ def rank_genes_groups(
             chunk = []
             n_cells = X.shape[0]
             n_genes_max_chunk = floor(CONST_MAX_SIZE / n_cells)
-            if n_genes_max_chunk < n_genes - 1:
+
+            # the chunk endpoints are always used in ranges: thus, the last element of the
+            # chunk list must be the total number of genes (not n_genes - 1)
+            if n_genes_max_chunk < n_genes:
                 chunk_index = n_genes_max_chunk
-                while chunk_index < n_genes - 1:
+                while chunk_index < n_genes:
                     chunk.append(chunk_index)
                     chunk_index = chunk_index + n_genes_max_chunk
-                chunk.append(n_genes - 1)
+                chunk.append(n_genes)
             else:
-                chunk.append(n_genes - 1)
+                chunk.append(n_genes)
             left = 0
             for chunk_index, right in enumerate(chunk):
                 # Check if issparse is true
@@ -343,7 +347,7 @@ def rank_genes_groups(
                 # sum up adjusted_ranks to calculate W_m,n
                 for imask, mask in enumerate(groups_masks):
                     scores[imask, left:right] = np.sum(ranks.loc[mask, :])
-                left = right + 1
+                left = right
 
             for imask, mask in enumerate(groups_masks):
                 means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
@@ -376,7 +380,7 @@ def rank_genes_groups(
 
     groups_order_save = [str(g) for g in groups_order]
     if (reference != 'rest' and method != 'logreg') or (method == 'logreg' and len(groups) == 2):
-        groups_order_save = [g for g in groups_order if g != reference]
+        groups_order_save = [str(g) for g in groups_order if g != reference]
     adata.uns[key_added]['scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_scores],
         dtype=[(rn, 'float32') for rn in groups_order_save])
