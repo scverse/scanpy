@@ -900,7 +900,7 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
 
 
 def downsample_counts(adata, total_counts=None, counts_per_cell=None, random_state=0,
-                      replace=True, copy=False):
+                      replace=False, copy=False):
     """
     Downsample counts from count matrix.
 
@@ -920,7 +920,7 @@ def downsample_counts(adata, total_counts=None, counts_per_cell=None, random_sta
         it will be downsampled to this number.
     random_state : `int` or `None`, optional (default: 0)
         Random seed for subsampling.
-    replace : `bool`, optional (default: `True`)
+    replace : `bool`, optional (default: `False`)
         Whether to sample the counts with replacement.
     copy : `bool`, optional (default: `False`)
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
