@@ -1,9 +1,10 @@
 """Rank genes according to differential expression.
 """
+from math import sqrt, floor
+from typing import Iterable, Union
 
 import numpy as np
 import pandas as pd
-from math import sqrt, floor
 from scipy.sparse import issparse
 
 from .. import utils
@@ -13,18 +14,19 @@ from ..preprocessing._simple import _get_mean_var
 
 
 def rank_genes_groups(
-        adata,
-        groupby,
-        use_raw=True,
-        groups='all',
-        reference='rest',
-        n_genes=100,
-        rankby_abs=False,
-        key_added=None,
-        copy=False,
-        method='t-test_overestim_var',
-        corr_method='benjamini-hochberg',
-        **kwds):
+    adata,
+    groupby,
+    use_raw=True,
+    groups: Union[str, Iterable[Union[str, int]]] = 'all',
+    reference='rest',
+    n_genes=100,
+    rankby_abs=False,
+    key_added=None,
+    copy=False,
+    method='t-test_overestim_var',
+    corr_method='benjamini-hochberg',
+    **kwds
+):
     """Rank genes for characterizing groups.
 
     Parameters
@@ -35,10 +37,9 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    groups : `str`, `list`, optional (default: `'all'`)
+    groups
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
-        be restricted. If not passed, a ranking will be generated for all
-        groups.
+        be restricted, or `'all'` (default), for all groups.
     reference : `str`, optional (default: `'rest'`)
         If `'rest'`, compare each group to the union of the rest of the group.  If
         a group identifier, compare with respect to this group.
@@ -104,7 +105,7 @@ def rank_genes_groups(
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     # for clarity, rename variable
-    groups_order = groups
+    groups_order = groups if isinstance(groups, str) else list(groups)
     if isinstance(groups_order, list) and isinstance(groups_order[0], int):
         groups_order = [str(n) for n in groups_order]
     if reference != 'rest' and reference not in set(groups_order):
