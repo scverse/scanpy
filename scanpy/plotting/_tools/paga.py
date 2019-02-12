@@ -439,6 +439,7 @@ def paga(
 
     # compute positions
     if pos is None:
+        adj_tree = None
         if layout in {'rt', 'rt_circular', 'eq_tree'}:
             adj_tree = adata.uns['paga']['connectivities_tree']
         pos = _compute_pos(
