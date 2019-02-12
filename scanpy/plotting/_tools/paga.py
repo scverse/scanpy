@@ -414,14 +414,14 @@ def paga(
         colorbars = [False for c in colors]
 
     if isinstance(root, str):
-        if root in node_labels:
-            root = list(node_labels).index(root)
+        if root in labels:
+            root = list(labels).index(root)
         else:
             raise ValueError(
                 'If `root` is a string, it needs to be one of {} not \'{}\'.'
-                .format(node_labels.tolist(), root))
-    if isinstance(root, list) and root[0] in node_labels:
-        root = [list(node_labels).index(r) for r in root]
+                .format(labels, root))
+    if isinstance(root, list) and root[0] in labels:
+        root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
     adjacency_solid = adata.uns['paga'][solid_edges].copy()
