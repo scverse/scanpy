@@ -1,6 +1,8 @@
-import numba
 import numpy as np
+from numpy.linalg import norm
+
 from .. import logging as logg
+from ..neighbors import Neighbors, get_indices_distances_from_sparse_matrix
 
 
 def compute_velocity_graph(adata, adata_u, X_du):
@@ -9,14 +11,12 @@ def compute_velocity_graph(adata, adata_u, X_du):
         or X_du.shape[0] != adata.shape[0]):
         raise ValueError('Number of cells do not match.')
 
-    from scanpy.neighbors import Neighbors, get_indices_distances_from_sparse_matrix
     neigh = Neighbors(adata)
     knn_indices, knn_distances = get_indices_distances_from_sparse_matrix(
         neigh.distances, neigh.n_neighbors)
     n_obs = adata.n_obs
     n_neighbors = neigh.n_neighbors
 
-    from numpy.linalg import norm
     X_u = adata_u.X.toarray()
     X_du = X_du.astype('float32').toarray()
 
@@ -56,28 +56,6 @@ def compute_velocity_graph(adata, adata_u, X_du):
     graph = coo_matrix((vals, (rows, cols)), shape=(n_obs, n_obs))
     graph.eliminate_zeros()
     return graph.tocsr()
-
-
-def comppute_arrows_embedding():
-    if 'rna_velocity' not in adata.uns:
-        raise ValueError('`arrows=True` requires `tl.rna_velocity` to be run before.')
-    adjacency = adata.uns['rna_velocity']['graph']
-    # loop over columns of adjacency, this is where transitions start from
-    from numpy.linalg import norm
-    V = np.zeros((adjacency.shape[0], 2), dtype='float32')
-    for i, n in enumerate(adjacency.T):  # loop over columns (note the transposition)
-        for j in n.nonzero()[1]:  # these are row indices
-            diff = adata.obsm['X_' + basis][j] - adata.obsm['X_' + basis][i]
-            # need the normalized difference vector: the distance in the embedding
-            # might be completely meaningless
-            diff /= norm(diff)
-            V[i] += adjacency[j, i] * diff
-    logg.hint('added \'V_{}\' to `.obsm`'.format(basis))
-    adata.obsm['V_' + basis] = V
-    X = adata.obsm['X_' + basis]
-    for ax in axs:
-        quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
-        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds)    
 
 
 def rna_velocity(adata, loomfile, copy=False):

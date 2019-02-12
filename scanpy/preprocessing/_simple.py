@@ -591,12 +591,13 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
     if isinstance(data, AnnData):
         logg.msg('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
-        cell_subset, counts_per_cell = materialize_as_ndarray(
-                    filter_cells(adata.X, min_counts=min_counts))
-        adata.obs[key_n_counts] = counts_per_cell
-        adata._inplace_subset_obs(cell_subset)
-        normalize_per_cell(adata.X, counts_per_cell_after,
-                           counts_per_cell=counts_per_cell[cell_subset])
+        if counts_per_cell is None:
+            cell_subset, counts_per_cell = materialize_as_ndarray(
+                        filter_cells(adata.X, min_counts=min_counts))
+            adata.obs[key_n_counts] = counts_per_cell
+            adata._inplace_subset_obs(cell_subset)
+            counts_per_cell=counts_per_cell[cell_subset]
+        normalize_per_cell(adata.X, counts_per_cell_after, counts_per_cell)
 
         layers = adata.layers.keys() if layers == 'all' else layers
         if use_rep == 'after':

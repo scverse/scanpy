@@ -130,7 +130,7 @@ def paga_compare(
     if show == False: return axs
 
 
-def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, layout_kwds={}):
+def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, adj_tree=None, root=0, layout_kwds={}):
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = 'fr'
@@ -175,10 +175,7 @@ def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, la
             adjacency_solid, pos=init_coords, iterations=iterations)
         pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
     elif layout == 'eq_tree':
-        nx_g_tree = nx_g_solid
-        if solid_edges == 'connectivities':
-            adj_tree = adata.uns['paga']['connectivities_tree']
-            nx_g_tree = nx.Graph(adj_tree)
+        nx_g_tree = nx.Graph(adj_tree)
         pos = utils.hierarchy_pos(nx_g_tree, root)
         if len(pos) < adjacency_solid.shape[0]:
             raise ValueError('This is a forest and not a single tree. '
@@ -188,10 +185,7 @@ def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, la
         from ... import utils as sc_utils
         g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
-            g_tree = g
-            if solid_edges == 'connectivities':
-                adj_tree = adata.uns['paga']['connectivities_tree']
-                g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
+            g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
             pos_list = g_tree.layout(
                 layout, root=root if isinstance(root, list) else [root]).coords
         elif layout == 'circle':
@@ -420,14 +414,14 @@ def paga(
         colorbars = [False for c in colors]
 
     if isinstance(root, str):
-        if root in node_labels:
-            root = list(node_labels).index(root)
+        if root in labels:
+            root = list(labels).index(root)
         else:
             raise ValueError(
                 'If `root` is a string, it needs to be one of {} not \'{}\'.'
-                .format(node_labels.tolist(), root))
-    if isinstance(root, list) and root[0] in node_labels:
-        root = [list(node_labels).index(r) for r in root]
+                .format(labels, root))
+    if isinstance(root, list) and root[0] in labels:
+        root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
     adjacency_solid = adata.uns['paga'][solid_edges].copy()
@@ -445,8 +439,11 @@ def paga(
 
     # compute positions
     if pos is None:
+        adj_tree = None
+        if layout in {'rt', 'rt_circular', 'eq_tree'}:
+            adj_tree = adata.uns['paga']['connectivities_tree']
         pos = _compute_pos(
-            adjacency_solid, layout=layout, random_state=random_state, init_pos=init_pos, layout_kwds=layout_kwds)
+            adjacency_solid, layout=layout, random_state=random_state, init_pos=init_pos, layout_kwds=layout_kwds, adj_tree=adj_tree, root=root)
 
     if plot:
         if ax is None:

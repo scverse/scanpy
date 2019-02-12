@@ -2,6 +2,10 @@ from .. utils import doc_params
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 from .. import logging as logg
+from ..logging import (
+    _VERBOSITY_LEVELS_FROM_STRINGS,
+    _settings_verbosity_greater_or_equal_than,
+)
 
 
 @doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -73,12 +77,14 @@ def tsne(
     adata = adata.copy() if copy else adata
     X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
-    params_sklearn = {'perplexity': perplexity,
-                      'random_state': random_state,
-                      'verbose': max(0, settings.verbosity-3),
-                      'early_exaggeration': early_exaggeration,
-                      'learning_rate': learning_rate,
-                      }
+    verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
+    params_sklearn = dict(
+        perplexity=perplexity,
+        random_state=random_state,
+        verbose=max(0, verbosity-3),
+        early_exaggeration=early_exaggeration,
+        learning_rate=learning_rate,
+    )
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     # deal with different tSNE implementations
     multicore_failed = True
@@ -104,7 +110,7 @@ def tsne(
         X_tsne = tsne.fit_transform(X)
     # update AnnData instance
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
               '    \'X_tsne\', tSNE coordinates (adata.obsm)')
     return adata if copy else None

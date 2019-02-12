@@ -1,6 +1,10 @@
+from ._utils import get_init_pos_from_paga
 from .. import settings
 from .. import logging as logg
-from ._utils import get_init_pos_from_paga
+from ..logging import (
+    _settings_verbosity_greater_or_equal_than,
+    _VERBOSITY_LEVELS_FROM_STRINGS,
+)
 
 def umap(
         adata,
@@ -115,6 +119,7 @@ def umap(
     from sklearn.utils import check_random_state
     random_state = check_random_state(random_state)
     n_epochs = maxiter
+    verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
     X_umap = simplicial_set_embedding(
         adata.uns['neighbors']['connectivities'].tocoo(),
         n_components,
@@ -126,9 +131,9 @@ def umap(
         n_epochs,
         init_coords,
         random_state,
-        max(0, settings.verbosity-3))
+        max(0, verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
               '    \'X_umap\', UMAP coordinates (adata.obsm)')
     return adata if copy else None

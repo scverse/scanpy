@@ -1,11 +1,13 @@
 from collections import namedtuple
+
 import numpy as np
 import scipy as sp
 from scipy.sparse.csgraph import minimum_spanning_tree
-from .. import logging as logg
-from ..neighbors import Neighbors
+
 from .. import utils
-from .. import settings
+from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
+from ..neighbors import Neighbors
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
 
@@ -94,7 +96,7 @@ def paga(
         adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
         # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     if use_rna_velocity:
         logg.hint(
             'added\n'

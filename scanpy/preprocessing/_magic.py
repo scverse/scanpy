@@ -1,11 +1,9 @@
 """Denoise high-dimensional data using MAGIC
 """
 
-import numbers
-import numpy as np
-
 from .. import settings
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def magic(adata,
@@ -118,8 +116,8 @@ def magic(adata,
             "`copy=True`".format(name_list))
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
-    if isinstance(verbose, int):
-        verbose = verbose >= 2
+    if isinstance(verbose, (str, int)):
+        verbose = _settings_verbosity_greater_or_equal_than(2)
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
     X_magic = MAGIC(k=k,
@@ -133,7 +131,7 @@ def magic(adata,
                     **kwargs).fit_transform(adata,
                                             genes=name_list)
     logg.info('    finished', time=True,
-              end=' ' if settings.verbosity > 2 else '\n')
+              end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     # update AnnData instance
     if name_list == "pca_only":
         # special case - update adata.obsm with smoothed values

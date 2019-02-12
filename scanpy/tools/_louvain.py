@@ -7,8 +7,8 @@ from natsort import natsorted
 from scipy.sparse import spmatrix
 
 from .. import utils
-from .. import settings
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -168,7 +168,7 @@ def louvain(
             categories=natsorted(all_groups.unique()))
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('found {} clusters and added\n'
               '    \'{}\', the cluster labels (adata.obs, categorical)'
               .format(n_clusters, key_added))

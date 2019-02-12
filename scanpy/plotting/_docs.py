@@ -52,10 +52,17 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
     'semibold', 'bold', 'heavy', 'black']`.
 size : `float` (default: `None`)
     Point size. If `None`, is automatically computed.
+color_map : `matplotlib.colors.Colormap` or `str`, optional (default: None)
+    Color map to use for continous variables. Anything that works for `cmap`
+    argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
+    `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
 palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid `matplotlib.pyplot.colormap` name like `'Set2'` or `'tab20'`, a list
-    of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a Cycler object.
+    of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a Cycler object. If
+    `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
+    variable already has colors stored in `adata.uns["{var}_colors"]`. If
+    provided, values of `adata.uns["{var}_colors"]` will be set by this palette.
 frameon : `bool`, optional (default: `None`)
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.api.tl.set_figure_params`, defaults to `True`.
@@ -68,9 +75,8 @@ hspace : `float` (default: 0.25)
 title : `str` or list of `str`, optional (default: `None`)
     Provide title for panels either as, e.g. `['title1', 'title2', ...]`.
 kwargs : further keyword arguments, optional
-    Arguments to pass to `matplotlib.pyplot.scatter`, for instance, the color
-    map (e.g. `cmap='viridis'`) or the maximum and minimum values
-    (e.g. `vmin=-2, vmax=5`).\
+    Arguments to pass to `matplotlib.pyplot.scatter`, for instance: the maximum
+    and minimum values (e.g. `vmin=-2, vmax=5`).\
 """
 
 

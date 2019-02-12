@@ -76,7 +76,7 @@ def krumsiek11():
     """
     filename = os.path.dirname(__file__) + '/krumsiek11.txt'
     verbosity_save = sc.settings.verbosity
-    sc.settings.verbosity = 0  # suppress output...
+    sc.settings.verbosity = 'error'  # suppress output...
     adata = sc.read(filename, first_column_names=True)
     sc.settings.verbosity = verbosity_save
     adata.uns['iroot'] = 0
