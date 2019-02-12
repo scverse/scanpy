@@ -3,10 +3,10 @@
 
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from scipy.sparse import issparse
-from .. import settings
+
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def score_genes(
@@ -128,7 +128,7 @@ def score_genes(
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
               '    \'{}\', score of gene set (adata.obs)'.format(score_name))
     return adata if copy else None

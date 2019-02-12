@@ -3,6 +3,7 @@
 
 from .. import settings
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def phate(
@@ -112,8 +113,8 @@ def phate(
     logg.info('computing PHATE', r=True)
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
-    if isinstance(verbose, int):
-        verbose = verbose >= 2
+    if isinstance(settings.verbosity, (str, int)):
+        verbose = _settings_verbosity_greater_or_equal_than(2)
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
@@ -138,7 +139,7 @@ def phate(
         **kwargs
     ).fit_transform(adata)
     logg.info('    finished', time=True,
-              end=' ' if settings.verbosity > 2 else '\n')
+              end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     # update AnnData instance
     adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates
     logg.hint('added\n'

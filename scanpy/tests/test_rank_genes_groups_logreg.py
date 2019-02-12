@@ -1,6 +1,6 @@
-import pandas as pd
 import numpy as np
 import scanpy as sc
+
 
 def test_rank_genes_groups_with_renamed_categories():
     adata = sc.datasets.blobs(n_variables=4, n_centers=3, n_observations=200)
