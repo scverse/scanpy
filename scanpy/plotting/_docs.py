@@ -51,6 +51,10 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
     'semibold', 'bold', 'heavy', 'black']`.
 size : `float` (default: `None`)
     Point size. If `None`, is automatically computed.
+color_map : `matplotlib.colors.Colormap` or `str`, optional (default: None)
+    Color map to use for continous variables. Anything that works for `cmap`
+    argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
+    `mpl.cm.cividis`).
 palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid `matplotlib.pyplot.colormap` name like `'Set2'` or `'tab20'`, a list
@@ -67,9 +71,8 @@ hspace : `float` (default: 0.25)
 title : `str` or list of `str`, optional (default: `None`)
     Provide title for panels either as, e.g. `['title1', 'title2', ...]`.
 kwargs : further keyword arguments, optional
-    Arguments to pass to `matplotlib.pyplot.scatter`, for instance, the color
-    map (e.g. `cmap='viridis'`) or the maximum and minimum values
-    (e.g. `vmin=-2, vmax=5`).\
+    Arguments to pass to `matplotlib.pyplot.scatter`, for instance: the maximum
+    and minimum values (e.g. `vmin=-2, vmax=5`).\
 """
 
 
