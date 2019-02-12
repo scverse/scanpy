@@ -2,8 +2,10 @@ from .. utils import doc_params
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 from .. import settings
 from .. import logging as logg
-from ..logging import _VERBOSITY_LEVELS_FROM_STRINGS, \
-    _settings_verbosity_greater_or_equal_than
+from ..logging import (
+    _VERBOSITY_LEVELS_FROM_STRINGS,
+    _settings_verbosity_greater_or_equal_than,
+)
 
 
 @doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
