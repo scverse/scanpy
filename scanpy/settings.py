@@ -1,7 +1,7 @@
 """Settings
 """
 
-verbosity = 1
+verbosity = 'warning'
 """Set global verbosity level.
 
 Level 0: only show 'error' messages.

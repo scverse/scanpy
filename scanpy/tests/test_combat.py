@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-import scanpy as sc
-import scanpy
 from sklearn.metrics import silhouette_score
+
+import scanpy as sc
 from scanpy.preprocessing._combat import stand_data
 
 

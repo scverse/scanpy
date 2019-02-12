@@ -8,8 +8,8 @@ import pandas as pd
 from scipy.sparse import issparse
 
 from .. import utils
-from .. import settings
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 from ..preprocessing._simple import _get_mean_var
 
 
@@ -396,7 +396,7 @@ def rank_genes_groups(
             [n for n in rankings_gene_pvals_adj],
             dtype=[(rn, 'float64') for rn in groups_order_save])
     
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint(
         'added to `.uns[\'{}\']`\n'
         '    \'names\', sorted np.recarray to be indexed by group ids\n'

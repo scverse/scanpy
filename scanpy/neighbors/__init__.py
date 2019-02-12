@@ -9,8 +9,9 @@ from sklearn.metrics import pairwise_distances
 
 from .. import settings
 from .. import logging as logg
-from .. utils import doc_params
 from .. import utils
+from ..utils import doc_params
+from ..logging import _settings_verbosity_greater_or_equal_than
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
@@ -93,7 +94,7 @@ def neighbors(
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
         '    \'distances\', distances for each pair of neighbors\n'
@@ -956,11 +957,11 @@ class Neighbors:
         """
         # pl.semilogy(w,'x',label=r'$ \widetilde K$')
         # pl.show()
-        if settings.verbosity > 2:
+        if _settings_verbosity_greater_or_equal_than(3):
             # output of spectrum of K for comparison
             w, v = np.linalg.eigh(self.K)
             logg.msg('spectrum of K (kernel)')
-        if settings.verbosity > 3:
+        if _settings_verbosity_greater_or_equal_than(4):
             # direct computation of spectrum of T
             w, vl, vr = scipy.linalg.eig(self.T, left=True)
             logg.msg('spectrum of transition matrix (should be same as of Ktilde)')

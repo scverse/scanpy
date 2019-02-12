@@ -1,7 +1,8 @@
 import numpy as np
-from anndata import AnnData
-from scanpy import Neighbors
 import pytest
+from anndata import AnnData
+
+from scanpy import Neighbors
 
 # the input data
 X = [[1, 0], [3, 0], [5, 6], [0, 4]]

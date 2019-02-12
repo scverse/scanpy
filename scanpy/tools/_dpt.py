@@ -3,8 +3,9 @@ import pandas as pd
 import scipy as sp
 import networkx as nx
 from natsort import natsorted
-from .. import settings
+
 from .. import logging as logg
+from ..logging import _settings_verbosity_greater_or_equal_than
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 
@@ -15,7 +16,7 @@ def _diffmap(adata, n_comps=15):
     dpt.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dpt.eigen_basis
     adata.uns['diffmap_evals'] = dpt.eigen_values
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
               '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
               '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
@@ -130,7 +131,7 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
         adata.obs['dpt_order'] = ordering_id
         adata.obs['dpt_order_indices'] = dpt.indices
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
            + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)'
               if dpt.iroot is not None else '')
