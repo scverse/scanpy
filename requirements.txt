@@ -1,5 +1,5 @@
 anndata>=0.6.15
-matplotlib>=2.2
+matplotlib>=3.0.0
 pandas>=0.21
 scipy
 seaborn
