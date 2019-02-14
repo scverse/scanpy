@@ -15,8 +15,7 @@ from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
 
-from . import settings
-from . import logging as logg
+from . import settings, logging as logg, __version__
 
 EPS = 1e-15
 
