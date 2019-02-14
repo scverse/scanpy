@@ -15,8 +15,7 @@ from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
 
-from . import settings
-from . import logging as logg
+from . import settings, logging as logg
 
 EPS = 1e-15
 
@@ -33,6 +32,7 @@ def check_versions():
     #       use the following hack...
     if anndata.__version__ != '0+unknown':
         if anndata.__version__ < LooseVersion('0.6.10'):
+            from . import __version__
             raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
                               'Run `pip install anndata -U --no-deps`.'
                               .format(__version__, anndata.__version__))
