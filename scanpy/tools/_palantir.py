@@ -74,7 +74,7 @@ def palantir( adata, **kargs ):
     
     >>> d.palantir.plot.plot_diffusion_components(d.tsne, d.dm_res)
     
-    For further demonstartion of palantir visualizations please follow the link below:
+    For further demonstration of palantir visualizations please follow the link below:
     <https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>
     that also provides a guide to draw *gene expression trends* amongst other things.
     
@@ -88,7 +88,7 @@ def palantir( adata, **kargs ):
         A wrapper class to instantiate a new object that wraps `palantir` as an attribute 
         reference attached to the class, together with other attribute references.
         The class uses instance variables, to preprocess and generate data using the 
-        embeded palantir package.
+        embedded palantir package.
         Pre-processing of data is important step before start using the palantir methods. 
         palantir accepts as input a Counts matrix: Cells x Genes.
         
@@ -196,7 +196,7 @@ def palantir( adata, **kargs ):
 
 	def wrapper_cls( adata, func=None , **kargs):
         """
-        Calss wrapper to pass a function and instantiate arguments passed to the class
+        Class wrapper to pass a function and instantiate arguments passed to the class
         """
 		if func:
 			return _wrapper_cls( func )
