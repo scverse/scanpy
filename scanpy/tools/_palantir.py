@@ -3,8 +3,8 @@
 from .. import logging as logg
 
 def palantir( adata, **kargs ):
-	
-	"""
+    
+    """
     Run Diffusion maps using the adaptive anisotropic kernel [Setty27]_.
 
     Palantir is an algorithm to align cells along differentiation trajectories. 
@@ -84,12 +84,12 @@ def palantir( adata, **kargs ):
     https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb
     that also provides a guide to draw *gene expression trends* amongst other things.
     
-	"""
-	import numpy as np
+    """
+    import numpy as np
 
     logg.info('Palantir diffusion maps', r=True)
 
-	class _wrapper_cls( object ):
+    class _wrapper_cls( object ):
         """
         A wrapper class to instantiate a new object that wraps `palantir` as an attribute 
         reference attached to the class, together with other attribute references.
@@ -104,12 +104,12 @@ def palantir( adata, **kargs ):
             - pre-processing of input data
         """
 
-		def __init__( self ,
-								adata,
-								func=None ,
-								normalize = False,
-								log_transform = False,
-					):
+        def __init__( self ,
+                                adata,
+                                func=None ,
+                                normalize = False,
+                                log_transform = False,
+                    ):
             
             """
             :input adata:         AnnData, or Dataframe of cells X genes
@@ -118,110 +118,110 @@ def palantir( adata, **kargs ):
             :input log_transform: `bool` (default: `False`), passed to palantir to log transform raw counts
             """
             # instantiate variables
-			self.func = func
-			self.adata = adata
+            self.func = func
+            self.adata = adata
 
-			# load palantir
-			self.__call__()
-			logg.info('palantir loaded ...', r=True)
+            # load palantir
+            self.__call__()
+            logg.info('palantir loaded ...', r=True)
 
-			# load data and normalize if necessary
-			self.preprocessing( self.adata,
-								normalize = normalize,
-								log_transform = log_transform )
+            # load data and normalize if necessary
+            self.preprocessing( self.adata,
+                                normalize = normalize,
+                                log_transform = log_transform )
 
-			adata.obsm['palantir_norm_data'] = np.array(self.data_df)
+            adata.obsm['palantir_norm_data'] = np.array(self.data_df)
 
-			# Principal component analysis
-			logg.info('PCA in progress ...', r=True)
-			self.pca_projections, self.var_r = self.palantir.utils.run_pca(self.data_df)
-			adata.uns['palantir_pca'] = {}
-			adata.uns['palantir_pca']['pca_projections'] = self.pca_projections
-			adata.uns['palantir_pca']['variance_ratio'] = self.var_r
+            # Principal component analysis
+            logg.info('PCA in progress ...', r=True)
+            self.pca_projections, self.var_r = self.palantir.utils.run_pca(self.data_df)
+            adata.uns['palantir_pca'] = {}
+            adata.uns['palantir_pca']['pca_projections'] = self.pca_projections
+            adata.uns['palantir_pca']['variance_ratio'] = self.var_r
 
-			# Diffusion maps
-			logg.info('Diffusion maps in progress ...', r=True)
-			self.dm_res = self.palantir.utils.run_diffusion_maps(self.pca_projections)
-			self.ms_data = self.palantir.utils.determine_multiscale_space(self.dm_res)
-			adata.uns['palantir_diff_maps'] = {}
-			adata.uns['palantir_diff_maps']['dm_res'] = self.dm_res
-			adata.obsm['X_palantir_diffmap'] = np.array(self.ms_data)
+            # Diffusion maps
+            logg.info('Diffusion maps in progress ...', r=True)
+            self.dm_res = self.palantir.utils.run_diffusion_maps(self.pca_projections)
+            self.ms_data = self.palantir.utils.determine_multiscale_space(self.dm_res)
+            adata.uns['palantir_diff_maps'] = {}
+            adata.uns['palantir_diff_maps']['dm_res'] = self.dm_res
+            adata.obsm['X_palantir_diffmap'] = np.array(self.ms_data)
 
-			# tSNE visualization
-			logg.info('tSNE in progress ...', r=True)
-			self.tsne = self.palantir.utils.run_tsne(self.ms_data)
-			adata.obsm['X_palantir_tsne'] = np.array(self.tsne)
+            # tSNE visualization
+            logg.info('tSNE in progress ...', r=True)
+            self.tsne = self.palantir.utils.run_tsne(self.ms_data)
+            adata.obsm['X_palantir_tsne'] = np.array(self.tsne)
 
-			# MAGIC imputation
-			logg.info('imputation in progress ...', r=True)
-			self.imp_df = self.palantir.utils.run_magic_imputation(self.data_df, self.dm_res)
-			adata.obsm['X_palantir_imputation'] = np.array(self.imp_df)
+            # MAGIC imputation
+            logg.info('imputation in progress ...', r=True)
+            self.imp_df = self.palantir.utils.run_magic_imputation(self.data_df, self.dm_res)
+            adata.obsm['X_palantir_imputation'] = np.array(self.imp_df)
 
-			logg.info('End of processing, start plotting.', r=True)
+            logg.info('End of processing, start plotting.', r=True)
             
 
-		def __call__( self ):
+        def __call__( self ):
             """
             Call for function to import palantir and instantiate it as a class attribute
             """
-			self.palantir = self.func()
+            self.palantir = self.func()
             
 
-		def preprocessing( self, data_df = None,
-								 normalize = False,
-								 log_transform = False):
-			try:
+        def preprocessing( self, data_df = None,
+                                 normalize = False,
+                                 log_transform = False):
+            try:
                 # for AnnData
-				self.data_df = self.adata.to_df()
-			except AttributeError:
-				# assume the data is a cell X genes Dataframe
-				logg.info('Assuming the data is a cell X genes Dataframe', r=True)
+                self.data_df = self.adata.to_df()
+            except AttributeError:
+                # assume the data is a cell X genes Dataframe
+                logg.info('Assuming the data is a cell X genes Dataframe', r=True)
                 
             # Remove low molecule count cells and low detection genes
             self.data_df = self.palantir.preprocess.filter_counts_data(self.data_df)
- 			logg.info('Data loaded ...', r=True)
+            logg.info('Data loaded ...', r=True)
            
-			if normalize:
-				try:
-					self.data_df = self.palantir.preprocess.normalize_counts(self.data_df)
+            if normalize:
+                try:
+                    self.data_df = self.palantir.preprocess.normalize_counts(self.data_df)
                     logg.info('data normalized ...', r=True)
-				except AttributeError as e:
-					raise AttributeError( "Missing data_df: " + str(e) )
+                except AttributeError as e:
+                    raise AttributeError( "Missing data_df: " + str(e) )
                     logg.error("Missing data_df: " + str(e), r=True)
                     
-			if log_transform:
-				try:
-					self.data_df = self.palantir.preprocess.log_transform(self.data_df)
-					print("data log transformed ...")
-				except AttributeError as e:
-					raise AttributeError( "Missing data_df: " + str(e) )
+            if log_transform:
+                try:
+                    self.data_df = self.palantir.preprocess.log_transform(self.data_df)
+                    print("data log transformed ...")
+                except AttributeError as e:
+                    raise AttributeError( "Missing data_df: " + str(e) )
                     logg.error("Missing data_df: " + str(e), r=True)
 
 
-	def wrapper_cls( adata, func=None , **kargs):
+    def wrapper_cls( adata, func=None , **kargs):
         """
         Class wrapper to pass a function and instantiate arguments passed to the class
         """
-		if func:
-			return _wrapper_cls( func )
-		else:
-			def wrapper( func ):
-				return _wrapper_cls( adata, func , **kargs)
-			return wrapper
+        if func:
+            return _wrapper_cls( func )
+        else:
+            def wrapper( func ):
+                return _wrapper_cls( adata, func , **kargs)
+            return wrapper
 
     # import palantir and wrap it in a function passed to the wrapper class
     # this method allows passing positional argument of adata, and additional
     # arguments used by the different methods of `_wrapper_cls`
-	@wrapper_cls( adata , **kargs )
-	def _run():
-		import importlib
-		try:
-			palantir = importlib.import_module('palantir')
-		except ImportError:
-			raise ImportError(
-				'\nplease install palantir: \n\n\t'
-				'git clone git://github.com/dpeerlab/Palantir.git\n\t'
-				'cd Palantir\n\t'
-				'sudo -H pip3 install .\n')
-		return palantir
-	return _run
+    @wrapper_cls( adata , **kargs )
+    def _run():
+        import importlib
+        try:
+            palantir = importlib.import_module('palantir')
+        except ImportError:
+            raise ImportError(
+                '\nplease install palantir: \n\n\t'
+                'git clone git://github.com/dpeerlab/Palantir.git\n\t'
+                'cd Palantir\n\t'
+                'sudo -H pip3 install .\n')
+        return palantir
+    return _run
