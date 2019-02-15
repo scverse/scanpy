@@ -1,8 +1,9 @@
-from typing import Union, Optional
-from collections.abc import Iterable
-from ..utils import doc_params
-from functools import singledispatch
 from anndata import AnnData
+from collections.abc import Iterable
+from typing import Union, Optional
+from functools import singledispatch
+import pandas as pd
+from ..utils import doc_params
 
 
 _doc_org = """\
@@ -26,7 +27,7 @@ use_cache : `bool`, optional (default: False)
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def simple_query(org: str, attrs: Union[list, str], filters: dict = None,
-                 host: str = "www.ensembl.org", use_cache: bool = False):
+                 host: str = "www.ensembl.org", use_cache: bool = False) -> pd.DataFrame:
     """
     A simple interface to biomart.
 
@@ -61,7 +62,7 @@ def simple_query(org: str, attrs: Union[list, str], filters: dict = None,
 
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
-def biomart_annotations(org, attrs, host="www.ensembl.org", use_cache=False):
+def biomart_annotations(org, attrs, host="www.ensembl.org", use_cache=False) -> pd.DataFrame:
     """
     Retrieve gene annotations from ensembl biomart.
 
@@ -92,7 +93,7 @@ def biomart_annotations(org, attrs, host="www.ensembl.org", use_cache=False):
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def gene_coordinates(org, gene_name, gene_attr="external_gene_name", chr_exclude=[],
-                     host="www.ensembl.org", use_cache=False):
+                     host="www.ensembl.org", use_cache=False) -> pd.DataFrame:
     """
     Retrieve gene coordinates for specific organism through BioMart.
 
@@ -121,7 +122,7 @@ def gene_coordinates(org, gene_name, gene_attr="external_gene_name", chr_exclude
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def mitochondrial_genes(org, attrname="external_gene_name", host="www.ensembl.org",
-                        use_cache=False):
+                        use_cache=False) -> pd.DataFrame:
     """\
     Mitochondrial gene symbols for specific organism through BioMart.
 
@@ -147,12 +148,12 @@ def mitochondrial_genes(org, attrname="external_gene_name", host="www.ensembl.or
 
 
 @singledispatch
-def enrich(container, org: Optional[str] = None):
+def enrich(container, org: Optional[str] = None) -> pd.DataFrame:
     """Get enrichment for DE results."""
     from gprofiler import gprofiler
     return gprofiler(container, org)
 
 
 @enrich.register
-def _enrich_anndata(adata: AnnData, group, key: str = "rank_genes_groups", org: Optional[str] = None):
+def _enrich_anndata(adata: AnnData, group, key: str = "rank_genes_groups", org: Optional[str] = None) -> pd.DataFrame:
     return enrich(adata.uns[key]["names"][group], org=org)
