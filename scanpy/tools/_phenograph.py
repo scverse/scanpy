@@ -70,24 +70,31 @@ def phenograph( adata,
         Assume adata is your annotated data which has the normalized data.
 
         Then do PCA:
+        
         >>> sc.tl.pca(adata, n_comps = 100)
         
         Compute phenograph clusters:
+        
         >>> result = sce.tl.phenograph(adata.obsm['X_pca'], k = 30)
         
         Imbed the phenograph result into adata as a *categorical* variable (this helps in plotting):
+        
         >>> adata.obs['pheno'] = pd.Categorical(result[0])
         
         Check by typing "adata" and you should see under obs a key called 'pheno'.
+        
         Now to show phenograph on tSNE (for example):
         
         Compute tSNE:
+        
         >>> sc.tl.tsne(adata, random_state = 7)
         
         Plot phenograph clusters on tSNE:
+        
         >>> sc.pl.tsne(adata, color = ['pheno'], s = 100, palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10)
         
         Cluster and cluster centroids for input Numpy ndarray
+        
         >>> df = np.random.rand(1000,40)
         >>> df.shape
         (1000, 40)
@@ -103,6 +110,7 @@ def phenograph( adata,
         PhenoGraph complete in 2.9466471672058105 seconds
         
         New results can be pushed into adata object:
+        
         >>> dframe = pd.DataFrame(data=df, columns=range(df.shape[1]),index=range(df.shape[0]) )
         >>> adata = sc.AnnData( X=dframe, obs=dframe, var=dframe)
         >>> adata.obs['pheno'] = pd.Categorical(result[0])
