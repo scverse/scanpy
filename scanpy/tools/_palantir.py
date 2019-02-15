@@ -15,7 +15,7 @@ def palantir( adata, **kargs ):
     Palantir has been designed to work with multidimensional single cell data from diverse
     technologies such as Mass cytometry and single cell RNA-seq.
 
-    Full documentation can be found here <https://github.com/dpeerlab/Palantir>
+    Full documentation can be found here https://github.com/dpeerlab/Palantir
 
     :param adata: :class:`~anndata.AnnData`, or Dataframe of cells X genes\n
 
@@ -45,22 +45,28 @@ def palantir( adata, **kargs ):
     >>> import scanpy.external as sce
     >>> import scanpy as sc
 
-    A sample data is available at <https://github.com/dpeerlab/Palantir/tree/master/data>
+    A sample data is available at https://github.com/dpeerlab/Palantir/tree/master/data
     To view the plots, it is recommended to run Jupyter notebook
+    
     *Load sample data*
     
     >>> adata = sc.read_csv(filename="Palantir/data/marrow_sample_scseq_counts.csv.gz")
     
     **Data preprocessing**
-    At this point, a new class object will, `d`, will be instantiated. The provided adata will be 
+    
+    At this point, a new class object, `d`, will be instantiated. The provided adata will be 
     processed and normalized, and then passed to palantir methods to generate the return objects 
     listed above. The generated objects will be pushed to the `adata` and stored for further use.
     Once instantiated, *Principal component analysis*, *Diffusion maps*, *tSNE on Diffusion maps*,
-    and *MAGIC imputation* data object will be created using the `palantir` default parameters.
+    and *MAGIC imputation* data objects will be created using the `palantir` default parameters.
     
     >>> d = sce.tl.palantir( adata=adata, normalize = True, log_transform = True )
     
+    The created object `d.palantir` can be used to override the default parameters
+    and re-run palantir different methods with the preferred parameters. 
+    
     **Plotting**
+    
     *tSNE visualization*
     
     >>> fig, ax = d.palantir.plot.plot_tsne(d.tsne)
@@ -75,7 +81,7 @@ def palantir( adata, **kargs ):
     >>> d.palantir.plot.plot_diffusion_components(d.tsne, d.dm_res)
     
     For further demonstration of palantir visualizations please follow the link below:
-    <https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>
+    https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb
     that also provides a guide to draw *gene expression trends* amongst other things.
     
 	"""
