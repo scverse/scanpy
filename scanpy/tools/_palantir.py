@@ -102,8 +102,6 @@ def palantir( adata, **kargs ):
             - instantiation initiation
             - instance function to embed palantir
             - pre-processing of input data
-            
-
         """
 
 		def __init__( self ,
