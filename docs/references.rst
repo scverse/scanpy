@@ -164,6 +164,10 @@ References
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
 
+.. [Setty27] Setty *et al.* (2018),
+   *Palantir characterizes cell fate continuities in human hematopoiesis*
+   `bioRxiv <https://doi.org/10.1101/385328>`__.
+   
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
