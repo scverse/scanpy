@@ -150,10 +150,14 @@ def mitochondrial_genes(org, attrname="external_gene_name", host="www.ensembl.or
 @singledispatch
 def enrich(container, org: Optional[str] = None) -> pd.DataFrame:
     """Get enrichment for DE results."""
-    from gprofiler import gprofiler
-    return gprofiler(container, org)
+    try:
+        from gprofiler import gprofiler
+    except ImportError:
+        raise ImportError("You need to install the `gprofiler` module.")
+    return pd.DataFrame(gprofiler(container, org))
 
 
 @enrich.register
-def _enrich_anndata(adata: AnnData, group, key: str = "rank_genes_groups", org: Optional[str] = None) -> pd.DataFrame:
+def _enrich_anndata(adata: AnnData, group, key: str = "rank_genes_groups",
+                    org: Optional[str] = None) -> pd.DataFrame:
     return enrich(adata.uns[key]["names"][group], org=org)
