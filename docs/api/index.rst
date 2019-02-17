@@ -212,7 +212,10 @@ Queries
 .. autosummary::
    :toctree: .
 
+   queries.biomart_annotations
+   queries.gene_coordinates
    queries.mitochondrial_genes
+   queries.enrich
 
 
 Classes

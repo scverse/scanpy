@@ -1,33 +1,42 @@
-from anndata import AnnData
-from collections.abc import Iterable
-from typing import Union, Optional
+from copy import copy
 from functools import singledispatch
+from collections import abc
+from typing import Any, Union, Optional, Iterable, Dict
+
+from anndata import AnnData
 import pandas as pd
+
 from ..utils import doc_params
 
 
 _doc_org = """\
-org : `str`
+org
     Organism to query. Must be an organism in ensembl biomart. "hsapiens",
     "mmusculus", "drerio", etc.\
 """
 
 _doc_host = """\
-host : `str`, optional (default: "www.ensembl.org")
+host
     A valid BioMart host URL. Alternative values include archive urls (like
     "grch37.ensembl.org") or regional mirrors (like "useast.ensembl.org").\
 """
 
 _doc_use_cache = """\
-use_cache : `bool`, optional (default: False)
+use_cache
     Whether pybiomart should use a cache for requests. Will create a
     `.pybiomart.sqlite` file in current directory if used.\
 """
 
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
-def simple_query(org: str, attrs: Union[list, str], filters: dict = None,
-                 host: str = "www.ensembl.org", use_cache: bool = False) -> pd.DataFrame:
+def simple_query(
+    org: str,
+    attrs: Union[Iterable[str], str],
+    *,
+    filters: Optional[Dict[str, Any]] = None,
+    host: str = "www.ensembl.org",
+    use_cache: bool = False
+) -> pd.DataFrame:
     """
     A simple interface to biomart.
 
@@ -43,33 +52,41 @@ def simple_query(org: str, attrs: Union[list, str], filters: dict = None,
     """
     if isinstance(attrs, str):
         attrs = [attrs]
-    elif isinstance(attrs, Iterable):
+    elif isinstance(attrs, abc.Iterable):
         attrs = list(attrs)
     else:
-        raise TypeError("attrs must be of type list or str, was {}.".format(type(attrs)))
+        raise TypeError(
+            "attrs must be of type list or str, was {}.".format(type(attrs))
+        )
     try:
         from pybiomart import Server
     except ImportError:
-        raise ImportError("You need to install the `pybiomart` module.")
+        raise ImportError(
+            "This method requires the `pybiomart` module to be installed."
+        )
     server = Server(host, use_cache=use_cache)
     dataset = server.marts["ENSEMBL_MART_ENSEMBL"].datasets[
         "{}_gene_ensembl".format(org)
     ]
-    res = dataset.query(
-        attributes=attrs, filters=filters, use_attr_names=True
-    )
+    res = dataset.query(attributes=attrs, filters=filters, use_attr_names=True)
     return res
 
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
-def biomart_annotations(org, attrs, host="www.ensembl.org", use_cache=False) -> pd.DataFrame:
+def biomart_annotations(
+    org: str,
+    attrs: Iterable[str],
+    *,
+    host: str = "www.ensembl.org",
+    use_cache: bool = False
+) -> pd.DataFrame:
     """
     Retrieve gene annotations from ensembl biomart.
 
     Parameters
     ----------
     {doc_org}
-    attrs : `List[str]`
+    attrs
         Attributes to query biomart for.
     {doc_host}
     {doc_use_cache}
@@ -92,8 +109,15 @@ def biomart_annotations(org, attrs, host="www.ensembl.org", use_cache=False) -> 
 
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
-def gene_coordinates(org, gene_name, gene_attr="external_gene_name", chr_exclude=[],
-                     host="www.ensembl.org", use_cache=False) -> pd.DataFrame:
+def gene_coordinates(
+    org: str,
+    gene_name: str,
+    *,
+    gene_attr: str = "external_gene_name",
+    chr_exclude: Iterable[str] = (),
+    host: str = "www.ensembl.org",
+    use_cache: bool = False
+) -> pd.DataFrame:
     """
     Retrieve gene coordinates for specific organism through BioMart.
 
@@ -101,7 +125,7 @@ def gene_coordinates(org, gene_name, gene_attr="external_gene_name", chr_exclude
     ----------
     {doc_org}
     gene_name :
-        The gene symbol (e.g. 'hgnc_symbol' for human) for which to retrieve
+        The gene symbol (e.g. "hgnc_symbol" for human) for which to retrieve
         coordinates.
     gene_attr : `str`, optional (default: "external_gene_name")
         The biomart attribute the gene symbol should show up for.
@@ -113,23 +137,36 @@ def gene_coordinates(org, gene_name, gene_attr="external_gene_name", chr_exclude
     Returns
     -------
     A `pd.DataFrame` containing gene coordinates for the specified gene symbol.
+
+    Examples
+    --------
+    >>> sc.queries.gene_coordinates("hsapiens", "MT-TF")
     """
-    res = simple_query(org=org,
-                       attrs=["chromosome_name", "start_position", "end_position"],
-                       filters={gene_attr: gene_name}, host=host, use_cache=use_cache)
+    res = simple_query(
+        org=org,
+        attrs=["chromosome_name", "start_position", "end_position"],
+        filters={gene_attr: gene_name},
+        host=host,
+        use_cache=use_cache,
+    )
     return res[~res["chromosome_name"].isin(chr_exclude)]
 
 
 @doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
-def mitochondrial_genes(org, attrname="external_gene_name", host="www.ensembl.org",
-                        use_cache=False) -> pd.DataFrame:
+def mitochondrial_genes(
+    org: str,
+    *,
+    attrname: str = "external_gene_name",
+    host: str = "www.ensembl.org",
+    use_cache: bool = False
+) -> pd.DataFrame:
     """\
     Mitochondrial gene symbols for specific organism through BioMart.
 
     Parameters
     ----------
     {doc_org}
-    attrname : `str`, optional (default: "external_gene_name")
+    attrname
         Biomart attribute field to return. Possible values include
         "external_gene_name", "ensembl_gene_id", "hgnc_symbol", "mgi_symbol",
         and "zfin_id_symbol".
@@ -138,26 +175,111 @@ def mitochondrial_genes(org, attrname="external_gene_name", host="www.ensembl.or
 
     Returns
     -------
-    An `np.array` containing identifiers for mitochondrial genes.
+    An `pd.DataFrame` containing identifiers for mitochondrial genes.
+
+    Examples
+    --------
+    >>> mito_gene_names = sc.queries.mitochondrial_genes("hsapiens")
+    >>> mito_ensembl_ids = sc.queries.mitochondrial_genes("hsapiens", attrname="ensembl_gene_id")
     """
-    return simple_query(org,
-                        attrs=[attrname],
-                        filters={"chromosome_name": ["MT"]},
-                        host=host,
-                        use_cache=use_cache)
+    return simple_query(
+        org,
+        attrs=[attrname],
+        filters={"chromosome_name": ["MT"]},
+        host=host,
+        use_cache=use_cache,
+    )
 
 
 @singledispatch
-def enrich(container, org: Optional[str] = None) -> pd.DataFrame:
-    """Get enrichment for DE results."""
+def enrich(
+    container: Iterable[str],
+    *,
+    org: str = "hsapiens",
+    correction_method: str = "analytical",
+    gprofiler_kwargs: dict = {}
+) -> Optional[pd.DataFrame]:
+    """
+    Get enrichment for DE results.
+
+    This is a thin convenience wrapper around the very useful
+    `gprofiler <https://github.com/vals/python-gprofiler>`_.
+
+    This method dispatches on the first argument, leading to the following two
+    signatures::
+
+        enrich(container, ...)
+        enrich(adata: AnnData, group, key: str, ...)
+
+    Where::
+
+        enrich(adata, group, key, ...) = enrich(adata.uns[key]["names"][group], ...)
+
+    Parameters
+    ----------
+    container
+        Contains genes you'd like to search.
+    adata
+        AnnData object whose group will be looked for.
+    group
+        The group whose genes should be used for enrichment.
+    key
+        Key in `uns` to find group under.
+    org
+        Organism to query. Must be an organism in ensembl biomart. "hsapiens",
+        "mmusculus", "drerio", etc.
+    correction_method
+        How to correct p-values. Possible values are: "analytical", "fdr",
+        and "bonferroni"
+    gprofiler_kwargs
+        Keyword arguments to pass to `gprofiler`.
+
+    Returns
+    -------
+    `pd.DataFrame` or `None`:
+        Returns enrichment results. If nothing was found to be enriched,
+        returns `None`.
+
+    Examples
+    --------
+    Using `sc.queries.enrich` on a list of genes:
+
+    >>> sc.queries.enrich(['Klf4', 'Pax5', 'Sox2', 'Nanog'], org="hsapiens")
+
+    Using `sc.queries.enrich on an `AnnData` object:
+
+    >>> pbmcs = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(pbmcs, "bulk_labels")
+    >>> sc.queries.enrich(pbmcs, "CD34+")
+    """
     try:
         from gprofiler import gprofiler
     except ImportError:
-        raise ImportError("You need to install the `gprofiler` module.")
-    return pd.DataFrame(gprofiler(container, org))
+        raise ImportError(
+            "This method requires the `gprofiler` module to be installed."
+        )
+    gprofiler_kwargs = copy(gprofiler_kwargs)
+    for k in ["organism", "correction_method"]:
+        if gprofiler_kwargs.get(k) is not None:
+            raise ValueError(
+                "Argument `{}` should be passed directly through `enrich`, not"
+                " through `gprofiler_kwargs`".format(k)
+            )
+    return gprofiler(
+        container,
+        organism=org,
+        correction_method=correction_method,
+        **gprofiler_kwargs
+    )
 
 
 @enrich.register
-def _enrich_anndata(adata: AnnData, group, key: str = "rank_genes_groups",
-                    org: Optional[str] = None) -> pd.DataFrame:
-    return enrich(adata.uns[key]["names"][group], org=org)
+def _enrich_anndata(
+    adata: AnnData,
+    group: str,
+    *,
+    key: str = "rank_genes_groups",
+    org: Optional[str] = None,
+    **kwargs
+) -> Optional[pd.DataFrame]:
+    return enrich(adata.uns[key]["names"][group], org=org, **kwargs)
