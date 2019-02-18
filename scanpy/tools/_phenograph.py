@@ -127,7 +127,7 @@ def phenograph( adata,
             'pip3 install git+https://github.com/jacoblevine/phenograph.git')
 
     communities, graph, Q = phenograph.cluster(
-                                        adata=adata,
+                                        data=adata,
                                         k=k,
                                         directed=directed,
                                         prune=prune,
