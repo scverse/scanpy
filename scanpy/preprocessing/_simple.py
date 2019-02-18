@@ -15,7 +15,7 @@ from anndata import AnnData
 
 from .. import settings as sett
 from .. import logging as logg
-from ..utils import sanitize_anndata
+from ..utils import sanitize_anndata, deprecated_arg_names
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -899,14 +899,15 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
         return X[obs_indices], obs_indices
 
 
-def downsample_counts(adata, total_counts=None, counts_per_cell=None, random_state=0,
+@deprecated_arg_names({"target_counts": "counts_per_cell"})
+def downsample_counts(adata, counts_per_cell=None, total_counts=None, random_state=0,
                       replace=False, copy=False):
     """
     Downsample counts from count matrix.
 
-    If `total_counts` is specified, expression matrix will be downsampled to
-    contain at most `total_counts`. If `counts_per_cell` in specified, each
-    cell will downsampled.
+    If `counts_per_cell` in specified, each cell will downsampled. If
+    `total_counts` is specified, expression matrix will be downsampled to
+    contain at most `total_counts`.
 
     Parameters
     ----------
