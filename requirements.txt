@@ -11,4 +11,4 @@ patsy
 networkx
 natsort
 joblib
-numba>=0.40.0
+numba>=0.41.0
