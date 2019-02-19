@@ -10,8 +10,8 @@ ROOT = os.path.join(ROOT, '_data', '10x_data')
 
 def assert_anndata_equal(a1, a2):
     assert a1.shape == a2.shape
-    assert all(a1.obs == a2.obs)
-    assert all(a1.var == a2.var)
+    assert (a1.obs == a2.obs).all(axis=None)
+    assert (a1.var == a2.var).all(axis=None)
     assert np.allclose(a1.X.todense(), a2.X.todense())
 
 def test_read_10x_mtx():
