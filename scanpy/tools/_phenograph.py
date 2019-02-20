@@ -77,7 +77,7 @@ def phenograph( adata,
         
         >>> result = sce.tl.phenograph(adata.obsm['X_pca'], k = 30)
         
-        Imbed the phenograph result into adata as a *categorical* variable (this helps in plotting):
+        Embed the phenograph result into adata as a *categorical* variable (this helps in plotting):
         
         >>> adata.obs['pheno'] = pd.Categorical(result[0])
         
