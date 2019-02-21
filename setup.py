@@ -32,7 +32,7 @@ setup(
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
         doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints', 'scanpydoc'],
-        test=['pytest>=3.9'],
+        test=['pytest>=3.9', 'dask[array]', 'zappy', 'zarr'],
     ),
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!
