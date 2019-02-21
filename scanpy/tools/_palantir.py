@@ -2,7 +2,7 @@
 """
 from .. import logging as logg
 
-def palantir( adata, **kargs ):
+def palantir( adata ):
 
     """
     Run Diffusion maps using the adaptive anisotropic kernel [Setty27]_.
@@ -19,16 +19,16 @@ def palantir( adata, **kargs ):
 
     :param adata: :class:`~anndata.AnnData`, or Dataframe of cells X genes
 
-    :param normalize: `bool` (default: `False`), property setter passed to 
+    :param normalize: `bool` (default: `False`), property setter passed to
                       palantir to normalize using palantir method,
                       `palantir.preprocess.normalize_counts`
 
-    :param log_transform: `bool` (default: `False`), property setter passed to 
-                          palantir. Some datasets show better signal in the log 
+    :param log_transform: `bool` (default: `False`), property setter passed to
+                          palantir. Some datasets show better signal in the log
                           scale. Applied using `palantir.preprocess.log_transform`
 
-    :param filter_low: `bool` (default: `False`), property setter passed to 
-                       palantir to remove low molecule count cells and low 
+    :param filter_low: `bool` (default: `False`), property setter passed to
+                       palantir to remove low molecule count cells and low
                        detection genes
 
     :return:
@@ -68,7 +68,7 @@ def palantir( adata, **kargs ):
     >>> import scanpy as sc
 
     A sample data is available at https://github.com/dpeerlab/Palantir/tree/master/data
-    
+
     To view the plots, it is recommended to run Jupyter notebook
 
     *Load sample data*
@@ -76,24 +76,24 @@ def palantir( adata, **kargs ):
     >>> adata = sc.read_csv(filename="Palantir/data/marrow_sample_scseq_counts.csv.gz")
 
     **Pre-processing**
-    
+
     The provided adata will be used as input to the embedded `palantir` methods:
-    
+
     >>> d = sce.tl.palantir( adata=adata )
-    
-    At this point, a new class object, `d`, will be instantiated. If the data 
-    needs pre-processing - filtering low genes/cells counts, or normalization, 
+
+    At this point, a new class object, `d`, will be instantiated. If the data
+    needs pre-processing - filtering low genes/cells counts, or normalization,
     or log transformation, set the `filter_low`, `normalize`, or `log_transform`
     to `True`:
-    
+
     >>> d.filter_low = True
     >>> d.normalize = True
     >>> d.log_transform = True
 
-    The created object `d.palantir` can be used to override the default 
+    The created object `d.palantir` can be used to override the default
     parameters used for pre-processing.
 
-    Follow the next step to pass the data to palantir methods, to generate the 
+    Follow the next step to pass the data to palantir methods, to generate the
     return objects listed above.
 
     **Run Palantir**
@@ -101,15 +101,15 @@ def palantir( adata, **kargs ):
     >>> d.process()
 
     By calling this method `palantir` will run and generate the various outputs.
-    The generated objects will be pushed to `adata` and stored for further use. 
-    Once instantiated, *Principal component analysis*, *Diffusion maps*, 
+    The generated objects will be pushed to `adata` and stored for further use.
+    Once instantiated, *Principal component analysis*, *Diffusion maps*,
     *tSNE on Diffusion maps*, and *MAGIC imputation* data objects will be created
     using the `palantir` default parameters.
-    
-    If running `palantir` using default parameters is not satisfactory, 
-    `d.palantir` methods can be used to override and substitute the individual 
+
+    If running `palantir` using default parameters is not satisfactory,
+    `d.palantir` methods can be used to override and substitute the individual
     outputs already embedded into `adata`.
-    
+
     **Plotting**
 
     *tSNE visualization*
@@ -171,7 +171,7 @@ def palantir( adata, **kargs ):
             :input filter_low: `bool` (default: `False`), property setter passed
                                to palantir
             """
-            
+
             # instantiate variables
             self.func = func
             self.adata = adata
@@ -184,7 +184,7 @@ def palantir( adata, **kargs ):
                 self.data_df = self.adata.to_df()
             except AttributeError:
                 # assume the data is a cell X genes Dataframe
-                logg.info('Assuming the data is a cell X genes Dataframe', 
+                logg.info('Assuming the data is a cell X genes Dataframe',
                 	      r=True)
 
             # load palantir
@@ -193,47 +193,47 @@ def palantir( adata, **kargs ):
 
         def __call__( self ):
             """
-            Call for function to import palantir and instantiate it as a class 
+            Call for function to import palantir and instantiate it as a class
             attribute
             """
             self.palantir = self.func()
 
         def process( self ):
-            
+
             """
             A method to run `palantir` on input Data Frame
             """
-            
+
             # Principal component analysis
             logg.info('PCA in progress ...', r=True)
-            
+
             self.pca_projections, self.var_r = self.palantir.utils.run_pca(self.data_df)
-            
+
             adata.uns['palantir_pca_results'] = {}
             adata.uns['palantir_pca_results']['pca_projections'] = self.pca_projections
             adata.uns['palantir_pca_results']['variance_ratio'] = self.var_r
 
             # Diffusion maps
             logg.info('Diffusion maps in progress ...', r=True)
-            
+
             self.dm_res = self.palantir.utils.run_diffusion_maps(self.pca_projections)
             self.ms_data = self.palantir.utils.determine_multiscale_space(self.dm_res)
-            
+
             adata.uns['palantir_diff_maps'] = self.dm_res
             adata.uns['palantir_ms_data'] = self.ms_data
 
             # tSNE visualization
             logg.info('tSNE in progress ...', r=True)
-            
+
             self.tsne = self.palantir.utils.run_tsne(self.ms_data)
-            
+
             adata.uns['palantir_tsne'] = self.tsne
-            
+
             # MAGIC imputation
             logg.info('imputation in progress ...', r=True)
-            
+
             self.imp_df = self.palantir.utils.run_magic_imputation(self.data_df, self.dm_res)
-            
+
             adata.uns['palantir_imp_df'] = self.imp_df
 
             logg.info('End of processing, start plotting.', r=True)
