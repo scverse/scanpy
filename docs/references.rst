@@ -98,7 +98,7 @@ References
 .. [Lambiotte09] Lambiotte *et al.* (2009)
    *Laplacian Dynamics and Multiscale Modular Structure in Networks*
    `arXiv <https://arxiv.org/abs/0812.1770>`__.
-   
+
 .. [Leek12] Leek *et al.* (2012),
    *sva: Surrogate Variable Analysis. R package*
    `Bioconductor <https://doi.org/10.18129/B9.bioc.sva>`__.
@@ -147,11 +147,11 @@ References
 .. [Park18] Park *et al.* (2018),
    *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
    `bioRxiv <https://doi.org/10.1101/397042>`__.
-   
+
 .. [Pedersen12] Pedersen (2012),
    *Python implementation of ComBat*
    `GitHub <https://github.com/brentp/combat.py>`__.
-   
+
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
@@ -167,7 +167,11 @@ References
 .. [Setty27] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `bioRxiv <https://doi.org/10.1101/385328>`__.
-   
+
+.. [Setty28] Setty *et al.* (2018),
+   *Charting the emergent organotypic landscape of the mammalian gut endoderm at single-cell resolution*
+   `bioRxiv <https://doi.org/10.1101/471078>`__.
+
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
