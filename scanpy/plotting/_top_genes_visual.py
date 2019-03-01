@@ -153,19 +153,19 @@ def exploratory_rank_analysis(adata, groupby, x='inflation', y='mean', groups='a
                                                    'tail_mean_difference'}):
             means_rest = _tail_mean_estimate(adata[:, name_list], mask_rest)
 
-        if (x is 'tail_var_group' or y is 'tail_var_group'):
+        if (x == 'tail_var_group' or y == 'tail_var_group'):
             # Get tail variance of expression
             var_group = _tail_var_estimate(adata[:, name_list], mask)
-        if (x is 'tail_var_rest' or y is 'tail_var_rest'):
+        if (x == 'tail_var_rest' or y == 'tail_var_rest'):
             var_rest = _tail_var_estimate(adata[:, name_list], mask_rest)
-        if (x is 'CDR' or y is 'CDR'):
+        if (x == 'CDR' or y == 'CDR'):
             # Get CDR: Need to give full adata object, since we need to count everything
             CDR = _Avg_CDR(adata, mask, name_list, model='rough', n_genes=None)
-        if (x is 'full_var_group' or y is 'full_var_group'):
+        if (x == 'full_var_group' or y == 'full_var_group'):
             # Slice first appropriately:
             adata_relevant = adata[:, name_list]
             exp, full_var_group = simple._get_mean_var(adata_relevant.X[mask])
-        if (x is 'full_var_rest' or y is 'full_var_rest'):
+        if (x == 'full_var_rest' or y == 'full_var_rest'):
             # Slice first appropriately:
             adata_relevant = adata[:, name_list]
             exp_rest, full_var_rest = simple._get_mean_var(adata_relevant.X[mask_rest])
@@ -174,10 +174,10 @@ def exploratory_rank_analysis(adata, groupby, x='inflation', y='mean', groups='a
         # get colored scatterplot
         # For coloring, get max score value, normalize (0,1)
         # Depending on whether normalization should be scale-invariant or only rank-invariant, do the following
-        if coloring is 'scores':
+        if coloring == 'scores':
             score_list = score_list / max(score_list)
             colors = cm.jet(score_list)
-        elif coloring is 'absolute':
+        elif coloring == 'absolute':
             color_list = rankdata(score_list)
             max_values = max(color_list)
             colors = cm.jet(color_list / max_values)
@@ -193,68 +193,68 @@ def exploratory_rank_analysis(adata, groupby, x='inflation', y='mean', groups='a
         # Potential values for x, y: 'mean' ('full' or 'tail'), 'tail_variance', 'inflation', 'CDR',
         # tail_variance_rest, Score (Just the ranking as given by test-statistic), 'full_var', 'full_var_rest'
 
-        if x is 'expression_rate_difference':
+        if x == 'expression_rate_difference':
             x_plot = rate_group - rate_rest
-        elif x is 'expression_rate_group':
+        elif x == 'expression_rate_group':
             x_plot = rate_group
-        elif x is 'expression_rate_rest':
+        elif x == 'expression_rate_rest':
             x_plot = rate_rest
-        elif x is 'Score':
+        elif x == 'Score':
             x_plot = score_list
-        elif x is 'full_mean_difference':
+        elif x == 'full_mean_difference':
             x_plot = means_group*rate_group-means_rest*rate_rest
-        elif x is 'full_mean_group':
+        elif x == 'full_mean_group':
             x_plot = means_group*rate_group
-        elif x is 'full_mean_rest':
+        elif x == 'full_mean_rest':
             x_plot = means_rest*rate_rest
-        elif x is 'tail_mean_difference':
+        elif x == 'tail_mean_difference':
             x_plot = means_group-means_rest
-        elif x is 'tail_mean_group':
+        elif x == 'tail_mean_group':
             x_plot = means_group
-        elif x is 'tail_mean_rest':
+        elif x == 'tail_mean_rest':
             x_plot = means_rest
-        elif x is 'tail_var_group':
+        elif x == 'tail_var_group':
             x_plot = var_group
-        elif x is 'tail_var_rest':
+        elif x == 'tail_var_rest':
             x_plot = var_rest
-        elif x is 'full_var_group':
+        elif x == 'full_var_group':
             x_plot = full_var_group
-        elif x is 'full_var_rest':
+        elif x == 'full_var_rest':
             x_plot = full_var_rest
-        elif x is 'CDR':
+        elif x == 'CDR':
             x_plot = CDR
         else:
             logg.error('No accepted input. Check function documentation to get an overview over all inputs')
 
-        if y is 'expression_rate_difference':
+        if y == 'expression_rate_difference':
             y_plot = rate_group - rate_rest
-        elif y is 'expression_rate_group':
+        elif y == 'expression_rate_group':
             y_plot = rate_group
-        elif y is 'expression_rate_rest':
+        elif y == 'expression_rate_rest':
             y_plot = rate_rest
-        elif y is 'Score':
+        elif y == 'Score':
             y_plot = score_list
-        elif y is 'full_mean_difference':
+        elif y == 'full_mean_difference':
             y_plot = means_group*rate_group-means_rest*rate_rest
-        elif y is 'full_mean_group':
+        elif y == 'full_mean_group':
             y_plot = means_group*rate_group
-        elif y is 'full_mean_rest':
+        elif y == 'full_mean_rest':
             y_plot = means_rest*rate_rest
-        elif y is 'tail_mean_difference':
+        elif y == 'tail_mean_difference':
             y_plot = means_group-means_rest
-        elif y is 'tail_mean_group':
+        elif y == 'tail_mean_group':
             y_plot = means_group
-        elif y is 'tail_mean_rest':
+        elif y == 'tail_mean_rest':
             y_plot = means_rest
-        elif y is 'tail_var_group':
+        elif y == 'tail_var_group':
             y_plot = var_group
-        elif y is 'tail_var_rest':
+        elif y == 'tail_var_rest':
             y_plot = var_rest
-        elif y is 'full_var_group':
+        elif y == 'full_var_group':
             y_plot = full_var_group
-        elif y is 'full_var_rest':
+        elif y == 'full_var_rest':
             y_plot = full_var_rest
-        elif y is 'CDR':
+        elif y == 'CDR':
             y_plot = CDR
         else:
             logg.error('No accepted input. Check function documentation to get an overview over all inputs')
@@ -285,7 +285,7 @@ def _zero_inflation_estimate(adata, mask, model='rough'):
     else:
         X = adata.X[mask, :]
     n_cells = X.shape[0]
-    if model is 'rough':
+    if model == 'rough':
         if issparse(X):
             return X.getnnz(axis=0) / n_cells
         else:
@@ -307,7 +307,7 @@ def _tail_mean_estimate(adata, mask, model='rough'):
     n_cells = X.shape[0]
     n_genes = X.shape[1]
     means = np.zeros((n_genes,))
-    if model is 'rough':
+    if model == 'rough':
         if issparse(X):
             n_nonzero_elements = X.getnnz(axis=0)
             # More efficient to use in flattened form, use indexing. Since highly sparsified, no memory issue
@@ -338,7 +338,7 @@ def _tail_var_estimate(adata, mask, model='rough'):
     n_cells = X.shape[0]
     n_genes = X.shape[1]
     variances = np.zeros((n_genes,))
-    if model is 'rough':
+    if model == 'rough':
         if issparse(X):
             n_nonzero_elements = X.getnnz(axis=0)
             # More efficient to use in flattened form, use indexing. Since highly sparsified, no memory issue
@@ -477,10 +477,10 @@ def top_ranked_group_analysis(adata, groupby, groupid, n=100, special_markers=No
     # get colored scatterplot
     # For coloring, get max score value, normalize (0,1)
     # Depending on whether normalization should be scale-invariant or only rank-invariant, do the following
-    if coloring is 'scores':
+    if coloring == 'scores':
         score_list = score_list / max(score_list)
         colors = cm.jet(score_list)
-    elif coloring is 'absolute':
+    elif coloring == 'absolute':
         color_list = rankdata(score_list)
         max_values = max(color_list)
         colors = cm.jet(color_list / max_values)
@@ -643,19 +643,19 @@ def scatter(adata, groupby, groupid, x,y, n=100, special_markers=None,
                                                'tail_mean_difference'}):
         means_rest = _tail_mean_estimate(adata[:, name_list], mask_rest)
 
-    if (x is 'tail_var_group' or y is 'tail_var_group'):
+    if (x == 'tail_var_group' or y == 'tail_var_group'):
         # Get tail variance of expression
         var_group = _tail_var_estimate(adata[:, name_list], mask)
-    if (x is 'tail_var_rest' or y is 'tail_var_rest'):
+    if (x == 'tail_var_rest' or y == 'tail_var_rest'):
         var_rest = _tail_var_estimate(adata[:, name_list], mask_rest)
-    if (x is 'CDR' or y is 'CDR'):
+    if (x == 'CDR' or y == 'CDR'):
         # Get CDR: Need to give full adata object, since we need to count everything
         CDR = _Avg_CDR(adata, mask, name_list, model='rough', n_genes=None)
-    if (x is 'full_var_group' or y is 'full_var_group'):
+    if (x == 'full_var_group' or y == 'full_var_group'):
         # Slice first appropriately:
         adata_relevant = adata[:, name_list]
         exp, full_var_group = simple._get_mean_var(adata_relevant.X[mask])
-    if (x is 'full_var_rest' or y is 'full_var_rest'):
+    if (x == 'full_var_rest' or y == 'full_var_rest'):
         # Slice first appropriately:
         adata_relevant = adata[:, name_list]
         exp_rest, full_var_rest = simple._get_mean_var(adata_relevant.X[mask_rest])
@@ -664,10 +664,10 @@ def scatter(adata, groupby, groupid, x,y, n=100, special_markers=None,
     # get colored scatterplot
     # For coloring, get max score value, normalize (0,1)
     # Depending on whether normalization should be scale-invariant or only rank-invariant, do the following
-    if coloring is 'scores':
+    if coloring == 'scores':
         score_list = score_list / max(score_list)
         colors = cm.jet(score_list)
-    elif coloring is 'absolute':
+    elif coloring == 'absolute':
         color_list = rankdata(score_list)
         max_values = max(color_list)
         colors = cm.jet(color_list / max_values)
@@ -683,68 +683,68 @@ def scatter(adata, groupby, groupid, x,y, n=100, special_markers=None,
     # Potential values for x, y: 'mean' ('full' or 'tail'), 'tail_variance', 'inflation', 'CDR',
     # tail_variance_rest, Score (Just the ranking as given by test-statistic), 'full_var', 'full_var_rest'
 
-    if x is 'expression_rate_difference':
+    if x == 'expression_rate_difference':
         x_plot = rate_group - rate_rest
-    elif x is 'expression_rate_group':
+    elif x == 'expression_rate_group':
         x_plot = rate_group
-    elif x is 'expression_rate_rest':
+    elif x == 'expression_rate_rest':
         x_plot = rate_rest
-    elif x is 'Score':
+    elif x == 'Score':
         x_plot = score_list
-    elif x is 'full_mean_difference':
+    elif x == 'full_mean_difference':
         x_plot = means_group * rate_group - means_rest * rate_rest
-    elif x is 'full_mean_group':
+    elif x == 'full_mean_group':
         x_plot = means_group * rate_group
-    elif x is 'full_mean_rest':
+    elif x == 'full_mean_rest':
         x_plot = means_rest * rate_rest
-    elif x is 'tail_mean_difference':
+    elif x == 'tail_mean_difference':
         x_plot = means_group - means_rest
-    elif x is 'tail_mean_group':
+    elif x == 'tail_mean_group':
         x_plot = means_group
-    elif x is 'tail_mean_rest':
+    elif x == 'tail_mean_rest':
         x_plot = means_rest
-    elif x is 'tail_var_group':
+    elif x == 'tail_var_group':
         x_plot = var_group
-    elif x is 'tail_var_rest':
+    elif x == 'tail_var_rest':
         x_plot = var_rest
-    elif x is 'full_var_group':
+    elif x == 'full_var_group':
         x_plot = full_var_group
-    elif x is 'full_var_rest':
+    elif x == 'full_var_rest':
         x_plot = full_var_rest
-    elif x is 'CDR':
+    elif x == 'CDR':
         x_plot = CDR
     else:
         logg.error('No accepted input. Check function documentation to get an overview over all inputs')
 
-    if y is 'expression_rate_difference':
+    if y == 'expression_rate_difference':
         y_plot = rate_group - rate_rest
-    elif y is 'expression_rate_group':
+    elif y == 'expression_rate_group':
         y_plot = rate_group
-    elif y is 'expression_rate_rest':
+    elif y == 'expression_rate_rest':
         y_plot = rate_rest
-    elif y is 'Score':
+    elif y == 'Score':
         y_plot = score_list
-    elif y is 'full_mean_difference':
+    elif y == 'full_mean_difference':
         y_plot = means_group * rate_group - means_rest * rate_rest
-    elif y is 'full_mean_group':
+    elif y == 'full_mean_group':
         y_plot = means_group * rate_group
-    elif y is 'full_mean_rest':
+    elif y == 'full_mean_rest':
         y_plot = means_rest * rate_rest
-    elif y is 'tail_mean_difference':
+    elif y == 'tail_mean_difference':
         y_plot = means_group - means_rest
-    elif y is 'tail_mean_group':
+    elif y == 'tail_mean_group':
         y_plot = means_group
-    elif y is 'tail_mean_rest':
+    elif y == 'tail_mean_rest':
         y_plot = means_rest
-    elif y is 'tail_var_group':
+    elif y == 'tail_var_group':
         y_plot = var_group
-    elif y is 'tail_var_rest':
+    elif y == 'tail_var_rest':
         y_plot = var_rest
-    elif y is 'full_var_group':
+    elif y == 'full_var_group':
         y_plot = full_var_group
-    elif y is 'full_var_rest':
+    elif y == 'full_var_rest':
         y_plot =     full_var_rest
-    elif y is 'CDR':
+    elif y == 'CDR':
         y_plot = CDR
     else:
         logg.error('No accepted input. Check function documentation to get an overview over all inputs')
@@ -836,10 +836,10 @@ def ROC_AUC_analysis(adata,groupby,group,n_genes=100, special_markers=None, colo
     rate_group = _zero_inflation_estimate(adata[:, name_list], mask)
     rate_rest = _zero_inflation_estimate(adata[:, name_list], mask_rest)
 
-    if coloring is 'scores':
+    if coloring == 'scores':
         score_list = score_list / max(score_list)
         colors = cm.jet(score_list)
-    elif coloring is 'absolute':
+    elif coloring == 'absolute':
         color_list = rankdata(score_list)
         max_values = max(color_list)
         colors = cm.jet(color_list / max_values)

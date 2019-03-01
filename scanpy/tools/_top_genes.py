@@ -68,7 +68,7 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
     adata_relevant = adata[:, name_list]
     # This line just makes group_mask access easier. Nothing else but 'all' will stand here.
     groups = 'all'
-    if data is 'Complete' or groupby is None:
+    if data == 'Complete' or groupby is None:
         if issparse(adata_relevant.X):
             Data_array = adata_relevant.X.todense()
         else:
@@ -77,12 +77,12 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
         # get group_mask
         groups_order, groups_masks = utils.select_groups(
             adata, groups, groupby)
-        if data is 'Group':
+        if data == 'Group':
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[groups_masks[group], :]
-        elif data is 'Rest':
+        elif data == 'Rest':
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[~groups_masks[group], :].todense()
             else:
