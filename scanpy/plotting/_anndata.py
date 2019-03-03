@@ -1571,7 +1571,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
-               var_group_rotation=None, layer=None, swap_axes=False, show=None, save=None, **kwds):
+               var_group_rotation=None, layer=None, standard_scale=None, swap_axes=False, show=None,
+               save=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1580,6 +1581,9 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     Parameters
     ----------
     {common_plot_args}
+    standard_scale : {{'row', 'col'}}, optional (default: None)
+        Whether or not to standardize that dimension, meaning for each row or column,
+        subtract the minimum and divide each by its maximum.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.pcolor`.
@@ -1622,6 +1626,17 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         dendrogram = False
 
     mean_obs = obs_tidy.groupby(level=0).mean()
+
+    if standard_scale == 'row':
+        mean_obs -= mean_obs.values.min(1).reshape(-1, 1)
+        mean_obs /= mean_obs.values.max(1).reshape(-1, 1)
+    elif standard_scale == 'col':
+        mean_obs -= mean_obs.min(0)
+        mean_obs /= mean_obs.max(0)
+    elif standard_scale is None:
+        pass
+    else:
+        logg.info('Unknown type for standard_scale, ignored')
 
     if dendrogram:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
