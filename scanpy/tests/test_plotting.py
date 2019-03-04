@@ -117,6 +117,18 @@ def test_violin():
     save_and_compare_images('master_violin_multi_panel', tolerance=40)
 
 
+def test_dendrogram():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.dendrogram(pbmc, 'bulk_labels')
+    save_and_compare_images('dendrogram', tolerance=10)
+
+
+def test_correlation():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.correlation_matrix(pbmc, 'bulk_labels')
+    save_and_compare_images('correlation', tolerance=15)
+
+
 def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68k_reduced()
     tolerance = 15
@@ -143,7 +155,7 @@ def test_rank_genes_groups():
 
     # test ranked genes using stacked violin plots
     sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3, show=False)
-    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=20)
 
     # test ranked genes using dotplot
     sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4, show=False)
@@ -169,6 +181,35 @@ def test_rank_genes_groups():
     # sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5,
     #                                jitter=False, strip=False, show=False)
     # save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+
+
+def test_rank_genes_symbols():
+    adata = sc.datasets.krumsiek11()
+
+    # add a 'symbols' column
+    adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
+    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    sc.pl.heatmap(adata, symbols, 'cell_type', use_raw=False, show=False, dendrogram=True,
+                  gene_symbols='symbols')
+    save_and_compare_images('master_heatmap_gene_symbols')
+
+    sc.pl.dotplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  gene_symbols='symbols')
+
+    save_and_compare_images('master_dotplot_gene_symbols', tolerance=15)
+
+    sc.pl.matrixplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                     gene_symbols='symbols')
+
+    save_and_compare_images('master_matrixplot_gene_symbols', tolerance=15)
+
+    sc.pl.stacked_violin(adata, symbols, 'cell_type', use_raw=False, color='blue', show=False,
+                         gene_symbols='symbols')
+    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=20)
+
+    sc.pl.tracksplot(adata, symbols, 'cell_type', dendrogram=True, use_raw=False,
+                     gene_symbols='symbols')
+    save_and_compare_images('master_tracksplot_gene_symbols')
 
 
 def test_scatterplots():
@@ -209,7 +250,7 @@ def test_scatterplots():
     # test edges = True
     sc.pp.neighbors(pbmc)
     sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
-    save_and_compare_images('master_umap_with_edges', tolerance=20)
+    save_and_compare_images('master_umap_with_edges', tolerance=35)
 
     # test diffmap
     # sc.tl.diffmap(pbmc)

@@ -9,8 +9,9 @@ color : string or list of strings, optional (default: `None`)
     Keys for annotations of observations/cells or variables/genes, e.g.,
     `'ann1'` or `['ann1', 'ann2']`.
 gene_symbols : string, optional (default: `None`)
-    Key for field in .var that stores gene symbols if you do not want to use 
-    .var_names.
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
 use_raw : `bool`, optional (default: `None`)
     Use `.raw` attribute of `adata` for coloring with gene expression. If
     `None`, uses `.raw` if present.\
@@ -108,13 +109,15 @@ num_categories : `int`, optional (default: `7`)
 figsize : (`float`, `float`), optional (default: `None`)
     Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
     Format is (width, height)
-dendrogram: `bool` If True, hierarchical clustering between the `groupby` categories is
-    computed and a dendrogram is plotted. `groupby` categories are reordered according to
-    the dendrogram order. If groups of `var_names` (see next arguments) are set and those groups correspond
-    to the `groupby` categories, those groups are also reordered. The 'pearson' method
-    is used to compute the pairwise correlation between categories using all var_names in
-    `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-    used is `complete`.
+dendrogram: `bool` or `str`, optional (default, `False`)
+    If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering 
+    between the `groupby` categories is added. The dendrogram information is computed
+    using :ref:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+    the function is called with default parameters.
+gene_symbols : string, optional (default: `None`)
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
 var_group_positions :  list of `tuples`.
     Use this parameter to highlight groups of `var_names`.
     This will draw a 'bracket' or a color block between the given start and end positions. If the
