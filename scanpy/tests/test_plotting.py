@@ -81,6 +81,16 @@ def test_matrixplot():
     sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False, swap_axes=True)
     save_and_compare_images('master_matrixplot_swap_axes', tolerance=15)
 
+    # test row/col standardization
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False, standard_scale='row')
+    save_and_compare_images('master_matrixplot_std_scale_row', tolerance=15)
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False, standard_scale='col')
+    save_and_compare_images('master_matrixplot_std_scale_col', tolerance=15)
+
+    # test swap_axes + standardize rows
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False, swap_axes=True, standard_scale='row')
+    save_and_compare_images('master_matrixplot_swap_axes_std_scale_row', tolerance=15)
+
     # test matrixplot numeric column and alternative cmap
     adata.obs['Gata2'] = adata.X[:, 0]
     sc.pl.matrixplot(adata, adata.var_names, 'Gata2', use_raw=False,
