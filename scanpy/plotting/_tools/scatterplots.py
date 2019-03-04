@@ -653,6 +653,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
         else:
             color_vector = adata.obs[value_to_plot]
     elif gene_symbols in adata.var.columns:
+        if value_to_plot not in adata.var[gene_symbols].values:
+            logg.error("Gene symbol {!r} not found in given gene_symbols "
+                       "column: {!r}".format(value_to_plot, gene_symbols))
+            return
         gene_id = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
         if use_raw:
             color_vector = adata.raw[:, gene_id].X

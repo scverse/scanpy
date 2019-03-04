@@ -285,13 +285,23 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
     group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
 
-    # make a list of tuples containing the index for the start gene and the
-    # end gene that should be labelled
-    group_positions = [(x, x + n_genes - 1) for x in range(0, n_genes * len(group_names), n_genes)]
+    gene_names = []
+    start = 0
+    group_positions = []
+    group_names_valid = []
+    for group in group_names:
+        # get all genes that are 'not-nan'
+        genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
+        if len(genes_list) == 0:
+            logg.warn("No genes found for group {}".format(group))
+            continue
+        gene_names.extend(genes_list)
+        end = start + len(genes_list)
+        group_positions.append((start, end -1))
+        group_names_valid.append(group)
+        start = end
 
-    # sum(list, []) is used to flatten the gene list
-    gene_names = sum([list(adata.uns[key]['names'][x][:n_genes]) for x in group_names], [])
-
+    group_names = group_names_valid
     if plot_type == 'dotplot':
         from .._anndata import dotplot
         dotplot(adata, gene_names, groupby, var_group_labels=group_names,
