@@ -1584,10 +1584,9 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     Parameters
     ----------
     {common_plot_args}
-    standard_scale : {{'row', 'col'}}, optional (default: None)
-        Whether or not to standardize that dimension, meaning for each row or column,
-        subtract the minimum and divide each by its maximum. If `swap_axes` is True,
-        standardization will be performed after swapping the axes.
+    standard_scale : {{'var', 'group'}}, optional (default: None)
+        Whether or not to standardize that dimension, meaning for each variable or group,
+        subtract the minimum and divide each by its maximum.
     {show_save_ax}
     **kwds : keyword arguments
         Are passed to `matplotlib.pyplot.pcolor`.
@@ -1632,13 +1631,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
     mean_obs = obs_tidy.groupby(level=0).mean()
 
-    if swap_axes and standard_scale in ('row', 'col'):
-        standard_scale = 'row' if standard_scale == 'col' else 'col'
-
-    if standard_scale == 'row':
+    if standard_scale == 'group':
         mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
         mean_obs = mean_obs.div(mean_obs.max(1), axis=0)
-    elif standard_scale == 'col':
+    elif standard_scale == 'var':
         mean_obs -= mean_obs.min(0)
         mean_obs /= mean_obs.max(0)
     elif standard_scale is None:
