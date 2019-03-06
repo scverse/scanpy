@@ -61,7 +61,8 @@ def rank_genes_groups(
         score. The returned scores are never the absolute values.
     log_transformed : `bool`, optional (default: `True`)
         Specifies if a log transformation was applied the matrix in adata. Reverses this tranformation to calculate
-        fold-changes only. All differential testing is still performed on log-transformed data if present.
+        fold-changes only. All differential testing is still performed on log-transformed data if present. Assumes a
+        log1p transformation.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
