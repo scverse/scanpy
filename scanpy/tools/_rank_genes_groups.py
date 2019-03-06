@@ -25,6 +25,7 @@ def rank_genes_groups(
     copy=False,
     method='t-test_overestim_var',
     corr_method='benjamini-hochberg',
+    log_transformed=True,
     **kwds
 ):
     """Rank genes for characterizing groups.
@@ -58,6 +59,9 @@ def rank_genes_groups(
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
+    log_transformed : `bool`, optional (default: `True`)
+        Specifies if a log transformation was applied the matrix in adata. Reverses this tranformation to calculate
+        fold-changes only. All differential testing is still performed on log-transformed data if present.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
@@ -167,8 +171,13 @@ def rank_genes_groups(
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
+        if log_transformed:
+            means_FC = np.zeros((n_groups, n_genes))
+            vars_FC = np.zeros((n_groups, n_genes))
         for imask, mask in enumerate(groups_masks):
             means[imask], vars[imask] = _get_mean_var(X[mask])
+            if log_transformed:
+                means_FC[imask], vars_FC[imask] = _get_mean_var(np.expm1(X[mask])) # for fold-change only
         # test each either against the union of all other groups or against a
         # specific group
         for igroup in range(n_groups):
@@ -178,6 +187,8 @@ def rank_genes_groups(
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
             mean_rest, var_rest = _get_mean_var(X[mask_rest])
+            if log_transformed:
+                mean_rest_FC, var_rest_FC = _get_mean_var(np.expm1(X[mask_rest])) # for fold-change only
             ns_group = ns[igroup]  # number of observations in group
             if method == 't-test': ns_rest = np.where(mask_rest)[0].size
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
@@ -186,9 +197,14 @@ def rank_genes_groups(
             denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
             denominator[np.flatnonzero(denominator == 0)] = np.nan
             scores = (means[igroup] - mean_rest) / denominator #Welch t-test
-            mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
-            foldchanges = (means[igroup] + 1e-9) / mean_rest
             scores[np.isnan(scores)] = 0
+            # Fold change
+            if log_transformed:
+                mean_rest_FC[mean_rest_FC == 0] = 1e-9  # set 0s to small value
+                foldchanges = (means_FC[igroup] + 1e-9) / mean_rest_FC
+            else:
+                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
+                foldchanges = (means[igroup] + 1e-9) / mean_rest
             #Get p-values
             denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
                 (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
@@ -208,7 +224,7 @@ def rank_genes_groups(
             partial_indices = np.argsort(scores_sort[partition])[::-1]
             global_indices = reference_indices[partition][partial_indices]
             rankings_gene_scores.append(scores[global_indices])
-            rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
+            rankings_gene_logfoldchanges.append(np.log2(foldchanges[global_indices]))
             rankings_gene_names.append(adata_comp.var_names[global_indices])
             rankings_gene_pvals.append(pvals[global_indices])
             rankings_gene_pvals_adj.append(pvals_adj[global_indices])
@@ -253,11 +269,22 @@ def rank_genes_groups(
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
+                # Transform the matrix to raw counts for fold-change calculation only
+                if log_transformed:
+                    means[imask], vars[imask] = _get_mean_var(np.expm1(X[mask]))  # for fold-change only
+                else:
+                    means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change only
+
                 if imask == ireference: continue
+
                 else: mask_rest = groups_masks[ireference]
                 ns_rest = np.where(mask_rest)[0].size
-                mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change
+                # Transform the matrix to raw counts for fold-change calculation only
+                if log_transformed:
+                    mean_rest, var_rest = _get_mean_var(np.expm1(X[mask_rest]))  # for fold-change only
+                else:
+                    mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change only
+
                 if ns_rest <= 25 or ns[imask] <= 25:
                     logg.hint('Few observations in a group for '
                               'normal approximation (<=25). Lower test accuracy.')
@@ -314,7 +341,7 @@ def rank_genes_groups(
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
-                rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
+                rankings_gene_logfoldchanges.append(np.log2(foldchanges[global_indices]))
                 rankings_gene_pvals.append(pvals[global_indices])
                 rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
@@ -347,9 +374,14 @@ def rank_genes_groups(
                 left = right
 
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
                 mask_rest = ~groups_masks[imask]
-                mean_rest, var_rest = _get_mean_var(X[mask_rest]) #for fold-change
+                # Transform the matrix to raw counts for fold-change calculation only
+                if log_transformed:
+                    means[imask], vars[imask] = _get_mean_var(np.expm1(X[mask]))  # for fold-change
+                    mean_rest, var_rest = _get_mean_var(np.expm1(X[mask_rest]))  # for fold-change
+                else:
+                    means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
+                    mean_rest, var_rest = _get_mean_var(X[mask_rest])  # for fold-change
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
@@ -370,7 +402,7 @@ def rank_genes_groups(
                 global_indices = reference_indices[partition][partial_indices]
                 rankings_gene_scores.append(scores[imask, global_indices])
                 rankings_gene_names.append(adata_comp.var_names[global_indices])
-                rankings_gene_logfoldchanges.append(np.log2(np.abs(foldchanges[global_indices])))
+                rankings_gene_logfoldchanges.append(np.log2(foldchanges[global_indices]))
                 rankings_gene_pvals.append(pvals[global_indices])
                 rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
