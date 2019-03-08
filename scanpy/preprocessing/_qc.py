@@ -75,7 +75,7 @@ def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=()
 
     >>> adata = sc.datasets.pbmc3k()
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
-    >>> sns.jointplot(adata.obs, "log1p_total_counts", "log1p_n_genes_by_counts", kind="hex")
+    >>> sns.jointplot("log1p_total_counts", "log1p_n_genes_by_counts", data=adata.obs, kind="hex")
     """
     X = adata.X
     obs_metrics = pd.DataFrame(index=adata.obs_names)
