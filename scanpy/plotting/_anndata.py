@@ -1305,7 +1305,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False,
-            gene_symbols=None, var_group_positions=None,
+            gene_symbols=None, var_group_positions=None, smallest_dot=0.,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1334,6 +1334,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         If none, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
         this value.
+    smallest_dot : `float` optional (default: 0.)
+        If none, the smallest dot has size 0. All expression levels with `dot_min` are potted with
+        `smallest_dot` dot size.
 
     {show_save_ax}
     **kwds : keyword arguments
@@ -1489,6 +1492,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         frac = ((frac - dot_min) / old_range)
 
     size = (frac * 10) ** 2
+    size += smallest_dot
     import matplotlib.colors
 
     normalize = matplotlib.colors.Normalize(vmin=kwds.get('vmin'), vmax=kwds.get('vmax'))
@@ -1542,6 +1546,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     else:
         fracs_values = fracs_legends
     size = (fracs_values * 10) ** 2
+    size += smallest_dot
     color = [cmap(normalize(value)) for value in np.repeat(max(mean_flat) * 0.7, len(size))]
 
     # plot size bar
