@@ -29,6 +29,7 @@ def filter_genes_dispersion(data,
             * `subset=False` in the new function, it suffices to
               merely annotate the genes, tools like `pp.pca` will
               detect the annotation
+            * you can now call: `sc.pl.highly_variable_genes(adata)`
             * `copy` is replaced by `inplace` 
 
     If trying out parameters, pass the data matrix instead of AnnData.
