@@ -878,7 +878,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         else:
             width, height = figsize
 
-        num_rows = len(categories)
+        num_rows = len(var_names)
         height_ratios = None
         if has_var_groups:
             # add some space in case 'brackets' want to be plotted on top of the image
