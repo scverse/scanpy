@@ -31,8 +31,9 @@ def dca(adata,
     in order to denoise the data and to capture hidden representation of
     cells in low dimensions. Type of the autoencoder and return values are
     determined by the parameters.
-
-    More information and bug reports `here <https://github.com/theislab/dca>`__.
+    
+    .. note::
+        More information and bug reports `here <https://github.com/theislab/dca>`__.
 
     Parameters
     ----------
@@ -150,7 +151,4 @@ def dca(adata,
         threads=threads,
         verbose=verbose,
         training_kwds=training_kwds,
-        return_model=return_model,
-        return_info=return_info,
-        copy=copy
-        )
+        return_model=return_model
