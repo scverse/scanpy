@@ -1099,7 +1099,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     else:
         logg.warn('Unknown type for standard_scale, ignored')
 
-
     if groupby is None or len(categories) <= 1:
         categorical = False
         # dendrogram can only be computed  between groupby categories
@@ -1869,7 +1868,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     groupby_height = 0.24
     num_rows = len(var_names) + 2  # +1 because of dendrogram on top and categories at bottom
     if figsize is None:
-        width = 10
+        width = 12
         track_height = 0.25
     else:
         width, height = figsize
@@ -1881,7 +1880,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     obs_tidy = obs_tidy.T
 
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=0.3 / width,
+    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=1.0 / width,
                             hspace=0, height_ratios=height_ratios,
                             width_ratios=[width, 0.14])
     axs_list = []
@@ -1896,7 +1895,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         axs_list.append(ax)
         for cat_idx, category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
-            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1, color=groupby_colors[cat_idx])
+            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1,
+                            color=groupby_colors[cat_idx])
 
         # remove the xticks labels except for the last processed plot.
         # Because the plots share the x axis it is redundant and less compact to plot the
@@ -1913,9 +1913,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         ymin, ymax = ax.get_ylim()
         ymax = int(ymax)
         ax.set_yticks([ymax])
-        tt = ax.set_yticklabels([str(ymax)], ha='right', va='top')
-
-        ax.tick_params(axis='y', labelsize='x-small', right=True, left=False, pad=-5,
+        tt = ax.set_yticklabels([str(ymax)], ha='left', va='top')
+        ax.spines['right'].set_position(('axes', 1.01))
+        ax.tick_params(axis='y', labelsize='x-small', right=True, left=False, length=2,
                        which='both', labelright=True, labelleft=False, direction='in')
         ax.set_ylabel(var, rotation=0, fontsize='small', ha='right', va='bottom')
         ax.yaxis.set_label_coords(-0.005, 0.1)
