@@ -761,7 +761,7 @@ def clustermap(
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
                    figsize=None,  dendrogram=False, gene_symbols=None,
-                   var_group_positions=None, var_group_labels=None,
+                   var_group_positions=None, var_group_labels=None, standard_scale=None,
                    var_group_rotation=None, layer=None, stripplot=False, jitter=False, size=1,
                    scale='width', order=None, swap_axes=False, show=None, save=None,
                    row_palette='muted', **kwds):
@@ -796,6 +796,9 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         should be a valid seaborn palette name or a valic matplotlib colormap
         (see https://seaborn.pydata.org/generated/seaborn.color_palette.html). Alternatively,
         a single color name or hex value can be passed. E.g. 'red' or '#cc33ff'
+    standard_scale : {{'var', 'obs'}}, optional (default: None)
+        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
+        subtract the minimum and divide each by its maximum.
     swap_axes: `bool`, optional (default: `False`)
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
@@ -821,6 +824,18 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
+
+    if standard_scale == 'obs':
+        obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
+        obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
+    elif standard_scale == 'var':
+        obs_tidy -= obs_tidy.min(0)
+        obs_tidy /= obs_tidy.max(0).fillna(0)
+    elif standard_scale is None:
+        pass
+    else:
+        logg.warn('Unknown type for standard_scale, ignored')
+
 
     if 'color' in kwds:
         row_palette = kwds['color']
