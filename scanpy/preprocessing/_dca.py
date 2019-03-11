@@ -151,4 +151,4 @@ def dca(adata,
         threads=threads,
         verbose=verbose,
         training_kwds=training_kwds,
-        return_model=return_model
+        return_model=return_model)
