@@ -1305,7 +1305,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False,
-            gene_symbols=None, var_group_positions=None,
+            gene_symbols=None, var_group_positions=None, standard_scale=None,
             var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1334,6 +1334,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         If none, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
         this value.
+    standard_scale : {{'var', 'group'}}, optional (default: None)
+        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
+        subtract the minimum and divide each by its maximum.
 
     {show_save_ax}
     **kwds : keyword arguments
@@ -1361,6 +1364,17 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     # 1. compute mean value
     mean_obs = obs_tidy.groupby(level=0).mean()
+
+    if standard_scale == 'group':
+        mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
+        mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
+    elif standard_scale == 'var':
+        mean_obs -= mean_obs.min(0)
+        mean_obs /= mean_obs.max(0).fillna(0)
+    elif standard_scale is None:
+        pass
+    else:
+        logg.warn('Unknown type for standard_scale, ignored')
 
     # 2. compute fraction of cells having value >0
     # transform obs_tidy into boolean matrix
