@@ -33,10 +33,10 @@ For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
    pp.filter_cells
    pp.filter_genes
    pp.highly_variable_genes
-   pp.filter_genes_dispersion
    pp.log1p
    pp.pca
-   pp.normalize_per_cell
+   pp.normalize_total
+   pp.normalize_quantile
    pp.regress_out
    pp.scale
    pp.subsample
@@ -257,7 +257,7 @@ Datasets
    datasets.toggleswitch
 
 
-Further Modules
+Further modules
 ---------------
 
 .. autosummary::
@@ -266,3 +266,13 @@ Further Modules
    external
    api
    plotting
+
+
+Deprecated functions
+--------------------
+
+.. autosummary::
+   :toctree: .
+
+   pp.filter_genes_dispersion
+   pp.normalize_per_cell
