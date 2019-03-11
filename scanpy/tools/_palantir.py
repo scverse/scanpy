@@ -3,6 +3,7 @@
 
 from .. import logging as logg
 
+
 def palantir( adata ):
     """
     Run Diffusion maps using the adaptive anisotropic kernel [Setty27]_.
