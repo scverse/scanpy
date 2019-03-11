@@ -1,9 +1,9 @@
 """Run Diffusion maps using the adaptive anisotropic kernel
 """
+
 from .. import logging as logg
 
 def palantir( adata ):
-
     """
     Run Diffusion maps using the adaptive anisotropic kernel [Setty27]_.
 
@@ -15,7 +15,8 @@ def palantir( adata ):
     Palantir has been designed to work with multidimensional single cell data
     from diverse technologies such as Mass cytometry and single cell RNA-seq.
 
-    Full documentation can be found here https://github.com/dpeerlab/Palantir
+    .. note::
+        More information and bug reports `here <https://github.com/dpeerlab/Palantir>`__.
 
     :param adata: :class:`~anndata.AnnData`, or Dataframe of cells X genes
 
@@ -125,13 +126,10 @@ def palantir( adata ):
 
     >>> d.palantir.plot.plot_diffusion_components(d.tsne, d.dm_res)
 
-    For further demonstration of palantir visualizations please follow the link
-    below:
+    For further demonstration of palantir visualizations please follow this
+    `Palantir_sample_notebook.ipynb<https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>`__
 
-    https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb
-
-    that provides a comprehensive guide to draw *gene expression trends*,
-    amongst other things.
+    It provides a comprehensive guide to draw *gene expression trends*, amongst other things.
 
     """
 
