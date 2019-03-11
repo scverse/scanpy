@@ -1567,6 +1567,10 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     size_legend.scatter(np.repeat(0, len(size)), range(len(size)), s=size, color=color)
     size_legend.set_yticks(range(len(size)))
+    labels = ["{:.0%}".format(x) for x in fracs_legends]
+    if dot_max < 1:
+        labels[-1] = ">" + labels[-1]
+    size_legend.set_yticklabels(labels)
     size_legend.set_yticklabels(["{:.0%}".format(x) for x in fracs_legends])
 
     size_legend.tick_params(axis='y', left=False, labelleft=False, labelright=True)
