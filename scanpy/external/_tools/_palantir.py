@@ -1,7 +1,7 @@
 """Run Diffusion maps using the adaptive anisotropic kernel
 """
 
-from .. import logging as logg
+from scanpy import logging as logg
 
 
 def palantir( adata ):
