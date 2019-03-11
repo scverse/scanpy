@@ -1045,7 +1045,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, layer=None, swap_axes=False, show_gene_labels=None, show=None, save=None, figsize=None, **kwds):
+            var_group_rotation=None, layer=None, standard_scale=None, swap_axes=False,
+            show_gene_labels=None, show=None, save=None, figsize=None, **kwds):
     """\
     Heatmap of the expression values of genes.
 
@@ -1058,6 +1059,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     Parameters
     ----------
     {common_plot_args}
+    standard_scale : {{'var', 'obs'}}, optional (default: None)
+        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
+        subtract the minimum and divide each by its maximum.
     swap_axes: `bool`, optional (default: `False`)
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
          categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
@@ -1080,25 +1084,21 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    if not use_raw and layer is None:
-        # this most likely will used a scaled version of the data
-        # and thus is better to use a diverging scale
-        param_set = False
-        if 'vmin' not in kwds:
-            kwds['vmin'] = -3
-            param_set = True
-        if 'vmax' not in kwds:
-            kwds['vmax'] = 3
-            param_set = True
-        if 'cmap' not in kwds:
-            kwds['cmap'] = 'bwr'
-            param_set = True
-        if param_set:
-            logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
-                      '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
+
+    if standard_scale == 'obs':
+        obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
+        obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
+    elif standard_scale == 'var':
+        obs_tidy -= obs_tidy.min(0)
+        obs_tidy /= obs_tidy.max(0).fillna(0)
+    elif standard_scale is None:
+        pass
+    else:
+        logg.warn('Unknown type for standard_scale, ignored')
+
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1585,7 +1585,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     ----------
     {common_plot_args}
     standard_scale : {{'var', 'group'}}, optional (default: None)
-        Whether or not to standardize that dimension, meaning for each variable or group,
+        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
     **kwds : keyword arguments
@@ -1606,22 +1606,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    if use_raw is False:
-        # this most likely will used a scaled version of the data
-        # and thus is better to use a diverging scale
-        param_set = False
-        if 'vmin' not in kwds:
-            kwds['vmin'] = -3
-            param_set = True
-        if 'vmax' not in kwds:
-            kwds['vmax'] = 3
-            param_set = True
-        if 'cmap' not in kwds:
-            kwds['cmap'] = 'bwr'
-            param_set = True
-        if param_set:
-            logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
-                      '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
@@ -1633,14 +1617,14 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
     if standard_scale == 'group':
         mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
-        mean_obs = mean_obs.div(mean_obs.max(1), axis=0)
+        mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
     elif standard_scale == 'var':
         mean_obs -= mean_obs.min(0)
-        mean_obs /= mean_obs.max(0)
+        mean_obs /= mean_obs.max(0).fillna(0)
     elif standard_scale is None:
         pass
     else:
-        logg.info('Unknown type for standard_scale, ignored')
+        logg.warn('Unknown type for standard_scale, ignored')
 
     if dendrogram:
         dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
