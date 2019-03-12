@@ -6,7 +6,7 @@ from scanpy import logging as logg
 
 def palantir(adata):
     """
-    Run Diffusion maps using the adaptive anisotropic kernel [Setty27]_.
+    Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 
     Palantir is an algorithm to align cells along differentiation trajectories.
     Palantir models differentiation as a stochastic process where stem cells
