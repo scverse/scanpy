@@ -1,15 +1,17 @@
 """Harmony for data visualization with augmented affinity matrix at discrete timepoints
 """
-from .. import logging as logg
+
+from scanpy import logging as logg
 import pandas as pd
 from collections import OrderedDict
 from itertools import chain
 import numpy as np
 import os
 
-def harmony( adata, **kargs ):
 
-    """Harmony for data visualization with augmented affinity matrix at discrete timepoints [Setty28]_.
+def harmony(adata, **kargs):
+
+    """Harmony for data visualization with augmented affinity matrix at discrete timepoints [Setty18i]_.
 
     Harmony is a framework for data visualization, trajectory detection and interpretation
     for scRNA-seq data measured at discrete timepoints. Harmony constructs an augmented
@@ -19,26 +21,26 @@ def harmony( adata, **kargs ):
     for computing the diffusion operator which can be used for trajectory detection using
     `Palantir`.
 
-    Full documentation can be found here https://github.com/dpeerlab/Harmony
+    .. note::
+        More information and bug reports `here <https://github.com/dpeerlab/Harmony>`__.
 
-    :param adata: `list` of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices
-                  from two time points. Please ensure that replicates of the same time
-                  point are consecutive in order
-    :param timepoints: `list` (default: `None`), timepoints at which each cell was measured.
-                       Important for Harmony augmented affinity matrix
-    :param sample_names: `list` (default: `None`), sample names in the form of timepoint_rep#
-                         of length `adata`
+    Parameters
+    ----------
+    adata: `list`
+        of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices from two time 
+        points. Please ensure that replicates of the same time point are consecutive in order
+    timepoints: `list` (default: `None`)
+        timepoints at which each cell was measured. Important for Harmony augmented affinity matrix
+    sample_names: `list` (default: `None`)
+        sample names in the form of timepoint_rep# of length `adata`
 
-    :return:
-        `harmony_adata` - :class:`~anndata.AnnData` of normalized data with the following objects:
-
-            `harmony_adata.obsm['layout']` --> force directed layout
-
-            `harmony_adata.uns['aff']` --> affinity matrix
-
-            `harmony_adata.uns['aug_aff']` --> augmented affinity matrix
-
-            `harmony_adata.uns['timepoint_connections']` --> timepoint connections
+    Returns
+    -------
+    `harmony_adata` of :class:`~anndata.AnnData` of normalized data:
+    - `.obsm['layout']` force directed layout
+    - `.uns['aff']` affinity matrix
+    - `.uns['aug_aff']` augmented affinity matrix
+    - `.uns['timepoint_connections']` timepoint connections
 
     Example
     -------
@@ -47,7 +49,7 @@ def harmony( adata, **kargs ):
     >>> import scanpy as sc
     >>> import os
 
-    A sample data is available at https://github.com/dpeerlab/Harmony/tree/master/data
+    A sample data is available `here <https://github.com/dpeerlab/Harmony/tree/master/data>`_.
 
     To view the plots, it is recommended to run jupyter notebook
 
@@ -92,18 +94,14 @@ def harmony( adata, **kargs ):
 
     >>> d.harmony.plot.plot_timepoints(d.layout, d.tp)
 
-    For further demonstration of Harmony visualizations please follow the link
-    below:
-
-    https://github.com/dpeerlab/Harmony/blob/master/notebooks/Harmony_sample_notebook.ipynb
-
-    that provides a comprehensive guide to draw *gene expression trends*, amongst other things.
-
+    For further demonstration of Harmony visualizations please follow this notebook
+    `Harmony_sample_notebook.ipynb <https://github.com/dpeerlab/Harmony/blob/master/notebooks/Harmony_sample_notebook.ipynb>`_.
+    It provides a comprehensive guide to draw *gene expression trends*, amongst other things.
     """
 
     logg.info('Harmony augmented affinity matrix', r=True)
 
-    class _wrapper_cls( object ):
+    class _wrapper_cls(object):
 
         """
         A wrapper class to instantiate a new object that wraps `Harmony` as an
@@ -119,24 +117,28 @@ def harmony( adata, **kargs ):
             - processing of input data
         """
 
-        def __init__( self ,
-                                adata,
-                                func = None ,
-                                timepoints = None,
-                                sample_names = None,
-                                log_transform = False
+        def __init__(self ,
+                     adata,
+                     func = None ,
+                     timepoints = None,
+                     sample_names = None,
+                     log_transform = False
                     ):
             """
-            :param adata: `list` of :class:`~anndata.AnnData`, or `.csv` filenames of count
-                          matrices from two time points. Please ensure that replicates of
-                          the same time point are consecutive in order
-            :input func: function wrapper to import harmony (not to be used)
-            :input timepoints: `list` (default: `None`), timepoints at which each cell was
-                               measured. Important for Harmony augmented affinity matrix
-            :input sample_names: `list` (default: `None`), sample names in the form of
-                                 timepoint_rep# of length `adata`
-            :input log_transform: `bool` (default: `False`), property setter passed to harmony
-
+            Parameters
+            ----------
+            adata: `list`
+                of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices from 
+                two time points. Please ensure that replicates of the same time point are 
+                consecutive in order
+            func: function wrapper to import harmony (not to be used)
+            timepoints: `list` (default: `None`)
+                timepoints at which each cell was measured. Important for Harmony augmented 
+                affinity matrix
+            sample_names: `list` (default: `None`)
+                sample names in the form of timepoint_rep# of length `adata`
+            log_transform: `bool` (default: `False`)
+                property setter passed to harmony
             """
 
             # instantiate variables
@@ -153,10 +155,10 @@ def harmony( adata, **kargs ):
             # determine if adata is a .csv file or a scanpy.AnnData object
             # and load the counts matrices into the instantiated attribute
             if self.sample_names is None:
-                print( '"sample_names" not provided, constructed internally')
+                print('"sample_names" not provided, constructed internally')
                 rep = range(len(self.adata))
                 self.sample_names = ['_'.join(['sample{}'.format(n+1),str(n+1)]) for n in rep]
-                print( '"sample_names": {}'.format(self.sample_names) )
+                print('"sample_names": {}'.format(self.sample_names))
 
             try:
                 assert(self.timepoints)
@@ -177,9 +179,9 @@ def harmony( adata, **kargs ):
             except:
                 try:
                     if not isinstance(adata[0], pd.DataFrame):
-                        assert( isinstance( adata[0].to_df(), pd.DataFrame) )
+                        assert(isinstance( adata[0].to_df(), pd.DataFrame))
                     else:
-                        assert( isinstance( adata[0], pd.DataFrame) )
+                        assert(isinstance( adata[0], pd.DataFrame))
                     counts = self.load_from_AnnData(self.adata, self.sample_names)
                     logg.info('Input data is a list of scanpy.AnnData objects', r=True)
                 except:
@@ -196,15 +198,14 @@ def harmony( adata, **kargs ):
             self.data_df = norm_df.loc[:,hvg_genes]
             logg.info('data normalized and returned as annData ...', r=True)
 
-        def __call__( self ):
+        def __call__(self):
             """
             Call for function to import harmony and instantiate it as a class
             attribute
             """
             self.harmony = self.func()
 
-
-        def process( self ):
+        def process(self):
 
             """
             A method to run `harmony` on input Data Frame
@@ -249,20 +250,26 @@ def harmony( adata, **kargs ):
 
             return self.harmony_adata
 
-
         def load_from_AnnData(self,
-                                    adata_list,
-                                    sample_names = None,
-                                    min_cell_count = 10
+                              adata_list,
+                              sample_names = None,
+                              min_cell_count = 10
                              ):
             """
             Read in scRNA-seq data from :class:`~anndata.AnnData` list
 
-            :param adata_list: `List` of :class:`~anndata.AnnData`, or Dataframes of cells X genes
-            :param sample_names: `List` of prefixes to attach to the cell names
-            :param min_cell_count: Minimum number of cells a gene should be detected in
-            :return: Pandas data frame representing the count matrix
-
+            Parameters
+            ----------
+            adata_list: `List`
+                of :class:`~anndata.AnnData`, or Dataframes of cells X genes
+            sample_names: `List` (default: `None`)
+                of prefixes to attach to the cell names
+            min_cell_count: `int` (default: 10)
+                Minimum number of cells a gene should be detected in
+            
+            Returns
+            ----------
+            Pandas data frame representing the count matrix
             """
 
             # Load counts
@@ -312,30 +319,29 @@ def harmony( adata, **kargs ):
             return counts
 
         @property
-        def log_transform( self ):
+        def log_transform(self):
             return self._log_transform
         @log_transform.setter
-        def log_transform( self , value ):
+        def log_transform(self , value):
             if value is True:
                 self.data_df = self.harmony.utils.log_transform(self.data_df)
                 logg.info('data log transformed ...', r=True)
 
 
-
-    def wrapper_cls( adata, func=None, **kargs ):
+    def wrapper_cls(adata, func=None, **kargs):
         """
         Class wrapper to pass a function to the class alongside positional argument
         """
         if func:
-            return _wrapper_cls( func )
+            return _wrapper_cls(func)
         else:
-            def wrapper( func ):
-                return _wrapper_cls( adata, func, **kargs )
+            def wrapper(func):
+                return _wrapper_cls(adata, func, **kargs)
             return wrapper
 
     # import palantir and wrap it in a function passed to the wrapper class
     # this method allows passing positional argument of adata to `_wrapper_cls`
-    @wrapper_cls( adata , **kargs )
+    @wrapper_cls(adata , **kargs)
     def _run():
         import importlib
         try:
