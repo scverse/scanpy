@@ -1,5 +1,5 @@
 from ..tools._pypairs import cyclone, sandbag
 from ..tools._phate import phate
 from ..tools._phenograph import phenograph
-from ..external._tools._palantir import palantir
-from ..external._tools._harmony import harmony
+from ._tools._palantir import palantir
+from ._tools._harmony import harmony
