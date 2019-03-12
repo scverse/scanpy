@@ -164,11 +164,11 @@ References
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
 
-.. [Setty27] Setty *et al.* (2018),
+.. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `bioRxiv <https://doi.org/10.1101/385328>`__.
 
-.. [Setty28] Setty *et al.* (2018),
+.. [Setty18i] Setty *et al.* (2018),
    *Charting the emergent organotypic landscape of the mammalian gut endoderm at single-cell resolution*
    `bioRxiv <https://doi.org/10.1101/471078>`__.
 
