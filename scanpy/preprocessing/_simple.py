@@ -531,6 +531,17 @@ def normalize_per_cell(data, counts_per_cell_after=None, counts_per_cell=None,
                        min_counts=1):
     """Normalize total counts per cell.
 
+    .. warning::
+        .. deprecated:: 1.3.7
+            Use :func:`~scanpy.api.pp.normalize_total` instead.
+            The new function is equivalent to the present
+            function, except that
+
+            * the new function doesn't filter cells based on `min_counts`,
+              use :func:`~scanpy.api.pp.filter_cells` if filtering is needed.
+            * some arguments were renamed
+            * `copy` is replaced by `inplace`
+
     Normalize each cell by total counts over all genes, so that every cell has
     the same total count after normalization.
 
