@@ -9,6 +9,8 @@ Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
 """
 
 doc_quant_descr = """\
+Normalize counts per cell.
+
 Normalize each cell by sum of counts over genes
 that make up less than fraction (specified by *quantile*) of the total count
 in every cell. These genes in each cell will sum up to *target_sum*.
