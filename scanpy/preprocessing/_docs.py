@@ -1,12 +1,23 @@
-doc_norm_bulk = """\
+doc_norm_descr = """\
 Normalize total counts per cell.
 
 Normalize each cell by total counts over genes, so that every cell has
 the same total count after normalization.
 
 Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-[Zheng17]_ or SPRING [Weinreb17]_.
+[Zheng17]_ or SPRING [Weinreb17]_.\
+"""
 
+doc_quant_descr = """\
+Normalize each cell by sum of counts over genes
+that make up less than fraction (specified by *quantile*) of the total count
+in every cell. These genes in each cell will sum up to *target_sum*.
+
+Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
+[Zheng17]_ or SPRING [Weinreb17]_.\
+"""
+
+doc_params_bulk = """\
 Parameters
 ----------
 adata : :class:`~anndata.AnnData`
@@ -60,7 +71,9 @@ Examples
 >>> print(adata.X)
 [[1.         0.         1.        ]
  [3.         0.         1.        ]
- [0.71428573 0.85714287 0.14285715]]\
+ [0.71428573 0.85714287 0.14285715]]
+
+Genes 1 and 2 were normalized and now sum up to 1 in each cell.\
 """
 
 doc_ex_total = """\
