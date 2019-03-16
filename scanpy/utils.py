@@ -38,7 +38,6 @@ def check_versions():
                               .format(__version__, anndata.__version__))
 
 
-
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     if getattr(c_or_f, '__doc__', None) is None:
         return None
