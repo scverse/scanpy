@@ -116,6 +116,19 @@ def palantir(adata):
 
     >>> d.palantir.plot.plot_diffusion_components(d.tsne, d.dm_res)
 
+    **Visualizing Palantir results**
+
+    Palantir can be run by specifying an approximate early cell. While Palantir
+    automatically determines the terminal states, they can also be specified using the
+    `termine_states` parameter.
+
+    >>> start_cell = 'Run5_164698952452459'
+    >>> pr_res = d.palantir.core.run_palantir(d.ms_data, start_cell, num_waypoints=500)
+    >>> palantir.plot.plot_palantir_results(pr_res, d.tsne)
+
+    - note that a `start_cell` must be defined for every data set. The start cell for
+    this dataset was chosen based on high expression of CD34.
+
     For further demonstration of palantir visualizations please follow this notebook
     `Palantir_sample_notebook.ipynb <https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*, amongst other things.
