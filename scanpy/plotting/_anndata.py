@@ -1345,7 +1345,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         of cells expressing given genes. A gene is expressed only if the expression value is greater than
         this threshold.
     mean_only_expressed : `bool` (default: `False`)
-        If True, gene expression is averaged only over cells expressing the gene.
+        If True, gene expression is averaged only over the cells expressing the given genes.
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
     dot_max : `float` optional (default: `None`)
