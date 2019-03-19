@@ -900,8 +900,14 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
 
 
 @deprecated_arg_names({"target_counts": "counts_per_cell"})
-def downsample_counts(adata, counts_per_cell=None, total_counts=None, random_state=0,
-                      replace=False, copy=False):
+def downsample_counts(
+    adata: AnnData,
+    counts_per_cell: Optional[int] = None,
+    total_counts: Optional[int] = None,
+    random_state: Optional[int] = 0,
+    replace: bool = False,
+    copy: bool = False,
+) -> Optional[AnnData]:
     """
     Downsample counts from count matrix.
 
@@ -911,19 +917,19 @@ def downsample_counts(adata, counts_per_cell=None, total_counts=None, random_sta
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    total_counts : `int`, optional (default: None)
-        Target total counts. If the count matrix has more than `total_counts`
-        it will be downsampled to have this number.
-    counts_per_cell : `int`, optional (default: None)
+    counts_per_cell
         Target total counts per cell. If a cell has more than 'counts_per_cell',
         it will be downsampled to this number.
-    random_state : `int` or `None`, optional (default: 0)
+    total_counts
+        Target total counts. If the count matrix has more than `total_counts`
+        it will be downsampled to have this number.
+    random_state
         Random seed for subsampling.
-    replace : `bool`, optional (default: `False`)
+    replace
         Whether to sample the counts with replacement.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
