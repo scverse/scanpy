@@ -17,7 +17,7 @@ def rank_genes_groups(
     adata,
     groupby,
     use_raw=True,
-    groups: Union[str, Iterable[Union[str, int]]] = 'all',
+    groups: Union[str, Iterable[str]] = 'all',
     reference='rest',
     n_genes=100,
     rankby_abs=False,
