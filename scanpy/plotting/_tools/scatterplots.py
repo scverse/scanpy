@@ -20,6 +20,8 @@ from ... import logging as logg
 
 def plot_scatter(
     adata: AnnData,
+    basis: str,
+    *,
     color: Union[str, Sequence[str], None] = None,
     gene_symbols: Optional[str] = None,
     use_raw: Optional[bool] = None,
@@ -29,7 +31,6 @@ def plot_scatter(
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
-    basis: Optional[str] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
     projection: str = '2d',
