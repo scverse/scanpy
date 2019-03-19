@@ -651,7 +651,7 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                 # that are not in the groups
                 color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         else:
-            color_vector = adata.obs[value_to_plot]
+            color_vector = adata.obs[value_to_plot].values
     elif gene_symbols in adata.var.columns:
         if value_to_plot not in adata.var[gene_symbols].values:
             logg.error("Gene symbol {!r} not found in given gene_symbols "
