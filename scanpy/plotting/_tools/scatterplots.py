@@ -48,7 +48,7 @@ def plot_scatter(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
-    **kwargs,
+    **kwargs
 ) -> Union[Figure, Axes, None]:
     sanitize_anndata(adata)
     if color_map is not None:
