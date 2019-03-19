@@ -26,12 +26,12 @@ def harmony(adata, **kargs):
 
     Parameters
     ----------
-    adata: `list`
+    adata : `list`
         of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices from two time 
         points. Please ensure that replicates of the same time point are consecutive in order
-    timepoints: `list` (default: `None`)
+    timepoints : `list` (default: `None`)
         timepoints at which each cell was measured. Important for Harmony augmented affinity matrix
-    sample_names: `list` (default: `None`)
+    sample_names : `list` (default: `None`)
         sample names in the form of timepoint_rep# of length `adata`
 
     Returns
@@ -127,17 +127,17 @@ def harmony(adata, **kargs):
             """
             Parameters
             ----------
-            adata: `list`
+            adata : `list`
                 of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices from 
                 two time points. Please ensure that replicates of the same time point are 
                 consecutive in order
-            func: function wrapper to import harmony (not to be used)
-            timepoints: `list` (default: `None`)
+            func : function wrapper to import harmony (not to be used)
+            timepoints : `list` (default: `None`)
                 timepoints at which each cell was measured. Important for Harmony augmented 
                 affinity matrix
-            sample_names: `list` (default: `None`)
+            sample_names : `list` (default: `None`)
                 sample names in the form of timepoint_rep# of length `adata`
-            log_transform: `bool` (default: `False`)
+            log_transform : `bool` (default: `False`)
                 property setter passed to harmony
             """
 
@@ -260,11 +260,11 @@ def harmony(adata, **kargs):
 
             Parameters
             ----------
-            adata_list: `List`
+            adata_list : `List`
                 of :class:`~anndata.AnnData`, or Dataframes of cells X genes
-            sample_names: `List` (default: `None`)
+            sample_names : `List` (default: `None`)
                 of prefixes to attach to the cell names
-            min_cell_count: `int` (default: 10)
+            min_cell_count : `int` (default: 10)
                 Minimum number of cells a gene should be detected in
             
             Returns
