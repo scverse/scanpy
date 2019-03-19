@@ -1341,8 +1341,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     ----------
     {common_plot_args}
     expression_cutoff : `float` (default: `0.`)
-        Expression cutoff that is used for binarizing gene expression and determining the fraction
-        of cells expressing the gene. A gene is expressed only if expression value is greater than
+        Expression cutoff that is used for binarizing the gene expression and determining the fraction
+        of cells expressing given genes. A gene is expressed only if the expression value is greater than
         this threshold.
     mean_only_expressed : `bool` (default: `False`)
         If True, gene expression is averaged only over cells expressing the gene.
@@ -1409,8 +1409,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         logg.warn('Unknown type for standard_scale, ignored')
 
     # compute the sum per group which in the boolean matrix this is the number
-    # of values >0, and divide the result by the total number of values in the group
-    # (given by `count()`)
+    # of values > expression_cutoff, and divide the result by the total number of values
+    # in the group (given by `count()`)
     fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
     dendro_width = 0.8 if dendrogram else 0
