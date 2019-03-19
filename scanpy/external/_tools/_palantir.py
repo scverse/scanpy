@@ -21,16 +21,8 @@ def palantir(adata):
 
     Parameters
     ----------
-    adata: :class:`~anndata.AnnData`
+    adata : :class:`~anndata.AnnData`
         An AnnData object, or Dataframe of cells X genes.
-    normalize: `bool` (default: `False`)
-        property setter passed to palantir to normalize using palantir method
-        `palantir.preprocess.normalize_counts`.
-    log_transform: `bool` (default: `False`)
-        property setter passed to palantir. Some datasets show better signal in the log
-        scale. Applied using `palantir.preprocess.log_transform`
-    filter_low: `bool` (default: `False`)
-        property setter passed to palantir to remove low molecule count cells and low detection genes
 
     Returns
     -------
@@ -163,11 +155,16 @@ def palantir(adata):
             """
             Parameters
             ----------
-            adata: AnnData, or Dataframe of cells X genes
-            func: function wrapper to import palantir (not to be used)
-            normalize: `bool` (default: `False`), property setter passed to palantir
-            log_transform: `bool` (default: `False`), property setter passed to palantir
-            filter_low: `bool` (default: `False`), property setter passed to palantir
+            adata : AnnData, or Dataframe of cells X genes
+            func : function wrapper to import palantir (not to be used)
+            normalize : `bool` (default: `False`)
+                property setter passed to palantir to normalize using palantir method
+                `palantir.preprocess.normalize_counts`.
+            log_transform : `bool` (default: `False`)
+                property setter passed to palantir. Some datasets show better signal in the log
+                scale. Applied using `palantir.preprocess.log_transform`
+            filter_low : `bool` (default: `False`)
+                property setter passed to palantir to remove low molecule count cells and low detection genes
             """
 
             # instantiate variables
