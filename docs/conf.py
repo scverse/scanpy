@@ -71,6 +71,7 @@ intersphinx_mapping = dict(
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/', None),
+    networkx=('https://networkx.github.io/documentation/networkx-1.10/', None),
     numpy=('https://docs.scipy.org/doc/numpy/', None),
     pandas=('http://pandas.pydata.org/pandas-docs/stable/', None),
     python=('https://docs.python.org/3', None),
