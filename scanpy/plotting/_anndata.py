@@ -1391,6 +1391,11 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     # transform obs_tidy into boolean matrix using the expression_cutoff
     obs_bool = obs_tidy > expression_cutoff
 
+    # compute the sum per group which in the boolean matrix this is the number
+    # of values > expression_cutoff, and divide the result by the total number of values
+    # in the group (given by `count()`)
+    fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
+
     # 2. compute mean value
     if mean_only_expressed:
         mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
@@ -1408,10 +1413,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     else:
         logg.warn('Unknown type for standard_scale, ignored')
 
-    # compute the sum per group which in the boolean matrix this is the number
-    # of values > expression_cutoff, and divide the result by the total number of values
-    # in the group (given by `count()`)
-    fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
     dendro_width = 0.8 if dendrogram else 0
     colorbar_width = 0.2
