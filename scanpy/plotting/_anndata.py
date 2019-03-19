@@ -1318,9 +1318,11 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False,
-            gene_symbols=None, var_group_positions=None, standard_scale=None, smallest_dot=0.,
-            var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, **kwds):
+            expression_cutoff=0., mean_only_expressed=False, color_map='Reds', dot_max=None,
+            dot_min=None, figsize=None, dendrogram=False, gene_symbols=None,
+            var_group_positions=None, standard_scale=None, smallest_dot=0.,
+            var_group_labels=None, var_group_rotation=None, layer=None, show=None,
+            save=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
@@ -1328,9 +1330,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     represents two values: mean expression within each category (visualized by
     color) and fraction of cells expressing the var_name in the
     category. (visualized by the size of the dot).  If groupby is not given, the
-    dotplot assumes that all data belongs to a single category. A gene is not
+    dotplot assumes that all data belongs to a single category. A gene is
     considered expressed if the expression value in the adata (or adata.raw) is
-    equal to zero.
+    above the specified threshold which is zero by default.
 
     For instance, for each marker gene, the mean value and the percentage of cells
     expressing the gene can be visualized for each cluster.
@@ -1338,6 +1340,12 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     Parameters
     ----------
     {common_plot_args}
+    expression_cutoff : `float` (default: `0.`)
+        Expression cutoff that is used for binarizing gene expression and determining the fraction
+        of cells expressing the gene. A gene is expressed only if expression value is greater than
+        this threshold.
+    mean_only_expressed : `bool` (default: `False`)
+        If True, gene expression is averaged only over cells expressing the gene.
     color_map : `str`, optional (default: `Reds`)
         String denoting matplotlib color map.
     dot_max : `float` optional (default: `None`)
@@ -1376,11 +1384,18 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                               layer=layer, gene_symbols=gene_symbols)
 
     # for if category defined by groupby (if any) compute for each var_name
-    # 1. the mean value over the category
-    # 2. the fraction of cells in the category having a value > 0
+    # 1. the fraction of cells in the category having a value > expression_cutoff
+    # 2. the mean value over the category
 
-    # 1. compute mean value
-    mean_obs = obs_tidy.groupby(level=0).mean()
+    # 1. compute fraction of cells having value > expression_cutoff
+    # transform obs_tidy into boolean matrix using the expression_cutoff
+    obs_bool = obs_tidy > expression_cutoff
+
+    # 2. compute mean value
+    if mean_only_expressed:
+        mean_obs = obs_tidy.mask(~obs_bool).groupby(level=0).mean().fillna(0)
+    else:
+        mean_obs = obs_tidy.groupby(level=0).mean()
 
     if standard_scale == 'group':
         mean_obs = mean_obs.sub(mean_obs.min(1), axis=0)
@@ -1392,10 +1407,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         pass
     else:
         logg.warn('Unknown type for standard_scale, ignored')
-
-    # 2. compute fraction of cells having value >0
-    # transform obs_tidy into boolean matrix
-    obs_bool = obs_tidy.astype(bool)
 
     # compute the sum per group which in the boolean matrix this is the number
     # of values >0, and divide the result by the total number of values in the group
