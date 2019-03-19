@@ -1,15 +1,265 @@
-from matplotlib import pyplot as pl
-from pandas.api.types import is_categorical_dtype
+from collections import abc
+from typing import Union, Optional, Sequence, Any, Mapping
+
 import numpy as np
+from anndata import AnnData
+from cycler import Cycler
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from pandas.api.types import is_categorical_dtype
+from matplotlib import pyplot as pl
 from matplotlib import rcParams
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, Colormap
+
 from .. import _utils as utils
-from ...utils import sanitize_anndata, doc_params
-from ... import settings
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from ... import settings
+from ...utils import sanitize_anndata, doc_params
 from ... import logging as logg
 
 
+def plot_scatter(
+    adata: AnnData,
+    basis: str,
+    *,
+    color: Union[str, Sequence[str], None] = None,
+    gene_symbols: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    sort_order: bool = True,
+    edges: bool = False,
+    edges_width: float = 0.1,
+    edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
+    arrows: bool = False,
+    arrows_kwds: Optional[Mapping[str, Any]] = None,
+    groups: Optional[str] = None,
+    components: Union[str, Sequence[str]] = None,
+    projection: str = '2d',
+    color_map: Union[Colormap, str, None] = None,
+    palette: Union[str, Sequence[str], Cycler, None] = None,
+    size: Optional[float] = None,
+    frameon: Optional[bool] = None,
+    legend_fontsize: Optional[int] = None,
+    legend_fontweight: str = 'bold',
+    legend_loc: str = 'right margin',
+    ncols: int = 4,
+    hspace: float = 0.25,
+    wspace: Optional[float] = None,
+    title: Union[str, Sequence[str], None] = None,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    ax: Optional[Axes] = None,
+    return_fig: Optional[bool] = None,
+    **kwargs
+) -> Union[Figure, Axes, None]:
+    sanitize_anndata(adata)
+    if color_map is not None:
+        kwargs['cmap'] = color_map
+    if size is not None:
+        kwargs['s'] = size
+    if 'edgecolor' not in kwargs:
+        # by default turn off edge color. Otherwise, for
+        # very small sizes the edge will not reduce its size
+        # (https://github.com/theislab/scanpy/issues/293)
+        kwargs['edgecolor'] = 'none'
+
+    if projection == '3d':
+        from mpl_toolkits.mplot3d import Axes3D
+        args_3d = {'projection': '3d'}
+    else:
+        args_3d = {}
+
+    if use_raw is None:
+        # check if adata.raw is set
+        if adata.raw is None:
+            use_raw = False
+        else:
+            use_raw = True
+
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
+    if adata.raw is None and use_raw is True:
+        raise ValueError(
+            "`use_raw` is set to True but AnnData object does not have raw. "
+            "Please check."
+        )
+    # turn color into a python list
+    color = [color] if isinstance(color, str) or color is None else list(color)
+    if title is not None:
+        # turn title into a python list if not None
+        title = [title] if isinstance(title, str) else list(title)
+
+    ####
+    # get the points position and the components list (only if components is not 'None)
+    data_points, components_list = _get_data_points(adata, basis, projection, components)
+
+    ###
+    # setup layout. Most of the code is for the case when multiple plots are required
+    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2'].
+    # component_list is a list of components [[0,1], [1,2]]
+    if (isinstance(color, abc.Sequence) and len(color) > 1) or len(components_list) > 1:
+        if ax is not None:
+            raise ValueError(
+                "When plotting multiple panels (each for a given value of 'color') "
+                "a given ax can not be used"
+            )
+        if len(components_list) == 0:
+            components_list = [None]
+
+        multi_panel = True
+        # each plot needs to be its own panel
+        from matplotlib import gridspec
+        # set up the figure
+        num_panels = len(color) * len(components_list)
+        n_panels_x = min(ncols, num_panels)
+        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
+        # each panel will have the size of rcParams['figure.figsize']
+        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
+                                 n_panels_y * rcParams['figure.figsize'][1]))
+        left = 0.2 / n_panels_x
+        bottom = 0.13 / n_panels_y
+        gs = gridspec.GridSpec(
+            nrows=n_panels_y, ncols=n_panels_x,
+            left=left, right=1-(n_panels_x-1)*left-0.01/n_panels_x,
+            bottom=bottom, top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
+            hspace=hspace, wspace=wspace,
+        )
+    else:
+        if len(components_list) == 0:
+            components_list = [None]
+        multi_panel = False
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111, **args_3d)
+
+    ###
+    # make the plots
+    axs = []
+    import itertools
+    idx_components = range(len(components_list))
+
+    # use itertools.product to make a plot for each color and for each component
+    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
+    # The plots are: [color=gene1, components=[1,2], color=gene1, components=[2,3],
+    #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
+    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
+        color_vector, categorical = _get_color_values(
+            adata, value_to_plot,
+            groups=groups, palette=palette,
+            use_raw=use_raw, gene_symbols=gene_symbols,
+        )
+
+        # check if higher value points should be plot on top
+        if sort_order is True and value_to_plot is not None and categorical is False:
+            order = np.argsort(color_vector)
+            color_vector = color_vector[order]
+            _data_points = data_points[component_idx][order, :]
+
+        else:
+            _data_points = data_points[component_idx]
+
+        # if plotting multiple panels, get the ax from the grid spec
+        # else use the ax value (either user given or created previously)
+        if multi_panel is True:
+            ax = pl.subplot(gs[count], **args_3d)
+            axs.append(ax)
+        if not (settings._frameon if frameon is None else frameon):
+            ax.axis('off')
+        if title is None:
+            if value_to_plot is not None:
+                ax.set_title(value_to_plot)
+            else:
+                ax.set_title('')
+        else:
+            try:
+                ax.set_title(title[count])
+            except IndexError:
+                logg.warn("The title list is shorter than the number of panels. Using 'color' value instead for"
+                          "some plots.")
+                ax.set_title(value_to_plot)
+
+        if 's' not in kwargs:
+            kwargs['s'] = 120000 / _data_points.shape[0]
+
+        # make the scatter plot
+        if projection == '3d':
+            cax = ax.scatter(
+                _data_points[:, 0], _data_points[:, 1], _data_points[:, 2],
+                marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                **kwargs,
+            )
+        else:
+            cax = ax.scatter(
+                _data_points[:, 0], _data_points[:, 1],
+                marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                **kwargs,
+            )
+
+        # remove y and x ticks
+        ax.set_yticks([])
+        ax.set_xticks([])
+        if projection == '3d':
+            ax.set_zticks([])
+
+        # set default axis_labels
+        name = _basis2name(basis)
+        if components is not None:
+            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
+        elif projection == '3d':
+            axis_labels = [name + str(x + 1) for x in range(3)]
+
+        else:
+            axis_labels = [name + str(x + 1) for x in range(2)]
+
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+        if projection == '3d':
+            # shift the label closer to the axis
+            ax.set_zlabel(axis_labels[2], labelpad=-7)
+        ax.autoscale_view()
+
+        if edges:
+            utils.plot_edges(ax, adata, basis, edges_width, edges_color)
+        if arrows:
+            utils.plot_arrows(ax, adata, basis, arrows_kwds)
+
+        if value_to_plot is None:
+            # if only dots were plotted without an associated value
+            # there is not need to plot a legend or a colorbar
+            continue
+
+        _add_legend_or_colorbar(
+            adata, ax, cax, categorical, value_to_plot, legend_loc,
+            _data_points, legend_fontweight, legend_fontsize, groups, multi_panel,
+        )
+
+    if return_fig is True:
+        return fig
+    axs = axs if multi_panel else ax
+    utils.savefig_or_show(basis, show=show, save=save)
+    if show is False:
+        return axs
+
+
+def _wraps_plot_scatter(wrapper):
+    annots_orig = {
+        k: v for k, v in wrapper.__annotations__.items()
+        if k not in {'adata', 'kwargs'}
+    }
+    annots_scatter = {
+        k: v for k, v in plot_scatter.__annotations__.items()
+        if k != 'basis'
+    }
+    wrapper.__annotations__ = {**annots_scatter, **annots_orig}
+    wrapper.__wrapped__ = plot_scatter
+    return wrapper
+
+
+# API
+
+
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def umap(adata, **kwargs):
     """\
@@ -26,9 +276,10 @@ def umap(adata, **kwargs):
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
-    return plot_scatter(adata, basis='umap', **kwargs)
+    return plot_scatter(adata, 'umap', **kwargs)
 
 
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def tsne(adata, **kwargs):
     """\
@@ -45,9 +296,10 @@ def tsne(adata, **kwargs):
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
-    return plot_scatter(adata, basis='tsne', **kwargs)
+    return plot_scatter(adata, 'tsne', **kwargs)
 
 
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def phate(adata, **kwargs):
     """\
@@ -83,9 +335,10 @@ def phate(adata, **kwargs):
                     color='branches',
                     color_map='tab20')
     """
-    return plot_scatter(adata, basis='phate', **kwargs)
+    return plot_scatter(adata, 'phate', **kwargs)
 
 
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def diffmap(adata, **kwargs):
     """\
@@ -101,9 +354,10 @@ def diffmap(adata, **kwargs):
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
-    return plot_scatter(adata, basis='diffmap', **kwargs)
+    return plot_scatter(adata, 'diffmap', **kwargs)
 
 
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def draw_graph(adata, layout=None, **kwargs):
     """\
@@ -131,14 +385,17 @@ def draw_graph(adata, layout=None, **kwargs):
         raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
 
-    return plot_scatter(adata, basis=basis, **kwargs)
+    return plot_scatter(adata, basis, **kwargs)
 
 
+@_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def pca(adata, **kwargs):
     """\
     Scatter plot in PCA coordinates.
 
+    Parameters
+    ----------
     {adata_color_etc}
     {scatter_bulk}
     {show_save_ax}
@@ -147,218 +404,10 @@ def pca(adata, **kwargs):
     -------
     If `show==False` a `matplotlib.Axis` or a list of it.
     """
-    return plot_scatter(adata, basis='pca', **kwargs)
+    return plot_scatter(adata, 'pca', **kwargs)
 
 
-def plot_scatter(adata,
-                 color=None,
-                 gene_symbols=None,
-                 use_raw=None,
-                 sort_order=True,
-                 edges=False,
-                 edges_width=0.1,
-                 edges_color='grey',
-                 arrows=False,
-                 arrows_kwds=None,
-                 basis=None,
-                 groups=None,
-                 components=None,
-                 projection='2d',
-                 color_map=None,
-                 palette=None,
-                 size=None,
-                 frameon=None,
-                 legend_fontsize=None,
-                 legend_fontweight='bold',
-                 legend_loc='right margin',
-                 ncols=4,
-                 hspace=0.25,
-                 wspace=None,
-                 title=None,
-                 show=None,
-                 save=None,
-                 ax=None, return_fig=None, **kwargs):
-
-    sanitize_anndata(adata)
-    if color_map is not None:
-        kwargs['cmap'] = color_map
-    if size is not None:
-        kwargs['s'] = size
-    if 'edgecolor' not in kwargs:
-        # by default turn off edge color. Otherwise, for
-        # very small sizes the edge will not reduce its size
-        # (https://github.com/theislab/scanpy/issues/293)
-        kwargs['edgecolor'] = 'none'
-
-    if projection == '3d':
-        from mpl_toolkits.mplot3d import Axes3D
-        args_3d = {'projection': '3d'}
-    else:
-        args_3d = {}
-
-    if use_raw is None:
-        # check if adata.raw is set
-        if adata.raw is None:
-            use_raw = False
-        else:
-            use_raw = True
-
-    if wspace is None:
-        #  try to set a wspace that is not too large or too small given the
-        #  current figure size
-        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
-    if adata.raw is None and use_raw is True:
-        raise ValueError("`use_raw` is set to True but annData object does not have raw. "
-                         "Please check.")
-    # turn color into a python list
-    color = [color] if isinstance(color, str) or color is None else list(color)
-    if title is not None:
-        # turn title into a python list if not None
-        title = [title] if isinstance(title, str) else list(title)
-
-    ####
-    # get the points position and the components list (only if components is not 'None)
-    data_points, components_list = _get_data_points(adata, basis, projection, components)
-
-    ###
-    # setup layout. Most of the code is for the case when multiple plots are required
-    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2'].
-    # component_list is a list of components [[0,1], [1,2]]
-    if (isinstance(color, list) and len(color) > 1) or len(components_list) > 1:
-        if ax is not None:
-            raise ValueError("When plotting multiple panels (each for a given value of 'color' "
-                             "a given ax can not be used")
-        if len(components_list) == 0:
-            components_list = [None]
-
-        multi_panel = True
-        # each plot needs to be its own panel
-        from matplotlib import gridspec
-        # set up the figure
-        num_panels = len(color) * len(components_list)
-        n_panels_x = min(ncols, num_panels)
-        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
-        # each panel will have the size of rcParams['figure.figsize']
-        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
-                                 n_panels_y * rcParams['figure.figsize'][1]))
-        left = 0.2 / n_panels_x
-        bottom = 0.13 / n_panels_y
-        gs = gridspec.GridSpec(nrows=n_panels_y,
-                               ncols=n_panels_x,
-                               left=left,
-                               right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-                               bottom=bottom,
-                               top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-                               hspace=hspace,
-                               wspace=wspace)
-    else:
-        if len(components_list) == 0:
-            components_list = [None]
-        multi_panel = False
-        if ax is None:
-            fig = pl.figure()
-            ax = fig.add_subplot(111, **args_3d)
-
-    ###
-    # make the plots
-    axs = []
-    import itertools
-    idx_components = range(len(components_list))
-
-    # use itertools.product to make a plot for each color and for each component
-    # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
-    # The plots are: [color=gene1, components=[1,2], color=gene1, components=[2,3],
-    #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
-    for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
-        color_vector, categorical = _get_color_values(adata, value_to_plot,
-                                                      groups=groups, palette=palette,
-                                                      use_raw=use_raw, gene_symbols=gene_symbols)
-
-        # check if higher value points should be plot on top
-        if sort_order is True and value_to_plot is not None and categorical is False:
-            order = np.argsort(color_vector)
-            color_vector = color_vector[order]
-            _data_points = data_points[component_idx][order, :]
-
-        else:
-            _data_points = data_points[component_idx]
-
-        # if plotting multiple panels, get the ax from the grid spec
-        # else use the ax value (either user given or created previously)
-        if multi_panel is True:
-            ax = pl.subplot(gs[count], **args_3d)
-            axs.append(ax)
-        if not (settings._frameon if frameon is None else frameon):
-            ax.axis('off')
-        if title is None:
-            if value_to_plot is not None:
-                ax.set_title(value_to_plot)
-            else:
-                ax.set_title('')
-        else:
-
-            try:
-                ax.set_title(title[count])
-            except IndexError:
-                logg.warn("The title list is shorter than the number of panels. Using 'color' value instead for"
-                          "some plots.")
-                ax.set_title(value_to_plot)
-
-        if 's' not in kwargs:
-            kwargs['s'] = 120000 / _data_points.shape[0]
-
-        # make the scatter plot
-        if projection == '3d':
-            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1], _data_points[:, 2],
-                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
-                            **kwargs)
-        else:
-            cax= ax.scatter(_data_points[:, 0], _data_points[:, 1],
-                            marker=".", c=color_vector, rasterized=settings._vector_friendly,
-                            **kwargs)
-
-        # remove y and x ticks
-        ax.set_yticks([])
-        ax.set_xticks([])
-        if projection == '3d':
-            ax.set_zticks([])
-
-        # set default axis_labels
-        name = _basis2name(basis)
-        if components is not None:
-            axis_labels = [name + str(x + 1) for x in components_list[component_idx]]
-        elif projection == '3d':
-            axis_labels = [name + str(x + 1) for x in range(3)]
-
-        else:
-            axis_labels = [name + str(x + 1) for x in range(2)]
-
-        ax.set_xlabel(axis_labels[0])
-        ax.set_ylabel(axis_labels[1])
-        if projection == '3d':
-            # shift the label closer to the axis
-            ax.set_zlabel(axis_labels[2], labelpad=-7)
-        ax.autoscale_view()
-
-        if edges:
-            utils.plot_edges(ax, adata, basis, edges_width, edges_color)
-        if arrows:
-            utils.plot_arrows(ax, adata, basis, arrows_kwds)
-
-        if value_to_plot is None:
-            # if only dots were plotted without an associated value
-            # there is not need to plot a legend or a colorbar
-            continue
-
-        _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
-                                _data_points, legend_fontweight, legend_fontsize, groups, multi_panel)
-
-    if return_fig is True:
-        return fig
-    axs = axs if multi_panel else ax
-    utils.savefig_or_show(basis, show=show, save=save)
-    if show is False:
-        return axs
+# Helpers
 
 
 def _get_data_points(adata, basis, projection, components):
@@ -401,7 +450,7 @@ def _get_data_points(adata, basis, projection, components):
             # eg: components='1,2'
             components_list.append([int(x.strip()) - 1 + offset for x in components.split(',')])
 
-        elif isinstance(components, list):
+        elif isinstance(components, abc.Sequence):
             if isinstance(components[0], int):
                 # components=[1,2]
                 components_list.append([int(x) - 1 + offset for x in components])
@@ -522,7 +571,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, list):
+        if isinstance(palette, abc.Sequence):
             if len(palette) < len(categories):
                 logg.warn("Length of palette colors is smaller than the number of "
                           "categories (palette length: {}, categories length: {}. "
