@@ -12,3 +12,4 @@ from ._louvain import louvain
 from ._sim import sim
 from ._score_genes import score_genes, score_genes_cell_cycle
 from ._dendrogram import dendrogram
+from ._density import density
