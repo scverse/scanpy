@@ -2,15 +2,18 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams
+from matplotlib import rcParams, cm, colors
+from anndata import AnnData
+from typing import Union, Optional
 
 from .. import _utils as utils
-from ...utils import doc_params
+from ...utils import doc_params, sanitize_anndata
 from ... import logging as logg
 from .._anndata import scatter, ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .._docs import doc_scatter_bulk, doc_show_save_ax
-from .scatterplots import pca
+from .scatterplots import pca, plot_scatter
+from matplotlib.colors import Colormap
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -633,3 +636,115 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
                    highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
                    xlabel='index (arbitrary order)')
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
+
+
+def density(
+        adata: AnnData,
+        embedding: str,
+        key: str,
+        group: Optional[str] = None,
+        color_map: Union[Colormap, str] = 'YlOrRd',
+        greysize: Optional[int] = 20,
+        colorsize:  Optional[int] = 40,
+        vmax:  Optional[int] = 1,
+        vmin:  Optional[int] = 0,
+        save: Union[bool, str, None] = None,
+        **kwargs):
+    """Plot the density of cells in an embedding (per condition)
+
+    Plots the gaussian kernel density estimates (over condition) from the
+    `sc.tl.density()` output.
+
+    This function was written by Sophie Tritschler and implemented into
+    Scanpy by Malte Luecken.
+    
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        The annotated data matrix.
+    embedding : `str`
+        The embedding over which the density was calculated. This must
+        be one of:
+        'umap' : UMAP
+        'dm' : Diffusion map
+        'pca' : PCA
+        'tsne' : t-SNE
+        'draw_graph_fa' : Force-directed graph layout by Force Atlas 2
+    key : `str`
+        Name of the `.obs` covariate that contains the density estimates
+    group : `str`, optional (default: `None`)
+        Category of the observed covariate which will be plotted.
+    """
+    sanitize_anndata(adata)
+    
+    # Test user inputs
+    embedding = embedding.lower()
+
+    if embedding == 'fa':
+        embedding = 'draw_graph_fa'
+
+    allowed_embeddings = ['umap', 'dm', 'pca', 'tsne', 'draw_graph_fa']
+
+    if embedding not in allowed_embeddings:
+        raise ValueError('{!r} is not a valid embedding.'.format(embedding))
+
+    if 'X_'+embedding not in adata.obsm.dtype.names:
+        raise ValueError('Cannot find the embedded representation. Compute the embedding first.')
+
+    if key not in adata.obs:
+        raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
+
+    if key+'_param' not in adata.uns:
+        raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
+
+    groupby = adata.uns[key+'_param']
+
+    if (group is None) and (groupby is not None):
+        raise ValueError('Densities were calculated over an `.obs` covariate. Please specify a group from this covariate to plot.')
+
+    if (group is not None) and (group not in adata.obs[groupby].cat.categories):
+        raise ValueError('Please specify a group from the `.obs` category over which the density was calculated.')
+
+    if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
+        raise ValueError('Densities should be scaled between 0 and 1.')
+    
+    # Define plotting data
+    dens_values = -np.ones(adata.n_obs)
+    dot_sizes = np.ones(adata.n_obs)*greysize
+
+    if group is not None:
+        group_mask = (adata.obs[groupby] == group)
+        dens_values[group_mask] = adata.obs[key][group_mask]
+        print("length of group mask is: {}".format(sum(group_mask)))
+        print(np.ones(sum(group_mask))*colorsize)
+        print(dot_sizes[:20])
+        dot_sizes[group_mask] = np.ones(sum(group_mask))*colorsize
+        print(dot_sizes[:20])
+
+    else:
+        dens_values = adata.obs[key]
+        dot_sizes = adata.ones(adata.n_obs)*colorsize
+
+    # Make the color map
+    if isinstance(color_map, str):
+        cmap1 = cm.get_cmap(color_map)
+    else:
+        cmap1 = color_map
+
+    colors1 = cm.Greys(np.linspace(0.4,0.4,24)) #Ensure 0 is not grey by using 149 here
+    colors2 = cmap1(np.linspace(0,1,26))
+    color_stack = np.vstack([colors1, colors2])
+    custom_cmap = colors.LinearSegmentedColormap.from_list('plotting_colors', color_stack)
+
+    print(dot_sizes[:50])
+
+    #norm = colors.Normalize(vmin=-1, vmax=1)
+    adata_vis = adata.copy()
+    adata_vis.obs['Density'] = dens_values
+    print(adata_vis.obs['Density'][:20])
+
+    # colour transformation is not really working! Probably need to layer the plots...
+
+    
+    # Plot the graph
+    return plot_scatter(adata_vis, embedding, color='Density', color_map=custom_cmap, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)
