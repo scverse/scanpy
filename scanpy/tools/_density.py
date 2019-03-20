@@ -40,6 +40,10 @@ def density(
     categorical cell annotation. The cell density can be plotted using the 
     `sc.pl.density()` function.
 
+    Note that density values are scaled to be between 0 and 1, so that
+    the density at each cell is only comparable to other densities in the
+    same condition category.
+
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
     
