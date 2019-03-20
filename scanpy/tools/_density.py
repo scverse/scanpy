@@ -4,6 +4,7 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 from anndata import AnnData
+from typing import Union
 
 from .. import logging as logg
 
@@ -31,8 +32,8 @@ def _calc_density(
 def density(
         adata: AnnData,
         embedding: str,
-        groupby: str = None,
-        key_added: str = None):
+        groupby: Union[str, None] = None,
+        key_added: Union[str, None] = None):
     """Calculate the density of cells in an embedding (per condition)
 
     Gaussian kernel density estimation is used to calculate the density of
@@ -40,9 +41,9 @@ def density(
     categorical cell annotation. The cell density can be plotted using the 
     `sc.pl.density()` function.
 
-    Note that density values are scaled to be between 0 and 1, so that
-    the density at each cell is only comparable to other densities in the
-    same condition category.
+    Note that density values are scaled to be between 0 and 1. Thus, the
+    density value at each cell is only comparable to other densities in 
+    the same condition category.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
@@ -58,7 +59,7 @@ def density(
         'dm' : Diffusion map
         'pca' : PCA
         'tsne' : t-SNE
-        'fa' : Force-directed graph layout by Force Atlas 2
+        'draw_graph_fa' : Force-directed graph layout by Force Atlas 2
     groupby : `str`, optional (default: `None`)
         Keys for categorical observation/cell annotation for which densities
         are calculated per category. Columns with up to ten categories are
@@ -77,7 +78,7 @@ def density(
     """
     logg.info('computing density on \'{}\''.format(embedding), r=True)
 
-    # Test if inputs are okay
+    # Test user inputs
     embedding = embedding.lower()
     
     if embedding == 'fa':
