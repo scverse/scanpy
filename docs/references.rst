@@ -198,7 +198,7 @@ References
 
 .. [Wolf17i] Wolf *et al.* (2019),
    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
-   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>__, 
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__, 
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),
