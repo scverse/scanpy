@@ -638,7 +638,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-def density(
+def embedding_density(
         adata: AnnData,
         embedding: str,
         key: str,

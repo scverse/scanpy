@@ -29,7 +29,7 @@ def _calc_density(
     return(scaled_z)
 
 
-def density(
+def embedding_density(
         adata: AnnData,
         embedding: str,
         groupby: Union[str, None] = None,
