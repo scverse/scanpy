@@ -1329,13 +1329,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     For each var_name and each `groupby` category a dot is plotted. Each dot
     represents two values: mean expression within each category (visualized by
     color) and fraction of cells expressing the var_name in the
-    category. (visualized by the size of the dot).  If groupby is not given, the
-    dotplot assumes that all data belongs to a single category. A gene is
-    considered expressed if the expression value in the adata (or adata.raw) is
-    above the specified threshold which is zero by default.
+    category (visualized by the size of the dot).  If groupby is not given, the
+    dotplot assumes that all data belongs to a single category. 
+    
+    **Note**: A gene is considered expressed if the expression value in the adata 
+    (or adata.raw) is above the specified threshold which is zero by default.
 
-    For instance, for each marker gene, the mean value and the percentage of cells
-    expressing the gene can be visualized for each cluster.
+    An example of dotplot usage is to visualize, for multiple marker genes, 
+    the mean value and the percentage of cells expressing the gene accross multiple clusters.
 
     Parameters
     ----------
