@@ -89,7 +89,7 @@ def density(
     if embedding not in allowed_embeddings:
         raise ValueError('{!r} is not a valid embedding.'.format(embedding))
 
-    if 'X_'+embedding not in adata.obsm:
+    if 'X_'+embedding not in adata.obsm.dtype.names:
         raise ValueError('Cannot find the embedded representation. Compute the embedding first.')
 
     if groupby is not None:
