@@ -7,7 +7,7 @@ from anndata import AnnData
 from typing import Union
 
 from .. import logging as logg
-
+from ..utils import sanitize_anndata
 
 def _calc_density(
         x: np.ndarray,
@@ -76,6 +76,8 @@ def density(
     and `[groupby]` denotes the parameter input.
     Updates `adata.uns` with an additional field `[key_added]_param`.
     """
+    sanitize_anndata(adata) # to ensure that newly created covariates are categorical to test for categoy numbers
+
     logg.info('computing density on \'{}\''.format(embedding), r=True)
 
     # Test user inputs
@@ -96,7 +98,7 @@ def density(
         if groupby not in adata.obs:
             raise ValueError('Could not find {!r} `.obs` column.'.format(groupby))
 
-        if adata.obs[groupby].dtype.name == 'category':
+        if adata.obs[groupby].dtype.name != 'category':
             raise ValueError('{!r} column does not contain Categorical data'.format(groupby))
     
         if len(adata.obs[groupby].cat.categories) > 10:
@@ -114,7 +116,7 @@ def density(
     if groupby is not None:
         categories = adata.obs[groupby].cat.categories
 
-        adata.obs[density_covariate] = [0 for i in range(adata.n_obs)]
+        density_values = np.zeros(adata.n_obs)
         
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
@@ -122,8 +124,10 @@ def density(
             embed_y = adata.obsm['X_'+embedding][cat_mask, 1]
 
             dens_embed = _calc_density(embed_x, embed_y)
-            adata.obs[density_covariate][cat_mask] = dens_embed
+            density_values[cat_mask] = dens_embed
 
+        adata.obs[density_covariate] = density_values
+        
     # Calculate the density over the whole embedding without subsetting
     else: #if groupby is None
         embed_x = adata.obsm['X_'+embedding][:, 0]
