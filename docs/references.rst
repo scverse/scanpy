@@ -196,8 +196,9 @@ References
    *Scanpy: large-scale single-cell gene expression data analysis*,
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
-.. [Wolf17i] Wolf *et al.* (2017),
-   *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+.. [Wolf17i] Wolf *et al.* (2019),
+   *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>__, 
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),
