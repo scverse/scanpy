@@ -644,8 +644,8 @@ def embedding_density(
         key: str,
         group: Optional[str] = None,
         color_map: Union[Colormap, str] = 'YlOrRd',
-        greysize: Optional[int] = 20,
-        colorsize:  Optional[int] = 40,
+        bg_dotsize: Optional[int] = 80,
+        fg_dotsize:  Optional[int] = 160,
         vmax:  Optional[int] = 1,
         vmin:  Optional[int] = 0,
         save: Union[bool, str, None] = None,
@@ -707,20 +707,16 @@ def embedding_density(
     
     # Define plotting data
     dens_values = -np.ones(adata.n_obs)
-    dot_sizes = np.ones(adata.n_obs)*greysize
+    dot_sizes = np.ones(adata.n_obs)*bg_dotsize
 
     if group is not None:
         group_mask = (adata.obs[groupby] == group)
         dens_values[group_mask] = adata.obs[key][group_mask]
-        print("length of group mask is: {}".format(sum(group_mask)))
-        print(np.ones(sum(group_mask))*colorsize)
-        print(dot_sizes[:20])
-        dot_sizes[group_mask] = np.ones(sum(group_mask))*colorsize
-        print(dot_sizes[:20])
+        dot_sizes[group_mask] = np.ones(sum(group_mask))*fg_dotsize
 
     else:
         dens_values = adata.obs[key]
-        dot_sizes = adata.ones(adata.n_obs)*colorsize
+        dot_sizes = adata.ones(adata.n_obs)*fg_dotsize
 
     # Make the color map
     if isinstance(color_map, str):
@@ -728,17 +724,9 @@ def embedding_density(
     else:
         cmap = color_map
 
-#    colors1 = cm.Greys(np.linspace(0.4,0.4,24)) #Ensure 0 is not grey by using 149 here
-#    colors2 = cmap1(np.linspace(0,1,26))
-#    color_stack = np.vstack([colors1, colors2])
-#    custom_cmap = colors.LinearSegmentedColormap.from_list('plotting_colors', color_stack)
-
-    print(dot_sizes[:50])
-
     #norm = colors.Normalize(vmin=-1, vmax=1)
     adata_vis = adata.copy()
     adata_vis.obs['Density'] = dens_values
-    print(adata_vis.obs['Density'][:20])
 
     # colour transformation is not really working! Probably need to layer the plots...
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
