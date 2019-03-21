@@ -683,7 +683,7 @@ def embedding_density(
 
     components = [0,1]
 
-    if basis == 'dm':
+    if basis == 'diffmap':
         components = [1,2]
 
     if key not in adata.obs:
@@ -722,14 +722,14 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        cmap1 = cm.get_cmap(color_map)
+        cmap = cm.get_cmap(color_map)
     else:
-        cmap1 = color_map
+        cmap = color_map
 
-    colors1 = cm.Greys(np.linspace(0.4,0.4,24)) #Ensure 0 is not grey by using 149 here
-    colors2 = cmap1(np.linspace(0,1,26))
-    color_stack = np.vstack([colors1, colors2])
-    custom_cmap = colors.LinearSegmentedColormap.from_list('plotting_colors', color_stack)
+#    colors1 = cm.Greys(np.linspace(0.4,0.4,24)) #Ensure 0 is not grey by using 149 here
+#    colors2 = cmap1(np.linspace(0,1,26))
+#    color_stack = np.vstack([colors1, colors2])
+#    custom_cmap = colors.LinearSegmentedColormap.from_list('plotting_colors', color_stack)
 
     print(dot_sizes[:50])
 
@@ -739,7 +739,9 @@ def embedding_density(
     print(adata_vis.obs['Density'][:20])
 
     # colour transformation is not really working! Probably need to layer the plots...
-
+    norm = colors.Normalize(vmin=vmin, vmax=vmax)
+    cmap.set_over('black')
+    cmap.set_under('lightgray')
     
     # Plot the graph
-    return plot_scatter(adata_vis, basis, components=components, color='Density', color_map=custom_cmap, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)
+    return plot_scatter(adata_vis, basis, components=components, color='Density', color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)

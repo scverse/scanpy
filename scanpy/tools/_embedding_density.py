@@ -67,7 +67,7 @@ def embedding_density(
     -------
     Updates `adata.obs` with an additional field specified by the `key_added`
     parameter. This parameter defaults to `[basis]_density_[groupby]`, where
-    where `[basis]` is one of `umap`, `dm`, `pca`, `tsne`, or `draw_graph_fa`
+    where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa`
     and `[groupby]` denotes the parameter input.
     Updates `adata.uns` with an additional field `[key_added]_param`.
     """
@@ -86,7 +86,7 @@ def embedding_density(
 
     components = [0,1]
 
-    if basis == 'dm':
+    if basis == 'diffmap':
         components = [1,2]
 
     if groupby is not None:
