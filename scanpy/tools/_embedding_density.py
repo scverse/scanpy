@@ -32,9 +32,9 @@ def _calc_density(
 def embedding_density(
         adata: AnnData,
         basis: str,
-        components: Union[str, Sequence[str]] = None,
         groupby: Union[str, None] = None,
-        key_added: Union[str, None] = None):
+        key_added: Union[str, None] = None,
+        components: Union[str, Sequence[str]] = None):
     """Calculate the density of cells in an embedding (per condition)
 
     Gaussian kernel density estimation is used to calculate the density of
@@ -56,9 +56,6 @@ def embedding_density(
     basis : `str`
         The embedding over which the density will be calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
-    components : Union[`str`, `Sequence[str]`]
-        The embedding dimensions over which the density should be calculated.
-        This is limited to two components.
     groupby : `str`, optional (default: `None`)
         Keys for categorical observation/cell annotation for which densities
         are calculated per category. Columns with up to ten categories are
@@ -66,6 +63,9 @@ def embedding_density(
     key_added : `str`, optional (default: `None`)
         Name of the `.obs` covariate that will be added with the density
         estimates.
+    components : Union[`str`, `Sequence[str]`]
+        The embedding dimensions over which the density should be calculated.
+        This is limited to two components.
 
     Returns
     -------
@@ -142,9 +142,9 @@ def embedding_density(
 
     # Reduce diffmap components for labeling
     # Note: plot_scatter takes care of correcting diffmap components for plotting automatically
-    if basis == 'diffmap': components -= 1
+    if basis != 'diffmap': components += 1
 
-    adata.uns[density_covariate+'_params'] = {'covariate':groupby, 'components':components}
+    adata.uns[density_covariate+'_params'] = {'covariate':groupby, 'components':components.tolist()}
     
 
     logg.hint('added\n'

@@ -685,10 +685,10 @@ def embedding_density(
     if key not in adata.obs:
         raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
 
-    if key+'_param' not in adata.uns:
+    if key+'_params' not in adata.uns:
         raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
 
-    if components:
+    if 'components' in kwargs:
         logg.warn('Components were specified, but will be ignored. Only the'
                   'components used to calculate the density can be plotted.')
 
