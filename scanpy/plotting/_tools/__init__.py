@@ -668,7 +668,8 @@ def embedding_density(
     key : `str`
         Name of the `.obs` covariate that contains the density estimates
     group : `str`, optional (default: `None`)
-        Category of the observed covariate which will be plotted.
+        The category in the categorical observation annotation to be plotted.
+        For example, 'G1' in the cell cycle 'phase' covariate.
 
     Examples
     --------
