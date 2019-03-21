@@ -678,13 +678,9 @@ def embedding_density(
     if basis == 'fa':
         basis = 'draw_graph_fa'
 
-    if 'X_'+basis not in adata.obsm.dtype.names:
-        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. Compute the embedding first.'.format(basis))
-
-    components = [0,1]
-
-    if basis == 'diffmap':
-        components = [1,2]
+    if 'X_'+basis not in adata.obsm_keys():
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`.'
+                         'Compute the embedding first.'.format(basis))
 
     if key not in adata.obs:
         raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
@@ -692,10 +688,16 @@ def embedding_density(
     if key+'_param' not in adata.uns:
         raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
 
-    groupby = adata.uns[key+'_param']
+    if components:
+        logg.warn('Components were specified, but will be ignored. Only the'
+                  'components used to calculate the density can be plotted.')
+
+    components = adata.uns[key+'_params']['components']
+    groupby = adata.uns[key+'_params']['covariate']
 
     if (group is None) and (groupby is not None):
-        raise ValueError('Densities were calculated over an `.obs` covariate. Please specify a group from this covariate to plot.')
+        raise ValueError('Densities were calculated over an `.obs` covariate.'
+                         'Please specify a group from this covariate to plot.')
 
     if (group is not None) and (group not in adata.obs[groupby].cat.categories):
         raise ValueError('Please specify a group from the `.obs` category over which the density was calculated.')
