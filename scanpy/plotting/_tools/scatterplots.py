@@ -156,6 +156,13 @@ def plot_scatter(
             color_vector = color_vector[order]
             _data_points = data_points[component_idx][order, :]
 
+            # check if 'size' is given (stored in kwargs['s']
+            # and reorder it.
+            import pandas.core.series
+            if 's' in kwargs and kwargs['s'] is not None \
+                and isinstance(kwargs['s'],(list, pandas.core.series.Series, np.ndarray)) \
+                and len(kwargs['s']) == len(color_vector):
+                kwargs['s'] = np.array(kwargs['s'])[order]
         else:
             _data_points = data_points[component_idx]
 
