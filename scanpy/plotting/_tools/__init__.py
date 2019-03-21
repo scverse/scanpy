@@ -741,7 +741,7 @@ def embedding_density(
 
     else:
         dens_values = adata.obs[key]
-        dot_sizes = adata.ones(adata.n_obs)*fg_dotsize
+        dot_sizes = np.ones(adata.n_obs)*fg_dotsize
 
     # Make the color map
     if isinstance(color_map, str):
