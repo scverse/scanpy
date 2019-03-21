@@ -31,7 +31,7 @@ def _calc_density(
 
 def embedding_density(
         adata: AnnData,
-        embedding: str,
+        basis: str,
         groupby: Union[str, None] = None,
         key_added: Union[str, None] = None):
     """Calculate the density of cells in an embedding (per condition)
@@ -52,14 +52,9 @@ def embedding_density(
     ----------
     adata : :class:`~anndata.AnnData`
         The annotated data matrix.
-    embedding : `str`
-        The embedding over which the density will be calculated. This must
-        be one of:
-        'umap' : UMAP
-        'dm' : Diffusion map
-        'pca' : PCA
-        'tsne' : t-SNE
-        'draw_graph_fa' : Force-directed graph layout by Force Atlas 2
+    basis : `str`
+        The embedding over which the density will be calculated. This embedded
+        representation should be found in `adata.obsm['X_[basis]']``.
     groupby : `str`, optional (default: `None`)
         Keys for categorical observation/cell annotation for which densities
         are calculated per category. Columns with up to ten categories are
@@ -71,28 +66,28 @@ def embedding_density(
     Returns
     -------
     Updates `adata.obs` with an additional field specified by the `key_added`
-    parameter. This parameter defaults to `[embedding]_density_[groupby]`,
-    where `[embedding]` is one of `umap`, `dm`, `pca`, `tsne`, or `draw_graph_fa`
+    parameter. This parameter defaults to `[basis]_density_[groupby]`, where
+    where `[basis]` is one of `umap`, `dm`, `pca`, `tsne`, or `draw_graph_fa`
     and `[groupby]` denotes the parameter input.
     Updates `adata.uns` with an additional field `[key_added]_param`.
     """
     sanitize_anndata(adata) # to ensure that newly created covariates are categorical to test for categoy numbers
 
-    logg.info('computing density on \'{}\''.format(embedding), r=True)
+    logg.info('computing density on \'{}\''.format(basis), r=True)
 
     # Test user inputs
-    embedding = embedding.lower()
+    basis = basis.lower()
     
-    if embedding == 'fa':
-        embedding = 'draw_graph_fa'
+    if basis == 'fa':
+        basis = 'draw_graph_fa'
 
-    allowed_embeddings = ['umap', 'dm', 'pca', 'tsne', 'draw_graph_fa']
+    if 'X_'+basis not in adata.obsm.dtype.names:
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. Compute the embedding first.'.format(basis))
 
-    if embedding not in allowed_embeddings:
-        raise ValueError('{!r} is not a valid embedding.'.format(embedding))
+    components = [0,1]
 
-    if 'X_'+embedding not in adata.obsm.dtype.names:
-        raise ValueError('Cannot find the embedded representation. Compute the embedding first.')
+    if basis == 'dm':
+        components = [1,2]
 
     if groupby is not None:
         if groupby not in adata.obs:
@@ -108,9 +103,9 @@ def embedding_density(
     if key_added is not None:
         density_covariate = key_added
     elif groupby is not None:
-        density_covariate = embedding+'_density_'+groupby
+        density_covariate = basis+'_density_'+groupby
     else:
-        density_covariate = embedding+'_density'
+        density_covariate = basis+'_density'
 
     # Calculate the densities over each category in the groupby column
     if groupby is not None:
@@ -120,8 +115,8 @@ def embedding_density(
         
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
-            embed_x = adata.obsm['X_'+embedding][cat_mask, 0]
-            embed_y = adata.obsm['X_'+embedding][cat_mask, 1]
+            embed_x = adata.obsm['X_'+basis][cat_mask, components[0]]
+            embed_y = adata.obsm['X_'+basis][cat_mask, components[1]]
 
             dens_embed = _calc_density(embed_x, embed_y)
             density_values[cat_mask] = dens_embed
@@ -130,8 +125,8 @@ def embedding_density(
         
     # Calculate the density over the whole embedding without subsetting
     else: #if groupby is None
-        embed_x = adata.obsm['X_'+embedding][:, 0]
-        embed_y = adata.obsm['X_'+embedding][:, 1]
+        embed_x = adata.obsm['X_'+basis][:, components[0]]
+        embed_y = adata.obsm['X_'+basis][:, components[1]]
 
         adata.obs[density_covariate] = _calc_density(embed_x, embed_y)
 

@@ -640,7 +640,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
 
 def embedding_density(
         adata: AnnData,
-        embedding: str,
+        basis: str,
         key: str,
         group: Optional[str] = None,
         color_map: Union[Colormap, str] = 'YlOrRd',
@@ -662,14 +662,9 @@ def embedding_density(
     ----------
     adata : :class:`~anndata.AnnData`
         The annotated data matrix.
-    embedding : `str`
-        The embedding over which the density was calculated. This must
-        be one of:
-        'umap' : UMAP
-        'dm' : Diffusion map
-        'pca' : PCA
-        'tsne' : t-SNE
-        'draw_graph_fa' : Force-directed graph layout by Force Atlas 2
+    basis : `str`
+        The embedding over which the density was calculated. This embedded
+        representation should be found in `adata.obsm['X_[basis]']``.
     key : `str`
         Name of the `.obs` covariate that contains the density estimates
     group : `str`, optional (default: `None`)
@@ -678,18 +673,18 @@ def embedding_density(
     sanitize_anndata(adata)
     
     # Test user inputs
-    embedding = embedding.lower()
+    basis = basis.lower()
 
-    if embedding == 'fa':
-        embedding = 'draw_graph_fa'
+    if basis == 'fa':
+        basis = 'draw_graph_fa'
 
-    allowed_embeddings = ['umap', 'dm', 'pca', 'tsne', 'draw_graph_fa']
+    if 'X_'+basis not in adata.obsm.dtype.names:
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. Compute the embedding first.'.format(basis))
 
-    if embedding not in allowed_embeddings:
-        raise ValueError('{!r} is not a valid embedding.'.format(embedding))
+    components = [0,1]
 
-    if 'X_'+embedding not in adata.obsm.dtype.names:
-        raise ValueError('Cannot find the embedded representation. Compute the embedding first.')
+    if basis == 'dm':
+        components = [1,2]
 
     if key not in adata.obs:
         raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
@@ -747,4 +742,4 @@ def embedding_density(
 
     
     # Plot the graph
-    return plot_scatter(adata_vis, embedding, color='Density', color_map=custom_cmap, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)
+    return plot_scatter(adata_vis, basis, components=components, color='Density', color_map=custom_cmap, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)
