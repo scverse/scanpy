@@ -80,7 +80,9 @@ title
     e.g. `['title1', 'title2', ...]`.
 kwargs : further keyword arguments, optional
     Arguments to pass to :func:`matplotlib.pyplot.scatter`,
-    for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).\
+    for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).
+return_fig
+    Return the matplotlib figure.\
 """
 
 
@@ -91,9 +93,7 @@ save
     If `True` or a `str`, save the figure. A string is appended to the default
     filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
 ax
-    A matplotlib axes object. Only works if plotting a single component.
-return_fig
-    Return the matplotlib figure.\
+    A matplotlib axes object. Only works if plotting a single component.\
 """
 
 
