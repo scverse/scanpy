@@ -638,6 +638,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
 
 
+@doc_params(show_save_ax=doc_show_save_ax)
 def embedding_density(
         adata: AnnData,
         basis: str,
@@ -670,6 +671,17 @@ def embedding_density(
     group : `str`, optional (default: `None`)
         The category in the categorical observation annotation to be plotted.
         For example, 'G1' in the cell cycle 'phase' covariate.
+    color_map : Union[`Colormap`, `str`] (default: `YlOrRd`)
+        Matplolib color map to use for density plotting.
+    bg_dotsize : `int`, optional (default: `80`)
+        Dot size for background data points not in the `group`.
+    fg_dotsize : `int`, optional (default: `160`)
+        Dot size for foreground data points in the `group`.
+    vmax : `int`, optional (default: `1`)
+        Density that corresponds to color bar maximum.
+    vmin : `int`, optional (default: `0`)
+        Density that corresponds to color bar minimum.
+    {show_save_ax}
 
     Examples
     --------
