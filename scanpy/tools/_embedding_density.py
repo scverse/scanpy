@@ -74,6 +74,16 @@ def embedding_density(
     where `[basis]` is one of `umap`, `diffmap`, `pca`, `tsne`, or `draw_graph_fa`
     and `[groupby]` denotes the parameter input.
     Updates `adata.uns` with an additional field `[key_added]_params`.
+
+    Examples
+    --------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.umap(adata)
+    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='G1')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='S')
     """
     sanitize_anndata(adata) # to ensure that newly created covariates are categorical to test for categoy numbers
 

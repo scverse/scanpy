@@ -669,6 +669,16 @@ def embedding_density(
         Name of the `.obs` covariate that contains the density estimates
     group : `str`, optional (default: `None`)
         Category of the observed covariate which will be plotted.
+
+    Examples
+    --------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.umap(adata)
+    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='G1')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='S')
     """
     sanitize_anndata(adata)
     
