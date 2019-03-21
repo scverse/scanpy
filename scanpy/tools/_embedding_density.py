@@ -40,7 +40,7 @@ def embedding_density(
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
     categorical cell annotation. The cell density can be plotted using the 
-    `sc.pl.density()` function.
+    `sc.pl.embedding_density()` function.
 
     Note that density values are scaled to be between 0 and 1. Thus, the
     density value at each cell is only comparable to other densities in 

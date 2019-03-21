@@ -653,7 +653,7 @@ def embedding_density(
     """Plot the density of cells in an embedding (per condition)
 
     Plots the gaussian kernel density estimates (over condition) from the
-    `sc.tl.density()` output.
+    `sc.tl.embedding_density()` output.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
@@ -683,10 +683,10 @@ def embedding_density(
                          'Compute the embedding first.'.format(basis))
 
     if key not in adata.obs:
-        raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
+        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
 
     if key+'_params' not in adata.uns:
-        raise ValueError('Please run `sc.tl.density()` first and specify the correct key.')
+        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
 
     if 'components' in kwargs:
         logg.warn('Components were specified, but will be ignored. Only the'
