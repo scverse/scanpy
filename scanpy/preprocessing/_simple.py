@@ -15,7 +15,7 @@ from anndata import AnnData
 
 from .. import settings as sett
 from .. import logging as logg
-from ..utils import sanitize_anndata
+from ..utils import sanitize_anndata, deprecated_arg_names
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -910,25 +910,37 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
         return X[obs_indices], obs_indices
 
 
-def downsample_counts(adata, target_counts=20000, random_state=0,
-                      replace=True, copy=False):
-    """Downsample counts so that each cell has no more than `target_counts`.
+@deprecated_arg_names({"target_counts": "counts_per_cell"})
+def downsample_counts(
+    adata: AnnData,
+    counts_per_cell: Optional[int] = None,
+    total_counts: Optional[int] = None,
+    random_state: Optional[int] = 0,
+    replace: bool = False,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """
+    Downsample counts from count matrix.
 
-    Cells with fewer counts than `target_counts` are unaffected by this. This
-    has been implemented by M. D. Luecken.
+    If `counts_per_cell` in specified, each cell will downsampled. If
+    `total_counts` is specified, expression matrix will be downsampled to
+    contain at most `total_counts`.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    target_counts : `int` (default: 20,000)
-        Target number of counts for downsampling. Cells with more counts than
-        'target_counts' will be downsampled to have 'target_counts' counts.
-    random_state : `int` or `None`, optional (default: 0)
-        Random seed to change subsampling.
-    replace : `bool`, optional (default: `True`)
+    counts_per_cell
+        Target total counts per cell. If a cell has more than 'counts_per_cell',
+        it will be downsampled to this number.
+    total_counts
+        Target total counts. If the count matrix has more than `total_counts`
+        it will be downsampled to have this number.
+    random_state
+        Random seed for subsampling.
+    replace
         Whether to sample the counts with replacement.
-    copy : `bool`, optional (default: `False`)
+    copy
         If an :class:`~anndata.AnnData` is passed, determines whether a copy
         is returned.
 
@@ -937,34 +949,67 @@ def downsample_counts(adata, target_counts=20000, random_state=0,
     AnnData, None
         Depending on `copy` returns or updates an `adata` with downsampled `.X`.
     """
+    if type(total_counts) == type(counts_per_cell):
+        raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
     if copy:
         adata = adata.copy()
     adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
-    if issparse(adata.X):
-        X = adata.X
+    if total_counts:
+        adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
+    elif counts_per_cell:
+        adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
+    if copy:
+        return adata
+
+
+def _downsample_per_cell(X, counts_per_cell, random_state, replace):
+    if issparse(X):
+        original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
         totals = np.ravel(X.sum(axis=1))
-        under_target = np.nonzero(totals > target_counts)[0]
+        under_target = np.nonzero(totals > counts_per_cell)[0]
         cols = np.split(X.data.view(), X.indptr[1:-1])
         for colidx in under_target:
             col = cols[colidx]
-            downsample_cell(col, target_counts, random_state=random_state,
-                            replace=replace, inplace=True)
-        if not isspmatrix_csr(adata.X):  # Put it back
-            adata.X = type(adata.X)(X)
+            _downsample_array(col, counts_per_cell, random_state=random_state,
+                              replace=replace, inplace=True)
+        X.eliminate_zeros()
+        if original_type is not csr_matrix: # Put it back
+            X = original_type(X)
     else:
-        totals = np.ravel(adata.X.sum(axis=1))
-        under_target = np.nonzero(totals > target_counts)[0]
-        adata.X[under_target, :] = \
-            np.apply_along_axis(downsample_cell, 1, adata.X[under_target, :],
-                                target_counts, random_state=random_state, replace=replace)
-    if copy: return adata
+        totals = np.ravel(X.sum(axis=1))
+        under_target = np.nonzero(totals > counts_per_cell)[0]
+        X[under_target, :] = \
+            np.apply_along_axis(_downsample_array, 1, X[under_target, :],
+                                counts_per_cell, random_state=random_state, 
+                                replace=replace)
+    return X
 
 
-@numba.njit
-def downsample_cell(col: np.array, target: int, random_state: int=0,
-                    replace: bool=True, inplace: bool=False):
+def _downsample_total_counts(X, total_counts, random_state, replace):
+    total = X.sum()
+    if total < total_counts:
+        return X
+    if issparse(X):
+        original_type = type(X)
+        if not isspmatrix_csr(X):
+            X = csr_matrix(X)
+        _downsample_array(X.data, total_counts, random_state=random_state,
+                          replace=replace, inplace=True)
+        X.eliminate_zeros()
+        if original_type is not csr_matrix:
+            X = original_type(X)
+    else:
+        v = X.view().reshape(np.multiply(*X.shape))
+        _downsample_array(v, total_counts, random_state, replace=replace,
+                          inplace=True)
+    return X
+
+
+@numba.njit(cache=True)
+def _downsample_array(col: np.array, target: int, random_state: int=0,
+                      replace: bool = True, inplace: bool=False):
     """
     Evenly reduce counts in cell to target amount.
 
