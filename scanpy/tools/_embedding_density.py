@@ -96,7 +96,7 @@ def embedding_density(
         basis = 'draw_graph_fa'
 
     if 'X_'+basis not in adata.obsm_keys():
-        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`.'
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. '
                          'Compute the embedding first.'.format(basis))
 
     if components is None: components = '1,2'

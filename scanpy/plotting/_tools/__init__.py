@@ -646,7 +646,7 @@ def embedding_density(
         group: Optional[str] = None,
         color_map: Union[Colormap, str] = 'YlOrRd',
         bg_dotsize: Optional[int] = 80,
-        fg_dotsize:  Optional[int] = 160,
+        fg_dotsize:  Optional[int] = 180,
         vmax:  Optional[int] = 1,
         vmin:  Optional[int] = 0,
         save: Union[bool, str, None] = None,
@@ -675,7 +675,7 @@ def embedding_density(
         Matplolib color map to use for density plotting.
     bg_dotsize : `int`, optional (default: `80`)
         Dot size for background data points not in the `group`.
-    fg_dotsize : `int`, optional (default: `160`)
+    fg_dotsize : `int`, optional (default: `180`)
         Dot size for foreground data points in the `group`.
     vmax : `int`, optional (default: `1`)
         Density that corresponds to color bar maximum.
@@ -702,7 +702,7 @@ def embedding_density(
         basis = 'draw_graph_fa'
 
     if 'X_'+basis not in adata.obsm_keys():
-        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`.'
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. '
                          'Compute the embedding first.'.format(basis))
 
     if key not in adata.obs:
@@ -712,18 +712,20 @@ def embedding_density(
         raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
 
     if 'components' in kwargs:
-        logg.warn('Components were specified, but will be ignored. Only the'
+        logg.warn('Components were specified, but will be ignored. Only the '
                   'components used to calculate the density can be plotted.')
+        del kwargs['components']
 
     components = adata.uns[key+'_params']['components']
     groupby = adata.uns[key+'_params']['covariate']
 
     if (group is None) and (groupby is not None):
-        raise ValueError('Densities were calculated over an `.obs` covariate.'
+        raise ValueError('Densities were calculated over an `.obs` covariate. '
                          'Please specify a group from this covariate to plot.')
 
     if (group is not None) and (group not in adata.obs[groupby].cat.categories):
-        raise ValueError('Please specify a group from the `.obs` category over which the density was calculated.')
+        raise ValueError('Please specify a group from the `.obs` category over which the density '
+                         'was calculated.')
 
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
         raise ValueError('Densities should be scaled between 0 and 1.')
@@ -751,10 +753,17 @@ def embedding_density(
     adata_vis = adata.copy()
     adata_vis.obs['Density'] = dens_values
 
-    # colour transformation is not really working! Probably need to layer the plots...
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cmap.set_over('black')
     cmap.set_under('lightgray')
     
+    # Ensure title is blank as default
+    if 'title' not in kwargs:
+        title=""
+    else:
+        title = kwargs.pop('title')
+
     # Plot the graph
-    return plot_scatter(adata_vis, basis, components=components, color='Density', color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax, vmin=vmin, save=save, **kwargs)
+    return plot_scatter(adata_vis, basis, components=components, color='Density',
+                        color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                        vmin=vmin, save=save, title=title, **kwargs)
