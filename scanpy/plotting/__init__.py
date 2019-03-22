@@ -9,6 +9,7 @@ from ._tools import dpt_timeseries, dpt_groups_pseudotime
 from ._tools import rank_genes_groups, rank_genes_groups_violin
 from ._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_genes_groups_stacked_violin, rank_genes_groups_matrixplot, rank_genes_groups_tracksplot
 from ._tools import sim
+from ._tools import embedding_density
 
 from ._rcmod import set_rcParams_scanpy, set_rcParams_defaults
 from . import palettes
@@ -117,4 +118,10 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    :toctree: .
 
    pl.sim
+
+**Density Plotting**
+.. autosummary::
+   :toctree: .
+
+   pl.embedding_density
 """
