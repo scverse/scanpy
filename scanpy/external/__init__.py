@@ -54,6 +54,7 @@ Embeddings
    :toctree: .
 
    tl.phate
+   tl.palantir
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,6 +81,7 @@ Plotting: PL
    :toctree: .
 
    pl.phate
+   tl.palantir
 
 
 Exporting

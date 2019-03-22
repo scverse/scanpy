@@ -4,7 +4,7 @@
 from .. import logging as logg
 
 
-def phenograph( data,
+def phenograph( adata,
                 k=30,
                 directed=False,
                 prune=False,
@@ -19,7 +19,7 @@ def phenograph( data,
         PhenoGraph clustering [Levine15]_.
 
 
-        :param data:     Numpy ndarray of data to cluster,
+        :param adata:    Numpy ndarray of data to cluster,
                          or sparse matrix of k-nearest neighbor graph
                          If ndarray, n-by-d array of n cells in d dimensions
                          If sparse matrix, n-by-n adjacency matrix
@@ -62,14 +62,43 @@ def phenograph( data,
         Example
         -------
         
+        >>> import scanpy.external as sce
         >>> import scanpy.api as sc
         >>> import numpy as np
+        >>> import pandas as pd
+        
+        Assume adata is your annotated data which has the normalized data.
 
-        >>> # Cluster and cluster centrolds
+        Then do PCA:
+        
+        >>> sc.tl.pca(adata, n_comps = 100)
+        
+        Compute phenograph clusters:
+        
+        >>> result = sce.tl.phenograph(adata.obsm['X_pca'], k = 30)
+        
+        Embed the phenograph result into adata as a *categorical* variable (this helps in plotting):
+        
+        >>> adata.obs['pheno'] = pd.Categorical(result[0])
+        
+        Check by typing "adata" and you should see under obs a key called 'pheno'.
+        
+        Now to show phenograph on tSNE (for example):
+        
+        Compute tSNE:
+        
+        >>> sc.tl.tsne(adata, random_state = 7)
+        
+        Plot phenograph clusters on tSNE:
+        
+        >>> sc.pl.tsne(adata, color = ['pheno'], s = 100, palette = sc.pl.palettes.vega_20_scanpy, legend_fontsize = 10)
+        
+        Cluster and cluster centroids for input Numpy ndarray
+        
         >>> df = np.random.rand(1000,40)
         >>> df.shape
         (1000, 40)
-        >>> communities, graph, Q = sc.tl.phenograph(df, k=50)
+        >>> result = sce.tl.phenograph(df, k=50)
         Finding 50 nearest neighbors using minkowski metric and 'auto' algorithm
         Neighbors computed in 0.16141605377197266 seconds
         Jaccard graph constructed in 0.7866239547729492 seconds
@@ -79,6 +108,13 @@ def phenograph( data,
         After 2 runs, maximum modularity is Q = 0.235874
         Louvain completed 22 runs in 1.5609488487243652 seconds
         PhenoGraph complete in 2.9466471672058105 seconds
+        
+        New results can be pushed into adata object:
+        
+        >>> dframe = pd.DataFrame(data=df, columns=range(df.shape[1]),index=range(df.shape[0]) )
+        >>> adata = sc.AnnData( X=dframe, obs=dframe, var=dframe)
+        >>> adata.obs['pheno'] = pd.Categorical(result[0])
+        
 
     """
     logg.info('PhenoGraph clustering', r=True)
@@ -91,7 +127,7 @@ def phenograph( data,
             'pip3 install git+https://github.com/jacoblevine/phenograph.git')
 
     communities, graph, Q = phenograph.cluster(
-                                        data=data,
+                                        data=adata,
                                         k=k,
                                         directed=directed,
                                         prune=prune,

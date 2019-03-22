@@ -2083,7 +2083,9 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
         width = corr_matrix_height + dendrogram_width
     else:
         width, height = figsize
+        corr_matrix_height = height - colorbar_height
 
+        
     fig = pl.figure(figsize=(width, height))
     # layout with 2 rows and 2  columns:
     # row 1: dendrogram + correlation matrix
