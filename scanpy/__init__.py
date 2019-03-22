@@ -24,8 +24,7 @@ __email__ = ', '.join([
 __version__ = get_versions()['version']
 
 check_versions()
-annotate_doc_types(sys.modules[__name__], 'scanpy')
-del get_versions, sys, check_versions, annotate_doc_types
+del get_versions, check_versions
 
 # the actual API
 from . import tools as tl
@@ -38,3 +37,8 @@ from anndata import read_h5ad, read_csv, read_excel, read_hdf, read_loom, read_m
 from .readwrite import read, read_10x_h5, read_10x_mtx, write
 from .neighbors import Neighbors
 from .settings import set_figure_params
+
+# has to be done at the end, after everything has been imported
+annotate_doc_types(sys.modules[__name__], 'scanpy')
+del sys, annotate_doc_types
+

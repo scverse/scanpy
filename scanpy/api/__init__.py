@@ -39,9 +39,11 @@ __doc__ = """\
 Global API (deprecated)
 =======================
 
-.. deprecated:: 1.3.7
+.. warning::
 
-   Use the top level module instead: `import scanpy as sc`.
+    .. deprecated:: 1.3.7
+
+       Use the top level module instead: `import scanpy as sc`.
 
 For the deprecated high-level API documented on this page, use `import scanpy.api as sc`.
 
@@ -143,6 +145,7 @@ Clustering and trajectory inference
    tl.louvain
    tl.dpt
    tl.paga
+   tl.dendrogram
 
 Marker genes
 ~~~~~~~~~~~~
@@ -151,6 +154,7 @@ Marker genes
    :toctree: .
 
    tl.rank_genes_groups
+   tl.filter_rank_genes_groups
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~

@@ -3,89 +3,96 @@
 
 
 doc_adata_color_etc = """\
-adata : :class:`~anndata.AnnData`
+adata
     Annotated data matrix.
-color : string or list of strings, optional (default: `None`)
+color
     Keys for annotations of observations/cells or variables/genes, e.g.,
     `'ann1'` or `['ann1', 'ann2']`.
-gene_symbols : string, optional (default: `None`)
-    Key for field in .var that stores gene symbols if you do not want to use 
-    .var_names.
-use_raw : `bool`, optional (default: `None`)
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
+use_raw
     Use `.raw` attribute of `adata` for coloring with gene expression. If
     `None`, uses `.raw` if present.\
 """
 
 
 doc_edges_arrows = """\
-edges : `bool`, optional (default: `False`)
+edges
     Show edges.
-edges_width : `float`, optional (default: 0.1)
+edges_width
     Width of edges.
-edges_color : matplotlib color, optional (default: 'grey')
-    Color of edges.
-arrows : `bool`, optional (default: `False`)
-    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).\
+edges_color : matplotlib color(s), optional (default: 'grey')
+    Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
+arrows
+    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
+arrows_kwds
+    Passed to :func:`~matplotlib.axes.Axes.quiver`\
 """
 
 
 doc_scatter_bulk = """\
-sort_order : `bool`, optional (default: `True`)
+sort_order
     For continuous annotations used as color parameter, plot data points
     with higher values on top of others.
-groups : `str`, optional (default: `all groups`)
+groups
     Restrict to a few categories in categorical observation annotation.
-components : `str` or list of `str`, optional (default: '1,2')
+    The default is not to restrict to any groups.
+components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
 projection : {'2d', '3d'}, optional (default: '2d')
     Projection of plot.
-legend_loc : `str`, optional (default: 'right margin')
+legend_loc
     Location of legend, either 'on data', 'right margin' or valid keywords for
     `matplotlib.legend`.
-legend_fontsize : `int`, optional (default: `None`)
+legend_fontsize
     Legend font size.
 legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
     Legend font weight. Defaults to 'bold' if `legend_loc == 'on data'`,
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
-size : `float` (default: `None`)
+size
     Point size. If `None`, is automatically computed.
-color_map : `matplotlib.colors.Colormap` or `str`, optional (default: None)
+color_map
     Color map to use for continous variables. Anything that works for `cmap`
     argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
     `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
-palette : `str`, list of `str`, or `Cycler` optional (default: `None`)
+palette
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid `matplotlib.pyplot.colormap` name like `'Set2'` or `'tab20'`, a list
     of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a Cycler object. If
     `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
     variable already has colors stored in `adata.uns["{var}_colors"]`. If
     provided, values of `adata.uns["{var}_colors"]` will be set by this palette.
-frameon : `bool`, optional (default: `None`)
+frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.api.tl.set_figure_params`, defaults to `True`.
-ncols : `int` (default: 4)
+ncols
     Number of panels per row.
-wspace : `float` (default: 0.1)
+wspace
     Adjust the width of the space between multiple panels.
-hspace : `float` (default: 0.25)
+hspace
     Adjust the height of the space between multiple panels.
-title : `str` or list of `str`, optional (default: `None`)
-    Provide title for panels either as, e.g. `['title1', 'title2', ...]`.
+title
+    Provide title for panels either as string or list of strings,
+    e.g. `['title1', 'title2', ...]`.
 kwargs : further keyword arguments, optional
-    Arguments to pass to `matplotlib.pyplot.scatter`, for instance: the maximum
-    and minimum values (e.g. `vmin=-2, vmax=5`).\
+    Arguments to pass to :func:`matplotlib.pyplot.scatter`,
+    for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).
+return_fig
+    Return the matplotlib figure.\
 """
 
 
 doc_show_save_ax = """\
-show : `bool`, optional (default: `None`)
+show
      Show the plot, do not return axis.
-save : `bool` or `str`, optional (default: `None`)
+save
     If `True` or a `str`, save the figure. A string is appended to the default
     filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
-ax : `matplotlib.Axes`, optional (default: `None`)
+ax
     A matplotlib axes object. Only works if plotting a single component.\
 """
 
@@ -108,13 +115,15 @@ num_categories : `int`, optional (default: `7`)
 figsize : (`float`, `float`), optional (default: `None`)
     Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
     Format is (width, height)
-dendrogram: `bool` If True, hierarchical clustering between the `groupby` categories is
-    computed and a dendrogram is plotted. `groupby` categories are reordered according to
-    the dendrogram order. If groups of `var_names` (see next arguments) are set and those groups correspond
-    to the `groupby` categories, those groups are also reordered. The 'pearson' method
-    is used to compute the pairwise correlation between categories using all var_names in
-    `raw` if `use_raw` is None, otherwise all adata.var_names are used. The linkage method
-    used is `complete`.
+dendrogram: `bool` or `str`, optional (default, `False`)
+    If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering 
+    between the `groupby` categories is added. The dendrogram information is computed
+    using :ref:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+    the function is called with default parameters.
+gene_symbols : string, optional (default: `None`)
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    refer to the index column of the `.var` DataFrame. Setting this option allows
+    alternative names to be used.
 var_group_positions :  list of `tuples`.
     Use this parameter to highlight groups of `var_names`.
     This will draw a 'bracket' or a color block between the given start and end positions. If the

@@ -48,6 +48,16 @@ def test_heatmap():
                   num_categories=4, figsize=(4.5, 5), show=False)
     save_and_compare_images('master_heatmap2')
 
+    # test var/obs standardization and layer
+    adata.layers['test'] = -1 * adata.X.copy()
+    sc.pl.heatmap(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  standard_scale='var', layer='test')
+    save_and_compare_images('master_heatmap_std_scale_var', tolerance=15)
+
+    sc.pl.heatmap(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  standard_scale='obs')
+    save_and_compare_images('master_heatmap_std_scale_obs', tolerance=15)
+
 
 def test_dotplot():
     adata = sc.datasets.krumsiek11()
@@ -71,6 +81,15 @@ def test_dotplot():
                   figsize=(7, 2.5), dendrogram=True, show=False)
     save_and_compare_images('master_dotplot3', tolerance=15)
 
+    # test var/group standardization smallest_dot
+    sc.pl.dotplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  standard_scale='var', smallest_dot=40)
+    save_and_compare_images('master_dotplot_std_scale_var', tolerance=15)
+
+    sc.pl.dotplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  standard_scale='group', smallest_dot=10)
+    save_and_compare_images('master_dotplot_std_scale_group', tolerance=15)
+
 
 def test_matrixplot():
     adata = sc.datasets.krumsiek11()
@@ -80,6 +99,16 @@ def test_matrixplot():
     # test swap_axes
     sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False, swap_axes=True)
     save_and_compare_images('master_matrixplot_swap_axes', tolerance=15)
+
+    # test var/group standardization and layer
+    adata.layers['test'] = -1 * adata.X.copy()
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True,
+                     show=False, standard_scale='var', layer='test', cmap='Blues_r')
+    save_and_compare_images('master_matrixplot_std_scale_var', tolerance=15)
+
+    sc.pl.matrixplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True,
+                     show=False, standard_scale='group', swap_axes=True)
+    save_and_compare_images('master_matrixplot_std_scale_group', tolerance=15)
 
     # test matrixplot numeric column and alternative cmap
     adata.obs['Gata2'] = adata.X[:, 0]
@@ -117,6 +146,18 @@ def test_violin():
     save_and_compare_images('master_violin_multi_panel', tolerance=40)
 
 
+def test_dendrogram():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.dendrogram(pbmc, 'bulk_labels')
+    save_and_compare_images('dendrogram', tolerance=10)
+
+
+def test_correlation():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.correlation_matrix(pbmc, 'bulk_labels')
+    save_and_compare_images('correlation', tolerance=15)
+
+
 def test_rank_genes_groups():
     pbmc = sc.datasets.pbmc68k_reduced()
     tolerance = 15
@@ -138,12 +179,12 @@ def test_rank_genes_groups():
 
     # test ranked genes using heatmap (swap_axes=True show_gene_labels=False)
     sc.pl.rank_genes_groups_heatmap(pbmc, n_genes=20, swap_axes=True, use_raw=False,
-                                    show_gene_labels=False, show=False)
+                                    show_gene_labels=False, show=False, vmin=-3, vmax=3, cmap='bwr')
     save_and_compare_images('master_ranked_genes_heatmap_swap_axes', tolerance=tolerance)
 
     # test ranked genes using stacked violin plots
     sc.pl.rank_genes_groups_stacked_violin(pbmc, n_genes=3, show=False)
-    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+    save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=20)
 
     # test ranked genes using dotplot
     sc.pl.rank_genes_groups_dotplot(pbmc, n_genes=4, show=False)
@@ -169,6 +210,35 @@ def test_rank_genes_groups():
     # sc.pl.rank_genes_groups_violin(pbmc, groups=pbmc.obs.bulk_labels.cat.categories[0], n_genes=5,
     #                                jitter=False, strip=False, show=False)
     # save_and_compare_images('master_ranked_genes_stacked_violin', tolerance=tolerance)
+
+
+def test_rank_genes_symbols():
+    adata = sc.datasets.krumsiek11()
+
+    # add a 'symbols' column
+    adata.var['symbols'] = adata.var.index.map(lambda x: "symbol_{}".format(x))
+    symbols = ["symbol_{}".format(x) for x in adata.var_names]
+    sc.pl.heatmap(adata, symbols, 'cell_type', use_raw=False, show=False, dendrogram=True,
+                  gene_symbols='symbols')
+    save_and_compare_images('master_heatmap_gene_symbols')
+
+    sc.pl.dotplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                  gene_symbols='symbols')
+
+    save_and_compare_images('master_dotplot_gene_symbols', tolerance=15)
+
+    sc.pl.matrixplot(adata, symbols, 'cell_type', use_raw=False, dendrogram=True, show=False,
+                     gene_symbols='symbols')
+
+    save_and_compare_images('master_matrixplot_gene_symbols', tolerance=15)
+
+    sc.pl.stacked_violin(adata, symbols, 'cell_type', use_raw=False, color='blue', show=False,
+                         gene_symbols='symbols')
+    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=20)
+
+    sc.pl.tracksplot(adata, symbols, 'cell_type', dendrogram=True, use_raw=False,
+                     gene_symbols='symbols')
+    save_and_compare_images('master_tracksplot_gene_symbols')
 
 
 def test_scatterplots():
@@ -209,7 +279,7 @@ def test_scatterplots():
     # test edges = True
     sc.pp.neighbors(pbmc)
     sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
-    save_and_compare_images('master_umap_with_edges', tolerance=20)
+    save_and_compare_images('master_umap_with_edges', tolerance=35)
 
     # test diffmap
     # sc.tl.diffmap(pbmc)

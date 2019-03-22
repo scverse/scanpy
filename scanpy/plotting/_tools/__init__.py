@@ -2,15 +2,18 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
-from matplotlib import rcParams
+from matplotlib import rcParams, cm, colors
+from anndata import AnnData
+from typing import Union, Optional
 
 from .. import _utils as utils
-from ...utils import doc_params
+from ...utils import doc_params, sanitize_anndata
 from ... import logging as logg
 from .._anndata import scatter, ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .._docs import doc_scatter_bulk, doc_show_save_ax
-from .scatterplots import pca
+from .scatterplots import pca, plot_scatter
+from matplotlib.colors import Colormap
 
 # ------------------------------------------------------------------------------
 # PCA
@@ -285,13 +288,23 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
     group_names = (adata.uns[key]['names'].dtype.names
                    if groups is None else groups)
 
-    # make a list of tuples containing the index for the start gene and the
-    # end gene that should be labelled
-    group_positions = [(x, x + n_genes - 1) for x in range(0, n_genes * len(group_names), n_genes)]
+    gene_names = []
+    start = 0
+    group_positions = []
+    group_names_valid = []
+    for group in group_names:
+        # get all genes that are 'not-nan'
+        genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
+        if len(genes_list) == 0:
+            logg.warn("No genes found for group {}".format(group))
+            continue
+        gene_names.extend(genes_list)
+        end = start + len(genes_list)
+        group_positions.append((start, end -1))
+        group_names_valid.append(group)
+        start = end
 
-    # sum(list, []) is used to flatten the gene list
-    gene_names = sum([list(adata.uns[key]['names'][x][:n_genes]) for x in group_names], [])
-
+    group_names = group_names_valid
     if plot_type == 'dotplot':
         from .._anndata import dotplot
         dotplot(adata, gene_names, groupby, var_group_labels=group_names,
@@ -623,3 +636,134 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
                    highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
                    xlabel='index (arbitrary order)')
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
+
+
+@doc_params(show_save_ax=doc_show_save_ax)
+def embedding_density(
+        adata: AnnData,
+        basis: str,
+        key: str,
+        group: Optional[str] = None,
+        color_map: Union[Colormap, str] = 'YlOrRd',
+        bg_dotsize: Optional[int] = 80,
+        fg_dotsize:  Optional[int] = 180,
+        vmax:  Optional[int] = 1,
+        vmin:  Optional[int] = 0,
+        save: Union[bool, str, None] = None,
+        **kwargs):
+    """Plot the density of cells in an embedding (per condition)
+
+    Plots the gaussian kernel density estimates (over condition) from the
+    `sc.tl.embedding_density()` output.
+
+    This function was written by Sophie Tritschler and implemented into
+    Scanpy by Malte Luecken.
+    
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        The annotated data matrix.
+    basis : `str`
+        The embedding over which the density was calculated. This embedded
+        representation should be found in `adata.obsm['X_[basis]']``.
+    key : `str`
+        Name of the `.obs` covariate that contains the density estimates
+    group : `str`, optional (default: `None`)
+        The category in the categorical observation annotation to be plotted.
+        For example, 'G1' in the cell cycle 'phase' covariate.
+    color_map : Union[`Colormap`, `str`] (default: `YlOrRd`)
+        Matplolib color map to use for density plotting.
+    bg_dotsize : `int`, optional (default: `80`)
+        Dot size for background data points not in the `group`.
+    fg_dotsize : `int`, optional (default: `180`)
+        Dot size for foreground data points in the `group`.
+    vmax : `int`, optional (default: `1`)
+        Density that corresponds to color bar maximum.
+    vmin : `int`, optional (default: `0`)
+        Density that corresponds to color bar minimum.
+    {show_save_ax}
+
+    Examples
+    --------
+    >>> adata = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.umap(adata)
+    >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='G1')
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    ...                         group='S')
+    """
+    sanitize_anndata(adata)
+    
+    # Test user inputs
+    basis = basis.lower()
+
+    if basis == 'fa':
+        basis = 'draw_graph_fa'
+
+    if 'X_'+basis not in adata.obsm_keys():
+        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. '
+                         'Compute the embedding first.'.format(basis))
+
+    if key not in adata.obs:
+        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
+
+    if key+'_params' not in adata.uns:
+        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
+
+    if 'components' in kwargs:
+        logg.warn('Components were specified, but will be ignored. Only the '
+                  'components used to calculate the density can be plotted.')
+        del kwargs['components']
+
+    components = adata.uns[key+'_params']['components']
+    groupby = adata.uns[key+'_params']['covariate']
+
+    if (group is None) and (groupby is not None):
+        raise ValueError('Densities were calculated over an `.obs` covariate. '
+                         'Please specify a group from this covariate to plot.')
+
+    if (group is not None) and (group not in adata.obs[groupby].cat.categories):
+        raise ValueError('Please specify a group from the `.obs` category over which the density '
+                         'was calculated.')
+
+    if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
+        raise ValueError('Densities should be scaled between 0 and 1.')
+    
+    # Define plotting data
+    dens_values = -np.ones(adata.n_obs)
+    dot_sizes = np.ones(adata.n_obs)*bg_dotsize
+
+    if group is not None:
+        group_mask = (adata.obs[groupby] == group)
+        dens_values[group_mask] = adata.obs[key][group_mask]
+        dot_sizes[group_mask] = np.ones(sum(group_mask))*fg_dotsize
+
+    else:
+        dens_values = adata.obs[key]
+        dot_sizes = np.ones(adata.n_obs)*fg_dotsize
+
+    # Make the color map
+    if isinstance(color_map, str):
+        cmap = cm.get_cmap(color_map)
+    else:
+        cmap = color_map
+
+    #norm = colors.Normalize(vmin=-1, vmax=1)
+    adata_vis = adata.copy()
+    adata_vis.obs['Density'] = dens_values
+
+    norm = colors.Normalize(vmin=vmin, vmax=vmax)
+    cmap.set_over('black')
+    cmap.set_under('lightgray')
+    
+    # Ensure title is blank as default
+    if 'title' not in kwargs:
+        title=""
+    else:
+        title = kwargs.pop('title')
+
+    # Plot the graph
+    return plot_scatter(adata_vis, basis, components=components, color='Density',
+                        color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                        vmin=vmin, save=save, title=title, **kwargs)

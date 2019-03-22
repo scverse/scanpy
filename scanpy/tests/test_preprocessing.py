@@ -88,7 +88,7 @@ def test_regress_out_categorical():
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
 
-def test_downsample_counts():
+def test_downsample_counts_per_cell():
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * \
         np.random.binomial(1, .3, (1000, 100))
@@ -97,7 +97,7 @@ def test_downsample_counts():
     adata_csc = AnnData(X=sp.csc_matrix(X))
     for adata, replace in product((adata_dense, adata_csr, adata_csc), (True, False)):
         initial_totals = np.ravel(adata.X.sum(axis=1))
-        adata = sc.pp.downsample_counts(adata, target_counts=TARGET, replace=replace, copy=True)
+        adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGET, replace=replace, copy=True)
         new_totals = np.ravel(adata.X.sum(axis=1))
         if sp.issparse(adata.X):
             assert all(adata.X.toarray()[X == 0] == 0)
@@ -109,3 +109,27 @@ def test_downsample_counts():
                     == new_totals[initial_totals <= TARGET])
         if not replace:
             assert np.all(X >= adata.X)
+
+def test_downsample_total_counts():
+    X = np.random.randint(0, 100, (1000, 100)) * \
+        np.random.binomial(1, .3, (1000, 100))
+    total = X.sum()
+    target = np.floor_divide(total, 10)
+    adata_dense = AnnData(X=X.copy())
+    adata_csr = AnnData(X=sp.csr_matrix(X))
+    for adata, replace in product((adata_dense, adata_csr), (True, False)):
+        initial_totals = np.ravel(adata.X.sum(axis=1))
+        adata = sc.pp.downsample_counts(adata, total_counts=target, replace=replace, copy=True)
+        new_totals = np.ravel(adata.X.sum(axis=1))
+        if sp.issparse(adata.X):
+            assert all(adata.X.toarray()[X == 0] == 0)
+        else:
+            assert all(adata.X[X == 0] == 0)
+        assert adata.X.sum() == target
+        assert all(initial_totals >= new_totals)
+        if not replace:
+            assert np.all(X >= adata.X)
+    for adata in (adata_dense, adata_csr): # When specified total is greater than current total
+        adata = sc.pp.downsample_counts(adata, total_counts=total + 10, replace=False, copy=True)
+        assert (adata.X == X).all()
+

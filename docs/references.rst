@@ -164,6 +164,10 @@ References
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
 
+.. [Setty18] Setty *et al.* (2018),
+   *Palantir characterizes cell fate continuities in human hematopoiesis*
+   `bioRxiv <https://doi.org/10.1101/385328>`__.
+   
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
@@ -196,8 +200,9 @@ References
    *Scanpy: large-scale single-cell gene expression data analysis*,
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
-.. [Wolf17i] Wolf *et al.* (2017),
-   *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+.. [Wolf17i] Wolf *et al.* (2019),
+   *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__, 
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),

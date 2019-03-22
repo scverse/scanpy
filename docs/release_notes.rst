@@ -6,6 +6,13 @@
 .. role:: smaller
 .. role:: noteversion
 
+On master :small:`March 21, 2019`
+-------------------------------------
+
+- :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False`, see `here <https://github.com/theislab/scanpy/pull/474>`__ :smaller:`thanks to I Virshup`
+- :func:`~scanpy.pl.density_embedding` allows plot cell densities on embeddings, see `here <https://github.com/theislab/scanpy/pull/543>`__ :smaller:`thanks to M Luecken`
+- :func:`~scanpy.external.palantir` interfaces Palantir [Setty18]_, see `here <https://github.com/theislab/scanpy/pull/493>`__ :smaller:`thanks to A Mousa`
+
 
 Version 1.4 :small:`February 5, 2019`
 -------------------------------------

@@ -75,10 +75,10 @@ def bbknn(adata, batch_key='batch', save_knn=False, copy=False, **kwargs):
     -------
     The `adata` with the batch-corrected graph.
     """
+    params = locals()  # Has to be first
+    kwargs = params.pop('kwargs')
     try:
         from bbknn import bbknn
     except ImportError:
         raise ImportError('Please install bbknn: `pip install bbknn`.')
-    params = locals()
-    kwargs = params.pop('kwargs')
     return bbknn(**params, **kwargs)

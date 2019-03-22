@@ -1,4 +1,4 @@
-from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot
+from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot, dendrogram, correlation_matrix
 
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
@@ -9,9 +9,10 @@ from ._tools import dpt_timeseries, dpt_groups_pseudotime
 from ._tools import rank_genes_groups, rank_genes_groups_violin
 from ._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_genes_groups_stacked_violin, rank_genes_groups_matrixplot, rank_genes_groups_tracksplot
 from ._tools import sim
+from ._tools import embedding_density
 
 from ._rcmod import set_rcParams_scanpy, set_rcParams_defaults
-from . import palettes 
+from . import palettes
 
 from ._utils import matrix
 from ._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
@@ -117,4 +118,10 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    :toctree: .
 
    pl.sim
+
+**Density Plotting**
+.. autosummary::
+   :toctree: .
+
+   pl.embedding_density
 """

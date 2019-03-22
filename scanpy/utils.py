@@ -5,7 +5,7 @@ import sys
 import inspect
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial
+from functools import partial, wraps
 from types import ModuleType
 from typing import Union, Callable, Optional
 
@@ -16,12 +16,12 @@ from textwrap import dedent
 from pandas.api.types import CategoricalDtype
 
 from . import settings, logging as logg
+import warnings
 
 EPS = 1e-15
 
 
 def check_versions():
-    import warnings
     from distutils.version import LooseVersion
 
     if sys.version_info < (3, 0):
@@ -36,7 +36,6 @@ def check_versions():
             raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
                               'Run `pip install anndata -U --no-deps`.'
                               .format(__version__, anndata.__version__))
-
 
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
@@ -60,6 +59,40 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
         '{} : {}'.format(line, type_doc(line)) if line.strip() in sig.parameters else line
         for line in doc.split('\n')
     )
+
+
+def deprecated_arg_names(arg_mapping):
+    """
+    Decorator which marks a functions keyword arguments as deprecated. It will
+    result in a warning being emitted when the deprecated keyword argument is
+    used, and the function being called with the new argument.
+
+    Parameters
+    ----------
+    arg_mapping : dict[str, str]
+        Mapping from deprecated argument name to current argument name.
+    """
+    def decorator(func):
+        @wraps(func)
+        def func_wrapper(*args, **kwargs):
+            warnings.simplefilter(
+                'always', DeprecationWarning)  # turn off filter
+            for old, new in arg_mapping.items():
+                if old in kwargs:
+                    warnings.warn(
+                        "Keyword argument '{0}' has been deprecated in favour "
+                        "of '{1}'. '{0}' will be removed in a future version."
+                        .format(old, new),
+                        category=DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    val = kwargs.pop(old)
+                    kwargs[new] = val
+            warnings.simplefilter(
+                'default', DeprecationWarning)  # reset filter
+            return func(*args, **kwargs)
+        return func_wrapper
+    return decorator
 
 
 def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
@@ -775,7 +808,6 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     --------
     http://stackoverflow.com/questions/22373927/get-traceback-of-warnings
     """
-    import warnings
     import traceback
     traceback.print_stack()
     log = file if hasattr(file, 'write') else sys.stderr
