@@ -928,7 +928,7 @@ def downsample_counts(
     """
     Downsample counts from count matrix.
 
-    If `counts_per_cell` in specified, each cell will downsampled. If
+    If `counts_per_cell` is specified, each cell will downsampled. If
     `total_counts` is specified, expression matrix will be downsampled to
     contain at most `total_counts`.
 
