@@ -201,7 +201,7 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         gamma_star.append(gamma)
         delta_star.append(delta)
 
-    sys.stdout.write("Adjusting data\n")
+    logg.info("Adjusting data\n")
     bayesdata = s_data
     gamma_star = np.array(gamma_star)
     delta_star = np.array(delta_star)
