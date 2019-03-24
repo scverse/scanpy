@@ -40,8 +40,9 @@ def design_mat(model, batch_levels):
     other_cols = [c for i, c in enumerate(model.columns)]
     factor_matrix = model[other_cols]
     design = pd.concat((design, factor_matrix), axis=1)
-    logg.info("Found {} categorical variables:".format(len(other_cols)))
-    logg.info("\t" + ", ".join(other_cols) + '\n')
+    if other_cols:
+        logg.info("Found {} categorical variables:".format(len(other_cols)))
+        logg.info("\t" + ", ".join(other_cols) + '\n')
 
     return design
 
