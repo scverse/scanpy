@@ -7,6 +7,7 @@ from numpy import linalg as la
 from scipy.sparse import issparse
 from anndata import AnnData
 
+from .. import logging as logg
 
 def design_mat(model, batch_levels):
     """
@@ -35,12 +36,13 @@ def design_mat(model, batch_levels):
         return_type="dataframe",
     )
     model = model.drop(["batch"], axis=1)
-    sys.stderr.write("found %i batches\n" % design.shape[1])
+    logg.info("Found {} batches\n".format(design.shape[1]))
     other_cols = [c for i, c in enumerate(model.columns)]
     factor_matrix = model[other_cols]
     design = pd.concat((design, factor_matrix), axis=1)
-    sys.stderr.write("found %i categorical variables:" % len(other_cols))
-    sys.stderr.write("\t" + ", ".join(other_cols) + '\n')
+    if other_cols:
+        logg.info("Found {} categorical variables:".format(len(other_cols)))
+        logg.info("\t" + ", ".join(other_cols) + '\n')
 
     return design
 
@@ -157,11 +159,11 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator
-    sys.stderr.write("Standardizing Data across genes.\n")
+    logg.info("Standardizing Data across genes.\n")
     s_data, design, var_pooled, stand_mean = stand_data(model, data)
 
     # fitting the parameters on the standardized data
-    sys.stderr.write("Fitting L/S model and finding priors\n")
+    logg.info("Fitting L/S model and finding priors\n")
     batch_design = design[design.columns[:n_batch]]
     # first estimate of the additive batch effect
     gamma_hat = np.dot(np.dot(la.inv(np.dot(batch_design.T, batch_design)), batch_design.T), s_data.T)
@@ -178,7 +180,7 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     a_prior = list(map(aprior, delta_hat))
     b_prior = list(map(bprior, delta_hat))
 
-    sys.stderr.write("Finding parametric adjustments\n")
+    logg.info("Finding parametric adjustments\n")
     # gamma star and delta star will be our empirical bayes (EB) estimators
     # for the additive and multiplicative batch effect per batch and cell
     gamma_star, delta_star = [], []
@@ -199,7 +201,7 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         gamma_star.append(gamma)
         delta_star.append(delta)
 
-    sys.stdout.write("Adjusting data\n")
+    logg.info("Adjusting data\n")
     bayesdata = s_data
     gamma_star = np.array(gamma_star)
     delta_star = np.array(delta_star)
