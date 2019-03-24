@@ -59,10 +59,6 @@ def rank_genes_groups(
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
-    log_transformed : `bool`, optional (default: `True`)
-        Specifies if a log transformation was applied the matrix in adata. Reverses this tranformation to calculate
-        fold-changes only. All differential testing is still performed on log-transformed data if present. Assumes a
-        log1p transformation.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
@@ -84,6 +80,7 @@ def rank_genes_groups(
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
+        Note: this is an approximation calculated from mean-log values.
     pvals : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         p-values.
     pvals_adj : structured `np.ndarray` (`.uns['rank_genes_groups']`)
@@ -180,13 +177,10 @@ def rank_genes_groups(
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
-        if log_transformed:
-            means_FC = np.zeros((n_groups, n_genes))
-            vars_FC = np.zeros((n_groups, n_genes))
+
         for imask, mask in enumerate(groups_masks):
             means[imask], vars[imask] = _get_mean_var(X[mask])
-            if log_transformed:
-                means_FC[imask], vars_FC[imask] = _get_mean_var(np.expm1(X[mask])) # for fold-change only
+
         # test each either against the union of all other groups or against a
         # specific group
         for igroup in range(n_groups):
@@ -196,8 +190,6 @@ def rank_genes_groups(
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
             mean_rest, var_rest = _get_mean_var(X[mask_rest])
-            if log_transformed:
-                mean_rest_FC, var_rest_FC = _get_mean_var(np.expm1(X[mask_rest])) # for fold-change only
             ns_group = ns[igroup]  # number of observations in group
             if method == 't-test': ns_rest = np.where(mask_rest)[0].size
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
@@ -208,12 +200,8 @@ def rank_genes_groups(
             scores = (means[igroup] - mean_rest) / denominator #Welch t-test
             scores[np.isnan(scores)] = 0
             # Fold change
-            if log_transformed:
-                mean_rest_FC[mean_rest_FC == 0] = 1e-9  # set 0s to small value
-                foldchanges = (means_FC[igroup] + 1e-9) / mean_rest_FC
-            else:
-                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
-                foldchanges = (means[igroup] + 1e-9) / mean_rest
+            foldchanges = (np.expm1(means[igroup]) + 1e-9) / (np.expm1(mean_rest) + 1e-9) #add small value to remove 0's
+
             #Get p-values
             denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
                 (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
@@ -278,21 +266,13 @@ def rank_genes_groups(
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
-                # Transform the matrix to raw counts for fold-change calculation only
-                if log_transformed:
-                    means[imask], vars[imask] = _get_mean_var(np.expm1(X[mask]))  # for fold-change only
-                else:
-                    means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change only
+                means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change only
 
                 if imask == ireference: continue
 
                 else: mask_rest = groups_masks[ireference]
                 ns_rest = np.where(mask_rest)[0].size
-                # Transform the matrix to raw counts for fold-change calculation only
-                if log_transformed:
-                    mean_rest, var_rest = _get_mean_var(np.expm1(X[mask_rest]))  # for fold-change only
-                else:
-                    mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change only
+                mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change only
 
                 if ns_rest <= 25 or ns[imask] <= 25:
                     logg.hint('Few observations in a group for '
@@ -342,8 +322,8 @@ def rank_genes_groups(
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
-                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
-                foldchanges = (means[imask] + 1e-9) / mean_rest
+                # Fold change
+                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -384,13 +364,8 @@ def rank_genes_groups(
 
             for imask, mask in enumerate(groups_masks):
                 mask_rest = ~groups_masks[imask]
-                # Transform the matrix to raw counts for fold-change calculation only
-                if log_transformed:
-                    means[imask], vars[imask] = _get_mean_var(np.expm1(X[mask]))  # for fold-change
-                    mean_rest, var_rest = _get_mean_var(np.expm1(X[mask_rest]))  # for fold-change
-                else:
-                    means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
-                    mean_rest, var_rest = _get_mean_var(X[mask_rest])  # for fold-change
+                means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
+                mean_rest, var_rest = _get_mean_var(X[mask_rest])  # for fold-change
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
@@ -403,8 +378,8 @@ def rank_genes_groups(
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
-                mean_rest[mean_rest == 0] = 1e-9  # set 0s to small value
-                foldchanges = (means[imask] + 1e-9) / mean_rest
+                # Fold change
+                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[imask, partition])[::-1]
