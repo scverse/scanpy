@@ -66,7 +66,7 @@ def embedding_density(
     key_added
         Name of the `.obs` covariate that will be added with the density
         estimates.
-    components00:00.000
+    components
         The embedding dimensions over which the density should be calculated.
         This is limited to two components.
 
@@ -165,7 +165,3 @@ def embedding_density(
               '    \'{}_params\', parameter (adata.uns)'.format(density_covariate, density_covariate))
 
     return None
-    
-
-
-    
