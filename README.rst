@@ -1,4 +1,4 @@
-|PyPI| |bioconda| |Docs| |Build Status|
+|PyPI| |bioconda| |Docs| |Build Status| |Gitter|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
    :target: https://pypi.org/project/scanpy
@@ -8,9 +8,13 @@
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
+.. |Gitter| image:: https://badges.gitter.im/scanpyhelp/community.svg
+   :target: https://gitter.im/scanpyhelp/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 ..
    .. |Coverage| image:: https://codecov.io/gh/theislab/scanpy/branch/master/graph/badge.svg
       :target: https://codecov.io/gh/theislab/scanpy
+      
+
 
 Scanpy – Single-Cell Analysis in Python
 =======================================
