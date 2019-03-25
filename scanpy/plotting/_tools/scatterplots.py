@@ -33,6 +33,7 @@ def plot_scatter(
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
+    layer: Optional[str] = None,
     projection: str = '2d',
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
@@ -145,7 +146,7 @@ def plot_scatter(
     #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
     for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
         color_vector, categorical = _get_color_values(
-            adata, value_to_plot,
+            adata, value_to_plot, layer=layer,
             groups=groups, palette=palette,
             use_raw=use_raw, gene_symbols=gene_symbols,
         )
@@ -646,7 +647,8 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
     adata.uns[value_to_plot + '_colors'] = palette[:length]
 
 
-def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False, gene_symbols=None):
+def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False,
+                      gene_symbols=None, layer=None):
     """
     Returns the value or color associated to each data point.
     For categorical data, the return value is list of colors taken
@@ -708,26 +710,28 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                 color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
         else:
             color_vector = adata.obs[value_to_plot].values
-    elif gene_symbols in adata.var.columns:
-        if value_to_plot not in adata.var[gene_symbols].values:
-            logg.error("Gene symbol {!r} not found in given gene_symbols "
-                       "column: {!r}".format(value_to_plot, gene_symbols))
-            return
-        gene_id = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
-        if use_raw:
-            color_vector = adata.raw[:, gene_id].X
-        else:
-            color_vector = adata[:, gene_id].X
-    # check if value to plot is in var
-    elif use_raw is False and value_to_plot in adata.var_names:
-        color_vector = adata[:, value_to_plot].X
-
-    elif use_raw is True and value_to_plot in adata.raw.var_names:
-        color_vector = adata.raw[:, value_to_plot].X
+    # when value_to_plot is not in adata.obs
     else:
-        raise ValueError("The passed `color` {} is not a valid observation annotation "
-                         "or variable name. Valid observation annotation keys are: {}"
-                         .format(value_to_plot, adata.obs.columns))
+        if gene_symbols is not None and gene_symbols in adata.var.columns:
+            if value_to_plot not in adata.var[gene_symbols].values:
+                logg.error("Gene symbol {!r} not found in given gene_symbols "
+                           "column: {!r}".format(value_to_plot, gene_symbols))
+                return
+            value_to_plot = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
+        if layer is not None and value_to_plot in adata.var_names:
+            if layer not in adata.layers.keys():
+                raise KeyError('Selected layer: {} is not in the layers list. The list of '
+                               'valid layers is: {}'.format(layer, adata.layers.keys()))
+            color_vector = adata[:, value_to_plot].layers[layer]
+        elif use_raw and value_to_plot in adata.var_names:
+            color_vector = adata.raw[:, value_to_plot].X
+        elif value_to_plot in adata.raw.var_names:
+            color_vector = adata[:, value_to_plot].X
+
+        else:
+            raise ValueError("The passed `color` {} is not a valid observation annotation "
+                             "or variable name. Valid observation annotation keys are: {}"
+                             .format(value_to_plot, adata.obs.columns))
 
     return color_vector, categorical
 

@@ -14,7 +14,12 @@ gene_symbols
     alternative names to be used.
 use_raw
     Use `.raw` attribute of `adata` for coloring with gene expression. If
-    `None`, uses `.raw` if present.\
+    `None`, uses `.raw` if present.
+layer
+    Name of the AnnData object layer that wants to be plotted. By default 
+    adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted. 
+    If `layer` is set to a valid layer name, then the layer is plotted. `layer` 
+    takes precedence over `use_raw`.\
 """
 
 
