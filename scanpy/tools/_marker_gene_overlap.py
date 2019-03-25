@@ -7,8 +7,9 @@ from anndata import AnnData
 
 
 def _calc_overlap_count(
-        markers1: dict,
-        markers2: dict):
+    markers1: dict,
+    markers2: dict,
+):
     """Calculate overlap count between the values of two dictionaries
 
     Note: dict values must be sets
@@ -25,8 +26,9 @@ def _calc_overlap_count(
 
 
 def _calc_overlap_coef(
-        markers1: dict,
-        markers2: dict):
+    markers1: dict,
+    markers2: dict,
+):
     """Calculate overlap coefficient between the values of two dictionaries
 
     Note: dict values must be sets
@@ -44,8 +46,9 @@ def _calc_overlap_coef(
 
 
 def _calc_jaccard(
-        markers1: dict,
-        markers2: dict):
+    markers1: dict,
+    markers2: dict,
+):
     """Calculate jaccard index between the values of two dictionaries
 
     Note: dict values must be sets
@@ -63,12 +66,14 @@ def _calc_jaccard(
 
 
 def marker_gene_overlap(
-        adata: AnnData,
-        key: str,
-        reference_markers: dict,
-        method: Optional[str] = 'overlap',
-        normalize: Union[str, None] = None,
-        key_added: Optional[str] = 'marker_gene_overlap'):
+    adata: AnnData,
+    key: str,
+    reference_markers: dict,
+    *,
+    method: Optional[str] = 'overlap',
+    normalize: Union[str, None] = None,
+    key_added: Optional[str] = 'marker_gene_overlap'
+):
     """Calculate an overlap score between data-deriven marker genes and provided markers
 
     Marker gene overlap scores can be quoted as overlap counts, overlap coefficients, or
