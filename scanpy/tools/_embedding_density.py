@@ -33,7 +33,7 @@ def _calc_density(
 def embedding_density(
     adata: AnnData,
     basis: str,
-    *,00:00.000
+    *,
     groupby: Optional[str] = None,
     key_added: Optional[str] = None,
     components: Union[str, Sequence[str]] = None
