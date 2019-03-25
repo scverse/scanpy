@@ -640,17 +640,19 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def embedding_density(
-        adata: AnnData,
-        basis: str,
-        key: str,
-        group: Optional[str] = None,
-        color_map: Union[Colormap, str] = 'YlOrRd',
-        bg_dotsize: Optional[int] = 80,
-        fg_dotsize:  Optional[int] = 180,
-        vmax:  Optional[int] = 1,
-        vmin:  Optional[int] = 0,
-        save: Union[bool, str, None] = None,
-        **kwargs):
+    adata: AnnData,
+    basis: str,
+    key: str,
+    *,
+    group: Optional[str] = None,
+    color_map: Union[Colormap, str] = 'YlOrRd',
+    bg_dotsize: Optional[int] = 80,
+    fg_dotsize:  Optional[int] = 180,
+    vmax:  Optional[int] = 1,
+    vmin:  Optional[int] = 0,
+    save: Union[bool, str, None] = None,
+    **kwargs
+):
     """Plot the density of cells in an embedding (per condition)
 
     Plots the gaussian kernel density estimates (over condition) from the
@@ -661,25 +663,25 @@ def embedding_density(
     
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    basis : `str`
+    basis
         The embedding over which the density was calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
-    key : `str`
+    key
         Name of the `.obs` covariate that contains the density estimates
-    group : `str`, optional (default: `None`)
+    group
         The category in the categorical observation annotation to be plotted.
         For example, 'G1' in the cell cycle 'phase' covariate.
-    color_map : Union[`Colormap`, `str`] (default: `YlOrRd`)
+    color_map
         Matplolib color map to use for density plotting.
-    bg_dotsize : `int`, optional (default: `80`)
+    bg_dotsize
         Dot size for background data points not in the `group`.
-    fg_dotsize : `int`, optional (default: `180`)
+    fg_dotsize
         Dot size for foreground data points in the `group`.
-    vmax : `int`, optional (default: `1`)
+    vmax
         Density that corresponds to color bar maximum.
-    vmin : `int`, optional (default: `0`)
+    vmin
         Density that corresponds to color bar minimum.
     {show_save_ax}
 
