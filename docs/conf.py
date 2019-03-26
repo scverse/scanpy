@@ -93,8 +93,10 @@ html_context = dict(
     github_repo='scanpy',     # Repo name
     github_version='master',  # Version
     conf_py_path='/docs/',    # Path in the checkout to the docs root
+    logo_only=True,           # Only show the logo
 )
 html_static_path = ['_static']
+html_logo = '_static/img/Scanpy_Logo_RGB.png'
 
 
 def setup(app):
