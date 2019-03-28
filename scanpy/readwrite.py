@@ -3,11 +3,13 @@
 
 import os
 import sys
+import time
+from pathlib import Path, PurePath
+from typing import Union
+
 import numpy as np
 import pandas as pd
-import time
 import tables
-from pathlib import Path
 import anndata
 from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
@@ -437,13 +439,12 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
             logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return read_hdf(filename, sheet)
     # read other file types
-    filename_cache = (settings.cachedir + filename.lstrip(
-        './').replace('/', '-').replace('.' + ext, '.h5ad'))
-    if filename_cache.endswith('.gz'): filename_cache = filename_cache[:-3]
-    if filename_cache.endswith('.bz2'): filename_cache = filename_cache[:-4]
-    if cache and os.path.exists(filename_cache):
-        logg.info('... reading from cache file', filename_cache)
-        adata = read_h5ad(filename_cache, backed=False)
+    path_cache = Path(settings.cachedir) / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
+    if path_cache.suffix in {'.gz', '.bz2'}:
+        path_cache = path_cache.with_suffix('')
+    if cache and path_cache.is_file():
+        logg.info('... reading from cache file', path_cache)
+        adata = read_h5ad(path_cache, backed=False)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
@@ -477,11 +478,26 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
         if cache:
             logg.info('... writing an', settings.file_format_data,
                       'cache file to speedup reading next time')
-            if not os.path.exists(os.path.dirname(filename_cache)):
-                os.makedirs(os.path.dirname(filename_cache))
+            if not path_cache.parent.is_dir():
+                path_cache.parent.mkdir(parents=True, exist_ok=True)
             # write for faster reading when calling the next time
-            adata.write(filename_cache)
+            adata.write(path_cache)
     return adata
+
+
+def _slugify(path: Union[str, PurePath]) -> str:
+    """Make a path into a filename."""
+    if not isinstance(path, PurePath):
+        path = PurePath(path)
+    parts = list(path.parts)
+    if parts[0] == '/':
+        parts.pop(0)
+    elif len(parts[0]) == 3 and parts[0][1:] == ':\\':
+        parts[0] = parts[0][0]  # C:\ → C
+    filename = '-'.join(parts)
+    assert '/' not in filename, filename
+    assert not filename[1:].startswith(':'), filename
+    return filename
 
 
 def _read_softgz(filename):
