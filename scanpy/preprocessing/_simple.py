@@ -279,17 +279,23 @@ def log1p(
         Returns or updates ``data``, depending on ``copy``.
     """
     if copy:
-        data = data.copy()
+        if not isinstance(data, AnnData):
+            data = data.astype(np.floating)
+        else:
+            data = data.copy()
+    elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
+        raise TypeError("Cannot perform inplace log1p on integer array")
 
     def _log1p(X):
         if issparse(X):
             np.log1p(X.data, out=X.data)
         else:
             np.log1p(X, out=X)
-
         return X
 
     if isinstance(data, AnnData):
+        if not np.issubdtype(data.X.dtype, np.floating):
+            data.X = data.X.astype(np.float32)
         if chunked:
             for chunk, start, end in data.chunked_X(chunk_size):
                  data.X[start:end] = _log1p(chunk)
@@ -922,7 +928,7 @@ def downsample_counts(
     """
     Downsample counts from count matrix.
 
-    If `counts_per_cell` in specified, each cell will downsampled. If
+    If `counts_per_cell` is specified, each cell will downsampled. If
     `total_counts` is specified, expression matrix will be downsampled to
     contain at most `total_counts`.
 

@@ -17,7 +17,7 @@ from .. import logging as logg
 from . import _utils as utils
 from ._utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from ._docs import doc_scatter_bulk, doc_show_save_ax, doc_common_plot_args
+from ._docs import doc_scatter_temp, doc_show_save_ax, doc_common_plot_args
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -26,7 +26,7 @@ VALID_LEGENDLOCS = {
 }
 
 
-@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(scatter_temp=doc_scatter_temp, show_save_ax=doc_show_save_ax)
 def scatter(
         adata,
         x=None,
@@ -78,7 +78,7 @@ def scatter(
         `(layers, layers, layers)`.
     basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
         String that denotes a plotting tool that computed coordinates.
-    {scatter_bulk}
+    {scatter_temp}
     {show_save_ax}
 
     Returns

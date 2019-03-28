@@ -4,14 +4,15 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 from anndata import AnnData
-from typing import Union, Sequence
+from typing import Union, Optional, Sequence
 
 from .. import logging as logg
 from ..utils import sanitize_anndata
 
 def _calc_density(
-        x: np.ndarray,
-        y: np.ndarray):
+    x: np.ndarray,
+    y: np.ndarray,
+):
     """
     Function to calculate the density of cells in an embedding.
     """    
@@ -30,11 +31,13 @@ def _calc_density(
 
 
 def embedding_density(
-        adata: AnnData,
-        basis: str,
-        groupby: Union[str, None] = None,
-        key_added: Union[str, None] = None,
-        components: Union[str, Sequence[str]] = None):
+    adata: AnnData,
+    basis: str,
+    *,
+    groupby: Optional[str] = None,
+    key_added: Optional[str] = None,
+    components: Union[str, Sequence[str]] = None
+):
     """Calculate the density of cells in an embedding (per condition)
 
     Gaussian kernel density estimation is used to calculate the density of
@@ -51,19 +54,19 @@ def embedding_density(
     
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    basis : `str`
+    basis
         The embedding over which the density will be calculated. This embedded
         representation should be found in `adata.obsm['X_[basis]']``.
-    groupby : `str`, optional (default: `None`)
+    groupby
         Keys for categorical observation/cell annotation for which densities
         are calculated per category. Columns with up to ten categories are
         accepted.
-    key_added : `str`, optional (default: `None`)
+    key_added
         Name of the `.obs` covariate that will be added with the density
         estimates.
-    components : Union[`str`, `Sequence[str]`]
+    components
         The embedding dimensions over which the density should be calculated.
         This is limited to two components.
 
@@ -162,7 +165,3 @@ def embedding_density(
               '    \'{}_params\', parameter (adata.uns)'.format(density_covariate, density_covariate))
 
     return None
-    
-
-
-    
