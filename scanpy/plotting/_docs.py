@@ -90,7 +90,7 @@ return_fig
 """
 
 # temporarily add a special variable doc_scatter_temp for pl.scatter
-# because currently pl.scatter does not accept ncols wsoace and hspace
+# because currently pl.scatter does not accept ncols, wspace, and hspace
 doc_scatter_temp = _doc_scatter_common + _doc_scatter_meta
 doc_scatter_bulk = _doc_scatter_common + _doc_scatter_panels + _doc_scatter_meta
 
