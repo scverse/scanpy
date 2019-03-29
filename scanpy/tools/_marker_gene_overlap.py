@@ -245,7 +245,7 @@ def marker_gene_overlap(
     # Could add an 'enrich' option here (fisher's exact test or hypergeometric 
     # test), but that would require knowledge of the size of the space from which
     # the reference marker gene set was taken. This is at best approximately 
-    # known.
+    # known. 
     
     # Create a pandas dataframe with the results
     marker_groups = list(reference_markers.keys())
