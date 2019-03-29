@@ -115,10 +115,15 @@ def marker_gene_overlap(
     Examples
     --------
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> 
-    >>> 
-    >>> 
-    >>> 
+    >>> sc.pp.pca(adata, svd_solver='arpack')
+    >>> sc.pp.neighbors(adata)
+    >>> sc.tl.louvain(adata)
+    >>> sc.tl.rank_genes_groups(adata, groupby='louvain')
+    >>> marker_genes = {'CD4 T cells':{'IL7R'},'CD14+ Monocytes':{'CD14', 'LYZ'}, 
+    ...                 'B cells':{'MS4A1'}, 'CD8 T cells':{'CD8A'}, 'NK cells':{'GNLY', 'NKG7'},
+    ...                 'FCGR3A+ Monocytes':{'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 
+    ...                 'CST3'}, 'Megakaryocytes':{'PPBP'}}
+    >>> sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
     if key not in adata.uns:
@@ -179,11 +184,6 @@ def marker_gene_overlap(
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
         else:
             data_markers[group] = set(adata.uns[key]['names'][group])
-
-    # To do:
-    # - allow to only use the top X marker genes calculated
-    # - allow using a p-value cutoff for the genes
-    # - test behaviour when 0 genes are selected by thresholds
 
     # Find overlaps
     if method == 'overlap_count':
