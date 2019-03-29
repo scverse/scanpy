@@ -69,7 +69,7 @@ def _calc_jaccard(
 
 def marker_gene_overlap(
     adata: AnnData,
-    reference_markers: Dict[str, str],
+    reference_markers: Dict[str, set],
     *,
     key: str = 'rank_genes_groups',
     method: Optional[str] = 'overlap_count',
