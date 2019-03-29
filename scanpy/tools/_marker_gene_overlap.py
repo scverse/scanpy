@@ -40,7 +40,7 @@ def _calc_overlap_coef(
     j=0
     for marker_group in markers1:
         tmp = [len(markers2[i].intersection(markers1[marker_group]))/
-               min(len(markers2[i]), len(markers1[marker_group])) for i in markers2.keys()]
+               max(min(len(markers2[i]), len(markers1[marker_group])),1) for i in markers2.keys()]
         overlap_coef[j,:] = tmp
         j += 1
 
@@ -74,6 +74,8 @@ def marker_gene_overlap(
     key: str = 'rank_genes_groups',
     method: Optional[str] = 'overlap_count',
     normalize: Union[str, None] = None,
+    top_n_markers: Optional[int] = None,
+    adj_pval_threshold: Optional[float] = None,
     key_added: Optional[str] = 'marker_gene_overlap'
 ):
     """Calculate an overlap score between data-deriven marker genes and provided markers
@@ -97,6 +99,10 @@ def marker_gene_overlap(
     method : `{'overlap_count', 'overlap_coef', 'jaccard'}`, optional (default: `overlap_count`)
 
     normalize : `{'reference', 'data', 'None'}`, optional (default: `None`)
+
+    top_n_markers
+       This is prioritized over `adj_pval_threshold`
+    adj_pval_threshold
 
     key_added
 
@@ -135,18 +141,49 @@ def marker_gene_overlap(
     if not np.all([isinstance(val, set) for val in reference_markers.values()]):
         raise ValueError('Please ensure that `reference_markers` contains sets '
                          'of markers as values.')
-        
+
+    if adj_pval_threshold is not None:
+        if adj_pval_threshold < 0:
+            logg.warn('`adj_pval_threshold` was set below 0. '
+                      'Threshold will be set to 0.')
+            adj_pval_threshold = 0
+
+        if adj_pval_threshold > 1:
+            logg.warn('`adj_pval_threshold` was set above 1. '
+                      'Threshold will be set to 1.')
+            adj_pval_threshold = 1
+
+        if top_n_markers is not None:
+            logg.warn('Both `adj_pval_threshold` and `top_n_markers` is set. '
+                      '`adj_pval_threshold` will be ignored.')
+            
+    if top_n_markers is not None:
+        if top_n_markers < 1:
+            logg.warn('`top_n_markers` was set below 1. '
+                      '`top_n_markers` will be set to 1.')
+            top_n_markers = 1
+            
 
     # Get data-derived marker genes in a dictionary of sets
     data_markers = dict()
     cluster_ids = adata.uns[key]['names'].dtype.names
 
     for group in cluster_ids:
-        data_markers[group] = set(adata.uns[key]['names'][group])
+
+        if top_n_markers is not None:
+            n_genes = min(top_n_markers, adata.uns[key]['names'].shape[0])
+            data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
+
+        elif adj_pval_threshold is not None:
+            n_genes = (adata.uns[key]['pvals_adj'][group] < adj_pval_threshold).sum()
+            data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
+        else:
+            data_markers[group] = set(adata.uns[key]['names'][group])
 
     # To do:
     # - allow to only use the top X marker genes calculated
     # - allow using a p-value cutoff for the genes
+    # - test behaviour when 0 genes are selected by thresholds
 
     # Find overlaps
     if method == 'overlap_count':
