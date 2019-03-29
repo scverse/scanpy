@@ -138,8 +138,8 @@ def marker_gene_overlap(
     >>> marker_genes = {'CD4 T cells':{'IL7R'},'CD14+ Monocytes':{'CD14', 
     ...                 'LYZ'}, 'B cells':{'MS4A1'}, 'CD8 T cells':{'CD8A'}, 
     ...                 'NK cells':{'GNLY', 'NKG7'}, 'FCGR3A+ Monocytes':
-    ...                 {'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 'CST3'},
-    ...                 'Megakaryocytes':{'PPBP'}}
+    ...                 {'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 
+    ...                 'CST3'}, 'Megakaryocytes':{'PPBP'}}
     >>> sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
@@ -206,9 +206,9 @@ def marker_gene_overlap(
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
 
             if n_genes == 0:
-                logg.warn('No marker genes passed the significance threshold of {} '
-                          'for cluster {!r}.'.format(adj_pval_threshold, group))
-
+                logg.warn('No marker genes passed the significance threshold of'
+                          ' {} for cluster {!r}.'.format(adj_pval_threshold, 
+                                                        group))
         else:
             data_markers[group] = set(adata.uns[key]['names'][group])
 
@@ -233,14 +233,16 @@ def marker_gene_overlap(
         marker_match = _calc_jaccard(reference_markers, data_markers)
         
     #Note:
-    # Could add an 'enrich' option here (fisher's exact test or hypergeometric test),
-    # but that would require knowledge of the size of the space from which the reference
-    # marker gene set was taken. This is at best approximately known.
-        
+    # Could add an 'enrich' option here (fisher's exact test or hypergeometric 
+    # test), but that would require knowledge of the size of the space from which
+    # the reference marker gene set was taken. This is at best approximately 
+    # known.
+    
     # Create a pandas dataframe with the results
     marker_groups = list(reference_markers.keys())
     clusters = list(cluster_ids)
-    marker_matching_df = pd.DataFrame(marker_match, index=marker_groups, columns=clusters)
+    marker_matching_df = pd.DataFrame(marker_match, index=marker_groups, 
+                                      columns=clusters)
 
     # Store the results
     adata.uns[key_added] = marker_matching_df
