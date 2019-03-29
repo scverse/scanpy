@@ -261,7 +261,5 @@ def marker_gene_overlap(
                   '    \'{}\', marker overlap scores (adata.uns)'
                   .format(key_added))
 
-        return None
-
     else:
         return marker_matching_df
