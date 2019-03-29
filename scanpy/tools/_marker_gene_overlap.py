@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 from anndata import AnnData
 
 from .. import logging as logg
@@ -69,7 +69,7 @@ def _calc_jaccard(
 
 def marker_gene_overlap(
     adata: AnnData,
-    reference_markers: dict,
+    reference_markers: Dict[str, str],
     *,
     key: str = 'rank_genes_groups',
     method: Optional[str] = 'overlap_count',
@@ -250,8 +250,9 @@ def marker_gene_overlap(
 
     # Store the results
     if inplace: 
-        raise NotImplementedError('Writing Pandas dataframes to h5ad is in '
-                                  'development.')
+        raise NotImplementedError('Writing Pandas dataframes to h5ad is '
+                                  'currently under development. Please '
+                                  'use `inplace=False in the meanwhile.')
         #adata.uns[key_added] = marker_matching_df
 
         #logg.hint('added\n'
