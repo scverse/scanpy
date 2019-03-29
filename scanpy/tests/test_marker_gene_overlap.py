@@ -12,17 +12,17 @@ def test_marker_overlap():
 
     marker_genes = {'type 1':{'a','b','c'}, 'type 2':{'a','f','g'}}
 
-    sc.tl.marker_gene_overlap(test_data, marker_genes, key_added='test1')
-    sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='reference', key_added='test2')
-    sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef', key_added='test3')
-    sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard', key_added='test4')
-    sc.tl.marker_gene_overlap(test_data, marker_genes, top_n_markers=2, key_added='test5')
-    sc.tl.marker_gene_overlap(test_data, marker_genes, adj_pval_threshold=0.01, key_added='test6')
+    t1 = sc.tl.marker_gene_overlap(test_data, marker_genes)
+    t2 = sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='reference')
+    t3 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef')
+    t4 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard')
+    t5 = sc.tl.marker_gene_overlap(test_data, marker_genes, top_n_markers=2)
+    t6 = sc.tl.marker_gene_overlap(test_data, marker_genes, adj_pval_threshold=0.01)
 
-    assert test_data.uns['test1'].iloc[1,1] == 3.0
-    assert test_data.uns['test1'].iloc[0,0] == 3.0
-    assert test_data.uns['test2'].iloc[0,0] == 0.75
-    assert test_data.uns['test3'].iloc[0,0] == 1.0
-    assert test_data.uns['test4'].iloc[0,0] == 0.6
-    assert test_data.uns['test5'].iloc[0,0] == 2
-    assert test_data.uns['test6'].iloc[0,0] == 1.0
+    assert t1.iloc[1,1] == 3.0
+    assert t1.iloc[0,0] == 3.0
+    assert t2.iloc[0,0] == 0.75
+    assert t3.iloc[0,0] == 1.0
+    assert t4.iloc[0,0] == 0.6
+    assert t5.iloc[0,0] == 2
+    assert t6.iloc[0,0] == 1.0

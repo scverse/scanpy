@@ -76,7 +76,8 @@ def marker_gene_overlap(
     normalize: Union[str, None] = None,
     top_n_markers: Optional[int] = None,
     adj_pval_threshold: Optional[float] = None,
-    key_added: Optional[str] = 'marker_gene_overlap'
+    key_added: Optional[str] = 'marker_gene_overlap',
+    inplace: Optional[bool] = False
 ):
     """Calculate an overlap score between data-deriven marker genes and 
     provided markers
@@ -114,18 +115,21 @@ def marker_gene_overlap(
         calculated marker genes are used. If `adj_pval_threshold` is set along
         with `top_n_markers`, then `adj_pval_threshold` is ignored.
     adj_pval_threshold
-        A significance threshold on the adjusted p-values to select marker genes.
-        This can only be used when adjusted p-values are calculated by 
+        A significance threshold on the adjusted p-values to select marker 
+        genes. This can only be used when adjusted p-values are calculated by 
         `sc.tl.rank_genes_groups()`. If `adj_pval_threshold` is set along with 
         `top_n_markers`, then `adj_pval_threshold` is ignored.
     key_added
         Name of the `.uns` field that will contain the marker overlap scores.
+    inplace
+        Return a marker gene dataframe or store it inplace in `adata.uns`.
 
 
     Returns
     -------
-    Updates `adata.uns` with an additional field specified by the `key_added`
-    parameter (default = 'marker_gene_overlap'). 
+    A pandas dataframe with the marker gene overlap scores if `inplace=False`.
+    For `inplace=True` `adata.uns` is updated with an additional field 
+    specified by the `key_added` parameter (default = 'marker_gene_overlap'). 
 
 
     Examples
@@ -140,7 +144,7 @@ def marker_gene_overlap(
     ...                 'NK cells':{'GNLY', 'NKG7'}, 'FCGR3A+ Monocytes':
     ...                 {'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 
     ...                 'CST3'}, 'Megakaryocytes':{'PPBP'}}
-    >>> sc.tl.marker_gene_overlap(adata, marker_genes)
+    >>> marker_matches = sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
     if key not in adata.uns:
@@ -245,9 +249,14 @@ def marker_gene_overlap(
                                       columns=clusters)
 
     # Store the results
-    adata.uns[key_added] = marker_matching_df
+    if inplace: 
+        raise NotImplementedError('Writing Pandas dataframes to h5ad is in '
+                                  'development.')
+        #adata.uns[key_added] = marker_matching_df
 
-    logg.hint('added\n'
-              '    \'{}\', marker overlap scores (adata.uns)'.format(key_added))
+        #logg.hint('added\n'
+        #          '    \'{}\', marker overlap scores (adata.uns)'
+        #          .format(key_added))
 
-    return None
+    else:
+        return marker_matching_df
