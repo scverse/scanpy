@@ -251,8 +251,8 @@ def marker_gene_overlap(
     # Store the results
     if inplace: 
         raise NotImplementedError('Writing Pandas dataframes to h5ad is '
-                                  'currently under development. Please '
-                                  'use `inplace=False in the meanwhile.')
+                                  'currently under development.\n'
+                                  'Please use `inplace=False in the meanwhile.')
         #adata.uns[key_added] = marker_matching_df
 
         #logg.hint('added\n'
