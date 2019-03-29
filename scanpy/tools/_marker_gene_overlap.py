@@ -147,6 +147,11 @@ def marker_gene_overlap(
     >>> marker_matches = sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
+    if inplace: 
+        raise NotImplementedError('Writing Pandas dataframes to h5ad is '
+                                  'currently under development.\n'
+                                  'Please use `inplace=False`.')
+
     if key not in adata.uns:
         raise ValueError('Could not find marker gene data. '
                          'Please run `sc.tl.rank_genes_groups()` first.')
@@ -250,14 +255,13 @@ def marker_gene_overlap(
 
     # Store the results
     if inplace: 
-        raise NotImplementedError('Writing Pandas dataframes to h5ad is '
-                                  'currently under development.\n'
-                                  'Please use `inplace=False` in the meanwhile.')
-        #adata.uns[key_added] = marker_matching_df
+        adata.uns[key_added] = marker_matching_df
 
-        #logg.hint('added\n'
-        #          '    \'{}\', marker overlap scores (adata.uns)'
-        #          .format(key_added))
+        logg.hint('added\n'
+                  '    \'{}\', marker overlap scores (adata.uns)'
+                  .format(key_added))
+
+        return None
 
     else:
         return marker_matching_df
