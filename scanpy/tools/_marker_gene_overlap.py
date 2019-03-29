@@ -78,11 +78,12 @@ def marker_gene_overlap(
     adj_pval_threshold: Optional[float] = None,
     key_added: Optional[str] = 'marker_gene_overlap'
 ):
-    """Calculate an overlap score between data-deriven marker genes and provided markers
+    """Calculate an overlap score between data-deriven marker genes and 
+    provided markers
 
-    Marker gene overlap scores can be quoted as overlap counts, overlap coefficients, or
-    jaccard indices. The method returns a pandas dataframe which can be used to annotate
-    clusters based on marker gene overlaps.
+    Marker gene overlap scores can be quoted as overlap counts, overlap 
+    coefficients, or jaccard indices. The method returns a pandas dataframe
+    which can be used to annotate clusters based on marker gene overlaps.
 
     This function was written by Malte Luecken.
 
@@ -91,26 +92,41 @@ def marker_gene_overlap(
     adata
         The annotated data matrix.
     reference_markers
-        A marker gene dictionary object. Keys should be strings with the cell identity name
-        and values are sets of strings which match format of `adata.var_name`.
+        A marker gene dictionary object. Keys should be strings with the 
+        cell identity name and values are sets of strings which match format
+        of `adata.var_name`.
     key
-        The key in `adata.uns` where the rank_genes_groups output is stored. This field
-        should contain a dictionary with a `numpy.recarray()` under the key 'names'.
-    method : `{'overlap_count', 'overlap_coef', 'jaccard'}`, optional (default: `overlap_count`)
-
+        The key in `adata.uns` where the rank_genes_groups output is stored.
+        By default this is `'rank_genes_groups'`.
+    method : `{'overlap_count', 'overlap_coef', 'jaccard'}`, optional 
+        (default: `overlap_count`)
+        Method to calculate marker gene overlap. `'overlap_count'` uses the
+        intersection of the gene set, `'overlap_coef'` uses the overlap 
+        coefficient, and `'jaccard'` uses the Jaccard index.
     normalize : `{'reference', 'data', 'None'}`, optional (default: `None`)
-
+        Normalization option for the marker gene overlap output. This parameter
+        can only be set when `method` is set to `'overlap_count'`. `'reference'`
+        row-normalizes the output so that overlap scores for each reference 
+        cluster add to 1. `'data'` column-normalizes the output so that overlap
+        scores for each data cluster add to 1.
     top_n_markers
-       This is prioritized over `adj_pval_threshold`
+        The number of top data-derived marker genes to use. By default all 
+        calculated marker genes are used. If `adj_pval_threshold` is set along
+        with `top_n_markers`, then `adj_pval_threshold` is ignored.
     adj_pval_threshold
-
+        A significance threshold on the adjusted p-values to select marker genes.
+        This can only be used when adjusted p-values are calculated by 
+        `sc.tl.rank_genes_groups()`. If `adj_pval_threshold` is set along with 
+        `top_n_markers`, then `adj_pval_threshold` is ignored.
     key_added
+        Name of the `.uns` field that will contain the marker overlap scores.
 
 
     Returns
     -------
     Updates `adata.uns` with an additional field specified by the `key_added`
     parameter (default = 'marker_gene_overlap'). 
+
 
     Examples
     --------
@@ -119,15 +135,17 @@ def marker_gene_overlap(
     >>> sc.pp.neighbors(adata)
     >>> sc.tl.louvain(adata)
     >>> sc.tl.rank_genes_groups(adata, groupby='louvain')
-    >>> marker_genes = {'CD4 T cells':{'IL7R'},'CD14+ Monocytes':{'CD14', 'LYZ'}, 
-    ...                 'B cells':{'MS4A1'}, 'CD8 T cells':{'CD8A'}, 'NK cells':{'GNLY', 'NKG7'},
-    ...                 'FCGR3A+ Monocytes':{'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 
-    ...                 'CST3'}, 'Megakaryocytes':{'PPBP'}}
+    >>> marker_genes = {'CD4 T cells':{'IL7R'},'CD14+ Monocytes':{'CD14', 
+    ...                 'LYZ'}, 'B cells':{'MS4A1'}, 'CD8 T cells':{'CD8A'}, 
+    ...                 'NK cells':{'GNLY', 'NKG7'}, 'FCGR3A+ Monocytes':
+    ...                 {'FCGR3A', 'MS4A7'}, 'Dendritic Cells':{'FCER1A', 'CST3'},
+    ...                 'Megakaryocytes':{'PPBP'}}
     >>> sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
     if key not in adata.uns:
-        raise ValueError()
+        raise ValueError('Could not find marker gene data. '
+                         'Please run `sc.tl.rank_genes_groups()` first.')
 
     avail_methods = {'overlap_count', 'overlap_coef', 'jaccard', 'enrich'}
     if method not in avail_methods:
@@ -148,6 +166,11 @@ def marker_gene_overlap(
                          'of markers as values.')
 
     if adj_pval_threshold is not None:
+        if 'pvals_adj' not in adata.uns[key]:
+            raise ValueError('Could not find adjusted p-value data. '
+                             'Please run `sc.tl.rank_genes_groups()` with a '
+                             'method that outputs adjusted p-values.')
+
         if adj_pval_threshold < 0:
             logg.warn('`adj_pval_threshold` was set below 0. '
                       'Threshold will be set to 0.')
@@ -168,7 +191,6 @@ def marker_gene_overlap(
                       '`top_n_markers` will be set to 1.')
             top_n_markers = 1
             
-
     # Get data-derived marker genes in a dictionary of sets
     data_markers = dict()
     cluster_ids = adata.uns[key]['names'].dtype.names
@@ -182,6 +204,11 @@ def marker_gene_overlap(
         elif adj_pval_threshold is not None:
             n_genes = (adata.uns[key]['pvals_adj'][group] < adj_pval_threshold).sum()
             data_markers[group] = set(adata.uns[key]['names'][group][:n_genes])
+
+            if n_genes == 0:
+                logg.warn('No marker genes passed the significance threshold of {} '
+                          'for cluster {!r}.'.format(adj_pval_threshold, group))
+
         else:
             data_markers[group] = set(adata.uns[key]['names'][group])
 
