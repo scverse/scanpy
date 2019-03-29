@@ -276,6 +276,12 @@ def test_scatterplots():
                title=['gene1', 'gene2'], show=False)
     save_and_compare_images('master_umap_gene_expr', tolerance=tolerance)
 
+    # test umap using layer
+    pbmc.layers['test'] = pbmc.X.copy() + 100
+    sc.pl.umap(pbmc, color=np.array(['LYZ', 'CD79A']), s=20, alpha=0.5, frameon=False,
+               title=['gene1', 'gene2'], layer='test', show=False, vmin=100)
+    save_and_compare_images('master_umap_layer', tolerance=tolerance)
+
     # test edges = True
     sc.pp.neighbors(pbmc)
     sc.pl.umap(pbmc, color='louvain', edges=True, edges_width=0.1, s=50, show=False)
