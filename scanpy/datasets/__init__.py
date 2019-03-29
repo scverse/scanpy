@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from .. import logging as logg
 import scanpy as sc
+from ._expression_atlas import expression_atlas
 
 
 def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):

@@ -1,5 +1,8 @@
 """Settings
 """
+from pathlib import Path
+
+DATASET_DIR = Path.home() / "scanpy_datasets"
 
 verbosity = 'warn'
 """Set global verbosity level.
