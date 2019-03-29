@@ -1,10 +1,12 @@
 """Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
 import numpy as np
+import pandas as pd
 
 from typing import Union, Optional
 from anndata import AnnData
 
+from .. import logging as logg
 
 def _calc_overlap_count(
     markers1: dict,
@@ -38,7 +40,7 @@ def _calc_overlap_coef(
     j=0
     for marker_group in markers1:
         tmp = [len(markers2[i].intersection(markers1[marker_group]))/
-               min(markers2[i], markers1[marker_group]) for i in markers2.keys()]
+               min(len(markers2[i]), len(markers1[marker_group])) for i in markers2.keys()]
         overlap_coef[j,:] = tmp
         j += 1
 
@@ -67,10 +69,10 @@ def _calc_jaccard(
 
 def marker_gene_overlap(
     adata: AnnData,
-    key: str,
     reference_markers: dict,
     *,
-    method: Optional[str] = 'overlap',
+    key: str = 'rank_genes_groups',
+    method: Optional[str] = 'overlap_count',
     normalize: Union[str, None] = None,
     key_added: Optional[str] = 'marker_gene_overlap'
 ):
@@ -84,18 +86,20 @@ def marker_gene_overlap(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    key : `str`, optional (default: `rank_genes_groups`)
+    reference_markers
+        A marker gene dictionary object. Keys should be strings with the cell identity name
+        and values are sets of strings which match format of `adata.var_name`.
+    key
         The key in `adata.uns` where the rank_genes_groups output is stored. This field
         should contain a dictionary with a `numpy.recarray()` under the key 'names'.
-    reference_markers : `dict`, optional (default: `None`)
-
-    key_added : `str`, optional (default: `None`)
-
     method : `{'overlap_count', 'overlap_coef', 'jaccard'}`, optional (default: `overlap_count`)
 
     normalize : `{'reference', 'data', 'None'}`, optional (default: `None`)
+
+    key_added
+
 
     Returns
     -------
@@ -151,10 +155,12 @@ def marker_gene_overlap(
         if normalize == 'reference':
             # Ensure rows sum to 1
             marker_match = marker_match/marker_match.sum(1)[:,np.newaxis]
+            marker_match = np.nan_to_num(marker_match)
 
-        elif noramlize == 'data':
+        elif normalize == 'data':
             #Ensure columns sum to 1
             marker_match = marker_match/marker_match.sum(0)
+            marker_match = np.nan_to_num(marker_match)
             
     elif method == 'overlap_coef':
         marker_match = _calc_overlap_coef(reference_markers, data_markers)
