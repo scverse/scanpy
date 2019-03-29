@@ -37,7 +37,8 @@ def louvain(
     of [Traag17]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
-    This requires to run :func:`~scanpy.api.pp.neighbors` first.
+    This requires having ran :func:`~scanpy.pp.neighbors` or :func:`~scanpy.external.pp.bbknn` first,
+    or explicitly passing a ``adjacency`` matrix.
 
     Parameters
     ----------
