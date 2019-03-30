@@ -175,72 +175,10 @@ def compute_neighbors_umap(
     """
     from umap.umap_ import nearest_neighbors
 
-    knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=None,
-                                                  metric='euclidean', metric_kwds={}, angular=False,
-                                                  verbose=False)
+    knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=None, metric='euclidean',
+                                                  metric_kwds={}, angular=False, verbose=False)
 
     return knn_indices, knn_dists
-
-
-def compute_connectivities_umap(knn_indices, knn_dists,
-        n_obs, n_neighbors, set_op_mix_ratio=1.0,
-        local_connectivity=1.0, bandwidth=1.0):
-    """This is from umap.fuzzy_simplicial_set [McInnes18]_.
-
-    Given a set of data X, a neighborhood size, and a measure of distance
-    compute the fuzzy simplicial set (here represented as a fuzzy graph in
-    the form of a sparse matrix) associated to the data. This is done by
-    locally approximating geodesic distance at each point, creating a fuzzy
-    simplicial set for each such point, and then combining all the local
-    fuzzy simplicial sets into a global one via a fuzzy union.
-    """
-    from .umap.umap_ import smooth_knn_dist
-
-    rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    sims = np.zeros((n_obs * n_neighbors), dtype=np.float64)
-    dists = np.zeros((n_obs * n_neighbors), dtype=np.float64)
-
-    sigmas, rhos = smooth_knn_dist(knn_dists, n_neighbors,
-                                   local_connectivity=local_connectivity)
-
-    for i in range(knn_indices.shape[0]):
-        for j in range(n_neighbors):
-            if knn_indices[i, j] == -1:
-                continue  # We didn't get the full knn for i
-            if knn_indices[i, j] == i:
-                sim = 0.0
-                dist = 0.0
-            elif knn_dists[i, j] - rhos[i] <= 0.0:
-                sim = 1.0
-                dist = knn_dists[i, j]
-            else:
-                sim = np.exp(-((knn_dists[i, j] - rhos[i]) / (sigmas[i] *
-                                                              bandwidth)))
-                dist = knn_dists[i, j]
-
-            rows[i * n_neighbors + j] = i
-            cols[i * n_neighbors + j] = knn_indices[i, j]
-            sims[i * n_neighbors + j] = sim
-            dists[i * n_neighbors + j] = dist
-
-    connectivities = coo_matrix((sims, (rows, cols)),
-                               shape=(n_obs, n_obs))
-    connectivities.eliminate_zeros()
-
-    distances = coo_matrix((dists, (rows, cols)),
-                           shape=(n_obs, n_obs))
-    distances.eliminate_zeros()
-
-    transpose = connectivities.transpose()
-
-    prod_matrix = connectivities.multiply(transpose)
-
-    connectivities = set_op_mix_ratio * (connectivities + transpose - prod_matrix) + \
-             (1.0 - set_op_mix_ratio) * prod_matrix
-
-    connectivities.eliminate_zeros()
-    return distances.tocsr(), connectivities.tocsr()
 
 
 def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -264,6 +202,32 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
     result = coo_matrix((vals, (rows, cols)),
                                       shape=(n_obs, n_obs))
     return result.tocsr()
+
+
+def compute_connectivities_umap(knn_indices, knn_dists,
+        n_obs, n_neighbors, set_op_mix_ratio=1.0,
+        local_connectivity=1.0, bandwidth=1.0):
+    """This is from umap.fuzzy_simplicial_set [McInnes18]_.
+
+    Given a set of data X, a neighborhood size, and a measure of distance
+    compute the fuzzy simplicial set (here represented as a fuzzy graph in
+    the form of a sparse matrix) associated to the data. This is done by
+    locally approximating geodesic distance at each point, creating a fuzzy
+    simplicial set for each such point, and then combining all the local
+    fuzzy simplicial sets into a global one via a fuzzy union.
+    """
+    from umap.umap_ import fuzzy_simplicial_set
+
+    X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
+    connectivities = fuzzy_simplicial_set(X, n_neighbors, None, None,
+                                          knn_indices=knn_indices, knn_dists=knn_dists,
+                                          set_op_mix_ratio=set_op_mix_ratio,
+                                          local_connectivity=local_connectivity,
+                                          bandwidth=bandwidth)
+    distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
+
+
+    return distances, connectivities.tocsr()
 
 
 def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
