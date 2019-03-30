@@ -14,6 +14,7 @@ def highly_variable_genes(
     n_top_genes=None,
     n_bins=20,
     flavor='seurat',
+    binning_method = 'equal_width',
     subset=False,
     inplace=True
 ):
@@ -57,6 +58,9 @@ def highly_variable_genes(
         Choose the flavor for computing normalized dispersion. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
+    binning_method : `{'equal_width', 'equal_frequency'}`, optional (default: 'equal_width')
+        Choose the binning method for the means. In `equal_width`, each bin covers the same width.
+        For `equal_frequency`, each bin has an equal number of genes. 
     subset : `bool`, optional (default: `False`)
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
@@ -107,7 +111,13 @@ def highly_variable_genes(
     df['mean'] = mean
     df['dispersion'] = dispersion
     if flavor == 'seurat':
-        df['mean_bin'] = pd.cut(df['mean'], bins=n_bins)
+        if binning_method == 'equal_width':
+            df['mean_bin'] = pd.cut(df['mean'], bins=n_bins)
+        elif binning_method == 'equal_frequency':
+            # be consistent with Seurat, even if qcut would also work
+            df['mean_bin'] = pd.qcut(df['mean'], q=n_bins)
+        else:
+            raise ValueError('`binning_method` needs to be "equal_width" or "equal_frequency"')
         disp_grouped = df.groupby('mean_bin')['dispersion']
         disp_mean_bin = disp_grouped.mean()
         disp_std_bin = disp_grouped.std(ddof=1)
@@ -139,7 +149,7 @@ def highly_variable_genes(
         from statsmodels import robust
         df['mean_bin'] = pd.cut(df['mean'], np.r_[
             -np.inf,
-            np.percentile(df['mean'], np.arange(10, 105, 5)),
+            np.percentile(df['mean'], np.linspace(10, 100, n_bins - 1)),
             np.inf
         ])
         disp_grouped = df.groupby('mean_bin')['dispersion']
