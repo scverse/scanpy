@@ -1,4 +1,3 @@
-from pathlib import Path
 from urllib.request import urlretrieve
 from zipfile import ZipFile
 
@@ -8,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 import anndata
-from ..settings import DATASET_DIR
+from .. import settings
 
 
 def _filter_boring(dataframe):
@@ -54,7 +53,7 @@ def download_experiment(accession):
     quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
     sampledata_path = "download?fileType=experiment-design&accessKey="
 
-    experiment_dir = DATASET_DIR / accession
+    experiment_dir = settings.dataset_dir / accession
     if not experiment_dir.is_dir():
         experiment_dir.mkdir()
 
@@ -115,40 +114,42 @@ def read_expression_from_archive(archive: ZipFile):
     return adata
 
 
-def expression_atlas(accession: str, filter_boring: bool = False):
+def expression_atlas(accession: str, *, filter_boring: bool = False):
     """
     Load a dataset from the `EBI Single Cell Expression Atlas`_.
 
     Params
     ------
     accession:
-        Dataset accession. Like E-GEOD-98816 or E-MTAB-4888.
+        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``.
     filter_boring:
         Whether boring labels in obs should be automatically removed.
 
+    Example
+    -------
+    >>> adata = sc.datasets.expression_atlas("E-MTAB-4888")
+
     .. _EBI Single Cell Expression Atlas: https://www.ebi.ac.uk/gxa/sc/experiments
     """
-    if not DATASET_DIR.is_dir():
+    if not settings.dataset_dir.is_dir():
         # Log here
-        DATASET_DIR.mkdir()
-    experiment_dir = DATASET_DIR / accession
+        settings.dataset_dir.mkdir()
+    experiment_dir = settings.dataset_dir / accession
     if (experiment_dir / f"{accession}.h5ad").is_file():
         adata = anndata.read(experiment_dir / f"{accession}.h5ad")
-        if filter_boring:
-            adata.obs = _filter_boring(adata.obs)
-        return adata
+    else:
+        download_experiment(accession)
 
-    download_experiment(accession)
+        print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
 
-    print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
+        with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
+            adata = read_expression_from_archive(f)
+        obs = pd.read_csv(
+            experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
+        )
 
-    with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
-        adata = read_expression_from_archive(f)
-
-    obs = pd.read_csv(experiment_dir / "experimental_design.tsv", sep="\t", index_col=0)
-
-    adata.obs[obs.columns] = obs
-    adata.write(experiment_dir / f"{accession}.h5ad", compression="gzip")
+        adata.obs[obs.columns] = obs
+        adata.write(experiment_dir / f"{accession}.h5ad", compression="gzip")
 
     if filter_boring:
         adata.obs = _filter_boring(adata.obs)

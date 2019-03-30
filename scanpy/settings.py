@@ -2,7 +2,7 @@
 """
 from pathlib import Path
 
-DATASET_DIR = Path.home() / "scanpy_datasets"
+dataset_dir = Path("./data")
 
 verbosity = 'warn'
 """Set global verbosity level.
