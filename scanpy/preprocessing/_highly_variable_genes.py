@@ -114,8 +114,7 @@ def highly_variable_genes(
         if binning_method == 'equal_width':
             df['mean_bin'] = pd.cut(df['mean'], bins=n_bins)
         elif binning_method == 'equal_frequency':
-            # be consistent with Seurat, even if qcut would also work
-            df['mean_bin'] = pd.qcut(df['mean'], q=n_bins)
+            df['mean_bin'] = pd.qcut(df['mean'], q=n_bins, duplicates='drop')
         else:
             raise ValueError('`binning_method` needs to be "equal_width" or "equal_frequency"')
         disp_grouped = df.groupby('mean_bin')['dispersion']
