@@ -225,7 +225,6 @@ def compute_connectivities_umap(knn_indices, knn_dists,
                                           local_connectivity=local_connectivity)
     distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
 
-
     return distances, connectivities.tocsr()
 
 
