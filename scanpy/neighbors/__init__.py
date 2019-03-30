@@ -206,7 +206,7 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
 
 def compute_connectivities_umap(knn_indices, knn_dists,
         n_obs, n_neighbors, set_op_mix_ratio=1.0,
-        local_connectivity=1.0, bandwidth=1.0):
+        local_connectivity=1.0):
     """This is from umap.fuzzy_simplicial_set [McInnes18]_.
 
     Given a set of data X, a neighborhood size, and a measure of distance
@@ -222,8 +222,7 @@ def compute_connectivities_umap(knn_indices, knn_dists,
     connectivities = fuzzy_simplicial_set(X, n_neighbors, None, None,
                                           knn_indices=knn_indices, knn_dists=knn_dists,
                                           set_op_mix_ratio=set_op_mix_ratio,
-                                          local_connectivity=local_connectivity,
-                                          bandwidth=bandwidth)
+                                          local_connectivity=local_connectivity)
     distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
 
 
