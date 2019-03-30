@@ -175,8 +175,8 @@ def compute_neighbors_umap(
     """
     from umap.umap_ import nearest_neighbors
 
-    knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=None, metric='euclidean',
-                                                  metric_kwds={}, angular=False, verbose=False)
+    knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=random_state, metric=metric,
+                                                  metric_kwds=metric_kwds, angular=angular, verbose=verbose)
 
     return knn_indices, knn_dists
 
