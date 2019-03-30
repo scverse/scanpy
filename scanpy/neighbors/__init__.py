@@ -173,7 +173,7 @@ def compute_neighbors_umap(
     -------
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
-    from from umap.umap_ import nearest_neighbors
+    from umap.umap_ import nearest_neighbors
 
     knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=None,
                                                   metric='euclidean', metric_kwds={}, angular=False,
