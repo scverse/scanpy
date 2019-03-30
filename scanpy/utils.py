@@ -878,6 +878,7 @@ def subsample_n(X, n=0, seed=0):
 def check_presence_download(filename, backup_url):
     """Check if file is present otherwise download."""
     import os
+    filename = str(filename) #  Throws error for Path on 3.5
     if not os.path.exists(filename):
         from .readwrite import download_progress
         dr = os.path.dirname(filename)
