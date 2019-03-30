@@ -249,6 +249,7 @@ Datasets
    :toctree: .
 
    datasets.blobs
+   datasets.expression_atlas
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
