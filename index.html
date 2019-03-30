@@ -3,18 +3,40 @@
 <title>Scanpy Logo</title>
 <meta charset=utf-8>
 <meta name=viewport content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css?family=Exo+2:200" rel="stylesheet"> 
 
 <style>
-main {
-	font-size: 2vw;
-	max-width: 877.5px;
-	margin: 2vw auto;
+:root {
+	font-size: 22px;
 	font-family: system-ui, sans-serif;
 }
-img#logo { width: 100% }
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+main {
+	max-width: calc(1755px/2 + 1rem);
+	margin: 0 auto;
+	padding: .5rem;
+}
+a#logo,
+a#logo > img {
+	display: block;
+	width: 100%;
+}
 h1 {
-	font-size: 2em;
+	font-family: 'Exo 2';
+	font-size: 2rem;
 	font-weight: lighter;
+}
+h1, p {
+	margin: .5rem 0;
+}
+@media (max-width: 560px) {
+	/* The header should become a bit more narrow than the device width */
+	:root { font-size: 3.9vw }
+	h1 { white-space: nowrap }
 }
 ul {
 	margin: 0;
@@ -25,26 +47,34 @@ li {
 }
 li > a {
 	display: block;
-	line-height: 2em;
+	line-height: 2rem;
 }
-a:link, a:visited {
+li > a:only-child:link,
+li > a:only-child:visited {
 	text-decoration: none;
 	color: #ef7b4a;
 	margin: 0 -.5em;
 	padding: 0 .5em;
+	border-radius: .2em;
 }
-a:link:hover, a:visited:hover {
+li > a:only-child:hover:link,
+li > a:only-child:hover:visited {
 	background-color: rgba(231, 39, 117, .1);
 }
 </style>
 
 <main>
-	<img id=logo src=logo/Scanpy_Logo_RGB.png alt="Scanpy Logo">
+	<h1>Click below for the docs</h1>
+	<p><a id=logo href=https://scanpy.readthedocs.io title="Scanpy docs">
+		<img src=logo/Scanpy_Logo_RGB.png alt="Scanpy Logo">
+	</a>
 	<h1>Download the Scanpy Logo</h1>
 	<ul>
-		<li><a href=logo/Scanpy_Logo_RGB.png  download>RGB.png</a></li>
-		<li><a href=logo/Scanpy_Logo_RGB.jpg  download>RGB.jpg</a></li>
-		<li><a href=logo/Scanpy_Logo_CMYK.eps download>CMYK.eps</a></li>
-		<li><a href=logo/Scanpy_Logo_CMYK.jpg download>CMYK.jpg</a></li>
+		<li><a href=logo/Scanpy_Logo_RGB.png  download>RGB.png</a>
+		<li><a href=logo/Scanpy_Logo_RGB.jpg  download>RGB.jpg</a>
+		<li><a href=logo/Scanpy_Logo_CMYK.eps download>CMYK.eps</a>
+		<li><a href=logo/Scanpy_Logo_CMYK.jpg download>CMYK.jpg</a>
 	</ul>
 </main>
+
+</body>
