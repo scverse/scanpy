@@ -567,8 +567,7 @@ def _read_softgz(filename):
     obs['groups'] = groups
     var = np.zeros((len(gene_names),), dtype=[('var_names', 'S21')])
     var['var_names'] = gene_names
-    ddata = {'X': X, 'obs': obs, 'var': var}
-    return AnnData(**ddata)
+    return AnnData(X=X, obs=obs, var=var)
 
 
 # -------------------------------------------------------------------------------
