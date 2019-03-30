@@ -1,4 +1,5 @@
-from urllib.request import urlretrieve
+from urllib.request import urlretrieve, urlopen
+from urllib.error import HTTPError
 from zipfile import ZipFile
 
 from scipy import sparse
@@ -48,14 +49,26 @@ def tqdm_hook(t):
     return update_to
 
 
+def sniff_url(accession):
+    # Note that data is downloaded from gxa/sc/experiment, not experiments
+    base_url = "https://www.ebi.ac.uk/gxa/sc/experiments/{}/".format(accession)
+    try:
+        with urlopen(base_url) as req:  # Check if server up/ dataset exists
+            pass
+    except HTTPError as e:
+        e.msg = e.msg + " ({})".format(base_url)  # Report failed url
+        raise
+
+
 def download_experiment(accession):
+    sniff_url(accession)
+
     base_url = "https://www.ebi.ac.uk/gxa/sc/experiment/{}/".format(accession)
     quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
     sampledata_path = "download?fileType=experiment-design&accessKey="
 
     experiment_dir = settings.dataset_dir / accession
-    if not experiment_dir.is_dir():
-        experiment_dir.mkdir()
+    experiment_dir.mkdir(parents=True, exist_ok=True)
 
     with tqdm(
         unit="B",
@@ -142,8 +155,6 @@ def expression_atlas(accession: str, *, filter_boring: bool = False):
         # Dataset couldn't be read for whatever reason
         pass
 
-    experiment_dir.mkdir(parents=True, exist_ok=True)
-    
     download_experiment(accession)
 
     print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
@@ -155,7 +166,7 @@ def expression_atlas(accession: str, *, filter_boring: bool = False):
     )
 
     adata.obs[obs.columns] = obs
-    adata.write(dataset_path, compression="gzip") # To be kind to disk space
+    adata.write(dataset_path, compression="gzip")  # To be kind to disk space
 
     if filter_boring:
         adata.obs = _filter_boring(adata.obs)
