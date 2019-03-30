@@ -129,27 +129,33 @@ def expression_atlas(accession: str, *, filter_boring: bool = False):
     -------
     >>> adata = sc.datasets.expression_atlas("E-MTAB-4888")
 
-    .. _EBI Single Cell Expression Atlas: https://www.ebi.ac.uk/gxa/sc/experiments
+    .. _`EBI Single Cell Expression Atlas`: https://www.ebi.ac.uk/gxa/sc/experiments
     """
-    if not settings.dataset_dir.is_dir():
-        # Log here
-        settings.dataset_dir.mkdir()
     experiment_dir = settings.dataset_dir / accession
-    if (experiment_dir / f"{accession}.h5ad").is_file():
-        adata = anndata.read(experiment_dir / f"{accession}.h5ad")
-    else:
-        download_experiment(accession)
+    dataset_path = experiment_dir / "{}.h5ad".format(accession)
+    try:
+        adata = anndata.read(dataset_path)
+        if filter_boring:
+            adata.obs = _filter_boring(adata.obs)
+        return adata
+    except OSError:
+        # Dataset couldn't be read for whatever reason
+        pass
 
-        print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    
+    download_experiment(accession)
 
-        with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
-            adata = read_expression_from_archive(f)
-        obs = pd.read_csv(
-            experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
-        )
+    print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
 
-        adata.obs[obs.columns] = obs
-        adata.write(experiment_dir / f"{accession}.h5ad", compression="gzip")
+    with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
+        adata = read_expression_from_archive(f)
+    obs = pd.read_csv(
+        experiment_dir / "experimental_design.tsv", sep="\t", index_col=0
+    )
+
+    adata.obs[obs.columns] = obs
+    adata.write(dataset_path, compression="gzip") # To be kind to disk space
 
     if filter_boring:
         adata.obs = _filter_boring(adata.obs)
