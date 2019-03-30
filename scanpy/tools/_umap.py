@@ -118,7 +118,7 @@ def umap(
         init_coords = init_pos
     from sklearn.utils import check_random_state
     random_state = check_random_state(random_state)
-    n_epochs = maxiter
+    n_epochs = 0 if maxiter is None else maxiter
     verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
     X_umap = simplicial_set_embedding(
         adata.X,
