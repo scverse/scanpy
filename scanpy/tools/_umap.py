@@ -104,7 +104,7 @@ def umap(
     if ('params' not in adata.uns['neighbors']
         or adata.uns['neighbors']['params']['method'] != 'umap'):
         logg.warn('neighbors/connectivities have not been computed using umap')
-    from ..neighbors.umap.umap_ import find_ab_params, simplicial_set_embedding
+    from umap.umap_ import find_ab_params, simplicial_set_embedding
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     else:
@@ -121,6 +121,7 @@ def umap(
     n_epochs = maxiter
     verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
     X_umap = simplicial_set_embedding(
+        adata.X,
         adata.uns['neighbors']['connectivities'].tocoo(),
         n_components,
         alpha,
@@ -131,7 +132,9 @@ def umap(
         n_epochs,
         init_coords,
         random_state,
-        max(0, verbosity-3))
+        metric="euclidean",
+        metric_kwds={},
+        verbose=max(0, verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
