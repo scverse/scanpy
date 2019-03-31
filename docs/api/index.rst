@@ -9,8 +9,8 @@ Import Scanpy as::
    import scanpy as sc
 
 .. note::
-
-   Wrappers to external functionality are found in :mod:`scanpy.external`. Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
+   Wrappers to external functionality are found in :mod:`scanpy.external`.
+   Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 
 Preprocessing: PP
@@ -142,9 +142,10 @@ For most tools and for some preprocessing functions, you'll find a plotting func
 Reading
 -------
 
-*Note:* For reading annotation use :ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>`
-and add it to your :class:`anndata.AnnData` object.
-The following read functions are intended for the numeric data in the data matrix `X`.
+.. note::
+   For reading annotation use :ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>`
+   and add it to your :class:`anndata.AnnData` object. The following read functions are
+   intended for the numeric data in the data matrix `X`.
 
 Read common file formats using
 
