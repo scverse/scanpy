@@ -131,6 +131,8 @@ def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
     """
     Load a dataset from the `EBI Single Cell Expression Atlas`_.
 
+    Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
+
     Params
     ------
     accession:
