@@ -224,6 +224,7 @@ The default directories for saving figures and caching files.
 ==============================================  ===================================
 :class:`settings.figdir`                        Directory for saving figures (default: ``'./figures/'``).
 :class:`settings.cachedir`                      Directory for cache files (default: ``'./cache/'``).
+:class:`settings.datasetdir`                    Directory for example datasets (default: ``'~/scanpy_datasets/'``).
 ==============================================  ===================================
 
 The verbosity of logging output, where verbosity levels have the following
@@ -249,7 +250,7 @@ Datasets
    :toctree: .
 
    datasets.blobs
-   datasets.expression_atlas
+   datasets.ebi_expression_atlas
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
