@@ -127,20 +127,22 @@ def read_expression_from_archive(archive: ZipFile):
     return adata
 
 
-def expression_atlas(accession: str, *, filter_boring: bool = False):
+def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
     """
     Load a dataset from the `EBI Single Cell Expression Atlas`_.
 
     Params
     ------
     accession:
-        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``.
+        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``. This can
+        be found in the url on the datasets page. For example:
+        ``https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne``
     filter_boring:
         Whether boring labels in obs should be automatically removed.
 
     Example
     -------
-    >>> adata = sc.datasets.expression_atlas("E-MTAB-4888")
+    >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
 
     .. _`EBI Single Cell Expression Atlas`: https://www.ebi.ac.uk/gxa/sc/experiments
     """

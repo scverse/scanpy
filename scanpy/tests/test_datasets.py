@@ -41,6 +41,11 @@ def test_pbmc3k(tmp_dataset_dir):
     sc.datasets.pbmc3k()
 
 
+@pytest.mark.internet
+def test_ebi_expression_atlas(tmp_dataset_dir):
+    adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
+
+
 def test_blobs():
     sc.datasets.blobs()
 
