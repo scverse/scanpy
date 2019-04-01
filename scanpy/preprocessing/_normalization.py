@@ -18,7 +18,7 @@ def _normalize_data(X, counts, after=None, copy=False):
 
 @doc_params(quant_descr=doc_quant_descr, params_bulk=doc_params_bulk, norm_quant=doc_norm_quant,
             norm_return=doc_norm_return, ex_quant=doc_ex_quant)
-def normalize_quantile(adata, target_sum=None, quantile=1, key_added=None,
+def normalize_quantile(adata, target_sum=None, quantile=0.95, key_added=None,
                        layers=None, layer_norm=None, inplace=True):
     """\
     {quant_descr}
