@@ -67,7 +67,7 @@ def download_experiment(accession):
     quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
     sampledata_path = "download?fileType=experiment-design&accessKey="
 
-    experiment_dir = settings.dataset_dir / accession
+    experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     with tqdm(
@@ -144,7 +144,7 @@ def expression_atlas(accession: str, *, filter_boring: bool = False):
 
     .. _`EBI Single Cell Expression Atlas`: https://www.ebi.ac.uk/gxa/sc/experiments
     """
-    experiment_dir = settings.dataset_dir / accession
+    experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / "{}.h5ad".format(accession)
     try:
         adata = anndata.read(dataset_path)

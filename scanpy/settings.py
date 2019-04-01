@@ -2,7 +2,9 @@
 """
 from pathlib import Path
 
-dataset_dir = Path("./data")
+datasetdir = Path.home() / "scanpy_data"
+"""Default directory for ``sc.datasets`` to download data to.
+"""
 
 verbosity = 'warn'
 """Set global verbosity level.

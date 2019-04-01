@@ -54,7 +54,7 @@ def burczynski06():
     blood mononuclear cells"
     J Mol Diagn 8, 51 (2006). PMID:16436634.
     """
-    filename = settings.dataset_dir / 'burczynski06/GDS1615_full.soft.gz'
+    filename = settings.datasetdir / 'burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     adata = sc.read(filename, backup_url=url, cache=True)
     return adata
@@ -103,7 +103,7 @@ def moignard15():
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
-    filename = settings.dataset_dir / 'moignard15/nbt.3154-S3.xlsx'
+    filename = settings.datasetdir / 'moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     adata = sc.read(filename, sheet='dCt_values.txt', cache=True, backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
@@ -141,7 +141,7 @@ def paul15():
     logg.warn('In Scanpy 0.*, this returned logarithmized data. '
               'Now it returns non-logarithmized data.')
     import h5py
-    filename = settings.dataset_dir / 'paul15/paul15.h5'
+    filename = settings.datasetdir / 'paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     sc.utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
@@ -250,5 +250,5 @@ def pbmc3k():
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
-    adata = sc.read(settings.dataset_dir / 'data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
+    adata = sc.read(settings.datasetdir / 'data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
     return adata

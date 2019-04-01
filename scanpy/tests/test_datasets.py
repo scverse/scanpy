@@ -7,37 +7,37 @@ import pytest
 from pathlib import Path
 
 @pytest.fixture(scope="module")
-def dataset_dir(tmpdir_factory):
+def tmp_dataset_dir(tmpdir_factory):
     new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
     print(new_dir)
-    old_dir = sc.settings.dataset_dir
-    sc.settings.dataset_dir = new_dir  # Set up
-    yield sc.settings.dataset_dir
-    sc.settings.dataset_dir = old_dir  # Tear down
+    old_dir = sc.settings.datasetdir
+    sc.settings.datasetdir = new_dir  # Set up
+    yield sc.settings.datasetdir
+    sc.settings.datasetdir = old_dir  # Tear down
 
 
 @pytest.mark.internet
-def test_burczynski06(dataset_dir):
+def test_burczynski06(tmp_dataset_dir):
     sc.datasets.burczynski06()
 
 
 @pytest.mark.internet
-def test_krumsiek11(dataset_dir):
+def test_krumsiek11(tmp_dataset_dir):
     sc.datasets.krumsiek11()
 
 
 @pytest.mark.internet
-def test_moignard15(dataset_dir):
+def test_moignard15(tmp_dataset_dir):
     sc.datasets.moignard15()
 
 
 @pytest.mark.internet
-def test_paul15(dataset_dir):
+def test_paul15(tmp_dataset_dir):
     sc.datasets.paul15()
 
 
 @pytest.mark.internet
-def test_pbmc3k(dataset_dir):
+def test_pbmc3k(tmp_dataset_dir):
     sc.datasets.pbmc3k()
 
 
