@@ -134,3 +134,20 @@ def api_image(qualname: str) -> str:
 # and there’s no way to insert filters into those templates
 # so we have to modify the default filters
 DEFAULT_FILTERS['api_image'] = api_image
+
+
+# -- Test for new scanpydoc functionality --------------------------------------
+
+from itertools import repeat, chain
+from sphinx.ext.napoleon import NumpyDocstring
+
+
+def scanpy_parse_returns_section(self, section):
+    lines_raw = self._dedent(self._consume_to_next_section())
+    lines = self._format_block(':returns: ', lines_raw)
+    if lines and lines[-1]:
+        lines.append('')
+    return lines
+
+
+NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
