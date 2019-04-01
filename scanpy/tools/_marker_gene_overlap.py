@@ -69,7 +69,7 @@ def _calc_jaccard(
 
 def marker_gene_overlap(
     adata: AnnData,
-    reference_markers: Dict[str, set],
+    reference_markers: Union[Dict[str, set], Dict[str,list]],
     *,
     key: str = 'rank_genes_groups',
     method: Optional[str] = 'overlap_count',
@@ -94,8 +94,8 @@ def marker_gene_overlap(
         The annotated data matrix.
     reference_markers
         A marker gene dictionary object. Keys should be strings with the 
-        cell identity name and values are sets of strings which match format
-        of `adata.var_name`.
+        cell identity name and values are sets or lists of strings which match 
+        format of `adata.var_name`.
     key
         The key in `adata.uns` where the rank_genes_groups output is stored.
         By default this is `'rank_genes_groups'`.
@@ -171,8 +171,12 @@ def marker_gene_overlap(
         raise ValueError('Can only normalize with method=`overlap_count`.')
 
     if not np.all([isinstance(val, set) for val in reference_markers.values()]):
-        raise ValueError('Please ensure that `reference_markers` contains sets '
-                         'of markers as values.')
+        try:
+            reference_markers = {key:set(val) for key,val
+                                 in reference_markers.items()}
+        except:
+            raise ValueError('Please ensure that `reference_markers` contains '
+                             'sets or lists of markers as values.')
 
     if adj_pval_threshold is not None:
         if 'pvals_adj' not in adata.uns[key]:
