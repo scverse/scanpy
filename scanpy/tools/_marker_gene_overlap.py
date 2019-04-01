@@ -107,9 +107,9 @@ def marker_gene_overlap(
     normalize : `{'reference', 'data', 'None'}`, optional (default: `None`)
         Normalization option for the marker gene overlap output. This parameter
         can only be set when `method` is set to `'overlap_count'`. `'reference'`
-        row-normalizes the output so that overlap scores for each reference 
-        cluster add to 1. `'data'` column-normalizes the output so that overlap
-        scores for each data cluster add to 1.
+        normalizes the data by the total number of marker genes given in the 
+        reference annotation per group. `'data'` normalizes the data by the
+        total number of marker genes used for each cluster.
     top_n_markers
         The number of top data-derived marker genes to use. By default all 
         calculated marker genes are used. If `adj_pval_threshold` is set along
@@ -147,7 +147,7 @@ def marker_gene_overlap(
     >>> marker_matches = sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
-    if inplace: 
+    if inplace:
         raise NotImplementedError('Writing Pandas dataframes to h5ad is '
                                   'currently under development.\n'
                                   'Please use `inplace=False`.')
@@ -227,12 +227,16 @@ def marker_gene_overlap(
 
         if normalize == 'reference':
             # Ensure rows sum to 1
-            marker_match = marker_match/marker_match.sum(1)[:,np.newaxis]
+            ref_lengths = np.array([len(reference_markers[m_group]) 
+                                    for m_group in reference_markers])
+            marker_match = marker_match/ref_lengths[:,np.newaxis]
             marker_match = np.nan_to_num(marker_match)
 
         elif normalize == 'data':
             #Ensure columns sum to 1
-            marker_match = marker_match/marker_match.sum(0)
+            data_lengths = np.array([len(data_markers[dat_group]) 
+                                     for dat_group in data_markers])
+            marker_match = marker_match/data_lengths
             marker_match = np.nan_to_num(marker_match)
             
     elif method == 'overlap_coef':

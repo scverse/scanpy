@@ -14,15 +14,17 @@ def test_marker_overlap():
 
     t1 = sc.tl.marker_gene_overlap(test_data, marker_genes)
     t2 = sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='reference')
-    t3 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef')
-    t4 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard')
-    t5 = sc.tl.marker_gene_overlap(test_data, marker_genes, top_n_markers=2)
-    t6 = sc.tl.marker_gene_overlap(test_data, marker_genes, adj_pval_threshold=0.01)
+    t3 = sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='data')
+    t4 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef')
+    t5 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard')
+    t6 = sc.tl.marker_gene_overlap(test_data, marker_genes, top_n_markers=2)
+    t7 = sc.tl.marker_gene_overlap(test_data, marker_genes, adj_pval_threshold=0.01)
 
     assert t1.iloc[1,1] == 3.0
     assert t1.iloc[0,0] == 3.0
-    assert t2.iloc[0,0] == 0.75
-    assert t3.iloc[0,0] == 1.0
-    assert t4.iloc[0,0] == 0.6
-    assert t5.iloc[0,0] == 2
-    assert t6.iloc[0,0] == 1.0
+    assert t2.iloc[0,0] == 1.0
+    assert t3.iloc[1,1] == 0.6
+    assert t4.iloc[0,0] == 1.0
+    assert t5.iloc[0,0] == 0.6
+    assert t6.iloc[0,0] == 2
+    assert t7.iloc[0,0] == 1.0
