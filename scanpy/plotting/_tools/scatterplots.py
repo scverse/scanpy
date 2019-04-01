@@ -725,7 +725,7 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
             color_vector = adata[:, value_to_plot].layers[layer]
         elif use_raw and value_to_plot in adata.var_names:
             color_vector = adata.raw[:, value_to_plot].X
-        elif value_to_plot in adata.raw.var_names:
+        elif value_to_plot in adata.var_names:
             color_vector = adata[:, value_to_plot].X
 
         else:
