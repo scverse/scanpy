@@ -2,10 +2,6 @@
 """
 from pathlib import Path
 
-datasetdir = Path.home() / "scanpy_data"
-"""Default directory for ``sc.datasets`` to download data to.
-"""
-
 verbosity = 'warn'
 """Set global verbosity level.
 
@@ -54,6 +50,10 @@ writedir = './write/'
 
 cachedir = './cache/'
 """Default cache directory.
+"""
+
+datasetdir = Path.home() / "scanpy_datasets"
+"""Default directory for ``sc.datasets`` to download data to.
 """
 
 figdir = './figures/'
