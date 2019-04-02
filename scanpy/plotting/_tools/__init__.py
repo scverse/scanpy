@@ -769,3 +769,48 @@ def embedding_density(
     return plot_scatter(adata_vis, basis, components=components, color='Density',
                         color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
                         vmin=vmin, save=save, title=title, **kwargs)
+
+
+def embedding_density_diff(
+    adata: AnnData,
+    basis: str,
+    key: str,
+    group_ctrl: str = None,
+    group_case: str = None,
+    *,
+    color_map: Union[Colormap, str] = 'RdBu',
+    grid_side: Optional[int] = 10,
+    vmax:  Optional[int] = 1,
+    vmin:  Optional[int] = 0,
+    save: Union[bool, str, None] = None,
+    **kwargs
+):
+    """
+
+    Notes:
+    - sc.tl.embedding_density() must have been run using the same observation 
+      covariate or the output makes no sense.
+    - At large grid values the 
+
+    """
+
+    # Test user inputs:
+    
+
+    # Get two conditions for embedded density 
+
+
+    # Interpolate densities to grid layout
+
+
+    # Rescale densities to sum to 1 over grid
+    
+
+    # Get difference of densities
+
+
+    # Plot heatmap
+    #Note: should allow scale of boxes to be different in x and y to reproduce
+    #      something resembling the embedded representation. Alternative: allow
+    #      only square grids
+    return None
