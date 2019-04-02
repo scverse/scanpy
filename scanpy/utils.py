@@ -1,9 +1,11 @@
 """Utility functions and classes
 """
 
+import sys
 import inspect
+from weakref import WeakSet
 from collections import namedtuple
-from functools import partial
+from functools import partial, wraps
 from types import ModuleType
 from typing import Union, Callable, Optional
 
@@ -13,10 +15,28 @@ from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
 
-from . import settings
-from . import logging as logg
+from . import settings, logging as logg
+import warnings
 
 EPS = 1e-15
+
+
+def check_versions():
+    from distutils.version import LooseVersion
+
+    if sys.version_info < (3, 0):
+        warnings.warn('Scanpy only runs reliably with Python 3, preferrably >=3.5.')
+
+    import anndata
+    # NOTE: pytest does not correctly retrieve anndata's version? why?
+    #       use the following hack...
+    if anndata.__version__ != '0+unknown':
+        if anndata.__version__ < LooseVersion('0.6.10'):
+            from . import __version__
+            raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
+                              'Run `pip install anndata -U --no-deps`.'
+                              .format(__version__, anndata.__version__))
+
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     if getattr(c_or_f, '__doc__', None) is None:
@@ -41,7 +61,43 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     )
 
 
-def descend_classes_and_funcs(mod: ModuleType, root: str):
+def deprecated_arg_names(arg_mapping):
+    """
+    Decorator which marks a functions keyword arguments as deprecated. It will
+    result in a warning being emitted when the deprecated keyword argument is
+    used, and the function being called with the new argument.
+
+    Parameters
+    ----------
+    arg_mapping : dict[str, str]
+        Mapping from deprecated argument name to current argument name.
+    """
+    def decorator(func):
+        @wraps(func)
+        def func_wrapper(*args, **kwargs):
+            warnings.simplefilter(
+                'always', DeprecationWarning)  # turn off filter
+            for old, new in arg_mapping.items():
+                if old in kwargs:
+                    warnings.warn(
+                        "Keyword argument '{0}' has been deprecated in favour "
+                        "of '{1}'. '{0}' will be removed in a future version."
+                        .format(old, new),
+                        category=DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    val = kwargs.pop(old)
+                    kwargs[new] = val
+            warnings.simplefilter(
+                'default', DeprecationWarning)  # reset filter
+            return func(*args, **kwargs)
+        return func_wrapper
+    return decorator
+
+
+def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
+    if encountered is None:
+        encountered = WeakSet()
     for obj in vars(mod).values():
         if not getattr(obj, '__module__', getattr(obj, '__qualname__', getattr(obj, '__name__', ''))).startswith(root):
             continue
@@ -49,8 +105,9 @@ def descend_classes_and_funcs(mod: ModuleType, root: str):
             yield obj
             if isinstance(obj, type):
                 yield from (m for m in vars(obj).values() if isinstance(m, Callable))
-        elif isinstance(obj, ModuleType):
-            yield from descend_classes_and_funcs(obj, root)
+        elif isinstance(obj, ModuleType) and obj not in encountered:
+            encountered.add(obj)
+            yield from descend_classes_and_funcs(obj, root, encountered)
 
 
 def annotate_doc_types(mod: ModuleType, root: str):
@@ -751,7 +808,6 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     --------
     http://stackoverflow.com/questions/22373927/get-traceback-of-warnings
     """
-    import warnings
     import traceback
     traceback.print_stack()
     log = file if hasattr(file, 'write') else sys.stderr

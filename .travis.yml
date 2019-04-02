@@ -2,10 +2,13 @@ language: python
 python:
   - "3.5"
   - "3.6"
-install: source .travis_install.sh
+cache: pip
+install:
+  - pip install docutils
+  - pip install -e .[test,louvain,leiden]
 env:
   - MPLBACKEND=Agg
 script:
-  - pytest
+  - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null

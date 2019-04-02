@@ -9,8 +9,9 @@ from sklearn.metrics import pairwise_distances
 
 from .. import settings
 from .. import logging as logg
-from .. utils import doc_params
 from .. import utils
+from ..utils import doc_params
+from ..logging import _settings_verbosity_greater_or_equal_than
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
@@ -35,7 +36,7 @@ def neighbors(
 
     The neighbor search efficiency of this heavily relies on UMAP [McInnes18]_,
     which also provides a method for estimating connectivities of data points -
-    the connectivity of the manifold (`method=='umap'`). If `method=='diffmap'`,
+    the connectivity of the manifold (`method=='umap'`). If `method=='gauss'`,
     connectivities are computed according to [Coifman05]_, in the adaption of
     [Haghverdi16]_.
 
@@ -93,88 +94,12 @@ def neighbors(
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
-    logg.info('    finished', time=True, end=' ' if settings.verbosity > 2 else '\n')
+    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
-        '    \'distances\', weighted adjacency matrix\n'
+        '    \'distances\', distances for each pair of neighbors\n'
         '    \'connectivities\', weighted adjacency matrix')
     return adata if copy else None
-
-
-def compute_euclidean_distances_using_matrix_mult(X, Y):
-    """Compute euclidean distance matrix for data arrays X and Y.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Data array (rows store observations, columns store variables).
-    Y : np.ndarray
-        Data array (rows store observations, columns store variables).
-
-    Returns
-    -------
-    distances : np.ndarray
-        Distance matrix.
-    """
-    XX = np.einsum('ij,ij->i', X, X)[:, None]
-    if X is Y:
-        YY = XX
-    else:
-        YY = np.einsum('ij,ij->i', Y, Y)[:, None]
-    distances = np.dot(X, Y.T)
-    distances *= -2
-    distances += XX
-    distances += YY.T
-    np.maximum(distances, 0, out=distances)
-    if X is Y:
-        distances.flat[::distances.shape[0] + 1] = 0.
-    # print(distances)
-    # print(distances[distances < 0])
-    # distances[distances < 0] = 0  # set to 0
-    distances = np.sqrt(distances)
-    return distances
-
-
-def compute_neighbors_numpy_chunk(X, Y, n_neighbors):
-    """Compute distance matrix in euclidean norm for chunk.
-    """
-    D = compute_euclidean_distances_using_matrix_mult(X, Y)
-    chunk_range = np.arange(D.shape[0])[:, None]
-    indices_chunk = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
-    indices_chunk = indices_chunk[chunk_range,
-                                  np.argsort(D[chunk_range, indices_chunk])]
-    distances_chunk = D[chunk_range, indices_chunk]
-    # we know that a point has zero-distance to itself:
-    #     set the first distance to zero
-    #     if we don't this, for large data (not treated by tests)
-    #     we might introduce spurious small non-zero values
-    #     which affects backwards compat
-    distances_chunk[:, 0] = 0
-    return indices_chunk, distances_chunk
-
-
-def compute_neighbors_numpy(X, n_neighbors, knn=True):
-    """Compute distance matrix in uared euclidean norm.
-    """
-    if not knn:
-        D = compute_euclidean_distances_using_matrix_mult(X, X)
-        indices, distances = get_indices_distances_from_dense_matrix(D, n_neighbors)
-        return D, indices, distances
-    # assume we can fit at max 20000 data points into memory
-    len_chunk = np.ceil(min(20000, X.shape[0])).astype(int)
-    n_chunks = np.ceil(X.shape[0] / len_chunk).astype(int)
-    chunks = [np.arange(start, min(start + len_chunk, X.shape[0]))
-             for start in range(0, n_chunks * len_chunk, len_chunk)]
-    indices = np.zeros((X.shape[0], n_neighbors), dtype=int)
-    distances = np.zeros((X.shape[0], n_neighbors), dtype=np.float32)
-    for i_chunk, chunk in enumerate(chunks):
-        indices_chunk, distances_chunk = compute_neighbors_numpy_chunk(
-            X[chunk], X, n_neighbors)
-        indices[chunk] = indices_chunk
-        distances[chunk] = distances_chunk
-    D = get_sparse_matrix_from_indices_distances_numpy(
-        indices, distances, X.shape[0], n_neighbors)
-    return D, indices, distances
 
 
 def compute_neighbors_umap(
@@ -705,9 +630,14 @@ class Neighbors:
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
         if use_dense_distances:
-            # standard eulcidean case for relatively small matrices
-            self._distances, knn_indices, knn_distances = compute_neighbors_numpy(
-                X, n_neighbors, knn=knn)
+            _distances = pairwise_distances(X, metric=metric, **metric_kwds)
+            knn_indices, knn_distances = get_indices_distances_from_dense_matrix(
+                _distances, n_neighbors)
+            if knn:
+                self._distances = get_sparse_matrix_from_indices_distances_numpy(
+                    knn_indices, knn_distances, X.shape[0], n_neighbors)
+            else:
+                self._distances = _distances
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
@@ -921,6 +851,11 @@ class Neighbors:
                      * (self.eigen_basis[i, l] - self.eigen_basis[:, l]))**2
                    # account for float32 precision
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] < 0.9994])
+        # thanks to Marius Lange for pointing Alex to this:
+        # we will likely remove the contributions from the stationary state below when making
+        # backwards compat breaking changes, they originate from an early implementation in 2015
+        # they never seem to have deteriorated results, but also other distance measures (see e.g.
+        # PAGA paper) don't have it, which makes sense
         row += sum([(self.eigen_basis[i, l] - self.eigen_basis[:, l])**2
                     for l in range(0, self.eigen_values.size) if self.eigen_values[l] >= 0.9994])
         if not use_mask:
@@ -943,7 +878,7 @@ class Neighbors:
         """See Fouss et al. (2006) and von Luxburg et al. (2007).
 
         This is the commute-time matrix. It's a squared-euclidian distance
-        matrix in \mathbb{R}^n.
+        matrix in :math:`\\mathbb{R}^n`.
         """
         self.C = np.repeat(np.diag(self.Lp)[:, np.newaxis],
                            self.Lp.shape[0], axis=1)
@@ -1022,11 +957,11 @@ class Neighbors:
         """
         # pl.semilogy(w,'x',label=r'$ \widetilde K$')
         # pl.show()
-        if settings.verbosity > 2:
+        if _settings_verbosity_greater_or_equal_than(3):
             # output of spectrum of K for comparison
             w, v = np.linalg.eigh(self.K)
             logg.msg('spectrum of K (kernel)')
-        if settings.verbosity > 3:
+        if _settings_verbosity_greater_or_equal_than(4):
             # direct computation of spectrum of T
             w, vl, vr = scipy.linalg.eig(self.T, left=True)
             logg.msg('spectrum of transition matrix (should be same as of Ktilde)')

@@ -65,7 +65,7 @@ References
 
 .. [Haghverdi18] Haghverdi *et al.* (2018),
    *Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors*,
-   `Nature Biotechnology <10.1038/nbt.4091>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/nbt.4091>`__.
 
 .. [Huber15] Huber *et al.* (2015),
    *Orchestrating high-throughput genomic analysis with Bioconductor*,
@@ -78,6 +78,10 @@ References
 .. [Jacomy14] Jacomy *et al.* (2014),
    *ForceAtlas2, a Continuous Graph Layout Algorithm for Handy Network Visualization Designed for the Gephi Software*
    `PLOS One <https://doi.org/10.1371/journal.pone.0098679>`__.
+
+.. [Johnson07] Johnson, Li & Rabinovic (2007),
+   *Adjusting batch effects in microarray expression data using empirical Bayes methods*,
+   `Biostatistics <https://doi.org/10.1093/biostatistics/kxj037>`__.
 
 .. [Kang18] Kang *et al.* (2018),
    *Python Implementation of MNN correct*,
@@ -94,6 +98,10 @@ References
 .. [Lambiotte09] Lambiotte *et al.* (2009)
    *Laplacian Dynamics and Multiscale Modular Structure in Networks*
    `arXiv <https://arxiv.org/abs/0812.1770>`__.
+   
+.. [Leek12] Leek *et al.* (2012),
+   *sva: Surrogate Variable Analysis. R package*
+   `Bioconductor <https://doi.org/10.18129/B9.bioc.sva>`__.
 
 .. [Levine15] Levine *et al.* (2015),
    *Data-Driven Phenotypic Dissection of AML Reveals Progenitor--like Cells that Correlate with Prognosis*,
@@ -115,6 +123,10 @@ References
    *Spatial reconstruction of single-cell gene expression data*,
    `Nature Biotechnology <https://doi.org/10.1038/nbt.3192>`__.
 
+.. [Manno18] La Manno *et al.* (2018),
+   *RNA velocity of single cells*,
+   `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.
+
 .. [McInnes18] McInnes & Healy (2018),
    *UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction*,
    `arXiv <https://arxiv.org/abs/1802.03426>`__.
@@ -132,6 +144,14 @@ References
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
    `bioRxiv <https://doi.org/10.1101/258566>`__.
 
+.. [Park18] Park *et al.* (2018),
+   *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
+   `bioRxiv <https://doi.org/10.1101/397042>`__.
+   
+.. [Pedersen12] Pedersen (2012),
+   *Python implementation of ComBat*
+   `GitHub <https://github.com/brentp/combat.py>`__.
+   
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
@@ -144,9 +164,17 @@ References
    *Computational assignment of cell-cycle stage from single-cell transcriptome data*
    `Methods <https://doi.org/10.1016/j.ymeth.2015.06.021>`__.
 
+.. [Setty18] Setty *et al.* (2018),
+   *Palantir characterizes cell fate continuities in human hematopoiesis*
+   `bioRxiv <https://doi.org/10.1101/385328>`__.
+   
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
+
+.. [Traag18] Traag *et al.* (2018),
+   *From Louvain to Leiden: guaranteeing well-connected communities*
+   `arXiv <https://arxiv.org/abs/1810.08473>`__.
 
 .. [Ulyanov16] Ulyanov (2016),
    *Multicore t-SNE*,
@@ -172,8 +200,9 @@ References
    *Scanpy: large-scale single-cell gene expression data analysis*,
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
-.. [Wolf17i] Wolf *et al.* (2017),
-   *Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+.. [Wolf17i] Wolf *et al.* (2019),
+   *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__, 
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),

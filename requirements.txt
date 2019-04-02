@@ -1,0 +1,14 @@
+anndata>=0.6.15
+matplotlib>=3.0.0
+pandas>=0.21
+scipy
+seaborn
+h5py
+tables
+scikit-learn>=0.19.1
+statsmodels
+patsy
+networkx
+natsort
+joblib
+numba>=0.41.0

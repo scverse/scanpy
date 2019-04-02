@@ -4,8 +4,8 @@
 import os
 import numpy as np
 import pandas as pd
-from . import api_without_datasets as sc
 from .. import logging as logg
+import scanpy as sc
 
 
 def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
@@ -21,7 +21,7 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
         Standard deviation of clusters.
     n_observations : `int`, optional (default: 640)
         Number of observations. By default, this is the same observation number as in
-        ``sc.examples.krumsiek11()``.
+        ``sc.datasets.krumsiek11()``.
 
     Returns
     -------
@@ -76,7 +76,7 @@ def krumsiek11():
     """
     filename = os.path.dirname(__file__) + '/krumsiek11.txt'
     verbosity_save = sc.settings.verbosity
-    sc.settings.verbosity = 0  # suppress output...
+    sc.settings.verbosity = 'error'  # suppress output...
     adata = sc.read(filename, first_column_names=True)
     sc.settings.verbosity = verbosity_save
     adata.uns['iroot'] = 0
@@ -194,7 +194,8 @@ def toggleswitch():
 
 
 def pbmc68k_reduced():
-    """
+    """Subsampled and processed 68k PBMCs.
+
     10x PBMC 68k dataset from
     https://support.10xgenomics.com/single-cell-gene-expression/datasets
 
@@ -212,3 +213,40 @@ def pbmc68k_reduced():
 
     filename = os.path.dirname(__file__) + '/10x_pbmc68k_reduced.h5ad'
     return sc.read(filename)
+
+
+def pbmc3k():
+    """3k PBMCs from 10x Genomics.
+
+    The data consists in 3k PBMCs from a Healthy Donor and is freely available
+    from 10x Genomics (`here
+    <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
+    from this `webpage
+    <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
+    
+    The exact same data is also used in Seurat's 
+    `basic clustering tutorial <https://satijalab.org/seurat/pbmc3k_tutorial.html>`__.
+
+    .. note::
+
+        This downloads 5.9 MB of data upon the first call of the function and stores it in `./data/pbmc3k_raw.h5ad`.
+        
+    The following code was run to produce the file.    
+    
+    .. code:: python
+    
+        adata = sc.read_10x_mtx(
+        './data/filtered_gene_bc_matrices/hg19/',  # the directory with the `.mtx` file
+        var_names='gene_symbols',                  # use gene symbols for the variable names (variables-axis index)
+        cache=True)                                # write a cache file for faster subsequent reading
+       
+        adata.var_names_make_unique()  # this is unnecessary if using 'gene_ids'
+        adata.write('write/pbmc3k_raw.h5ad', compression='gzip')    
+
+    Returns
+    -------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    """
+    adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
+    return adata

@@ -1,8 +1,10 @@
-|PyPI| |Docs| |Build Status|
+|PyPI| |bioconda| |Docs| |Build Status|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/scanpy.svg
-    :target: https://pypi.org/project/scanpy
-.. |Docs| image:: https://readthedocs.org/projects/scanpy/badge/?version=latest
+   :target: https://pypi.org/project/scanpy
+.. |bioconda| image:: https://img.shields.io/badge/bioconda-🐍-blue.svg
+   :target: http://bioconda.github.io/recipes/scanpy/README.html
+.. |Docs| image:: https://readthedocs.com/projects/icb-scanpy/badge/?version=latest
    :target: https://scanpy.readthedocs.io
 .. |Build Status| image:: https://travis-ci.org/theislab/scanpy.svg?branch=master
    :target: https://travis-ci.org/theislab/scanpy
@@ -12,10 +14,6 @@
 
 Scanpy – Single-Cell Analysis in Python
 =======================================
-
-.. image:: http://falexwolf.de/img/tsne_1.3M.png
-   :width: 90px
-   :align: left
 
 Scanpy is a scalable toolkit for analyzing single-cell gene expression data.
 It includes preprocessing, visualization, clustering, pseudotime and trajectory

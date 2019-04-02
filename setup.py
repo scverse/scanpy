@@ -1,35 +1,38 @@
-from setuptools import setup, find_packages
+import sys
+if sys.version_info < (3,):
+    sys.exit('scanpy requires Python >= 3.5')
 from pathlib import Path
+
+from setuptools import setup, find_packages
 import versioneer
 
-package_name = 'scanpy'
 
-req_path = Path('requires.txt')
-if not req_path.is_file():
-    req_path = Path(package_name + '.egg-info') / req_path
-with req_path.open() as requirements:
-    requires = [l.strip() for l in requirements]
-
-with open('README.rst', encoding='utf-8') as readme_f:
-    readme = readme_f.read()
-
-author = 'Alex Wolf, Philipp Angerer, Davide Cittaro, Gokcen Eraslan, Fidel Ramirez, Tobias Callies'
+try:
+    from scanpy import __author__, __email__
+except ImportError:  # Deps not yet installed
+    __author__ = __email__ = ''
 
 setup(
-    name=package_name,
+    name='scanpy',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description='Single-Cell Analysis in Python.',
-    long_description=readme,
+    long_description=Path('README.rst').read_text('utf-8'),
     url='http://github.com/theislab/scanpy',
-    author=author,
-    author_email='alex.wolf@helmholtz-muenchen.de',
+    author=__author__,
+    author_email=__email__,
     license='BSD',
-    install_requires=requires,
+    python_requires='>=3.5',
+    install_requires=[
+        l.strip() for l in
+        Path('requirements.txt').read_text('utf-8').splitlines()
+    ],
     extras_require=dict(
-        louvain=['python-igraph', 'louvain'],
-        doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints'],
-        test=['pytest'],
+        louvain=['python-igraph', 'louvain>=0.6'],
+        leiden=['python-igraph', 'leidenalg'],
+        bbknn=['bbknn'],
+        doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints', 'scanpydoc'],
+        test=['pytest>=3.9', 'dask[array]', 'zappy', 'zarr'],
     ),
     packages=find_packages(),
     # `package_data` does NOT work for source distributions!!!
@@ -51,6 +54,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Scientific/Engineering :: Visualization',
     ],

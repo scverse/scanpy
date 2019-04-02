@@ -1,9 +1,25 @@
+.noteversion {
+    font-size:70%;
+}
+
+.noteversion:after {
+    content: "/";
+}
+
 .small {
     font-size:40%;
 }
 
 .smaller {
-    font-size:60%;
+    font-size:70%;
+}
+
+.rst-content dl:not(.docutils) tt.xref, .rst-content dl:not(.docutils) code.xref {
+    font-weight: bold;  /* restore bold for hyperref literals */
+}
+
+.rst-content dl:not(.docutils) tt, .rst-content dl:not(.docutils) code {
+    font-weight: normal;  /* ovewrite bold for default literals */
 }
 
 .rst-content dl:not(.docutils) dl dt {
@@ -13,17 +29,14 @@
     border-left: none;
     margin: 0 0 12px;
     padding: 3px 0 0;
-    font-size: 100%;
+    font-size: 111.11%;
 }
 
-.rst-content dl:not(.docutils) dl dt code {
-    font-size: 100%;
-    font-weight: normal;
-    background: none transparent;
-    border: none;
-    padding: 0 2px;
+/* No narrow parameter lists for plot functions with images */
+.rst-content .docutils.field-list {
+    clear: right;
 }
 
-.rst-content dl:not(.docutils) dl dt a.reference>code {
-    text-decoration: underline;
+.rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {
+    color: #404040;
 }

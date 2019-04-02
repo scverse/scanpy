@@ -1,9 +1,9 @@
 Usage Principles
 ----------------
 
-Import the Scanpy API as::
+Import Scanpy as::
 
-    import scanpy.api as sc
+    import scanpy as sc
 
 Workflow
 ^^^^^^^^
