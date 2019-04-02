@@ -42,8 +42,8 @@ def test_marker_overlap_methods():
     t4 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef')
     t5 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard')
 
-    assert t4.iloc[0,0] == 1.0
-    assert t5.iloc[0,0] == 0.6
+    assert t4['c0']['type 1'] == 1.0
+    assert t5['c0']['type 1'] == 0.6
 
 
 def test_marker_overlap_subsetting():
