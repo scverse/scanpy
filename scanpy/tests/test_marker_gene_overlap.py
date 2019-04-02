@@ -22,11 +22,6 @@ def test_marker_overlap_base():
 
     t1 = sc.tl.marker_gene_overlap(test_data, marker_genes)
 
-    print(t1)
-    print(marker_genes)
-    print(test_data.uns['rank_genes_groups']['names']['c0'])
-    print(test_data.uns['rank_genes_groups']['pvals_adj']['c1'])
-    
     assert t1['c0']['type 1'] == 3.0
     assert t1['c1']['type 2'] == 3.0
 
@@ -36,13 +31,6 @@ def test_marker_overlap_normalization():
 
     t2 = sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='reference')
     t3 = sc.tl.marker_gene_overlap(test_data, marker_genes, normalize='data')
-
-    print(t2)
-    print(t3)
-    print(marker_genes)
-    print(test_data.uns['rank_genes_groups']['names']['c0'])
-    print(test_data.uns['rank_genes_groups']['pvals_adj']['c1'])
-
 
     assert t2['c0']['type 1'] == 1.0
     assert t3['c1']['type 2'] == 0.6
@@ -54,12 +42,6 @@ def test_marker_overlap_methods():
     t4 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='overlap_coef')
     t5 = sc.tl.marker_gene_overlap(test_data, marker_genes, method='jaccard')
 
-    print(t4)
-    print(t5)
-    print(marker_genes)
-    print(test_data.uns['rank_genes_groups']['names']['c0'])
-    print(test_data.uns['rank_genes_groups']['pvals_adj']['c1'])
-
     assert t4['c0']['type 1'] == 1.0
     assert t5['c0']['type 1'] == 0.6
 
@@ -69,12 +51,6 @@ def test_marker_overlap_subsetting():
 
     t6 = sc.tl.marker_gene_overlap(test_data, marker_genes, top_n_markers=2)
     t7 = sc.tl.marker_gene_overlap(test_data, marker_genes, adj_pval_threshold=0.01)
-
-    print(t6)
-    print(t7)
-    print(marker_genes)
-    print(test_data.uns['rank_genes_groups']['names']['c0'])
-    print(test_data.uns['rank_genes_groups']['pvals_adj']['c1'])
 
     assert t6['c0']['type 1'] == 2.0
     assert t7['c0']['type 1'] == 1.0
