@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Optional, Tuple, Sequence, Type
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,7 @@ def leiden(
     adata: AnnData,
     resolution: float = 1,
     *,
+    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     random_state: int = 0,
     key_added: str = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
@@ -50,6 +51,9 @@ def leiden(
         to one that doesn’t accept a ``resolution_parameter``.
     random_state
         Change the initialization of the optimization.
+    restrict_to
+        Restrict the clustering to the categories within the key for sample
+        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
     key_added
         ``adata.obs`` key under which to add the cluster labels.
     adjacency
@@ -101,6 +105,19 @@ def leiden(
         if 'neighbors' not in adata.uns:
             raise ValueError('You need to run `pp.neighbors` first to compute a neighborhood graph.')
         adjacency = adata.uns['neighbors']['connectivities']
+    if restrict_to is not None:
+        restrict_key, restrict_categories = restrict_to
+        if not isinstance(restrict_categories[0], str):
+            raise ValueError('You need to use strings to label categories, '
+                             'e.g. \'1\' instead of 1.')
+        for c in restrict_categories:
+            if c not in adata.obs[restrict_key].cat.categories:
+                raise ValueError(
+                    '\'{}\' is not a valid category for \'{}\''
+                    .format(c, restrict_key))
+        restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
+        adjacency = adjacency[restrict_indices, :]
+        adjacency = adjacency[:, restrict_indices]
     # convert it to igraph
     g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
@@ -121,10 +138,20 @@ def leiden(
     part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
     # store output into adata.obs
     groups = np.array(part.membership)
-    adata.obs[key_added] = pd.Categorical(
-        values=groups.astype('U'),
-        categories=natsorted(np.unique(groups).astype('U')),
-    )
+    if restrict_to is None:
+        adata.obs[key_added] = pd.Categorical(
+            values=groups.astype('U'),
+            categories=natsorted(np.unique(groups).astype('U')),
+        )
+    else:
+        key_added = restrict_key + '_R' if key_added is None else key_added
+        all_groups = adata.obs[restrict_key].astype('U')
+        prefix = '-'.join(restrict_categories) + ','
+        new_groups = [prefix + g for g in groups.astype('U')]
+        all_groups.iloc[restrict_indices] = new_groups
+        adata.obs[key_added] = pd.Categorical(
+            values=all_groups,
+            categories=natsorted(all_groups.unique()))
     # store information on the clustering parameters
     adata.uns['leiden'] = {}
     adata.uns['leiden']['params'] = dict(
