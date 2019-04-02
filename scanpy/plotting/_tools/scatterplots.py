@@ -71,16 +71,13 @@ def plot_scatter(
 
     if use_raw is None:
         # check if adata.raw is set
-        if adata.raw is None:
-            use_raw = False
-        else:
-            use_raw = True
+        use_raw = adata.raw is not None
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the
         #  current figure size
         wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
-    if adata.raw is None and use_raw is True:
+    if adata.raw is None and use_raw:
         raise ValueError(
             "`use_raw` is set to True but AnnData object does not have raw. "
             "Please check."
@@ -723,11 +720,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                 raise KeyError('Selected layer: {} is not in the layers list. The list of '
                                'valid layers is: {}'.format(layer, adata.layers.keys()))
             color_vector = adata[:, value_to_plot].layers[layer]
-        elif use_raw and value_to_plot in adata.var_names:
+        elif use_raw and value_to_plot in adata.raw.var_names:
             color_vector = adata.raw[:, value_to_plot].X
-        elif value_to_plot in adata.raw.var_names:
+        elif value_to_plot in adata.var_names:
             color_vector = adata[:, value_to_plot].X
-
         else:
             raise ValueError("The passed `color` {} is not a valid observation annotation "
                              "or variable name. Valid observation annotation keys are: {}"
