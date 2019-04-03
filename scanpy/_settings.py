@@ -91,11 +91,11 @@ class ScanpyConfig(object):
 
     @verbosity.setter
     def verbosity(self, verbosity):
-        verbosity = verbosity.lower()
         verbosity_str_options = ["error", "warn", "info", "hint"]
         if isinstance(verbosity, int):
             self._verbosity == verbosity
         elif isinstance(verbosity, str):
+            verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
                 raise ValueError(
                     "Cannot set verbosity to {}. Accepted string values are: {}".format(
@@ -137,6 +137,7 @@ class ScanpyConfig(object):
                     file_format, file_format_options
                 )
             )
+        self._file_format_data = file_format
 
     @property
     def file_format_figs(self):
@@ -193,7 +194,7 @@ class ScanpyConfig(object):
     def cachedir(self):
         """Default cache directory.
         """
-        return self.cachedir
+        return self._cachedir
 
     @cachedir.setter
     def cachedir(self, cachedir):

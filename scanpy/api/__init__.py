@@ -23,9 +23,10 @@ from .. import plotting
 # to show in the docs for that reason...
 # it would be nice to make the simple data types "properties of the
 # module"... putting setters and getters for all of them wouldn't be very nice
-from .. import settings
+from .._settings import settings
 # for now - or maybe as the permanently favored solution - put the single function here
-from ..settings import set_figure_params
+# from ..settings import set_figure_params
+set_figure_params = settings.set_figure_params
 
 # some stuff that is not actually documented...
 from .. import utils

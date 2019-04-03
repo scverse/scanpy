@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 from .. import logging as logg
-from .. import settings
+from .._settings import settings
 import scanpy as sc
 from ._ebi_expression_atlas import ebi_expression_atlas
 

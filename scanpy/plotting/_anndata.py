@@ -12,7 +12,7 @@ from matplotlib import gridspec
 from matplotlib.colors import is_color_like
 import seaborn as sns
 
-from .. import settings
+from .._settings import settings
 from .. import logging as logg
 from . import _utils as utils
 from ._utils import scatter_base, scatter_group, setup_axes

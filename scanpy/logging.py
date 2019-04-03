@@ -4,7 +4,7 @@
 import time as time_module
 import datetime
 from anndata import logging
-from . import settings
+from ._settings import settings
 
 
 _VERBOSITY_LEVELS_FROM_STRINGS = {
@@ -103,8 +103,8 @@ def _write_log(*msg, end='\n'):
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
-    from .settings import logfile
-    if logfile == '':
+    from ._settings import settings
+    if settings.logfile == '':
         print(*msg, end=end)
     else:
         out = ''

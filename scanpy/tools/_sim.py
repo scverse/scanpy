@@ -17,7 +17,7 @@ import numpy as np
 import scipy as sp
 from .. import utils
 from .. import readwrite
-from .. import settings
+from .._settings import settings
 from .. import logging as logg
 
 

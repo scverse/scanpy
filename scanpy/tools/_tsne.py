@@ -1,6 +1,6 @@
 from .. utils import doc_params
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
-from .. import settings
+from .._settings import settings
 from .. import logging as logg
 from ..logging import (
     _VERBOSITY_LEVELS_FROM_STRINGS,

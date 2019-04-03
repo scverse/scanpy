@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 import anndata
-from .. import settings
+from .._settings import settings
 
 
 def _filter_boring(dataframe):
