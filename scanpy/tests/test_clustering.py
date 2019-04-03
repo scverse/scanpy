@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import scanpy as sc
 
@@ -18,6 +19,47 @@ def adata_neighbors():
 
 def test_leiden_basic(adata_neighbors):
     sc.tl.leiden(adata_neighbors)
+
+
+def test_clustering_subset(adata_neighbors):
+    methods = (
+        (sc.tl.louvain, 'louvain'),
+        (sc.tl.leiden, 'leiden'),
+    )
+    for clustering, key in methods:
+        print(f'Clustering method {key}')
+        clustering(adata_neighbors, key_added=key)
+        print(adata_neighbors)
+        print(adata_neighbors.obs[key].value_counts())
+
+        for c in np.unique(adata_neighbors.obs[key]):
+            print(f'Analyzing cluster {c}')
+            cells_in_c = (adata_neighbors.obs[key] == c)
+            ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
+            key_sub = f'{key}_sub'
+            clustering(adata_neighbors, restrict_to=(key, [c]),
+                key_added=key_sub) 
+
+            # Old category should not be present
+            assert (c not in
+                adata_neighbors.obs.loc[:, key_sub].value_counts().index)
+
+            # Cells in the original category are assigned only to new categories
+            print('Categories')
+            cat_counts = adata_neighbors.obs.loc[cells_in_c, key_sub].value_counts()
+            print(cat_counts)
+
+            print('Non-zero categories')
+            nonzero_cat = (cat_counts > 0)
+            print(nonzero_cat)
+            nonzero_cat = (adata_neighbors.obs[key_sub].cat.categories
+                .to_series()[nonzero_cat].index)
+            print(nonzero_cat)
+
+            common_cat = (nonzero_cat & adata_neighbors.obs[key].cat.categories)
+            print('Common categories')
+            print(common_cat)
+            assert len(common_cat) == 0
 
 
 def test_louvain_basic(adata_neighbors):
