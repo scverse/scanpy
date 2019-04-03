@@ -39,7 +39,7 @@ class ScanpyConfig(object):
         categories_to_ignore=["N/A", "dontknow", "no_gate", "?"],
         _frameon=True,
         _vector_friendly=False,
-        _low_resolution_warning=True,
+        _low_resolution_warning=True
     ):
         self.verbosity = verbosity
         self.plot_suffix = plot_suffix
