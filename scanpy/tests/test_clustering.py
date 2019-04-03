@@ -49,6 +49,10 @@ def test_clustering_subset(adata_neighbors):
             cat_counts = adata_neighbors.obs.loc[cells_in_c, key_sub].value_counts()
             print(cat_counts)
 
+            ## Only cells of the original cluster have been assigned to
+            ## new categories
+            assert cat_counts.sum() == ncells_in_c
+
             print('Non-zero categories')
             nonzero_cat = (cat_counts > 0)
             print(nonzero_cat)
@@ -59,6 +63,7 @@ def test_clustering_subset(adata_neighbors):
             common_cat = (nonzero_cat & adata_neighbors.obs[key].cat.categories)
             print('Common categories')
             print(common_cat)
+            ## Only new categories
             assert len(common_cat) == 0
 
 
