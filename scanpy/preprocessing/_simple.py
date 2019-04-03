@@ -821,6 +821,11 @@ def _regress_out_chunk(data):
 def scale(data, zero_center=True, max_value=None, copy=False):
     """Scale data to unit variance and zero mean.
 
+    .. note::
+        Variables (genes) that do not display any variation (are constant across
+        all observations) are retained and set to 0 during this operation. In
+        the future, they might be set to NaNs.
+
     Parameters
     ----------
     data : :class:`~anndata.AnnData`, `np.ndarray`, `sp.sparse`
@@ -1102,6 +1107,7 @@ def _scale(X, zero_center=True):
             sparsefuncs.inplace_column_scale(X, 1/scale)
         else:
             X -= mean
+            scale[scale == 0] = 1e-12
             X /= scale
     else:
         from sklearn.preprocessing import StandardScaler
