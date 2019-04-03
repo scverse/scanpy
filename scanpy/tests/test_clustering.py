@@ -27,16 +27,16 @@ def test_clustering_subset(adata_neighbors):
         (sc.tl.leiden, 'leiden'),
     )
     for clustering, key in methods:
-        print(f'Clustering method {key}')
+        print('Clustering method ' + str(key))
         clustering(adata_neighbors, key_added=key)
         print(adata_neighbors)
         print(adata_neighbors.obs[key].value_counts())
 
         for c in np.unique(adata_neighbors.obs[key]):
-            print(f'Analyzing cluster {c}')
+            print('Analyzing cluster ' + str(c))
             cells_in_c = (adata_neighbors.obs[key] == c)
             ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
-            key_sub = f'{key}_sub'
+            key_sub = str(key) + '_sub'
             clustering(adata_neighbors, restrict_to=(key, [c]),
                 key_added=key_sub) 
 
