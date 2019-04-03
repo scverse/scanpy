@@ -4,16 +4,7 @@ import scanpy as sc
 
 @pytest.fixture
 def adata_neighbors():
-    adata = sc.read(
-        './data/pbmc3k_raw.h5ad',
-        backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad',
-    )
-    sc.pp.filter_genes(adata, min_cells=1)
-    sc.pp.normalize_per_cell(adata)
-    sc.pp.log1p(adata)
-    sc.pp.pca(adata)
-    sc.pp.neighbors(adata)
-    return adata
+    return sc.datasets.pbmc68k_reduced()
 
 
 def test_leiden_basic(adata_neighbors):
