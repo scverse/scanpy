@@ -52,7 +52,7 @@ cachedir = './cache/'
 """Default cache directory.
 """
 
-datasetdir = Path.home() / "scanpy_datasets"
+datasetdir = Path().absolute() / "data"
 """Default directory for ``sc.datasets`` to download data to.
 """
 
