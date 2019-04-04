@@ -212,20 +212,29 @@ high-resolution jupyter display backend useful for use in notebooks.
 
    set_figure_params
 
+An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as `scanpy.settings` and allows configuring Scanpy.
+
+.. autosummary::
+   :toctree: .
+
+   _settings.ScanpyConfig
+
+Some selected settings are discussed in the following.
+
 Influence the global behavior of plotting functions. In non-interactive scripts,
 you'd usually want to set :class:`settings.autoshow` to ``False``.
 
 ==============================================  ===================================
-:class:`settings.autoshow`                      Automatically show figures (default: ``True``).
-:class:`settings.autosave`                      Automatically save figures (default: ``False``).
+:class:`settings.autoshow`                      Automatically show figures (default: `True`).
+:class:`settings.autosave`                      Automatically save figures (default: `False`).
 ==============================================  ===================================
 
-The default directories for saving figures and caching files.
+The default directories for saving figures, caching files and storing datasets.
 
 ==============================================  ===================================
-:class:`settings.figdir`                        Directory for saving figures (default: ``'./figures/'``).
-:class:`settings.cachedir`                      Directory for cache files (default: ``'./cache/'``).
-:class:`settings.datasetdir`                    Directory for example datasets (default: ``'~/scanpy_datasets/'``).
+:class:`settings.figdir`                        Directory for saving figures (default: `'./figures/'`).
+:class:`settings.cachedir`                      Directory for cache files (default: `'./cache/'`).
+:class:`settings.datasetdir`                    Directory for example datasets (default: `'./data/'`).
 ==============================================  ===================================
 
 The verbosity of logging output, where verbosity levels have the following
