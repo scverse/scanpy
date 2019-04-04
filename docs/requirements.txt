@@ -18,3 +18,4 @@ networkx
 natsort
 joblib
 numba
+tqdm
