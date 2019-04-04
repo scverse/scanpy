@@ -129,7 +129,8 @@ def read_expression_from_archive(archive: ZipFile):
 
 def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
     """
-    Load a dataset from the `EBI Single Cell Expression Atlas`_.
+    Load a dataset from the `EBI Single Cell Expression Atlas 
+    <https://www.ebi.ac.uk/gxa/sc/experiments>`_.
 
     Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
 
@@ -145,8 +146,6 @@ def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
     Example
     -------
     >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
-
-    .. _`EBI Single Cell Expression Atlas`: https://www.ebi.ac.uk/gxa/sc/experiments
     """
     experiment_dir = settings.datasetdir / accession
     dataset_path = experiment_dir / "{}.h5ad".format(accession)
