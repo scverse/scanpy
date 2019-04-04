@@ -6,7 +6,7 @@ import inspect
 from weakref import WeakSet
 from collections import namedtuple
 from functools import partial, wraps
-from types import ModuleType
+from types import ModuleType, MethodType
 from typing import Union, Callable, Optional
 
 import numpy as np
@@ -15,7 +15,8 @@ from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
 
-from . import settings, logging as logg
+from ._settings import settings
+from . import logging as logg
 import warnings
 
 EPS = 1e-15
@@ -101,7 +102,7 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     for obj in vars(mod).values():
         if not getattr(obj, '__module__', getattr(obj, '__qualname__', getattr(obj, '__name__', ''))).startswith(root):
             continue
-        if isinstance(obj, Callable):
+        if isinstance(obj, Callable) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 yield from (m for m in vars(obj).values() if isinstance(m, Callable))
@@ -878,6 +879,7 @@ def subsample_n(X, n=0, seed=0):
 def check_presence_download(filename, backup_url):
     """Check if file is present otherwise download."""
     import os
+    filename = str(filename) #  Throws error for Path on 3.5
     if not os.path.exists(filename):
         from .readwrite import download_progress
         dr = os.path.dirname(filename)

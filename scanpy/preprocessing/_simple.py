@@ -13,7 +13,7 @@ from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
 from anndata import AnnData
 
-from .. import settings as sett
+from .._settings import settings as sett
 from .. import logging as logg
 from ..utils import sanitize_anndata, deprecated_arg_names
 from ._distributed import materialize_as_ndarray

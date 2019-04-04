@@ -14,7 +14,7 @@ from anndata import AnnData, read_loom, \
     read_csv, read_excel, read_text, read_hdf, read_mtx
 from anndata import read as read_h5ad
 
-from . import settings
+from ._settings import settings
 from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats

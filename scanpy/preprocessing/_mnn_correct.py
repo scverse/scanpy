@@ -1,4 +1,4 @@
-from .. import settings
+from .._settings import settings
 
 
 def mnn_correct(*datas, var_index=None, var_subset=None, batch_key='batch', index_unique='-',

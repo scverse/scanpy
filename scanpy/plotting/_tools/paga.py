@@ -12,7 +12,7 @@ from collections import Iterable
 
 from .. import _utils as utils
 from ... import utils as sc_utils
-from ... import settings
+from ..._settings import settings
 from ... import logging as logg
 from .._utils import matrix
 

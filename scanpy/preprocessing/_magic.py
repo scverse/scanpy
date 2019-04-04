@@ -1,7 +1,7 @@
 """Denoise high-dimensional data using MAGIC
 """
 
-from .. import settings
+from .._settings import settings
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
 

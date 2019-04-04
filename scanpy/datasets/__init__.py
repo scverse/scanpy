@@ -5,7 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 from .. import logging as logg
+from .._settings import settings
 import scanpy as sc
+from ._ebi_expression_atlas import ebi_expression_atlas
 
 
 def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
@@ -52,7 +54,7 @@ def burczynski06():
     blood mononuclear cells"
     J Mol Diagn 8, 51 (2006). PMID:16436634.
     """
-    filename = 'data/burczynski06/GDS1615_full.soft.gz'
+    filename = settings.datasetdir / 'burczynski06/GDS1615_full.soft.gz'
     url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     adata = sc.read(filename, backup_url=url, cache=True)
     return adata
@@ -101,7 +103,7 @@ def moignard15():
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
-    filename = 'data/moignard15/nbt.3154-S3.xlsx'
+    filename = settings.datasetdir / 'moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
     adata = sc.read(filename, sheet='dCt_values.txt', cache=True, backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
@@ -139,7 +141,7 @@ def paul15():
     logg.warn('In Scanpy 0.*, this returned logarithmized data. '
               'Now it returns non-logarithmized data.')
     import h5py
-    filename = 'data/paul15/paul15.h5'
+    filename = settings.datasetdir / 'paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
     sc.utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
@@ -248,5 +250,5 @@ def pbmc3k():
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
-    adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
+    adata = sc.read(settings.datasetdir / 'data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
     return adata

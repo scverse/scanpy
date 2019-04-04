@@ -8,7 +8,7 @@ from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 import warnings
 from .. import logging as logg
-from .. import settings
+from .._settings import settings
 from . import palettes
 
 

@@ -13,7 +13,7 @@ from matplotlib.colors import is_color_like, Colormap
 
 from .. import _utils as utils
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
-from ... import settings
+from ..._settings import settings
 from ...utils import sanitize_anndata, doc_params
 from ... import logging as logg
 

@@ -7,7 +7,7 @@ from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix
 from sklearn.metrics import pairwise_distances
 
-from .. import settings
+from .._settings import settings
 from .. import logging as logg
 from .. import utils
 from ..utils import doc_params
