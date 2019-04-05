@@ -44,7 +44,9 @@ scripts/tgdyn_simple.py
 .spyproject/
 scanpy/.spyproject/
 
-
+# Environment management
+Pipfile
+Pipfile.lock
 
 # always-ignore extensions
 *~
