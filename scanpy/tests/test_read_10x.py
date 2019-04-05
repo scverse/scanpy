@@ -16,9 +16,9 @@ def assert_anndata_equal(a1, a2):
 
 def test_read_10x_mtx():
     sc.read_10x_mtx(os.path.join(ROOT, '1.2.0', 'filtered_gene_bc_matrices', 'hg19_chr21'),
-                    var_names='gene_symbols', cache=True)
+                    var_names='gene_symbols')
     sc.read_10x_mtx(os.path.join(ROOT, '3.0.0', 'filtered_feature_bc_matrix'),
-                    var_names='gene_symbols', cache=True)
+                    var_names='gene_symbols')
 
 def test_read_10x_h5_v1():
     spec_genome_v1 = sc.read_10x_h5(os.path.join(ROOT, '1.2.0', 'filtered_gene_bc_matrices_h5.h5'),

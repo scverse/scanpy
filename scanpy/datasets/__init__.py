@@ -105,7 +105,7 @@ def moignard15():
     """
     filename = settings.datasetdir / 'moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
-    adata = sc.read(filename, sheet='dCt_values.txt', cache=True, backup_url=backup_url)
+    adata = sc.read(filename, sheet='dCt_values.txt', backup_url=backup_url)
     # filter out 4 genes as in Haghverdi et al. (2016)
     gene_subset = ~np.in1d(adata.var_names, ['Eif2b1', 'Mrpl19', 'Polr2a', 'Ubc'])
     adata = adata[:, gene_subset]  # retain non-removed genes
