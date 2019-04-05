@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import scanpy as sc
 
@@ -29,7 +28,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
     print(adata_neighbors)
     print(adata_neighbors.obs[key].value_counts())
 
-    for c in np.unique(adata_neighbors.obs[key]):
+    for c in adata_neighbors.obs[key].unique():
         print('Analyzing cluster ', c)
         cells_in_c = adata_neighbors.obs[key] == c
         ncells_in_c = adata_neighbors.obs[key].value_counts().loc[c]
@@ -39,29 +38,17 @@ def test_clustering_subset(adata_neighbors, clustering, key):
             restrict_to=(key, [c]),
             key_added=key_sub
         ) 
+        # Get new clustering labels
         new_partition = adata_neighbors.obs[key_sub]
 
-        # Old category should not be present
-        categories = new_partition.unique()
-        assert c not in categories
-
-        # Cells in the original category are assigned only to new categories
-        print('Categories')
         cat_counts = new_partition[cells_in_c].value_counts()
-        print(cat_counts)
 
-        ## Only cells of the original cluster have been assigned to
-        ## new categories
+        # Only original cluster's cells assigned to new categories
         assert cat_counts.sum() == ncells_in_c
 
-        print('Non-zero categories')
+        # Original category's cells assigned only to new categories
         nonzero_cat = cat_counts[cat_counts > 0].index
-        print(nonzero_cat)
-
         common_cat = nonzero_cat & adata_neighbors.obs[key].cat.categories
-        print('Common categories')
-        print(common_cat)
-        ## Only new categories
         assert len(common_cat) == 0
 
 
