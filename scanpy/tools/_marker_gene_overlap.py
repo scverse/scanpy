@@ -69,7 +69,7 @@ def _calc_jaccard(
 
 def marker_gene_overlap(
     adata: AnnData,
-    reference_markers: Dict[str, set],
+    reference_markers: Union[Dict[str, set], Dict[str,list]],
     *,
     key: str = 'rank_genes_groups',
     method: Optional[str] = 'overlap_count',
@@ -94,8 +94,8 @@ def marker_gene_overlap(
         The annotated data matrix.
     reference_markers
         A marker gene dictionary object. Keys should be strings with the 
-        cell identity name and values are sets of strings which match format
-        of `adata.var_name`.
+        cell identity name and values are sets or lists of strings which match 
+        format of `adata.var_name`.
     key
         The key in `adata.uns` where the rank_genes_groups output is stored.
         By default this is `'rank_genes_groups'`.
@@ -107,9 +107,9 @@ def marker_gene_overlap(
     normalize : `{'reference', 'data', 'None'}`, optional (default: `None`)
         Normalization option for the marker gene overlap output. This parameter
         can only be set when `method` is set to `'overlap_count'`. `'reference'`
-        row-normalizes the output so that overlap scores for each reference 
-        cluster add to 1. `'data'` column-normalizes the output so that overlap
-        scores for each data cluster add to 1.
+        normalizes the data by the total number of marker genes given in the 
+        reference annotation per group. `'data'` normalizes the data by the
+        total number of marker genes used for each cluster.
     top_n_markers
         The number of top data-derived marker genes to use. By default all 
         calculated marker genes are used. If `adj_pval_threshold` is set along
@@ -147,7 +147,7 @@ def marker_gene_overlap(
     >>> marker_matches = sc.tl.marker_gene_overlap(adata, marker_genes)
     """
     # Test user inputs
-    if inplace: 
+    if inplace:
         raise NotImplementedError('Writing Pandas dataframes to h5ad is '
                                   'currently under development.\n'
                                   'Please use `inplace=False`.')
@@ -171,8 +171,12 @@ def marker_gene_overlap(
         raise ValueError('Can only normalize with method=`overlap_count`.')
 
     if not np.all([isinstance(val, set) for val in reference_markers.values()]):
-        raise ValueError('Please ensure that `reference_markers` contains sets '
-                         'of markers as values.')
+        try:
+            reference_markers = {key:set(val) for key,val
+                                 in reference_markers.items()}
+        except:
+            raise ValueError('Please ensure that `reference_markers` contains '
+                             'sets or lists of markers as values.')
 
     if adj_pval_threshold is not None:
         if 'pvals_adj' not in adata.uns[key]:
@@ -227,12 +231,16 @@ def marker_gene_overlap(
 
         if normalize == 'reference':
             # Ensure rows sum to 1
-            marker_match = marker_match/marker_match.sum(1)[:,np.newaxis]
+            ref_lengths = np.array([len(reference_markers[m_group]) 
+                                    for m_group in reference_markers])
+            marker_match = marker_match/ref_lengths[:,np.newaxis]
             marker_match = np.nan_to_num(marker_match)
 
         elif normalize == 'data':
             #Ensure columns sum to 1
-            marker_match = marker_match/marker_match.sum(0)
+            data_lengths = np.array([len(data_markers[dat_group]) 
+                                     for dat_group in data_markers])
+            marker_match = marker_match/data_lengths
             marker_match = np.nan_to_num(marker_match)
             
     elif method == 'overlap_coef':
