@@ -10,6 +10,8 @@ from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
 
+from ._utils_clustering import rename_groups, restrict_adjacency
+
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -107,8 +109,12 @@ def leiden(
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
-        adjacency, restrict_indices = utils.restrict_adjacency(adata,
-            restrict_key, restrict_categories, adjacency)
+        adjacency, restrict_indices = restrict_adjacency(
+            adata,
+            restrict_key,
+            restrict_categories,
+            adjacency
+        )
     # convert it to igraph
     g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
@@ -130,8 +136,14 @@ def leiden(
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
-        groups = utils.rename_groups(adata, key_added, restrict_key,
-            restrict_categories, restrict_indices, groups)
+        groups = rename_groups(
+            adata,
+            key_added,
+            restrict_key,
+            restrict_categories,
+            restrict_indices,
+            groups
+        )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),

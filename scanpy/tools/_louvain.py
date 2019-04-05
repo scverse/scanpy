@@ -10,6 +10,8 @@ from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
 
+from ._utils_clustering import rename_groups, restrict_adjacency
+
 try:
     from louvain.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -98,8 +100,12 @@ def louvain(
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
-        adjacency, restrict_indices = utils.restrict_adjacency(adata,
-            restrict_key, restrict_categories, adjacency)
+        adjacency, restrict_indices = restrict_adjacency(
+            adata,
+            restrict_key,
+            restrict_categories,
+            adjacency
+        )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
@@ -142,8 +148,14 @@ def louvain(
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     if restrict_to is not None:
-        groups = utils.rename_groups(adata, key_added, restrict_key,
-            restrict_categories, restrict_indices, groups)
+        groups = rename_groups(
+            adata,
+            key_added,
+            restrict_key,
+            restrict_categories,
+            restrict_indices,
+            groups
+        )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
