@@ -560,13 +560,8 @@ def _read_softgz(filename):
     # Convert the Python list of lists to a Numpy array and transpose to match
     # the Scanpy convention of storing samples in rows and variables in colums.
     X = np.array(X).T
-    row_names = sample_names
-    col_names = gene_names
-    obs = np.zeros((len(row_names),), dtype=[('obs_names', 'S21'), ('groups', 'S21')])
-    obs['obs_names'] = sample_names
-    obs['groups'] = groups
-    var = np.zeros((len(gene_names),), dtype=[('var_names', 'S21')])
-    var['var_names'] = gene_names
+    obs = pd.DataFrame({"groups": groups}, index=sample_names)
+    var = pd.DataFrame(index=gene_names)
     return AnnData(X=X, obs=obs, var=var)
 
 
