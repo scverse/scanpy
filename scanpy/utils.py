@@ -25,8 +25,10 @@ EPS = 1e-15
 def check_versions():
     from distutils.version import LooseVersion
 
-    if sys.version_info < (3, 0):
-        warnings.warn('Scanpy only runs reliably with Python 3, preferrably >=3.5.')
+    if sys.version_info < (3, 6):
+        warnings.warn('Scanpy prefers Python 3.6 or higher. '
+                      'Currently, Python 3.5 leads to a bug in `tl.marker_gene_overlap` '
+                      'and we might stop supporting it in the future.')
 
     import anndata
     # NOTE: pytest does not correctly retrieve anndata's version? why?
