@@ -42,7 +42,7 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         new_partition = adata_neighbors.obs[key_sub]
 
         # Old category should not be present
-        categories = new_partition.value_counts().index
+        categories = new_partition.unique()
         assert c not in categories
 
         # Cells in the original category are assigned only to new categories
