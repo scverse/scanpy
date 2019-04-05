@@ -9,7 +9,6 @@ from pathlib import Path
 @pytest.fixture(scope="module")
 def tmp_dataset_dir(tmpdir_factory):
     new_dir = Path(tmpdir_factory.mktemp("scanpy_data"))
-    print(new_dir)
     old_dir = sc.settings.datasetdir
     sc.settings.datasetdir = new_dir  # Set up
     yield sc.settings.datasetdir
