@@ -17,7 +17,9 @@ def tmp_dataset_dir(tmpdir_factory):
 
 @pytest.mark.internet
 def test_burczynski06(tmp_dataset_dir):
-    sc.datasets.burczynski06()
+    adata = sc.datasets.burczynski06()
+    assert adata.shape == (127, 22283)
+    assert not (adata.X == 0).any()
 
 
 @pytest.mark.internet
