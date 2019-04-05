@@ -250,5 +250,5 @@ def pbmc3k():
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     """
-    adata = sc.read(settings.datasetdir / 'data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
+    adata = sc.read(settings.datasetdir / 'pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
     return adata
