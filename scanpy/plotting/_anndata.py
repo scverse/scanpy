@@ -830,7 +830,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
     elif standard_scale == 'var':
         obs_tidy -= obs_tidy.min(0)
-        obs_tidy /= obs_tidy.max(0).fillna(0)
+        obs_tidy = (obs_tidy / obs_tidy.max(0)).fillna(0)
     elif standard_scale is None:
         pass
     else:
@@ -1108,7 +1108,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         obs_tidy = obs_tidy.div(obs_tidy.max(1), axis=0).fillna(0)
     elif standard_scale == 'var':
         obs_tidy -= obs_tidy.min(0)
-        obs_tidy /= obs_tidy.max(0).fillna(0)
+        obs_tidy = (obs_tidy / obs_tidy.max(0)).fillna(0)
     elif standard_scale is None:
         pass
     else:
@@ -1408,7 +1408,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
     elif standard_scale == 'var':
         mean_obs -= mean_obs.min(0)
-        mean_obs /= mean_obs.max(0).fillna(0)
+        mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
     elif standard_scale is None:
         pass
     else:
@@ -1670,7 +1670,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         mean_obs = mean_obs.div(mean_obs.max(1), axis=0).fillna(0)
     elif standard_scale == 'var':
         mean_obs -= mean_obs.min(0)
-        mean_obs /= mean_obs.max(0).fillna(0)
+        mean_obs = (mean_obs / mean_obs.max(0)).fillna(0)
     elif standard_scale is None:
         pass
     else:
