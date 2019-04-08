@@ -10,6 +10,8 @@ from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
 
+from ._utils_clustering import rename_groups, restrict_adjacency
+
 try:
     from louvain.VertexPartition import MutableVertexPartition
 except ImportError:
@@ -22,7 +24,7 @@ def louvain(
     resolution: Optional[float] = None,
     random_state: int = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    key_added: Optional[str] = None,
+    key_added: Optional[str] = 'louvain',
     adjacency: Optional[spmatrix] = None,
     flavor: str = 'vtraag',
     directed: bool = True,
@@ -98,17 +100,12 @@ def louvain(
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
-        if not isinstance(restrict_categories[0], str):
-            raise ValueError('You need to use strings to label categories, '
-                             'e.g. \'1\' instead of 1.')
-        for c in restrict_categories:
-            if c not in adata.obs[restrict_key].cat.categories:
-                raise ValueError(
-                    '\'{}\' is not a valid category for \'{}\''
-                    .format(c, restrict_key))
-        restrict_indices = adata.obs[restrict_key].isin(restrict_categories).values
-        adjacency = adjacency[restrict_indices, :]
-        adjacency = adjacency[:, restrict_indices]
+        adjacency, restrict_indices = restrict_adjacency(
+            adata,
+            restrict_key,
+            restrict_categories,
+            adjacency
+        )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
@@ -150,27 +147,23 @@ def louvain(
         for k, v in partition.items(): groups[k] = v
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
-    unique_groups = np.unique(groups)
-    n_clusters = len(unique_groups)
-    if restrict_to is None:
-        groups = groups.astype('U')
-        key_added = 'louvain' if key_added is None else key_added
-        adata.obs[key_added] = pd.Categorical(
-            values=groups,
-            categories=natsorted(unique_groups.astype('U')))
-    else:
-        key_added = restrict_key + '_R' if key_added is None else key_added
-        all_groups = adata.obs[restrict_key].astype('U')
-        prefix = '-'.join(restrict_categories) + ','
-        new_groups = [prefix + g for g in groups.astype('U')]
-        all_groups.iloc[restrict_indices] = new_groups
-        adata.obs[key_added] = pd.Categorical(
-            values=all_groups,
-            categories=natsorted(all_groups.unique()))
+    if restrict_to is not None:
+        groups = rename_groups(
+            adata,
+            key_added,
+            restrict_key,
+            restrict_categories,
+            restrict_indices,
+            groups
+        )
+    adata.obs[key_added] = pd.Categorical(
+        values=groups.astype('U'),
+        categories=natsorted(np.unique(groups).astype('U')),
+    )
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('found {} clusters and added\n'
               '    \'{}\', the cluster labels (adata.obs, categorical)'
-              .format(n_clusters, key_added))
+              .format(len(np.unique(groups)), key_added))
     return adata if copy else None

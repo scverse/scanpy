@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Optional, Tuple, Sequence, Type
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,8 @@ from scipy import sparse
 from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
+
+from ._utils_clustering import rename_groups, restrict_adjacency
 
 try:
     from leidenalg.VertexPartition import MutableVertexPartition
@@ -21,8 +23,9 @@ def leiden(
     adata: AnnData,
     resolution: float = 1,
     *,
+    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     random_state: int = 0,
-    key_added: str = 'leiden',
+    key_added: Optional[str] = 'leiden',
     adjacency: Optional[sparse.spmatrix] = None,
     directed: bool = True,
     use_weights: bool = True,
@@ -50,8 +53,11 @@ def leiden(
         to one that doesn’t accept a ``resolution_parameter``.
     random_state
         Change the initialization of the optimization.
+    restrict_to
+        Restrict the clustering to the categories within the key for sample
+        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
     key_added
-        ``adata.obs`` key under which to add the cluster labels.
+        ``adata.obs`` key under which to add the cluster labels. (default: ``'leiden'``)
     adjacency
         Sparse adjacency matrix of the graph, defaults to
         ``adata.uns['neighbors']['connectivities']``.
@@ -101,6 +107,14 @@ def leiden(
         if 'neighbors' not in adata.uns:
             raise ValueError('You need to run `pp.neighbors` first to compute a neighborhood graph.')
         adjacency = adata.uns['neighbors']['connectivities']
+    if restrict_to is not None:
+        restrict_key, restrict_categories = restrict_to
+        adjacency, restrict_indices = restrict_adjacency(
+            adata,
+            restrict_key,
+            restrict_categories,
+            adjacency
+        )
     # convert it to igraph
     g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
@@ -121,6 +135,15 @@ def leiden(
     part = leidenalg.find_partition(g, partition_type, **partition_kwargs)
     # store output into adata.obs
     groups = np.array(part.membership)
+    if restrict_to is not None:
+        groups = rename_groups(
+            adata,
+            key_added,
+            restrict_key,
+            restrict_categories,
+            restrict_indices,
+            groups
+        )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
