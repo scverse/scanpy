@@ -25,8 +25,6 @@ def test_leiden_basic(adata_neighbors):
 ])
 def test_clustering_subset(adata_neighbors, clustering, key):
     clustering(adata_neighbors, key_added=key)
-    print(adata_neighbors)
-    print(adata_neighbors.obs[key].value_counts())
 
     for c in adata_neighbors.obs[key].unique():
         print('Analyzing cluster ', c)
