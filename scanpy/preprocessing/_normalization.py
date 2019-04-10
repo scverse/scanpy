@@ -5,6 +5,7 @@ from .. import logging as logg
 from ..utils import doc_params
 from ._docs import doc_norm_descr, doc_quant_descr, doc_params_bulk, doc_norm_quant, doc_norm_return, doc_ex_quant, doc_ex_total
 
+
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     after = np.median(counts[counts>0]) if after is None else after
@@ -16,10 +17,11 @@ def _normalize_data(X, counts, after=None, copy=False):
         X /= counts[:, None]
     return X if copy else None
 
+
 @doc_params(quant_descr=doc_quant_descr, params_bulk=doc_params_bulk, norm_quant=doc_norm_quant,
             norm_return=doc_norm_return, ex_quant=doc_ex_quant)
-def normalize_quantile(adata, target_sum=None, quantile=0.95, key_added=None,
-                       layers=None, layer_norm=None, inplace=True):
+def normalize_total(adata, target_sum=None, quantile=1, key_added=None,
+                    layers=None, layer_norm=None, inplace=True):
     """\
     {quant_descr}
 
@@ -104,18 +106,3 @@ def normalize_quantile(adata, target_sum=None, quantile=0.95, key_added=None,
             .format(key_added))
 
     return dat if not inplace else None
-
-@doc_params(norm_descr=doc_norm_descr, params_bulk=doc_params_bulk, norm_return=doc_norm_return, ex_total=doc_ex_total)
-def normalize_total(adata, target_sum=None, key_added=None, layers=None, layer_norm=None, inplace=True):
-    """\
-    {norm_descr}
-
-    {params_bulk}
-
-    {norm_return}
-
-    {ex_total}
-    """
-    return normalize_quantile(adata=adata, target_sum=target_sum,
-                              key_added=key_added, layers=layers,
-                              layer_norm=layer_norm, quantile=1, inplace=inplace)

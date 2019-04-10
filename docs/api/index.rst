@@ -36,7 +36,6 @@ For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
    pp.log1p
    pp.pca
    pp.normalize_total
-   pp.normalize_quantile
    pp.regress_out
    pp.scale
    pp.subsample

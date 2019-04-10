@@ -88,6 +88,7 @@ def test_regress_out_categorical():
     multi = sc.pp.regress_out(adata, keys='batch', n_jobs=8, copy=True)
     assert adata.X.shape == multi.X.shape
 
+
 def test_downsample_counts_per_cell():
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * \
@@ -109,6 +110,7 @@ def test_downsample_counts_per_cell():
                     == new_totals[initial_totals <= TARGET])
         if not replace:
             assert np.all(X >= adata.X)
+
 
 def test_downsample_total_counts():
     X = np.random.randint(0, 100, (1000, 100)) * \
