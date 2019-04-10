@@ -1330,12 +1330,12 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     represents two values: mean expression within each category (visualized by
     color) and fraction of cells expressing the var_name in the
     category (visualized by the size of the dot).  If groupby is not given, the
-    dotplot assumes that all data belongs to a single category. 
-    
-    **Note**: A gene is considered expressed if the expression value in the adata 
+    dotplot assumes that all data belongs to a single category.
+
+    **Note**: A gene is considered expressed if the expression value in the adata
     (or adata.raw) is above the specified threshold which is zero by default.
 
-    An example of dotplot usage is to visualize, for multiple marker genes, 
+    An example of dotplot usage is to visualize, for multiple marker genes,
     the mean value and the percentage of cells expressing the gene accross multiple clusters.
 
     Parameters
@@ -2030,6 +2030,7 @@ def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_la
 def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogram=True, figsize=None,
                        show=None, save=None, **kwds):
     """
+    Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
     ----------
@@ -2066,12 +2067,15 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
     index = adata.uns[dendrogram_key]['categories_idx_ordered']
     corr_matrix = adata.uns[dendrogram_key]['correlation_matrix']
     # reorder matrix columns according to the dendrogram
-    assert(len(index)) == corr_matrix.shape[0]
-    corr_matrix = corr_matrix[index, :]
-    corr_matrix = corr_matrix[:, index]
-    num_rows = len(index)
-    labels = list(adata.obs[groupby].cat.categories)
-
+    if dendrogram:
+        assert(len(index)) == corr_matrix.shape[0]
+        corr_matrix = corr_matrix[index, :]
+        corr_matrix = corr_matrix[:, index]
+        labels = list(adata.obs[groupby].cat.categories)
+        labels = np.array(labels).astype('str')[index]
+    else:
+        labels = adata.obs[groupby].cat.categories
+    num_rows = corr_matrix.shape[0]
     colorbar_height = 0.2
     if dendrogram:
         dendrogram_width = 1.8
@@ -2085,7 +2089,6 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
         width, height = figsize
         corr_matrix_height = height - colorbar_height
 
-        
     fig = pl.figure(figsize=(width, height))
     # layout with 2 rows and 2  columns:
     # row 1: dendrogram + correlation matrix
@@ -2114,7 +2117,7 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
         kwds['vmax'] = 1
         kwds['vmin'] = -1
     if 'cmap' not in kwds:
-        # by default use a diverget color map
+        # by default use a divergent color map
         kwds['cmap'] = 'bwr'
 
     img_mat = corr_matrix_ax.pcolormesh(corr_matrix, **kwds)
@@ -2123,12 +2126,12 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
 
     corr_matrix_ax.yaxis.tick_right()
     corr_matrix_ax.set_yticks(np.arange(corr_matrix .shape[0]) + 0.5)
-    corr_matrix_ax.set_yticklabels(np.array(labels).astype('str')[index])
+    corr_matrix_ax.set_yticklabels(labels)
 
     corr_matrix_ax.xaxis.set_tick_params(labeltop=True)
     corr_matrix_ax.xaxis.set_tick_params(labelbottom=False)
     corr_matrix_ax.set_xticks(np.arange(corr_matrix .shape[0]) + 0.5)
-    corr_matrix_ax.set_xticklabels(np.array(labels).astype('str')[index], rotation=45, ha='left')
+    corr_matrix_ax.set_xticklabels(labels, rotation=45, ha='left')
 
     corr_matrix_ax.tick_params(
         axis='x',
