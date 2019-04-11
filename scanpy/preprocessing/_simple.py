@@ -3,7 +3,7 @@
 Compositions of these functions are found in sc.preprocess.recipes.
 """
 import warnings
-from typing import Union, Optional, Tuple
+from typing import Union, Optional, Tuple, Collection
 
 import numba
 import numpy as np
@@ -924,7 +924,7 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False):
 @deprecated_arg_names({"target_counts": "counts_per_cell"})
 def downsample_counts(
     adata: AnnData,
-    counts_per_cell: Optional[int] = None,
+    counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
     random_state: Optional[int] = 0,
     replace: bool = False,
@@ -943,7 +943,9 @@ def downsample_counts(
         Annotated data matrix.
     counts_per_cell
         Target total counts per cell. If a cell has more than 'counts_per_cell',
-        it will be downsampled to this number.
+        it will be downsampled to this number. Resulting counts can be specified
+        on a per cell basis by passing an array.Should be an integer or integer
+        ndarray with same length as number of obs.
     total_counts
         Target total counts. If the count matrix has more than `total_counts`
         it will be downsampled to have this number.
@@ -960,20 +962,34 @@ def downsample_counts(
     AnnData, None
         Depending on `copy` returns or updates an `adata` with downsampled `.X`.
     """
-    if type(total_counts) == type(counts_per_cell):
+    # This logic is all dispatch
+    total_counts_call = total_counts is not None
+    counts_per_cell_call = counts_per_cell is not None
+    if total_counts_call is counts_per_cell_call:
         raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
     if copy:
         adata = adata.copy()
     adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
-    if total_counts:
+    if total_counts_call:
         adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
-    elif counts_per_cell:
+    elif counts_per_cell_call:
         adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
     if copy:
         return adata
 
 
 def _downsample_per_cell(X, counts_per_cell, random_state, replace):
+    n_obs = X.shape[0]
+    if isinstance(counts_per_cell, int):
+        counts_per_cell = np.full(n_obs, counts_per_cell)
+    else:
+        counts_per_cell = np.asarray(counts_per_cell)
+    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
+        raise ValueError(
+            "If provided, 'counts_per_cell' must be either an integer, or "
+            "coercible to an `np.ndarray` of length as number of observations"
+            " by `np.asarray(counts_per_cell)`."
+        )
     if issparse(X):
         original_type = type(X)
         if not isspmatrix_csr(X):
@@ -983,7 +999,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         cols = np.split(X.data.view(), X.indptr[1:-1])
         for colidx in under_target:
             col = cols[colidx]
-            _downsample_array(col, counts_per_cell, random_state=random_state,
+            _downsample_array(col, counts_per_cell[colidx], random_state=random_state,
                               replace=replace, inplace=True)
         X.eliminate_zeros()
         if original_type is not csr_matrix: # Put it back
@@ -991,10 +1007,10 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
     else:
         totals = np.ravel(X.sum(axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        X[under_target, :] = \
-            np.apply_along_axis(_downsample_array, 1, X[under_target, :],
-                                counts_per_cell, random_state=random_state, 
-                                replace=replace)
+        for colidx in under_target:
+            col = X[colidx, :].view()
+            _downsample_array(col, counts_per_cell[colidx], random_state=random_state,
+                              replace=replace, inplace=True)
     return X
 
 
