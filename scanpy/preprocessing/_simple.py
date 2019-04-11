@@ -994,22 +994,22 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        totals = np.ravel(X.sum(axis=1))
+        totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        cols = np.split(X.data.view(), X.indptr[1:-1])
-        for colidx in under_target:
-            col = cols[colidx]
-            _downsample_array(col, counts_per_cell[colidx], random_state=random_state,
+        rows = np.split(X.data.view(), X.indptr[1:-1])
+        for rowidx in under_target:
+            row = rows[rowidx]
+            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
                               replace=replace, inplace=True)
         X.eliminate_zeros()
-        if original_type is not csr_matrix: # Put it back
+        if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
     else:
         totals = np.ravel(X.sum(axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        for colidx in under_target:
-            col = X[colidx, :].view()
-            _downsample_array(col, counts_per_cell[colidx], random_state=random_state,
+        for rowidx in under_target:
+            row = X[rowidx, :].view()
+            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
                               replace=replace, inplace=True)
     return X
 

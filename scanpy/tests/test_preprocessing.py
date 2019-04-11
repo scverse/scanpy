@@ -105,6 +105,10 @@ def test_downsample_counts_per_cell(count_matrix_format, replace):
     X = np.random.randint(0, 100, (1000, 100)) * \
         np.random.binomial(1, .3, (1000, 100))
     adata = AnnData(X=count_matrix_format(X))
+    with pytest.raises(ValueError):
+        sc.pp.downsample_counts(adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace)
+    with pytest.raises(ValueError):
+        sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGET,
                                     replace=replace, copy=True)
@@ -127,7 +131,6 @@ def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replac
         np.random.binomial(1, .3, (1000, 100))
     adata = AnnData(X=count_matrix_format(X))
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    # assert all(initial_totals == 0)
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
     adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGETS, replace=replace, copy=True)
@@ -142,6 +145,7 @@ def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replac
                 == new_totals[initial_totals <= TARGETS])
     if not replace:
         assert np.all(X >= adata.X)
+
 
 def test_downsample_total_counts(count_matrix_format, replace):
     X = np.random.randint(0, 100, (1000, 100)) * \
