@@ -1,5 +1,5 @@
-from ._utils import get_init_pos_from_paga
-from .._settings import settings
+from ._utils import get_init_pos_from_paga, choose_representation
+from .. import settings
 from .. import logging as logg
 from ..logging import (
     _settings_verbosity_greater_or_equal_than,
@@ -120,8 +120,10 @@ def umap(
     random_state = check_random_state(random_state)
     n_epochs = 0 if maxiter is None else maxiter
     verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
+    neigh_params = adata.uns['neighbors']['params']
+    X = choose_representation(adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None))
     X_umap = simplicial_set_embedding(
-        adata.X,
+        X,
         adata.uns['neighbors']['connectivities'].tocoo(),
         n_components,
         alpha,
@@ -132,8 +134,8 @@ def umap(
         n_epochs,
         init_coords,
         random_state,
-        metric="euclidean",
-        metric_kwds={},
+        neigh_params.get('metric', 'euclidean'),
+        neigh_params.get('metric_kwds', {}),
         verbose=max(0, verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')

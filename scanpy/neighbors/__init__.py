@@ -93,6 +93,13 @@ def neighbors(
         random_state=random_state)
     adata.uns['neighbors'] = {}
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
+    adata.uns['neighbors']['params']['metric'] = metric
+    if metric_kwds:
+        adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
+    if use_rep is not None:
+        adata.uns['neighbors']['params']['use_rep'] = use_rep
+    if n_pcs is not None:
+        adata.uns['neighbors']['params']['n_pcs'] = n_pcs
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
