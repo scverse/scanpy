@@ -56,7 +56,7 @@ doc_ex_frac = """\
 Example using *fraction*
 --------
 >>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
->>> sc.pp.normalize_fraction(adata, fraction=0.7)
+>>> sc.pp.normalize_total(adata, fraction=0.7)
 >>> print(adata.X)
 [[1.         0.         1.        ]
  [3.         0.         1.        ]
