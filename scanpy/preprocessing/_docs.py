@@ -1,18 +1,8 @@
 doc_norm_descr = """\
-Normalize total counts per cell.
-
-Normalize each cell by total counts over genes, so that every cell has
-the same total count after normalization.
-
-Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-[Zheng17]_ or SPRING [Weinreb17]_.\
-"""
-
-doc_quant_descr = """\
 Normalize counts per cell.
 
 Normalize each cell by sum of counts over genes
-that make up less than fraction (specified by *quantile*) of the total count
+that make up less than fraction (specified by *fraction*) of the total count
 in every cell. These genes in each cell will sum up to *target_sum*.
 
 Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
@@ -29,6 +19,10 @@ target_sum : `float` or `None`, optional (default: `None`)
     If `None`, after normalization, each observation (cell) has a total count
     equal to the median of total counts for observations (cells)
     before normalization.
+fraction : `float`, optional (default: 1)
+    Only use genes that make up less than fraction (specified by *fraction*)
+    of the total count in every cell. So only these genes will sum up
+    to *target_sum*.
 key_added : `str`, optional (default: `None`)
     Name of the field in `adata.obs` where the total counts per cell are
     stored.
@@ -50,13 +44,6 @@ inplace : `bool`, optional (default: `True`)
     `adata.X` and `adata.layers`.\
 """
 
-doc_norm_quant = """\
-quantile : `float`, optional (default: 1)
-    Only use genes that make up less than fraction (specified by *quantile*)
-    of the total count in every cell. So only these genes will sum up
-    to *target_sum*.\
-"""
-
 doc_norm_return = """\
 Returns
 -------
@@ -65,11 +52,11 @@ or updates `adata` with normalized version of the original
 `adata.X` and `adata.layers`, depending on `inplace`.\
 """
 
-doc_ex_quant = """\
-Examples
+doc_ex_frac = """\
+Example using *fraction*
 --------
 >>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
->>> sc.pp.normalize_quantile(adata, quantile=0.7)
+>>> sc.pp.normalize_fraction(adata, fraction=0.7)
 >>> print(adata.X)
 [[1.         0.         1.        ]
  [3.         0.         1.        ]
@@ -79,7 +66,7 @@ Genes 1 and 2 were normalized and now sum up to 1 in each cell.\
 """
 
 doc_ex_total = """\
-Examples
+Example
 --------
 >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
 >>> print(adata.X.sum(axis=1))

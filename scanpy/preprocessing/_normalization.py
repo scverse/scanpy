@@ -3,7 +3,7 @@ from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 from .. import logging as logg
 from ..utils import doc_params
-from ._docs import doc_norm_descr, doc_quant_descr, doc_params_bulk, doc_norm_quant, doc_norm_return, doc_ex_quant, doc_ex_total
+from ._docs import doc_norm_descr, doc_params_bulk, doc_norm_return, doc_ex_frac, doc_ex_total
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -18,22 +18,23 @@ def _normalize_data(X, counts, after=None, copy=False):
     return X if copy else None
 
 
-@doc_params(quant_descr=doc_quant_descr, params_bulk=doc_params_bulk, norm_quant=doc_norm_quant,
-            norm_return=doc_norm_return, ex_quant=doc_ex_quant)
-def normalize_total(adata, target_sum=None, quantile=1, key_added=None,
+@doc_params(norm_descr=doc_norm_descr, params_bulk=doc_params_bulk, norm_return=doc_norm_return,
+            ex_frac=doc_ex_frac, ex_total=doc_ex_total)
+def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
                     layers=None, layer_norm=None, inplace=True):
     """\
-    {quant_descr}
+    {norm_descr}
 
     {params_bulk}
-    {norm_quant}
 
     {norm_return}
 
-    {ex_quant}
+    {ex_total}
+
+    {ex_frac}
     """
-    if quantile < 0 or quantile > 1:
-        raise ValueError('Choose quantile between 0 and 1.')
+    if fraction < 0 or fraction > 1:
+        raise ValueError('Choose fraction between 0 and 1.')
 
     X = adata.X
     gene_subset = None
@@ -41,15 +42,15 @@ def normalize_total(adata, target_sum=None, quantile=1, key_added=None,
     # not recarray because need to support sparse
         dat = {}
 
-    if quantile < 1:
+    if fraction < 1:
         logg.msg('normalizing by count per cell for \
-                  genes that make up less than quantile * total count per cell', r=True)
+                  genes that make up less than fraction * total count per cell', r=True)
         X = adata.X
 
         counts_per_cell = X.sum(1)
         counts_per_cell = np.ravel(counts_per_cell)
 
-        gene_subset = (X>counts_per_cell[:, None]*quantile).sum(0)
+        gene_subset = (X>counts_per_cell[:, None]*fraction).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
     else:
         logg.msg('normalizing by total count per cell', r=True)
