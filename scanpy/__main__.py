@@ -23,7 +23,7 @@ class Delegator(abc.Mapping):
     def __getitem__(self, k: str) -> ArgumentParser:
         raise NotImplementedError
 
-    def _find_commands(self) -> Generator[ArgumentParser, None, None]:
+    def _find_commands(self) -> Generator[str, None, None]:
         raise NotImplementedError
 
 
