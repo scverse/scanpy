@@ -51,6 +51,14 @@ class TestPreprocessingDistributed:
         assert result.shape == (adata.n_obs, adata.n_vars)
         npt.assert_allclose(result, adata.X)
 
+    def test_normalize_total(self, adata, adata_dist):
+        normalize_total(adata_dist)
+        result = materialize_as_ndarray(adata_dist.X)
+        normalize_total(adata)
+        assert result.shape == adata.shape
+        assert result.shape == (adata.n_obs, adata.n_vars)
+        npt.assert_allclose(result, adata.X)
+
     def test_filter_cells(self, adata, adata_dist):
         filter_cells(adata_dist, min_genes=3)
         result = materialize_as_ndarray(adata_dist.X)
