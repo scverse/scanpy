@@ -24,7 +24,7 @@ The `Params` abbreviation is a legit replacement for `Parameters`.
 
 The `Returns` section deserves special attention:
 While you can either use the standard numpydoc way of populating it,
-you can also just write any prose:
+e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
 
 ```rst
 Returns
@@ -36,7 +36,7 @@ type of return value 2
     description of return value 2
 ```
 
-or like [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
+or use prose, like [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
 
 ```rst
 Returns
