@@ -24,12 +24,12 @@ def _diffmap(adata, n_comps=15):
 
 def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         allow_kendall_tau_shift=True, copy=False):
-    """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf17i]_.
+    """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf19]_.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` has been introduced by [Haghverdi16]_ and
-    implemented within Scanpy [Wolf17]_. Here, we use a further developed
-    version, which is able to deal with disconnected graphs [Wolf17i]_ and can
+    implemented within Scanpy [Wolf18]_. Here, we use a further developed
+    version, which is able to deal with disconnected graphs [Wolf19]_ and can
     be run in a `hierarchical` mode by setting the parameter
     `n_branchings>1`. We recommend, however, to only use
     :func:`~scanpy.api.tl.dpt` for computing pseudotime (`n_branchings=0`) and

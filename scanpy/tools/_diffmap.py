@@ -2,11 +2,11 @@ from ._dpt import _diffmap
 
 
 def diffmap(adata, n_comps=15, copy=False):
-    """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf17]_.
+    """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 
     Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
     data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
-    by [Haghverdi16]_ in the implementation of [Wolf17]_.
+    by [Haghverdi16]_ in the implementation of [Wolf18]_.
 
     The width ("sigma") of the connectivity kernel is implicitly determined by
     the number of neighbors used to compute the single-cell graph in

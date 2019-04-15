@@ -31,11 +31,11 @@ def sim(model,
         step=None,
         seed=None,
         writedir=None):
-    """Simulate dynamic gene expression data [Wittmann09]_ [Wolf17]_.
+    """Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by
-    [Wittmann09]_. The Scanpy implementation is due to [Wolf17]_.
+    [Wittmann09]_. The Scanpy implementation is due to [Wolf18]_.
 
     Parameters
     ----------

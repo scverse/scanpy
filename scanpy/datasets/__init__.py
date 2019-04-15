@@ -67,7 +67,7 @@ def krumsiek11():
     simulate the data. It describes development to four cell fates: 'monocyte',
     'erythrocyte', 'megakaryocyte' and 'neutrophil'.
 
-    See also the discussion of this data in [Wolf17i]_.
+    See also the discussion of this data in [Wolf19]_.
 
     Simulate via :func:`~scanpy.api.sim`.
 
