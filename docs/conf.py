@@ -159,7 +159,10 @@ def _consume_returns_section(self):
         name, type, descr = field
         if (not descr  # empty description (empty list)
             or len(descr) == 1 and descr[0] == ''):  # empty description (empty string)
-            new_descr = name + ': ' + type + '\n'
+            new_descr = ''
+            if name != '':
+                new_descr = name + ': '
+            new_descr += type + '\n'
             # deal with escaped *
             new_descr = new_descr.replace('\* ', '* ')
             if concat_with_old:
