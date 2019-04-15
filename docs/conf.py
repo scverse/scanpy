@@ -208,5 +208,5 @@ def _parse_returns_section(self, section):
     return lines
 
 
-NumpyDocstring._consume_returns_section = _consume_returns_section
+# NumpyDocstring._consume_returns_section = _consume_returns_section
 NumpyDocstring._parse_returns_section = _parse_returns_section
