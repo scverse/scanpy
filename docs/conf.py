@@ -141,40 +141,40 @@ DEFAULT_FILTERS['api_image'] = api_image
 from itertools import repeat, chain
 from sphinx.ext.napoleon import NumpyDocstring
 
-
-def _consume_returns_section(self):
-    # type: () -> List[Tuple[unicode, unicode, List[unicode]]]
-    # this is the full original function
-    fields = self._consume_fields(prefer_type=True)
-    # Let us postprocess the output of this function.
-    # 
-    # fields with empty descriptions are prose fields, the "actual descriptions"
-    # are stored in the types, hence:
-    #
-    # concat fields with empty descriptions
-    #
-    new_fields = []
-    concat_with_old = False
-    for field in fields:
-        name, type, descr = field
-        if (not descr  # empty description (empty list)
-            or len(descr) == 1 and descr[0] == ''):  # empty description (empty string)
-            new_descr = ''
-            if name != '':
-                new_descr = name + ': '
-            new_descr += type + '\n'
-            # deal with escaped *
-            new_descr = new_descr.replace('\* ', '* ')
-            if concat_with_old:
-                # concat to the description section
-                new_fields[-1][2].append(new_descr)
-            else:
-                new_fields.append(('', '', [new_descr]))
-                concat_with_old = True
-        else:
-            new_fields.append(field)
-            concat_with_old = False
-    return new_fields
+# # allow "prose" sections...
+# def _consume_returns_section(self):
+#     # type: () -> List[Tuple[unicode, unicode, List[unicode]]]
+#     # this is the full original function
+#     fields = self._consume_fields(prefer_type=True)
+#     # Let us postprocess the output of this function.
+#     # 
+#     # fields with empty descriptions are prose fields, the "actual descriptions"
+#     # are stored in the types, hence:
+#     #
+#     # concat fields with empty descriptions
+#     #
+#     new_fields = []
+#     concat_with_old = False
+#     for field in fields:
+#         name, type, descr = field
+#         if (not descr  # empty description (empty list)
+#             or len(descr) == 1 and descr[0] == ''):  # empty description (empty string)
+#             new_descr = ''
+#             if name != '':
+#                 new_descr = name + ': '
+#             new_descr += type + '\n'
+#             # deal with escaped *
+#             new_descr = new_descr.replace('\* ', '* ')
+#             if concat_with_old:
+#                 # concat to the description section
+#                 new_fields[-1][2].append(new_descr)
+#             else:
+#                 new_fields.append(('', '', [new_descr]))
+#                 concat_with_old = True
+#         else:
+#             new_fields.append(field)
+#             concat_with_old = False
+#     return new_fields
 
 
 # This is essentially entirely copied, the only change here is removing the bullets.
