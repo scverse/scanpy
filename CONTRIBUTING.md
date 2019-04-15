@@ -47,16 +47,22 @@ or updates `adata` with normalized version of the original
 ```
 
 Many functions also just modify parts of the passed AnnData object,
-like e.g. [`tl.leiden`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.leiden.html)
+like e.g. [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html)
 
 ```rst
 Returns
 -------
-`adata.obs[key_added]`
-    Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
+Depending on `copy`, returns or updates `adata` with the following fields.
 
-`adata.uns['leiden']['params']`
-    A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
+If `n_branchings==0`, no field `dpt_groups` will be written.
+
+dpt_pseudotime : `pd.Series` (`adata.obs`, dtype `float`)
+    Array of dim (number of samples) that stores the pseudotime of each
+    cell, that is, the DPT distance with respect to the root cell.
+dpt_groups : `pd.Series` (`adata.obs`, dtype `category`)
+    Array of dim (number of samples) that stores the subgroup id ('0',
+    '1', ...) for each cell. The groups  typically correspond to
+    'progenitor cells', 'undecided cells' or 'branches' of a process.
 ```
 
 
