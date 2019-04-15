@@ -23,7 +23,7 @@ Either take a look at any Scanpy or Numpy function or
 The `Params` abbreviation is a legit replacement for `Parameters`.
 
 The `Returns` section deserves special attention:
-While you can either use the standard numpydoc way of populating it,
+You can either use the standard numpydoc way of populating it,
 e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
 
 ```rst
