@@ -85,6 +85,7 @@ a method with the same name in ``pl``.
    pl.umap
    pl.diffmap
    pl.draw_graph
+   pl.embedding_density
 
 **Branching trajectories and pseudotime, clustering**
 
@@ -111,17 +112,10 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
    pl.rank_genes_groups_dotplot
    pl.rank_genes_groups_matrixplot
 
-
 **Simulations**
 
 .. autosummary::
    :toctree: .
 
    pl.sim
-
-**Density Plotting**
-.. autosummary::
-   :toctree: .
-
-   pl.embedding_density
 """

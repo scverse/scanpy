@@ -40,14 +40,17 @@ layers : `str` or list of `str`, optional (default: `None`)
 layer_norm : `str` or `None`, optional (default: `None`)
     Specifies how to normalize layers:
 
-    * If `None`, after normalization, for each layer in *layers* each cell
-    has a total count equal to the median of the *counts_per_cell* before
+    * If `None`, after normalization, for each layer in *layers* each cell\
+    has a total count equal to the median of the *counts_per_cell* before\
     normalization of the layer.
-    * If `'after'`, for each layer in *layers* each cell has
-    a total count equal to target_sum.
-    * If `'X'`, for each layer in *layers* each cell has a total count equal
-    to the median of total counts for observations (cells) of `adata.X`
+
+    * If `'after'`, for each layer in *layers* each cell has\
+    a total count equal to `target_sum`.
+
+    * If `'X'`, for each layer in *layers* each cell has a total count equal\
+    to the median of total counts for observations (cells) of `adata.X`\
     before normalization.
+
 inplace : `bool`, optional (default: `True`)
     Whether to update `adata` or return dictionary with normalized copies of
     `adata.X` and `adata.layers`.\
@@ -58,23 +61,10 @@ Returns
 -------
 Returns dictionary with normalized copies of `adata.X` and `adata.layers`
 or updates `adata` with normalized version of the original
-`adata.X` and `adata.layers`, depending on `inplace`.\
+`adata.X` and `adata.layers`, depending on `inplace`.
 """
 
-doc_ex_frac = """\
-Example using *fraction*
---------
->>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
->>> sc.pp.normalize_total(adata, fraction=0.7)
->>> print(adata.X)
-[[1.         0.         1.        ]
- [3.         0.         1.        ]
- [0.71428573 0.85714287 0.14285715]]
-
-Genes 1 and 2 were normalized and now sum up to 1 in each cell.\
-"""
-
-doc_ex_total = """\
+doc_examples = """\
 Example
 --------
 >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
@@ -96,7 +86,18 @@ Example
 0       1.0        3.0
 1       3.0        3.0
 2      11.0        3.0
-[ 1.  1.  1.]\
+[ 1.  1.  1.]
+
+An example using `fraction`.
+
+>>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
+>>> sc.pp.normalize_total(adata, fraction=0.7)
+>>> print(adata.X)
+[[1.         0.         1.        ]
+ [3.         0.         1.        ]
+ [0.71428573 0.85714287 0.14285715]]
+
+Genes 1 and 2 were normalized and now sum up to 1 in each cell.
 """
 
 
@@ -113,7 +114,7 @@ def _normalize_data(X, counts, after=None, copy=False):
 
 
 @doc_params(norm_descr=doc_norm_descr, params_bulk=doc_params_bulk, norm_return=doc_norm_return,
-            ex_frac=doc_ex_frac, ex_total=doc_ex_total)
+            examples=doc_examples)
 def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
                     layers=None, layer_norm=None, inplace=True):
     """\
@@ -123,9 +124,7 @@ def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
 
     {norm_return}
 
-    {ex_total}
-
-    {ex_frac}
+    {examples}
     """
     if fraction < 0 or fraction > 1:
         raise ValueError('Choose fraction between 0 and 1.')
