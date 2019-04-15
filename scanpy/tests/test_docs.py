@@ -4,6 +4,13 @@ import inspect
 import scanpy as sc
 
 
+def dedent_skip_header(docstring):
+    split = docstring.split('\n')
+    first_line = split[0]
+    rest = dedent('\n'.join(split[1:]))
+    return first_line + '\n' + rest
+
+
 def iterate_over_functions():
     functions_all = {}
     for mn in dir(sc):
