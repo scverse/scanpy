@@ -29,7 +29,7 @@ type of return value 1
 type of return value 2
     description of return value 2
 ```
-or you can write plain prose (`.rst`), for instance
+or you can write plain RST-formatted prose, for instance
 ```
 Returns
 -------
@@ -44,7 +44,7 @@ Returns
 * `adata.obs[key_added]`: Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
 * `adata.uns['leiden']['params']`: A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
 ```
-
+Whether a section is interpreted as `numpydoc` or prose depends on whether the second line is indented or not.
 
 ### Tests
 
