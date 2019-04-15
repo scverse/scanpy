@@ -428,15 +428,14 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
                              key_added='rank_genes_groups_filtered',
                              min_in_group_fraction=0.25, min_fold_change=2,
                              max_out_group_fraction=0.5):
-    """
-    Uses the results of :ref:`scanpy.tl.rank_genes_groups`, to filter out genes
-    based on fold change and fraction of genes expressing the gene within and outside the
-    `groupby` categories.
+    """Filters out genes based on fold change and fraction of genes expressing the gene within and outside the `groupby` categories.
 
-    Results are stored in adata.uns[key_added] (default: 'rank_genes_groups_filtered')
+    See :func:`~scanpy.tl.rank_genes_groups`.
+
+    Results are stored in `adata.uns[key_added]` (default: 'rank_genes_groups_filtered').
 
     To preserve the original structure of adata.uns['rank_genes_groups'], filtered genes
-    are set to `nan`.
+    are set to `NaN`.
 
     Parameters
     ----------

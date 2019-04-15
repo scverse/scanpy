@@ -196,11 +196,11 @@ References
    *Seaborn*,
    `Zenodo <https://doi.org/10.5281/zenodo.54844>`__.
 
-.. [Wolf17] Wolf *et al.* (2018),
+.. [Wolf18] Wolf *et al.* (2018),
    *Scanpy: large-scale single-cell gene expression data analysis*,
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
-.. [Wolf17i] Wolf *et al.* (2019),
+.. [Wolf19] Wolf *et al.* (2019),
    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
    `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__, 
    `bioRxiv <https://doi.org/10.1101/208819>`__.

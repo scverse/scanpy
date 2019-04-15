@@ -34,8 +34,7 @@ def leiden(
     copy: bool = False,
     **partition_kwargs
 ) -> Optional[AnnData]:
-    """
-    Cluster cells into subgroups [Traag18]_.
+    """Cluster cells into subgroups [Traag18]_.
 
     Cluster cells using the Leiden algorithm [Traag18]_, an improved version of the
     Louvain algorithm [Blondel08]_. The Louvain algorithm has been proposed for single-cell

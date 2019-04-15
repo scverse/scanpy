@@ -22,13 +22,13 @@ def dendrogram(adata: AnnData, groupby: str,
                linkage_method: Optional[str]='complete',
                key_added: Optional[str]=None) -> None:
 
-    """
-    Computes a hierarchical clustering for the given `groupby` categories. Be default the PCA
-    components are used unless .X has less than 50 variables.
+    """Computes a hierarchical clustering for the given `groupby` categories.
 
-    Alternatively, a list of var_names (e.g genes) can be given.
+    By default, the PCA representation is used unless `.X` has less than 50 variables.
 
-    Average values of either var_names or components are used to compute a correlation matrix.
+    Alternatively, a list of `var_names` (e.g. genes) can be given.
+
+    Average values of either `var_names` or components are used to compute a correlation matrix.
 
     The hierarchical clustering can be visualized using `sc.pl.dendrogram` or multiple other
     visualizations that can include a dendrogram: `matrixplot`, `heatmap`, `dotplot` and `stacked_violin`

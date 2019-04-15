@@ -95,6 +95,7 @@ Clustering and trajectory inference
 
    tl.leiden
    tl.louvain
+   tl.dendrogram
    tl.dpt
    tl.paga
 
@@ -106,6 +107,7 @@ Marker genes
    :toctree: .
 
    tl.rank_genes_groups
+   tl.filter_rank_genes_groups
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
