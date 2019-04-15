@@ -29,7 +29,7 @@ type of return value 1
 type of return value 2
     description of return value 2
 ```
-or you can write plain RST-formatted prose, for instance
+or you can write plain RST-formatted prose, for instance from [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
 ```
 Returns
 -------
@@ -37,14 +37,15 @@ Returns dictionary with normalized copies of `adata.X` and `adata.layers`
 or updates `adata` with normalized version of the original
 `adata.X` and `adata.layers`, depending on `inplace`.
 ```
-or
+or from [`tl.leiden`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.leiden.html)
 ```
 Returns
 -------
 * `adata.obs[key_added]`: Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
 * `adata.uns['leiden']['params']`: A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
 ```
-Whether a section is interpreted as `numpydoc` or prose depends on whether the second line is indented or not.
+Whether a section is interpreted as `numpydoc` or prose depends on whether the second line of the section is indented or not.
+
 
 ### Tests
 

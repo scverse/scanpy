@@ -80,7 +80,6 @@ def leiden(
 
     Returns
     -------
-    Depending on `copy` updates or returns `adata` with
     * `adata.obs[key_added]`: Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
     * `adata.uns['leiden']['params']`: A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
     """
