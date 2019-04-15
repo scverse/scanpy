@@ -20,8 +20,7 @@ def umap(
         a=None,
         b=None,
         copy=False):
-    """\
-    Embed the neighborhood graph using UMAP [McInnes18]_.
+    """Embed the neighborhood graph using UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
