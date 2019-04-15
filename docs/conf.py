@@ -142,12 +142,68 @@ from itertools import repeat, chain
 from sphinx.ext.napoleon import NumpyDocstring
 
 
-def scanpy_parse_returns_section(self, section):
-    lines_raw = self._dedent(self._consume_to_next_section())
-    lines = self._format_block(':returns: ', lines_raw)
+def _consume_returns_section(self):
+    # type: () -> List[Tuple[unicode, unicode, List[unicode]]]
+    # this is the full original function
+    fields = self._consume_fields(prefer_type=True)
+    # Let us postprocess the output of this function.
+    # 
+    # fields with empty descriptions are prose fields, the "actual descriptions"
+    # are stored in the types, hence:
+    #
+    # concat fields with empty descriptions
+    #
+    new_fields = []
+    concat_with_old = False
+    for field in fields:
+        name, type, descr = field
+        if (not descr  # empty description (empty list)
+            or len(descr) == 1 and descr[0] == ''):  # empty description (empty string)
+            new_descr = name + ': ' + type + '\n'
+            # deal with escaped *
+            new_descr = new_descr.replace('\* ', '* ')
+            if concat_with_old:
+                # concat to the description section
+                new_fields[-1][2].append(new_descr)
+            else:
+                new_fields.append(('', '', [new_descr]))
+                concat_with_old = True
+        else:
+            new_fields.append(field)
+            concat_with_old = False
+    return new_fields
+
+
+# This is essentially entirely copied, the only change here is removing the bullets.
+def _parse_returns_section(self, section):
+    # type: (unicode) -> List[unicode]
+    fields = self._consume_returns_section()
+    multi = len(fields) > 1
+    if multi:
+        use_rtype = False
+    else:
+        use_rtype = self._config.napoleon_use_rtype
+
+    lines = []  # type: List[unicode]
+    for _name, _type, _desc in fields:
+        if use_rtype:
+            field = self._format_field(_name, '', _desc)
+        else:
+            field = self._format_field(_name, _type, _desc)
+
+        if multi:
+            if lines:
+                lines.extend(self._format_block('          ', field))
+            else:
+                lines.extend(self._format_block(':returns: ', field))
+        else:
+            lines.extend(self._format_block(':returns: ', field))
+            if _type and use_rtype:
+                lines.extend([':rtype: %s' % _type, ''])
     if lines and lines[-1]:
         lines.append('')
     return lines
 
 
-NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
+NumpyDocstring._consume_returns_section = _consume_returns_section
+NumpyDocstring._parse_returns_section = _parse_returns_section
