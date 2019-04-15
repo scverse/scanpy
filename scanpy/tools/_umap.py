@@ -20,8 +20,7 @@ def umap(
         a=None,
         b=None,
         copy=False):
-    """\
-    Embed the neighborhood graph using UMAP [McInnes18]_.
+    """Embed the neighborhood graph using UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to
@@ -91,9 +90,7 @@ def umap(
 
     Returns
     -------
-    Depending on `copy`, returns or updates `adata` with the following fields.
-
-    X_umap : `adata.obsm`
+    X_umap : `adata.obsm` field
         UMAP coordinates of data.
     """
     adata = adata.copy() if copy else adata

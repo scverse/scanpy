@@ -930,8 +930,7 @@ def downsample_counts(
     replace: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
-    """
-    Downsample counts from count matrix.
+    """Downsample counts from count matrix.
 
     If `counts_per_cell` is specified, each cell will downsampled. If
     `total_counts` is specified, expression matrix will be downsampled to

@@ -33,9 +33,8 @@ def leiden(
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     copy: bool = False,
     **partition_kwargs
-) -> Optional[AnnData]:
-    """
-    Cluster cells into subgroups [Traag18]_.
+):
+    """Cluster cells into subgroups [Traag18]_.
 
     Cluster cells using the Leiden algorithm [Traag18]_, an improved version of the
     Louvain algorithm [Blondel08]_. The Louvain algorithm has been proposed for single-cell
@@ -49,22 +48,22 @@ def leiden(
         The annotated data matrix.
     resolution
         A parameter value controlling the coarseness of the clustering.
-        Higher values lead to more clusters. Set to ``None`` if overriding ``partition_type``
-        to one that doesn’t accept a ``resolution_parameter``.
+        Higher values lead to more clusters. Set to `None` if overriding `partition_type`
+        to one that doesn’t accept a `resolution_parameter`.
     random_state
         Change the initialization of the optimization.
     restrict_to
         Restrict the clustering to the categories within the key for sample
-        annotation, tuple needs to contain ``(obs_key, list_of_categories)``.
+        annotation, tuple needs to contain `(obs_key, list_of_categories)`.
     key_added
-        ``adata.obs`` key under which to add the cluster labels. (default: ``'leiden'``)
+        `adata.obs` key under which to add the cluster labels. (default: `'leiden'`)
     adjacency
         Sparse adjacency matrix of the graph, defaults to
-        ``adata.uns['neighbors']['connectivities']``.
+        `adata.uns['neighbors']['connectivities']`.
     directed
         Whether to treat the graph as directed or undirected.
     use_weights
-        If ``True``, edge weights from the graph are used in the computation
+        If `True`, edge weights from the graph are used in the computation
         (placing more emphasis on stronger edges).
     n_iterations
         How many iterations of the Leiden clustering algorithm to perform.
@@ -74,26 +73,16 @@ def leiden(
         Type of partition to use. Defaults to :class:`~leidenalg.RBConfigurationVertexPartition`.
         For the available options, consult the documentation for :func:`~leidenalg.find_partition`.
     copy
-        Whether to copy ``adata`` or modify it inplace.
+        Whether to copy `adata` or modify it inplace.
     **partition_kwargs
         Any further arguments to pass to `~leidenalg.find_partition`
-        (which in turn passes arguments to the ``partition_type``).
+        (which in turn passes arguments to the `partition_type`).
 
     Returns
     -------
-    :obj:`None`
-        By default (``copy=False``), updates ``adata`` with the following fields:
-
-        ``adata.obs[key_added]`` (:class:`pandas.Series`, dtype ``category``)
-            Array of dim (number of samples) that stores the subgroup id
-            (``'0'``, ``'1'``, ...) for each cell.
-
-        ``adata.uns['leiden']['params']``
-            A dict with the values for the parameters ``resolution``,
-            ``random_state``, and ``n_iterations``.
-
-    :class:`~anndata.AnnData`
-        When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
+    Depending on `copy` updates or returns `adata` with
+    * `adata.obs[key_added]`: Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
+    * `adata.uns['leiden']['params']`: A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
     """
     try:
         import leidenalg

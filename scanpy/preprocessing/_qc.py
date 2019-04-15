@@ -7,8 +7,7 @@ from sklearn.utils.sparsefuncs import mean_variance_axis
 
 def calculate_qc_metrics(adata, expr_type="counts", var_type="genes", qc_vars=(),
                          percent_top=(50, 100, 200, 500), inplace=False):
-    """
-    Calculate quality control metrics.
+    """Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater

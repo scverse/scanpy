@@ -1992,8 +1992,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 @doc_params(show_save_ax=doc_show_save_ax)
 def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_labels=False,
                show=None, save=None):
-    """
-    Plots a dendrogram of the categories defined in `groupby`. See. :ref:`sc.tl.dendrogram`
+    """Plots a dendrogram of the categories defined in `groupby`.
+
+    See :func:`~scanpy.tl.dendrogram`.
 
     Parameters
     ----------
@@ -2029,8 +2030,7 @@ def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_la
 @doc_params(show_save_ax=doc_show_save_ax)
 def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogram=True, figsize=None,
                        show=None, save=None, **kwds):
-    """
-    Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
+    """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
     ----------

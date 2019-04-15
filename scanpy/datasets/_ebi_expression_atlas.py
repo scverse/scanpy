@@ -128,20 +128,18 @@ def read_expression_from_archive(archive: ZipFile):
 
 
 def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
-    """
-    Load a dataset from the `EBI Single Cell Expression Atlas 
-    <https://www.ebi.ac.uk/gxa/sc/experiments>`_.
+    """Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
 
     Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
 
     Params
     ------
-    accession:
+    accession
         Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``. This can
         be found in the url on the datasets page. For example:
         ``https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne``
-    filter_boring:
-        Whether boring labels in obs should be automatically removed.
+    filter_boring
+        Whether boring labels in `.obs` should be automatically removed.
 
     Example
     -------
