@@ -3,8 +3,8 @@ python:
   - "3.6"
 cache: pip
 install:
-  - pip install docutils
-  - pip install -e .[test,louvain,leiden,sphinx]
+  - pip install docutils sphinx
+  - pip install -e .[test,louvain,leiden]
 env:
   - MPLBACKEND=Agg
 script:
