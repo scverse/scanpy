@@ -196,7 +196,6 @@ def enrich(
     container: Iterable[str],
     *,
     org: str = "hsapiens",
-    correction_method: str = "analytical",
     gprofiler_kwargs: dict = {}
 ) -> Optional[pd.DataFrame]:
     """
@@ -228,9 +227,6 @@ def enrich(
     org
         Organism to query. Must be an organism in ensembl biomart. "hsapiens",
         "mmusculus", "drerio", etc.
-    correction_method
-        How to correct p-values. Possible values are: "analytical", "fdr",
-        and "bonferroni"
     gprofiler_kwargs
         Keyword arguments to pass to `gprofiler`.
 
@@ -253,22 +249,22 @@ def enrich(
     >>> sc.queries.enrich(pbmcs, "CD34+")
     """
     try:
-        from gprofiler import gprofiler
+        from gprofiler import GProfiler
     except ImportError:
         raise ImportError(
-            "This method requires the `gprofiler` module to be installed."
+            "This method requires the `gprofiler-official` module to be installed."
         )
+    gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
     gprofiler_kwargs = copy(gprofiler_kwargs)
-    for k in ["organism", "correction_method"]:
+    for k in ["organism"]:
         if gprofiler_kwargs.get(k) is not None:
             raise ValueError(
                 "Argument `{}` should be passed directly through `enrich`, not"
                 " through `gprofiler_kwargs`".format(k)
             )
-    return gprofiler(
-        container,
+    return gprofiler.profile(
+        list(container),
         organism=org,
-        correction_method=correction_method,
         **gprofiler_kwargs
     )
 
@@ -278,8 +274,45 @@ def _enrich_anndata(
     adata: AnnData,
     group: str,
     *,
+    org: Optional[str] = "hsapiens",
     key: str = "rank_genes_groups",
-    org: Optional[str] = None,
-    **kwargs
+    pval_cutoff: float = 0.05,
+    logfc_cutoff: Optional[float] = None,
+    gene_symbols: Optional[str] = None,
+    gprofiler_kwargs: dict = {}
 ) -> Optional[pd.DataFrame]:
-    return enrich(adata.uns[key]["names"][group], org=org, **kwargs)
+    de = rank_genes_groups_df(
+        adata,
+        group=group,
+        key=key,
+        pval_cutoff=pval_cutoff,
+        logfc_cutoff=logfc_cutoff,
+        gene_symbols=gene_symbols
+    )
+    if gene_symbols is not None:
+        gene_list = list(de[gene_symbols])
+    else:
+        gene_list = list(de["names"])
+    return enrich(gene_list, org=org, gprofiler_kwargs=gprofiler_kwargs)
+
+
+####### Utilities
+
+def rank_genes_groups_df(
+    adata: AnnData,
+    group: str,  # Can this be something else?
+    key: str = "rank_genes_groups",
+    pval_cutoff : Optional[float] = None,
+    logfc_cutoff : Optional[float] = None,
+    gene_symbols : Optional[str] = None
+):
+    d = pd.DataFrame()
+    for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
+        d[k] = adata.uns["rank_genes_groups"][k][group]
+    if pval_cutoff is not None:
+        d = d[d["pvals_adj"] < pval_cutoff]
+    if logfc_cutoff is not None:
+        d = d[d["logfoldchanges"].abs() > logfc_cutoff]
+    if gene_symbols is not None:
+        d = d.join(adata.var[gene_symbols], on="names")
+    return d
