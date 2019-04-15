@@ -22,7 +22,8 @@ def dendrogram(adata: AnnData, groupby: str,
                linkage_method: Optional[str]='complete',
                key_added: Optional[str]=None) -> None:
 
-    """Computes a hierarchical clustering for the given `groupby` categories.
+    """\
+    Computes a hierarchical clustering for the given `groupby` categories.
 
     By default, the PCA representation is used unless `.X` has less than 50 variables.
 
