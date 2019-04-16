@@ -45,7 +45,7 @@ def test_help_output(set_path: type(None), capsys: CaptureFixture):
 
 def test_external(set_path: type(None)):
     # We need to capture the output manually, since subprocesses don’t write to sys.stderr
-    cmd = main(['testbin', '-t', '--testarg', 'testpos'], stdout=PIPE, text=True, check=True)
+    cmd = main(['testbin', '-t', '--testarg', 'testpos'], stdout=PIPE, encoding='utf-8', check=True)
     assert cmd.stdout == 'test -t --testarg testpos\n'
 
 
