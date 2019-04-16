@@ -1,21 +1,12 @@
-from sphinx.ext.napoleon import NumpyDocstring, GoogleDocstring
-from sphinx.ext.napoleon import Config
 import inspect
 import scanpy as sc
-
-
-def dedent_skip_header(docstring):
-    split = docstring.split('\n')
-    first_line = split[0]
-    rest = dedent('\n'.join(split[1:]))
-    return first_line + '\n' + rest
 
 
 def iterate_over_functions():
     functions_all = {}
     for mn in dir(sc):
         # skip privates and duplicates and stuff we haven't formatted in the righ way, yet
-        if mn.startswith('_') or mn in {'tl', 'pl', 'pp', 'readwrite', 'utils', 'logging', 'neighbors'}:
+        if mn.startswith('_') or mn in {'tl', 'pl', 'pp', 'cli', 'readwrite', 'utils', 'logging', 'neighbors'}:
             continue
         module = sc.__dict__[mn]
         if not inspect.ismodule(module):
@@ -28,9 +19,10 @@ def iterate_over_functions():
 
 def test_function_headers():
     for descr, f in iterate_over_functions().items():
+        assert f.__doc__ is not None, '{} has no docstring'.format(f)
         lines = f.__doc__.split('\n')
-        if lines[0].startswith('    ') or lines[0] == '':
-            raise Exception(
-                'Header of docstring of function `{}` should start with one-line description:\n'
-                '"""My one-line description.\n'
-                'not\n{}'.format(descr, lines[:2]))
+        assert lines[0] and not lines[0].startswith('    '), (
+            'Header of docstring of function `{}` should start with one-line description:\n'
+            '"""My one-line description.\n'
+            'not\n{}'.format(descr, lines[:2])
+        )

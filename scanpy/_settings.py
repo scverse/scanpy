@@ -1,3 +1,4 @@
+import inspect
 from pathlib import Path
 from time import time
 
@@ -333,7 +334,8 @@ class ScanpyConfig(object):
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
         self._frameon = frameon
 
-    def _is_run_from_ipython(self):
+    @staticmethod
+    def _is_run_from_ipython():
         """Determines whether run from Ipython.
 
         Only affects progress bars.
@@ -343,6 +345,13 @@ class ScanpyConfig(object):
             return True
         except NameError:
             return False
+
+    def __str__(self) -> str:
+        return '\n'.join(
+            f'{k} = {v!r}'
+            for k, v in inspect.getmembers(self)
+            if not k.startswith("_") and not k == 'getdoc'
+        )
 
 
 settings = ScanpyConfig()

@@ -40,6 +40,9 @@ setup(
     # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
     package_data={'': '*.txt'},
     include_package_data=True,
+    entry_points=dict(
+        console_scripts=['scanpy=scanpy.cli:console_main'],
+    ),
     zip_safe=False,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
