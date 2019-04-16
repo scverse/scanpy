@@ -121,7 +121,7 @@ def filter_cells(
         adata = data.copy() if copy else data
         cell_subset, number = materialize_as_ndarray(filter_cells(adata.X, min_counts, min_genes, max_counts, max_genes))
         if not inplace:
-            return gene_subset, number
+            return cell_subset, number
         if min_genes is None and max_genes is None: adata.obs['n_counts'] = number
         else: adata.obs['n_genes'] = number
         adata._inplace_subset_obs(cell_subset)
