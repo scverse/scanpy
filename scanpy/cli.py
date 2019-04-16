@@ -1,4 +1,5 @@
 import os
+import sys
 from argparse import ArgumentParser, Namespace, _SubParsersAction, ArgumentError
 from collections import abc
 from functools import lru_cache, partial
@@ -116,3 +117,10 @@ def main(argv: Optional[Sequence[str]] = None, *, check: bool = True, **runargs)
     
     args = parser.parse_args(argv)
     return args.func()
+
+
+def console_main():
+    """This serves as CLI entry point and will not show a Python traceback if a called command fails"""
+    cmd = main(check=False)
+    if cmd is not None:
+        sys.exit(cmd.returncode)
