@@ -93,7 +93,7 @@ class ScanpyConfig(object):
     def verbosity(self, verbosity):
         verbosity_str_options = ["error", "warn", "info", "hint"]
         if isinstance(verbosity, int):
-            self._verbosity == verbosity
+            self._verbosity = verbosity
         elif isinstance(verbosity, str):
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
