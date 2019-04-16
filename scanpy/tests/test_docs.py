@@ -6,7 +6,7 @@ def iterate_over_functions():
     functions_all = {}
     for mn in dir(sc):
         # skip privates and duplicates and stuff we haven't formatted in the righ way, yet
-        if mn.startswith('_') or mn in {'tl', 'pl', 'pp', 'readwrite', 'utils', 'logging', 'neighbors'}:
+        if mn.startswith('_') or mn in {'tl', 'pl', 'pp', 'cli', 'readwrite', 'utils', 'logging', 'neighbors'}:
             continue
         module = sc.__dict__[mn]
         if not inspect.ismodule(module):
