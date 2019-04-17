@@ -459,7 +459,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         elif isinstance(components, abc.Sequence):
             if isinstance(components[0], int):
                 # components=[1,2]
-                components_list.append(tuple(int(x) - 1 + offset for x in components]))
+                components_list.append(tuple(int(x) - 1 + offset for x in components))
             else:
                 # in this case, the components are str
                 # eg: components=['1,2'] or components=['1,2', '2,3]
