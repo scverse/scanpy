@@ -91,9 +91,10 @@ def umap(
 
     Returns
     -------
-    X_umap : `adata.obsm` field
+    Depending on `copy`, returns or updates `adata` with the following fields.
+
+    **X_umap** : `adata.obsm` field
         UMAP coordinates of data.
-    \\
     """
     adata = adata.copy() if copy else adata
     if 'neighbors' not in adata.uns:
