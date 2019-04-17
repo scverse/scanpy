@@ -189,10 +189,10 @@ def filter_genes(
     Depending on `inplace`, returns the following arrays or directly subsets
     and annotates the data matrix
 
-    gene_subset : :class:`~numpy.ndarray`
+    gene_subset : numpy.ndarray
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
-    number_per_gene : :class:`~numpy.ndarray`
+    number_per_gene : numpy.ndarray
         Depending on what was tresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
