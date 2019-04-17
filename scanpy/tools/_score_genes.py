@@ -164,11 +164,11 @@ def score_genes_cell_cycle(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    S_score : `adata.obs`, dtype `object`
+    **S_score** : `adata.obs`, dtype `object`
         The score for S phase for each cell.
-    G2M_score : `adata.obs`, dtype `object`
+    **G2M_score** : `adata.obs`, dtype `object`
         The score for G2M phase for each cell.
-    phase : `adata.obs`, dtype `object`
+    **phase** : `adata.obs`, dtype `object`
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
     See also
