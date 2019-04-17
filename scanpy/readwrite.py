@@ -4,7 +4,7 @@
 import sys
 import time
 from pathlib import Path, PurePath
-from typing import Union
+from typing import Union, Dict
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ avail_exts = {'anndata', 'xlsx',
 
 
 def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
-         first_column_names=False, backup_url=None, cache=False, **kwargs):
+         first_column_names=False, backup_url=None, cache=False, **kwargs) -> AnnData:
     """Read file and return :class:`~anndata.AnnData` object.
 
     To speed up reading, consider passing `cache=True`, which creates an hdf5
@@ -70,7 +70,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
+    An :class:`~anndata.AnnData` object
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     if is_valid_filename(filename):
@@ -90,7 +90,7 @@ def read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     return read_h5ad(filename, backed=backed)
 
 
-def read_10x_h5(filename, genome=None, gex_only=True):
+def read_10x_h5(filename, genome=None, gex_only=True) -> AnnData:
     """Read 10x-Genomics-formatted hdf5 file.
 
     Parameters
@@ -106,12 +106,11 @@ def read_10x_h5(filename, genome=None, gex_only=True):
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix, where obsevations/cells are named by their
-        barcode and variables/genes by gene name. The data matrix is stored in
-        `adata.X`, cell names in `adata.obs_names` and gene names in
-        `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
-        The feature types are stored in `adata.var['feature_types']`
+    Annotated data matrix, where obsevations/cells are named by their
+    barcode and variables/genes by gene name. The data matrix is stored in
+    `adata.X`, cell names in `adata.obs_names` and gene names in
+    `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
+    The feature types are stored in `adata.var['feature_types']`
     """
     logg.info('reading', filename, r=True, end=' ')
     with tables.open_file(str(filename), 'r') as f:
@@ -215,7 +214,7 @@ def _read_v3_10x_h5(filename):
             raise Exception('File is missing one or more required datasets.')
 
 
-def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False, gex_only=True):
+def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False, gex_only=True) -> AnnData:
     """Read 10x-Genomics-formatted mtx directory.
 
     Parameters
@@ -236,7 +235,7 @@ def read_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False, 
 
     Returns
     -------
-    An :class:`~anndata.AnnData`.
+    An :class:`~anndata.AnnData` object
     """
     path = Path(path)
     genefile_exists = (path / 'genes.tsv').is_file()
@@ -345,7 +344,7 @@ def write(filename, adata, ext=None, compression='gzip', compression_opts=None):
 # -------------------------------------------------------------------------------
 
 
-def read_params(filename, asheader=False, verbosity=0):
+def read_params(filename, asheader=False, verbosity=0) -> Dict[str, Union[int, float, bool, str, None]]:
     """Read parameter dictionary from text file.
 
     Assumes that parameters are specified in the format:
@@ -363,8 +362,7 @@ def read_params(filename, asheader=False, verbosity=0):
 
     Returns
     -------
-    params : dict
-        Dictionary that stores parameters.
+    Dictionary that stores parameters.
     """
     filename = str(filename)  # allow passing pathlib.Path objects
     from collections import OrderedDict
@@ -504,15 +502,11 @@ def _slugify(path: Union[str, PurePath]) -> str:
     return filename
 
 
-def _read_softgz(filename):
+def _read_softgz(filename) -> AnnData:
     """Read a SOFT format data file.
 
     The SOFT format is documented here
     http://www.ncbi.nlm.nih.gov/geo/info/soft2.html.
-
-    Returns
-    -------
-    adata
 
     Notes
     -----

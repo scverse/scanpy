@@ -139,11 +139,22 @@ DEFAULT_FILTERS['api_image'] = api_image
 # -- Test for new scanpydoc functionality --------------------------------------
 
 
+import re
 from sphinx.ext.napoleon import NumpyDocstring
 
 
+def process_return(lines):
+    for line in lines:
+        m = re.fullmatch(r'(?P<param>\w+)\s+:\s+(?P<type>[\w.]+)', line)
+        if m:
+            # Once this is in scanpydoc, we can use the fancy hover stuff
+            yield f'**{m["param"]}** \\: :class:`{m["type"]}`'
+        else:
+            yield line
+
+
 def scanpy_parse_returns_section(self, section):
-    lines_raw = self._dedent(self._consume_to_next_section())
+    lines_raw = list(process_return(self._dedent(self._consume_to_next_section())))
     lines = self._format_block(':returns: ', lines_raw)
     if lines and lines[-1]:
         lines.append('')
@@ -151,3 +162,18 @@ def scanpy_parse_returns_section(self, section):
 
 
 NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
+
+
+# -- Debug code ----------------------------------------------------------------
+
+
+# Just do the following to see the rst of a function:
+# rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
+import os
+if os.environ.get('DEBUG') is not None:
+    import sphinx.ext.napoleon
+    pd = sphinx.ext.napoleon._process_docstring
+    def pd_new(app, what, name, obj, options, lines):
+        pd(app, what, name, obj, options, lines)
+        print(*lines, sep='\n')
+    sphinx.ext.napoleon._process_docstring = pd_new

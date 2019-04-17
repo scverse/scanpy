@@ -32,6 +32,10 @@
     font-size: 111.11%;
 }
 
+.rst-content dl:not(.docutils) dl dt .classifier::before {
+	content: ' : ';
+}
+
 /* No narrow parameter lists for plot functions with images */
 .rst-content .docutils.field-list {
     clear: right;

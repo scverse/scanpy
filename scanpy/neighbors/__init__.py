@@ -74,10 +74,11 @@ def neighbors(
     Returns
     -------
     Depending on `copy`, updates or returns `adata` with the following:
-    connectivities : sparse matrix (`.uns['neighbors']`, dtype `float32`)
+
+    **connectivities** : sparse matrix (`.uns['neighbors']`, dtype `float32`)
         Weighted adjacency matrix of the neighborhood graph of data
         points. Weights should be interpreted as connectivities.
-    distances : sparse matrix (`.uns['neighbors']`, dtype `float32`)
+    **distances** : sparse matrix (`.uns['neighbors']`, dtype `float32`)
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
     """
@@ -170,7 +171,7 @@ def compute_neighbors_umap(
 
     Returns
     -------
-    knn_indices, knn_dists : np.arrays of shape (n_observations, n_neighbors)
+    **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
     from .umap import sparse
     from .umap.umap_ import rptree_leaf_array, make_nn_descent
@@ -786,9 +787,10 @@ class Neighbors:
         Returns
         -------
         Writes the following attributes.
-        eigen_values : np.ndarray
+
+        eigen_values : numpy.ndarray
             Eigenvalues of transition matrix.
-        eigen_basis : np.ndarray
+        eigen_basis : numpy.ndarray
              Matrix of eigenvectors (stored in columns).  `.eigen_basis` is
              projection of data matrix on right eigenvectors, that is, the
              projection on the diffusion components.  these are simply the

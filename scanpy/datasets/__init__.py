@@ -4,13 +4,15 @@
 import os
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+
 from .. import logging as logg
 from .._settings import settings
 import scanpy as sc
 from ._ebi_expression_atlas import ebi_expression_atlas
 
 
-def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
+def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640) -> AnnData:
     """Gaussian Blobs.
 
     Parameters
@@ -27,9 +29,8 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix containing a observation annotation 'blobs' that
-        indicates cluster identity.
+    Annotated data matrix containing a observation annotation 'blobs' that
+    indicates cluster identity.
     """
     import sklearn.datasets
     X, y = sklearn.datasets.make_blobs(n_samples=n_observations,
@@ -37,10 +38,10 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640):
                                        centers=n_centers,
                                        cluster_std=cluster_std,
                                        random_state=0)
-    return sc.AnnData(X, obs={'blobs': y.astype(str)})
+    return AnnData(X, obs={'blobs': y.astype(str)})
 
 
-def burczynski06():
+def burczynski06() -> AnnData:
     """Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 
     The study assesses transcriptional profiles in peripheral blood mononuclear
@@ -60,7 +61,7 @@ def burczynski06():
     return adata
 
 
-def krumsiek11():
+def krumsiek11() -> AnnData:
     """Simulated myeloid progenitors [Krumsiek11]_.
 
     The literature-curated boolean network from [Krumsiek11]_ was used to
@@ -73,8 +74,7 @@ def krumsiek11():
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
     filename = os.path.dirname(__file__) + '/krumsiek11.txt'
     verbosity_save = sc.settings.verbosity
@@ -95,13 +95,12 @@ def krumsiek11():
     return adata
 
 
-def moignard15():
+def moignard15() -> AnnData:
     """Hematopoiesis in early mouse embryos [Moignard15]_.
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
     filename = settings.datasetdir / 'moignard15/nbt.3154-S3.xlsx'
     backup_url = 'http://www.nature.com/nbt/journal/v33/n3/extref/nbt.3154-S3.xlsx'
@@ -124,7 +123,7 @@ def moignard15():
     return adata
 
 
-def paul15():
+def paul15() -> AnnData:
     """Development of Myeloid Progenitors [Paul15]_.
 
     Non-logarithmized raw data.
@@ -135,8 +134,7 @@ def paul15():
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
     logg.warn('In Scanpy 0.*, this returned logarithmized data. '
               'Now it returns non-logarithmized data.')
@@ -151,7 +149,7 @@ def paul15():
         clusters = f['cluster.id'][()].flatten()
         infogenes_names = f['info.genes_strings'][()].astype(str)
     # each row has to correspond to a observation, therefore transpose
-    adata = sc.AnnData(X.transpose())
+    adata = AnnData(X.transpose())
     adata.var_names = gene_names
     adata.row_names = cell_names
     # names reflecting the cell type identifications from the paper
@@ -176,7 +174,7 @@ def paul15():
     return adata
 
 
-def toggleswitch():
+def toggleswitch() -> AnnData:
     """Simulated toggleswitch.
 
     Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
@@ -186,8 +184,7 @@ def toggleswitch():
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
     filename = os.path.dirname(__file__) + '/toggleswitch.txt'
     adata = sc.read(filename, first_column_names=True)
@@ -195,7 +192,7 @@ def toggleswitch():
     return adata
 
 
-def pbmc68k_reduced():
+def pbmc68k_reduced() -> AnnData:
     """Subsampled and processed 68k PBMCs.
 
     10x PBMC 68k dataset from
@@ -209,15 +206,14 @@ def pbmc68k_reduced():
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
 
     filename = os.path.dirname(__file__) + '/10x_pbmc68k_reduced.h5ad'
     return sc.read(filename)
 
 
-def pbmc3k():
+def pbmc3k() -> AnnData:
     """3k PBMCs from 10x Genomics.
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
@@ -225,30 +221,29 @@ def pbmc3k():
     <http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz>`__
     from this `webpage
     <https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k>`__).
-    
-    The exact same data is also used in Seurat's 
+
+    The exact same data is also used in Seurat's
     `basic clustering tutorial <https://satijalab.org/seurat/pbmc3k_tutorial.html>`__.
 
     .. note::
 
         This downloads 5.9 MB of data upon the first call of the function and stores it in `./data/pbmc3k_raw.h5ad`.
-        
-    The following code was run to produce the file.    
-    
+
+    The following code was run to produce the file.
+
     .. code:: python
-    
+
         adata = sc.read_10x_mtx(
         './data/filtered_gene_bc_matrices/hg19/',  # the directory with the `.mtx` file
         var_names='gene_symbols',                  # use gene symbols for the variable names (variables-axis index)
         cache=True)                                # write a cache file for faster subsequent reading
-       
+
         adata.var_names_make_unique()  # this is unnecessary if using 'gene_ids'
-        adata.write('write/pbmc3k_raw.h5ad', compression='gzip')    
+        adata.write('write/pbmc3k_raw.h5ad', compression='gzip')
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
     """
     adata = sc.read(settings.datasetdir / 'pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
     return adata

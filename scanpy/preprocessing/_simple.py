@@ -39,7 +39,7 @@ def filter_cells(
     max_genes:  Optional[int] = None,
     inplace: bool = True,
     copy: bool = False,
-):
+) -> Optional[Tuple[np.ndarray, np.ndarray]]:
     """Filter cell outliers based on counts and numbers of genes expressed.
 
     For instance, only keep cells with at least `min_counts` counts or
@@ -67,16 +67,15 @@ def filter_cells(
 
     Returns
     -------
-    `tuple`, `None`
-        Depending on `inplace`, returns the following arrays or directly subsets
-        and annotates the data matrix
+    Depending on ``inplace``, returns the following arrays or directly subsets
+    and annotates the data matrix:
 
-        cells_subset : :class:`~numpy.ndarray`
-            Boolean index mask that does filtering. `True` means that the
-            cell is kept. `False` means the cell is removed.
-        number_per_cell : :class:`~numpy.ndarray`
-            Depending on what was tresholded (`counts` or `genes`), the array stores
-            `n_counts` or `n_cells` per gene.
+    cells_subset : numpy.ndarray
+        Boolean index mask that does filtering. ``True`` means that the
+        cell is kept. ``False`` means the cell is removed.
+    number_per_cell : numpy.ndarray
+        Depending on what was tresholded (``counts`` or ``genes``), the array stores
+        ``n_counts`` or ``n_cells`` per gene.
 
     Examples
     --------
