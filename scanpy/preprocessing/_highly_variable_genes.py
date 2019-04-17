@@ -71,10 +71,14 @@ def highly_variable_genes(
     Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
     updates `.var` with the following fields
 
-    * `highly_variable` - boolean indicator of highly-variable genes
-    * `means` - means per gene
-    * `dispersions` - dispersions per gene
-    * `dispersions_norm` - normalized dispersions per gene
+    highly_variable : bool
+        boolean indicator of highly-variable genes
+    **means**
+        means per gene
+    **dispersions**
+        dispersions per gene
+    **dispersions_norm**
+        normalized dispersions per gene
 
     Notes
     -----
