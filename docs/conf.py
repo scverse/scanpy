@@ -1,9 +1,6 @@
 import sys
-import logging
 from pathlib import Path
 from datetime import datetime
-
-from jinja2.defaults import DEFAULT_FILTERS
 
 import matplotlib  # noqa
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -12,9 +9,6 @@ matplotlib.use('agg')
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 import scanpy  # noqa
-
-
-logger = logging.getLogger(__name__)
 
 
 # -- General configuration ------------------------------------------------
@@ -101,6 +95,7 @@ html_logo = '_static/img/Scanpy_Logo_RGB.png'
 
 def setup(app):
     app.add_stylesheet('css/custom.css')
+    app.connect('autodoc-process-docstring', insert_function_images)
 
 
 # -- Options for other output formats ------------------------------------------
@@ -122,18 +117,11 @@ texinfo_documents = [
 # -- Images for plot functions -------------------------------------------------
 
 
-def api_image(qualname: str) -> str:
-    # I’d like to make this a contextfilter, but the jinja context doesn’t contain the path,
-    # so no chance to not hardcode “api/” here.
-    path = Path(__file__).parent / 'api' / f'{qualname}.png'
-    print(path, path.is_file())
-    return f'.. image:: {path.name}\n   :width: 200\n   :align: right' if path.is_file() else ''
-
-
-# html_context doesn’t apply to autosummary templates ☹
-# and there’s no way to insert filters into those templates
-# so we have to modify the default filters
-DEFAULT_FILTERS['api_image'] = api_image
+def insert_function_images(app, what, name, obj, options, lines):
+    path = Path(__file__).parent / 'api' / f'{name}.png'
+    if what != 'function' or not path.is_file(): return
+    lines[0:0] = [f'.. image:: {path.name}', '   :width: 200', '   :align: right', '']
+    print(*lines, sep='\n')
 
 
 # -- Test for new scanpydoc functionality --------------------------------------
