@@ -609,7 +609,7 @@ def fuzzy_simplicial_set(
     local_connectivity=1.0,
     bandwidth=1.0,
     verbose=False,
-) -> coo_matrix:
+) -> scipy.sparse.coo_matrix:
     """Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
     the form of a sparse matrix) associated to the data. This is done by

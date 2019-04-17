@@ -2,6 +2,8 @@
 #
 # License: BSD 3 clause
 
+from typing import Tuple
+
 import numpy as np
 import numba
 
