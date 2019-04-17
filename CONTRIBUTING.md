@@ -16,36 +16,40 @@ We stick to [PEP 8](https://www.python.org/dev/peps/pep-0008) and to this [edito
 
 ### Docs
 
-We use the numpydoc style for writing docstrings. Either take a look at any Scanpy or Numpy function or [here](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html).
+We use the numpydoc style for writing docstrings.
+Either take a look at any Scanpy or Numpy function or
+[here](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html).
 
 The `Params` abbreviation is a legit replacement for `Parameters`.
 
-The `Returns` section deserves special attention: you can either use the standard numpydoc way of populating it, e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
-```
+The `Returns` section deserves special attention:
+You can either use the standard numpydoc way of populating it,
+e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
+
+```rst
 Returns
 -------
 type of return value 1
     description of return value 1
+
 type of return value 2
     description of return value 2
 ```
-or you can write plain RST-formatted prose, for instance from [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
-```
+
+or use prose, like [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
+
+```rst
 Returns
 -------
 Returns dictionary with normalized copies of `adata.X` and `adata.layers`
 or updates `adata` with normalized version of the original
 `adata.X` and `adata.layers`, depending on `inplace`.
 ```
-or from [`tl.leiden`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.leiden.html)
-```
-Returns
--------
-* `adata.obs[key_added]`: Array of dim (number of samples) that stores the subgroup id (`'0'`, `'1'`, ...) for each cell.
-* `adata.uns['leiden']['params']`: A dict with the values for the parameters `resolution`, `random_state`, and `n_iterations`.
-```
-or from [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html)
-```
+
+Many functions also just modify parts of the passed AnnData object,
+like e.g. [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html)
+
+```rst
 Returns
 -------
 Depending on `copy`, returns or updates `adata` with the following fields.
@@ -60,8 +64,6 @@ dpt_groups : `pd.Series` (`adata.obs`, dtype `category`)
     '1', ...) for each cell. The groups  typically correspond to
     'progenitor cells', 'undecided cells' or 'branches' of a process.
 ```
-
-Whether a section is interpreted as `numpydoc` or prose depends on whether the second line of the section is indented or not.
 
 
 ### Tests

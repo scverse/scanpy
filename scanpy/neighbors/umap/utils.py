@@ -2,6 +2,8 @@
 #
 # License: BSD 3 clause
 
+from typing import Tuple
+
 import numpy as np
 import numba
 
@@ -65,7 +67,7 @@ def norm(vec):
 
 
 @numba.njit()
-def rejection_sample(n_samples, pool_size, rng_state):
+def rejection_sample(n_samples, pool_size, rng_state) -> np.ndarray:
     """Generate n_samples many integers from 0 to pool_size such that no
     integer is selected twice. The duplication constraint is achieved via
     rejection sampling.
@@ -83,8 +85,8 @@ def rejection_sample(n_samples, pool_size, rng_state):
 
     Returns
     -------
-    sample: array of shape(n_samples,)
-        The ``n_samples`` randomly selected elements from the pool.
+    The ``n_samples`` randomly selected elements from the pool.
+    Of shape ``(n_samples,)``
     """
     result = np.empty(n_samples, dtype=np.int64)
     for i in range(n_samples):
@@ -101,7 +103,7 @@ def rejection_sample(n_samples, pool_size, rng_state):
 
 
 @numba.njit('f8[:, :, :](i8,i8)')
-def make_heap(n_points, size):
+def make_heap(n_points, size) -> np.ndarray:
     """Constructor for the numba enabled heap objects. The heaps are used
     for approximate nearest neighbor search, maintaining a list of potential
     neighbors sorted by their distance. We also flag if potential neighbors
@@ -121,7 +123,7 @@ def make_heap(n_points, size):
 
     Returns
     -------
-    heap: An ndarray suitable for passing to other numba enabled heap functions.
+    An ndarray suitable for passing to other numba enabled heap functions.
     """
     result = np.zeros((3, n_points, size))
     result[0] = -1
@@ -132,7 +134,7 @@ def make_heap(n_points, size):
 
 
 @numba.jit('i8(f8[:,:,:],i8,f8,i8,i8)')
-def heap_push(heap, row, weight, index, flag):
+def heap_push(heap, row, weight, index, flag) -> int:
     """Push a new element onto the heap. The heap stores potential neighbors
     for each data point. The ``row`` parameter determines which data point we
     are addressing, the ``weight`` determines the distance (for heap sorting),
@@ -158,7 +160,7 @@ def heap_push(heap, row, weight, index, flag):
 
     Returns
     -------
-    success: The number of new elements successfully pushed into the heap.
+    The number of new elements successfully pushed into the heap.
     """
     indices = heap[0, row]
     weights = heap[1, row]
@@ -214,25 +216,28 @@ def heap_push(heap, row, weight, index, flag):
     return 1
 
 @numba.njit()
-def deheap_sort(heap):
+def deheap_sort(heap) -> Tuple[np.ndarray, np.ndarray]:
     """Given an array of heaps (of indices and weights), unpack the heap
     out to give and array of sorted lists of indices and weights by increasing
     weight. This is effectively just the second half of heap sort (the first
     half not being required since we already have the data in a heap).
-    
+
     Parameters
     ----------
     heap : array of shape (3, n_samples, n_neighbors)
         The heap to turn into sorted lists.
-        
+
     Returns
     -------
-    indices, weights: arrays of shape (n_samples, n_neighbors)
-        The indices and weights sorted by increasing weight.
+    indices : numpy.ndarray
+        The indices sorted by increasing weight.
+        Of shape ``(n_samples, n_neighbors)``
+    weights : numpy.ndarray
+        Array of weights. Of shape ``(n_samples, n_neighbors)``
     """
     indices = heap[0]
     weights = heap[1]
-    
+
     for i in range(indices.shape[0]):
         heap_end = indices.shape[1] - 1
         while heap_end >= 0:
@@ -241,18 +246,18 @@ def deheap_sort(heap):
             weights[i, 0], weights[i, heap_end] = \
                 weights[i, heap_end], weights[i, 0]
             heap_end -= 1
-            
+
             root = 0
             while root * 2 + 1 < heap_end:
                 left_child = root * 2 + 1
                 right_child = left_child + 1
                 swap = root
-                
+
                 if weights[i, swap] < weights[i, left_child]:
                     swap = left_child
                 if right_child < heap_end and weights[i, swap] < weights[i, right_child]:
                     swap = right_child
-                    
+
                 if swap == root:
                     break
                 else:
@@ -260,7 +265,7 @@ def deheap_sort(heap):
                         weights[i, swap], weights[i, root]
                     indices[i, root], indices[i, swap] = \
                         indices[i, swap], indices[i, root]
-                        
+
                     root = swap
     return indices.astype(np.int64), weights
 
@@ -291,7 +296,7 @@ def build_candidates(current_graph, n_vertices, n_neighbors, max_candidates,
 
     Returns
     -------
-    candidate_neighbors: A heap with an array of (randomly sorted) candidate
+    A heap with an array of (randomly sorted) candidate
     neighbors for each vertex in the graph.
     """
     candidate_neighbors = make_heap(n_vertices, max_candidates)

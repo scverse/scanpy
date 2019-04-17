@@ -45,7 +45,7 @@ def highest_expr_genes(
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis`.
+    If `show==False` a :class:`~matplotlib.axes.Axes`.
     """
     from scipy.sparse import issparse
 
@@ -65,7 +65,7 @@ def highest_expr_genes(
 
     if not ax:
         # figsize is hardcoded to produce a tall image. To change the fig size,
-        # a matplotlib.Axes object needs to be passed.
+        # a matplotlib.axes.Axes object needs to be passed.
         height = (n_top * 0.2) + 1.5
         fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwds)

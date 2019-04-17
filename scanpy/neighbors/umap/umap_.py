@@ -64,11 +64,11 @@ def random_projection_cosine_split(data, indices, rng_state):
 
     Returns
     -------
-    indices_left: array
+    indices_left : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
 
-    indices_right: array
+    indices_right : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
     """
@@ -84,10 +84,10 @@ def random_projection_cosine_split(data, indices, rng_state):
 
     left_norm = norm(data[left])
     right_norm = norm(data[right])
-    
+
     if left_norm == 0.0:
         left_norm = 1.0
-        
+
     if right_norm == 0.0:
         right_norm = 1.0
 
@@ -102,7 +102,7 @@ def random_projection_cosine_split(data, indices, rng_state):
     hyperplane_norm = norm(hyperplane_vector)
     if hyperplane_norm == 0.0:
         hyperplane_norm = 1.0
-        
+
     for d in range(dim):
         hyperplane_vector[d] = hyperplane_vector[d] / hyperplane_norm
 
@@ -172,11 +172,11 @@ def random_projection_split(data, indices, rng_state):
 
     Returns
     -------
-    indices_left: array
+    indices_left : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
 
-    indices_right: array
+    indices_right : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
     """
@@ -276,7 +276,7 @@ def make_tree(data, indices, rng_state, leaf_size=30, angular=False):
 
     Returns
     -------
-    node: RandomProjectionTreeNode
+    node : RandomProjectionTreeNode
         A random projection tree node which links to its child nodes. This
         provides the full tree below the returned node.
     """
@@ -343,7 +343,7 @@ def get_leaves(tree):
 
     Returns
     -------
-    leaves: list
+    leaves : list
         A list of arrays of indices of points in each leaf node.
     """
     if tree.is_leaf:
@@ -381,7 +381,7 @@ def rptree_leaf_array(data, n_neighbors, rng_state, n_trees=10, angular=False):
 
     Returns
     -------
-    leaf_array: array of shape (n_leaves, max(10, n_neighbors))
+    leaf_array : :class:`~numpy.ndarray` of shape (n_leaves, max(10, n_neighbors))
         Each row of leaf array is a list of indices found in a given leaf.
         Since not all leaves are the same size the arrays are padded out with -1
         to ensure we can return a single ndarray.
@@ -528,10 +528,10 @@ def smooth_knn_dist(distances, k, n_iter=64, local_connectivity=1.0,
 
     Returns
     -------
-    knn_dist: array of shape (n_samples,)
+    knn_dist: :class:`numpy.ndarray` of shape (n_samples,)
         The distance to kth nearest neighbor, as suitably approximated.
 
-    nn_dist: array of shape (n_samples,)
+    nn_dist: :class:`numpy.ndarray` of shape (n_samples,)
         The distance to the 1st nearest neighbor for each point.
     """
     target = np.log2(k) * bandwidth
@@ -598,11 +598,18 @@ def smooth_knn_dist(distances, k, n_iter=64, local_connectivity=1.0,
 
 
 # @numba.jit(parallel=True)
-def fuzzy_simplicial_set(X, n_neighbors, random_state,
-                         metric, metric_kwds={}, angular=False,
-                         set_op_mix_ratio=1.0,
-                         local_connectivity=1.0, bandwidth=1.0,
-                         verbose=False):
+def fuzzy_simplicial_set(
+    X,
+    n_neighbors,
+    random_state,
+    metric,
+    metric_kwds={},
+    angular=False,
+    set_op_mix_ratio=1.0,
+    local_connectivity=1.0,
+    bandwidth=1.0,
+    verbose=False,
+) -> scipy.sparse.coo_matrix:
     """Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
     the form of a sparse matrix) associated to the data. This is done by
@@ -686,10 +693,9 @@ def fuzzy_simplicial_set(X, n_neighbors, random_state,
 
     Returns
     -------
-    fuzzy_simplicial_set: coo_matrix
-        A fuzzy simplicial set represented as a sparse matrix. The (i,
-        j) entry of the matrix represents the membership strength of the
-        1-simplex between the ith and jth sample points.
+    A fuzzy simplicial set represented as a sparse matrix. The (i,
+    j) entry of the matrix represents the membership strength of the
+    1-simplex between the ith and jth sample points.
     """
 
     rows = np.zeros((X.shape[0] * n_neighbors), dtype=np.int64)
@@ -841,8 +847,8 @@ def spectral_layout(graph, dim, random_state):
 
     Returns
     -------
-    embedding: array of shape (n_vertices, dim)
-        The spectral embedding of the graph.
+    embedding : numpy.ndarray
+        The spectral embedding of the graph. Of shape ``(n_vertices, dim)``
     """
     n_samples = graph.shape[0]
     n_components, labels = scipy.sparse.csgraph.connected_components(graph)
@@ -935,10 +941,21 @@ def rdist(x, y):
 
 
 @numba.njit()
-def optimize_layout(embedding, positive_head, positive_tail,
-                    n_epochs, n_vertices, epochs_per_sample,
-                    a, b, rng_state, gamma=1.0, initial_alpha=1.0,
-                    negative_sample_rate=5.0, verbose=False):
+def optimize_layout(
+    embedding,
+    positive_head,
+    positive_tail,
+    n_epochs,
+    n_vertices,
+    epochs_per_sample,
+    a,
+    b,
+    rng_state,
+    gamma=1.0,
+    initial_alpha=1.0,
+    negative_sample_rate=5.0,
+    verbose=False,
+) -> np.ndarray:
     """Improve an embedding using stochastic gradient descent to minimize the
     fuzzy set cross entropy between the 1-skeletons of the high dimensional
     and low dimensional fuzzy simplicial sets. In practice this is done by
@@ -989,8 +1006,7 @@ def optimize_layout(embedding, positive_head, positive_tail,
 
     Returns
     -------
-    embedding: array of shape (n_samples, n_components)
-        The optimized embedding.
+    The optimized embedding. Of shape ``(n_samples, n_components)``
     """
 
     dim = embedding.shape[1]
@@ -1054,10 +1070,17 @@ def optimize_layout(embedding, positive_head, positive_tail,
     return embedding
 
 
-def simplicial_set_embedding(graph, n_components,
-                             initial_alpha, a, b,
-                             gamma, negative_sample_rate, n_epochs,
-                             init, random_state, verbose):
+def simplicial_set_embedding(
+    graph,
+    n_components,
+    initial_alpha, a, b,
+    gamma,
+    negative_sample_rate,
+    n_epochs,
+    init,
+    random_state,
+    verbose,
+) -> np.ndarray:
     """Perform a fuzzy simplicial set embedding, using a specified
     initialisation method and then minimizing the fuzzy set cross entropy
     between the 1-skeletons of the high and low dimensional fuzzy simplicial
@@ -1102,9 +1125,8 @@ def simplicial_set_embedding(graph, n_components,
 
     Returns
     -------
-    embedding: array of shape (n_samples, n_components)
-        The optimized of ``graph`` into an ``n_components`` dimensional
-        euclidean space.
+    The optimized of ``graph`` into an ``n_components`` dimensional
+    euclidean space. Of shape `` (n_samples, n_components)``
     """
     graph = graph.tocoo()
     graph.sum_duplicates()
@@ -1235,9 +1257,9 @@ class UMAP(BaseEstimator):
         appropriately; this will hopefully be fixed in the future.
 
     negative_sample_rate: int (optional, default 5)
-        The number of negative edge/1-simplex samples to use per positive 
+        The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
-        
+
     alpha: float (optional, default 1.0)
         The initial learning rate for the embedding optimization.
 
@@ -1461,7 +1483,7 @@ class UMAP(BaseEstimator):
 
         return self
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(self, X, y=None) -> np.ndarray:
         """Fit X into an embedded space and return that transformed
         output.
 
@@ -1473,8 +1495,8 @@ class UMAP(BaseEstimator):
 
         Returns
         -------
-        X_new : array, shape (n_samples, n_components)
-            Embedding of the training data in low-dimensional space.
+        Embedding of the training data in low-dimensional space.
+        Of shape ``(n_samples, n_components)``
         """
         self.fit(X)
         return self.embedding_

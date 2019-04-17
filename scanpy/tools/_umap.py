@@ -7,19 +7,20 @@ from ..logging import (
 )
 
 def umap(
-        adata,
-        min_dist=0.5,
-        spread=1.0,
-        n_components=2,
-        maxiter=None,
-        alpha=1.0,
-        gamma=1.0,
-        negative_sample_rate=5,
-        init_pos='spectral',
-        random_state=0,
-        a=None,
-        b=None,
-        copy=False):
+    adata,
+    min_dist=0.5,
+    spread=1.0,
+    n_components=2,
+    maxiter=None,
+    alpha=1.0,
+    gamma=1.0,
+    negative_sample_rate=5,
+    init_pos='spectral',
+    random_state=0,
+    a=None,
+    b=None,
+    copy=False,
+):
     """Embed the neighborhood graph using UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
@@ -90,7 +91,9 @@ def umap(
 
     Returns
     -------
-    X_umap : `adata.obsm` field
+    Depending on `copy`, returns or updates `adata` with the following fields.
+
+    **X_umap** : `adata.obsm` field
         UMAP coordinates of data.
     """
     adata = adata.copy() if copy else adata

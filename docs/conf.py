@@ -1,9 +1,6 @@
 import sys
-import logging
 from pathlib import Path
 from datetime import datetime
-
-from jinja2.defaults import DEFAULT_FILTERS
 
 import matplotlib  # noqa
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
@@ -12,9 +9,6 @@ matplotlib.use('agg')
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 import scanpy  # noqa
-
-
-logger = logging.getLogger(__name__)
 
 
 # -- General configuration ------------------------------------------------
@@ -101,6 +95,7 @@ html_logo = '_static/img/Scanpy_Logo_RGB.png'
 
 def setup(app):
     app.add_stylesheet('css/custom.css')
+    app.connect('autodoc-process-docstring', insert_function_images)
 
 
 # -- Options for other output formats ------------------------------------------
@@ -122,91 +117,51 @@ texinfo_documents = [
 # -- Images for plot functions -------------------------------------------------
 
 
-def api_image(qualname: str) -> str:
-    # I’d like to make this a contextfilter, but the jinja context doesn’t contain the path,
-    # so no chance to not hardcode “api/” here.
-    path = Path(__file__).parent / 'api' / f'{qualname}.png'
-    print(path, path.is_file())
-    return f'.. image:: {path.name}\n   :width: 200\n   :align: right' if path.is_file() else ''
-
-
-# html_context doesn’t apply to autosummary templates ☹
-# and there’s no way to insert filters into those templates
-# so we have to modify the default filters
-DEFAULT_FILTERS['api_image'] = api_image
+def insert_function_images(app, what, name, obj, options, lines):
+    path = Path(__file__).parent / 'api' / f'{name}.png'
+    if what != 'function' or not path.is_file(): return
+    lines[0:0] = [f'.. image:: {path.name}', '   :width: 200', '   :align: right', '']
+    print(*lines, sep='\n')
 
 
 # -- Test for new scanpydoc functionality --------------------------------------
 
-from itertools import repeat, chain
+
+import re
 from sphinx.ext.napoleon import NumpyDocstring
 
-# allow "prose" sections...
-def _consume_returns_section(self):
-    # type: () -> List[Tuple[unicode, unicode, List[unicode]]]
-    # this is the full original function
-    fields = self._consume_fields(prefer_type=True)
-    # Let us postprocess the output of this function.
-    # 
-    # fields with empty descriptions are prose fields, the "actual descriptions"
-    # are stored in the types, hence:
-    #
-    # concat fields with empty descriptions
-    #
-    new_fields = []
-    concat_with_old = False
-    for field in fields:
-        name, type, descr = field
-        if (not descr  # empty description (empty list)
-            or len(descr) == 1 and descr[0] == ''):  # empty description (empty string)
-            new_descr = ''
-            if name != '':
-                new_descr = name + ': '
-            new_descr += type + '\n'
-            # deal with escaped *
-            new_descr = new_descr.replace('\* ', '* ')
-            if concat_with_old:
-                # concat to the description section
-                new_fields[-1][2].append(new_descr)
-            else:
-                new_fields.append(('', '', [new_descr]))
-                concat_with_old = True
+
+def process_return(lines):
+    for line in lines:
+        m = re.fullmatch(r'(?P<param>\w+)\s+:\s+(?P<type>[\w.]+)', line)
+        if m:
+            # Once this is in scanpydoc, we can use the fancy hover stuff
+            yield f'**{m["param"]}** : :class:`~{m["type"]}`'
         else:
-            new_fields.append(field)
-            concat_with_old = False
-    return new_fields
+            yield line
 
 
-# This is essentially entirely copied, the only change here is removing the bullets.
-def _parse_returns_section(self, section):
-    # type: (unicode) -> List[unicode]
-    fields = self._consume_returns_section()
-    multi = len(fields) > 1
-    if multi:
-        use_rtype = False
-    else:
-        use_rtype = self._config.napoleon_use_rtype
-
-    lines = []  # type: List[unicode]
-    for _name, _type, _desc in fields:
-        if use_rtype:
-            field = self._format_field(_name, '', _desc)
-        else:
-            field = self._format_field(_name, _type, _desc)
-
-        if multi:
-            if lines:
-                lines.extend(self._format_block('          ', field))
-            else:
-                lines.extend(self._format_block(':returns: ', field))
-        else:
-            lines.extend(self._format_block(':returns: ', field))
-            if _type and use_rtype:
-                lines.extend([':rtype: %s' % _type, ''])
+def scanpy_parse_returns_section(self, section):
+    lines_raw = list(process_return(self._dedent(self._consume_to_next_section())))
+    lines = self._format_block(':returns: ', lines_raw)
     if lines and lines[-1]:
         lines.append('')
     return lines
 
 
-NumpyDocstring._consume_returns_section = _consume_returns_section
-NumpyDocstring._parse_returns_section = _parse_returns_section
+NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
+
+
+# -- Debug code ----------------------------------------------------------------
+
+
+# Just do the following to see the rst of a function:
+# rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
+import os
+if os.environ.get('DEBUG') is not None:
+    import sphinx.ext.napoleon
+    pd = sphinx.ext.napoleon._process_docstring
+    def pd_new(app, what, name, obj, options, lines):
+        pd(app, what, name, obj, options, lines)
+        print(*lines, sep='\n')
+    sphinx.ext.napoleon._process_docstring = pd_new

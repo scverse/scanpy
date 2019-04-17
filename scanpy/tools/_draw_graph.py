@@ -68,7 +68,7 @@ def draw_graph(
     -------
     Depending on `copy`, returns or updates `adata` with the following field.
 
-    X_draw_graph_`layout` : `adata.obsm`
+    **X_draw_graph_layout** : `adata.obsm`
         Coordinates of graph layout. E.g. for layout='fa' (the default), the field is called 'X_draw_graph_fa'
     """
     logg.info('drawing single-cell graph using layout "{}"'.format(layout),

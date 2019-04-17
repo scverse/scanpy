@@ -1,4 +1,5 @@
 import sys
+from typing import List, Tuple
 
 import numba
 import pandas as pd
@@ -9,7 +10,7 @@ from anndata import AnnData
 
 from .. import logging as logg
 
-def design_mat(model, batch_levels):
+def design_mat(model: pd.DataFrame, batch_levels: List[str]) -> pd.DataFrame:
     """
     Computes a simple design matrix.
 
@@ -18,15 +19,14 @@ def design_mat(model, batch_levels):
 
     Parameters
     --------
-    model : pd.DataFrame
+    model
         Contains the batch annotation
-    batch_levels : list
+    batch_levels
         Levels of the batch annotation
 
     Returns
     --------
-    design : pd.DataFrame
-        The design matrix for the regression problem
+    The design matrix for the regression problem
     """
     import patsy
 
@@ -47,7 +47,10 @@ def design_mat(model, batch_levels):
     return design
 
 
-def stand_data(model, data):
+def stand_data(
+    model: pd.DataFrame,
+    data: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """
     Standardizes the data per gene.
 
@@ -55,20 +58,20 @@ def stand_data(model, data):
 
     Parameters
     --------
-    model : pd.DataFrame
+    model
         Contains the batch annotation
-    data : pd.DataFrame
+    data
         Contains the Data
 
     Returns
     --------
-    s_data : pd.DataFrame
+    s_data : pandas.DataFrame
         Standardized Data
-    design : pd.DataFrame
+    design : pandas.DataFrame
         Batch assignment as one-hot encodings
-    var_pooled : np.array
+    var_pooled : numpy.ndarray
         Pooled variance per gene
-    stand_mean : np.array
+    stand_mean : numpy.ndarray
         Gene-wise mean
     """
 
@@ -229,7 +232,7 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
 
 
 @numba.jit
-def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
+def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001) -> Tuple[float, float]:
     """
     Iteratively compute the conditional posterior means for gamma and delta.
 
@@ -253,9 +256,9 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
 
     Returns:
     --------
-    gamma: float
+    gamma : float
         estimated value for gamma
-    delta: float
+    delta : float
         estimated value for delta
     """
 

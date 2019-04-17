@@ -10,16 +10,17 @@ from ..logging import (
 
 @doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
-        adata,
-        n_pcs=None,
-        use_rep=None,
-        perplexity=30,
-        early_exaggeration=12,
-        learning_rate=1000,
-        random_state=0,
-        use_fast_tsne=True,
-        n_jobs=None,
-        copy=False):
+    adata,
+    n_pcs=None,
+    use_rep=None,
+    perplexity=30,
+    early_exaggeration=12,
+    learning_rate=1000,
+    random_state=0,
+    use_fast_tsne=True,
+    n_jobs=None,
+    copy=False,
+):
     """\
     t-SNE [Maaten08]_ [Amir13]_ [Pedregosa11]_.
 
@@ -70,7 +71,7 @@ def tsne(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_tsne : `np.ndarray` (`adata.obs`, dtype `float`)
+    **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
     logg.info('computing tSNE', r=True)

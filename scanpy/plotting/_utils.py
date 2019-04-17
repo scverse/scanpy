@@ -1,12 +1,16 @@
 import os
+import warnings
+from typing import Union, List
+
 import numpy as np
 import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
+from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
-import warnings
+
 from .. import logging as logg
 from .._settings import settings
 from . import palettes
@@ -432,23 +436,25 @@ def setup_axes(
     return axs, panel_pos, draw_region_width, figure_width
 
 
-def scatter_base(Y,
-                 colors='blue',
-                 sort_order=True,
-                 alpha=None,
-                 highlights=[],
-                 right_margin=None,
-                 left_margin=None,
-                 projection='2d',
-                 title=None,
-                 component_name='DC',
-                 component_indexnames=[1, 2, 3],
-                 axis_labels=None,
-                 colorbars=[False],
-                 sizes=[1],
-                 color_map='viridis',
-                 show_ticks=True,
-                 ax=None):
+def scatter_base(
+    Y,
+    colors='blue',
+    sort_order=True,
+    alpha=None,
+    highlights=[],
+    right_margin=None,
+    left_margin=None,
+    projection='2d',
+    title=None,
+    component_name='DC',
+    component_indexnames=[1, 2, 3],
+    axis_labels=None,
+    colorbars=[False],
+    sizes=[1],
+    color_map='viridis',
+    show_ticks=True,
+    ax=None,
+) -> Union[Axes, List[Axes]]:
     """Plot scatter plot of data.
 
     Parameters
@@ -459,9 +465,8 @@ def scatter_base(Y,
 
     Returns
     -------
-    axs : matplotlib.axis or list of matplotlib.axis
-        Depending on whether supplying a single array or a list of arrays,
-        return a single axis or a list of axes.
+    Depending on whether supplying a single array or a list of arrays,
+    return a single axis or a list of axes.
     """
     if isinstance(highlights, dict):
         highlights_indices = sorted(highlights)

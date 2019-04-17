@@ -1,5 +1,5 @@
 from collections import abc
-from typing import Union, Optional, Sequence, Any, Mapping
+from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
 
 import numpy as np
 from anndata import AnnData
@@ -266,7 +266,7 @@ def _wraps_plot_scatter(wrapper):
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def umap(adata, **kwargs):
+def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in UMAP basis.
 
@@ -279,14 +279,14 @@ def umap(adata, **kwargs):
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     return plot_scatter(adata, 'umap', **kwargs)
 
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def tsne(adata, **kwargs):
+def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in tSNE basis.
 
@@ -299,14 +299,14 @@ def tsne(adata, **kwargs):
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     return plot_scatter(adata, 'tsne', **kwargs)
 
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def phate(adata, **kwargs):
+def phate(adata, **kwargs) -> Union[List[Axes], None]:
     """\
     Scatter plot in PHATE basis.
 
@@ -319,7 +319,7 @@ def phate(adata, **kwargs):
 
     Returns
     -------
-    If `show==False`, a list of `matplotlib.Axis` objects. Every second element
+    If `show==False`, a list of :class:`~matplotlib.axes.Axes` objects. Every second element
     corresponds to the 'right margin' drawing area for color bars and legends.
 
     Examples
@@ -345,7 +345,7 @@ def phate(adata, **kwargs):
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def diffmap(adata, **kwargs):
+def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in Diffusion Map basis.
 
@@ -357,14 +357,14 @@ def diffmap(adata, **kwargs):
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     return plot_scatter(adata, 'diffmap', **kwargs)
 
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def draw_graph(adata, layout=None, **kwargs):
+def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
 
@@ -381,7 +381,7 @@ def draw_graph(adata, layout=None, **kwargs):
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     if layout is None:
         layout = str(adata.uns['draw_graph']['params']['layout'])
@@ -395,7 +395,7 @@ def draw_graph(adata, layout=None, **kwargs):
 
 @_wraps_plot_scatter
 @doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca(adata, **kwargs):
+def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.
 
@@ -407,7 +407,7 @@ def pca(adata, **kwargs):
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     return plot_scatter(adata, 'pca', **kwargs)
 
@@ -415,7 +415,7 @@ def pca(adata, **kwargs):
 # Helpers
 
 
-def _get_data_points(adata, basis, projection, components):
+def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndarray], List[Tuple[int, int]]]:
     """
     Returns the data points corresponding to the selected basis, projection and/or components.
 
@@ -425,10 +425,11 @@ def _get_data_points(adata, basis, projection, components):
 
     Returns
     -------
-    `tuple` of:
-        data_points : `list`. Each list is a numpy array containing the data points
-        components : `list` The cleaned list of components. Eg. [[0,1]] or [[0,1], [1,2]]
-                    for components = [1,2] and components=['1,2', '2,3'] respectively
+    data_points : list
+        Each entry is a numpy array containing the data points
+    components : list
+        The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
+        for components = [1,2] and components=['1,2', '2,3'] respectively
     """
     n_dims = 2
     if projection == '3d':
@@ -453,19 +454,19 @@ def _get_data_points(adata, basis, projection, components):
 
         if isinstance(components, str):
             # eg: components='1,2'
-            components_list.append([int(x.strip()) - 1 + offset for x in components.split(',')])
+            components_list.append(tuple(int(x.strip()) - 1 + offset for x in components.split(',')))
 
         elif isinstance(components, abc.Sequence):
             if isinstance(components[0], int):
                 # components=[1,2]
-                components_list.append([int(x) - 1 + offset for x in components])
+                components_list.append(tuple(int(x) - 1 + offset for x in components))
             else:
                 # in this case, the components are str
                 # eg: components=['1,2'] or components=['1,2', '2,3]
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append([int(x.strip()) - 1 + offset for x in comp.split(',')])
+                    components_list.append(tuple(int(x.strip()) - 1 + offset for x in comp.split(',')))
 
         else:
             raise ValueError("Given components: '{}' are not valid. Please check. "
@@ -482,7 +483,7 @@ def _get_data_points(adata, basis, projection, components):
         if basis == 'diffmap':
             # remove the offset added in the case of diffmap, such that
             # plot_scatter can print the labels correctly.
-            components_list = [[number-1 for number in comp] for comp in components_list]
+            components_list = [tuple(number-1 for number in comp) for comp in components_list]
     else:
         data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
         components_list = []
@@ -553,11 +554,14 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
 
     Parameters
     ----------
-    adata : annData object
-    value_to_plot : name of a valid categorical observation
-    palette : Palette should be either a valid `matplotlib.pyplot.colormaps()` string,
-              a list of colors (in a format that can be understood by matplotlib,
-              eg. RGB, RGBS, hex, or a cycler object with key='color'
+    adata
+        annData object
+    value_to_plot
+        name of a valid categorical observation
+    palette
+        Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
+        a list of colors (in a format that can be understood by matplotlib,
+        eg. RGB, RGBS, hex, or a cycler object with key='color'
 
     Returns
     -------

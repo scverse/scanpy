@@ -1,9 +1,8 @@
 # use highlighting until the merge of https://github.com/rtfd/readthedocs.org/pull/4096
 sphinx_rtd_theme>=0.3.1
 # sphinx-autodoc-typehints needs at least sphinx 1.8
-# we fiddled quite a lot with the return section in the napoleon extension, let's be safe
-# and lock this to 1.8.3
-sphinx==1.8.3
+# Sphinx 2 has nicer looking sections
+sphinx>=2.0.1
 sphinx-autodoc-typehints
 scanpydoc>=0.3.2
 # same as ../requires.txt, but omitting the c++ packages

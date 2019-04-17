@@ -1,7 +1,10 @@
-from anndata import AnnData
+import warnings
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-import warnings
+from anndata import AnnData
+
 from .. import logging as logg
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
@@ -16,7 +19,7 @@ def highly_variable_genes(
     flavor='seurat',
     subset=False,
     inplace=True
-):
+) -> Optional[np.recarray]:
     """Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
@@ -65,14 +68,17 @@ def highly_variable_genes(
 
     Returns
     -------
-    :class:`~numpy.recarray`, `None`
-        Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
-        updates `.var` with the following fields
+    Depending on `inplace` returns calculated metrics (:class:`~numpy.recarray`) or
+    updates `.var` with the following fields
 
-        * `highly_variable` - boolean indicator of highly-variable genes
-        * `means` - means per gene
-        * `dispersions` - dispersions per gene
-        * `dispersions_norm` - normalized dispersions per gene
+    highly_variable : bool
+        boolean indicator of highly-variable genes
+    **means**
+        means per gene
+    **dispersions**
+        dispersions per gene
+    **dispersions_norm**
+        normalized dispersions per gene
 
     Notes
     -----
