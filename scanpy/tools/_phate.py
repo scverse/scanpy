@@ -92,7 +92,7 @@ def phate(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_phate : `np.ndarray`, (`adata.obs`, shape=[n_samples, n_components], dtype `float`)
+    **X_phate** : `np.ndarray`, (`adata.obs`, shape=[n_samples, n_components], dtype `float`)
         PHATE coordinates of data.
 
     Examples
