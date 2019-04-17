@@ -608,7 +608,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
 
     Returns
     -------
-    A `matplotlib.Axes` object if `ax` is `None` else `None`.
+    A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
     """
     sanitize_anndata(adata)
     if use_raw is None and adata.raw is not None: use_raw = True
@@ -809,7 +809,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     Returns
     -------
-    List of `matplotlib.Axes`
+    List of :class:`~matplotlib.axes.Axes`
 
     Examples
     -------
@@ -1088,7 +1088,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Returns
     -------
-    List of `matplotlib.Axes`
+    List of :class:`~matplotlib.axes.Axes`
 
     Examples
     -------
@@ -1370,7 +1370,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Returns
     -------
-    List of `matplotlib.Axes`
+    List of :class:`~matplotlib.axes.Axes`
 
     Examples
     -------
@@ -1643,7 +1643,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
     Returns
     -------
-    List of `matplotlib.Axes`
+    List of :class:`~matplotlib.axes.Axes`
 
     Examples
     --------
@@ -1843,7 +1843,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     Returns
     -------
-    A list of `matplotlib.Axes`.
+    A list of :class:`~matplotlib.axes.Axes`.
 
     Examples
     --------

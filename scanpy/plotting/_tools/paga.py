@@ -343,7 +343,7 @@ def paga(
         grouping.
     cmap : color map
         The color map.
-    cax : `matplotlib.Axes`
+    cax : :class:`~matplotlib.axes.Axes`
         A matplotlib axes object for a potential colorbar.
     cb_kwds : colorbar keywords
         See `here
@@ -362,7 +362,7 @@ def paga(
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
-    ax : `matplotlib.Axes`
+    ax : :class:`~matplotlib.axes.Axes`
         A matplotlib axes object.
 
     Returns
@@ -867,7 +867,7 @@ def paga_path(
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
-    ax : `matplotlib.Axes`
+    ax : :class:`~matplotlib.axes.Axes`
          A matplotlib axes object.
 
     Returns
