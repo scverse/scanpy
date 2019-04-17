@@ -30,7 +30,7 @@ def filter_genes_dispersion(data,
               merely annotate the genes, tools like `pp.pca` will
               detect the annotation
             * you can now call: `sc.pl.highly_variable_genes(adata)`
-            * `copy` is replaced by `inplace` 
+            * `copy` is replaced by `inplace`
 
     If trying out parameters, pass the data matrix instead of AnnData.
 
@@ -79,17 +79,17 @@ def filter_genes_dispersion(data,
 
     Returns
     -------
-    If an AnnData `adata` is passed, returns or updates `adata` depending on \
+    If an AnnData `adata` is passed, returns or updates `adata` depending on
     `copy`. It filters the `adata` and adds the annotations
 
-    means : adata.var
+    **means** : adata.var
         Means per gene. Logarithmized when `log` is `True`.
-    dispersions : adata.var
+    **dispersions** : adata.var
         Dispersions per gene. Logarithmized when `log` is `True`.
-    dispersions_norm : adata.var
+    **dispersions_norm** : adata.var
         Normalized dispersions per gene. Logarithmized when `log` is `True`.
 
-    If a data matrix `X` is passed, the annotation is returned as `np.recarray` \
+    If a data matrix `X` is passed, the annotation is returned as `np.recarray`
     with the same information stored in fields: `gene_subset`, `means`, `dispersions`, `dispersion_norm`.
     """
     if n_top_genes is not None and not all([

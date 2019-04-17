@@ -29,10 +29,10 @@ def diffmap(adata, n_comps=15, copy=False):
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    X_diffmap : `adata.obsm`
+    **X_diffmap** : :class:`numpy.ndarray` (`adata.obsm`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
-    diffmap_evals : `np.ndarray` (`adata.uns`)
+    **diffmap_evals** : :class:`numpy.ndarray` (`adata.uns`)
         Array of size (number of eigen vectors). Eigenvalues of transition matrix.
     """
     if 'neighbors' not in adata.uns:

@@ -2,7 +2,7 @@ import pandas as pd
 from .. import logging as logg
 
 
-def mitochondrial_genes(host, org):
+def mitochondrial_genes(host, org) -> pd.Index:
     """Mitochondrial gene symbols for specific organism through BioMart.
 
     Parameters
@@ -15,7 +15,7 @@ def mitochondrial_genes(host, org):
 
     Returns
     -------
-    A `pd.Index` containing mitochondrial gene symbols.
+    A :class:`pandas.Index` containing mitochondrial gene symbols.
     """
     try:
         from bioservices import biomart
@@ -53,7 +53,7 @@ def mitochondrial_genes(host, org):
     return res.index
 
 
-def gene_coordinates(host, org, gene, chr_exclude=[]):
+def gene_coordinates(host, org, gene, chr_exclude=[]) -> pd.DataFrame:
     """Retrieve gene coordinates for specific organism through BioMart.
     Parameters
     ----------

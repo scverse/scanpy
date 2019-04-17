@@ -148,7 +148,7 @@ def process_return(lines):
         m = re.fullmatch(r'(?P<param>\w+)\s+:\s+(?P<type>[\w.]+)', line)
         if m:
             # Once this is in scanpydoc, we can use the fancy hover stuff
-            yield f'**{m["param"]}** \\: :class:`{m["type"]}`'
+            yield f'**{m["param"]}** \\: :class:`~{m["type"]}`'
         else:
             yield line
 

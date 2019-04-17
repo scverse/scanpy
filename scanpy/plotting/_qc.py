@@ -45,7 +45,7 @@ def highest_expr_genes(
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis`.
+    If `show==False` a :class:`~matplotlib.axes.Axes`.
     """
     from scipy.sparse import issparse
 

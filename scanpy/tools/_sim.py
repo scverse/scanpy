@@ -13,24 +13,29 @@ import os
 import itertools
 import collections
 from collections import OrderedDict as odict
+
 import numpy as np
 import scipy as sp
+from anndata import AnnData
+
 from .. import utils
 from .. import readwrite
 from .._settings import settings
 from .. import logging as logg
 
 
-def sim(model,
-        params_file=True,
-        tmax=None,
-        branching=None,
-        nrRealizations=None,
-        noiseObs=None,
-        noiseDyn=None,
-        step=None,
-        seed=None,
-        writedir=None):
+def sim(
+    model,
+    params_file=True,
+    tmax=None,
+    branching=None,
+    nrRealizations=None,
+    noiseObs=None,
+    noiseDyn=None,
+    step=None,
+    seed=None,
+    writedir=None,
+) -> AnnData:
     """Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
 
     Sample from a stochastic differential equation model built from
@@ -62,8 +67,7 @@ def sim(model,
 
     Returns
     -------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
+    Annotated data matrix.
 
     Examples
     --------
@@ -818,17 +822,23 @@ class GRNsim:
                   boolRules=self.boolRules,invTimeStep=self.invTimeStep)
 
 def _check_branching(X,Xsamples,restart,threshold=0.25):
-    """ Check whether time series branches.
+    """\
+    Check whether time series branches.
 
-        Args:
-            X (np.array): current time series data.
-            Xsamples (np.array): list of previous branching samples.
-            restart (int): counts number of restart trials.
-            threshold (float, optional): sets threshold for attractor
-                identification.
+    Parameters
+    ----------
+    X (np.array): current time series data.
+    Xsamples (np.array): list of previous branching samples.
+    restart (int): counts number of restart trials.
+    threshold (float, optional): sets threshold for attractor
+        identification.
 
-        Returns:
-            check = true if branching realization, Xsamples = updated list
+    Returns
+    -------
+    check : bool
+        true if branching realization
+    Xsamples
+        updated list
     """
     check = True
     if restart == 0:
@@ -853,13 +863,16 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
     return check, Xsamples
 
 def check_nocycles(Adj, verbosity=2):
-    """ Checks that there are no cycles in graph described by adjacancy matrix.
+    """\
+    Checks that there are no cycles in graph described by adjacancy matrix.
 
-        Args:
-            Adj (np.array): adjancancy matrix of dimension (dim, dim)
+    Parameters
+    ----------
+    Adj (np.array): adjancancy matrix of dimension (dim, dim)
 
-        Returns:
-            True if there is no cycle, False otherwise.
+    Returns
+    -------
+    True if there is no cycle, False otherwise.
     """
     dim = Adj.shape[0]
     for g in range(dim):
@@ -878,19 +891,24 @@ def check_nocycles(Adj, verbosity=2):
 
 
 def sample_coupling_matrix(dim=3,connectivity=0.5):
-    """ Sample coupling matrix.
+    """\
+    Sample coupling matrix.
 
-        Checks that returned graphs contain no self-cycles.
+    Checks that returned graphs contain no self-cycles.
 
-        Args:
-            dim (int): dimension of coupling matrix.
-            connectivity (float): fraction of connectivity, fully connected means 1.,
-                not-connected means 0, in the case of fully connected, one has
-                dim*(dim-1)/2 edges in the graph.
+    Parameters
+    ----------
+    dim : int
+        dimension of coupling matrix.
+    connectivity : float
+        fraction of connectivity, fully connected means 1.,
+        not-connected means 0, in the case of fully connected, one has
+        dim*(dim-1)/2 edges in the graph.
 
-        Returns:
-            Tuple (Coupl,Adj,Adj_signed) of coupling matrix, adjancancy and
-            signed adjacancy matrix.
+    Returns
+    -------
+    Tuple (Coupl,Adj,Adj_signed) of coupling matrix, adjancancy and
+    signed adjacancy matrix.
     """
     max_trial = 10
     check = False
@@ -946,17 +964,21 @@ class StaticCauseEffect:
             'tanh': lambda x: np.tanh(2*x),
         }
 
-    def sim_givenAdj(self,Adj,model='line'):
-        """ Simulate data given only an adjacancy matrix and a model.
+    def sim_givenAdj(self, Adj: np.array, model='line'):
+        """\
+        Simulate data given only an adjacancy matrix and a model.
 
         The model is a bivariate funtional dependence. The adjacancy matrix
         needs to be acyclic.
 
-        Args:
-           Adj (np.array): adjacancy matrix of shape (dim,dim).
+        Parameters
+        ----------
+        Adj
+            adjacancy matrix of shape (dim,dim).
 
-        Returns:
-           Data array of shape (n_samples,dim).
+        Returns
+        -------
+        Data array of shape (n_samples,dim).
         """
         # nice examples
         examples = [{'func' : 'sawtooth', 'gdist' : 'uniform',
@@ -1031,11 +1053,6 @@ class StaticCauseEffect:
 
     def sim_combi(self):
         """ Simulate data to model combi regulation.
-
-        Args:
-
-        Returns:
-
         """
         n_samples = 500
         sigma_glob = 1.8

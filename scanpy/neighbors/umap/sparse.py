@@ -176,11 +176,11 @@ def sparse_random_projection_cosine_split(inds,
 
     Returns
     -------
-    indices_left: array
+    indices_left : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
 
-    indices_right: array
+    indices_right : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
     """
@@ -298,11 +298,11 @@ def sparse_random_projection_split(inds,
 
     Returns
     -------
-    indices_left: array
+    indices_left : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
 
-    indices_right: array
+    indices_right : numpy.ndarray
         The elements of ``indices`` that fall on the "left" side of the
         random hyperplane.
     """
@@ -585,7 +585,7 @@ def sparse_bray_curtis(ind1, data1, ind2, data2):
 def sparse_jaccard(ind1, data1, ind2, data2):
     num_non_zero = arr_union(ind1, ind2).shape[0]
     num_equal = arr_intersect(ind1, ind2).shape[0]
-    
+
     if num_non_zero == 0:
         return 0.0
     else:

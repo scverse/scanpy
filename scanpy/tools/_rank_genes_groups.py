@@ -69,21 +69,21 @@ def rank_genes_groups(
 
     Returns
     -------
-    names : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    **names** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the gene
         names. Ordered according to scores.
-    scores : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    **scores** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the z-score
         underlying the computation of a p-value for each gene for each
         group. Ordered according to scores.
-    logfoldchanges : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    **logfoldchanges** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Structured array to be indexed by group id storing the log2
         fold change for each gene for each group. Ordered according to
         scores. Only provided if method is 't-test' like.
         Note: this is an approximation calculated from mean-log values.
-    pvals : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    **pvals** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         p-values.
-    pvals_adj : structured `np.ndarray` (`.uns['rank_genes_groups']`)
+    **pvals_adj** : structured `np.ndarray` (`.uns['rank_genes_groups']`)
         Corrected p-values.
 
     Notes

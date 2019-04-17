@@ -83,7 +83,7 @@ def scatter(
 
     Returns
     -------
-    If `show==False` a `matplotlib.Axis` or a list of it.
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
     if basis is not None:
         axs = _scatter_obs(

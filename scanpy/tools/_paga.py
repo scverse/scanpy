@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import List
 
 import numpy as np
 import scipy as sp
@@ -61,10 +62,10 @@ def paga(
 
     Returns
     -------
-    connectivities : np.ndarray (adata.uns['connectivities'])
+    **connectivities** : :class:`numpy.ndarray` (adata.uns['connectivities'])
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
-    connectivities_tree : sc.sparse csr matrix (adata.uns['connectivities_tree'])
+    **connectivities_tree** : :class:`scipy.sparse.csr_matrix` (adata.uns['connectivities_tree'])
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
 
@@ -328,7 +329,7 @@ class PAGA():
         self.transitions_confidence = transitions_confidence.T
 
 
-def paga_degrees(adata):
+def paga_degrees(adata) -> List[int]:
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
@@ -338,8 +339,7 @@ def paga_degrees(adata):
 
     Returns
     -------
-    degrees : list
-        List of degrees for each node.
+    List of degrees for each node.
     """
     import networkx as nx
     g = nx.Graph(adata.uns['paga']['connectivities'])
@@ -347,7 +347,7 @@ def paga_degrees(adata):
     return degrees
 
 
-def paga_expression_entropies(adata):
+def paga_expression_entropies(adata) -> List[float]:
     """Compute the median expression entropy for each node-group.
 
     Parameters
@@ -357,8 +357,7 @@ def paga_expression_entropies(adata):
 
     Returns
     -------
-    entropies : list
-        Entropies of median expressions for each node.
+    Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
     groups_order, groups_masks = utils.select_groups(
@@ -370,7 +369,7 @@ def paga_expression_entropies(adata):
         x_probs = (x_median - np.nanmin(x_median)) / (np.nanmax(x_median) - np.nanmin(x_median))
         entropies.append(entropy(x_probs))
     return entropies
-    
+
 
 def paga_compare_paths(adata1, adata2,
                        adjacency_key='connectivities', adjacency_key2=None):

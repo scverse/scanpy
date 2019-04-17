@@ -47,23 +47,23 @@ def sandbag(
     try:
         from pypairs import __version__ as pypairsversion
         from distutils.version import LooseVersion
-        
+
         if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
             raise ImportError('Please only use `pypairs` >= v3.0.9 ')
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
-        
-    
+
+
     from pypairs.pairs import sandbag
     from . import settings
     from pypairs import settings as pp_settings
-    
+
     pp_settings.verbosity = settings.verbosity
     pp_settings.n_jobs = settings.n_jobs
     pp_settings.writedir = settings.writedir
     pp_settings.cachedir = settings.cachedir
     pp_settings.logfile = settings.logfile
-    
+
     return sandbag(
         data = adata,
         annotation = annotation,
@@ -113,28 +113,27 @@ def cyclone(
 
     Returns
     -------
-     A :class:`~pandas.DataFrame` with samples as index and categories as columns with scores for each category for each
+    A :class:`~pandas.DataFrame` with samples as index and categories as columns with scores for each category for each
     sample and a additional column with the name of the max scoring category for each sample.
-    
-        *
-            If marker pairs contain only the cell cycle categories G1, S and G2M an additional column
-            ``pypairs_cc_prediction`` will be added. Where category S is assigned to samples where G1 and G2M score are
-            below 0.5.
+
+    If marker pairs contain only the cell cycle categories G1, S and G2M an additional column
+    ``pypairs_cc_prediction`` will be added. Where category S is assigned to samples where G1 and G2M score are
+    below 0.5.
     """
     try:
         from pypairs import __version__ as pypairsversion
         from distutils.version import LooseVersion
-        
+
         if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
             raise ImportError('Please only use `pypairs` >= v3.0.9 ')
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
-        
-    
+
+
     from pypairs.pairs import cyclone
     from . import settings
     from pypairs import settings as pp_settings
-    
+
     pp_settings.verbosity = settings.verbosity
     pp_settings.n_jobs = settings.n_jobs
     pp_settings.writedir = settings.writedir

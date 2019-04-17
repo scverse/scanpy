@@ -1,5 +1,5 @@
 import sys
-from typing import List
+from typing import List, Tuple
 
 import numba
 import pandas as pd

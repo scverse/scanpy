@@ -1,10 +1,11 @@
 """Run Diffusion maps using the adaptive anisotropic kernel
 """
 
+from anndata import AnnData
 from scanpy import logging as logg
 
 
-def palantir(adata):
+def palantir(adata: AnnData):
     """
     Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 
@@ -21,28 +22,33 @@ def palantir(adata):
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         An AnnData object, or Dataframe of cells X genes.
 
     Returns
     -------
+    `.uns['palantir_norm_data']`
+        A `data_df` copy of adata if normalized
 
-    `.uns['palantir_norm_data']` which is a `data_df` copy of adata if normalized
+    `pca_results`
+        PCA projections and explained variance ratio of adata:
+        - `.uns['palantir_pca_results']['pca_projections']`
+        - `.uns['palantir_pca_results']['variance_ratio']`
 
-    `pca_results` PCA projections and explained variance ratio of adata:
-    - `.uns['palantir_pca_results']['pca_projections']`
-    - `.uns['palantir_pca_results']['variance_ratio']`
+    `dm_res`
+        Diffusion components, corresponding eigen values and diffusion operator:
+        - `.uns['palantir_diff_maps']['EigenVectors']`
+        - `.uns['palantir_diff_maps']['EigenValues']`
+        - `.uns['palantir_diff_maps']['T']`
 
-    `dm_res` Diffusion components, corresponding eigen values and diffusion operator:
-    - `.uns['palantir_diff_maps']['EigenVectors']`
-    - `.uns['palantir_diff_maps']['EigenValues']`
-    - `.uns['palantir_diff_maps']['T']`
+    `.uns['palantir_ms_data']`
+        The `ms_data` - Multi scale data matrix
 
-    `.uns['palantir_ms_data']` which is the `ms_data` - Multi scale data matrix
+    `.uns['palantir_tsne']` : `tsne`
+        tSNE on diffusion maps
 
-    `.uns['palantir_tsne']` which is `tsne` - tSNE on diffusion maps
-
-    `.uns['palantir_imp_df']` which is `imp_df` - Imputed data matrix (MAGIC imputation)
+    `.uns['palantir_imp_df']` : `imp_df`
+        Imputed data matrix (MAGIC imputation)
 
     Example
     -------
