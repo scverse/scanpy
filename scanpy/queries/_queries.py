@@ -37,7 +37,7 @@ def simple_query(
     host: str = "www.ensembl.org",
     use_cache: bool = False
 ) -> pd.DataFrame:
-    """
+    """\
     A simple interface to biomart.
 
     Params
@@ -80,7 +80,7 @@ def biomart_annotations(
     host: str = "www.ensembl.org",
     use_cache: bool = False
 ) -> pd.DataFrame:
-    """
+    """\
     Retrieve gene annotations from ensembl biomart.
 
     Parameters
@@ -93,7 +93,7 @@ def biomart_annotations(
 
     Returns
     -------
-    A `pd.DataFrame` containing annotations.
+    Dataframe containing annotations.
 
     Examples
     --------
@@ -118,7 +118,7 @@ def gene_coordinates(
     host: str = "www.ensembl.org",
     use_cache: bool = False
 ) -> pd.DataFrame:
-    """
+    """\
     Retrieve gene coordinates for specific organism through BioMart.
 
     Parameters
@@ -136,7 +136,7 @@ def gene_coordinates(
 
     Returns
     -------
-    A `pd.DataFrame` containing gene coordinates for the specified gene symbol.
+    Dataframe containing gene coordinates for the specified gene symbol.
 
     Examples
     --------
@@ -175,7 +175,7 @@ def mitochondrial_genes(
 
     Returns
     -------
-    An `pd.DataFrame` containing identifiers for mitochondrial genes.
+    Dataframe containing identifiers for mitochondrial genes.
 
     Examples
     --------
@@ -192,17 +192,18 @@ def mitochondrial_genes(
 
 
 @singledispatch
+@doc_params(doc_org=_doc_org)
 def enrich(
     container: Iterable[str],
     *,
     org: str = "hsapiens",
     gprofiler_kwargs: dict = {}
-) -> Optional[pd.DataFrame]:
-    """
+) -> pd.DataFrame:
+    """\
     Get enrichment for DE results.
 
     This is a thin convenience wrapper around the very useful
-    `gprofiler <https://github.com/vals/python-gprofiler>`_.
+    `gprofiler <https://pypi.org/project/gprofiler-official/#description>`_.
 
     This method dispatches on the first argument, leading to the following two
     signatures::
@@ -224,17 +225,13 @@ def enrich(
         The group whose genes should be used for enrichment.
     key
         Key in `uns` to find group under.
-    org
-        Organism to query. Must be an organism in ensembl biomart. "hsapiens",
-        "mmusculus", "drerio", etc.
+    {doc_org}
     gprofiler_kwargs
-        Keyword arguments to pass to `gprofiler`.
+        Keyword arguments to pass to :func:`gprofiler.GProfiler.profile`.
 
     Returns
     -------
-    `pd.DataFrame` or `None`:
-        Returns enrichment results. If nothing was found to be enriched,
-        returns `None`.
+    Dataframe of enrichment results.
 
     Examples
     --------
@@ -242,7 +239,7 @@ def enrich(
 
     >>> sc.queries.enrich(['Klf4', 'Pax5', 'Sox2', 'Nanog'], org="hsapiens")
 
-    Using `sc.queries.enrich on an `AnnData` object:
+    Using `sc.queries.enrich` on an :class:`anndata.AnnData` object:
 
     >>> pbmcs = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(pbmcs, "bulk_labels")
@@ -280,7 +277,7 @@ def _enrich_anndata(
     logfc_cutoff: Optional[float] = None,
     gene_symbols: Optional[str] = None,
     gprofiler_kwargs: dict = {}
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,
         group=group,
@@ -305,7 +302,7 @@ def rank_genes_groups_df(
     pval_cutoff : Optional[float] = None,
     logfc_cutoff : Optional[float] = None,
     gene_symbols : Optional[str] = None
-):
+) -> pd.DataFrame:
     d = pd.DataFrame()
     for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
         d[k] = adata.uns["rank_genes_groups"][k][group]
