@@ -466,7 +466,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
                 # More than one component can be given and is stored
                 # as a new item of components_list
                 for comp in components:
-                    components_list.append(tuple(int(x.strip()) - 1 + offset for x in comp.split(',')]))
+                    components_list.append(tuple(int(x.strip()) - 1 + offset for x in comp.split(',')))
 
         else:
             raise ValueError("Given components: '{}' are not valid. Please check. "
