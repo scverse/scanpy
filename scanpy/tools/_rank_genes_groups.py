@@ -459,11 +459,9 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
     >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
-
-    # visualize results
+    >>> # visualize results
     >>> sc.pl.rank_genes_groups(adata, key='rank_genes_groups_filtered')
-
-    # visualize results using dotplot
+    >>> # visualize results using dotplot
     >>> sc.pl.rank_genes_groups_dotplot(adata, key='rank_genes_groups_filtered')
     """
     if key is None:
