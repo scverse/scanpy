@@ -9,15 +9,16 @@ __author__ = ', '.join([
     'Fidel Ramirez',
     'Isaac Virshup',
     'Sergei Rybakov',
-    'Marius Lange',
-    'Davide Cittaro',
     'Gokcen Eraslan',
     'Tom White',
+    'Malte Luecken',
+    'Davide Cittaro',
     'Tobias Callies',
+    'Marius Lange',
     'Andrés R. Muñoz-Rojas',
 ])
 __email__ = ', '.join([
-    'alex.wolf@helmholtz-muenchen.de',
+    'f.alex.wolf@gmx.de',
     'philipp.angerer@helmholtz-muenchen.de',
     # We don’t need all, the main authors are sufficient.
 ])
@@ -43,4 +44,3 @@ set_figure_params = settings.set_figure_params
 # has to be done at the end, after everything has been imported
 annotate_doc_types(sys.modules[__name__], 'scanpy')
 del sys, annotate_doc_types
-
