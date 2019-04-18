@@ -23,21 +23,14 @@ Either take a look at any Scanpy or Numpy function or
 The `Params` abbreviation is a legit replacement for `Parameters`.
 
 The `Returns` section deserves special attention:
-You can either use the standard numpydoc way of populating it,
-e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
+There are three types of return sections – prose, tuple, mix of prose and tuple.
+1. Prose is for simple cases.
+2. Tuple return sections are formatted like parameters (other than in numpydoc, each tuple is first characterized by the identifier name and *not* by its type, you can provide type annotation in the function header or by separation with a colon, as in parameters). 
+3. Mix of prose and typle is relevant in complicated cases, e.g. when you want to describe that you _added something as annotation to an `AnnData` object_.
 
-```rst
-Returns
--------
-type of return value 1
-    description of return value 1
+#### Examples
 
-type of return value 2
-    description of return value 2
-```
-
-or use prose, like [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
-
+For simple cases, use prose as in [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
 ```rst
 Returns
 -------
@@ -46,9 +39,19 @@ or updates `adata` with normalized version of the original
 `adata.X` and `adata.layers`, depending on `inplace`.
 ```
 
-Many functions also just modify parts of the passed AnnData object,
-like e.g. [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html)
+You can either use the standard numpydoc way of populating it,
+e.g. as in [`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html)
+```rst
+Returns
+-------
+one_identifier : some_type
+    Description.
+second_identifier : some_type
+    Description.
+```
 
+Many functions also just modify parts of the passed AnnData object,
+like e.g. [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html). You can then combine prose and lists to best describe what happens.
 ```rst
 Returns
 -------
