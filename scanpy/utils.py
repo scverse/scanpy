@@ -6,16 +6,18 @@ import inspect
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, wraps
+from functools import partial, wraps, singledispatch
 from types import ModuleType, MethodType
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Iterable
 
 import numpy as np
 import scipy.sparse
 from natsort import natsorted
 from textwrap import dedent
+import pandas as pd
 from pandas.api.types import CategoricalDtype
 
+from anndata import AnnData
 from ._settings import settings
 from . import logging as logg
 import warnings
@@ -411,6 +413,9 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     else:
         return csr_matrix(shape)
 
+# --------------------------------------------------------------------------------
+# Group stuff
+# --------------------------------------------------------------------------------
 
 def compute_association_matrix_of_groups(adata, prediction, reference,
                                          normalization='prediction',
@@ -577,6 +582,129 @@ def unique_categories(categories):
     categories = np.setdiff1d(categories, np.array(settings.categories_to_ignore))
     categories = np.array(natsorted(categories, key=lambda v: v.upper()))
     return categories
+
+# --------------------------------------------------------------------------------
+# Plotting data helpers
+# --------------------------------------------------------------------------------
+
+@singledispatch  # TODO: implement diffxpy method
+def rank_genes_groups_df(
+    adata: AnnData,
+    group: str,  # Can this be something other than a str?
+    *,
+    genes: Optional[Iterable[str]] = None,  # TODO: Implement
+    key: str = "rank_genes_groups",
+    pval_cutoff: Optional[float] = 0.05,
+    logfc_cutoff: Optional[float] = None,
+    gene_symbols: Optional[str] = None
+) -> pd.DataFrame:
+    """
+    Get `rank_genes_groups` results in the form of a :class:`pd.DataFrame`.
+
+    Params
+    ------
+    adata
+        Object to get results from.
+    group
+        Which group (key from :func:`scanpy.tl.rank_genes_groups` `groupby`) to
+        return results from.
+    genes
+        Only return values for these genes.
+    key
+        Key differential expression groups were stored under.
+    pval_cutoff
+        Minimum adjusted pval to return.
+    logfc_cutoff
+        Minumum logfc to return.
+    gene_symbols
+        Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+        refer to the index column of the `.var` DataFrame. Setting this option allows
+        alternative names to be used.
+    """
+    d = pd.DataFrame()
+    for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
+        d[k] = adata.uns["rank_genes_groups"][k][group]
+    if pval_cutoff is not None:
+        d = d[d["pvals_adj"] < pval_cutoff]
+    if logfc_cutoff is not None:
+        d = d[d["logfoldchanges"].abs() > logfc_cutoff]
+    if gene_symbols is not None:
+        d = d.join(adata.var[gene_symbols], on="names")
+    return d
+
+
+# Would an array be faster?
+def obs_values(adata, value_key: str, *, use_raw: bool = False, gene_symbols: str = None, layer: str = None):
+    """Get series for value defined on each cell.
+
+    Params
+    ------
+    adata
+    value_key
+
+    """
+    obs_names = adata.obs_names
+    if value_key in adata.obs.columns:
+        vals = adata.obs[value_key]
+        return vals
+    if gene_symbols is not None and gene_symbols in adata.var.columns:
+        if value_key not in adata.var[gene_symbols].values:
+            logg.error("Gene symbol {!r} not found in given gene_symbols "
+                       "column: {!r}".format(value_key, gene_symbols))
+            return
+        value_key = adata.var[adata.var[gene_symbols] == value_key].index[0]
+    if layer is not None and value_key in adata.var_names:
+        if layer not in adata.layers.keys():
+            raise KeyError('Selected layer: {} is not in the layers list. The list of '
+                           'valid layers is: {}'.format(layer, adata.layers.keys()))
+        vals = pd.Series(adata[:, value_key].layers[layer], index=obs_names)
+    elif use_raw and value_key in adata.raw.var_names:
+        vals = pd.Series(adata.raw[:, value_key].X, index=obs_names)
+    elif value_key in adata.var_names:
+        vals = pd.Series(adata[:, value_key].X, index=obs_names)
+    else:
+        raise ValueError("The passed `value_key` {} is not a valid observation annotation "
+                         "or variable name. Valid observation annotation keys are: {}"
+                         .format(value_key, adata.obs.columns))
+    return vals
+
+
+def obs_values_df(
+    adata: AnnData, keys: Iterable[str], *,
+    use_raw: bool = False, gene_symbols: str = None, layer: str = None
+):
+    """
+    Return values for observations in adata.
+
+    Params
+    ------
+    adata
+    keys
+        Keys from either `.obs_names` or `.obs.index`.
+    use_raw
+    gene_symbols
+    layer
+
+    Returns
+    -------
+    A dataframe whose columns are values corresponding to `keys` from `.X` or
+    `.obs`. The index is `adata.obs_names`.
+
+    Examples
+    --------
+    pbmc = 
+    """
+    df = pd.DataFrame(index=adata.obs_names)
+    for k in keys:
+        df[k] = obs_values(
+            adata, k, use_raw=use_raw, gene_symbols=gene_symbols, layer=layer
+        )
+    return df
+
+
+# --------------------------------------------------------------------------------
+# Other stuff
+# --------------------------------------------------------------------------------
 
 
 def fill_in_datakeys(example_parameters, dexdata):
