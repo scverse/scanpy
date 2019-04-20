@@ -181,6 +181,9 @@ def compute_neighbors_umap(
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
     from umap.umap_ import nearest_neighbors
+    from sklearn.utils import check_random_state
+
+    random_state = check_random_state(random_state)
 
     knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=random_state, metric=metric,
                                                   metric_kwds=metric_kwds, angular=angular, verbose=verbose)
