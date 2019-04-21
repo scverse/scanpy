@@ -102,6 +102,8 @@ def neighbors(
         adata.uns['neighbors']['params']['n_pcs'] = n_pcs
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
+    if neighbors.rp_forest is not None:
+        adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
@@ -185,10 +187,11 @@ def compute_neighbors_umap(
 
     random_state = check_random_state(random_state)
 
-    knn_indices, knn_dists, _ = nearest_neighbors(X, n_neighbors, random_state=random_state, metric=metric,
-                                                  metric_kwds=metric_kwds, angular=angular, verbose=verbose)
+    knn_indices, knn_dists, forest = nearest_neighbors(X, n_neighbors, random_state=random_state,
+                                                       metric=metric, metric_kwds=metric_kwds,
+                                                       angular=angular, verbose=verbose)
 
-    return knn_indices, knn_dists
+    return knn_indices, knn_dists, forest
 
 
 def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -294,6 +297,28 @@ def _backwards_compat_get_full_eval(adata):
         return adata.uns['diffmap_evals']
 
 
+def _make_forest_dict(forest):
+    d = {}
+    props = ('hyperplanes', 'offsets', 'children', 'indices')
+    for prop in props:
+        d[prop] = {}
+        sizes = np.fromiter((getattr(tree, prop).shape[0] for tree in forest), dtype=int)
+        d[prop]['sizes'] = sizes
+        if prop == 'offsets':
+            dims = sizes.sum()
+        else:
+            dims = (sizes.sum(), getattr(forest[0], prop).shape[1])
+        dtype = getattr(forest[0], prop).dtype
+        dat = np.empty(dims, dtype=dtype)
+        start = 0
+        for i, size in enumerate(sizes):
+            end = start+size
+            dat[start:end] = getattr(forest[i], prop)
+            start = end
+        d[prop]['data'] = dat
+    return d
+
+
 class OnFlySymMatrix:
     """Emulate a matrix where elements are calculated on the fly.
     """
@@ -361,6 +386,7 @@ class Neighbors:
         self._distances = None
         self._connectivities = None
         self._number_connected_components = None
+        self._rp_forest = None
         if 'neighbors' in adata.uns:
             if 'distances' in adata.uns['neighbors']:
                 self.knn = issparse(adata.uns['neighbors']['distances'])
@@ -370,6 +396,8 @@ class Neighbors:
                 self._connectivities = adata.uns['neighbors']['connectivities']
             if 'params' in adata.uns['neighbors']:
                 self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+            if 'rp_forest' in adata.uns['neighbors']:
+                self._rp_forest = adata.uns['neighbors']['rp_forest']
             else:
                 # estimating n_neighbors
                 if self._connectivities is None:
@@ -401,6 +429,10 @@ class Neighbors:
             self.n_dcs = None
         if info_str != '':
             logg.msg('    initialized {}'.format(info_str), v=4)
+
+    @property
+    def rp_forest(self):
+        return self._rp_forest
 
     @property
     def distances(self):
@@ -542,8 +574,9 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances = compute_neighbors_umap(
+            knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
+            self._rp_forest = _make_forest_dict(forest)
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices
