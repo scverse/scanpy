@@ -125,9 +125,9 @@ def highly_variable_genes(
             df.append(hvg)
 
         df = pd.concat(df, axis=0)
-        df = df.groupby('gene').agg({'means': np.nanmin,
-                                     'dispersions': np.nanmin,
-                                     'dispersions_norm': np.nanmin,
+        df = df.groupby('gene').agg({'means': np.nanmean,
+                                     'dispersions': np.nanmean,
+                                     'dispersions_norm': np.nanmean,
                                      'highly_variable': np.nansum})
         if n_top_genes is not None:
             # sort genes by how often they selected as hvg within each batch and
