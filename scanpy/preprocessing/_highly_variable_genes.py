@@ -131,7 +131,7 @@ def highly_variable_genes(
                                      'highly_variable': np.nansum})
         if n_top_genes is not None:
             # sort genes by how often they selected as hvg within each batch and
-            # break ties with minimum normalized dispersion across batches
+            # break ties with normalized dispersion across batches
             df.sort_values(['highly_variable', 'dispersions_norm'],
                            ascending=False, na_position='last', inplace=True)
             df['highly_variable'] = False
