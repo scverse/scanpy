@@ -6,6 +6,7 @@ from anndata import AnnData
 from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix
 from sklearn.metrics import pairwise_distances
+from sklearn.utils import check_random_state
 
 from .._settings import settings
 from .. import logging as logg
@@ -112,6 +113,66 @@ def neighbors(
     return adata if copy else None
 
 
+def _rp_forest_generate(rp_forest_dict):
+    from collections import namedtuple
+
+    props = ['hyperplanes', 'offsets', 'children', 'indices']
+    FlatTree = namedtuple('FlatTree', props)
+    num_trees = len(rp_forest_dict[props[0]]['start'])-1
+
+    for i in range(num_trees):
+        tree = []
+        for prop in props:
+            start = rp_forest_dict[prop]['start'][i]
+            end = rp_forest_dict[prop]['start'][i+1]
+            tree.append(rp_forest_dict[prop]['data'][start:end])
+        yield FlatTree(*tree)
+
+    tree = []
+    for prop in props:
+        start = rp_forest_dict[prop]['start'][num_trees]
+        tree.append(rp_forest_dict[prop]['data'][start:])
+    yield FlatTree(*tree)
+
+
+def neighbors_update(adata, adata_new, k=10, queue_size=5, random_state=0):
+    # only with use_rep='X' for now
+    from umap.nndescent import make_initialisations, make_initialized_nnd_search, initialise_search
+    from umap.umap_ import INT32_MAX, INT32_MIN
+    from umap.utils import deheap_sort
+    import umap.distances as dist
+
+    if 'metric_kwds' in adata.uns['neighbors']['params']:
+        dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
+    else:
+        dist_args = ()
+    dist_func = dist.named_distances[adata.uns['neighbors']['params']['metric']]
+
+    random_init, tree_init = make_initialisations(dist_func, dist_args)
+    search = make_initialized_nnd_search(dist_func, dist_args)
+
+    search_graph = adata.uns['neighbors']['distances'].copy()
+    search_graph.data = (search_graph.data > 0).astype(np.int8)
+    search_graph = search_graph.maximum(search_graph.transpose())
+    # prune it?
+
+    random_state = check_random_state(random_state)
+    rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
+
+    if 'rp_forest' in adata.uns['neighbors']:
+        rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
+    else:
+        rp_forest = None
+    train = adata.X
+    test = adata_new.X
+
+    init = initialise_search(rp_forest, train, test, int(k * queue_size), random_init, tree_init, rng_state)
+    result = search(train, search_graph.indptr, search_graph.indices, init, test)
+
+    indices, dists = deheap_sort(result)
+    return indices[:, :k], dists[:, :k]
+
+
 def compute_neighbors_umap(
         X, n_neighbors, random_state=None,
         metric='euclidean', metric_kwds={}, angular=False,
@@ -183,7 +244,6 @@ def compute_neighbors_umap(
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
     from umap.umap_ import nearest_neighbors
-    from sklearn.utils import check_random_state
 
     random_state = check_random_state(random_state)
 
@@ -303,7 +363,7 @@ def _make_forest_dict(forest):
     for prop in props:
         d[prop] = {}
         sizes = np.fromiter((getattr(tree, prop).shape[0] for tree in forest), dtype=int)
-        d[prop]['sizes'] = sizes
+        d[prop]['start'] = np.zeros_like(sizes)
         if prop == 'offsets':
             dims = sizes.sum()
         else:
@@ -312,6 +372,7 @@ def _make_forest_dict(forest):
         dat = np.empty(dims, dtype=dtype)
         start = 0
         for i, size in enumerate(sizes):
+            d[prop]['start'][i] = start
             end = start+size
             dat[start:end] = getattr(forest[i], prop)
             start = end
