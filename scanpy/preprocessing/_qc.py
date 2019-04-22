@@ -6,13 +6,26 @@ import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
+def _choose_mtx_rep(adata, use_raw=False, layer=None):
+    is_layer = layer is not None
+    if use_raw and is_layer:
+        raise ValueError()
+    if is_layer:
+        return adata.layers[layer]
+    elif use_raw:
+        return adata.raw.X
+    else:
+        return adata.X
 
 def calculate_qc_metrics(
     adata,
+    *,
     expr_type="counts",
     var_type="genes",
     qc_vars=(),
     percent_top=(50, 100, 200, 500),
+    layer: str = None,
+    use_raw: bool = False,
     inplace=False,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """Calculate quality control metrics.
@@ -36,6 +49,10 @@ def calculate_qc_metrics(
         Which proportions of top genes to cover. If empty or `None` don't
         calculate. Values are considered 1-indexed, `percent_top=[50]` finds
         cumulative proportion to the 50th most expressed gene.
+    layer
+        If provided, allows specification of layer to calculate metrics on.
+    use_raw
+        If True, metrics will be calculated on expression matrix of `adata.raw`.
     inplace : bool, optional (default: `False`)
         Whether to place calculated metrics in `.obs` and `.var`
 
@@ -81,7 +98,7 @@ def calculate_qc_metrics(
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sns.jointplot("log1p_total_counts", "log1p_n_genes_by_counts", data=adata.obs, kind="hex")
     """
-    X = adata.X
+    X = _choose_mtx_rep(adata, use_raw, layer)
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     var_metrics = pd.DataFrame(index=adata.var_names)
     if isspmatrix_coo(X):

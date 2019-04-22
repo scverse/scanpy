@@ -131,3 +131,22 @@ def test_qc_metrics_percentage(): # In response to #421
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
     with pytest.raises(IndexError):
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])
+
+
+def test_layer_raw():
+    a = np.random.binomial(100, .005, (1000, 1000))
+    adata = sc.AnnData(
+        sparse.csr_matrix(a),
+        obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
+        var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
+    )
+    adata.raw = adata.copy()
+    adata.layers["counts"] = adata.X.copy()
+    obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
+    sc.pp.log1p(adata)  # To be sure they aren't reusing it
+    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, layer="counts")
+    obs_raw, var_raw = sc.pp.calculate_qc_metrics(adata, use_raw=True)
+    assert np.allclose(obs_orig, obs_layer)
+    assert np.allclose(obs_orig, obs_raw)
+    assert np.allclose(var_orig, var_layer)
+    assert np.allclose(var_orig, var_raw)
