@@ -361,8 +361,14 @@ def top_segment_proportions_dense(mtx, ns):
         prev = n
     return values / sums[:, None]
 
-@numba.njit(parallel=True)
-def top_segment_proportions_sparse_csr(data, indptr, ns):
+def top_segment_proportions_sparse_csr(data, indptr, ns, parallel: bool = None):
+    # Rough estimate for when compilation + paralleziation is faster than single-threaded
+    if (indptr.size < 300000) or (parallel == False):
+        return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
+    else:
+        return _top_segment_proportions_sparse_csr_parallel(data, indptr, ns)
+
+def _top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -386,3 +392,9 @@ def top_segment_proportions_sparse_csr(data, indptr, ns):
         values[:, j] = acc
         prev = n
     return values / sums.reshape((indptr.size - 1, 1))
+
+_top_segment_proportions_sparse_csr_cached = \
+    numba.njit(cache=True)(_top_segment_proportions_sparse_csr)
+
+_top_segment_proportions_sparse_csr_parallel = \
+    numba.njit(parallel=True)(_top_segment_proportions_sparse_csr)
