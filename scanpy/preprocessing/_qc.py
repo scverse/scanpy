@@ -7,7 +7,14 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from anndata import AnnData
-from ._docs import doc_expr_reps, doc_obs_qc_args, doc_qc_metric_naming, doc_obs_qc_returns, doc_var_qc_returns, doc_adata_basic
+from ._docs import (
+    doc_expr_reps,
+    doc_obs_qc_args,
+    doc_qc_metric_naming,
+    doc_obs_qc_returns,
+    doc_var_qc_returns,
+    doc_adata_basic,
+)
 from ..utils import doc_params
 
 
@@ -16,7 +23,8 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
     if use_raw and is_layer:
         raise ValueError(
             "Cannot use expression from both layer and raw. You provided:"
-            "'use_raw={}' and 'layer={}'".format(use_raw, layer))
+            "'use_raw={}' and 'layer={}'".format(use_raw, layer)
+        )
     if is_layer:
         return adata.layers[layer]
     elif use_raw:
@@ -30,7 +38,7 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
     doc_expr_reps=doc_expr_reps,
     doc_obs_qc_args=doc_obs_qc_args,
     doc_qc_metric_naming=doc_qc_metric_naming,
-    doc_obs_qc_returns=doc_obs_qc_returns
+    doc_obs_qc_returns=doc_obs_qc_returns,
 )
 def describe_obs(
     adata: AnnData,
@@ -42,7 +50,7 @@ def describe_obs(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
-    X=None
+    X=None,
 ) -> Optional[pd.DataFrame]:
     """\
     Describe observations of anndata.
@@ -81,24 +89,25 @@ def describe_obs(
     else:
         obs_metrics["n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
     obs_metrics["log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics["n_{var_type}_by_{expr_type}"])
+        obs_metrics["n_{var_type}_by_{expr_type}"]
+    )
     obs_metrics["total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics["log1p_total_{expr_type}"] = np.log1p(
-        obs_metrics["total_{expr_type}"])
+    obs_metrics["log1p_total_{expr_type}"] = np.log1p(obs_metrics["total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top)
         # Since there are local loop variables, formatting must occur in their scope
         # Probably worth looking into a python3.5 compatable way to make this better
         for i, n in enumerate(percent_top):
-            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
+            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = (
                 proportions[:, i] * 100
+            )
     for qc_var in qc_vars:
         obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
             X[:, adata.var[qc_var].values].sum(axis=1)
-        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = \
-            np.log1p(
-                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())])
+        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = np.log1p(
+                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())]
+            )
         # "total_{expr_type}" not formatted yet
         obs_metrics["pct_{expr_type}_{qc_var}".format(**locals())] = \
             obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] / \
@@ -118,7 +127,7 @@ def describe_obs(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
     doc_qc_metric_naming=doc_qc_metric_naming,
-    doc_var_qc_returns=doc_var_qc_returns
+    doc_var_qc_returns=doc_var_qc_returns,
 )
 def describe_var(
     adata: AnnData,
@@ -128,7 +137,7 @@ def describe_var(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace=False,
-    X=None
+    X=None,
 ) -> Optional[pd.DataFrame]:
     """\
     Describe variables of anndata.
@@ -168,13 +177,11 @@ def describe_var(
     else:
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
-    var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-        var_metrics["mean_{expr_type}"])
+    var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
     var_metrics["pct_dropout_by_{expr_type}"] = \
         (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
-    var_metrics["log1p_total_{expr_type}"] = np.log1p(
-        var_metrics["total_{expr_type}"])
+    var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
     # Relabel
     new_colnames = []
     for col in var_metrics.columns:
@@ -192,7 +199,7 @@ def describe_var(
     doc_obs_qc_args=doc_obs_qc_args,
     doc_qc_metric_naming=doc_qc_metric_naming,
     doc_obs_qc_returns=doc_obs_qc_returns,
-    doc_var_qc_returns=doc_var_qc_returns
+    doc_var_qc_returns=doc_var_qc_returns,
 )
 def calculate_qc_metrics(
     adata: AnnData,
@@ -255,14 +262,10 @@ def calculate_qc_metrics(
         qc_vars=qc_vars,
         percent_top=percent_top,
         inplace=inplace,
-        X=X
+        X=X,
     )
     var_metrics = describe_var(
-        adata,
-        expr_type=expr_type,
-        var_type=var_type,
-        inplace=inplace,
-        X=X
+        adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
     )
 
     if not inplace:
@@ -293,7 +296,7 @@ def top_proportions(mtx, n):
 
 def top_proportions_dense(mtx, n):
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(np.argpartition, 1, -mtx, n-1)
+    partitioned = np.apply_along_axis(np.argpartition, 1, -mtx, n - 1)
     partitioned = partitioned[:, :n]
     values = np.zeros_like(partitioned, dtype=np.float64)
     for i in range(partitioned.shape[0]):
@@ -305,15 +308,15 @@ def top_proportions_dense(mtx, n):
 
 
 def top_proportions_sparse_csr(data, indptr, n):
-    values = np.zeros((indptr.size-1, n), dtype=np.float64)
-    for i in numba.prange(indptr.size-1):
-        start, end = indptr[i], indptr[i+1]
+    values = np.zeros((indptr.size - 1, n), dtype=np.float64)
+    for i in numba.prange(indptr.size - 1):
+        start, end = indptr[i], indptr[i + 1]
         vec = np.zeros(n, dtype=np.float64)
         if end - start <= n:
-            vec[:end-start] = data[start:end]
+            vec[:end - start] = data[start:end]
             total = vec.sum()
         else:
-            vec[:] = -(np.partition(-data[start:end], n-1)[:n])
+            vec[:] = -(np.partition(-data[start:end], n - 1)[:n])
             total = (data[start:end]).sum()  # Is this not just vec.sum()?
         vec[::-1].sort()
         values[i, :] = vec.cumsum() / total
@@ -339,17 +342,20 @@ def top_segment_proportions(mtx, ns):
     if issparse(mtx):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
-        return top_segment_proportions_sparse_csr(mtx.data, mtx.indptr,
-                                                  np.array(ns, dtype=np.int))
+        return top_segment_proportions_sparse_csr(
+            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
+        )
     else:
         return top_segment_proportions_dense(mtx, ns)
+
 
 def top_segment_proportions_dense(mtx, ns):
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(
-        np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
+    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][
+        :, : ns[-1]
+    ]
     values = np.zeros((mtx.shape[0], len(ns)))
     acc = np.zeros((mtx.shape[0]))
     prev = 0
@@ -359,31 +365,32 @@ def top_segment_proportions_dense(mtx, ns):
         prev = n
     return values / sums[:, None]
 
+
 def top_segment_proportions_sparse_csr(data, indptr, ns, parallel: bool = None):
     # Rough estimate for when compilation + paralleziation is faster than single-threaded
-    if (indptr.size < 300000) or (parallel == False):
+    if (indptr.size < 300_000) or (parallel == False):
         return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
     else:
         return _top_segment_proportions_sparse_csr_parallel(data, indptr, ns)
+
 
 def _top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
-    values = np.zeros((indptr.size-1, len(ns)), dtype=np.float64)
+    values = np.zeros((indptr.size - 1, len(ns)), dtype=np.float64)
     # Just to keep it simple, as a dense matrix
-    partitioned = np.zeros((indptr.size-1, maxidx), dtype=data.dtype)
+    partitioned = np.zeros((indptr.size - 1, maxidx), dtype=data.dtype)
     for i in numba.prange(indptr.size - 1):
-        start, end = indptr[i], indptr[i+1]
+        start, end = indptr[i], indptr[i + 1]
         sums[i] = np.sum(data[start:end])
         if end - start <= maxidx:
-            partitioned[i, :end-start] = data[start:end]
+            partitioned[i, : end - start] = data[start:end]
         elif (end - start) > maxidx:
-            partitioned[i, :] = - \
-                (np.partition(-data[start:end], maxidx))[:maxidx]
-        partitioned[i, :] = np.partition(partitioned[i, :], maxidx-ns)
+            partitioned[i, :] = -(np.partition(-data[start:end], maxidx))[:maxidx]
+        partitioned[i, :] = np.partition(partitioned[i, :], maxidx - ns)
     partitioned = partitioned[:, ::-1][:, :ns[-1]]
-    acc = np.zeros((indptr.size-1), dtype=data.dtype)
+    acc = np.zeros((indptr.size - 1), dtype=data.dtype)
     prev = 0
     for j, n in enumerate(ns):
         acc += partitioned[:, prev:n].sum(axis=1)
@@ -391,8 +398,11 @@ def _top_segment_proportions_sparse_csr(data, indptr, ns):
         prev = n
     return values / sums.reshape((indptr.size - 1, 1))
 
-_top_segment_proportions_sparse_csr_cached = \
-    numba.njit(cache=True)(_top_segment_proportions_sparse_csr)
 
-_top_segment_proportions_sparse_csr_parallel = \
-    numba.njit(parallel=True)(_top_segment_proportions_sparse_csr)
+_top_segment_proportions_sparse_csr_cached = numba.njit(cache=True)(
+    _top_segment_proportions_sparse_csr
+)
+
+_top_segment_proportions_sparse_csr_parallel = numba.njit(parallel=True)(
+    _top_segment_proportions_sparse_csr
+)
