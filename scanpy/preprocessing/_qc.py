@@ -7,11 +7,16 @@ from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from anndata import AnnData
+from ._docs import doc_expr_reps, doc_obs_qc_args, doc_qc_metric_naming, doc_obs_qc_returns, doc_var_qc_returns, doc_adata_basic
+from ..utils import doc_params
+
 
 def _choose_mtx_rep(adata, use_raw=False, layer=None):
     is_layer = layer is not None
     if use_raw and is_layer:
-        raise ValueError()
+        raise ValueError(
+            "Cannot use expression from both layer and raw. You provided:"
+            "'use_raw={}' and 'layer={}'".format(use_raw, layer))
     if is_layer:
         return adata.layers[layer]
     elif use_raw:
@@ -20,6 +25,13 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
         return adata.X
 
 
+@doc_params(
+    doc_adata_basic=doc_adata_basic,
+    doc_expr_reps=doc_expr_reps,
+    doc_obs_qc_args=doc_obs_qc_args,
+    doc_qc_metric_naming=doc_qc_metric_naming,
+    doc_obs_qc_returns=doc_obs_qc_returns
+)
 def describe_obs(
     adata: AnnData,
     *,
@@ -31,9 +43,30 @@ def describe_obs(
     use_raw: bool = False,
     inplace: bool = False,
     X=None
-) -> pd.DataFrame:
-    """
+) -> Optional[pd.DataFrame]:
+    """\
     Describe observations of anndata.
+
+    Calculates a number of qc metrics for observations in AnnData object. See
+    section `Returns` for a description of those metrics.
+
+    Params
+    ------
+    {doc_adata_basic}
+    {doc_qc_metric_naming}
+    {doc_obs_qc_args}
+    {doc_expr_reps}
+    inplace
+        Whether to place calculated metrics in `adata.obs`.
+    X
+        Matrix to calculate values on. Meant for internal usage.
+
+    Returns
+    -------
+    QC metrics for observations in adata. If inplace, values are placed into
+    the AnnData's `.obs` dataframe.
+
+    {doc_obs_qc_returns}
     """
     # Handle whether X is passed
     if X is None:
@@ -81,6 +114,12 @@ def describe_obs(
         return obs_metrics
 
 
+@doc_params(
+    doc_adata_basic=doc_adata_basic,
+    doc_expr_reps=doc_expr_reps,
+    doc_qc_metric_naming=doc_qc_metric_naming,
+    doc_var_qc_returns=doc_var_qc_returns
+)
 def describe_var(
     adata: AnnData,
     *,
@@ -90,9 +129,29 @@ def describe_var(
     use_raw: bool = False,
     inplace=False,
     X=None
-) -> pd.DataFrame:
-    """
+) -> Optional[pd.DataFrame]:
+    """\
     Describe variables of anndata.
+
+    Calculates a number of qc metrics for variables in AnnData object. See
+    section `Returns` for a description of those metrics.
+
+    Params
+    ------
+    {doc_adata_basic}
+    {doc_qc_metric_naming}
+    {doc_expr_reps}
+    inplace
+        Whether to place calculated metrics in `adata.var`.
+    X
+        Matrix to calculate values on. Meant for internal usage.
+
+    Returns
+    -------
+    QC metrics for variables in adata. If inplace, values are placed into the
+    AnnData's `.var` dataframe.
+
+    {doc_var_qc_returns}
     """
     # Handle whether X is passed
     if X is None:
@@ -127,6 +186,14 @@ def describe_var(
         return var_metrics
 
 
+@doc_params(
+    doc_adata_basic=doc_adata_basic,
+    doc_expr_reps=doc_expr_reps,
+    doc_obs_qc_args=doc_obs_qc_args,
+    doc_qc_metric_naming=doc_qc_metric_naming,
+    doc_obs_qc_returns=doc_obs_qc_returns,
+    doc_var_qc_returns=doc_var_qc_returns
+)
 def calculate_qc_metrics(
     adata: AnnData,
     *,
@@ -138,7 +205,8 @@ def calculate_qc_metrics(
     use_raw: bool = False,
     inplace: bool = False,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
-    """Calculate quality control metrics.
+    """\
+    Calculate quality control metrics.
 
     Calculates a number of qc metrics for an AnnData object, see section
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
@@ -146,59 +214,21 @@ def calculate_qc_metrics(
 
     Parameters
     ----------
-    adata
-        Annotated data matrix.
-    expr_type
-        Name of kind of values in X.
-    var_type
-        The kind of thing the variables are.
-    qc_vars
-        Keys for boolean columns of `.var` which identify variables you could 
-        want to control for (e.g. "ERCC" or "mito").
-    percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
-        Which proportions of top genes to cover. If empty or `None` don't
-        calculate. Values are considered 1-indexed, `percent_top=[50]` finds
-        cumulative proportion to the 50th most expressed gene.
-    layer
-        If provided, allows specification of layer to calculate metrics on.
-    use_raw
-        If True, metrics will be calculated on expression matrix of `adata.raw`.
+    {doc_adata_basic}
+    {doc_qc_metric_naming}
+    {doc_obs_qc_args}
+    {doc_expr_reps}
     inplace
-        Whether to place calculated metrics in `.obs` and `.var`
+        Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
 
     Returns
     -------
     Depending on `inplace` returns calculated metrics (`pd.DataFrame`) or
     updates `adata`'s `obs` and `var`.
 
-    Observation level metrics include:
+    {doc_obs_qc_returns}
 
-    `total_{var_type}_by_{expr_type}`
-        E.g. "total_genes_by_counts". Number of genes with positive counts in a cell.
-    `total_{expr_type}`
-        E.g. "total_counts". Total number of counts for a cell.
-    `pct_{expr_type}_in_top_{n}_{var_type}` - for `n` in `percent_top`
-        E.g. "pct_counts_in_top_50_genes". Cumulative percentage of counts
-        for 50 most expressed genes in a cell.
-    `total_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
-        E.g. "total_counts_mito". Total number of counts for variabes in
-        `qc_vars`.
-    `pct_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
-        E.g. "pct_counts_mito". Proportion of total counts for a cell which
-        are mitochondrial.
-
-    Variable level metrics include:
-
-    `total_{expr_type}`
-        E.g. "total_counts". Sum of counts for a gene.
-    `mean_{expr_type}`
-        E.g. "mean counts". Mean expression over all cells.
-    `n_cells_by_{expr_type}`
-        E.g. "n_cells_by_counts". Number of cells this expression is
-        measured in.
-    `pct_dropout_by_{expr_type}`
-        E.g. "pct_dropout_by_counts". Percentage of cells this feature does
-        not appear in.
+    {doc_var_qc_returns}
 
     Example
     -------
@@ -206,7 +236,10 @@ def calculate_qc_metrics(
 
     >>> adata = sc.datasets.pbmc3k()
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
-    >>> sns.jointplot("log1p_total_counts", "log1p_n_genes_by_counts", data=adata.obs, kind="hex")
+    >>> sns.jointplot(
+            "log1p_total_counts", "log1p_n_genes_by_counts",
+            data=adata.obs, kind="hex"
+        )
     """
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw, layer)
@@ -234,6 +267,7 @@ def calculate_qc_metrics(
 
     if not inplace:
         return obs_metrics, var_metrics
+
 
 def top_proportions(mtx, n):
     """
