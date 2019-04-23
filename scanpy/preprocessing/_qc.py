@@ -208,67 +208,31 @@ def calculate_qc_metrics(
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sns.jointplot("log1p_total_counts", "log1p_n_genes_by_counts", data=adata.obs, kind="hex")
     """
+    # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw, layer)
-    obs_metrics = pd.DataFrame(index=adata.obs_names)
-    var_metrics = pd.DataFrame(index=adata.var_names)
     if isspmatrix_coo(X):
         X = csr_matrix(X)  # COO not subscriptable
     if issparse(X):
         X.eliminate_zeros()
-    # Calculate obs metrics
-    if issparse(X):
-        obs_metrics["n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
-    else:
-        obs_metrics["n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
-    obs_metrics["log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics["n_{var_type}_by_{expr_type}"])
-    obs_metrics["total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics["log1p_total_{expr_type}"] = np.log1p(
-        obs_metrics["total_{expr_type}"])
-    if percent_top:
-        percent_top = sorted(percent_top)
-        proportions = top_segment_proportions(X, percent_top)
-        # Since there are local loop variables, formatting must occur in their scope
-        # Probably worth looking into a python3.5 compatable way to make this better
-        for i, n in enumerate(percent_top):
-            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = \
-                proportions[:, i] * 100
-    for qc_var in qc_vars:
-        obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
-            X[:, adata.var[qc_var].values].sum(axis=1)
-        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = \
-            np.log1p(
-                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())])
-        # "total_{expr_type}" not formatted yet
-        obs_metrics["pct_{expr_type}_{qc_var}".format(**locals())] = \
-            obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] / \
-            obs_metrics["total_{expr_type}"] * 100
-    # Calculate var metrics
-    if issparse(X):
-        # Current memory bottleneck for csr matrices:
-        var_metrics["n_cells_by_{expr_type}"] = X.getnnz(axis=0)
-        var_metrics["mean_{expr_type}"] = mean_variance_axis(X, axis=0)[0]
-    else:
-        var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
-        var_metrics["mean_{expr_type}"] = X.mean(axis=0)
-    var_metrics["log1p_mean_{expr_type}"] = np.log1p(
-        var_metrics["mean_{expr_type}"])
-    var_metrics["pct_dropout_by_{expr_type}"] = \
-        (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
-    var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
-    var_metrics["log1p_total_{expr_type}"] = np.log1p(
-        var_metrics["total_{expr_type}"])
-    # Format strings
-    for df in obs_metrics, var_metrics:
-        new_colnames = []
-        for col in df.columns:
-            new_colnames.append(col.format(**locals()))
-        df.columns = new_colnames
-    # Return
-    if inplace:
-        adata.obs[obs_metrics.columns] = obs_metrics
-        adata.var[var_metrics.columns] = var_metrics
-    else:
+
+    obs_metrics = describe_obs(
+        adata,
+        expr_type=expr_type,
+        var_type=var_type,
+        qc_vars=qc_vars,
+        percent_top=percent_top,
+        inplace=inplace,
+        X=X
+    )
+    var_metrics = describe_var(
+        adata,
+        expr_type=expr_type,
+        var_type=var_type,
+        inplace=inplace,
+        X=X
+    )
+
+    if not inplace:
         return obs_metrics, var_metrics
 
 def top_proportions(mtx, n):
