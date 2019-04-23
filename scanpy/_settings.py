@@ -211,7 +211,7 @@ class ScanpyConfig(object):
     @datasetdir.setter
     def datasetdir(self, datasetdir):
         _type_check(datasetdir, "datasetdir", [str, Path])
-        self._datasetdir = Path(datasetdir).absolute()
+        self._datasetdir = Path(datasetdir).resolve()
 
     @property
     def figdir(self):

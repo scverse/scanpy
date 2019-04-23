@@ -121,7 +121,6 @@ def insert_function_images(app, what, name, obj, options, lines):
     path = Path(__file__).parent / 'api' / f'{name}.png'
     if what != 'function' or not path.is_file(): return
     lines[0:0] = [f'.. image:: {path.name}', '   :width: 200', '   :align: right', '']
-    print(*lines, sep='\n')
 
 
 # -- Test for new scanpydoc functionality --------------------------------------
