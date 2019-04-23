@@ -1,10 +1,12 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Collection
 
 import numba
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
 from sklearn.utils.sparsefuncs import mean_variance_axis
+
+from anndata import AnnData
 
 def _choose_mtx_rep(adata, use_raw=False, layer=None):
     is_layer = layer is not None
@@ -18,15 +20,15 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
         return adata.X
 
 def calculate_qc_metrics(
-    adata,
+    adata: AnnData,
     *,
-    expr_type="counts",
-    var_type="genes",
-    qc_vars=(),
-    percent_top=(50, 100, 200, 500),
-    layer: str = None,
+    expr_type: str = "counts",
+    var_type: str = "genes",
+    qc_vars: Collection[str] = (),
+    percent_top: Collection[int] = (50, 100, 200, 500),
+    layer: Optional[str] = None,
     use_raw: bool = False,
-    inplace=False,
+    inplace: bool = False,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """Calculate quality control metrics.
 
@@ -36,13 +38,13 @@ def calculate_qc_metrics(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    expr_type : `str`, optional (default: `"counts"`)
+    expr_type
         Name of kind of values in X.
-    var_type : `str`, optional (default: `"genes"`)
+    var_type
         The kind of thing the variables are.
-    qc_vars : `Container`, optional (default: `()`)
+    qc_vars
         Keys for boolean columns of `.var` which identify variables you could 
         want to control for (e.g. "ERCC" or "mito").
     percent_top : `Container[int]`, optional (default: `(50, 100, 200, 500)`)
@@ -53,7 +55,7 @@ def calculate_qc_metrics(
         If provided, allows specification of layer to calculate metrics on.
     use_raw
         If True, metrics will be calculated on expression matrix of `adata.raw`.
-    inplace : bool, optional (default: `False`)
+    inplace
         Whether to place calculated metrics in `.obs` and `.var`
 
     Returns
