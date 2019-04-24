@@ -1,5 +1,5 @@
 import sys
-from typing import List, Tuple
+from typing import Collection, Tuple, Optional
 
 import numba
 import pandas as pd
@@ -9,18 +9,22 @@ from scipy.sparse import issparse
 from anndata import AnnData
 
 from .. import logging as logg
+from ..utils import sanitize_anndata
 
-def design_mat(model: pd.DataFrame, batch_levels: List[str]) -> pd.DataFrame:
+def _design_matrix(
+        model: pd.DataFrame,
+        batch_key: str,
+        batch_levels: Collection[str],
+) -> pd.DataFrame:
     """
     Computes a simple design matrix.
-
-    At the moment, only includes the categorical annotations passed with the 'key' argument
-    to the combat function
 
     Parameters
     --------
     model
         Contains the batch annotation
+    batch_key
+        Name of the batch column
     batch_levels
         Levels of the batch annotation
 
@@ -31,25 +35,40 @@ def design_mat(model: pd.DataFrame, batch_levels: List[str]) -> pd.DataFrame:
     import patsy
 
     design = patsy.dmatrix(
-        "~ 0 + C(batch, levels={})".format(batch_levels),
+        "~ 0 + C(Q('{}'), levels=batch_levels)".format(batch_key),
         model,
         return_type="dataframe",
     )
-    model = model.drop(["batch"], axis=1)
+    model = model.drop([batch_key], axis=1)
+    numerical_covariates = model.select_dtypes('number').columns.values
+
     logg.info("Found {} batches\n".format(design.shape[1]))
-    other_cols = [c for i, c in enumerate(model.columns)]
-    factor_matrix = model[other_cols]
-    design = pd.concat((design, factor_matrix), axis=1)
+    other_cols = [c for c in model.columns.values if c not in numerical_covariates]
+
     if other_cols:
+        col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
+        factor_matrix = patsy.dmatrix("~ 0 + {}".format(col_repr),
+                                      model[other_cols],
+                                      return_type="dataframe")
+
+        design = pd.concat((design, factor_matrix), axis=1)
         logg.info("Found {} categorical variables:".format(len(other_cols)))
         logg.info("\t" + ", ".join(other_cols) + '\n')
+
+    if numerical_covariates is not None:
+        logg.info("Found {} numerical variables:".format(len(numerical_covariates)))
+        logg.info("\t" + ", ".join(numerical_covariates) + '\n')
+
+        for nC in numerical_covariates:
+            design[nC] = model[nC]
 
     return design
 
 
-def stand_data(
+def _standardize_data(
     model: pd.DataFrame,
     data: pd.DataFrame,
+    batch_key: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
     """
     Standardizes the data per gene.
@@ -62,6 +81,8 @@ def stand_data(
         Contains the batch annotation
     data
         Contains the Data
+    batch_key
+        Name of the batch column in the model matrix
 
     Returns
     --------
@@ -76,15 +97,13 @@ def stand_data(
     """
 
     # compute the design matrix
-    batch_items = model.groupby("batch").groups.items()
-    batch_levels = [k for k, v in batch_items]
-    batch_info = [v for k, v in batch_items]
+    batch_items = model.groupby(batch_key).groups.items()
+    batch_levels, batch_info = zip(*batch_items)
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
-    drop_cols = [cname for cname, inter in ((model == 1).all()).iteritems() if inter]
-    model = model[[c for c in model.columns if c not in drop_cols]]
-    design = design_mat(model, batch_levels)
+
+    design = _design_matrix(model, batch_key, batch_levels)
 
     # compute pooled variance estimator
     B_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
@@ -114,7 +133,7 @@ def stand_data(
     return s_data, design, var_pooled, stand_mean
 
 
-def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
+def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[str]] = None, inplace: bool = True):
     """ComBat function for batch effect correction [Johnson07]_ [Leek12]_ [Pedersen12]_.
 
     Corrects for batch effects by fitting linear models, gains statistical power
@@ -127,6 +146,8 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         Annotated data matrix
     key: `str`, optional (default: `"batch"`)
         Key to a categorical annotation from adata.obs that will be used for batch effect removal
+    covariates
+        Additional covariates which could be causing batch effects.
     inplace: bool, optional (default: `True`)
         Wether to replace adata.X or to return the corrected data
 
@@ -137,8 +158,17 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     """
 
     # check the input
-    if key not in adata.obs.keys():
+    if key not in adata.obs_keys():
         raise ValueError('Could not find the key {!r} in adata.obs'.format(key))
+
+    if covariates is not None:
+        cov_exist = np.isin(covariates, adata.obs_keys())
+        if np.any(~cov_exist):
+            missing_cov = np.array(covariates)[~cov_exist].tolist()
+            raise ValueError('Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov))
+
+        if key in covariates:
+            raise ValueError('Batch key and covariates cannot overlap')
 
     # only works on dense matrices so far
     if issparse(adata.X):
@@ -151,18 +181,18 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         columns=adata.obs_names,
     )
 
+    sanitize_anndata(adata)
+
     # construct a pandas series of the batch annotation
-    batch = pd.Series(adata.obs[key])
-    model = pd.DataFrame({'batch': batch})
-    batch_items = model.groupby("batch").groups.items()
-    batch_info = [v for k, v in batch_items]
+    model = adata.obs[[key] + (covariates if covariates else [])]
+    batch_info = model.groupby(key).groups.values()
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator
     logg.info("Standardizing Data across genes.\n")
-    s_data, design, var_pooled, stand_mean = stand_data(model, data)
+    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, key)
 
     # fitting the parameters on the standardized data
     logg.info("Fitting L/S model and finding priors\n")
@@ -179,8 +209,8 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     gamma_bar = gamma_hat.mean(axis=1)
     t2 = gamma_hat.var(axis=1)
     # a_prior and b_prior are the priors on lambda and theta from Johnson and Li (2006)
-    a_prior = list(map(aprior, delta_hat))
-    b_prior = list(map(bprior, delta_hat))
+    a_prior = list(map(_aprior, delta_hat))
+    b_prior = list(map(_bprior, delta_hat))
 
     logg.info("Finding parametric adjustments\n")
     # gamma star and delta star will be our empirical bayes (EB) estimators
@@ -286,13 +316,13 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001) -> Tuple[float, 
     return g_new, d_new
 
 
-def aprior(delta_hat):
+def _aprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
     return (2*s2 + m**2) / s2
 
 
-def bprior(delta_hat):
+def _bprior(delta_hat):
     m = delta_hat.mean()
     s2 = delta_hat.var()
     return (m*s2 + m**3) / s2
