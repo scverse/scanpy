@@ -170,6 +170,9 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
         if key in covariates:
             raise ValueError('Batch key and covariates cannot overlap')
 
+        if len(covariates) != len(set(covariates)):
+            raise ValueError('Covariates must be unique')
+
     # only works on dense matrices so far
     if issparse(adata.X):
         X = adata.X.A.T
