@@ -10,6 +10,14 @@ def test_highly_variable_genes_basic():
     adata = sc.datasets.blobs()
     sc.pp.highly_variable_genes(adata)
 
+    adata = sc.datasets.blobs()
+    sc.pp.highly_variable_genes(adata, batch_key='blobs')
+    assert 'highly_variable_nbatches' in adata.var.columns
+
+    adata = sc.datasets.blobs()
+    sc.pp.highly_variable_genes(adata, batch_key='blobs', n_top_genes=3)
+    assert 'highly_variable_nbatches' in adata.var.columns
+    assert adata.var['highly_variable'].sum() == 3
 
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')

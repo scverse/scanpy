@@ -85,6 +85,8 @@ def highly_variable_genes(
         dispersions per gene
     **dispersions_norm**
         normalized dispersions per gene
+    highly_variable_nbatches : int
+        If batch_key is given, this denotes in how many batches genes are detected as HVG
 
     Notes
     -----
@@ -129,10 +131,12 @@ def highly_variable_genes(
                                      'dispersions': np.nanmean,
                                      'dispersions_norm': np.nanmean,
                                      'highly_variable': np.nansum})
+        df.rename(columns={'highly_variable': 'highly_variable_nbatches'}, inplace=True)
+
         if n_top_genes is not None:
             # sort genes by how often they selected as hvg within each batch and
             # break ties with normalized dispersion across batches
-            df.sort_values(['highly_variable', 'dispersions_norm'],
+            df.sort_values(['highly_variable_nbatches', 'dispersions_norm'],
                            ascending=False, na_position='last', inplace=True)
             df['highly_variable'] = False
             df.loc[:n_top_genes, 'highly_variable'] = True
@@ -245,19 +249,24 @@ def highly_variable_genes(
         adata.var['means'] = df['means'].values
         adata.var['dispersions'] = df['dispersions'].values
         adata.var['dispersions_norm'] = df['dispersions_norm'].values.astype('float32', copy=False)
+        if batch_key is not None:
+            adata.var['highly_variable_nbatches'] = df['highly_variable_nbatches'].values
         if subset:
             adata._inplace_subset_var(gene_subset)
     else:
-        arrays = (
+        arrays = [
              gene_subset,
              df['means'].values,
              df['dispersions'].values,
-             df['dispersions_norm'].values.astype('float32', copy=False)
-        )
+             df['dispersions_norm'].values.astype('float32', copy=False),
+        ]
         dtypes = [
             ('highly_variable', np.bool_),
             ('means', 'float32'),
             ('dispersions', 'float32'),
             ('dispersions_norm', 'float32'),
         ]
+        if batch_key is not None:
+            arrays.append(df['highly_variable_nbatches'].values)
+            dtypes.append(('highly_variable_nbatches', int))
         return np.rec.fromarrays(arrays, dtype=dtypes)
