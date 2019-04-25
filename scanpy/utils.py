@@ -592,7 +592,6 @@ def rank_genes_groups_df(
     adata: AnnData,
     group: str,  # Can this be something other than a str?
     *,
-    genes: Optional[Iterable[str]] = None,  # TODO: Implement
     key: str = "rank_genes_groups",
     pval_cutoff: Optional[float] = 0.05,
     logfc_cutoff: Optional[float] = None,
@@ -608,8 +607,6 @@ def rank_genes_groups_df(
     group
         Which group (key from :func:`scanpy.tl.rank_genes_groups` `groupby`) to
         return results from.
-    genes
-        Only return values for these genes.
     key
         Key differential expression groups were stored under.
     pval_cutoff
@@ -620,6 +617,12 @@ def rank_genes_groups_df(
         Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
         refer to the index column of the `.var` DataFrame. Setting this option allows
         alternative names to be used.
+
+    Example
+    -------
+    >>> pbmc = sc.datasets.pbmc68k_reduced()
+    >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True, n_genes=pbmc.shape[1])
+    >>> dedf = sc.utils.rank_genes_groups_df(pbmc, group="0")
     """
     d = pd.DataFrame()
     for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
