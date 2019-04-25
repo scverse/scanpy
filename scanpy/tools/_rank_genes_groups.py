@@ -196,7 +196,8 @@ def rank_genes_groups(
             else: raise ValueError('Method does not exist.')
 
             denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
-            denominator[np.flatnonzero(denominator == 0)] = np.nan
+            with np.errstate(divide='ignore', invalid='ignore'):
+                scores = np.divide((means[igroup] - mean_rest), denominator) #Welch t-test
             scores = (means[igroup] - mean_rest) / denominator #Welch t-test
             scores[np.isnan(scores)] = 0
             # Fold change
@@ -205,8 +206,8 @@ def rank_genes_groups(
             #Get p-values
             denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
                 (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
-            denominator_dof[np.flatnonzero(denominator_dof == 0)] = np.nan
-            dof = np.square(vars[igroup]/ns_group + var_rest/ns_rest) / denominator_dof # dof calculation for Welch t-test
+            with np.errstate(divide='ignore', invalid='ignore'):
+                dof = np.divide(np.square(vars[igroup]/ns_group + var_rest/ns_rest), denominator_dof) # dof calculation for Welch t-test
             dof[np.isnan(dof)] = 0
             pvals = stats.t.sf(abs(scores), dof)*2 # *2 because of two-tailed t-test
 
