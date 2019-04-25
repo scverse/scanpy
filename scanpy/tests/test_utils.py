@@ -27,6 +27,7 @@ def test_descend_classes_and_funcs():
 def test_obs_values():
     obs = pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"])
     var = pd.DataFrame(index=["gene1", "gene2"])
-    adata = sc.AnnData(X=np.ones((2, 2)), obs=obs, var=var)
-    test_df = pd.DataFrame({"gene2": [1, 1], "obs1": [0, 1]}, index=adata.obs_names)
-    assert np.all(obs_values_df(adata, ["gene2", "obs1"]) == test_df)
+    obsm = {"eye": np.eye(2)}
+    adata = sc.AnnData(X=np.ones((2, 2)), obs=obs, var=var, obsm=obsm)
+    test_df = pd.DataFrame({"gene2": [1, 1], "obs1": [0, 1], "eye0": [1, 0]}, index=adata.obs_names)
+    assert np.all(obs_values_df(adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0)]) == test_df)

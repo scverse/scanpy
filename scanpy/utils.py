@@ -8,7 +8,7 @@ from weakref import WeakSet
 from collections import namedtuple
 from functools import partial, wraps, singledispatch
 from types import ModuleType, MethodType
-from typing import Union, Callable, Optional, Iterable
+from typing import Union, Callable, Optional, Iterable, Tuple
 
 import numpy as np
 import scipy.sparse
@@ -634,14 +634,30 @@ def rank_genes_groups_df(
 
 
 # Would an array be faster?
-def obs_values(adata, value_key: str, *, use_raw: bool = False, gene_symbols: str = None, layer: str = None):
-    """Get series for value defined on each cell.
+def obs_values(
+    adata,
+    value_key: str,
+    *,
+    gene_symbols: str = None,
+    use_raw: bool = False,
+    layer: str = None
+) -> pd.Series:
+    """
+    Get series for value defined on each cell.
+
+    Used by :func:`obs_values_df` to get values.
 
     Params
     ------
     adata
     value_key
+    gene_symbols
+    use_raw
+    layer
 
+    Returns
+    -------
+    Series with `adata.obs_names` as index.
     """
     obs_names = adata.obs_names
     if value_key in adata.obs.columns:
@@ -670,9 +686,14 @@ def obs_values(adata, value_key: str, *, use_raw: bool = False, gene_symbols: st
 
 
 def obs_values_df(
-    adata: AnnData, keys: Iterable[str], *,
-    use_raw: bool = False, gene_symbols: str = None, layer: str = None
-):
+    adata: AnnData,
+    keys: Iterable[str] = [],
+    obsm_keys: Iterable[Tuple[str, int]] = [],
+    *,
+    use_raw: bool = False,
+    gene_symbols: str = None,
+    layer: str = None
+) -> pd.DataFrame:
     """
     Return values for observations in adata.
 
@@ -680,25 +701,50 @@ def obs_values_df(
     ------
     adata
     keys
-        Keys from either `.obs_names` or `.obs.index`.
+        Keys from either `.var_names` or `.obs.columns`.
+    obsm_keys
+        Tuple of ``({key from obsm}, {column index of obsm[key]})`.
     use_raw
     gene_symbols
     layer
 
     Returns
     -------
-    A dataframe whose columns are values corresponding to `keys` from `.X` or
-    `.obs`. The index is `adata.obs_names`.
+    A dataframe with `adata.obs_names` as index, and values specified by `keys`
+    and `obsm_keys`.
 
     Examples
     --------
-    pbmc = 
+    Getting value for plotting:
+
+    >>> pbmc = sc.datasets.pbmc68k_reduced()
+    >>> plotdf = sc.utils.obs_values_df(
+            pbmc,
+            keys=["CD8B", "n_genes"],
+            obsm_keys=[("X_umap", 0), ("X_umap", 1)],
+            gene_symbols="gene_symbols"
+        )
+    >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
+
+    Calculating mean expression for marker genes by cluster:
+
+    >>> pbmc = sc.datasets.pbmc68k_reduced()
+    >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
+    >>> genedf = sc.utils.obs_values_df(
+            pbmc,
+            keys=["louvain", *marker_genes]
+        )
+    >>> grouped = genedf.groupby("louvain")
+    >>> mean, var = grouped.mean(), grouped.var()
     """
     df = pd.DataFrame(index=adata.obs_names)
     for k in keys:
         df[k] = obs_values(
             adata, k, use_raw=use_raw, gene_symbols=gene_symbols, layer=layer
         )
+    for k, idx in obsm_keys:
+        added_k = "{}{}".format(k, idx)
+        df[added_k] = adata.obsm[k][:, idx]
     return df
 
 
