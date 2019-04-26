@@ -108,6 +108,7 @@ Marker genes
 
    tl.rank_genes_groups
    tl.filter_rank_genes_groups
+   tl.marker_gene_overlap
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~

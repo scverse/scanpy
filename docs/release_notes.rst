@@ -13,6 +13,7 @@ New functionality:
 
 - :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :smaller:`thanks to M Luecken`
+- :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :smaller:`thanks to F Ramirez`  
 - :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False`, see `here <https://github.com/theislab/scanpy/pull/474>`__ :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings, see `here <https://github.com/theislab/scanpy/pull/543>`__ :smaller:`thanks to M Luecken`
