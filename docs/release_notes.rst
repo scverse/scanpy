@@ -6,12 +6,23 @@
 .. role:: smaller
 .. role:: noteversion
 
-On master :small:`March 21, 2019`
+Version 1.4.1 :small:`April 27, 2019`
 -------------------------------------
 
+New functionality:
+
+- :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :smaller:`thanks to I Virshup`
+- :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :smaller:`thanks to M Luecken`
+- :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False`, see `here <https://github.com/theislab/scanpy/pull/474>`__ :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings, see `here <https://github.com/theislab/scanpy/pull/543>`__ :smaller:`thanks to M Luecken`
 - :func:`~scanpy.external.palantir` interfaces Palantir [Setty18]_, see `here <https://github.com/theislab/scanpy/pull/493>`__ :smaller:`thanks to A Mousa`
+
+Updates:
+
+- `.layers` support of scatter plots :smaller:`thanks to F Ramirez`
+- fix double-logarithmization in compute of log fold change in :func:`~scanpy.tl.rank_genes_groups` :smaller:`thanks to A Muñoz-Rojas`
+- fix return sections of docs :smaller:`thanks to P Angerer`
 
 
 Version 1.4 :small:`February 5, 2019`
@@ -21,7 +32,7 @@ Major updates:
 
 - one can now `import scanpy as sc` instead of `import scanpy.api as sc`, see `here <https://scanpy.readthedocs.io/en/latest/api/>`__ :noteversion:`1.3.7`
 - a new plotting gallery for visualizing marker genes, see `here <https://scanpy-tutorials.readthedocs.io/en/latest/visualizing-marker-genes.html>`__ :noteversion:`1.3.6` :smaller:`thanks to F Ramirez`
-- tutorials are integrated on ReadTheDocs, see simple `clustering <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__ and simple `trajectory inference <https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html>`__ :noteversion:`1.3.6`  
+- tutorials are integrated on ReadTheDocs, see simple `clustering <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__ and simple `trajectory inference <https://scanpy-tutorials.readthedocs.io/en/latest/paga-paul15.html>`__ :noteversion:`1.3.6`
 - a fully distributed preprocessing backend :noteversion:`1.3.3` :smaller:`thanks to T White and the Laserson Lab`
 - changed default compression to `None` in :func:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
 - performance gains in :func:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`thanks to S Rybakov`
