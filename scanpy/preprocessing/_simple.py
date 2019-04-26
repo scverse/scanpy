@@ -446,7 +446,7 @@ def pca(
     else:
         adata = AnnData(data)
 
-    logg.msg('computing PCA with n_comps =', n_comps, r=True, v=4)
+    logg.info('computing PCA with n_comps =', n_comps, r=True)
 
     if adata.n_vars < n_comps:
         n_comps = adata.n_vars - 1
@@ -515,7 +515,7 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.msg('    finished', t=True, end=' ', v=4)
+        logg.info('    finished', t=True)
         logg.msg('and added\n'
                  '    \'X_pca\', the PCA coordinates (adata.obs)\n'
                  '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
@@ -523,6 +523,7 @@ def pca(
                  '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
         return adata if copy else None
     else:
+        logg.info('    finished', t=True)
         if return_info:
             return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
         else:
