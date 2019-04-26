@@ -13,6 +13,7 @@ def test_highly_variable_genes_basic():
     adata = sc.datasets.blobs()
     sc.pp.highly_variable_genes(adata, batch_key='blobs')
     assert 'highly_variable_nbatches' in adata.var.columns
+    assert 'highly_variable_intersection' in adata.var.columns
 
     adata = sc.datasets.blobs()
     sc.pp.highly_variable_genes(adata, batch_key='blobs', n_top_genes=3)

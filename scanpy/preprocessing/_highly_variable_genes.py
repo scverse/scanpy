@@ -127,11 +127,13 @@ def highly_variable_genes(
             df.append(hvg)
 
         df = pd.concat(df, axis=0)
+        df['highly_variable'] = df['highly_variable'].astype(int)
         df = df.groupby('gene').agg({'means': np.nanmean,
                                      'dispersions': np.nanmean,
                                      'dispersions_norm': np.nanmean,
                                      'highly_variable': np.nansum})
         df.rename(columns={'highly_variable': 'highly_variable_nbatches'}, inplace=True)
+        df['highly_variable_intersection'] = df['highly_variable_nbatches'] == len(batches)
 
         if n_top_genes is not None:
             # sort genes by how often they selected as hvg within each batch and
@@ -251,6 +253,7 @@ def highly_variable_genes(
         adata.var['dispersions_norm'] = df['dispersions_norm'].values.astype('float32', copy=False)
         if batch_key is not None:
             adata.var['highly_variable_nbatches'] = df['highly_variable_nbatches'].values
+            adata.var['highly_variable_intersection'] = df['highly_variable_intersection'].values
         if subset:
             adata._inplace_subset_var(gene_subset)
     else:
@@ -267,6 +270,8 @@ def highly_variable_genes(
             ('dispersions_norm', 'float32'),
         ]
         if batch_key is not None:
-            arrays.append(df['highly_variable_nbatches'].values)
-            dtypes.append(('highly_variable_nbatches', int))
+            arrays.extend([df['highly_variable_nbatches'].values,
+                           df['highly_variable_intersection'].values])
+            dtypes.append([('highly_variable_nbatches', int),
+                           ('highly_variable_intersection', np.bool_)])
         return np.rec.fromarrays(arrays, dtype=dtypes)
