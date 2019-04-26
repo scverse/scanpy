@@ -189,30 +189,27 @@ def rank_genes_groups(
             else:
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
+            mean_group, var_group = means[igroup], vars[igroup]
             mean_rest, var_rest = _get_mean_var(X[mask_rest])
+
             ns_group = ns[igroup]  # number of observations in group
             if method == 't-test': ns_rest = np.where(mask_rest)[0].size
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
             else: raise ValueError('Method does not exist.')
 
-            denominator = np.sqrt(vars[igroup]/ns_group + var_rest/ns_rest)
-            with np.errstate(divide='ignore', invalid='ignore'):
-                scores = np.divide((means[igroup] - mean_rest), denominator) #Welch t-test
-            scores = (means[igroup] - mean_rest) / denominator #Welch t-test
-            scores[np.isnan(scores)] = 0
-            # Fold change
-            foldchanges = (np.expm1(means[igroup]) + 1e-9) / (np.expm1(mean_rest) + 1e-9) #add small value to remove 0's
+            scores, pvals = stats.ttest_ind_from_stats(
+                mean1=mean_group, std1=np.sqrt(var_group), nobs1=ns_group,
+                mean2=mean_rest,  std2=np.sqrt(var_rest),  nobs2=ns_rest,
+                equal_var=False  # Welch's
+            )
 
-            #Get p-values
-            denominator_dof = (np.square(vars[igroup]) / (np.square(ns_group)*(ns_group-1))) + (
-                (np.square(var_rest) / (np.square(ns_rest) * (ns_rest - 1))))
-            with np.errstate(divide='ignore', invalid='ignore'):
-                dof = np.divide(np.square(vars[igroup]/ns_group + var_rest/ns_rest), denominator_dof) # dof calculation for Welch t-test
-            dof[np.isnan(dof)] = 0
-            pvals = stats.t.sf(abs(scores), dof)*2 # *2 because of two-tailed t-test
+            # Fold change
+            foldchanges = (np.expm1(mean_group) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+
+            scores[np.isnan(scores)] = 0  # I think it's only nan when means are the same and vars are 0
+            pvals[np.isnan(pvals)] = 1  # This also has to happen for Benjamini Hochberg
 
             if corr_method == 'benjamini-hochberg':
-                pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
                 _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
             elif corr_method == 'bonferroni':
                 pvals_adj = np.minimum(pvals * n_genes, 1.0)
