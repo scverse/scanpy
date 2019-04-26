@@ -145,7 +145,7 @@ def highly_variable_genes(
         from statsmodels import robust
         df['mean_bin'] = pd.cut(df['mean'], np.r_[
             -np.inf,
-            np.percentile(df['mean'], np.arange(10, 105, 5)),
+            np.percentile(df['mean'], [k*100/n_bins for k in range(1,n_bins)]),
             np.inf
         ])
         disp_grouped = df.groupby('mean_bin')['dispersion']
