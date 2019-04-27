@@ -18,6 +18,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from anndata import AnnData
+from . import _docs
 from ._settings import settings
 from . import logging as logg
 import warnings
@@ -587,7 +588,7 @@ def unique_categories(categories):
 # Plotting data helpers
 # --------------------------------------------------------------------------------
 
-@singledispatch  # TODO: implement diffxpy method
+# TODO: implement diffxpy method, make singledispatch
 def rank_genes_groups_df(
     adata: AnnData,
     group: str,  # Can this be something other than a str?
@@ -617,9 +618,8 @@ def rank_genes_groups_df(
     logfc_max
         Maximum logfc to return.
     gene_symbols
-        Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
-        refer to the index column of the `.var` DataFrame. Setting this option allows
-        alternative names to be used.
+        Column name in `.var` DataFrame that stores gene symbols. Specifying 
+        this will add that column to the returned dataframe.
 
     Example
     -------
@@ -642,6 +642,7 @@ def rank_genes_groups_df(
 
 
 # Would an array be faster?
+@doc_params(raw_layer_params=_docs.doc_raw_layers)
 def obs_values(
     adata,
     value_key: str,
@@ -650,7 +651,7 @@ def obs_values(
     use_raw: bool = False,
     layer: str = None
 ) -> pd.Series:
-    """
+    """\
     Get series for value defined on each cell.
 
     Used by :func:`obs_values_df` to get values.
@@ -660,8 +661,7 @@ def obs_values(
     adata
     value_key
     gene_symbols
-    use_raw
-    layer
+    {raw_layer_params}
 
     Returns
     -------
@@ -692,29 +692,30 @@ def obs_values(
                          .format(value_key, adata.obs.columns))
     return vals
 
-
+@doc_params(raw_layer_params=_docs.doc_raw_layers)
 def obs_values_df(
     adata: AnnData,
     keys: Iterable[str] = [],
     obsm_keys: Iterable[Tuple[str, int]] = [],
     *,
     use_raw: bool = False,
+    layer: str = None,
     gene_symbols: str = None,
-    layer: str = None
 ) -> pd.DataFrame:
-    """
+    """\
     Return values for observations in adata.
 
     Params
     ------
     adata
+        AnnData object to get values from.
     keys
-        Keys from either `.var_names` or `.obs.columns`.
+        Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
-        Tuple of ``({key from obsm}, {column index of obsm[key]})`.
-    use_raw
+        Tuple of ``(key from obsm, column index of obsm[key])`.
+    {raw_layer_params}
     gene_symbols
-    layer
+        Column of `adata.var` to search for `keys` in.
 
     Returns
     -------
