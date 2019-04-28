@@ -11,6 +11,7 @@ Version 1.4.1 :small:`April 27, 2019`
 
 New functionality:
 
+- Scanpy has a command line interface again. Invoking it like ``scanpy somecommand [args]`` simply calls ``scanpy-somecommand [args]``, except for builting commands (currently just ``scanpy settings``). Implementation `here <https://github.com/theislab/scanpy/pull/604>`__.
 - :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :smaller:`thanks to M Luecken`
 - :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :smaller:`thanks to F Ramirez`  
