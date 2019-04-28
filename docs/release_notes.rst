@@ -6,6 +6,14 @@
 .. role:: smaller
 .. role:: noteversion
 
+
+On master :small:`April 27, 2019`
+---------------------------------
+
+Bug fixes:
+
+- :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation, see `PR <https://github.com/theislab/scanpy/pull/621>`__ :smaller:`thanks to I Virshup`
+
 Version 1.4.1 :small:`April 27, 2019`
 -------------------------------------
 
@@ -14,7 +22,7 @@ New functionality:
 - Scanpy has a command line interface again. Invoking it like ``scanpy somecommand [args]`` simply calls ``scanpy-somecommand [args]``, except for builting commands (currently just ``scanpy settings``). Implementation `here <https://github.com/theislab/scanpy/pull/604>`__.
 - :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :smaller:`thanks to M Luecken`
-- :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :smaller:`thanks to F Ramirez`  
+- :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :smaller:`thanks to F Ramirez`
 - :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False`, see `here <https://github.com/theislab/scanpy/pull/474>`__ :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings, see `here <https://github.com/theislab/scanpy/pull/543>`__ :smaller:`thanks to M Luecken`
