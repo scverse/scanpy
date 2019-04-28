@@ -274,6 +274,7 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
 
     result = coo_matrix((vals, (rows, cols)),
                                       shape=(n_obs, n_obs))
+    result.eliminate_zeros()
     return result.tocsr()
 
 
