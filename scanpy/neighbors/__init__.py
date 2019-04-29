@@ -636,9 +636,9 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, forest = compute_neighbors_umap(
+            knn_indices, knn_distances, _ = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
-            self._rp_forest = _make_forest_dict(forest)
+            #self._rp_forest = _make_forest_dict(forest)
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices
