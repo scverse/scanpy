@@ -147,7 +147,9 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
     key: `str`, optional (default: `"batch"`)
         Key to a categorical annotation from adata.obs that will be used for batch effect removal
     covariates
-        Additional covariates which could be causing batch effects.
+        Additional covariates such as adjustment variables or biological condition. Note that
+        not including covariates may introduce bias or lead to the removal of biological signal 
+        in unbalanced designs.
     inplace: bool, optional (default: `True`)
         Wether to replace adata.X or to return the corrected data
 
