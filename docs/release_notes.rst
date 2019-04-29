@@ -13,6 +13,7 @@ On master :small:`April 27, 2019`
 Bug fixes:
 
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation, see `PR <https://github.com/theislab/scanpy/pull/621>`__ :smaller:`thanks to I Virshup`
+- :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see `PR <https://github.com/theislab/scanpy/pull/618>`__ :smaller:`thanks to G Eraslan`
 
 Version 1.4.1 :small:`April 27, 2019`
 -------------------------------------
