@@ -236,6 +236,8 @@ def highly_variable_genes(
         normalized dispersions per gene
     highly_variable_nbatches : int
         If batch_key is given, this denotes in how many batches genes are detected as HVG
+    highly_variable_intersection : bool
+        If batch_key is given, this denotes the genes that are highly variable in all batches
 
     Notes
     -----

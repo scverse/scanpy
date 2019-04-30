@@ -11,12 +11,17 @@ def test_highly_variable_genes_basic():
     sc.pp.highly_variable_genes(adata)
 
     adata = sc.datasets.blobs()
-    sc.pp.highly_variable_genes(adata, batch_key='blobs')
+    np.random.seed(0)
+    adata.obs['batch'] = np.random.binomial(3, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(adata, batch_key='batch')
     assert 'highly_variable_nbatches' in adata.var.columns
     assert 'highly_variable_intersection' in adata.var.columns
 
     adata = sc.datasets.blobs()
-    sc.pp.highly_variable_genes(adata, batch_key='blobs', n_top_genes=3)
+    adata.obs['batch'] = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(adata, batch_key='batch', n_top_genes=3)
     assert 'highly_variable_nbatches' in adata.var.columns
     assert adata.var['highly_variable'].sum() == 3
 
