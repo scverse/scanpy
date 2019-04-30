@@ -55,6 +55,6 @@ def test_rank_genes_groups_df():
     sc.tl.rank_genes_groups(adata, groupby="celltype", method="wilcoxon")
     dedf = rank_genes_groups_df(adata, "a")
     assert dedf["pvals"].value_counts()[1.] == 2
-    assert rank_genes_groups_df(adata, "a", logfc_max=.1).shape[0] == 2
-    assert rank_genes_groups_df(adata, "a", logfc_min=.1).shape[0] == 1
+    assert rank_genes_groups_df(adata, "a", log2fc_max=.1).shape[0] == 2
+    assert rank_genes_groups_df(adata, "a", log2fc_min=.1).shape[0] == 1
     assert rank_genes_groups_df(adata, "a", pval_cutoff=.9).shape[0] == 1

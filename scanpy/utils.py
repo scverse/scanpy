@@ -595,8 +595,8 @@ def rank_genes_groups_df(
     *,
     key: str = "rank_genes_groups",
     pval_cutoff: Optional[float] = None,
-    logfc_min: Optional[float] = None,
-    logfc_max: Optional[float] = None,
+    log2fc_min: Optional[float] = None,
+    log2fc_max: Optional[float] = None,
     gene_symbols: Optional[str] = None
 ) -> pd.DataFrame:
     """
@@ -613,9 +613,9 @@ def rank_genes_groups_df(
         Key differential expression groups were stored under.
     pval_cutoff
         Minimum adjusted pval to return.
-    logfc_min
+    log2fc_min
         Minumum logfc to return.
-    logfc_max
+    log2fc_max
         Maximum logfc to return.
     gene_symbols
         Column name in `.var` DataFrame that stores gene symbols. Specifying 
@@ -632,10 +632,10 @@ def rank_genes_groups_df(
         d[k] = adata.uns["rank_genes_groups"][k][group]
     if pval_cutoff is not None:
         d = d[d["pvals_adj"] < pval_cutoff]
-    if logfc_min is not None:
-        d = d[d["logfoldchanges"] > logfc_min]
-    if logfc_max is not None:
-        d = d[d["logfoldchanges"] < logfc_max]
+    if log2fc_min is not None:
+        d = d[d["logfoldchanges"] > log2fc_min]
+    if log2fc_max is not None:
+        d = d[d["logfoldchanges"] < log2fc_max]
     if gene_symbols is not None:
         d = d.join(adata.var[gene_symbols], on="names")
     return d
