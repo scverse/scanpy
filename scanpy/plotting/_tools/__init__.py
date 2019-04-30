@@ -653,14 +653,15 @@ def embedding_density(
     save: Union[bool, str, None] = None,
     **kwargs
 ):
-    """Plot the density of cells in an embedding (per condition)
+    """
+    Plot the density of cells in an embedding (per condition)
 
     Plots the gaussian kernel density estimates (over condition) from the
     `sc.tl.embedding_density()` output.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
-    
+
     Parameters
     ----------
     adata
@@ -690,13 +691,13 @@ def embedding_density(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='G1')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='S')
     """
     sanitize_anndata(adata)
-    
+
     # Test user inputs
     basis = basis.lower()
 
@@ -731,7 +732,7 @@ def embedding_density(
 
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
         raise ValueError('Densities should be scaled between 0 and 1.')
-    
+
     # Define plotting data
     dens_values = -np.ones(adata.n_obs)
     dot_sizes = np.ones(adata.n_obs)*bg_dotsize
@@ -758,7 +759,7 @@ def embedding_density(
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cmap.set_over('black')
     cmap.set_under('lightgray')
-    
+
     # Ensure title is blank as default
     if 'title' not in kwargs:
         title=""

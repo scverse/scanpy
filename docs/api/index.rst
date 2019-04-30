@@ -1,3 +1,4 @@
+.. module:: scanpy
 .. automodule:: scanpy
 
 API
@@ -131,12 +132,11 @@ Simulations
 Plotting: PL
 ------------
 
-The plotting module :class:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
+The plotting module :mod:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
 For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
-.. toctree::
-   :hidden:
-   :maxdepth: 1
+.. autosummary::
+   :toctree: .
 
    plotting
 
