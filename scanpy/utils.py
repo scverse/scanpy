@@ -641,57 +641,6 @@ def rank_genes_groups_df(
     return d
 
 
-# Would an array be faster?
-@doc_params(raw_layer_params=_docs.doc_raw_layers)
-def obs_values(
-    adata,
-    value_key: str,
-    *,
-    gene_symbols: str = None,
-    use_raw: bool = False,
-    layer: str = None
-) -> pd.Series:
-    """\
-    Get series for value defined on each cell.
-
-    Used by :func:`obs_values_df` to get values.
-
-    Params
-    ------
-    adata
-    value_key
-    gene_symbols
-    {raw_layer_params}
-
-    Returns
-    -------
-    Series with `adata.obs_names` as index.
-    """
-    obs_names = adata.obs_names
-    if value_key in adata.obs.columns:
-        vals = adata.obs[value_key]
-        return vals
-    if gene_symbols is not None and gene_symbols in adata.var.columns:
-        if value_key not in adata.var[gene_symbols].values:
-            logg.error("Gene symbol {!r} not found in given gene_symbols "
-                       "column: {!r}".format(value_key, gene_symbols))
-            return
-        value_key = adata.var[adata.var[gene_symbols] == value_key].index[0]
-    if layer is not None and value_key in adata.var_names:
-        if layer not in adata.layers.keys():
-            raise KeyError('Selected layer: {} is not in the layers list. The list of '
-                           'valid layers is: {}'.format(layer, adata.layers.keys()))
-        vals = pd.Series(adata[:, value_key].layers[layer], index=obs_names)
-    elif use_raw and value_key in adata.raw.var_names:
-        vals = pd.Series(adata.raw[:, value_key].X, index=obs_names)
-    elif value_key in adata.var_names:
-        vals = pd.Series(adata[:, value_key].X, index=obs_names)
-    else:
-        raise ValueError("The passed `value_key` {} is not a valid observation annotation "
-                         "or variable name. Valid observation annotation keys are: {}"
-                         .format(value_key, adata.obs.columns))
-    return vals
-
 @doc_params(raw_layer_params=_docs.doc_raw_layers)
 def obs_values_df(
     adata: AnnData,
@@ -730,8 +679,7 @@ def obs_values_df(
     >>> plotdf = sc.utils.obs_values_df(
             pbmc,
             keys=["CD8B", "n_genes"],
-            obsm_keys=[("X_umap", 0), ("X_umap", 1)],
-            gene_symbols="gene_symbols"
+            obsm_keys=[("X_umap", 0), ("X_umap", 1)]
         )
     >>> plotdf.plot.scatter("X_umap0", "X_umap1", c="CD8B")
 
@@ -746,11 +694,36 @@ def obs_values_df(
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """
-    df = pd.DataFrame(index=adata.obs_names)
-    for k in keys:
-        df[k] = obs_values(
-            adata, k, use_raw=use_raw, gene_symbols=gene_symbols, layer=layer
+    ### Argument handling
+    if layer is None:
+        layer = "X"
+    # Check keys
+    if gene_symbols is not None:
+        gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
+    else:
+        gene_names = pd.Series(adata.var_names, index=adata.var_names)
+    lookup_keys = []
+    not_found = []
+    for key in keys:
+        if key in adata.obs.columns:
+            lookup_keys.append(key)
+        elif key in gene_names.index:
+            lookup_keys.append(gene_names[key])
+        else:
+            not_found.append(key)
+    if len(not_found) > 0:
+        if gene_symbols is None:
+            gene_error = "`adata.var_names`"
+        else:
+            gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
+        raise KeyError(
+            "Could not find keys '{}' in columns of `adata.obs` or in {}.".format(not_found, gene_error)
         )
+
+    ### Make df
+    df = pd.DataFrame(index=adata.obs_names)
+    for k, l in zip(keys, lookup_keys):
+        df[k] = adata._get_obs_array(l, use_raw=use_raw, layer=layer)
     for k, idx in obsm_keys:
         added_k = "{}{}".format(k, idx)
         df[added_k] = adata.obsm[k][:, idx]
