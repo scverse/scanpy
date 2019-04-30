@@ -51,6 +51,7 @@ def describe_obs(
     use_raw: bool = False,
     inplace: bool = False,
     X=None,
+    parallel=None
 ) -> Optional[pd.DataFrame]:
     """\
     Describe observations of anndata.
@@ -68,6 +69,9 @@ def describe_obs(
         Whether to place calculated metrics in `adata.obs`.
     X
         Matrix to calculate values on. Meant for internal usage.
+    parallel
+        Whether values are calculated in parallel. If `None`, heuristic based
+        on numba compilation time is used.
 
     Returns
     -------
@@ -95,7 +99,7 @@ def describe_obs(
     obs_metrics["log1p_total_{expr_type}"] = np.log1p(obs_metrics["total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
-        proportions = top_segment_proportions(X, percent_top)
+        proportions = top_segment_proportions(X, percent_top, parallel)
         # Since there are local loop variables, formatting must occur in their scope
         # Probably worth looking into a python3.5 compatable way to make this better
         for i, n in enumerate(percent_top):
@@ -211,6 +215,7 @@ def calculate_qc_metrics(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
+    parallel: Optional[bool] = None
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
     Calculate quality control metrics.
@@ -227,6 +232,9 @@ def calculate_qc_metrics(
     {doc_expr_reps}
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
+    parallel
+        Whether to force parallelism. Otherwise usage of paralleism is based on
+        compilation time and sample size heuristics.
 
     Returns
     -------
@@ -263,6 +271,7 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
+        parallel=parallel
     )
     var_metrics = describe_var(
         adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
@@ -323,7 +332,7 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(mtx, ns):
+def top_segment_proportions(mtx, ns, parallel=None):
     """
     Calculates total percentage of counts in top ns genes.
 
@@ -343,7 +352,7 @@ def top_segment_proportions(mtx, ns):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
+            mtx.data, mtx.indptr, np.array(ns, dtype=np.int), parallel
         )
     else:
         return top_segment_proportions_dense(mtx, ns)
@@ -368,10 +377,10 @@ def top_segment_proportions_dense(mtx, ns):
 
 def top_segment_proportions_sparse_csr(data, indptr, ns, parallel: bool = None):
     # Rough estimate for when compilation + paralleziation is faster than single-threaded
-    if (indptr.size < 300_000) or (parallel == False):
-        return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
-    else:
+    if (indptr.size > 300_000) or (parallel == True):
         return _top_segment_proportions_sparse_csr_parallel(data, indptr, ns)
+    else:
+        return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
 
 
 def _top_segment_proportions_sparse_csr(data, indptr, ns):

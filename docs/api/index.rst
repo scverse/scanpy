@@ -30,8 +30,6 @@ For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
    :toctree: .
 
    pp.calculate_qc_metrics
-   pp.describe_obs
-   pp.describe_var
    pp.filter_cells
    pp.filter_genes
    pp.highly_variable_genes
