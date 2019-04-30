@@ -148,6 +148,7 @@ def print_version_and_date():
 
 _DEPENDENCIES_NUMERICS = [
     'anndata',  # anndata actually shouldn't, but as long as it's in development
+    'umap',
     'numpy',
     'scipy',
     'pandas',
@@ -178,27 +179,6 @@ def print_versions():
     Matplotlib and Seaborn are excluded from this.
     """
     _print_versions_dependencies(['scanpy'] + _DEPENDENCIES_NUMERICS)
-
-
-def print_versions_dependencies_numerics():
-    """Dependencies that might influence numerical results (computed data).
-    """
-    print('Dependencies:', end=' ')
-    _print_versions_dependencies(_DEPENDENCIES_NUMERICS)
-
-
-def print_versions_dependencies_plotting():
-    """Dependencies that might influence plots (but not computed data).
-    """
-    print('Dependencies:', end=' ')
-    _print_versions_dependencies(_DEPENDENCIES_PLOTTING)
-
-
-def print_versions_dependencies_all():
-    """All relevant dependencies.
-    """
-    _print_versions_dependencies(
-        _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING)
 
 
 def get_date_string():

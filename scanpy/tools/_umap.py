@@ -1,4 +1,4 @@
-from ._utils import get_init_pos_from_paga
+from ._utils import get_init_pos_from_paga, choose_representation
 from .._settings import settings
 from .. import logging as logg
 from ..logging import (
@@ -104,7 +104,7 @@ def umap(
     if ('params' not in adata.uns['neighbors']
         or adata.uns['neighbors']['params']['method'] != 'umap'):
         logg.warn('neighbors/connectivities have not been computed using umap')
-    from ..neighbors.umap.umap_ import find_ab_params, simplicial_set_embedding
+    from umap.umap_ import find_ab_params, simplicial_set_embedding
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)
     else:
@@ -118,9 +118,12 @@ def umap(
         init_coords = init_pos
     from sklearn.utils import check_random_state
     random_state = check_random_state(random_state)
-    n_epochs = maxiter
+    n_epochs = 0 if maxiter is None else maxiter
     verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
+    neigh_params = adata.uns['neighbors']['params']
+    X = choose_representation(adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None))
     X_umap = simplicial_set_embedding(
+        X,
         adata.uns['neighbors']['connectivities'].tocoo(),
         n_components,
         alpha,
@@ -131,7 +134,9 @@ def umap(
         n_epochs,
         init_coords,
         random_state,
-        max(0, verbosity-3))
+        neigh_params.get('metric', 'euclidean'),
+        neigh_params.get('metric_kwds', {}),
+        verbose=max(0, verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
