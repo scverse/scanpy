@@ -156,14 +156,8 @@ def _highly_variable_genes_single_batch(
             dispersion_norm > min_disp,
             dispersion_norm < max_disp,
         ))
-        print((mean > min_mean).sum())
-        print((mean < max_mean).sum())
-        print((dispersion_norm > min_disp).sum())
-        print((dispersion_norm < max_disp).sum())
-        print(gene_subset.sum())
 
     df['highly_variable'] = gene_subset
-    print(df.head())
     return df
 
 def highly_variable_genes(
@@ -257,13 +251,11 @@ def highly_variable_genes(
 
     if batch_key is None:
         df = _highly_variable_genes_single_batch(adata,
-                                                 min_disp=min_disp, max_disp=min_disp,
+                                                 min_disp=min_disp, max_disp=max_disp,
                                                  min_mean=min_mean, max_mean=max_mean,
                                                  n_top_genes=n_top_genes,
                                                  n_bins=n_bins,
                                                  flavor=flavor)
-        print(df)
-        #print(df.highly_variable.sum())
     else:
         sanitize_anndata(adata)
         batches = adata.obs[batch_key].cat.categories
@@ -271,7 +263,7 @@ def highly_variable_genes(
         for batch in batches:
             adata_subset = adata[adata.obs[batch_key] == batch]
             hvg = _highly_variable_genes_single_batch(adata_subset,
-                                                      min_disp=min_disp, max_disp=min_disp,
+                                                      min_disp=min_disp, max_disp=max_disp,
                                                       min_mean=min_mean, max_mean=max_mean,
                                                       n_top_genes=n_top_genes,
                                                       n_bins=n_bins,
@@ -325,7 +317,7 @@ def highly_variable_genes(
             adata.var['highly_variable_nbatches'] = df['highly_variable_nbatches'].values
             adata.var['highly_variable_intersection'] = df['highly_variable_intersection'].values
         if subset:
-            adata._inplace_subset_var(df['highly_variable'])
+            adata._inplace_subset_var(df['highly_variable'].values)
     else:
         arrays = [
              df['highly_variable'].values,
