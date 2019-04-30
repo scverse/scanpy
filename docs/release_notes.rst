@@ -13,6 +13,7 @@ On master :small:`April 27, 2019`
 Updates:
 
 - :func:`~scanpy.tl.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency, see `PR <https://github.com/theislab/scanpy/pull/576>`__ :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.pp.calculate_qc_metrics` is now single threaded by default for datasets under 300,000 cells -- allowing cached compilation. See `PR <https://github.com/theislab/scanpy/pull/615>`__ :smaller:`thanks to I Virshup`
 
 Bug fixes:
 
