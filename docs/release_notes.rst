@@ -10,6 +10,10 @@
 On master :small:`April 27, 2019`
 ---------------------------------
 
+Updates:
+
+- :func:`~scanpy.tl.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency, see `PR <https://github.com/theislab/scanpy/pull/576>`__ :smaller:`thanks to S Rybakov`
+
 Bug fixes:
 
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation, see `PR <https://github.com/theislab/scanpy/pull/621>`__ :smaller:`thanks to I Virshup`
