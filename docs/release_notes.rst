@@ -13,11 +13,12 @@ On master :small:`April 27, 2019`
 Updates:
 
 - :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency, see :pr:`576` :smaller:`thanks to S Rybakov`
+- :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see :pr:`618` :smaller:`thanks to G Eraslan`
+- :func:`~scanpy.pp.highly_variable_gene` now has a `batch_key` option which performs the HVG selection in each batch separately in order to reduce the batch effects by avoiding the selection of batch-specific genes.  see :pr:`622` :smaller:`thanks to G Eraslan`
 
 Bug fixes:
 
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation, see :pr:`621` :smaller:`thanks to I Virshup`
-- :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see :pr:`618` :smaller:`thanks to G Eraslan`
 
 Version 1.4.1 :small:`April 27, 2019`
 -------------------------------------
