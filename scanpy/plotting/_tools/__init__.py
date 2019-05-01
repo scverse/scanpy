@@ -56,7 +56,8 @@ pca_scatter = pca
 
 
 def pca_loadings(adata, components=None, show=None, save=None):
-    """Rank genes according to contributions to PCs.
+    """\
+    Rank genes according to contributions to PCs.
 
     Parameters
     ----------
@@ -79,7 +80,8 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
 
 def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
-    """Plot the variance ratio.
+    """\
+    Plot the variance ratio.
 
     Parameters
     ----------
@@ -104,7 +106,8 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
 
 
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
-    """Heatmap of pseudotime series.
+    """\
+    Heatmap of pseudotime series.
 
     Parameters
     ----------
@@ -589,7 +592,8 @@ def rank_genes_groups_violin(
 
 def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         show=None, save=None):
-    """Plot results of simulation.
+    """\
+    Plot results of simulation.
 
     Parameters
     ----------
@@ -653,14 +657,15 @@ def embedding_density(
     save: Union[bool, str, None] = None,
     **kwargs
 ):
-    """Plot the density of cells in an embedding (per condition)
+    """\
+    Plot the density of cells in an embedding (per condition)
 
     Plots the gaussian kernel density estimates (over condition) from the
     `sc.tl.embedding_density()` output.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
-    
+
     Parameters
     ----------
     adata
@@ -690,13 +695,13 @@ def embedding_density(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='G1')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='S')
     """
     sanitize_anndata(adata)
-    
+
     # Test user inputs
     basis = basis.lower()
 
@@ -731,7 +736,7 @@ def embedding_density(
 
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
         raise ValueError('Densities should be scaled between 0 and 1.')
-    
+
     # Define plotting data
     dens_values = -np.ones(adata.n_obs)
     dot_sizes = np.ones(adata.n_obs)*bg_dotsize
@@ -758,7 +763,7 @@ def embedding_density(
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cmap.set_over('black')
     cmap.set_under('lightgray')
-    
+
     # Ensure title is blank as default
     if 'title' not in kwargs:
         title=""

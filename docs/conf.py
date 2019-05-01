@@ -71,6 +71,7 @@ intersphinx_mapping = dict(
     python=('https://docs.python.org/3', None),
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
+    scanpy_tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest', None),
 )
 
 
@@ -91,11 +92,13 @@ html_context = dict(
 )
 html_static_path = ['_static']
 html_logo = '_static/img/Scanpy_Logo_RGB.png'
+gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(html_context)
 
 
 def setup(app):
     app.add_stylesheet('css/custom.css')
     app.connect('autodoc-process-docstring', insert_function_images)
+    app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
 
 
 # -- Options for other output formats ------------------------------------------
@@ -121,6 +124,19 @@ def insert_function_images(app, what, name, obj, options, lines):
     path = Path(__file__).parent / 'api' / f'{name}.png'
     if what != 'function' or not path.is_file(): return
     lines[0:0] = [f'.. image:: {path.name}', '   :width: 200', '   :align: right', '']
+
+
+# -- GitHub links --------------------------------------------------------------
+
+
+def autolink(url_template, title_template='{}'):
+    from docutils import nodes
+    def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+        url = url_template.format(text)
+        title = title_template.format(text)
+        node = nodes.reference(rawtext, title, refuri=url, **options)
+        return [node], []
+    return role
 
 
 # -- Test for new scanpydoc functionality --------------------------------------
