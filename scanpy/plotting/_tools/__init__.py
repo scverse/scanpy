@@ -57,7 +57,8 @@ pca_scatter = pca
 
 
 def pca_loadings(adata, components=None, show=None, save=None):
-    """Rank genes according to contributions to PCs.
+    """\
+    Rank genes according to contributions to PCs.
 
     Parameters
     ----------
@@ -80,7 +81,8 @@ def pca_loadings(adata, components=None, show=None, save=None):
 
 
 def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
-    """Plot the variance ratio.
+    """\
+    Plot the variance ratio.
 
     Parameters
     ----------
@@ -105,7 +107,8 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
 
 
 def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
-    """Heatmap of pseudotime series.
+    """\
+    Heatmap of pseudotime series.
 
     Parameters
     ----------
@@ -590,7 +593,8 @@ def rank_genes_groups_violin(
 
 def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         show=None, save=None):
-    """Plot results of simulation.
+    """\
+    Plot results of simulation.
 
     Parameters
     ----------
@@ -658,7 +662,7 @@ def embedding_density(
     show: Optional[bool] = None,
     **kwargs
 ):
-    """
+    """\
     Plot the density of cells in an embedding (per condition)
 
     Plots the gaussian kernel density estimates (over condition) from the
