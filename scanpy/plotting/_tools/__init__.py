@@ -689,6 +689,8 @@ def embedding_density(
         Density that corresponds to color bar maximum.
     vmin
         Density that corresponds to color bar minimum.
+    ncols
+        Number of panels..
     {show_save_ax}
 
     Examples
@@ -697,9 +699,7 @@ def embedding_density(
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
     >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
-    ...                         group='G1')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
-    ...                         group='S')
+    ...                         group=['G1', 'S'])
     """
     sanitize_anndata(adata)
 
@@ -742,10 +742,6 @@ def embedding_density(
         #  current figure size
         wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
 
-    # Define plotting data
-    dens_values = -np.ones(adata.n_obs)
-    dot_sizes = np.ones(adata.n_obs)*bg_dotsize
-
     # Make the color map
     if isinstance(color_map, str):
         cmap = cm.get_cmap(color_map)
@@ -756,6 +752,7 @@ def embedding_density(
     cmap.set_over('black')
     cmap.set_under('lightgray')
 
+    # if group is set, then plot it using multiple panels (even if only one group is set)
     if group is not None and isinstance(group, abc.Sequence):
         from matplotlib import gridspec
         # set up the figure
@@ -781,8 +778,12 @@ def embedding_density(
                                  'was calculated. Invalid group name: {}'.format(group_name))
 
             ax = pl.subplot(gs[count])
+            # Define plotting data
+            dot_sizes = np.ones(adata.n_obs) * bg_dotsize
             group_mask = (adata.obs[groupby] == group_name)
-            adata.obs['_density'] = adata.obs[key][group_mask]
+            dens_values = -np.ones(adata.n_obs)
+            dens_values[group_mask] = adata.obs[key][group_mask]
+            adata.obs['_density'] = dens_values
             dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
 
             if 'title' not in kwargs:
@@ -791,10 +792,11 @@ def embedding_density(
                 title = kwargs.pop('title')
             ax=plot_scatter(adata, basis, components=components, color='_density',
                          color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
-                         vmin=vmin, save=save, title=title, ax=ax, show=show, **kwargs)
+                         vmin=vmin, save=False, title=title, ax=ax, show=False, **kwargs)
             axs.append(ax)
 
         adata.obs = adata.obs.drop(columns=['_density'])
+        utils.savefig_or_show(key + "_", show=show, save=save)
         if show is False:
             return axs
     else:
@@ -813,5 +815,5 @@ def embedding_density(
 
         # Plot the graph
         return plot_scatter(adata_vis, basis, components=components, color='Density',
-                            color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                            color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax, show=show,
                             vmin=vmin, save=save, title=title, **kwargs)
