@@ -12,7 +12,7 @@ from ...utils import doc_params, sanitize_anndata
 from ... import logging as logg
 from .._anndata import scatter, ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from .._docs import doc_scatter_bulk, doc_show_save_ax
+from .._docs import doc_scatter_bulk, doc_show_save_ax, _doc_scatter_panels
 from .scatterplots import pca, plot_scatter
 from matplotlib.colors import Colormap
 
@@ -643,7 +643,7 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@doc_params(show_save_ax=doc_show_save_ax, panels=_doc_scatter_panels)
 def embedding_density(
     adata: AnnData,
     basis: str,
@@ -693,8 +693,7 @@ def embedding_density(
         Density that corresponds to color bar maximum.
     vmin
         Density that corresponds to color bar minimum.
-    ncols
-        Number of panels..
+    {panels}
     {show_save_ax}
 
     Examples
