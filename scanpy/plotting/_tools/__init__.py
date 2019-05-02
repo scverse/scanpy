@@ -1,3 +1,4 @@
+from collections import abc
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
@@ -650,7 +651,11 @@ def embedding_density(
     fg_dotsize:  Optional[int] = 180,
     vmax:  Optional[int] = 1,
     vmin:  Optional[int] = 0,
+    ncols: Optional[int] = 4,
+    hspace: Optional[float] = 0.25,
+    wspace: Optional[None] = None,
     save: Union[bool, str, None] = None,
+    show: Optional[bool] = None,
     **kwargs
 ):
     """
@@ -721,30 +726,25 @@ def embedding_density(
 
     components = adata.uns[key+'_params']['components']
     groupby = adata.uns[key+'_params']['covariate']
+    # turn group into a list if needed
+    if isinstance(group, str):
+        group = [group]
 
     if (group is None) and (groupby is not None):
         raise ValueError('Densities were calculated over an `.obs` covariate. '
                          'Please specify a group from this covariate to plot.')
 
-    if (group is not None) and (group not in adata.obs[groupby].cat.categories):
-        raise ValueError('Please specify a group from the `.obs` category over which the density '
-                         'was calculated.')
-
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
         raise ValueError('Densities should be scaled between 0 and 1.')
+
+    if wspace is None:
+        #  try to set a wspace that is not too large or too small given the
+        #  current figure size
+        wspace = 0.75 / rcParams['figure.figsize'][0] + 0.02
 
     # Define plotting data
     dens_values = -np.ones(adata.n_obs)
     dot_sizes = np.ones(adata.n_obs)*bg_dotsize
-
-    if group is not None:
-        group_mask = (adata.obs[groupby] == group)
-        dens_values[group_mask] = adata.obs[key][group_mask]
-        dot_sizes[group_mask] = np.ones(sum(group_mask))*fg_dotsize
-
-    else:
-        dens_values = adata.obs[key]
-        dot_sizes = np.ones(adata.n_obs)*fg_dotsize
 
     # Make the color map
     if isinstance(color_map, str):
@@ -752,21 +752,66 @@ def embedding_density(
     else:
         cmap = color_map
 
-    #norm = colors.Normalize(vmin=-1, vmax=1)
-    adata_vis = adata.copy()
-    adata_vis.obs['Density'] = dens_values
-
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cmap.set_over('black')
     cmap.set_under('lightgray')
 
-    # Ensure title is blank as default
-    if 'title' not in kwargs:
-        title=""
-    else:
-        title = kwargs.pop('title')
+    if group is not None and isinstance(group, abc.Sequence):
+        from matplotlib import gridspec
+        # set up the figure
+        num_panels = len(group)
+        n_panels_x = min(ncols, num_panels)
+        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
+        # each panel will have the size of rcParams['figure.figsize']
+        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
+                                 n_panels_y * rcParams['figure.figsize'][1]))
+        left = 0.2 / n_panels_x
+        bottom = 0.13 / n_panels_y
+        gs = gridspec.GridSpec(
+            nrows=n_panels_y, ncols=n_panels_x,
+            left=left, right=1 - (n_panels_x - 1) * left - 0.01 / n_panels_x,
+            bottom=bottom, top=1 - (n_panels_y - 1) * bottom - 0.1 / n_panels_y,
+            hspace=hspace, wspace=wspace,
+        )
 
-    # Plot the graph
-    return plot_scatter(adata_vis, basis, components=components, color='Density',
-                        color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
-                        vmin=vmin, save=save, title=title, **kwargs)
+        axs = []
+        for count, group_name in enumerate(group):
+            if group_name not in adata.obs[groupby].cat.categories:
+                raise ValueError('Please specify a group from the `.obs` category over which the density '
+                                 'was calculated. Invalid group name: {}'.format(group_name))
+
+            ax = pl.subplot(gs[count])
+            group_mask = (adata.obs[groupby] == group_name)
+            adata.obs['_density'] = adata.obs[key][group_mask]
+            dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
+
+            if 'title' not in kwargs:
+                title = group_name
+            else:
+                title = kwargs.pop('title')
+            ax=plot_scatter(adata, basis, components=components, color='_density',
+                         color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                         vmin=vmin, save=save, title=title, ax=ax, show=show, **kwargs)
+            axs.append(ax)
+
+        adata.obs = adata.obs.drop(columns=['_density'])
+        if show is False:
+            return axs
+    else:
+        dens_values = adata.obs[key]
+        dot_sizes = np.ones(adata.n_obs)*fg_dotsize
+
+        #norm = colors.Normalize(vmin=-1, vmax=1)
+        adata_vis = adata.copy()
+        adata_vis.obs['Density'] = dens_values
+
+        # Ensure title is blank as default
+        if 'title' not in kwargs:
+            title = group if group is not None else ""
+        else:
+            title = kwargs.pop('title')
+
+        # Plot the graph
+        return plot_scatter(adata_vis, basis, components=components, color='Density',
+                            color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                            vmin=vmin, save=save, title=title, **kwargs)
