@@ -5,7 +5,7 @@ from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
 from anndata import AnnData
-from typing import Union, Optional
+from typing import Union, Optional, List
 
 from .. import _utils as utils
 from ...utils import doc_params, sanitize_anndata
@@ -649,7 +649,7 @@ def embedding_density(
     basis: str,
     key: str,
     *,
-    group: Optional[str] = None,
+    group: Optional[Union[str, List[str], None]] = 'all',
     color_map: Union[Colormap, str] = 'YlOrRd',
     bg_dotsize: Optional[int] = 80,
     fg_dotsize:  Optional[int] = 180,
@@ -682,7 +682,10 @@ def embedding_density(
         Name of the `.obs` covariate that contains the density estimates
     group
         The category in the categorical observation annotation to be plotted.
-        For example, 'G1' in the cell cycle 'phase' covariate.
+        For example, 'G1' in the cell cycle 'phase' covariate. If all categories
+        are to be plotted use group='all' (default), If multiple categories
+        want to be plotted use a list (e.g.: ['G1', 'S']. If the overall density
+        wants to be ploted set group to 'None'.
     color_map
         Matplolib color map to use for density plotting.
     bg_dotsize
@@ -729,13 +732,23 @@ def embedding_density(
 
     components = adata.uns[key+'_params']['components']
     groupby = adata.uns[key+'_params']['covariate']
+
     # turn group into a list if needed
-    if isinstance(group, str):
+    if group == 'all':
+        if groupby is None:
+            group = None
+        else:
+            group = list(adata.obs[groupby].cat.categories)
+    elif isinstance(group, str):
         group = [group]
 
     if (group is None) and (groupby is not None):
         raise ValueError('Densities were calculated over an `.obs` covariate. '
                          'Please specify a group from this covariate to plot.')
+
+    if (group is not None) and (groupby is None):
+        logg.warn('value of \'group\' is ignored because densities were not calculated for an `.obs` covariate.')
+        group = None
 
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
         raise ValueError('Densities should be scaled between 0 and 1.')
@@ -754,6 +767,12 @@ def embedding_density(
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
     cmap.set_over('black')
     cmap.set_under('lightgray')
+    # a name to store the density values is needed. To avoid
+    # overwriting a user name a new random name is created
+    while True:
+        density_col_name = '_tmp_embedding_density_column_{}_'.format(np.random.randint(1000, 10000))
+        if density_col_name not in adata.obs.columns:
+            break
 
     # if group is set, then plot it using multiple panels (even if only one group is set)
     if group is not None and isinstance(group, abc.Sequence):
@@ -786,29 +805,24 @@ def embedding_density(
             group_mask = (adata.obs[groupby] == group_name)
             dens_values = -np.ones(adata.n_obs)
             dens_values[group_mask] = adata.obs[key][group_mask]
-            adata.obs['_density'] = dens_values
+            adata.obs[density_col_name] = dens_values
             dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
 
             if 'title' not in kwargs:
                 title = group_name
             else:
                 title = kwargs.pop('title')
-            ax=plot_scatter(adata, basis, components=components, color='_density',
+            ax=plot_scatter(adata, basis, components=components, color=density_col_name,
                          color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
                          vmin=vmin, save=False, title=title, ax=ax, show=False, **kwargs)
             axs.append(ax)
 
-        adata.obs = adata.obs.drop(columns=['_density'])
-        utils.savefig_or_show(key + "_", show=show, save=save)
-        if show is False:
-            return axs
+        ax = axs
     else:
         dens_values = adata.obs[key]
         dot_sizes = np.ones(adata.n_obs)*fg_dotsize
 
-        #norm = colors.Normalize(vmin=-1, vmax=1)
-        adata_vis = adata.copy()
-        adata_vis.obs['Density'] = dens_values
+        adata.obs[density_col_name] = dens_values
 
         # Ensure title is blank as default
         if 'title' not in kwargs:
@@ -817,6 +831,13 @@ def embedding_density(
             title = kwargs.pop('title')
 
         # Plot the graph
-        return plot_scatter(adata_vis, basis, components=components, color='Density',
-                            color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax, show=show,
-                            vmin=vmin, save=save, title=title, **kwargs)
+        ax = plot_scatter(adata, basis, components=components, color=density_col_name,
+                     color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                     vmin=vmin, save=False, show=False, title=title, **kwargs)
+
+    # remove temporary column name
+    adata.obs = adata.obs.drop(columns=[density_col_name])
+
+    utils.savefig_or_show(key + "_", show=show, save=save)
+    if show is False:
+        return ax
