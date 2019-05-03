@@ -704,6 +704,11 @@ def embedding_density(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
+
+    Plot all categories be default
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
+
+    Plot selected categories
     >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group=['G1', 'S'])
     """
