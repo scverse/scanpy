@@ -25,3 +25,8 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 .. _documentation: https://scanpy.readthedocs.io
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
+
+I have added source code for weighted sampled data. I have already preprocessed data and found the top fea PC's and then input to scanpy
+to found louvain coomunities , marker genes and later plot in different formats like dotPlot, violinPlot and heatmap. I have updated scanpy
+for weighted sampled data where each row has its weight, but this support for clustering and plotting. We can further update sparse PCA as 
+well to support weighted data points. 
