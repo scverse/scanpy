@@ -126,6 +126,8 @@ def leiden(
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
+        if key_added == 'louvain':
+            key_added += '_R'
         groups = rename_groups(
             adata,
             key_added,

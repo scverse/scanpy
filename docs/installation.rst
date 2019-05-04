@@ -34,14 +34,9 @@ parts of scanpy but aren't requirements: `python-igraph
 Bioconda
 ~~~~~~~~
 
-If you're using bioconda_, create a python3 bioconda environment with scanpy
-installed::
+Using bioconda_, simply run::
 
-    conda create -n scanpy python=3.6 scanpy
-
-When you want to use scanpy, switch to that environment::
-
-    source activate scanpy
+    conda install -c bioconda scanpy
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~

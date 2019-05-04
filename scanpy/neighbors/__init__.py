@@ -6,6 +6,7 @@ from anndata import AnnData
 from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix
 from sklearn.metrics import pairwise_distances
+from sklearn.utils import check_random_state
 
 from .._settings import settings
 from .. import logging as logg
@@ -93,14 +94,83 @@ def neighbors(
         random_state=random_state)
     adata.uns['neighbors'] = {}
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
+    adata.uns['neighbors']['params']['metric'] = metric
+    if metric_kwds:
+        adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
+    if use_rep is not None:
+        adata.uns['neighbors']['params']['use_rep'] = use_rep
+    if n_pcs is not None:
+        adata.uns['neighbors']['params']['n_pcs'] = n_pcs
     adata.uns['neighbors']['distances'] = neighbors.distances
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
+    if neighbors.rp_forest is not None:
+        adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint(
         'added to `.uns[\'neighbors\']`\n'
         '    \'distances\', distances for each pair of neighbors\n'
         '    \'connectivities\', weighted adjacency matrix')
     return adata if copy else None
+
+
+def _rp_forest_generate(rp_forest_dict):
+    from collections import namedtuple
+
+    props = ['hyperplanes', 'offsets', 'children', 'indices']
+    FlatTree = namedtuple('FlatTree', props)
+    num_trees = len(rp_forest_dict[props[0]]['start'])-1
+
+    for i in range(num_trees):
+        tree = []
+        for prop in props:
+            start = rp_forest_dict[prop]['start'][i]
+            end = rp_forest_dict[prop]['start'][i+1]
+            tree.append(rp_forest_dict[prop]['data'][start:end])
+        yield FlatTree(*tree)
+
+    tree = []
+    for prop in props:
+        start = rp_forest_dict[prop]['start'][num_trees]
+        tree.append(rp_forest_dict[prop]['data'][start:])
+    yield FlatTree(*tree)
+
+
+def neighbors_update(adata, adata_new, k=10, queue_size=5, random_state=0):
+    # only with use_rep='X' for now
+    from umap.nndescent import make_initialisations, make_initialized_nnd_search, initialise_search
+    from umap.umap_ import INT32_MAX, INT32_MIN
+    from umap.utils import deheap_sort
+    import umap.distances as dist
+
+    if 'metric_kwds' in adata.uns['neighbors']['params']:
+        dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
+    else:
+        dist_args = ()
+    dist_func = dist.named_distances[adata.uns['neighbors']['params']['metric']]
+
+    random_init, tree_init = make_initialisations(dist_func, dist_args)
+    search = make_initialized_nnd_search(dist_func, dist_args)
+
+    search_graph = adata.uns['neighbors']['distances'].copy()
+    search_graph.data = (search_graph.data > 0).astype(np.int8)
+    search_graph = search_graph.maximum(search_graph.transpose())
+    # prune it?
+
+    random_state = check_random_state(random_state)
+    rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
+
+    if 'rp_forest' in adata.uns['neighbors']:
+        rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
+    else:
+        rp_forest = None
+    train = adata.X
+    test = adata_new.X
+
+    init = initialise_search(rp_forest, train, test, int(k * queue_size), random_init, tree_init, rng_state)
+    result = search(train, search_graph.indptr, search_graph.indices, init, test)
+
+    indices, dists = deheap_sort(result)
+    return indices[:, :k], dists[:, :k]
 
 
 def compute_neighbors_umap(
@@ -173,148 +243,15 @@ def compute_neighbors_umap(
     -------
     **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
     """
-    from .umap import sparse
-    from .umap.umap_ import rptree_leaf_array, make_nn_descent
-    from .umap import distances as dist
-    from .umap import sparse
-    import scipy
-    from sklearn.utils import check_random_state
-
-    INT32_MIN = np.iinfo(np.int32).min + 1
-    INT32_MAX = np.iinfo(np.int32).max - 1
+    from umap.umap_ import nearest_neighbors
 
     random_state = check_random_state(random_state)
 
-    if metric == 'precomputed':
-        # Note that this does not support sparse distance matrices yet ...
-        # Compute indices of n nearest neighbors
-        knn_indices = np.argsort(X)[:, :n_neighbors]
-        # Compute the nearest neighbor distances
-        #   (equivalent to np.sort(X)[:, :n_neighbors])
-        knn_dists = X[np.arange(X.shape[0])[:, None], knn_indices].copy()
-    else:
-        if callable(metric):
-            distance_func = metric
-        elif metric in dist.named_distances:
-            distance_func = dist.named_distances[metric]
-        else:
-            raise ValueError('Metric is neither callable, ' +
-                             'nor a recognised string')
+    knn_indices, knn_dists, forest = nearest_neighbors(X, n_neighbors, random_state=random_state,
+                                                       metric=metric, metric_kwds=metric_kwds,
+                                                       angular=angular, verbose=verbose)
 
-        if metric in ('cosine', 'correlation', 'dice', 'jaccard'):
-            angular = True
-
-        rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
-
-        if scipy.sparse.isspmatrix_csr(X):
-            if metric in sparse.sparse_named_distances:
-                distance_func = sparse.sparse_named_distances[metric]
-                if metric in sparse.sparse_need_n_features:
-                    metric_kwds['n_features'] = X.shape[1]
-            else:
-                raise ValueError('Metric {} not supported for sparse ' +
-                                'data'.format(metric))
-            metric_nn_descent = sparse.make_sparse_nn_descent(
-                distance_func, tuple(metric_kwds.values()))
-            leaf_array = rptree_leaf_array(X, n_neighbors,
-                                           rng_state, n_trees=10,
-                                           angular=angular)
-            knn_indices, knn_dists = metric_nn_descent(X.indices,
-                                                       X.indptr,
-                                                       X.data,
-                                                       X.shape[0],
-                                                       n_neighbors,
-                                                       rng_state,
-                                                       max_candidates=60,
-                                                       rp_tree_init=True,
-                                                       leaf_array=leaf_array,
-                                                       verbose=verbose)
-        else:
-            metric_nn_descent = make_nn_descent(distance_func,
-                                                tuple(metric_kwds.values()))
-            # TODO: Hacked values for now
-            n_trees = 5 + int(round((X.shape[0]) ** 0.5 / 20.0))
-            n_iters = max(5, int(round(np.log2(X.shape[0]))))
-
-            leaf_array = rptree_leaf_array(X, n_neighbors,
-                                           rng_state, n_trees=n_trees,
-                                           angular=angular)
-            knn_indices, knn_dists = metric_nn_descent(X,
-                                                       n_neighbors,
-                                                       rng_state,
-                                                       max_candidates=60,
-                                                       rp_tree_init=True,
-                                                       leaf_array=leaf_array,
-                                                       n_iters=n_iters,
-                                                       verbose=verbose)
-
-        if np.any(knn_indices < 0):
-            logg.warn('Failed to correctly find n_neighbors for some samples. '
-                 'Results may be less than ideal. Try re-running with '
-                 'different parameters.')
-
-    return knn_indices, knn_dists
-
-
-def compute_connectivities_umap(knn_indices, knn_dists,
-        n_obs, n_neighbors, set_op_mix_ratio=1.0,
-        local_connectivity=1.0, bandwidth=1.0):
-    """This is from umap.fuzzy_simplicial_set [McInnes18]_.
-
-    Given a set of data X, a neighborhood size, and a measure of distance
-    compute the fuzzy simplicial set (here represented as a fuzzy graph in
-    the form of a sparse matrix) associated to the data. This is done by
-    locally approximating geodesic distance at each point, creating a fuzzy
-    simplicial set for each such point, and then combining all the local
-    fuzzy simplicial sets into a global one via a fuzzy union.
-    """
-    from .umap.umap_ import smooth_knn_dist
-
-    rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
-    sims = np.zeros((n_obs * n_neighbors), dtype=np.float64)
-    dists = np.zeros((n_obs * n_neighbors), dtype=np.float64)
-
-    sigmas, rhos = smooth_knn_dist(knn_dists, n_neighbors,
-                                   local_connectivity=local_connectivity)
-
-    for i in range(knn_indices.shape[0]):
-        for j in range(n_neighbors):
-            if knn_indices[i, j] == -1:
-                continue  # We didn't get the full knn for i
-            if knn_indices[i, j] == i:
-                sim = 0.0
-                dist = 0.0
-            elif knn_dists[i, j] - rhos[i] <= 0.0:
-                sim = 1.0
-                dist = knn_dists[i, j]
-            else:
-                sim = np.exp(-((knn_dists[i, j] - rhos[i]) / (sigmas[i] *
-                                                              bandwidth)))
-                dist = knn_dists[i, j]
-
-            rows[i * n_neighbors + j] = i
-            cols[i * n_neighbors + j] = knn_indices[i, j]
-            sims[i * n_neighbors + j] = sim
-            dists[i * n_neighbors + j] = dist
-
-    connectivities = coo_matrix((sims, (rows, cols)),
-                               shape=(n_obs, n_obs))
-    connectivities.eliminate_zeros()
-
-    distances = coo_matrix((dists, (rows, cols)),
-                           shape=(n_obs, n_obs))
-    distances.eliminate_zeros()
-
-    transpose = connectivities.transpose()
-
-    prod_matrix = connectivities.multiply(transpose)
-
-    connectivities = set_op_mix_ratio * (connectivities + transpose - prod_matrix) + \
-             (1.0 - set_op_mix_ratio) * prod_matrix
-
-    connectivities.eliminate_zeros()
-    return distances.tocsr(), connectivities.tocsr()
+    return knn_indices, knn_dists, forest
 
 
 def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -337,7 +274,32 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
 
     result = coo_matrix((vals, (rows, cols)),
                                       shape=(n_obs, n_obs))
+    result.eliminate_zeros()
     return result.tocsr()
+
+
+def compute_connectivities_umap(knn_indices, knn_dists,
+        n_obs, n_neighbors, set_op_mix_ratio=1.0,
+        local_connectivity=1.0):
+    """This is from umap.fuzzy_simplicial_set [McInnes18]_.
+
+    Given a set of data X, a neighborhood size, and a measure of distance
+    compute the fuzzy simplicial set (here represented as a fuzzy graph in
+    the form of a sparse matrix) associated to the data. This is done by
+    locally approximating geodesic distance at each point, creating a fuzzy
+    simplicial set for each such point, and then combining all the local
+    fuzzy simplicial sets into a global one via a fuzzy union.
+    """
+    from umap.umap_ import fuzzy_simplicial_set
+
+    X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
+    connectivities = fuzzy_simplicial_set(X, n_neighbors, None, None,
+                                          knn_indices=knn_indices, knn_dists=knn_dists,
+                                          set_op_mix_ratio=set_op_mix_ratio,
+                                          local_connectivity=local_connectivity)
+    distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
+
+    return distances, connectivities.tocsr()
 
 
 def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
@@ -394,6 +356,29 @@ def _backwards_compat_get_full_eval(adata):
         return np.r_[1, adata.uns['diffmap_evals']]
     else:
         return adata.uns['diffmap_evals']
+
+
+def _make_forest_dict(forest):
+    d = {}
+    props = ('hyperplanes', 'offsets', 'children', 'indices')
+    for prop in props:
+        d[prop] = {}
+        sizes = np.fromiter((getattr(tree, prop).shape[0] for tree in forest), dtype=int)
+        d[prop]['start'] = np.zeros_like(sizes)
+        if prop == 'offsets':
+            dims = sizes.sum()
+        else:
+            dims = (sizes.sum(), getattr(forest[0], prop).shape[1])
+        dtype = getattr(forest[0], prop).dtype
+        dat = np.empty(dims, dtype=dtype)
+        start = 0
+        for i, size in enumerate(sizes):
+            d[prop]['start'][i] = start
+            end = start+size
+            dat[start:end] = getattr(forest[i], prop)
+            start = end
+        d[prop]['data'] = dat
+    return d
 
 
 class OnFlySymMatrix:
@@ -463,6 +448,7 @@ class Neighbors:
         self._distances = None
         self._connectivities = None
         self._number_connected_components = None
+        self._rp_forest = None
         if 'neighbors' in adata.uns:
             if 'distances' in adata.uns['neighbors']:
                 self.knn = issparse(adata.uns['neighbors']['distances'])
@@ -472,6 +458,8 @@ class Neighbors:
                 self._connectivities = adata.uns['neighbors']['connectivities']
             if 'params' in adata.uns['neighbors']:
                 self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+            if 'rp_forest' in adata.uns['neighbors']:
+                self._rp_forest = adata.uns['neighbors']['rp_forest']
             else:
                 # estimating n_neighbors
                 if self._connectivities is None:
@@ -503,6 +491,10 @@ class Neighbors:
             self.n_dcs = None
         if info_str != '':
             logg.msg('    initialized {}'.format(info_str), v=4)
+
+    @property
+    def rp_forest(self):
+        return self._rp_forest
 
     @property
     def distances(self):
@@ -644,8 +636,9 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances = compute_neighbors_umap(
+            knn_indices, knn_distances, _ = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
+            #self._rp_forest = _make_forest_dict(forest)
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices
