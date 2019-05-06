@@ -107,7 +107,7 @@ def _normalize_data(X, counts, after=None, copy=False):
     counts += (counts == 0)
     counts /= after
     if issparse(X):
-        X = sparsefuncs.inplace_row_scale(X, 1/counts)
+        sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
         X /= counts[:, None]
     return X if copy else None
