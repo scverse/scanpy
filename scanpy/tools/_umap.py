@@ -113,7 +113,7 @@ def umap(
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state)
+        init_coords = get_init_pos_from_paga(adata, random_state=random_state).astype(adata.X.dtype)
     else:
         init_coords = init_pos
     from sklearn.utils import check_random_state

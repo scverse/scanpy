@@ -148,6 +148,8 @@ def louvain(
     else:
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     if restrict_to is not None:
+        if key_added == 'louvain':
+            key_added += '_R'
         groups = rename_groups(
             adata,
             key_added,

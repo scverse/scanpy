@@ -6,22 +6,30 @@
 .. role:: smaller
 .. role:: noteversion
 
+On Master :small:`May 7, 2019`
+------------------------------
 
-On master :small:`April 27, 2019`
----------------------------------
+- :func:`~scanpy.pp.calculate_qc_metrics` is now single threaded by default for datasets under 300,000 cells -- allowing cached compilation. See :pr:`615` :smaller:`thanks to I Virshup`
 
-Updates:
+Version 1.4.2 :small:`May 6, 2019`
+----------------------------------
+
+New functionality:
 
 
+- :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see :pr:`618` :smaller:`thanks to G Eraslan`
+- :func:`~scanpy.pp.highly_variable_genes` now has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches, see :pr:`622` :smaller:`thanks to G Eraslan`
 
+Code design:
 
 - :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency, see :pr:`576` :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see :pr:`618` :smaller:`thanks to G Eraslan`
-- :func:`~scanpy.pp.highly_variable_gene` now has a `batch_key` option which performs the HVG selection in each batch separately in order to reduce the batch effects by avoiding the selection of batch-specific genes.  see :pr:`622` :smaller:`thanks to G Eraslan`
-- :func:`~scanpy.pp.calculate_qc_metrics` is now single threaded by default for datasets under 300,000 cells -- allowing cached compilation. See :pr:`615` :smaller:`thanks to I Virshup`
+
 Bug fixes:
 
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation, see :pr:`621` :smaller:`thanks to I Virshup`
+- :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype`
+- :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` auto-generate `key_added=louvain_R` upon passing `restrict_to`, which was temporarily changed in `v1.4.1`.
+
 
 Version 1.4.1 :small:`April 27, 2019`
 -------------------------------------
@@ -37,7 +45,7 @@ New functionality:
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings, see :pr:`543` :smaller:`thanks to M Luecken`
 - :func:`~scanpy.external.palantir` interfaces Palantir [Setty18]_, see :pr:`493` :smaller:`thanks to A Mousa`
 
-Updates:
+Minor updates:
 
 - `.layers` support of scatter plots :smaller:`thanks to F Ramirez`
 - fix double-logarithmization in compute of log fold change in :func:`~scanpy.tl.rank_genes_groups` :smaller:`thanks to A Muñoz-Rojas`
