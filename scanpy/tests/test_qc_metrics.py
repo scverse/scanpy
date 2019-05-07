@@ -1,11 +1,22 @@
 import numpy as np
 import pandas as pd
 import pytest
-import scanpy as sc
-import scanpy
 from scipy import sparse
 
-from scanpy.preprocessing._qc import top_proportions, top_segment_proportions
+
+import scanpy as sc
+import scanpy
+from scanpy.preprocessing._qc import top_proportions, top_segment_proportions, describe_var, describe_obs
+
+@pytest.fixture
+def anndata():
+    a = np.random.binomial(100, .005, (1000, 1000))
+    adata = sc.AnnData(
+        sparse.csr_matrix(a),
+        obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
+        var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
+    )
+    return adata
 
 def test_proportions():
     a_dense = np.ones((100, 100))
@@ -131,3 +142,33 @@ def test_qc_metrics_percentage(): # In response to #421
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
     with pytest.raises(IndexError):
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])
+
+
+def test_layer_raw(anndata):
+    adata = anndata.copy()
+    adata.raw = adata.copy()
+    adata.layers["counts"] = adata.X.copy()
+    obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
+    sc.pp.log1p(adata)  # To be sure they aren't reusing it
+    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, layer="counts")
+    obs_raw, var_raw = sc.pp.calculate_qc_metrics(adata, use_raw=True)
+    assert np.allclose(obs_orig, obs_layer)
+    assert np.allclose(obs_orig, obs_raw)
+    assert np.allclose(var_orig, var_layer)
+    assert np.allclose(var_orig, var_raw)
+
+
+def test_inner_methods(anndata):
+    adata = anndata.copy()
+    full_inplace = adata.copy()
+    partial_inplace = adata.copy()
+    obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
+    assert np.all(obs_orig == describe_obs(adata))
+    assert np.all(var_orig == describe_var(adata))
+    sc.pp.calculate_qc_metrics(full_inplace, inplace=True)
+    describe_obs(partial_inplace, inplace=True)
+    describe_var(partial_inplace, inplace=True)
+    assert np.all(full_inplace.obs == partial_inplace.obs)
+    assert np.all(full_inplace.var == partial_inplace.var)
+    assert np.all(partial_inplace.obs[obs_orig.columns] == obs_orig)
+    assert np.all(partial_inplace.var[var_orig.columns] == var_orig)

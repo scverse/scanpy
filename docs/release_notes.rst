@@ -6,11 +6,16 @@
 .. role:: smaller
 .. role:: noteversion
 
+On Master :small:`May 7, 2019`
+------------------------------
+
+- :func:`~scanpy.pp.calculate_qc_metrics` is now single threaded by default for datasets under 300,000 cells -- allowing cached compilation. See :pr:`615` :smaller:`thanks to I Virshup`
 
 Version 1.4.2 :small:`May 6, 2019`
 ----------------------------------
 
 New functionality:
+
 
 - :func:`~scanpy.pp.combat` ComBat function now supports additional covariates which may include adjustment variables or biological condition, see :pr:`618` :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` now has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches, see :pr:`622` :smaller:`thanks to G Eraslan`
