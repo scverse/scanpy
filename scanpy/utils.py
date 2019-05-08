@@ -30,7 +30,7 @@ def check_versions():
                       'Currently, Python 3.5 leads to a bug in `tl.marker_gene_overlap` '
                       'and we might stop supporting it in the future.')
 
-    import anndata
+    import anndata, umap
     # NOTE: pytest does not correctly retrieve anndata's version? why?
     #       use the following hack...
     if anndata.__version__ != '0+unknown':
@@ -40,6 +40,10 @@ def check_versions():
                               'Run `pip install anndata -U --no-deps`.'
                               .format(__version__, anndata.__version__))
 
+    if umap.__version__ < LooseVersion('0.3.0'):
+        from . import __version__
+        raise ImportError('Scanpy {} needs umap version >=0.3.0, not {}.'
+                          .format(__version__, umap.__version__))
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     if getattr(c_or_f, '__doc__', None) is None:
