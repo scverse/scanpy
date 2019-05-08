@@ -456,10 +456,10 @@ class Neighbors:
             if 'connectivities' in adata.uns['neighbors']:
                 self.knn = issparse(adata.uns['neighbors']['connectivities'])
                 self._connectivities = adata.uns['neighbors']['connectivities']
-            if 'params' in adata.uns['neighbors']:
-                self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
             if 'rp_forest' in adata.uns['neighbors']:
                 self._rp_forest = adata.uns['neighbors']['rp_forest']
+            if 'params' in adata.uns['neighbors']:
+                self.n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
             else:
                 # estimating n_neighbors
                 if self._connectivities is None:
