@@ -9,8 +9,8 @@ from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
+from matplotlib import patheffects
 from matplotlib.colors import is_color_like
-import matplotlib.patheffects as patheffects
 import seaborn as sns
 
 from .._settings import settings
