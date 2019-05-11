@@ -10,6 +10,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib.colors import is_color_like
+import matplotlib.patheffects as patheffects
 import seaborn as sns
 
 from .._settings import settings
@@ -43,6 +44,7 @@ def scatter(
         legend_loc='right margin',
         legend_fontsize=None,
         legend_fontweight=None,
+        legend_fontoutline=None,
         color_map=None,
         palette=None,
         frameon=None,
@@ -102,6 +104,7 @@ def scatter(
             legend_loc=legend_loc,
             legend_fontsize=legend_fontsize,
             legend_fontweight=legend_fontweight,
+            legend_fontoutline=legend_fontoutline,
             color_map=color_map,
             palette=palette,
             frameon=frameon,
@@ -132,6 +135,7 @@ def scatter(
                 legend_loc=legend_loc,
                 legend_fontsize=legend_fontsize,
                 legend_fontweight=legend_fontweight,
+                legend_fontoutline=legend_fontoutline,
                 color_map=color_map,
                 palette=palette,
                 frameon=frameon,
@@ -161,6 +165,7 @@ def scatter(
                 legend_loc=legend_loc,
                 legend_fontsize=legend_fontsize,
                 legend_fontweight=legend_fontweight,
+                legend_fontoutline=legend_fontoutline,
                 color_map=color_map,
                 palette=palette,
                 frameon=frameon,
@@ -195,6 +200,7 @@ def _scatter_var(
         legend_loc='right margin',
         legend_fontsize=None,
         legend_fontweight=None,
+        legend_fontoutline=None,
         color_map=None,
         palette=None,
         frameon=None,
@@ -224,6 +230,7 @@ def _scatter_var(
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         legend_fontweight=legend_fontweight,
+        legend_fontoutline=legend_fontoutline,
         color_map=color_map,
         palette=palette,
         frameon=frameon,
@@ -257,6 +264,7 @@ def _scatter_obs(
         legend_loc='right margin',
         legend_fontsize=None,
         legend_fontweight=None,
+        legend_fontoutline=None,
         color_map=None,
         palette=None,
         frameon=None,
@@ -455,12 +463,17 @@ def _scatter_obs(
         if legend_loc.startswith('on data'):
             if legend_fontweight is None:
                 legend_fontweight = 'bold'
+            if legend_fontoutline is not None:
+                legend_fontoutline = [patheffects.withStroke(linewidth=legend_fontoutline,
+                                                             foreground='w')]
             for name, pos in centroids.items():
                 axs[ikey].text(pos[0], pos[1], name,
                                weight=legend_fontweight,
                                verticalalignment='center',
                                horizontalalignment='center',
-                               fontsize=legend_fontsize)
+                               fontsize=legend_fontsize,
+                               path_effects=legend_fontoutline)
+
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
             for iname, name in enumerate(adata.obs[key].cat.categories):
                 if name in centroids:

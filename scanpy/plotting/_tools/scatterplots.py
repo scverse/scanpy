@@ -10,6 +10,7 @@ from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib.colors import is_color_like, Colormap
+import matplotlib.patheffects as patheffects
 
 from .. import _utils as utils
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
@@ -42,6 +43,7 @@ def plot_scatter(
     legend_fontsize: Optional[int] = None,
     legend_fontweight: str = 'bold',
     legend_loc: str = 'right margin',
+    legend_fontoutline: Optional[int] = None,
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
@@ -234,9 +236,14 @@ def plot_scatter(
             # there is not need to plot a legend or a colorbar
             continue
 
+        if legend_fontoutline is not None:
+            legend_fontoutline = [patheffects.withStroke(linewidth=legend_fontoutline,
+                                                         foreground='w')]
+
         _add_legend_or_colorbar(
             adata, ax, cax, categorical, value_to_plot, legend_loc,
-            _data_points, legend_fontweight, legend_fontsize, groups, multi_panel,
+            _data_points, legend_fontweight, legend_fontsize, legend_fontoutline,
+            groups, multi_panel,
         )
 
     if return_fig is True:
@@ -492,7 +499,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
 
 def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_loc,
                             scatter_array, legend_fontweight, legend_fontsize,
-                            groups, multi_panel):
+                            legend_fontoutline, groups, multi_panel):
     """
     Adds a color bar or a legend to the given ax. A legend is added when the
     data is categorical and a color bar is added when a continuous value was used.
@@ -538,7 +545,8 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
                         weight=legend_fontweight,
                         verticalalignment='center',
                         horizontalalignment='center',
-                        fontsize=legend_fontsize)
+                        fontsize=legend_fontsize,
+                        path_effects=legend_fontoutline)
 
                 all_pos[ilabel] = [x_pos, y_pos]
             # this is temporary storage for access by other tools

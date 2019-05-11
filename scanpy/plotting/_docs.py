@@ -58,6 +58,9 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
     Legend font weight. Defaults to 'bold' if `legend_loc == 'on data'`,
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
+legend_fontoutline
+    Linewidth of the legend font outline. This uses `matplotlib.patheffects` to
+    draw a white outline around the legend text.
 size
     Point size. If `None`, is automatically computed.
 color_map
