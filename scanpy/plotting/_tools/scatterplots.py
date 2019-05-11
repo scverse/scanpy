@@ -9,8 +9,8 @@ from matplotlib.figure import Figure
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
+from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap
-import matplotlib.patheffects as patheffects
 
 from .. import _utils as utils
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
