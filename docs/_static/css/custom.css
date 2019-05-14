@@ -14,6 +14,10 @@
     font-size:70%;
 }
 
+.pr {
+    font-size:70%;
+}
+
 .rst-content dl:not(.docutils) tt.xref, .rst-content dl:not(.docutils) code.xref {
     font-weight: bold;  /* restore bold for hyperref literals */
 }
