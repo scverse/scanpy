@@ -12,10 +12,39 @@ from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 
 
+# Weighted mean and weighted variance for
+def get_weighted_mean_var(X, weight):
+    # - using sklearn.StandardScaler throws an error related to
+    #   int to long trafo for very large matrices
+    # - using X.multiply is slower
+    if True:
+        mean = np.average(X, weights=weight, axis=0)
+        '''
+        if issparse(X):
+            mean_sq = X.multiply(X).mean(axis=0)
+            mean = mean.A1
+            mean_sq = mean_sq.A1
+        else:
+            mean_sq = np.multiply(X, X).mean(axis=0)
+        '''
+        # enforece R convention (unbiased estimator) for variance
+        var = np.average((X-mean)**2, weights=weight, axis=0)
+        var = var * (X.shape[0]/(X.shape[0]-1))
+    else:
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler(with_mean=False).partial_fit(X)
+        mean = scaler.mean_
+        # enforce R convention (unbiased estimator)
+        var = scaler.var_ * (X.shape[0]/(X.shape[0]-1))
+    return mean, var
+
+
 def rank_genes_groups(
         adata,
         groupby,
         use_raw=True,
+        use_weights=False,
+        weights=None,
         groups='all',
         reference='rest',
         n_genes=100,
@@ -35,6 +64,10 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    use_weights : `bool`, optional (default: `False`)
+        Check either input matrix to `adata` has weights for observation or not.
+    weights: `list`, optional (default: 'None')
+        Use `weights` vector as sample weights for input of `adata`.
     groups : `str`, `list`, optional (default: `'all'`)
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted. If not passed, a ranking will be generated for all
@@ -166,8 +199,12 @@ def rank_genes_groups(
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
-        for imask, mask in enumerate(groups_masks):
-            means[imask], vars[imask] = _get_mean_var(X[mask])
+        if use_weights:
+            for imask, mask in enumerate(groups_masks):
+                means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])
+        else:
+            for imask, mask in enumerate(groups_masks):
+                means[imask], vars[imask] = _get_mean_var(X[mask])
         # test each either against the union of all other groups or against a
         # specific group
         for igroup in range(n_groups):
@@ -176,7 +213,11 @@ def rank_genes_groups(
             else:
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
-            mean_rest, var_rest = _get_mean_var(X[mask_rest])
+            if use_weights:
+                mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])
+            else:
+                mean_rest, var_rest = _get_mean_var(X[mask_rest])
+
             ns_group = ns[igroup]  # number of observations in group
             if method == 't-test': ns_rest = np.where(mask_rest)[0].size
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
@@ -252,11 +293,17 @@ def rank_genes_groups(
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
+                if use_weights:
+                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])  # for fold-change
+                else:
+                    means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
                 if imask == ireference: continue
                 else: mask_rest = groups_masks[ireference]
                 ns_rest = np.where(mask_rest)[0].size
-                mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change
+                if use_weights:
+                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])  # for fold-change
+                else:
+                    mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change
                 if ns_rest <= 25 or ns[imask] <= 25:
                     logg.hint('Few observations in a group for '
                               'normal approximation (<=25). Lower test accuracy.')
@@ -346,9 +393,15 @@ def rank_genes_groups(
                 left = right + 1
 
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
+                if use_weights:
+                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])  # for fold-change
+                else:
+                    means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
                 mask_rest = ~groups_masks[imask]
-                mean_rest, var_rest = _get_mean_var(X[mask_rest]) #for fold-change
+                if use_weights:
+                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])  # for fold-change
+                else:
+                    mean_rest, var_rest = _get_mean_var(X[mask_rest]) #for fold-change
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
