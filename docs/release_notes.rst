@@ -34,6 +34,7 @@ Code design:
 
 - :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :pr:`576` :noteversion:`1.4.2` :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :pr:`615` :noteversion:`1.4.3` :smaller:`thanks to I Virshup`
+- :func:`~scanpy.pp.normalie_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :smaller:`thanks to A Wolf`
 - `.layers` support of scatter plots :noteversion:`1.4.1` :smaller:`thanks to F Ramirez`
 - fix double-logarithmization in compute of log fold change in :func:`~scanpy.tl.rank_genes_groups` :noteversion:`1.4.1` :smaller:`thanks to A Muñoz-Rojas`
 - fix return sections of docs :noteversion:`1.4.1` :smaller:`thanks to P Angerer`

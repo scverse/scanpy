@@ -15,5 +15,5 @@ def test_normalize_total(typ):
     assert np.allclose(np.ravel(adata.X.sum(axis=1)), [1., 1., 1.])
 
     adata = sc.AnnData(typ(X_frac, dtype='float32'))
-    sc.pp.normalize_total(adata, fraction=0.7)
+    sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.7)
     assert np.allclose(np.ravel(adata.X[:, 1:3].sum(axis=1)), [1., 1., 1.])

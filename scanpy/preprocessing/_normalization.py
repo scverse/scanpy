@@ -16,23 +16,30 @@ def _normalize_data(X, counts, after=None, copy=False):
     return X if copy else None
 
 
-def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
-                    layers=None, layer_norm=None, inplace=True):
+def normalize_total(
+        adata,
+        target_sum=None,
+        exclude_highly_expressed=False,
+        max_fraction=0.05,
+        key_added=None,
+        layers=None,
+        layer_norm=None,
+        inplace=True):
     """\
     Normalize counts per cell.
 
-    For `fraction=1`, this is standard total-count normalization, if choosing
-    `target_sum=1e6`, this is CPM normalization.
+    If choosing `target_sum=1e6`, this is CPM normalization.
 
-    Normalize each cell by sum of counts over genes that make up less than fraction
-    (specified by *fraction*) of the total counts in every cell. These genes in each
-    cell will sum up to *target_sum*.
+    If `exclude_highly_expressed=True`, very highly expressed genes are excluded
+    from the computation of the normalization factor (size factor) for each
+    cell. This is meaningful as these can strongly influence the resulting
+    normalized values for all other genes [Weinreb17]_.
 
     Similar functions are used, for example, by Seurat [Satija15]_, Cell Ranger
-    [Zheng17]_ or SPRING [Weinreb17]_.\
+    [Zheng17]_ or SPRING [Weinreb17]_.
 
-    Parameters
-    ----------
+    Params
+    ------
     adata : :class:`~anndata.AnnData`
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
@@ -40,12 +47,18 @@ def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
         If `None`, after normalization, each observation (cell) has a total count
         equal to the median of total counts for observations (cells)
         before normalization.
-    fraction : `float`, optional (default: 1)
-        Only use genes that make up less than fraction (specified by *fraction*)
-        of the total count in every cell. So only these genes will sum up
-        to *target_sum*.
+    exclude_highly_expressed : `bool`, optional (default: `False`)
+        Exclude (very) highly expressed genes for the computation of the
+        normalization factor (size factor) for each cell. A gene is considered
+        highly expressed, if it has more than `max_fraction` of the total counts
+        in at least one cell. The not-excluded genes will sum up to
+        `target_sum`.
+    max_fraction : `float`, optional (default: 0.05)
+        If `exclude_highly_expressed=True`, consider cells as highly expressed
+        that have more counts than `max_fraction` of the original total counts
+        in at least one cell.
     key_added : `str`, optional (default: `None`)
-        Name of the field in `adata.obs` where the total counts per cell are
+        Name of the field in `adata.obs` where the normalization factor is
         stored.
     layers : `str` or list of `str`, optional (default: `None`)
         List of layers to normalize. Set to `'all'` to normalize all layers.
@@ -75,67 +88,51 @@ def normalize_total(adata, target_sum=None, fraction=1, key_added=None,
 
     Example
     --------
-    >>> adata = AnnData(np.array([[1, 0], [3, 0], [5, 6]]))
-    >>> print(adata.X.sum(axis=1))
-    [  1.   3.  11.]
-    >>> sc.pp.normalize_total(adata, key_added='n_counts')
-    >>> print(adata.obs)
-    >>> print(adata.X.sum(axis=1))
-       n_counts
-    0       1.0
-    1       3.0
-    2      11.0
-    [ 3.  3.  3.]
-    >>> sc.pp.normalize_total(adata, target_sum=1,
-    >>>                       key_added='n_counts2')
-    >>> print(adata.obs)
-    >>> print(adata.X.sum(axis=1))
-       n_counts  n_counts2
-    0       1.0        3.0
-    1       3.0        3.0
-    2      11.0        3.0
-    [ 1.  1.  1.]
-
-    An example using `fraction`.
-
-    >>> adata = AnnData(np.array([[1, 0, 1], [3, 0, 1], [5, 6, 1]]))
-    >>> sc.pp.normalize_total(adata, fraction=0.7)
-    >>> print(adata.X)
-    [[1.         0.         1.        ]
-     [3.         0.         1.        ]
-     [0.71428573 0.85714287 0.14285715]]
-
-    Genes 1 and 2 were normalized and now sum up to 1 in each cell.
+    >>> sc.settings.verbosity = 2
+    >>> np.set_printoptions(precision=2)
+    >>> adata = sc.AnnData(np.array([[3, 3, 3, 6, 6], [1, 1, 1, 2, 2], [1, 22, 1, 2, 2]]))
+    >>> adata.X
+    array([[ 3.,  3.,  3.,  6.,  6.],
+           [ 1.,  1.,  1.,  2.,  2.],
+           [ 1., 22.,  1.,  2.,  2.]], dtype=float32)
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, inplace=False)['X']
+    >>> X_norm
+    array([[0.14, 0.14, 0.14, 0.29, 0.29],
+           [0.14, 0.14, 0.14, 0.29, 0.29],
+           [0.04, 0.79, 0.04, 0.07, 0.07]], dtype=float32)
+    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, exclude_highly_expressed=True, max_fraction=0.2, inplace=False)['X']
+    The following highly-expressed genes are not considered during normalization factor computation:
+    ['1', '3', '4']
+    >>> X_norm
+    array([[ 0.5,  0.5,  0.5,  1. ,  1. ],
+           [ 0.5,  0.5,  0.5,  1. ,  1. ],
+           [ 0.5, 11. ,  0.5,  1. ,  1. ]], dtype=float32)
     """
-    if fraction < 0 or fraction > 1:
-        raise ValueError('Choose fraction between 0 and 1.')
+    if max_fraction < 0 or max_fraction > 1:
+        raise ValueError('Choose max_fraction between 0 and 1.')
 
     X = adata.X
-    gene_subset = None
+
     if not inplace:
-    # not recarray because need to support sparse
-        dat = {}
+        dat = {}  # not recarray because need to support sparse
 
-    if fraction < 1:
-        logg.msg('normalizing by count per cell for \
-                  genes that make up less than fraction * total count per cell', r=True)
-        X = adata.X
-
-        counts_per_cell = X.sum(1)
+    gene_subset = None
+    if exclude_highly_expressed:
+        counts_per_cell = X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
-        gene_subset = (X>counts_per_cell[:, None]*fraction).sum(0)
+        # at least one cell as more than max_fraction of counts per cell
+        gene_subset = (X>counts_per_cell[:, None]*max_fraction).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
-    else:
-        logg.msg('normalizing by total count per cell', r=True)
+        logg.info(
+            'The following highly-expressed genes are not considered during normalization factor computation:\n{}'
+            .format(adata.var_names[~gene_subset].tolist()))
 
-    # counts per cell for subset, if fraction!=1
+    # counts per cell for subset, if max_fraction!=1
     X = X if gene_subset is None else adata[:, gene_subset].X
     counts_per_cell = X.sum(1)
     # get rid of adata view
     counts_per_cell = np.ravel(counts_per_cell).copy()
-    del X
-    del gene_subset
 
     if key_added is not None:
         adata.obs[key_added] = counts_per_cell
