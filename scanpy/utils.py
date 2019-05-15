@@ -40,12 +40,16 @@ def check_versions():
                               'Run `pip install anndata -U --no-deps`.'
                               .format(__version__, anndata.__version__))
 
-    if umap.__version__ < LooseVersion('0.3.0'):
-        from . import __version__
-        # make this a warning, not an error (it fails on RTD otherwise, also
-        # it might be useful for people to still be able to run it)
-        logg.warn('Scanpy {} needs umap version >=0.3.0, not {}.'
-                  .format(__version__, umap.__version__))
+    try:
+        if umap.__version__ < LooseVersion('0.3.0'):
+            from . import __version__
+            # make this a warning, not an error
+            # it might be useful for people to still be able to run it
+            logg.warn('Scanpy {} needs umap version >=0.3.0, not {}.'
+                      .format(__version__, umap.__version__))
+    except AttributeError:  # it fails on RTD otherwise
+        pass
+
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     if getattr(c_or_f, '__doc__', None) is None:
