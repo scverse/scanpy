@@ -15,3 +15,4 @@ natsort
 joblib
 numba>=0.41.0
 umap-learn>=0.3.0
+pynndescent>=0.3.0
