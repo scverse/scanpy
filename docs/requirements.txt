@@ -20,3 +20,4 @@ natsort
 joblib
 numba
 tqdm
+umap
