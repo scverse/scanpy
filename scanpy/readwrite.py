@@ -403,16 +403,16 @@ def get_params_from_list(params_list):
     """Transform params list to dictionary.
     """
     params = {}
-    for i in range(0, len(params_list)):
-        if '=' not in params_list[i]:
-            try:
-                if not isinstance(params[key], list): params[key] = [params[key]]
-                params[key] += [params_list[i]]
-            except KeyError:
+    key = None
+    for param in params_list:
+        if '=' not in param:
+            if key is None or key not in params:
                 raise ValueError('Pass parameters like `key1=a key2=b c d key3=...`.')
+            if not isinstance(params[key], list):
+                params[key] = [params[key]]
+            params[key] += [param]
         else:
-            key_val = params_list[i].split('=')
-            key, val = key_val
+            key, val = param.split('=')
             params[key] = convert_string(val)
     return params
 
@@ -426,8 +426,10 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
           first_column_names=None, backup_url=None, cache=False,
           suppress_cache_warning=False, **kwargs):
     if ext is not None and ext not in avail_exts:
-        raise ValueError('Please provide one of the available extensions.\n'
-                         + avail_exts)
+        raise ValueError(
+            'Please provide one of the available extensions.\n{}'
+            .format(avail_exts)
+        )
     else:
         ext = is_valid_filename(filename, return_ext=True)
     is_present = check_datafile_present_and_download(filename,
@@ -436,7 +438,7 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
-            return read_h5ad(filename, backed=backed)
+            return read_h5ad(filename, backed='r')
         else:
             logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return read_hdf(filename, sheet)
@@ -446,7 +448,7 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
         logg.info('... reading from cache file', path_cache)
-        adata = read_h5ad(path_cache, backed=False)
+        adata = read_h5ad(path_cache)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
