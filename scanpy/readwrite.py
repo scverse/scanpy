@@ -435,7 +435,8 @@ def _read(filename, backed=False, sheet=None, ext=None, delimiter=None,
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
-            return read_h5ad(filename, backed='r')
+            backed = [None, 'r'][backed] if isinstance(backed, bool) else backed
+            return read_h5ad(filename, backed=backed)
         else:
             logg.msg('reading sheet', sheet, 'from file', filename, v=4)
             return read_hdf(filename, sheet)

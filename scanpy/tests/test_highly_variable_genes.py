@@ -25,6 +25,7 @@ def test_highly_variable_genes_basic():
     assert 'highly_variable_nbatches' in adata.var.columns
     assert adata.var['highly_variable'].sum() == 3
 
+
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
 
