@@ -25,3 +25,8 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 .. _documentation: https://scanpy.readthedocs.io
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
+
+
+.. image:: https://api.codacy.com/project/badge/Grade/7fb082c36bcd453db16e30d9433d80bd
+   :alt: Codacy Badge
+   :target: https://app.codacy.com/app/theislab/scanpy?utm_source=github.com&utm_medium=referral&utm_content=theislab/scanpy&utm_campaign=Badge_Grade_Dashboard
