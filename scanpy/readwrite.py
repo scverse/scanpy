@@ -378,7 +378,7 @@ def read_params(filename, asheader=False, verbosity=0) -> Dict[str, Union[int, f
     return params
 
 
-def write_params(path, *args, **dicts):
+def write_params(path, *args, **maps):
     """Write parameters to file, so that it's readable by read_params.
 
     Uses INI file format.
@@ -387,16 +387,13 @@ def write_params(path, *args, **dicts):
     if not path.parent.is_dir():
         path.parent.mkdir(parents=True)
     if len(args) == 1:
-        d = args[0]
-        with path.open('w') as f:
-            for key in d:
-                f.write(key + ' = ' + str(d[key]) + '\n')
-    else:
-        with path.open('w') as f:
-            for k, d in dicts.items():
-                f.write('[' + k + ']\n')
-                for key, val in d.items():
-                    f.write(key + ' = ' + str(val) + '\n')
+        maps[None] = args[0]
+    with path.open('w') as f:
+        for header, map in maps.items():
+            if header is not None:
+                f.write('[{}]\n'.format(header))
+            for key, val in map.items():
+                f.write('{} = {}\n'.format(key, val))
 
 
 def get_params_from_list(params_list):
