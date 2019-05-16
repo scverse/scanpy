@@ -1,6 +1,11 @@
+from typing import Optional, Union, Iterable
+
 import numpy as np
+from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
+
+
 from .. import logging as logg
 
 
@@ -17,20 +22,21 @@ def _normalize_data(X, counts, after=None, copy=False):
 
 
 def normalize_total(
-        adata,
-        target_sum=None,
-        exclude_highly_expressed=False,
-        max_fraction=0.05,
-        key_added=None,
-        layers=None,
-        layer_norm=None,
-        inplace=True):
+    adata: AnnData,
+    target_sum: Optional[float] = None,
+    exclude_highly_expressed: bool = False,
+    max_fraction: float = 0.05,
+    key_added: Optional[str] = None,
+    layers: Union[str, Iterable[str]] = None,
+    layer_norm: Optional[str] = None,
+    inplace: bool = True,
+):
     """\
     Normalize counts per cell.
 
-    If choosing `target_sum=1e6`, this is CPM normalization.
+    If choosing ``target_sum=1e6``, this is CPM normalization.
 
-    If `exclude_highly_expressed=True`, very highly expressed genes are excluded
+    If ``exclude_highly_expressed=True``, very highly expressed genes are excluded
     from the computation of the normalization factor (size factor) for each
     cell. This is meaningful as these can strongly influence the resulting
     normalized values for all other genes [Weinreb17]_.
@@ -40,45 +46,45 @@ def normalize_total(
 
     Params
     ------
-    adata : :class:`~anndata.AnnData`
-        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
+    adata
+        The annotated data matrix of shape ``n_obs`` × ``n_vars``. Rows correspond
         to cells and columns to genes.
-    target_sum : `float` or `None`, optional (default: `None`)
-        If `None`, after normalization, each observation (cell) has a total count
+    target_sum
+        If ``None``, after normalization, each observation (cell) has a total count
         equal to the median of total counts for observations (cells)
         before normalization.
-    exclude_highly_expressed : `bool`, optional (default: `False`)
+    exclude_highly_expressed
         Exclude (very) highly expressed genes for the computation of the
         normalization factor (size factor) for each cell. A gene is considered
-        highly expressed, if it has more than `max_fraction` of the total counts
+        highly expressed, if it has more than ``max_fraction`` of the total counts
         in at least one cell. The not-excluded genes will sum up to
-        `target_sum`.
-    max_fraction : `float`, optional (default: 0.05)
-        If `exclude_highly_expressed=True`, consider cells as highly expressed
-        that have more counts than `max_fraction` of the original total counts
+        ``target_sum``.
+    max_fraction
+        If ``exclude_highly_expressed=True``, consider cells as highly expressed
+        that have more counts than ``max_fraction`` of the original total counts
         in at least one cell.
-    key_added : `str`, optional (default: `None`)
-        Name of the field in `adata.obs` where the normalization factor is
+    key_added
+        Name of the field in ``adata.obs`` where the normalization factor is
         stored.
-    layers : `str` or list of `str`, optional (default: `None`)
-        List of layers to normalize. Set to `'all'` to normalize all layers.
-    layer_norm : `str` or `None`, optional (default: `None`)
+    layers
+        List of layers to normalize. Set to ``'all'`` to normalize all layers.
+    layer_norm
         Specifies how to normalize layers:
 
-        * If `None`, after normalization, for each layer in *layers* each cell\
-        has a total count equal to the median of the *counts_per_cell* before\
+        * If ``None``, after normalization, for each layer in *layers* each cell
+        has a total count equal to the median of the *counts_per_cell* before
         normalization of the layer.
 
-        * If `'after'`, for each layer in *layers* each cell has\
-        a total count equal to `target_sum`.
+        * If ``'after'``, for each layer in *layers* each cell has
+        a total count equal to ``target_sum``.
 
-        * If `'X'`, for each layer in *layers* each cell has a total count equal\
-        to the median of total counts for observations (cells) of `adata.X`\
+        * If ``'X'``, for each layer in *layers* each cell has a total count equal
+        to the median of total counts for observations (cells) of ``adata.X``
         before normalization.
 
-    inplace : `bool`, optional (default: `True`)
-        Whether to update `adata` or return dictionary with normalized copies of
-        `adata.X` and `adata.layers`.\
+    inplace
+        Whether to update ``adata`` or return dictionary with normalized copies of
+        ``adata.X`` and ``adata.layers``.
 
     Returns
     -------
@@ -111,35 +117,33 @@ def normalize_total(
     if max_fraction < 0 or max_fraction > 1:
         raise ValueError('Choose max_fraction between 0 and 1.')
 
-    X = adata.X
-
-    if not inplace:
-        dat = {}  # not recarray because need to support sparse
+    if layers == 'all':
+        layers = adata.layers.keys()
+    elif isinstance(layers, str):
+        raise ValueError(
+            "`layers` needs to be a list of strings or 'all', not {!r}"
+            .format(layers)
+        )
 
     gene_subset = None
     if exclude_highly_expressed:
-        counts_per_cell = X.sum(1)  # original counts per cell
+        counts_per_cell = adata.X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
 
         # at least one cell as more than max_fraction of counts per cell
-        gene_subset = (X>counts_per_cell[:, None]*max_fraction).sum(0)
+        gene_subset = (adata.X > counts_per_cell[:, None]*max_fraction).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
         logg.info(
             'The following highly-expressed genes are not considered during normalization factor computation:\n{}'
             .format(adata.var_names[~gene_subset].tolist()))
 
     # counts per cell for subset, if max_fraction!=1
-    X = X if gene_subset is None else adata[:, gene_subset].X
+    X = adata.X if gene_subset is None else adata[:, gene_subset].X
     counts_per_cell = X.sum(1)
     # get rid of adata view
     counts_per_cell = np.ravel(counts_per_cell).copy()
 
-    if inplace and key_added is not None:
-        adata.obs[key_added] = counts_per_cell
-    else:
-        dat['norm_factor'] = counts_per_cell
-
-    cell_subset = counts_per_cell>0
+    cell_subset = counts_per_cell > 0
     if not np.all(cell_subset):
         logg.warn('Some cells have total count of genes equal to zero')
 
@@ -154,25 +158,29 @@ def normalize_total(
     del cell_subset
 
     if inplace:
+        if key_added is not None:
+            adata.obs[key_added] = counts_per_cell
         if hasattr(adata.X, '__itruediv__'):
             _normalize_data(adata.X, counts_per_cell, target_sum)
         else:
             adata.X = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
     else:
-        dat['X'] = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
+        # not recarray because need to support sparse
+        dat = dict(
+            X=_normalize_data(adata.X, counts_per_cell, target_sum, copy=True),
+            norm_factor=counts_per_cell,
+        )
 
-    layers = adata.layers.keys() if layers == 'all' else layers
-    if layers is not None:
-        for layer in layers:
-            L = adata.layers[layer]
-            counts = np.ravel(L.sum(1))
-            if inplace:
-                if hasattr(L, '__itruediv__'):
-                    _normalize_data(L, counts, after)
-                else:
-                    adata.layers[layer] = _normalize_data(L, counts, after, copy=True)
+    for layer_name in (layers or ()):
+        layer = adata.layers[layer_name]
+        counts = np.ravel(layer.sum(1))
+        if inplace:
+            if hasattr(layer, '__itruediv__'):
+                _normalize_data(layer, counts, after)
             else:
-                dat[layer] = _normalize_data(L, counts, after, copy=True)
+                adata.layers[layer_name] = _normalize_data(layer, counts, after, copy=True)
+        else:
+            dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
     logg.msg('    finished', t=True, end=': ')
     logg.msg('normalized adata.X')
