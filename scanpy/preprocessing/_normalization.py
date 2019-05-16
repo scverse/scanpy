@@ -134,8 +134,10 @@ def normalize_total(
     # get rid of adata view
     counts_per_cell = np.ravel(counts_per_cell).copy()
 
-    if key_added is not None:
+    if inplace and key_added is not None:
         adata.obs[key_added] = counts_per_cell
+    else:
+        dat['norm_factor'] = counts_per_cell
 
     cell_subset = counts_per_cell>0
     if not np.all(cell_subset):
