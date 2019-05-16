@@ -766,7 +766,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
                    figsize=None,  dendrogram=False, var_group_positions=None, var_group_labels=None,
                    var_group_rotation=None, layer=None, stripplot=False, jitter=False, size=1,
                    scale='width', order=None, swap_axes=False, show=None, save=None,
-                   row_palette='muted', use_weights=False, weights=None, **kwds):
+                   row_palette='muted', weights=None, **kwds):
     """\
     Stacked violin plots.
 
@@ -821,7 +821,12 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    if weights is not None:
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
+    else:
+        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
 
     if 'color' in kwds:
         row_palette = kwds['color']
@@ -842,7 +847,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
                                           use_raw=use_raw, log=log, num_categories=num_categories,
-                                          use_weights=use_weights, weights=weights)
+                                          weights=weights)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1048,7 +1053,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             dendrogram=False, var_group_positions=None, var_group_labels=None,
             var_group_rotation=None, layer=None, swap_axes=False, show_gene_labels=None, show=None, save=None,
-            figsize=None, use_weights=False, weights=None, **kwds):
+            figsize=None, weights=None, **kwds):
     """\
     Heatmap of the expression values of genes.
 
@@ -1100,7 +1105,12 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    if weights is not None:
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
+    else:
+        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1120,7 +1130,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
                                           use_raw=use_raw, log=log, num_categories=num_categories,
-                                          use_weights=use_weights, weights=weights)
+                                          weights=weights)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1309,7 +1319,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
             color_map='Reds', dot_max=None, dot_min=None, figsize=None, dendrogram=False, var_group_positions=None,
-            var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, use_weights=False, weights=None, **kwds):
+            var_group_labels=None, var_group_rotation=None, layer=None, show=None, save=None, weights=None, **kwds):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
@@ -1355,19 +1365,21 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
-    categories, obs_tidy, categorical = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     # for if category defined by groupby (if any) compute for each var_name
     # 1. the mean value over the category
     # 2. the fraction of cells in the category having a value > 0
 
     # 1. compute mean value
-    if use_weights:
-        weights.columns = ['Wt']
+    if weights is not None:
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
+        df_weights = weights
+        df_weights.columns = ['Wt']
         obs_tidy = obs_tidy.reset_index(drop=True)
-        weights = weights.reset_index(drop=True)
-        obs_tidy = obs_tidy.join(weights)
-        obs_tidy.set_index(categorical, groupby, inplace=True)
+        df_weights = df_weights.reset_index(drop=True)
+        obs_tidy = obs_tidy.join(df_weights)
+        obs_tidy.set_index(catego, groupby, inplace=True)
         #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
         mean_obs = obs_tidy.groupby(level=0).apply(gw_Avg, "Wt")
 
@@ -1376,6 +1388,8 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         mean_obs = mean_obs.drop('Wt', axis=1)
 
     else:
+        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
         mean_obs = obs_tidy.groupby(level=0).mean()
 
     # 2. compute fraction of cells having value >0
@@ -1448,7 +1462,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
                                           use_raw=use_raw, log=log, num_categories=num_categories,
-                                          use_weights=use_weights, weights=weights)
+                                          weights=weights)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1593,7 +1607,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
                figsize=None, dendrogram=False, var_group_positions=None, var_group_labels=None,
                var_group_rotation=None, layer=None, swap_axes=False, show=None, save=None,
-               use_weights=False, weights=None, **kwds):
+               weights=None, **kwds):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1637,17 +1651,21 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         if param_set:
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
-
-    categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    if weights is not None:
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+    else:
+        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+                                                          layer=layer)
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
 
-    if use_weights:
-        weights.columns = ['Wt']
+    if weights is not None:
+        df_weights = weights
+        df_weights.columns = ['Wt']
         obs_tidy = obs_tidy.reset_index(drop=True)
-        weights = weights.reset_index(drop=True)
-        obs_tidy = obs_tidy.join(weights)
+        df_weights = df_weights.reset_index(drop=True)
+        obs_tidy = obs_tidy.join(df_weights)
         obs_tidy.set_index(catego, groupby, inplace=True)
         #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
         mean_obs = obs_tidy.groupby(level=0).apply(gw_Avg, "Wt")
@@ -1666,7 +1684,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
                                           use_raw=use_raw, log=log, num_categories=num_categories,
-                                          use_weights=use_weights, weights=weights)
+                                          weights=weights)
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1812,7 +1830,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                dendrogram=False, var_group_positions=None, var_group_labels=None,
                layer=None, show=None, save=None, figsize=None,
-               use_weights=False, weights=None, **kwds):
+               weights=None, **kwds):
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
     y values correspond to the var_name values and x is each of the cells. Best results
@@ -1843,8 +1861,11 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         raise ValueError('groupby has to be a valid categorical observation. Given value: {}, '
                          'valid categorical observations: {}'.
                          format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
-
-    categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
+    
+    if weights is not None:
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
+    else:
+        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
@@ -1861,7 +1882,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                                           var_group_labels=var_group_labels,
                                           var_group_positions=var_group_positions,
                                           use_raw=use_raw, log=log,
-                                          use_weights=use_weights, weights=weights)
+                                          weights=weights)
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
@@ -1977,6 +1998,79 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
 
 def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
+                       num_categories=7, layer=None):
+    """
+    Given the anndata object, prepares a data frame in which the row index are the categories
+    defined by group by and the columns correspond to var_names.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    var_names : `str` or list of `str`
+        `var_names` should be a valid subset of  `adata.var_names`.
+    groupby : `str` or `None`, optional (default: `None`)
+        The key of the observation grouping to consider. It is expected that
+        groupby is a categorical. If groupby is not a categorical observation,
+        it would be subdivided into `num_categories`.
+    log : `bool`, optional (default: `False`)
+        Use the log of the values
+    use_raw : `bool`, optional (default: `None`)
+        Use `raw` attribute of `adata` if present.
+    num_categories : `int`, optional (default: `7`)
+        Only used if groupby observation is not categorical. This value
+        determines the number of groups into which the groupby observation
+        should be subdivided.
+
+    Returns
+    -------
+    Tuple of `pandas.DataFrame` and list of categories.
+    """
+    from scipy.sparse import issparse
+    sanitize_anndata(adata)
+    if use_raw is None and adata.raw is not None: use_raw = True
+    if isinstance(var_names, str):
+        var_names = [var_names]
+
+    if groupby is not None:
+        if groupby not in adata.obs_keys():
+            raise ValueError('groupby has to be a valid observation. Given value: {}, '
+                             'valid observations: {}'.format(groupby, adata.obs_keys()))
+
+    if layer is not None:
+        if layer not in adata.layers.keys():
+            raise KeyError('Selected layer: {} is not in the layers list. The list of '
+                           'valid layers is: {}'.format(layer, adata.layers.keys()))
+        matrix = adata[:, var_names].layers[layer]
+    elif use_raw:
+        matrix = adata.raw[:, var_names].X
+    else:
+        matrix = adata[:, var_names].X
+
+    if issparse(matrix):
+        matrix = matrix.toarray()
+    if log:
+        matrix = np.log1p(matrix)
+
+    obs_tidy = pd.DataFrame(matrix, columns=var_names)
+    if groupby is None:
+        groupby = ''
+        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
+    else:
+        if not is_categorical_dtype(adata.obs[groupby]):
+            # if the groupby column is not categorical, turn it into one
+            # by subdividing into  `num_categories` categories
+            categorical = pd.cut(adata.obs[groupby], num_categories)
+        else:
+            categorical = adata.obs[groupby]
+
+    obs_tidy.set_index(categorical, groupby, inplace=True)
+    categories = obs_tidy.index.categories
+
+    return categories, obs_tidy
+
+
+def _prepare_weighted_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
                        num_categories=7, layer=None):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
@@ -2168,7 +2262,7 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
 
 def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_group_labels=None,
                         var_group_positions=None, use_raw=True, log=False, num_categories=7,
-                        cor_method='pearson', linkage_method='complete', use_weights=False, weights=None):
+                        cor_method='pearson', linkage_method='complete', weights=None):
 
     # compute a correlation matrix based on all the data in adata (or adata.raw if use_raw is true)
     # this is to avoid doing the computation only on the few genes that are being plotted
@@ -2176,13 +2270,14 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
 
     gene_names = adata.raw.var_names if use_raw else adata.var_names
-    cat, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
 
-    if use_weights:
-        weights.columns = ['Wt']
+    if weights is not None:
+        cat, df, catego = _prepare_weighted_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        df_weights = weights
+        df_weights.columns = ['Wt']
         df = df.reset_index(drop=True)
-        weights = weights.reset_index(drop=True)
-        df = df.join(weights)
+        df_weights = df_weights.reset_index(drop=True)
+        df = df.join(df_weights)
         df.set_index(catego, groupby, inplace=True)
         #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
         mean_df = df.groupby(level=0).apply(gw_Avg, "Wt")
@@ -2191,6 +2286,7 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
         df = df.drop('Wt', axis=1)
         mean_df = mean_df.drop('Wt', axis=1)
     else:
+        cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = df.groupby(level=0).mean()
     #mean_df = df.groupby(level=0).mean()
 

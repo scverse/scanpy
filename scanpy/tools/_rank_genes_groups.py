@@ -43,7 +43,6 @@ def rank_genes_groups(
         adata,
         groupby,
         use_raw=True,
-        use_weights=False,
         weights=None,
         groups='all',
         reference='rest',
@@ -64,10 +63,8 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    use_weights : `bool`, optional (default: `False`)
-        Check either input matrix to `adata` has weights for observation or not.
-    weights: `list`, optional (default: 'None')
-        Use `weights` vector as sample weights for input of `adata`.
+    weights: `dataframe`, optional (default: 'None')
+        Use `weights` attribute as sample/observation weights. It's 1-column dataframe without header name.
     groups : `str`, `list`, optional (default: `'all'`)
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted. If not passed, a ranking will be generated for all
@@ -199,9 +196,11 @@ def rank_genes_groups(
         # loop over all masks and compute means, variances and sample numbers
         means = np.zeros((n_groups, n_genes))
         vars = np.zeros((n_groups, n_genes))
-        if use_weights:
+        if weights is not None:
+            Y = weights.values
+            Y = Y.ravel()
             for imask, mask in enumerate(groups_masks):
-                means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])
+                means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=Y[mask])
         else:
             for imask, mask in enumerate(groups_masks):
                 means[imask], vars[imask] = _get_mean_var(X[mask])
@@ -213,8 +212,10 @@ def rank_genes_groups(
             else:
                 if igroup == ireference: continue
                 else: mask_rest = groups_masks[ireference]
-            if use_weights:
-                mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])
+            if weights is not None:
+                Y = weights.values
+                Y = Y.ravel()
+                mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=Y[mask_rest])
             else:
                 mean_rest, var_rest = _get_mean_var(X[mask_rest])
 
@@ -293,15 +294,19 @@ def rank_genes_groups(
         # First loop: Loop over all genes
         if reference != 'rest':
             for imask, mask in enumerate(groups_masks):
-                if use_weights:
-                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])  # for fold-change
+                if weights is not None:
+                    Y = weights.values
+                    Y = Y.ravel()
+                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=Y[mask])  # for fold-change
                 else:
                     means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
                 if imask == ireference: continue
                 else: mask_rest = groups_masks[ireference]
                 ns_rest = np.where(mask_rest)[0].size
-                if use_weights:
-                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])  # for fold-change
+                if weights is not None:
+                    Y = weights.values
+                    Y = Y.ravel()
+                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=Y[mask_rest])  # for fold-change
                 else:
                     mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change
                 if ns_rest <= 25 or ns[imask] <= 25:
@@ -393,13 +398,17 @@ def rank_genes_groups(
                 left = right + 1
 
             for imask, mask in enumerate(groups_masks):
-                if use_weights:
-                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=weights[mask])  # for fold-change
+                if weights is not None:
+                    Y = weights.values
+                    Y = Y.ravel()
+                    means[imask], vars[imask] = get_weighted_mean_var(X[mask], weight=Y[mask])  # for fold-change
                 else:
                     means[imask], vars[imask] = _get_mean_var(X[mask])  # for fold-change
                 mask_rest = ~groups_masks[imask]
-                if use_weights:
-                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=weights[mask_rest])  # for fold-change
+                if weights is not None:
+                    Y = weights.values
+                    Y = Y.ravel()
+                    mean_rest, var_rest = get_weighted_mean_var(X[mask_rest], weight=Y[mask_rest])  # for fold-change
                 else:
                     mean_rest, var_rest = _get_mean_var(X[mask_rest]) #for fold-change
 
