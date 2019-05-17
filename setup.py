@@ -1,6 +1,6 @@
 import sys
 if sys.version_info < (3,):
-    sys.exit('scanpy requires Python >= 3.5')
+    sys.exit('scanpy requires Python >= 3.6')
 from pathlib import Path
 
 from setuptools import setup, find_packages
@@ -22,7 +22,7 @@ setup(
     author=__author__,
     author_email=__email__,
     license='BSD',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=[
         l.strip() for l in
         Path('requirements.txt').read_text('utf-8').splitlines()
