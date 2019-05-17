@@ -1,4 +1,5 @@
-from itertools import product
+from pathlib import Path
+
 import numpy as np
 from scipy import sparse as sp
 import scanpy as sc
@@ -6,12 +7,15 @@ import pytest
 from anndata import AnnData
 
 
+HERE = Path(__file__).parent
+
+
 def test_log1p_chunked():
     A = np.random.rand(200, 10)
     ad = AnnData(A)
     ad2 = AnnData(A)
     ad3 = AnnData(A)
-    ad3.filename = 'test.h5ad'
+    ad3.filename = HERE / 'test.h5ad'
     sc.pp.log1p(ad)
     sc.pp.log1p(ad2, chunked=True)
     assert np.allclose(ad2.X, ad.X)

@@ -3,32 +3,22 @@
 #
 # This is the subsampled notebook for testing.
 
+from pathlib import Path
+
+import numpy as np
 from matplotlib.testing import setup
 setup()
 
-import matplotlib as mpl
-mpl.use('agg')
-from matplotlib.testing.compare import compare_images
-import matplotlib.pyplot as pl
-import numpy as np
-import os
-import scanpy.api as sc
-
-ROOT = os.path.dirname(os.path.abspath(__file__)) + '/_images_paga_paul15_subsampled/'
+import scanpy as sc
 
 
-def save_and_compare_images(basename):
-    if not os.path.exists('./figures/'): os.makedirs('./figures/')
-    outname = './figures/' + basename + '.png'
-    pl.savefig(outname, dpi=40)
-    pl.close()
-    tolerance = 25  # had to increase this for the heatmap
-                    # is not ideal and borderline high
-    res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
-    assert res is None, res
+HERE: Path = Path(__file__).parent
+ROOT = HERE / '_images_paga_paul15_subsampled'
+FIGS = HERE / 'figures'
 
 
-def test_paga_paul15_subsampled():
+def test_paga_paul15_subsampled(image_comparer, plt):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
 
     adata = sc.datasets.paul15()
     sc.pp.subsample(adata, n_obs=200)
@@ -90,8 +80,8 @@ def test_paga_paul15_subsampled():
 
     adata.obs['distance'] = adata.obs['dpt_pseudotime']
 
-    _, axs = pl.subplots(ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12})
-    pl.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
+    _, axs = plt.subplots(ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12})
+    plt.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
     for ipath, (descr, path) in enumerate(paths):
         _, data = sc.pl.paga_path(
             adata, path, gene_names,

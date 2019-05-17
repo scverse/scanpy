@@ -2,33 +2,34 @@
 # *First compiled on May 5, 2017. Updated August 14, 2018.*
 # # Clustering 3k PBMCs following a Seurat Tutorial
 #
-# This started out with a demonstration that Scanpy would allow to reproduce most of Seurat's ([Satija *et al.*, 2015](https://doi.org/10.1038/nbt.3192)) clustering tutorial as described on http://satijalab.org/seurat/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge. In the meanwhile, we have added and removed several pieces.
+# This started out with a demonstration that Scanpy would allow to reproduce most of Seurat's
+# ([Satija *et al.*, 2015](https://doi.org/10.1038/nbt.3192)) clustering tutorial as described on
+# http://satijalab.org/seurat/pbmc3k_tutorial.html (July 26, 2017), which we gratefully acknowledge.
+# In the meanwhile, we have added and removed several pieces.
 #
-# The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz) from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
+# The data consists in *3k PBMCs from a Healthy Donor* and is freely available from 10x Genomics
+# ([here](http://cf.10xgenomics.com/samples/cell-exp/1.1.0/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
+# from this [webpage](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)).
 
+from pathlib import Path
+
+import numpy as np
+import pytest
 
 from matplotlib.testing import setup
 setup()
-from matplotlib.testing.compare import compare_images
-import matplotlib.pyplot as pl
-import numpy as np
-import os
-import scanpy.api as sc
 
-ROOT = os.path.dirname(os.path.abspath(__file__)) + '/pbmc3k_images/'
+import scanpy as sc
 
 
-def save_and_compare_images(basename):
-    if not os.path.exists('./figures/'): os.makedirs('./figures/')
-    outname = './figures/' + basename + '.png'
-    pl.savefig(outname, dpi=40)
-    pl.close()
-    tolerance = 20
-    res = compare_images(ROOT + '/' + basename + '.png', outname, tolerance)
-    assert res is None, res
+HERE: Path = Path(__file__).parent
+ROOT = HERE / 'pbmc3k_images'
+FIGS = HERE / 'figures'
 
 
-def test_pbmc3k():
+@pytest.mark.internet
+def test_pbmc3k(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 
     adata = sc.read('./data/pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
 
@@ -43,13 +44,17 @@ def test_pbmc3k():
     mito_genes = [name for name in adata.var_names if name.startswith('MT-')]
     # for each cell compute fraction of counts in mito genes vs. all genes
     # the `.A1` is only necessary as X is sparse to transform to a dense array after summing
-    adata.obs['percent_mito'] = np.sum(
-        adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
+    adata.obs['percent_mito'] = (
+        np.sum(adata[:, mito_genes].X, axis=1).A1 /
+        np.sum(adata.X, axis=1).A1
+    )
     # add the total counts per cell as observations-annotation to adata
     adata.obs['n_counts'] = adata.X.sum(axis=1).A1
 
-    sc.pl.violin(adata, ['n_genes', 'n_counts', 'percent_mito'],
-                 jitter=False, multi_panel=True, show=False)
+    sc.pl.violin(
+        adata, ['n_genes', 'n_counts', 'percent_mito'],
+        jitter=False, multi_panel=True, show=False,
+    )
     save_and_compare_images('violin')
 
     sc.pl.scatter(adata, x='n_counts', y='percent_mito', show=False)
@@ -65,7 +70,8 @@ def test_pbmc3k():
     sc.pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
 
     filter_result = sc.pp.filter_genes_dispersion(
-        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5,
+    )
     sc.pl.filter_genes_dispersion(filter_result, show=False)
     save_and_compare_images('filter_genes_dispersion')
 
@@ -121,7 +127,8 @@ def test_pbmc3k():
         'CD4 T cells', 'CD14+ Monocytes',
         'B cells', 'CD8 T cells',
         'NK cells', 'FCGR3A+ Monocytes',
-        'Dendritic cells', 'Megakaryocytes']
+        'Dendritic cells', 'Megakaryocytes',
+    ]
     adata.rename_categories('louvain', new_cluster_names)
 
     # sc.pl.umap(adata, color='louvain', legend_loc='on data', title='', frameon=False, show=False)

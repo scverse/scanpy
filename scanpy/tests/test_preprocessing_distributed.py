@@ -8,10 +8,15 @@ import pytest
 from scanpy.preprocessing import *
 from scanpy.preprocessing._simple import materialize_as_ndarray
 
+
 HERE = Path(__file__).parent / Path('_data/')
 input_file = str(Path(HERE, "10x-10k-subset.zarr"))
 
-@pytest.mark.skipif(not all((find_spec('dask'), find_spec('zappy'), find_spec('zarr'))), reason='Dask, Zappy, and Zarr all required')
+required = ['dask', 'zappy', 'zarr']
+installed = {mod: bool(find_spec(mod)) for mod in required}
+
+
+@pytest.mark.skipif(not all(installed.values()), reason=f'{required} all required: {installed}')
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):
