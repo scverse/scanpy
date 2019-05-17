@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import os.path
 import pandas as pd
 import scanpy as sc
-import pytest
 
 # Scanpy
 sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)

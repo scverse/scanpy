@@ -1105,11 +1105,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
-    else:
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
 
     if groupby is None or len(categories) <= 1:
@@ -1861,11 +1857,8 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
         raise ValueError('groupby has to be a valid categorical observation. Given value: {}, '
                          'valid categorical observations: {}'.
                          format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
-    
-    if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
-    else:
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
+
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:

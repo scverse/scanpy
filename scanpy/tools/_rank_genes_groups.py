@@ -19,15 +19,6 @@ def get_weighted_mean_var(X, weight):
     # - using X.multiply is slower
     if True:
         mean = np.average(X, weights=weight, axis=0)
-        '''
-        if issparse(X):
-            mean_sq = X.multiply(X).mean(axis=0)
-            mean = mean.A1
-            mean_sq = mean_sq.A1
-        else:
-            mean_sq = np.multiply(X, X).mean(axis=0)
-        '''
-        # enforece R convention (unbiased estimator) for variance
         var = np.average((X-mean)**2, weights=weight, axis=0)
         var = var * (X.shape[0]/(X.shape[0]-1))
     else:
