@@ -3,6 +3,7 @@
 
 import sys
 import inspect
+from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
 from functools import partial, wraps
@@ -888,19 +889,11 @@ def subsample_n(X, n=0, seed=0):
     return Xsampled, rows
 
 
-def check_presence_download(filename, backup_url):
+def check_presence_download(filename: Path, backup_url):
     """Check if file is present otherwise download."""
-    import os
-    filename = str(filename) #  Throws error for Path on 3.5
-    if not os.path.exists(filename):
-        from .readwrite import download_progress
-        dr = os.path.dirname(filename)
-        try:
-            os.makedirs(dr)
-        except FileExistsError:
-            pass  # ignore if dir already exists
-        from urllib.request import urlretrieve
-        urlretrieve(backup_url, filename, reporthook=download_progress)
+    if not filename.is_file():
+        from .readwrite import download
+        download(backup_url, filename)
 
 
 def hierarch_cluster(M):

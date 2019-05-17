@@ -21,11 +21,15 @@ from ._settings import settings
 from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
-text_exts = {'csv',
-             'tsv', 'tab', 'data', 'txt'}  # these four are all equivalent
-avail_exts = {'anndata', 'xlsx',
-              'h5', 'h5ad', 'mtx', 'mtx.gz',
-              'soft.gz', 'loom'} | text_exts
+text_exts = {
+    'csv',
+    'tsv', 'tab', 'data', 'txt',  # these four are all equivalent
+}
+avail_exts = {
+    'anndata', 'xlsx',
+    'h5', 'h5ad', 'mtx', 'mtx.gz',
+    'soft.gz', 'loom',
+} | text_exts
 """Available file formats for reading data. """
 
 
@@ -476,8 +480,10 @@ def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = check_datafile_present_and_download(filename,
-                                                     backup_url=backup_url)
+    is_present = check_datafile_present_and_download(
+        filename,
+        backup_url=backup_url,
+    )
     if not is_present: logg.msg('... did not find original file', filename)
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
@@ -695,7 +701,7 @@ def get_used_files():
 
 
 def wait_until_file_unused(filename):
-    while (filename in get_used_files()):
+    while filename in get_used_files():
         time.sleep(1)
 
 
@@ -705,10 +711,18 @@ def get_filename_from_key(key, ext=None):
     return filename
 
 
-def download_progress(count, blockSize, totalSize):
-    percent = int(count*blockSize*100/totalSize)
-    sys.stdout.write('\r' + '... %d%%' % percent)
-    sys.stdout.flush()
+def download(url: str, path: Path):
+    from tqdm import tqdm
+    from urllib.request import urlretrieve
+
+    path.parent.mkdir(parents=True)
+    with tqdm(unit='B', unit_scale=True, miniters=1, desc=path.name) as t:
+        def update_to(b=1, bsize=1, tsize=None):
+            if tsize is not None:
+                t.total = tsize
+            t.update(b * bsize - t.n)
+
+        urlretrieve(url, str(path), reporthook=update_to)
 
 
 def check_datafile_present_and_download(path, backup_url=None):
@@ -724,9 +738,8 @@ def check_datafile_present_and_download(path, backup_url=None):
     if not path.parent.is_dir():
         logg.info(f'creating directory {path.parent}/ for saving data')
         path.parent.mkdir(parents=True)
-    from urllib.request import urlretrieve
-    urlretrieve(backup_url, str(path), reporthook=download_progress)
-    logg.info('')
+
+    download(backup_url, path)
     return True
 
 
@@ -750,13 +763,11 @@ def is_valid_filename(filename, return_ext=False):
         return 'soft.gz' if return_ext else True
     elif ''.join(ext) == '.mtx.gz':
         return 'mtx.gz' if return_ext else True
-    else:
-        if return_ext:
-            raise ValueError(f'''\
+    elif not return_ext:
+        return False
+    raise ValueError(f'''\
 {filename!r} does not end on a valid extension.
 Please, provide one of the available extensions.
 {avail_exts}
 Text files with .gz and .bz2 extensions are also supported.\
 ''')
-        else:
-            return False
