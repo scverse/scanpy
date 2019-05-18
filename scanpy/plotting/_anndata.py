@@ -29,6 +29,16 @@ VALID_LEGENDLOCS = {
 def gw_Avg(x, w="weights"):
     return pd.Series(np.average(x, weights=x[w], axis=0),index= x.columns)
 
+def _compute_gw_Avg_of_dataframe(df, weights, catego, groupby):
+    df_weights = weights
+    df_weights.columns = ['Wt']
+    df = df.reset_index(drop=True)
+    df_weights = df_weights.reset_index(drop=True)
+    df = df.join(df_weights)
+    df.set_index(catego, groupby, inplace=True)
+    mean_df = df.groupby(level=0).apply(gw_Avg, "Wt")
+    return mean_df
+
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def scatter(
         adata,
@@ -1367,17 +1377,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if weights is not None:
         categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
-        df_weights = weights
-        df_weights.columns = ['Wt']
-        obs_tidy = obs_tidy.reset_index(drop=True)
-        df_weights = df_weights.reset_index(drop=True)
-        obs_tidy = obs_tidy.join(df_weights)
-        obs_tidy.set_index(catego, groupby, inplace=True)
-        #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
-        mean_obs = obs_tidy.groupby(level=0).apply(gw_Avg, "Wt")
-
-        # Drop Column
-        obs_tidy = obs_tidy.drop('Wt', axis=1)
+        mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
         mean_obs = mean_obs.drop('Wt', axis=1)
 
     else:
@@ -1645,31 +1645,18 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
     if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
+        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log,
+                                                                   num_categories, layer=layer)
+        mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
+        mean_obs = mean_obs.drop('Wt', axis=1)
     else:
         categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
+        mean_obs = obs_tidy.groupby(level=0).mean()
+
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
-
-    if weights is not None:
-        df_weights = weights
-        df_weights.columns = ['Wt']
-        obs_tidy = obs_tidy.reset_index(drop=True)
-        df_weights = df_weights.reset_index(drop=True)
-        obs_tidy = obs_tidy.join(df_weights)
-        obs_tidy.set_index(catego, groupby, inplace=True)
-        #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
-        mean_obs = obs_tidy.groupby(level=0).apply(gw_Avg, "Wt")
-
-        # Drop Column
-        obs_tidy = obs_tidy.drop('Wt', axis=1)
-        mean_obs = mean_obs.drop('Wt', axis=1)
-
-    else:
-        mean_obs = obs_tidy.groupby(level=0).mean()
-    #mean_obs = obs_tidy.groupby(level=0).mean()
 
     if dendrogram:
         dendro_data = _compute_dendrogram(adata, groupby, var_names=var_names,
@@ -2263,17 +2250,7 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
 
     if weights is not None:
         __, df, catego = _prepare_weighted_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
-        df_weights = weights
-        df_weights.columns = ['Wt']
-        df = df.reset_index(drop=True)
-        df_weights = df_weights.reset_index(drop=True)
-        df = df.join(df_weights)
-        df.set_index(catego, groupby, inplace=True)
-        #obs_tidy = obs_tidy.set_index(['Wt'], inplace=True)
-        mean_df = df.groupby(level=0).apply(gw_Avg, "Wt")
-
-        # Drop Column
-        df = df.drop('Wt', axis=1)
+        mean_df = _compute_gw_Avg_of_dataframe(df, weights, catego, groupby)
         mean_df = mean_df.drop('Wt', axis=1)
     else:
         cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
