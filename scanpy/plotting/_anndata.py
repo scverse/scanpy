@@ -821,11 +821,8 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
     if isinstance(var_names, str):
         var_names = [var_names]
-    if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
-    else:
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+
+    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
 
     if 'color' in kwds:
@@ -2265,7 +2262,7 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     gene_names = adata.raw.var_names if use_raw else adata.var_names
 
     if weights is not None:
-        cat, df, catego = _prepare_weighted_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        __, df, catego = _prepare_weighted_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         df_weights = weights
         df_weights.columns = ['Wt']
         df = df.reset_index(drop=True)
