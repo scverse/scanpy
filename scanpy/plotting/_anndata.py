@@ -30,7 +30,7 @@ def gw_Avg(x, w="weights"):
     return pd.Series(np.average(x, weights=x[w], axis=0),index= x.columns)
 
 def _compute_gw_Avg_of_dataframe(df, weights, catego, groupby):
-    df_weights = weights
+    df_weights = weights.copy(deep=True)
     df_weights.columns = ['Wt']
     df = df.reset_index(drop=True)
     df_weights = df_weights.reset_index(drop=True)
@@ -832,8 +832,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     if isinstance(var_names, str):
         var_names = [var_names]
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
+    categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories, layer=layer)
 
     if 'color' in kwds:
         row_palette = kwds['color']
@@ -1112,7 +1111,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+    categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
 
     if groupby is None or len(categories) <= 1:
@@ -1375,13 +1374,13 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     # 1. compute mean value
     if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+        categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
         mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
         mean_obs = mean_obs.drop('Wt', axis=1)
 
     else:
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+        categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
         mean_obs = obs_tidy.groupby(level=0).mean()
 
@@ -1645,12 +1644,12 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
     if weights is not None:
-        categories, obs_tidy, catego = _prepare_weighted_dataframe(adata, var_names, groupby, use_raw, log,
+        categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log,
                                                                    num_categories, layer=layer)
         mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
         mean_obs = mean_obs.drop('Wt', axis=1)
     else:
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
+        categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                                           layer=layer)
         mean_obs = obs_tidy.groupby(level=0).mean()
 
@@ -1842,7 +1841,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
                          'valid categorical observations: {}'.
                          format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
+    categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None, layer=layer)
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
@@ -2044,79 +2043,6 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
     obs_tidy.set_index(categorical, groupby, inplace=True)
     categories = obs_tidy.index.categories
 
-    return categories, obs_tidy
-
-
-def _prepare_weighted_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
-                       num_categories=7, layer=None):
-    """
-    Given the anndata object, prepares a data frame in which the row index are the categories
-    defined by group by and the columns correspond to var_names.
-
-    Parameters
-    ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data matrix.
-    var_names : `str` or list of `str`
-        `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
-        The key of the observation grouping to consider. It is expected that
-        groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories`.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
-        Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
-        Only used if groupby observation is not categorical. This value
-        determines the number of groups into which the groupby observation
-        should be subdivided.
-
-    Returns
-    -------
-    Tuple of `pandas.DataFrame` and list of categories.
-    """
-    from scipy.sparse import issparse
-    sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None: use_raw = True
-    if isinstance(var_names, str):
-        var_names = [var_names]
-
-    if groupby is not None:
-        if groupby not in adata.obs_keys():
-            raise ValueError('groupby has to be a valid observation. Given value: {}, '
-                             'valid observations: {}'.format(groupby, adata.obs_keys()))
-
-    if layer is not None:
-        if layer not in adata.layers.keys():
-            raise KeyError('Selected layer: {} is not in the layers list. The list of '
-                           'valid layers is: {}'.format(layer, adata.layers.keys()))
-        matrix = adata[:, var_names].layers[layer]
-    elif use_raw:
-        matrix = adata.raw[:, var_names].X
-    else:
-        matrix = adata[:, var_names].X
-
-    if issparse(matrix):
-        matrix = matrix.toarray()
-    if log:
-        matrix = np.log1p(matrix)
-
-    obs_tidy = pd.DataFrame(matrix, columns=var_names)
-    if groupby is None:
-        groupby = ''
-        categorical = pd.Series(np.repeat('', len(obs_tidy))).astype('category')
-    else:
-        if not is_categorical_dtype(adata.obs[groupby]):
-            # if the groupby column is not categorical, turn it into one
-            # by subdividing into  `num_categories` categories
-            categorical = pd.cut(adata.obs[groupby], num_categories)
-        else:
-            categorical = adata.obs[groupby]
-
-    obs_tidy.set_index(categorical, groupby, inplace=True)
-    categories = obs_tidy.index.categories
-
     return categories, obs_tidy, categorical
 
 
@@ -2249,11 +2175,11 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     gene_names = adata.raw.var_names if use_raw else adata.var_names
 
     if weights is not None:
-        __, df, catego = _prepare_weighted_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        cat, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = _compute_gw_Avg_of_dataframe(df, weights, catego, groupby)
         mean_df = mean_df.drop('Wt', axis=1)
     else:
-        cat, df = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        cat, df, _ = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = df.groupby(level=0).mean()
     #mean_df = df.groupby(level=0).mean()
 
