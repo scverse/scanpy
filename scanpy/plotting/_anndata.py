@@ -2175,11 +2175,11 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
     gene_names = adata.raw.var_names if use_raw else adata.var_names
 
     if weights is not None:
-        cat, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        _, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = _compute_gw_Avg_of_dataframe(df, weights, catego, groupby)
         mean_df = mean_df.drop('Wt', axis=1)
     else:
-        cat, df, _ = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
+        _, df, _ = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = df.groupby(level=0).mean()
     #mean_df = df.groupby(level=0).mean()
 
