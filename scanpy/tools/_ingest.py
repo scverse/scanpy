@@ -11,6 +11,9 @@ class Ingest:
         #need to take care of representation
         rep = adata.X
 
+        #maybe don't need it, rather initialize Ingest class with all needed cluster keys
+        self._adata = adata
+
         if 'PCs' in adata.varm:
             self._pca_basis = adata.varm['PCs']
         if 'X_umap' in adata.obsm:
@@ -59,3 +62,8 @@ class Ingest:
         rep = rep.toarray() if issparse(rep) else rep.copy()
         rep -= rep.mean(axis=0)
         adata_small.obsm['X_pca'] = np.dot(rep, self._pca_basis)
+
+    def knn_classify(self, adata_small, classes_key, k):
+        #i.e. ingest.knn_classify(adata_small, 'louvain')
+        cat_array = self._adata.obs[classes_key]
+        #todo
