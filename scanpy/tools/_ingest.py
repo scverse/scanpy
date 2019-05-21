@@ -1,8 +1,8 @@
+import numpy as np
 from umap import UMAP
 from umap.distances import named_distances
 from umap.nndescent import make_initialisations, make_initialized_nnd_search
 from ..neighbors import _rp_forest_generate
-
 from scipy.sparse import issparse
 
 class Ingest:
@@ -10,6 +10,9 @@ class Ingest:
     def __init__(self, adata):
         #need to take care of representation
         rep = adata.X
+
+        if 'PCs' in adata.varm:
+            self._pca_basis = adata.varm['PCs']
         if 'X_umap' in adata.obsm:
             self._umap = UMAP(
                 metric = adata.uns['neighbors']['params']['metric']
@@ -48,4 +51,11 @@ class Ingest:
     def umap(self, adata_small):
         #need to take care of representation
         rep = adata_small.X
-        return self._umap.transform(rep)
+        adata_small.obsm['X_umap'] = self._umap.transform(rep)
+
+    def pca(self, adata_small):
+        #todo - efficient implementation for sparse matrices
+        rep = adata_small.X
+        rep = rep.toarray() if issparse(rep) else rep.copy()
+        rep -= rep.mean(axis=0)
+        adata_small.obsm['X_pca'] = np.dot(rep, self._pca_basis)
