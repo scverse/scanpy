@@ -86,7 +86,7 @@ def cyclone(
     """Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 
     Calculates scores for each observation and each phase and assigns prediction
-    based on marker pairs indentified by sandbag.
+    based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
 
     This reproduces the approach of [Scialdone15]_ in the implementation of
     [Fechtner18]_.
@@ -96,7 +96,7 @@ def cyclone(
     adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     marker_pairs : `dict`
-        Dictionary of marker pairs. See :func:`~scanpy.api.sandbag` output.
+        Dictionary of marker pairs. See :func:`~scanpy.external.tl.sandbag` output.
     gene_names: `list`
         List of genes.
     sample_names: `list`
@@ -106,17 +106,17 @@ def cyclone(
         iterations for random sampling to obtain a cycle score.
     min_iter : `int`, optional (default: 100)
         An integer scalar specifying the minimum number of iterations
-        for score estimation
+        for score estimation.
     min_pairs : `int`, optional (default: 50)
         An integer scalar specifying the minimum number of iterations
-        for score estimation
+        for score estimation.
 
     Returns
     -------
     A :class:`~pandas.DataFrame` with samples as index and categories as columns with scores for each category for each
-    sample and a additional column with the name of the max scoring category for each sample.
+    sample and an additional column with the name of the max scoring category for each sample.
 
-    If marker pairs contain only the cell cycle categories G1, S and G2M an additional column
+    If marker_pairs contains only the cell cycle categories G1, S and G2M an additional column
     ``pypairs_cc_prediction`` will be added. Where category S is assigned to samples where G1 and G2M score are
     below 0.5.
     """
