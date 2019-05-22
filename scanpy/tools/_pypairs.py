@@ -55,7 +55,7 @@ def sandbag(
 
 
     from pypairs.pairs import sandbag
-    from . import settings
+    from .._settings import settings
     from pypairs import settings as pp_settings
 
     pp_settings.verbosity = settings.verbosity
@@ -131,7 +131,7 @@ def cyclone(
 
 
     from pypairs.pairs import cyclone
-    from . import settings
+    from .._settings import settings
     from pypairs import settings as pp_settings
 
     pp_settings.verbosity = settings.verbosity
