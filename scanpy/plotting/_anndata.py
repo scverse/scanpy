@@ -1112,8 +1112,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
 
-    categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
+    categories, obs_tidy, _ = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories, layer=layer,
+    )
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1374,15 +1375,13 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     # 2. the fraction of cells in the category having a value > 0
 
     # 1. compute mean value
+    categories, obs_tidy, catego = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories, layer=layer,
+    )
     if weights is not None:
-        categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
         mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
         mean_obs = mean_obs.drop('Wt', axis=1)
-
     else:
-        categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
         mean_obs = obs_tidy.groupby(level=0).mean()
 
     # 2. compute fraction of cells having value >0
@@ -1644,14 +1643,13 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         if param_set:
             logg.info('Divergent color map has been automatically set to plot non-raw data. Use '
                       '`vmin`, `vmax` and `cmap` to adjust the plot.')
+    categories, obs_tidy, catego = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories, layer=layer,
+    )
     if weights is not None:
-        categories, obs_tidy, catego = _prepare_dataframe(adata, var_names, groupby, use_raw, log,
-                                                                   num_categories, layer=layer)
         mean_obs = _compute_gw_Avg_of_dataframe(obs_tidy, weights, catego, groupby)
         mean_obs = mean_obs.drop('Wt', axis=1)
     else:
-        categories, obs_tidy, _ = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                                          layer=layer)
         mean_obs = obs_tidy.groupby(level=0).mean()
 
     if groupby is None or len(categories) <= 1:
@@ -2175,12 +2173,11 @@ def _compute_dendrogram(adata, groupby, categories=None, var_names=None, var_gro
 
     gene_names = adata.raw.var_names if use_raw else adata.var_names
 
+    _, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
     if weights is not None:
-        _, df, catego = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = _compute_gw_Avg_of_dataframe(df, weights, catego, groupby)
         mean_df = mean_df.drop('Wt', axis=1)
     else:
-        _, df, _ = _prepare_dataframe(adata, gene_names, groupby, use_raw, log, num_categories)
         mean_df = df.groupby(level=0).mean()
     #mean_df = df.groupby(level=0).mean()
 
