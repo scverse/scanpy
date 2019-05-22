@@ -54,8 +54,6 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
-    weights: `dataframe`, optional (default: 'None')
-        Use `weights` attribute as sample/observation weights. It's 1-column dataframe without header name.
     groups : `str`, `list`, optional (default: `'all'`)
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted. If not passed, a ranking will be generated for all
@@ -78,6 +76,8 @@ def rank_genes_groups(
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
+    weights: `dataframe`, optional (default: 'None')
+        Use `weights` attribute as sample/observation weights. It's 1-column dataframe without header name.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression

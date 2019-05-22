@@ -30,10 +30,11 @@ def gw_Avg(x, w="weights"):
     return pd.Series(np.average(x, weights=x[w], axis=0),index= x.columns)
 
 def _compute_gw_Avg_of_dataframe(df, weights, catego, groupby):
-    df_weights = weights.copy(deep=True)
-    df_weights.columns = ['Wt']
+    if isinstance(weights, pd.DataFrame):
+        df_weights = weights.set_axis(['Wt'], axis='columns', inplace=False)
+    else:
+        df_weights = pd.DataFrame(dict(Wt=weights))
     df = df.reset_index(drop=True)
-    df_weights = df_weights.reset_index(drop=True)
     df = df.join(df_weights)
     df.set_index(catego, groupby, inplace=True)
     mean_df = df.groupby(level=0).apply(gw_Avg, "Wt")
