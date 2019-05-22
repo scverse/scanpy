@@ -34,7 +34,6 @@ def rank_genes_groups(
         adata,
         groupby,
         use_raw=True,
-        weights=None,
         groups='all',
         reference='rest',
         n_genes=100,
@@ -43,6 +42,7 @@ def rank_genes_groups(
         copy=False,
         method='t-test_overestim_var',
         corr_method='benjamini-hochberg',
+        weights=None,
         **kwds):
     """Rank genes for characterizing groups.
 
@@ -76,12 +76,11 @@ def rank_genes_groups(
     rankby_abs : `bool`, optional (default: `False`)
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
-    weights: `dataframe`, optional (default: 'None')
-        Use `weights` attribute as sample/observation weights. It's 1-column dataframe without header name.
+    weights: sequence of numbers (``float`` or ``int``), optional (default: ``None``)
+        Scale each observation with its weight.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
-        are passed to `sklearn.linear_model.LogisticRegression
-        <http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`__.
+        are passed to :class:`sklearn.linear_model.LogisticRegression`.
         For instance, you can pass `penalty='l1'` to try to come up with a
         minimal set of genes that are good predictors (sparse solution meaning
         few non-zero fitted coefficients).
