@@ -73,6 +73,13 @@ def test_dotplot(image_comparer):
                   figsize=(7, 2.5), dendrogram=True, show=False)
     save_and_compare_images('master_dotplot3')
 
+    # test dict as markers input
+    markers_dict = {'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}
+    sc.pl.dotplot(pbmc, markers_dict, groupby='bulk_labels',
+                  dot_max=0.7, dot_min=0.1, color_map='winter',
+                  figsize=(7, 2.5), dendrogram=True, show=False)
+    save_and_compare_images('master_dotplot_dict')
+
     # test var/group standardization smallest_dot
     sc.pl.dotplot(adata, adata.var_names, 'cell_type', use_raw=False, dendrogram=True, show=False,
                   standard_scale='var', smallest_dot=40)
