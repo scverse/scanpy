@@ -119,7 +119,7 @@ def test_matrixplot(image_comparer):
 
 
 def test_stacked_violin(image_comparer, plt):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=26)
 
     adata = sc.datasets.krumsiek11()
     sc.pl.stacked_violin(adata, adata.var_names, 'cell_type', use_raw=False, color='blue', show=False)
@@ -248,7 +248,7 @@ def test_rank_genes_symbols(image_comparer):
 
     sc.pl.stacked_violin(adata, symbols, 'cell_type', use_raw=False, color='blue', show=False,
                          gene_symbols='symbols')
-    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=20)
+    save_and_compare_images('master_stacked_violin_gene_symbols', tolerance=21)
 
     sc.pl.tracksplot(adata, symbols, 'cell_type', dendrogram=True, use_raw=False,
                      gene_symbols='symbols')
