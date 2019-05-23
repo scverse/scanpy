@@ -773,6 +773,9 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
+    See also :func:`~scanpy.pl.rank_genes_groups_stacked_violin` to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Parameters
     ----------
     {common_plot_args}
@@ -817,11 +820,14 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     >>> sc.pl.stacked_violin(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
     ...                      groupby='bulk_labels', dendrogram=True)
 
+    Using var_names as dict:
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
     if use_raw is None and adata.raw is not None: use_raw = True
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
+                                                                             var_group_labels, var_group_positions)
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
-    if isinstance(var_names, str):
-        var_names = [var_names]
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
 
@@ -836,7 +842,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     else:
         logg.warn('Unknown type for standard_scale, ignored')
 
-
     if 'color' in kwds:
         row_palette = kwds['color']
         # remove color from kwds in case is set to avoid an error caused by
@@ -846,6 +851,17 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
         # for the tiny violin plots used, is best
         # to use a thin lindwidth.
         kwds['linewidth'] = 0.5
+
+    # set by default the violin plot cut=0 to limit the extend
+    # of the violin plot as this produces better plots that wont extend
+    # to negative values for example. From seaborn.violin documentation:
+    #
+    # cut: Distance, in units of bandwidth size, to extend the density past
+    # the extreme datapoints. Set to 0 to limit the violin range within
+    # the range of the observed data (i.e., to have the same effect as
+    # trim=True in ggplot.
+    if 'cut' not in kwds:
+        kwds['cut'] = 0
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1071,6 +1087,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     annotation is turned into a categorical by binning the data into the number
     specified in `num_categories`.
 
+    See also :func:`~scanpy.pl.rank_genes_groups_heatmap` to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Parameters
     ----------
     {common_plot_args}
@@ -1095,10 +1114,16 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pl.heatmap(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
     ...               groupby='bulk_labels', dendrogram=True, swap_axes=True)
+
+    Using var_names as dict:
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+
     """
     if use_raw is None and adata.raw is not None: use_raw = True
-    if isinstance(var_names, str):
-        var_names = [var_names]
+
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
+                                                                             var_group_labels, var_group_positions)
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
@@ -1338,6 +1363,9 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     An example of dotplot usage is to visualize, for multiple marker genes,
     the mean value and the percentage of cells expressing the gene accross multiple clusters.
 
+    See also :func:`~scanpy.pl.rank_genes_groups_dotplot` to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Parameters
     ----------
     {common_plot_args}
@@ -1377,10 +1405,14 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
     ...               groupby='bulk_labels', dendrogram=True)
+
+    Using var_names as dict:
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
     if use_raw is None and adata.raw is not None: use_raw = True
-    if isinstance(var_names, str):
-        var_names = [var_names]
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
+                                                                             var_group_labels, var_group_positions)
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               layer=layer, gene_symbols=gene_symbols)
 
@@ -1413,7 +1445,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
         pass
     else:
         logg.warn('Unknown type for standard_scale, ignored')
-
 
     dendro_width = 0.8 if dendrogram else 0
     colorbar_width = 0.2
@@ -1631,6 +1662,9 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     If groupby is not given, the matrixplot assumes that all data belongs to a single
     category.
 
+    See also :func:`~scanpy.pl.rank_genes_groups_matrixplot` to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Parameters
     ----------
     {common_plot_args}
@@ -1651,11 +1685,15 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     >>> sc.pl.matrixplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
     ... groupby='bulk_labels', dendrogram=True)
 
+    Using var_names as dict:
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
     """
 
     if use_raw is None and adata.raw is not None: use_raw = True
-    if isinstance(var_names, str):
-        var_names = [var_names]
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
+                                                                             var_group_labels, var_group_positions)
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
                                               gene_symbols=gene_symbols, layer=layer)
@@ -1834,6 +1872,9 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     `groupby` is required to sort and order the values using the respective group
     and should be a categorical value.
 
+    See also :func:`~scanpy.pl.rank_genes_groups_tracksplot` to plot marker genes
+    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+
     Parameters
     ----------
     {common_plot_args}
@@ -1850,12 +1891,19 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
     ...                  'bulk_labels', dendrogram=True)
+
+    Using var_names as dict:
+    >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
+    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
         raise ValueError('groupby has to be a valid categorical observation. Given value: {}, '
                          'valid categorical observations: {}'.
                          format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
+
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
+                                                                             var_group_labels, var_group_positions)
 
     categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None,
                                               gene_symbols=gene_symbols, layer=layer)
@@ -2732,3 +2780,41 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height=4):
         heatmap_cbar_ax = fig.add_subplot(subplot_spec)
     pl.colorbar(mappable, cax=heatmap_cbar_ax)
     return heatmap_cbar_ax
+
+
+def _check_var_names_type(var_names, var_group_labels, var_group_positions):
+    """
+    checks if var_names is a dict. Is this is the cases, then set the
+    correct values for var_group_labels and var_group_positions
+
+    Returns
+    -------
+    var_names, var_group_labels, var_group_positions
+
+    """
+
+    # Mapping is used to test if var_names is a dictionary or an OrderedDictionary
+    from collections import Mapping
+
+    if isinstance(var_names, Mapping):
+        if var_group_labels is not None or var_group_positions is not None:
+            logg.warn("`var_names` is a dictionary. This will reset the current value of "
+                      "`var_group_labels` and `var_group_positions`.")
+        var_group_labels = []
+        _var_names = []
+        var_group_positions = []
+        start = 0
+        for label, vars_list in var_names.items():
+            if isinstance(vars_list, str):
+                vars_list = [vars_list]
+            # use list() in case var_list is a numpy array or pandas series
+            _var_names.extend(list(vars_list))
+            var_group_labels.append(label)
+            var_group_positions.append((start, start + len(vars_list) - 1))
+            start += len(vars_list)
+        var_names = _var_names
+
+    elif isinstance(var_names, str):
+        var_names = [var_names]
+
+    return var_names, var_group_labels, var_group_positions

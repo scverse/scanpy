@@ -114,8 +114,14 @@ ax
 doc_common_plot_args = """\
 adata : :class:`~anndata.AnnData`
     Annotated data matrix.
-var_names : `str` or list of `str`
+var_names : `str`, list of `str`, dict or OrderedDict
     `var_names` should be a valid subset of  `adata.var_names`.
+    If `var_names` is a dict, then the key is used as label 
+    to group the values (see var_group_labels). The dict values
+    should be a list or str of valid adata.var_names. In this 
+    case either coloring or 'brackets' are used for the grouping 
+    of var names depending on the plot. When `var_names` is a dict, 
+    then the `var_group_labels` and `var_group_positions` are set. 
 groupby : `str` or `None`, optional (default: `None`)
     The key of the observation grouping to consider.
 log : `bool`, optional (default: `False`)
