@@ -20,4 +20,4 @@ natsort
 joblib
 numba
 tqdm
-umap
+umap-learn
