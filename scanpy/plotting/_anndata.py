@@ -1182,8 +1182,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     if categorical:
         obs_tidy = obs_tidy.sort_index()
 
-    goal_points = 1000
-    obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
     colorbar_width = 0.2
 
     if not swap_axes:
@@ -1935,8 +1933,6 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     obs_tidy = obs_tidy.sort_index()
 
-    goal_points = 1000
-    obs_tidy = _reduce_and_smooth(obs_tidy, goal_points)
     # obtain the start and end of each category and make
     # a list of ranges that will be used to plot a different
     # color
@@ -2628,41 +2624,6 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
     dendro_ax.spines['top'].set_visible(False)
     dendro_ax.spines['left'].set_visible(False)
     dendro_ax.spines['bottom'].set_visible(False)
-
-
-def _reduce_and_smooth(obs_tidy, goal_size):
-    """
-    Uses interpolation to reduce the number of observations (cells).
-    This is useful for plotting functions that otherwise will ignore
-    most of the cells' values.
-
-    The reduction and smoothing is only done per column
-
-    Parameters
-    ----------
-    obs_tidy : Pandas DataFrame. rows = obs (eg. cells), cols = vars (eg. genes)
-    goal_size : number of cells to keep
-
-    Returns
-    -------
-
-    """
-    if obs_tidy.shape[0] < goal_size:
-        return obs_tidy
-    else:
-        # usually, a large number of cells can not be plotted, thus
-        # it is useful to reduce the number of cells plotted while
-        # smoothing the values. This should be similar to an interpolation
-        # but done per row and not for the entire image.
-        from scipy.interpolate import UnivariateSpline
-        x = range(obs_tidy.shape[0])
-        # maximum number of cells to keep
-        new_x = np.linspace(0, len(x), num=goal_size, endpoint=False)
-        new_df = obs_tidy.iloc[new_x, :].copy()
-        for index, col in obs_tidy.iteritems():
-            spl = UnivariateSpline(x, col.values, s=20)
-            new_df[index] = spl(new_x)
-        return new_df.copy()
 
 
 def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientation='left', cmap_name='tab20'):
