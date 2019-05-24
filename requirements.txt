@@ -1,7 +1,7 @@
 anndata>=0.6.15
 matplotlib>=3.0.0
 pandas>=0.21
-scipy=1.2
+scipy==1.2
 seaborn
 h5py
 tables
