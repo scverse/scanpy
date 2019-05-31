@@ -121,7 +121,10 @@ def umap(
     n_epochs = 0 if maxiter is None else maxiter
     verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
     neigh_params = adata.uns['neighbors']['params']
-    X = choose_representation(adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None))
+    X = choose_representation(
+        adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
+    # the data matrix X is really only used for determining the number of connected components
+    # for the init condition in the UMAP embedding
     X_umap = simplicial_set_embedding(
         X,
         adata.uns['neighbors']['connectivities'].tocoo(),
