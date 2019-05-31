@@ -25,7 +25,6 @@ def rank_genes_groups(
     copy=False,
     method='t-test_overestim_var',
     corr_method='benjamini-hochberg',
-    log_transformed=True,
     **kwds
 ):
     """Rank genes for characterizing groups.
