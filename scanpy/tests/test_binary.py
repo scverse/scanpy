@@ -40,7 +40,7 @@ def test_help_output(set_path: type(None), capsys: CaptureFixture):
     with pytest.raises(SystemExit, match='^0$'):
         main(['-h'])
     captured = capsys.readouterr()
-    assert re.search(r'^positional arguments:\n\s+\{settings,testbin[^}]*\}$', captured.out, re.MULTILINE)
+    assert re.search(r'^positional arguments:\n\s+\{settings,[\w,-]*testbin[\w,-]*\}$', captured.out, re.MULTILINE)
 
 
 def test_external(set_path: type(None)):
