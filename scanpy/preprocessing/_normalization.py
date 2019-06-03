@@ -182,10 +182,9 @@ def normalize_total(
         else:
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
-    logg.msg('    finished', t=True, end=': ')
-    logg.msg('normalized adata.X')
+    logg.debug('    finished', t=True, end=': ')
+    logg.debug('normalized adata.X')
     if key_added is not None:
-        logg.msg('and added \'{}\', counts per cell before normalization (adata.obs)'
-            .format(key_added))
+        logg.debug(f'and added {key_added!r}, counts per cell before normalization (adata.obs)')
 
     return dat if not inplace else None

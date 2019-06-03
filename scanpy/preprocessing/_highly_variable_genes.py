@@ -99,12 +99,11 @@ def _highly_variable_genes_single_batch(
         one_gene_per_bin = disp_std_bin.isnull()
         gen_indices = np.where(one_gene_per_bin[df['mean_bin'].values])[0].tolist()
         if len(gen_indices) > 0:
-            logg.msg(
+            logg.debug(
                 'Gene indices {} fell into a single bin: their '
                 'normalized dispersion was set to 1.\n    '
                 'Decreasing `n_bins` will likely avoid this effect.'
                 .format(gen_indices),
-                v=4
             )
         # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
         # but there’s still a dtype error without “.value”.
@@ -144,10 +143,9 @@ def _highly_variable_genes_single_batch(
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
-        logg.msg(
-            'the {} top genes correspond to a normalized dispersion cutoff of {}'
-            .format(n_top_genes, disp_cut_off),
-            v=5,
+        logg.debug(
+            f'the {n_top_genes} top genes correspond to a '
+            f'normalized dispersion cutoff of {disp_cut_off}'
         )
     else:
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
@@ -244,7 +242,7 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
-    logg.msg('extracting highly variable genes', r=True, v=4)
+    logg.debug('extracting highly variable genes', r=True)
 
     if not isinstance(adata, AnnData):
         raise ValueError(
@@ -301,7 +299,7 @@ def highly_variable_genes(
             ))
             df['highly_variable'] = gene_subset
 
-    logg.msg('    finished', time=True, v=4)
+    logg.debug('    finished', time=True)
 
     if inplace or subset:
         logg.hint(

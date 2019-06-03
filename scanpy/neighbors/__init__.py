@@ -523,7 +523,7 @@ class Neighbors:
             self._eigen_basis = None
             self.n_dcs = None
         if info_str != '':
-            logg.msg('    initialized {}'.format(info_str), v=4)
+            logg.debug('    initialized {}'.format(info_str))
 
     @property
     def rp_forest(self) -> Optional[RPForestDict]:
@@ -670,7 +670,7 @@ class Neighbors:
         if write_knn_indices:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
-        logg.msg('computed neighbors', t=True, v=4)
+        logg.debug('computed neighbors', t=True)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
@@ -684,7 +684,7 @@ class Neighbors:
         # self._distances is unaffected by this
         if method == 'gauss':
             self._compute_connectivities_diffmap()
-        logg.msg('computed connectivities', t=True, v=4)
+        logg.debug('computed connectivities', t=True)
         self._number_connected_components = 1
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
@@ -791,7 +791,7 @@ class Neighbors:
         else:
             self.Z = scipy.sparse.spdiags(1.0/z, 0, K.shape[0], K.shape[0])
         self._transitions_sym = self.Z @ K @ self.Z
-        logg.msg('computed transitions', v=4, time=True)
+        logg.debug('computed transitions', time=True)
 
     def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
         """Compute eigen decomposition of transition matrix.
@@ -927,7 +927,7 @@ class Neighbors:
                 dsqroot = dsq
                 iroot = i
                 if np.sqrt(dsqroot) < 1e-10: break
-        logg.msg('setting root index to', iroot, v=4)
+        logg.debug('setting root index to', iroot)
         if self.iroot is not None and iroot != self.iroot:
             logg.warn('Changing index of iroot from {} to {}.'.format(self.iroot, iroot))
         self.iroot = iroot

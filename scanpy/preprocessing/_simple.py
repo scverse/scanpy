@@ -450,8 +450,10 @@ def pca(
 
     if adata.n_vars < n_comps:
         n_comps = adata.n_vars - 1
-        logg.msg('reducing number of computed PCs to',
-               n_comps, 'as dim of data is only', adata.n_vars, v=4)
+        logg.debug(
+            'reducing number of computed PCs to', n_comps,
+            'as dim of data is only', adata.n_vars,
+        )
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError('Did not find adata.var[\'highly_variable\']. '
@@ -465,7 +467,7 @@ def pca(
 
     if chunked:
         if not zero_center or random_state or svd_solver != 'auto':
-            logg.msg('Ignoring zero_center, random_state, svd_solver', v=4)
+            logg.debug('Ignoring zero_center, random_state, svd_solver')
 
         from sklearn.decomposition import IncrementalPCA
 
@@ -486,19 +488,23 @@ def pca(
         if zero_center:
             from sklearn.decomposition import PCA
             if issparse(adata_comp.X):
-                logg.msg('    as `zero_center=True`, '
-                       'sparse input is densified and may '
-                       'lead to huge memory consumption', v=4)
+                logg.debug(
+                    '    as `zero_center=True`, '
+                    'sparse input is densified and may '
+                    'lead to huge memory consumption',
+                )
                 X = adata_comp.X.toarray()  # Copying the whole adata_comp.X here, could cause memory problems
             else:
                 X = adata_comp.X
             pca_ = PCA(n_components=n_comps, svd_solver=svd_solver, random_state=random_state)
         else:
             from sklearn.decomposition import TruncatedSVD
-            logg.msg('    without zero-centering: \n'
-                   '    the explained variance does not correspond to the exact statistical defintion\n'
-                   '    the first component, e.g., might be heavily influenced by different means\n'
-                   '    the following components often resemble the exact PCA very closely', v=4)
+            logg.debug(
+                '    without zero-centering: \n'
+                '    the explained variance does not correspond to the exact statistical defintion\n'
+                '    the first component, e.g., might be heavily influenced by different means\n'
+                '    the following components often resemble the exact PCA very closely'
+            )
             pca_ = TruncatedSVD(n_components=n_comps, random_state=random_state)
             X = adata_comp.X
         X_pca = pca_.fit_transform(X)
@@ -516,11 +522,13 @@ def pca(
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
         logg.info('    finished', t=True)
-        logg.msg('and added\n'
-                 '    \'X_pca\', the PCA coordinates (adata.obs)\n'
-                 '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
-                 '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
-                 '    \'pca_variance_ratio\', the variance ratio (adata.uns)', v=4)
+        logg.debug(
+            'and added\n'
+            '    \'X_pca\', the PCA coordinates (adata.obs)\n'
+            '    \'PC1\', \'PC2\', ..., the loadings (adata.var)\n'
+            '    \'pca_variance\', the variance / eigenvalues (adata.uns)\n'
+            '    \'pca_variance_ratio\', the variance ratio (adata.uns)'
+        )
         return adata if copy else None
     else:
         logg.info('    finished', t=True)
@@ -610,7 +618,7 @@ def normalize_per_cell(
     """
     if key_n_counts is None: key_n_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.msg('normalizing by total count per cell', r=True)
+        logg.debug('normalizing by total count per cell', r=True)
         adata = data.copy() if copy else data
         if counts_per_cell is None:
             cell_subset, counts_per_cell = materialize_as_ndarray(
@@ -634,10 +642,9 @@ def normalize_per_cell(
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
-        logg.msg('    finished', t=True, end=': ')
-        logg.msg('normalized adata.X and added', no_indent=True)
-        logg.msg('    \'{}\', counts per cell before normalization (adata.obs)'
-            .format(key_n_counts))
+        logg.debug('    finished', t=True, end=': ')
+        logg.debug('normalized adata.X and added', no_indent=True)
+        logg.debug(f'    {key_n_counts!r}, counts per cell before normalization (adata.obs)')
         return adata if copy else None
     # proceed with data matrix
     X = data.copy() if copy else data
@@ -743,7 +750,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
                 'If providing categorical variable, '
                 'only a single one is allowed. For this one '
                 'we regress on the mean for each category.')
-        logg.msg('... regressing on per-gene means within categories')
+        logg.debug('... regressing on per-gene means within categories')
         regressors = np.zeros(adata.X.shape, dtype='float32')
         for category in adata.obs[keys[0]].cat.categories:
             mask = (category == adata.obs[keys[0]]).values
@@ -853,24 +860,24 @@ def scale(data, zero_center=True, max_value=None, copy=False) -> Optional[AnnDat
         adata = data.copy() if copy else data
         # need to add the following here to make inplace logic work
         if zero_center and issparse(adata.X):
-            logg.msg(
+            logg.debug(
                 '... scale_data: as `zero_center=True`, sparse input is '
-                'densified and may lead to large memory consumption')
+                'densified and may lead to large memory consumption'
+            )
             adata.X = adata.X.toarray()
         scale(adata.X, zero_center=zero_center, max_value=max_value, copy=False)
         return adata if copy else None
     X = data.copy() if copy else data  # proceed with the data matrix
     zero_center = zero_center if zero_center is not None else False if issparse(X) else True
     if not zero_center and max_value is not None:
-        logg.msg(
-            '... scale_data: be careful when using `max_value` without `zero_center`',
-            v=4)
+        logg.debug('... scale_data: be careful when using `max_value` without `zero_center`')
     if max_value is not None:
-        logg.msg('... clipping at max_value', max_value)
+        logg.debug('... clipping at max_value', max_value)
     if zero_center and issparse(X):
-        logg.msg('... scale_data: as `zero_center=True`, sparse input is '
-                 'densified and may lead to large memory consumption, returning copy',
-                 v=4)
+        logg.debug(
+            '... scale_data: as `zero_center=True`, sparse input is '
+            'densified and may lead to large memory consumption, returning copy'
+        )
         X = X.toarray()
         copy = True
     _scale(X, zero_center)
@@ -911,7 +918,7 @@ def subsample(data, fraction=None, n_obs=None, random_state=0, copy=False) -> Op
             raise ValueError('`fraction` needs to be within [0, 1], not {}'
                              .format(fraction))
         new_n_obs = int(fraction * old_n_obs)
-        logg.msg('... subsampled to {} data points'.format(new_n_obs))
+        logg.debug(f'... subsampled to {new_n_obs} data points')
     else:
         raise ValueError('Either pass `n_obs` or `fraction`.')
     obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)

@@ -1,46 +1,47 @@
 import inspect
+import sys
 from pathlib import Path
 from time import time
+from typing import Tuple, Union, Any, List, Iterable, TextIO
 
 
-def _type_check(var, varname, types):
-    if not isinstance(types, list):
-        types = [types]
-    if not any(isinstance(var, t) for t in types):
+def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
+    if isinstance(var, types):
+        return
+    if isinstance(types, type):
+        possible_types_str = types.__name__
+    else:
         type_names = [t.__name__ for t in types]
-        if len(types) == 1:
-            possible_types_str = type_names[0]
-        else:
-            possible_types_str = "{} or {}".format(
-                ", ".join(type_names[:-1]), type_names[-1]
-            )
-        raise TypeError("{} must be of type {}".format(varname, possible_types_str))
+        possible_types_str = "{} or {}".format(
+            ", ".join(type_names[:-1]), type_names[-1]
+        )
+    raise TypeError(f"{varname} must be of type {possible_types_str}")
 
 
-class ScanpyConfig(object):
+class ScanpyConfig:
     """Config manager for scanpy.
     """
 
     def __init__(
         self,
         *,
-        verbosity="warn",
-        plot_suffix="",
-        file_format_data="h5ad",
-        file_format_figs="pdf",
-        autosave=False,
-        autoshow=True,
-        writedir="./write/",
-        cachedir="./cache/",
-        datasetdir="./data/",
-        figdir="./figures/",
+        verbosity: str = "warn",
+        plot_suffix: str = "",
+        file_format_data: str = "h5ad",
+        file_format_figs: str = "pdf",
+        autosave: bool = False,
+        autoshow: bool = True,
+        writedir: Union[str, Path] = "./write/",
+        cachedir: Union[str, Path] = "./cache/",
+        datasetdir: Union[str, Path] = "./data/",
+        figdir: Union[str, Path] = "./figures/",
         max_memory=15,
         n_jobs=1,
-        logfile="",
-        categories_to_ignore=["N/A", "dontknow", "no_gate", "?"],
-        _frameon=True,
-        _vector_friendly=False,
-        _low_resolution_warning=True
+        logfile: Union[str, Path, None] = None,
+        categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
+        _frameon: bool = True,
+        _vector_friendly: bool = False,
+        _low_resolution_warning: bool = True
     ):
         self.verbosity = verbosity
         self.plot_suffix = plot_suffix
@@ -76,7 +77,7 @@ class ScanpyConfig(object):
         """Stores the previous memory usage."""
 
     @property
-    def verbosity(self):
+    def verbosity(self) -> int:
         """
         Set global verbosity level.
 
@@ -99,28 +100,27 @@ class ScanpyConfig(object):
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
                 raise ValueError(
-                    "Cannot set verbosity to {}. Accepted string values are: {}".format(
-                        verbosity, verbosity_str_options
-                    )
+                    f"Cannot set verbosity to {verbosity}. "
+                    f"Accepted string values are: {verbosity_str_options}"
                 )
             else:
                 self._verbosity = verbosity_str_options.index(verbosity)
         else:
-            _type_check(verbosity, "verbosity", [str, int])
+            _type_check(verbosity, "verbosity", (str, int))
 
     @property
-    def plot_suffix(self):
+    def plot_suffix(self) -> str:
         """Global suffix that is appended to figure filenames.
         """
         return self._plot_suffix
 
     @plot_suffix.setter
-    def plot_suffix(self, plot_suffix):
+    def plot_suffix(self, plot_suffix: str):
         _type_check(plot_suffix, "plot_suffix", str)
         self._plot_suffix = plot_suffix
 
     @property
-    def file_format_data(self):
+    def file_format_data(self) -> str:
         """File format for saving AnnData objects.
 
         Allowed are 'txt', 'csv' (comma separated value file) for exporting and 'h5ad'
@@ -129,19 +129,18 @@ class ScanpyConfig(object):
         return self._file_format_data
 
     @file_format_data.setter
-    def file_format_data(self, file_format):
+    def file_format_data(self, file_format: str):
         _type_check(file_format, "file_format_data", str)
-        file_format_options = ["txt", "csv", "h5ad"]
-        if file_format not in ["txt", "csv", "h5ad"]:
+        file_format_options = {"txt", "csv", "h5ad"}
+        if file_format not in file_format_options:
             raise ValueError(
-                "Cannot set file_format_data to {}. Must be one of {}".format(
-                    file_format, file_format_options
-                )
+                f"Cannot set file_format_data to {file_format}. "
+                f"Must be one of {file_format_options}"
             )
         self._file_format_data = file_format
 
     @property
-    def file_format_figs(self):
+    def file_format_figs(self) -> str:
         """File format for saving figures.
 
         For example 'png', 'pdf' or 'svg'. Many other formats work as well (see
@@ -150,12 +149,12 @@ class ScanpyConfig(object):
         return self._file_format_figs
 
     @file_format_figs.setter
-    def file_format_figs(self, figure_format):
+    def file_format_figs(self, figure_format: str):
         _type_check(figure_format, "figure_format_data", str)
         self._file_format_figs = figure_format
 
     @property
-    def autosave(self):
+    def autosave(self) -> bool:
         """bool: Save plots/figures as files in directory 'figs'.
 
         Do not show plots/figures interactively.
@@ -163,12 +162,12 @@ class ScanpyConfig(object):
         return self._autosave
 
     @autosave.setter
-    def autosave(self, autosave):
+    def autosave(self, autosave: bool):
         _type_check(autosave, "autosave", bool)
         self._autosave = autosave
 
     @property
-    def autoshow(self):
+    def autoshow(self) -> bool:
         """bool: Show all plots/figures automatically if autosave == False.
 
         There is no need to call the matplotlib pl.show() in this case.
@@ -176,56 +175,56 @@ class ScanpyConfig(object):
         return self._autoshow
 
     @autoshow.setter
-    def autoshow(self, autoshow):
+    def autoshow(self, autoshow: bool):
         _type_check(autoshow, "autoshow", bool)
         self._autoshow = autoshow
 
     @property
-    def writedir(self):
+    def writedir(self) -> Path:
         """Directory where the function scanpy.write writes to by default.
         """
         return self._writedir
 
     @writedir.setter
-    def writedir(self, writedir):
-        _type_check(writedir, "writedir", [str, Path])
-        self._writedir = str(writedir)  # TODO: Make Path
+    def writedir(self, writedir: Union[str, Path]):
+        _type_check(writedir, "writedir", (str, Path))
+        self._writedir = Path(writedir)
 
     @property
-    def cachedir(self):
+    def cachedir(self) -> Path:
         """Default cache directory.
         """
         return self._cachedir
 
     @cachedir.setter
-    def cachedir(self, cachedir):
-        _type_check(cachedir, "cachedir", [str, Path])
-        self._cachedir = str(cachedir)  # TODO: Make Path
+    def cachedir(self, cachedir: Union[str, Path]):
+        _type_check(cachedir, "cachedir", (str, Path))
+        self._cachedir = Path(cachedir)
 
     @property
-    def datasetdir(self):
+    def datasetdir(self) -> Path:
         """Default directory for ``sc.datasets`` to download data to.
         """
         return self._datasetdir
 
     @datasetdir.setter
-    def datasetdir(self, datasetdir):
-        _type_check(datasetdir, "datasetdir", [str, Path])
+    def datasetdir(self, datasetdir: Union[str, Path]):
+        _type_check(datasetdir, "datasetdir", (str, Path))
         self._datasetdir = Path(datasetdir).resolve()
 
     @property
-    def figdir(self):
+    def figdir(self) -> Path:
         """Directory where plots are saved.
         """
         return self._figdir
 
     @figdir.setter
-    def figdir(self, figdir):
-        _type_check(figdir, "figdir", [str, Path])
-        self._figdir = str(figdir)  # TODO: Make Path
+    def figdir(self, figdir: Union[str, Path]):
+        _type_check(figdir, "figdir", (str, Path))
+        self._figdir = Path(figdir)
 
     @property
-    def max_memory(self):
+    def max_memory(self) -> Union[int, float]:
         """Maximal memory usage in Gigabyte.
 
         Is currently not well respected....
@@ -233,41 +232,48 @@ class ScanpyConfig(object):
         return self._max_memory
 
     @max_memory.setter
-    def max_memory(self, max_memory):
-        _type_check(max_memory, "max_memory", [int, float])
+    def max_memory(self, max_memory: Union[int, float]):
+        _type_check(max_memory, "max_memory", (int, float))
         self._max_memory = max_memory
 
     @property
-    def n_jobs(self):
+    def n_jobs(self) -> int:
         """Default number of jobs/ CPUs to use for parallel computing.
         """
         return self._n_jobs
 
     @n_jobs.setter
-    def n_jobs(self, n_jobs):
+    def n_jobs(self, n_jobs: int):
         _type_check(n_jobs, "n_jobs", int)
         self._n_jobs = n_jobs
 
     @property
-    def logfile(self):
-        """Name of logfile. By default is set to '' and writes to standard output.
+    def logfile(self) -> Union[Path, TextIO]:
+        """:class:`~pathlib.Path` of logfile or writable object.
+        The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
+        and to :obj:`sys.stderr` otherwise.
+        
+        For backwards compatibility, setting it to `''` behaves like setting it to `None`.
         """
         return self._logfile
 
     @logfile.setter
-    def logfile(self, logfile):
-        _type_check(logfile, "logfile", [str, Path])
-        self._logfile = str(logfile)
+    def logfile(self, logfile: Union[str, Path, TextIO, None]):
+        _type_check(logfile, "logfile", (str, Path, type(None)))
+        stream = sys.stdout if self._is_run_from_ipython() else sys.stderr
+        self._logfile = Path(logfile) if logfile else stream
 
     @property
-    def categories_to_ignore(self):
+    def categories_to_ignore(self) -> List[str]:
         """Categories that are omitted in plotting etc.
         """
         return self._categories_to_ignore
 
     @categories_to_ignore.setter
-    def categories_to_ignore(self, categories_to_ignore):
-        # TODO: add checks
+    def categories_to_ignore(self, categories_to_ignore: Iterable[str]):
+        categories_to_ignore = list(categories_to_ignore)
+        for i, cat in enumerate(categories_to_ignore):
+            _type_check(cat, f"categories_to_ignore[{i}]", str)
         self._categories_to_ignore = categories_to_ignore
 
     # --------------------------------------------------------------------------------
@@ -318,7 +324,7 @@ class ScanpyConfig(object):
         try:
             import IPython
             IPython.core.display.set_matplotlib_formats(ipython_format)
-        except:
+        except Exception:
             pass
         from matplotlib import rcParams
         self._vector_friendly = vector_friendly

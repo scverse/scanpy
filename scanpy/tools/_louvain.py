@@ -111,7 +111,7 @@ def louvain(
             logg.warn('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
-        if not directed: logg.m('    using the undirected graph', v=4)
+        if not directed: logg.debug('    using the undirected graph')
         g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)

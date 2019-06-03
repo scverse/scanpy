@@ -232,7 +232,7 @@ def savefig(writekey, dpi=None, ext=None):
     if ext is None: ext = settings.file_format_figs
     filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
     # output the following msg at warning level; it's really important for the user
-    logg.msg('saving figure to file', filename, v=1)
+    logg.warn('saving figure to file', filename)
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
@@ -295,7 +295,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force
                 for c in adata.uns[key + '_colors']]
             return
     else:
-        logg.msg('generating colors for {} using palette'.format(key), v=4)
+        logg.debug('generating colors for {} using palette'.format(key))
     palette = default_palette(palette)
     palette_adjusted = adjust_palette(palette,
                                       length=len(adata.obs[key].cat.categories))

@@ -225,10 +225,11 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     n_edges_ref = len(graph_ref.nonzero()[0])
     n_edges_cmp = len(graph_cmp.nonzero()[0])
     n_edges_union = len(edgeset_union)
-    logg.msg(
+    logg.debug(
         '... n_edges_ref', n_edges_ref,
         'n_edges_cmp', n_edges_cmp,
-        'n_edges_union', n_edges_union)
+        'n_edges_union', n_edges_union,
+    )
 
     graph_ref = graph_ref.tocsr()  # need a copy of the csr graph anyways
     graph_cmp = graph_cmp.tocsr()
@@ -252,8 +253,8 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     fraction_edges = n_edges_ref / n_edges_fully_connected
     naive_entropy = (fraction_edges * np.log(1./fraction_edges)
                      + (1-fraction_edges) * np.log(1./(1-fraction_edges)))
-    logg.msg('cross entropy of naive sparse prediction {:.3e}'.format(naive_entropy))
-    logg.msg('cross entropy of random prediction {:.3e}'.format(-np.log(0.5)))
+    logg.debug('cross entropy of naive sparse prediction {:.3e}'.format(naive_entropy))
+    logg.debug('cross entropy of random prediction {:.3e}'.format(-np.log(0.5)))
     logg.info('cross entropy {:.3e}'.format(entropy))
 
     # for manifold analysis, restrict to largest connected component in
@@ -264,7 +265,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     largest_component = np.arange(graph_ref.shape[0], dtype=int)
     if n_components > 1:
         component_sizes = np.bincount(labels)
-        logg.msg('largest component has size', component_sizes.max())
+        logg.debug('largest component has size', component_sizes.max())
         largest_component = np.where(
             component_sizes == component_sizes.max())[0][0]
         graph_ref_red = graph_ref.tocsr()[labels == largest_component, :]
@@ -325,18 +326,18 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
             adata_ref.uns['highlights'][points2[ip]] = 'D' + str(ip)
             found_disconnected_points = True
     if found_disconnected_points:
-        logg.msg('most disconnected points', points)
-        logg.msg('    with weights', weights[max_weights].round(1))
+        logg.debug('most disconnected points', points)
+        logg.debug('    with weights', weights[max_weights].round(1))
 
     max_weights = np.argpartition(
         weights_overlap, kth=-n_points)[-n_points:]
     points = list(edgeset_union_indices[0][max_weights])
     for p in points:
         adata_ref.uns['highlights'][p] = 'O'
-    logg.msg('most overlapping points', points)
-    logg.msg('    with weights', weights_overlap[max_weights].round(1))
-    logg.msg('    with d_rep', d_cmp[max_weights].round(1))
-    logg.msg('    with d_ref', d_ref[max_weights].round(1))
+    logg.debug('most overlapping points', points)
+    logg.debug('    with weights', weights_overlap[max_weights].round(1))
+    logg.debug('    with d_rep', d_cmp[max_weights].round(1))
+    logg.debug('    with d_ref', d_ref[max_weights].round(1))
 
     geo_entropy_d = np.sum(weights * p_ref * np.log(ratio))
     geo_entropy_o = np.sum(weights_overlap * (1-p_ref) * np.log(ratio_1m))
@@ -719,9 +720,11 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
                 np.in1d(np.arange(len(adata.obs[key].cat.categories)).astype(str),
                                           np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
-            logg.m(np.array(groups_order_subset),
-                   'invalid! specify valid groups_order (or indices) one of',
-                   adata.obs[key].cat.categories)
+            logg.debug(
+                np.array(groups_order_subset),
+                'invalid! specify valid groups_order (or indices) one of',
+                adata.obs[key].cat.categories,
+            )
             from sys import exit
             exit(0)
         groups_masks = groups_masks[groups_ids]
@@ -852,11 +855,13 @@ def subsample(X, subsample=1, seed=0):
         rows = np.arange(0, X.shape[0], subsample, dtype=int)
         n = rows.size
         Xsampled = np.array(X[rows])
-    if seed > 0:
+    else:
+        if seed < 0:
+            raise ValueError(f'Invalid seed value < 0: {seed}')
         n = int(X.shape[0]/subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
-    logg.m('... subsampled to', n, 'of', X.shape[0], 'data points')
+    logg.debug('... subsampled to', n, 'of', X.shape[0], 'data points')
     return Xsampled, rows
 
 

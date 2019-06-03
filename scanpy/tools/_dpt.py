@@ -189,8 +189,10 @@ class DPT(Neighbors):
         segs_tips : np.ndarray
             List of indices of the tips of segments.
         """
-        logg.m('    detect', self.n_branchings,
-               'branching' + ('' if self.n_branchings == 1 else 's'))
+        logg.debug(
+            '    detect', self.n_branchings,
+            'branching' + ('' if self.n_branchings == 1 else 's'),
+        )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
         # initialize the search for branchings with a single segment,
@@ -231,15 +233,19 @@ class DPT(Neighbors):
         segs_connects = [[]]
         segs_undecided = [True]
         segs_adjacency = [[]]
-        logg.m('    do not consider groups with less than {} points for splitting'
-               .format(self.min_group_size))
+        logg.debug(
+            '    do not consider groups with less than '
+            f'{self.min_group_size} points for splitting'
+        )
         for ibranch in range(self.n_branchings):
             iseg, tips3 = self.select_segment(segs, segs_tips, segs_undecided)
             if iseg == -1:
-                logg.m('    partitioning converged')
+                logg.debug('    partitioning converged')
                 break
-            logg.m('    branching {}:'.format(ibranch + 1),
-                   'split group', iseg)  # [third start end]
+            logg.debug(
+                '    branching {}:'.format(ibranch + 1),
+                'split group', iseg,
+            )  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(segs, segs_tips,
                                   segs_connects,
@@ -318,11 +324,15 @@ class DPT(Neighbors):
                     if jseg != iseg:
                         # take the inner tip, the "second tip" of the segment
                         for itip in range(2):
-                            if (self.distances_dpt[segs_tips[jseg][1], segs_tips[iseg][itip]]
-                                < 0.5 * self.distances_dpt[segs_tips[iseg][~itip], segs_tips[iseg][itip]]):
-                                # logg.m('    group', iseg, 'with tip', segs_tips[iseg][itip],
-                                #        'connects with', jseg, 'with tip', segs_tips[jseg][1], v=4)
-                                # logg.m('    do not use the tip for "triangulation"', v=4)
+                            if (
+                                self.distances_dpt[segs_tips[jseg][1], segs_tips[iseg][itip]]
+                                < 0.5 * self.distances_dpt[segs_tips[iseg][~itip], segs_tips[iseg][itip]]
+                            ):
+                                # logg.debug(
+                                #     '    group', iseg, 'with tip', segs_tips[iseg][itip],
+                                #     'connects with', jseg, 'with tip', segs_tips[jseg][1],
+                                # )
+                                # logg.debug('    do not use the tip for "triangulation"')
                                 third_maximizer = itip
             # map the global position to the position within the segment
             tips = [np.where(allindices[seg] == tip)[0][0]
@@ -352,8 +362,10 @@ class DPT(Neighbors):
             # assigning the highest score to the longest segment
             score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
-            logg.m('    group', iseg, 'score', score, 'n_points', len(seg),
-                   '(too small)' if len(seg) < self.min_group_size else '', v=4)
+            logg.debug(
+                '    group', iseg, 'score', score, 'n_points', len(seg),
+                '(too small)' if len(seg) < self.min_group_size else '',
+            )
             if len(seg) <= self.min_group_size: score = 0
             # write result
             scores_tips[iseg, 0] = score
@@ -404,7 +416,7 @@ class DPT(Neighbors):
                     indices = np.argsort(self.pseudotime[tips])
                     self.segs_tips[itips] = self.segs_tips[itips][indices]
                 else:
-                    logg.m('    group', itips, 'is very small', v=4)
+                    logg.debug('    group', itips, 'is very small')
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
@@ -555,17 +567,19 @@ class DPT(Neighbors):
                         segs_connects[jseg_min].append(closest_points_in_kseg[idx])
                         segs_adjacency[kseg].append(jseg_min)
                         segs_connects[kseg].append(closest_points_in_jseg[idx])
-                        logg.m('    attaching new segment', kseg, 'at', jseg_min)
+                        logg.debug('    attaching new segment', kseg, 'at', jseg_min)
                         # if we split the cluster, we should not attach kseg
                         do_not_attach_kseg = True
                     else:
-                        logg.m('    cannot attach new segment', kseg, 'at', jseg_min,
-                               '(would produce cycle)')
+                        logg.debug(
+                            '    cannot attach new segment', kseg, 'at', jseg_min,
+                            '(would produce cycle)'
+                        )
                         if kseg != kseg_list[-1]:
-                            logg.m('        continue')
+                            logg.debug('        continue')
                             continue
                         else:
-                            logg.m('        do not add another link')
+                            logg.debug('        do not add another link')
                             break
                 if jseg_min in kseg_list and not do_not_attach_kseg:
                     segs_adjacency[jseg_min].append(kseg)
@@ -837,7 +851,7 @@ class DPT(Neighbors):
         imax = min_length + iimax
         corr_coeff_max = corr_coeff[iimax]
         if corr_coeff_max < 0.3:
-            logg.m('    is root itself, never obtain significant correlation', v=4)
+            logg.debug('    is root itself, never obtain significant correlation')
         return imax
 
     def _kendall_tau_add(self, len_old, diff_pos, tau_old):

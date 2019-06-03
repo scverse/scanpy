@@ -59,8 +59,8 @@ def read(
     ----------
     filename
         If the filename has no file extension, it is interpreted as a key for
-        generating a filename via ``sc.settings.writedir + filename +
-        sc.settings.file_format_data``.  This is the same behavior as in
+        generating a filename via ``sc.settings.writedir / (filename +
+        sc.settings.file_format_data)``.  This is the same behavior as in
         ``sc.read(filename, ...)``.
     backed : {``None``, ``'r'``, ``'r+'``}
         If ``'r'``, load :class:`~anndata.AnnData` in ``backed`` mode instead
@@ -99,8 +99,8 @@ def read(
         )
     # generate filename and read to dict
     filekey = filename
-    filename = settings.writedir + filekey + '.' + settings.file_format_data
-    if not Path(filename).exists():
+    filename = settings.writedir / (filekey + '.' + settings.file_format_data)
+    if not filename.exists():
         raise ValueError(
             f'Reading with filekey {filekey!r} failed, '
             f'the inferred filename {filename!r} does not exist. '
@@ -484,13 +484,13 @@ def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
         filename,
         backup_url=backup_url,
     )
-    if not is_present: logg.msg('... did not find original file', filename)
+    if not is_present: logg.debug('... did not find original file', filename)
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
             return read_h5ad(filename, backed=backed)
         else:
-            logg.msg(f'reading sheet {sheet} from file {filename}', v=4)
+            logg.debug(f'reading sheet {sheet} from file {filename}')
             return read_hdf(filename, sheet)
     # read other file types
     path_cache = Path(settings.cachedir) / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
@@ -502,7 +502,7 @@ def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
-        logg.msg('reading', filename, v=4)
+        logg.debug('reading', filename)
         if not cache and not suppress_cache_warning:
             logg.hint(
                 'This might be very slow. Consider passing `cache=True`, '
@@ -522,10 +522,9 @@ def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
             adata = read_csv(filename, first_column_names=first_column_names)
         elif ext in {'txt', 'tab', 'data', 'tsv'}:
             if ext == 'data':
-                logg.msg(
+                logg.hint(
                     "... assuming '.data' means tab or white-space "
                     'separated text file',
-                    v=3,
                 )
                 logg.hint('change this by passing `ext` to sc.read')
             adata = read_text(filename, delimiter, first_column_names)

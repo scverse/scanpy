@@ -113,8 +113,7 @@ def filter_genes_dispersion(data,
         else:
             adata.var['highly_variable'] = result['gene_subset']
         return adata if copy else None
-    logg.msg('extracting highly variable genes',
-              r=True, v=4)
+    logg.debug('extracting highly variable genes', r=True)
     X = data  # no copy necessary, X remains unchanged in the following
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
@@ -140,11 +139,11 @@ def filter_genes_dispersion(data,
         one_gene_per_bin = disp_std_bin.isnull()
         gen_indices = np.where(one_gene_per_bin[df['mean_bin'].values])[0].tolist()
         if len(gen_indices) > 0:
-            logg.msg(
-                'Gene indices {} fell into a single bin: their '
+            logg.debug(
+                f'Gene indices {gen_indices} fell into a single bin: their '
                 'normalized dispersion was set to 1.\n    '
                 'Decreasing `n_bins` will likely avoid this effect.'
-                .format(gen_indices), v=4)
+            )
         # Circumvent pandas 0.23 bug. Both sides of the assignment have dtype==float32,
         # but there’s still a dtype error without “.value”.
         disp_std_bin[one_gene_per_bin] = disp_mean_bin[one_gene_per_bin.values].values
@@ -174,23 +173,28 @@ def filter_genes_dispersion(data,
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = df['dispersion_norm'].values >= disp_cut_off
-        logg.msg('the {} top genes correspond to a normalized dispersion cutoff of'
-                 .format(n_top_genes, disp_cut_off), v=5)
+        logg.debug(
+            f'the {n_top_genes} top genes correspond to a '
+            f'normalized dispersion cutoff of {disp_cut_off}'
+        )
     else:
         max_disp = np.inf if max_disp is None else max_disp
         dispersion_norm[np.isnan(dispersion_norm)] = 0  # similar to Seurat
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
-    logg.msg('    finished', time=True, v=4)
-    return np.rec.fromarrays((gene_subset,
-                              df['mean'].values,
-                              df['dispersion'].values,
-                              df['dispersion_norm'].values.astype('float32', copy=False)),
-                              dtype=[('gene_subset', bool),
-                                     ('means', 'float32'),
-                                     ('dispersions', 'float32'),
-                                     ('dispersions_norm', 'float32')])
+    logg.debug('    finished', time=True)
+    return np.rec.fromarrays((
+        gene_subset,
+        df['mean'].values,
+        df['dispersion'].values,
+        df['dispersion_norm'].values.astype('float32', copy=False),
+    ), dtype=[
+        ('gene_subset', bool),
+        ('means', 'float32'),
+        ('dispersions', 'float32'),
+        ('dispersions_norm', 'float32'),
+    ])
 
 
 def filter_genes_cv_deprecated(X, Ecutoff, cvFilter):

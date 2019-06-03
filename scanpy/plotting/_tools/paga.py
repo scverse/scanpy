@@ -643,9 +643,10 @@ def _paga_graph(
     # count number of connected components
     n_components, labels = scipy.sparse.csgraph.connected_components(adjacency_solid)
     if n_components > 1 and not single_component:
-        logg.msg(
+        logg.debug(
             'Graph has more than a single connected component. '
-            'To restrict to this component, pass `single_component=True`.')
+            'To restrict to this component, pass `single_component=True`.'
+        )
     if n_components > 1 and single_component:
         component_sizes = np.bincount(labels)
         largest_component = np.where(
@@ -708,7 +709,7 @@ def _paga_graph(
                              'y': 1000*pos[count][1],
                              'z': 0}}
         filename = settings.writedir + 'paga_graph.gexf'
-        logg.msg('exporting to {}'.format(filename), v=1)
+        logg.warn('exporting to', filename)
         if settings.writedir != '' and not os.path.exists(settings.writedir):
             os.makedirs(settings.writedir)
         nx.write_gexf(nx_g_solid, settings.writedir + 'paga_graph.gexf')

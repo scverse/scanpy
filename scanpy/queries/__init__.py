@@ -37,7 +37,7 @@ def mitochondrial_genes(host, org) -> pd.Index:
         s.add_dataset_to_xml('drerio_gene_ensembl')
         s.add_attribute_to_xml('zfin_id_symbol')
     else:
-        logg.msg('organism ', str(org), ' is unavailable', v=4, no_indent=True)
+        logg.debug('organism ', str(org), ' is unavailable', no_indent=True)
         return None
     s.add_attribute_to_xml('chromosome_name')
     xml = s.get_xml()
@@ -91,7 +91,7 @@ def gene_coordinates(host, org, gene, chr_exclude=[]) -> pd.DataFrame:
         s.add_dataset_to_xml('drerio_gene_ensembl')
         s.add_attribute_to_xml('zfin_id_symbol')
     else:
-        logg.msg('organism ', str(org), ' is unavailable', v=4, no_indent=True)
+        logg.debug('organism ', str(org), ' is unavailable', no_indent=True)
         return None
     s.add_attribute_to_xml('chromosome_name')
     s.add_attribute_to_xml('start_position')

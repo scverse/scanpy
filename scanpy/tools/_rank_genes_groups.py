@@ -158,8 +158,8 @@ def rank_genes_groups(
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
-    logg.msg('consider \'{}\' groups:'.format(groupby), groups_order, v=4)
-    logg.msg('with sizes:', ns, v=4)
+    logg.debug('consider \'{}\' groups:'.format(groupby), groups_order)
+    logg.debug('with sizes:', ns)
     if reference != 'rest':
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)

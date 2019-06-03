@@ -483,7 +483,7 @@ def _scatter_obs(
             utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir + 'pos.csv'
-                logg.msg('exporting label positions to {}'.format(filename), v=1)
+                logg.warn('exporting label positions to {}'.format(filename))
                 if settings.writedir != '' and not os.path.exists(settings.writedir):
                     os.makedirs(settings.writedir)
                 np.savetxt(filename, all_pos, delimiter=',')
