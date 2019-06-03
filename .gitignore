@@ -4,6 +4,7 @@
 /write/
 
 # Docs
+/docs/_build/
 /docs/api/scanpy.*.rst
 !/docs/api/scanpy.api.rst
 !/docs/api/scanpy.api.AnnData.rst
