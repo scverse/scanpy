@@ -152,11 +152,10 @@ _DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
 def _versions_dependencies(dependencies):
     # this is not the same as the requirements!
     for mod in dependencies:
-        mod_name = mod[0] if isinstance(mod, tuple) else mod
-        mod_install = mod[1] if isinstance(mod, tuple) else mod
+        mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
         try:
             imp = __import__(mod_name)
-            yield mod_install, imp.__version__
+            yield dist_name, imp.__version__
         except (ImportError, AttributeError):
             pass
 
