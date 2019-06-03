@@ -1,10 +1,9 @@
 """Reading and Writing
 """
 
-import sys
 import time
 from pathlib import Path, PurePath
-from typing import Union, Dict, Optional, Tuple
+from typing import Union, Dict, Optional, Tuple, BinaryIO
 
 import numpy as np
 import pandas as pd
@@ -90,7 +89,7 @@ def read(
     -------
     An :class:`~anndata.AnnData` object
     """
-    filename = str(filename)  # allow passing pathlib.Path objects
+    filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
         return _read(
             filename, backed=backed, sheet=sheet, ext=ext,
@@ -98,7 +97,7 @@ def read(
             backup_url=backup_url, cache=cache, **kwargs,
         )
     # generate filename and read to dict
-    filekey = filename
+    filekey = str(filename)
     filename = settings.writedir / (filekey + '.' + settings.file_format_data)
     if not filename.exists():
         raise ValueError(
@@ -335,7 +334,7 @@ def _read_v3_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=Fal
 
 
 def write(
-    filename: str,
+    filename: Union[str, Path],
     adata: AnnData,
     ext: Optional[str] = None,
     compression: str = 'gzip',
@@ -348,8 +347,8 @@ def write(
     ----------
     filename
         If the filename has no file extension, it is interpreted as a key for
-        generating a filename via `sc.settings.writedir + filename +
-        sc.settings.file_format_data`.  This is the same behavior as in
+        generating a filename via `sc.settings.writedir / (filename +
+        sc.settings.file_format_data)`.  This is the same behavior as in
         :func:`~scanpy.api.read`.
     adata
         Annotated data matrix.
@@ -361,7 +360,7 @@ def write(
     compression_opts
         See http://docs.h5py.org/en/latest/high/dataset.html.
     """
-    filename = str(filename)  # allow passing pathlib.Path objects
+    filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
         filename = filename
         ext_ = is_valid_filename(filename, return_ext=True)
@@ -470,9 +469,18 @@ def get_params_from_list(params_list):
 # -------------------------------------------------------------------------------
 
 
-def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
-          first_column_names=None, backup_url=None, cache=False,
-          suppress_cache_warning=False, **kwargs):
+def _read(
+    filename: Path,
+    backed=None,
+    sheet=None,
+    ext=None,
+    delimiter=None,
+    first_column_names=None,
+    backup_url=None,
+    cache=False,
+    suppress_cache_warning=False,
+    **kwargs,
+):
     if ext is not None and ext not in avail_exts:
         raise ValueError(
             'Please provide one of the available extensions.\n'
@@ -493,7 +501,7 @@ def _read(filename, backed=None, sheet=None, ext=None, delimiter=None,
             logg.debug(f'reading sheet {sheet} from file {filename}')
             return read_hdf(filename, sheet)
     # read other file types
-    path_cache = Path(settings.cachedir) / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
+    path_cache = settings.cachedir / _slugify(filename).replace('.' + ext, '.h5ad')  # type: Path
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
@@ -561,7 +569,7 @@ def _slugify(path: Union[str, PurePath]) -> str:
     return filename
 
 
-def _read_softgz(filename) -> AnnData:
+def _read_softgz(filename: Union[str, bytes, Path, BinaryIO]) -> AnnData:
     """\
     Read a SOFT format data file.
 
@@ -573,7 +581,6 @@ def _read_softgz(filename) -> AnnData:
     The function is based on a script by Kerby Shedden.
     http://dept.stat.lsa.umich.edu/~kshedden/Python-Workshop/gene_expression_comparison.html
     """
-    filename = str(filename)  # allow passing pathlib.Path objects
     import gzip
     with gzip.open(filename, mode='rt') as file:
         # The header part of the file contains information about the
@@ -704,10 +711,9 @@ def wait_until_file_unused(filename):
         time.sleep(1)
 
 
-def get_filename_from_key(key, ext=None):
+def get_filename_from_key(key, ext=None) -> Path:
     ext = settings.file_format_data if ext is None else ext
-    filename = settings.writedir + key + '.' + ext
-    return filename
+    return settings.writedir / f'{key}.{ext}'
 
 
 def download(url: str, path: Path):
@@ -742,9 +748,9 @@ def check_datafile_present_and_download(path, backup_url=None):
     return True
 
 
-def is_valid_filename(filename, return_ext=False):
+def is_valid_filename(filename: Path, return_ext=False):
     """Check whether the argument is a filename."""
-    ext = Path(filename).suffixes
+    ext = filename.suffixes
 
     if len(ext) > 2:
         logg.warn(

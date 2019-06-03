@@ -1,7 +1,7 @@
 """Builtin Datasets.
 """
+from pathlib import Path
 
-import os
 import numpy as np
 import pandas as pd
 from anndata import AnnData
@@ -10,6 +10,9 @@ from .. import logging as logg
 from .._settings import settings
 import scanpy as sc
 from ._ebi_expression_atlas import ebi_expression_atlas
+
+
+HERE = Path(__file__).parent
 
 
 def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640) -> AnnData:
@@ -76,7 +79,7 @@ def krumsiek11() -> AnnData:
     -------
     Annotated data matrix.
     """
-    filename = os.path.dirname(__file__) + '/krumsiek11.txt'
+    filename = HERE / 'krumsiek11.txt'
     verbosity_save = sc.settings.verbosity
     sc.settings.verbosity = 'error'  # suppress output...
     adata = sc.read(filename, first_column_names=True)
@@ -186,7 +189,7 @@ def toggleswitch() -> AnnData:
     -------
     Annotated data matrix.
     """
-    filename = os.path.dirname(__file__) + '/toggleswitch.txt'
+    filename = HERE / 'toggleswitch.txt'
     adata = sc.read(filename, first_column_names=True)
     adata.uns['iroot'] = 0
     return adata
@@ -209,7 +212,7 @@ def pbmc68k_reduced() -> AnnData:
     Annotated data matrix.
     """
 
-    filename = os.path.dirname(__file__) + '/10x_pbmc68k_reduced.h5ad'
+    filename = HERE / '10x_pbmc68k_reduced.h5ad'
     return sc.read(filename)
 
 

@@ -110,7 +110,6 @@ def _write_log(*msg, end='\n'):
         One or more arguments to be formatted as string. Same behavior as print
         function.
     """
-    from ._settings import settings
     out = ' '.join(map(str, msg))
     if hasattr(settings.logfile, 'open'):
         with settings.logfile.open('a') as f:

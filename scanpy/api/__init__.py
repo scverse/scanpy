@@ -267,9 +267,9 @@ you'd usually want to set :class:`settings.autoshow` to ``False``.
 The default directories for saving figures and caching files.
 
 ==============================================  ===================================
-:class:`settings.figdir`                        Directory for saving figures (default: ``'./figures/'``).
-:class:`settings.cachedir`                      Directory for cache files (default: ``'./cache/'``).
-:class:`settings.datasetdir`                    Directory for example datasets (default: ``'~/scanpy_datasets/'``).
+:class:`settings.figdir`                        Directory for saving figures (default: `Path('figures')`).
+:class:`settings.cachedir`                      Directory for cache files (default: `Path('cache')`).
+:class:`settings.datasetdir`                    Directory for example datasets (default: `Path('data')`).
 ==============================================  ===================================
 
 The verbosity of logging output, where verbosity levels have the following

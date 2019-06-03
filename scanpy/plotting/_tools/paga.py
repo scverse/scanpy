@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 import scipy
@@ -708,18 +707,17 @@ def _paga_graph(
                 'position': {'x': 1000*pos[count][0],
                              'y': 1000*pos[count][1],
                              'z': 0}}
-        filename = settings.writedir + 'paga_graph.gexf'
+        filename = settings.writedir / 'paga_graph.gexf'
         logg.warn('exporting to', filename)
-        if settings.writedir != '' and not os.path.exists(settings.writedir):
-            os.makedirs(settings.writedir)
-        nx.write_gexf(nx_g_solid, settings.writedir + 'paga_graph.gexf')
+        settings.writedir.mkdir(parents=True, exist_ok=True)
+        nx.write_gexf(nx_g_solid, settings.writedir / 'paga_graph.gexf')
 
     ax.set_frame_on(frameon)
     ax.set_xticks([])
     ax.set_yticks([])
 
     # groups sizes
-    if (groups_key is not None and groups_key + '_sizes' in adata.uns):
+    if groups_key is not None and groups_key + '_sizes' in adata.uns:
         groups_sizes = adata.uns[groups_key + '_sizes']
     else:
         groups_sizes = np.ones(len(node_labels))

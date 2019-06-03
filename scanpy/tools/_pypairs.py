@@ -1,14 +1,16 @@
 """Calculate scores based on relative expression change of maker pairs
 """
 
+
 def sandbag(
-        adata,
-        annotation,
-        gene_names,
-        sample_names,
-        fraction=0.65,
-        filter_genes=None,
-        filter_samples=None):
+    adata,
+    annotation,
+    gene_names,
+    sample_names,
+    fraction=0.65,
+    filter_genes=None,
+    filter_samples=None,
+):
     """Generate pairs of genes [Scialdone15]_ [Fechtner18]_.
 
     Calculates the pairs of genes serving as marker pairs for each phase,

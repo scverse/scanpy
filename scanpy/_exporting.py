@@ -1,22 +1,28 @@
 """Exporting to formats for other software.
 """
+import json
+import logging as logg
+from pathlib import Path
+from typing import Union, Optional, Iterable
 
 import numpy as np
 import scipy.sparse
 import h5py
 import matplotlib.pyplot as plt
-import os
-import json
-import logging as logg
+from anndata import AnnData
 from pandas.api.types import is_categorical
 
 
 def spring_project(
-        adata, project_dir, embedding_method,
-        subplot_name = None,
-        cell_groupings=None, custom_color_tracks=None,
-        total_counts_key = 'n_counts', overwrite = False
-        ):
+    adata: AnnData,
+    project_dir: Union[Path, str],
+    embedding_method: str,
+    subplot_name: Optional[str] = None,
+    cell_groupings: Union[str, Iterable[str], None] = None,
+    custom_color_tracks: Union[str, Iterable[str], None] = None,
+    total_counts_key: str = 'n_counts',
+    overwrite: bool = False,
+):
     """Exports to a SPRING project directory [Weinreb17]_.
 
     Visualize annotation present in `adata`. By default, export all gene expression data
@@ -26,23 +32,23 @@ def spring_project(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix: `adata.uns['neighbors']` needs to
         be present.
-    project_dir : `str`
+    project_dir
         Path to directory for exported SPRING files.
-    embedding_method: `str`
+    embedding_method
         Name of a 2-D embedding in `adata.obsm`
-    subplot_name: `str`, optional (default: `None`)
+    subplot_name
         Name of subplot folder to be created at `project_dir+"/"+subplot_name`
-    cell_groupings : `str`, `list` of `str`, optional (default: `None`)
+    cell_groupings
         Instead of importing all categorical annotations when `None`,
         pass a list of keys for `adata.obs`.
-    custom_color_tracks : `str`, `list` of `str`, optional (default: `None`)
+    custom_color_tracks
         Specify specific `adata.obs` keys for continuous coloring.
-    total_counts_key: `str`, optional (default: "n_counts")
+    total_counts_key
         Name of key for total transcript counts in `adata.obs`.
-    overwrite: `boolean`, optional (default: `False`)
+    overwrite
         When `True`, existing counts matrices in `project_dir` are overwritten.
 
     Examples
@@ -68,29 +74,29 @@ def spring_project(
 
     # Make project directory and subplot directory (subplot has same name as project)
     # For now, the subplot is just all cells in adata
-    project_dir = project_dir.rstrip('/') + '/'
-    if subplot_name is None:
-        subplot_dir = project_dir + project_dir.split('/')[-2] + '/'
-    else:
-        subplot_dir = project_dir + subplot_name + '/'
-    if not os.path.exists(subplot_dir):
-        os.makedirs(subplot_dir)
-    print("Writing subplot to %s" %subplot_dir)
+    project_dir: Path = Path(project_dir)
+    subplot_dir: Path = project_dir.parent if subplot_name is None else project_dir / subplot_name
+    subplot_dir.mkdir(parents=True, exist_ok=True)
+    print(f'Writing subplot to {subplot_dir}')
 
     # Write counts matrices as hdf5 files and npz if they do not already exist
     # or if user requires overwrite.
     # To do: check if Alex's h5sparse format will allow fast loading from just
     # one file.
     write_counts_matrices = True
-    base_dir_filelist = ['counts_norm_sparse_genes.hdf5', 'counts_norm_sparse_cells.hdf5',
-                         'counts_norm.npz', 'total_counts.txt', 'genes.txt']
-    if all([os.path.isfile(project_dir + f) for f in base_dir_filelist]):
+    base_dir_filelist = [
+        'counts_norm_sparse_genes.hdf5', 'counts_norm_sparse_cells.hdf5',
+        'counts_norm.npz', 'total_counts.txt', 'genes.txt',
+    ]
+    if all((project_dir / f).is_file() for f in base_dir_filelist):
         if not overwrite:
-            logg.warning('%s is an existing SPRING folder. A new subplot will be created, but '
-                         'you must set `overwrite=True` to overwrite counts matrices.' %project_dir)
+            logg.warning(
+                f'{project_dir} is an existing SPRING folder. A new subplot will be created, but '
+                'you must set `overwrite=True` to overwrite counts matrices.'
+            )
             write_counts_matrices = False
         else:
-            logg.warning('Overwriting the files in %s.' %project_dir)
+            logg.warning(f'Overwriting the files in {project_dir}.')
 
     # Ideally, all genes will be written from adata.raw
     if adata.raw is not None:
@@ -108,13 +114,13 @@ def spring_project(
 
     # Write the counts matrices to project directory
     if write_counts_matrices:
-        write_hdf5_genes(E, gene_list, project_dir + 'counts_norm_sparse_genes.hdf5')
-        write_hdf5_cells(E, project_dir + 'counts_norm_sparse_cells.hdf5')
-        write_sparse_npz(E, project_dir + 'counts_norm.npz')
-        with open(project_dir + 'genes.txt', 'w') as o:
+        write_hdf5_genes(E, gene_list, project_dir / 'counts_norm_sparse_genes.hdf5')
+        write_hdf5_cells(E, project_dir / 'counts_norm_sparse_cells.hdf5')
+        write_sparse_npz(E, project_dir / 'counts_norm.npz')
+        with (project_dir / 'genes.txt').open('w') as o:
             for g in gene_list:
                 o.write(g + '\n')
-        np.savetxt(project_dir + 'total_counts.txt', total_counts)
+        np.savetxt(project_dir / 'total_counts.txt', total_counts)
 
     # Get categorical and continuous metadata
     categorical_extras = {}
@@ -128,11 +134,11 @@ def spring_project(
             cell_groupings = [cell_groupings]
         for obs_name in cell_groupings:
             if obs_name not in adata.obs:
-                logg.warning('Cell grouping "%s" is not in adata.obs' %obs_name)
+                logg.warning(f'Cell grouping {obs_name!r} is not in adata.obs')
             elif is_categorical(adata.obs[obs_name]):
                 categorical_extras[obs_name] = [str(x) for x in adata.obs[obs_name]]
             else:
-                logg.warning('Cell grouping "%s" is not a categorical variable' %obs_name)
+                logg.warning(f'Cell grouping {obs_name!r} is not a categorical variable')
     if custom_color_tracks is None:
         for obs_name in adata.obs:
             if not is_categorical(adata.obs[obs_name]):
@@ -142,49 +148,49 @@ def spring_project(
             custom_color_tracks = [custom_color_tracks]
         for obs_name in custom_color_tracks:
             if obs_name not in adata.obs:
-                logg.warning('Custom color track "%s" is not in adata.obs' %obs_name)
+                logg.warning(f'Custom color track {obs_name!r} is not in adata.obs')
             elif not is_categorical(adata.obs[obs_name]):
                 continuous_extras[obs_name] = np.array(adata.obs[obs_name])
             else:
-                logg.warning('Custom color track "%s" is not a continuous variable' %obs_name)
-
+                logg.warning(f'Custom color track {obs_name!r} is not a continuous variable')
 
     # Write continuous colors
     continuous_extras['Uniform'] = np.zeros(E.shape[0])
-    write_color_tracks(continuous_extras, subplot_dir+'color_data_gene_sets.csv')
+    write_color_tracks(continuous_extras, subplot_dir / 'color_data_gene_sets.csv')
 
     # Create and write a dictionary of color profiles to be used by the visualizer
     color_stats = {}
     color_stats = get_color_stats_genes(color_stats, E, gene_list)
     color_stats = get_color_stats_custom(color_stats, continuous_extras)
-    write_color_stats(subplot_dir + 'color_stats.json', color_stats)
+    write_color_stats(subplot_dir / 'color_stats.json', color_stats)
 
     # Write categorical data
     categorical_coloring_data = {}
     categorical_coloring_data = build_categ_colors(categorical_coloring_data, categorical_extras)
-    write_cell_groupings(subplot_dir+'categorical_coloring_data.json', categorical_coloring_data)
+    write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
 
     # Write graph in two formats for backwards compatibility
     edges = get_edges(adata)
-    write_graph(subplot_dir + 'graph_data.json', E.shape[0], edges)
-    write_edges(subplot_dir + 'edges.csv', edges)
-
+    write_graph(subplot_dir / 'graph_data.json', E.shape[0], edges)
+    write_edges(subplot_dir / 'edges.csv', edges)
 
     # Write cell filter; for now, subplots must be generated from within SPRING,
     # so cell filter includes all cells.
-    np.savetxt(subplot_dir + 'cell_filter.txt', np.arange(E.shape[0]), fmt='%i')
-    np.save(subplot_dir + 'cell_filter.npy', np.arange(E.shape[0]))
+    np.savetxt(subplot_dir / 'cell_filter.txt', np.arange(E.shape[0]), fmt='%i')
+    np.save(subplot_dir / 'cell_filter.npy', np.arange(E.shape[0]))
 
     # Write 2-D coordinates, after adjusting to roughly match SPRING's default d3js force layout parameters
-    coords = coords - coords.min(0)[None,:]
-    coords = coords * (np.array([1000, 1000]) / coords.ptp(0))[None,:] + np.array([200,-200])[None,:]
-    np.savetxt(subplot_dir + 'coordinates.txt',
-               np.hstack((np.arange(E.shape[0])[:,None], coords)),
-               fmt='%i,%.6f,%.6f')
+    coords = coords - coords.min(0)[None, :]
+    coords = coords * (np.array([1000, 1000]) / coords.ptp(0))[None, :] + np.array([200, -200])[None, :]
+    np.savetxt(
+        subplot_dir / 'coordinates.txt',
+        np.hstack((np.arange(E.shape[0])[:, None], coords)),
+        fmt='%i,%.6f,%.6f',
+    )
 
     # Write some useful intermediates, if they exist
     if 'X_pca' in adata.obsm_keys():
-        np.savez_compressed(subplot_dir + 'intermediates.npz',
+        np.savez_compressed(subplot_dir / 'intermediates.npz',
                             Epca=adata.obsm['X_pca'],
                             total_counts = total_counts)
 
@@ -192,8 +198,8 @@ def spring_project(
     if 'paga' in adata.uns:
         clusts = np.array(adata.obs[adata.uns['paga']['groups']].cat.codes)
         uniq_clusts = adata.obs[adata.uns['paga']['groups']].cat.categories
-        paga_coords = [coords[clusts==i,:].mean(0) for i in range(len(uniq_clusts))]
-        export_PAGA_to_SPRING(adata, paga_coords, subplot_dir + 'PAGA_data.json')
+        paga_coords = [coords[clusts == i, :].mean(0) for i in range(len(uniq_clusts))]
+        export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json')
 
     return None
 

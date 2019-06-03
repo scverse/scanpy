@@ -1,7 +1,6 @@
 """Plotting functions for AnnData.
 """
 
-import os
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -482,10 +481,9 @@ def _scatter_obs(
                     all_pos[iname] = [np.nan, np.nan]
             utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
-                filename = settings.writedir + 'pos.csv'
-                logg.warn('exporting label positions to {}'.format(filename))
-                if settings.writedir != '' and not os.path.exists(settings.writedir):
-                    os.makedirs(settings.writedir)
+                filename = settings.writedir / 'pos.csv'
+                logg.warn(f'exporting label positions to {filename}')
+                settings.writedir.mkdir(parents=True, exist_ok=True)
                 np.savetxt(filename, all_pos, delimiter=',')
         elif legend_loc == 'right margin':
             legend = axs[ikey].legend(

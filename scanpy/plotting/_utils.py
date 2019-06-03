@@ -1,4 +1,3 @@
-import os
 import warnings
 from typing import Union, List
 
@@ -214,7 +213,7 @@ def savefig(writekey, dpi=None, ext=None):
 
     The `filename` is generated as follows:
 
-        filename = settings.figdir + writekey + settings.plot_suffix + '.' + settings.file_format_figs
+        filename = settings.figdir / (writekey + settings.plot_suffix + '.' + settings.file_format_figs)
     """
     if dpi is None:
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
@@ -227,10 +226,9 @@ def savefig(writekey, dpi=None, ext=None):
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
-    if not os.path.exists(settings.figdir): os.makedirs(settings.figdir)
-    if settings.figdir[-1] != '/': settings.figdir += '/'
+    settings.figdir.mkdir(parents=True, exist_ok=True)
     if ext is None: ext = settings.file_format_figs
-    filename = settings.figdir + writekey + settings.plot_suffix + '.' + ext
+    filename = settings.figdir / f'{writekey}{settings.plot_suffix}.{ext}'
     # output the following msg at warning level; it's really important for the user
     logg.warn('saving figure to file', filename)
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
