@@ -109,7 +109,7 @@ def phate(
     (2000, 2)
     >>> sc.pl.phate(adata)
     """
-    logg.info('computing PHATE', r=True)
+    logg.info('computing PHATE')
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
     if isinstance(settings.verbosity, (str, int)):
@@ -137,10 +137,14 @@ def phate(
         verbose=verbose,
         **kwargs
     ).fit_transform(adata)
-    logg.info('    finished', time=True,
-              end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     # update AnnData instance
     adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates
-    logg.hint('added\n'
-              '    \'X_phate\', PHATE coordinates (adata.obsm)')
+    logg.info(
+        '    finished',
+        time=True,
+        deep=(
+            'added\n'
+            "    'X_phate', PHATE coordinates (adata.obsm)"
+        ),
+    )
     return adata if copy else None

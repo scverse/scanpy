@@ -59,7 +59,7 @@ class ScanpyConfig:
         _low_resolution_warning: bool = True
     ):
         # logging
-        self._root_logger = RootLogger('INFO')  # level will be replaced
+        self._root_logger = RootLogger(logging.INFO)  # level will be replaced
         self.logfile = logfile
         self.verbosity = verbosity
         # rest

@@ -84,7 +84,7 @@ def neighbors(
         Instead of decaying weights, this stores distances for each pair of
         neighbors.
     """
-    logg.info('computing neighbors', r=True)
+    logg.info('computing neighbors')
     adata = adata.copy() if copy else adata
     if adata.isview:  # we shouldn't need this here...
         adata._init_as_actual(adata.copy())
@@ -107,11 +107,15 @@ def neighbors(
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
     if neighbors.rp_forest is not None:
         adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint(
-        'added to `.uns[\'neighbors\']`\n'
-        '    \'distances\', distances for each pair of neighbors\n'
-        '    \'connectivities\', weighted adjacency matrix')
+    logg.info(
+        '    finished',
+        time=True,
+        deep=(
+            'added to `.uns[\'neighbors\']`\n'
+            '    \'distances\', distances for each pair of neighbors\n'
+            '    \'connectivities\', weighted adjacency matrix'
+        ),
+    )
     return adata if copy else None
 
 
@@ -522,7 +526,7 @@ class Neighbors:
             self._eigen_basis = None
             self.n_dcs = None
         if info_str != '':
-            logg.debug('    initialized {}'.format(info_str))
+            logg.debug(f'    initialized {info_str}')
 
     @property
     def rp_forest(self) -> Optional[RPForestDict]:
@@ -632,17 +636,16 @@ class Neighbors:
         Also writes `.knn_indices` and `.knn_distances` if
         `write_knn_indices==True`.
         """
+        logg.info('Computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
-            logg.warn('n_obs too small: adjusting to `n_neighbors = {}`'
-                      .format(n_neighbors))
+            logg.warn(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
         if method not in {'umap', 'gauss'}:
             raise ValueError('`method` needs to be \'umap\' or \'gauss\'.')
         if self._adata.shape[0] >= 10000 and not knn:
-            logg.warn(
-                'Using high n_obs without `knn=True` takes a lot of memory...')
+            logg.warn('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
@@ -669,7 +672,7 @@ class Neighbors:
         if write_knn_indices:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
-        logg.debug('computed neighbors', t=True)
+        logg.info('computed neighbors', time=True)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
@@ -683,7 +686,7 @@ class Neighbors:
         # self._distances is unaffected by this
         if method == 'gauss':
             self._compute_connectivities_diffmap()
-        logg.debug('computed connectivities', t=True)
+        logg.info('computed connectivities', time=True)
         self._number_connected_components = 1
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
@@ -768,6 +771,7 @@ class Neighbors:
         -------
         Makes attributes `.transitions_sym` and `.transitions` available.
         """
+        logg.info('Computing transitions')
         W = self._connectivities
         # density normalization as of Coifman et al. (2005)
         # ensures that kernel matrix is independent of sampling density
@@ -790,7 +794,7 @@ class Neighbors:
         else:
             self.Z = scipy.sparse.spdiags(1.0/z, 0, K.shape[0], K.shape[0])
         self._transitions_sym = self.Z @ K @ self.Z
-        logg.debug('computed transitions', time=True)
+        logg.info('computed transitions', time=True)
 
     def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
         """Compute eigen decomposition of transition matrix.
@@ -852,9 +856,10 @@ class Neighbors:
         # set iroot directly
         if 'iroot' in self._adata.uns:
             if self._adata.uns['iroot'] >= self._adata.n_obs:
-                logg.warn('Root cell index {} does not exist for {} samples. '
-                          'Is ignored.'
-                          .format(self._adata.uns['iroot'], self._adata.n_obs))
+                logg.warn(
+                    f'Root cell index {self._adata.uns["iroot"]} does not '
+                    f'exist for {self._adata.n_obs} samples. It’s ignored.'
+                )
             else:
                 self.iroot = self._adata.uns['iroot']
             return
@@ -926,7 +931,7 @@ class Neighbors:
                 dsqroot = dsq
                 iroot = i
                 if np.sqrt(dsqroot) < 1e-10: break
-        logg.debug('setting root index to', iroot)
+        logg.debug(f'setting root index to {iroot}')
         if self.iroot is not None and iroot != self.iroot:
-            logg.warn('Changing index of iroot from {} to {}.'.format(self.iroot, iroot))
+            logg.warn(f'Changing index of iroot from {self.iroot} to {iroot}.')
         self.iroot = iroot

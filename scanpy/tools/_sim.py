@@ -187,9 +187,10 @@ def sample_dynamic_data(**params):
                                       nrRealizations=nrRealizations)
                 if real >= nrRealizations:
                     break
-        if False:
-            logg.info('mean nr of offdiagonal edges',nrOffEdges_list.mean(),
-                      'compared to total nr',grnsim.dim*(grnsim.dim-1)/2.)
+        logg.debug(
+            f'mean nr of offdiagonal edges {nrOffEdges_list.mean()} '
+            f'compared to total nr {grnsim.dim*(grnsim.dim-1)/2.}'
+        )
 
     # more complex models
     else:
@@ -251,7 +252,7 @@ def sample_dynamic_data(**params):
     filename = None
     for filename in writedir.glob('sim*.txt'):
         pass
-    logg.info('reading simulation results', filename)
+    logg.info(f'reading simulation results {filename}')
     adata = readwrite._read(filename, first_column_names=True,
                             suppress_cache_warning=True)
     adata.uns['tmax_write'] = tmax/step
@@ -892,10 +893,7 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
                 check = False
         if check:
             Xsamples.append(X)
-    if not check:
-        logg.debug('realization {}:'.format(restart), 'no new branch')
-    else:
-        logg.debug('realization {}:'.format(restart), 'new branch')
+    logg.debug(f'realization {restart}: {"" if check else "no"} new branch')
     return check, Xsamples
 
 

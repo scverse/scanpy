@@ -87,7 +87,7 @@ def louvain(
     :class:`~anndata.AnnData`
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
-    logg.info('running Louvain clustering', r=True)
+    logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
             '`partition_type` is only a valid argument when `flavour` is "vtraag"')
@@ -163,8 +163,12 @@ def louvain(
     )
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('found {} clusters and added\n'
-              '    \'{}\', the cluster labels (adata.obs, categorical)'
-              .format(len(np.unique(groups)), key_added))
+    logg.info(
+        '    finished',
+        time=True,
+        deep=(
+            f'found {len(np.unique(groups))} clusters and added\n'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+        ),
+    )
     return adata if copy else None

@@ -137,7 +137,7 @@ def read_10x_h5(
     `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
     The feature types are stored in `adata.var['feature_types']`
     """
-    logg.info('reading', filename, r=True, end=' ')
+    logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
@@ -201,7 +201,7 @@ def _read_legacy_10x_h5(filename, genome=None):
                     gene_ids=dsets['genes'].astype(str),
                 ),
             )
-            logg.info(t=True)
+            logg.info('', time=True)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
@@ -236,7 +236,7 @@ def _read_v3_10x_h5(filename):
                     genome=dsets['genome'].astype(str),
                 ),
             )
-            logg.info(t=True)
+            logg.info('', time=True)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
@@ -492,7 +492,7 @@ def _read(
         filename,
         backup_url=backup_url,
     )
-    if not is_present: logg.debug('... did not find original file', filename)
+    if not is_present: logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
@@ -505,12 +505,12 @@ def _read(
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
-        logg.info('... reading from cache file', path_cache)
+        logg.info(f'... reading from cache file {path_cache}')
         adata = read_h5ad(path_cache)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
-        logg.debug('reading', filename)
+        logg.debug(f'reading {filename}')
         if not cache and not suppress_cache_warning:
             logg.hint(
                 'This might be very slow. Consider passing `cache=True`, '

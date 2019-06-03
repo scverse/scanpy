@@ -138,15 +138,14 @@ def filter_cells(
 
     s = np.sum(~cell_subset)
     if s > 0:
-        logg.info('filtered out {} cells that have'.format(s), end=' ')
+        msg = f'filtered out {s} cells that have'
         if min_genes is not None or min_counts is not None:
-            logg.info('less than',
-                   str(min_genes) + ' genes expressed'
-                   if min_counts is None else str(min_counts) + ' counts', no_indent=True)
+            msg += 'less than '
+            msg += f'{min_genes} genes expressed' if min_counts is None else f'{min_counts} counts'
         if max_genes is not None or max_counts is not None:
-            logg.info('more than ',
-                   str(max_genes) + ' genes expressed'
-                   if max_counts is None else str(max_counts) + ' counts', no_indent=True)
+            msg += 'more than '
+            msg += f'{max_genes} genes expressed' if max_counts is None else f'{max_counts} counts'
+        logg.info(msg)
     return cell_subset, number_per_cell
 
 
@@ -235,15 +234,14 @@ def filter_genes(
 
     s = np.sum(~gene_subset)
     if s > 0:
-        logg.info('filtered out {} genes that are detected'.format(s), end=' ')
+        msg = f'filtered out {s} genes that are detected'
         if min_cells is not None or min_counts is not None:
-            logg.info('in less than',
-                   str(min_cells) + ' cells'
-                   if min_counts is None else str(min_counts) + ' counts', no_indent=True)
+            msg += 'in less than '
+            msg += f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'
         if max_cells is not None or max_counts is not None:
-            logg.info('in more than ',
-                   str(max_cells) + ' cells'
-                   if max_counts is None else str(max_counts) + ' counts', no_indent=True)
+            msg += 'in more than '
+            msg += f'{max_cells} cells' if max_counts is None else f'{max_counts} counts'
+        logg.info(msg)
     return gene_subset, number_per_gene
 
 
@@ -438,7 +436,8 @@ def pca(
             'Note that scikit-learn\'s randomized PCA might not be exactly '
             'reproducible across different computational platforms. For exact '
             'reproducibility, choose `svd_solver=\'arpack\'.` This will likely '
-            'become the Scanpy default in the future.')
+            'become the Scanpy default in the future.'
+        )
 
     data_is_AnnData = isinstance(data, AnnData)
     if data_is_AnnData:
@@ -446,13 +445,13 @@ def pca(
     else:
         adata = AnnData(data)
 
-    logg.info('computing PCA with n_comps =', n_comps, r=True)
+    logg.info(f'computing PCA with n_comps = {n_comps}')
 
     if adata.n_vars < n_comps:
         n_comps = adata.n_vars - 1
         logg.debug(
-            'reducing number of computed PCs to', n_comps,
-            'as dim of data is only', adata.n_vars,
+            f'reducing number of computed PCs to {n_comps} '
+            f'as dim of data is only {adata.n_vars}'
         )
 
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
@@ -521,7 +520,7 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.info('    finished', t=True)
+        logg.info('    finished', time=True)
         logg.debug(
             'and added\n'
             '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -531,7 +530,7 @@ def pca(
         )
         return adata if copy else None
     else:
-        logg.info('    finished', t=True)
+        logg.info('    finished', time=True)
         if return_info:
             return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
         else:
@@ -618,7 +617,7 @@ def normalize_per_cell(
     """
     if key_n_counts is None: key_n_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.debug('normalizing by total count per cell', r=True)
+        logg.info('normalizing by total count per cell')
         adata = data.copy() if copy else data
         if counts_per_cell is None:
             cell_subset, counts_per_cell = materialize_as_ndarray(
@@ -642,9 +641,11 @@ def normalize_per_cell(
             temp = normalize_per_cell(adata.layers[layer], after, counts, copy=True)
             adata.layers[layer] = temp
 
-        logg.debug('    finished', t=True, end=': ')
-        logg.debug('normalized adata.X and added', no_indent=True)
-        logg.debug(f'    {key_n_counts!r}, counts per cell before normalization (adata.obs)')
+        logg.info(
+            '    finished ({time_passed}): normalized adata.X and added'
+            f'    {key_n_counts!r}, counts per cell before normalization (adata.obs)',
+            time=True,
+        )
         return adata if copy else None
     # proceed with data matrix
     X = data.copy() if copy else data
@@ -728,10 +729,12 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
     -------
     Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    logg.info('regressing out', keys, r=True)
+    logg.info(f'regressing out {keys}')
     if issparse(adata.X):
-        logg.info('    sparse input is densified and may '
-                  'lead to high memory use')
+        logg.info(
+            '    sparse input is densified and may '
+            'lead to high memory use'
+        )
     adata = adata.copy() if copy else adata
     if isinstance(keys, str):
         keys = [keys]
@@ -798,7 +801,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
     adata.X = np.vstack(res).T.astype(adata.X.dtype)
-    logg.info('    finished', t=True)
+    logg.info('    finished', time=True)
     return adata if copy else None
 
 
@@ -872,7 +875,7 @@ def scale(data, zero_center=True, max_value=None, copy=False) -> Optional[AnnDat
     if not zero_center and max_value is not None:
         logg.debug('... scale_data: be careful when using `max_value` without `zero_center`')
     if max_value is not None:
-        logg.debug('... clipping at max_value', max_value)
+        logg.debug(f'... clipping at max_value {max_value}')
     if zero_center and issparse(X):
         logg.debug(
             '... scale_data: as `zero_center=True`, sparse input is '

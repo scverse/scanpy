@@ -265,9 +265,10 @@ def marker_gene_overlap(
     if inplace: 
         adata.uns[key_added] = marker_matching_df
 
-        logg.hint('added\n'
-                  '    \'{}\', marker overlap scores (adata.uns)'
-                  .format(key_added))
+        logg.hint(
+            'added\n'
+            f'    {key_added!r}, marker overlap scores (adata.uns)'
+        )
 
     else:
         return marker_matching_df

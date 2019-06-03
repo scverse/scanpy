@@ -96,7 +96,7 @@ def umap(
     if 'neighbors' not in adata.uns:
         raise ValueError(
             'Did not find \'neighbors/connectivities\'. Run `sc.pp.neighbors` first.')
-    logg.info('computing UMAP', r=True)
+    logg.info('computing UMAP')
     if ('params' not in adata.uns['neighbors']
         or adata.uns['neighbors']['params']['method'] != 'umap'):
         logg.warn('neighbors/connectivities have not been computed using umap')
@@ -137,7 +137,12 @@ def umap(
         neigh_params.get('metric_kwds', {}),
         verbose=max(0, verbosity-3))
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-              '    \'X_umap\', UMAP coordinates (adata.obsm)')
+    logg.info(
+        '    finished',
+        time=True,
+        deep=(
+            'added\n'
+            "    'X_umap', UMAP coordinates (adata.obsm)"
+        ),
+    )
     return adata if copy else None

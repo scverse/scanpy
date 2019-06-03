@@ -1188,8 +1188,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             show_gene_labels = True
         else:
             show_gene_labels = False
-            logg.warn('Gene labels are not shown when more than 50 genes are visualized. To show '
-                      'gene labels set `show_gene_labels=True`')
+            logg.warn(
+                'Gene labels are not shown when more than 50 genes are visualized. '
+                'To show gene labels set `show_gene_labels=True`'
+            )
     if categorical:
         obs_tidy = obs_tidy.sort_index()
 
@@ -2267,7 +2269,7 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
         translated_var_names = []
         for symbol in var_names:
             if symbol not in adata.var[gene_symbols].values:
-                logg.error("Gene symbol {!r} not found in given gene_symbols column: {!r}".format(symbol, gene_symbols))
+                logg.error(f"Gene symbol {symbol!r} not found in given gene_symbols column: {gene_symbols!r}")
                 return
             translated_var_names.append(adata.var[adata.var[gene_symbols] == symbol].index[0])
         symbols = var_names
@@ -2490,11 +2492,12 @@ def _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
             var_group_labels = labels_ordered
             var_group_positions = positions_ordered
         else:
-            logg.warn("Groups are not reordered because the `groupby` categories "
-                      "and the `var_group_labels` are different.\n"
-                      "categories: {}\nvar_group_labels: {}".format(
-                        _format_first_three_categories(categories),
-                        _format_first_three_categories(var_group_labels)))
+            logg.warn(
+                "Groups are not reordered because the `groupby` categories "
+                "and the `var_group_labels` are different.\n"
+                f"categories: {_format_first_three_categories(categories)}\n"
+                f"var_group_labels: {_format_first_three_categories(var_group_labels)}"
+            )
     else:
         var_names_idx_ordered = None
 
@@ -2521,9 +2524,11 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
-        logg.warn("dendrogram data not found (using key={}). Running `sc.tl.dendrogram` "
-                  "with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` "
-                  "independently.".format(dendrogram_key))
+        logg.warn(
+            f"dendrogram data not found (using key={dendrogram_key}). Running `sc.tl.dendrogram` "
+            "with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` "
+            "independently."
+        )
         dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if 'dendrogram_info' not in adata.uns[dendrogram_key]:
@@ -2770,8 +2775,10 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
 
     if isinstance(var_names, Mapping):
         if var_group_labels is not None or var_group_positions is not None:
-            logg.warn("`var_names` is a dictionary. This will reset the current value of "
-                      "`var_group_labels` and `var_group_positions`.")
+            logg.warn(
+                "`var_names` is a dictionary. This will reset the current value of "
+                "`var_group_labels` and `var_group_positions`."
+            )
         var_group_labels = []
         _var_names = []
         var_group_positions = []
