@@ -2,7 +2,7 @@
 """
 
 import time as time_module
-import datetime
+from datetime import timedelta, datetime
 from typing import Union
 
 from anndata import logging
@@ -95,7 +95,7 @@ def _msg(
             settings._previous_time = time_module.time()
         if time:
             elapsed = get_passed_time()
-            msg = msg + ('({})'.format(_sec_to_str(elapsed)),)
+            msg = msg + (f'({timedelta(seconds=elapsed)})',)
             _write_log(*msg, end=end)
 
 
@@ -120,20 +120,6 @@ def _write_log(*msg, end='\n'):
         raise TypeError(f'settings.logfile of unknown type {type(settings.logfile)}')
 
 
-def _sec_to_str(t):
-    """Format time in seconds.
-
-    Parameters
-    ----------
-    t : int
-        Time in seconds.
-    """
-    from functools import reduce
-    return "%d:%02d:%02d.%02d" % \
-        reduce(lambda ll, b: divmod(ll[0], b) + ll[1:],
-               [(t*100,), 100, 60, 60])
-
-
 print_memory_usage = logging.print_memory_usage
 
 
@@ -145,11 +131,6 @@ def get_passed_time():
     elapsed = now - settings._previous_time
     settings._previous_time = now
     return elapsed
-
-
-def print_version_and_date():
-    from . import __version__
-    _write_log(f'Running Scanpy {__version__}, on {get_date_string()}.')
 
 
 _DEPENDENCIES_NUMERICS = [
@@ -168,17 +149,16 @@ _DEPENDENCIES_NUMERICS = [
 _DEPENDENCIES_PLOTTING = ['matplotlib', 'seaborn']
 
 
-def _print_versions_dependencies(dependencies):
+def _versions_dependencies(dependencies):
     # this is not the same as the requirements!
     for mod in dependencies:
         mod_name = mod[0] if isinstance(mod, tuple) else mod
         mod_install = mod[1] if isinstance(mod, tuple) else mod
         try:
             imp = __import__(mod_name)
-            print('{}=={}'.format(mod_install, imp.__version__), end=' ')
+            yield mod_install, imp.__version__
         except (ImportError, AttributeError):
             pass
-    print()
 
 
 def print_versions():
@@ -186,8 +166,13 @@ def print_versions():
 
     Matplotlib and Seaborn are excluded from this.
     """
-    _print_versions_dependencies(['scanpy'] + _DEPENDENCIES_NUMERICS)
+    modules = ['scanpy'] + _DEPENDENCIES_NUMERICS
+    _write_log(' '.join(
+        f'{mod}=={ver}'
+        for mod, ver in _versions_dependencies(modules)
+    ))
 
 
-def get_date_string():
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+def print_version_and_date():
+    from . import __version__
+    _write_log(f'Running Scanpy {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.')
