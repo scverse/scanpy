@@ -7,7 +7,6 @@ import networkx as nx
 from natsort import natsorted
 
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 

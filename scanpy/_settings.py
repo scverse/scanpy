@@ -2,7 +2,22 @@ import inspect
 import sys
 from pathlib import Path
 from time import time
-from typing import Tuple, Union, Any, List, Iterable, TextIO
+from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
+
+from . import logging
+from .logging import _set_log_level, _set_log_file, RootLogger
+
+_VERBOSITY_TO_LOGLEVEL = {
+    'error': 'ERROR',
+    'warn': 'WARNING',
+    'info': 'INFO',
+    'hint': 'HINT',
+    'debug': 'DEBUG',
+}
+verbosity_names = list(_VERBOSITY_TO_LOGLEVEL.keys())
+# Python 3.7 ensures iteration order
+for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
+    _VERBOSITY_TO_LOGLEVEL[v] = level
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
@@ -43,7 +58,11 @@ class ScanpyConfig:
         _vector_friendly: bool = False,
         _low_resolution_warning: bool = True
     ):
+        # logging
+        self._root_logger = RootLogger('INFO')  # level will be replaced
+        self.logfile = logfile
         self.verbosity = verbosity
+        # rest
         self.plot_suffix = plot_suffix
         self.file_format_data = file_format_data
         self.file_format_figs = file_format_figs
@@ -55,7 +74,6 @@ class ScanpyConfig:
         self.figdir = figdir
         self.max_memory = max_memory
         self.n_jobs = n_jobs
-        self.logfile = logfile
         self.categories_to_ignore = categories_to_ignore
         self._frameon = _frameon
         """bool: See set_figure_params."""
@@ -76,6 +94,9 @@ class ScanpyConfig:
         self._previous_memory_usage = -1
         """Stores the previous memory usage."""
 
+        for fn in verbosity_names:
+            setattr(logging, fn, getattr(self._root_logger, fn))
+
     @property
     def verbosity(self) -> int:
         """
@@ -93,7 +114,10 @@ class ScanpyConfig:
 
     @verbosity.setter
     def verbosity(self, verbosity):
-        verbosity_str_options = ["error", "warn", "info", "hint"]
+        verbosity_str_options = [
+            v for v in _VERBOSITY_TO_LOGLEVEL
+            if isinstance(v, str)
+        ]
         if isinstance(verbosity, int):
             self._verbosity = verbosity
         elif isinstance(verbosity, str):
@@ -107,6 +131,8 @@ class ScanpyConfig:
                 self._verbosity = verbosity_str_options.index(verbosity)
         else:
             _type_check(verbosity, "verbosity", (str, int))
+        from .logging import _set_log_level
+        _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
 
     @property
     def plot_suffix(self) -> str:
@@ -248,8 +274,22 @@ class ScanpyConfig:
         self._n_jobs = n_jobs
 
     @property
-    def logfile(self) -> Union[Path, TextIO]:
-        """:class:`~pathlib.Path` of logfile or writable object.
+    def logpath(self) -> Optional[Path]:
+        """The file path `logfile` was set to."""
+        return self._logpath
+
+    @logpath.setter
+    def logpath(self, logpath: Union[str, Path, None]):
+        _type_check(logpath, "logfile", (str, Path))
+        self._logpath = Path(logpath)
+        # set via “file object” branch of logfile.setter
+        self.logfile = self._logpath.open('a')
+
+    @property
+    def logfile(self) -> TextIO:
+        """The open file to write logs to.
+
+        Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
         and to :obj:`sys.stderr` otherwise.
         
@@ -259,9 +299,15 @@ class ScanpyConfig:
 
     @logfile.setter
     def logfile(self, logfile: Union[str, Path, TextIO, None]):
-        _type_check(logfile, "logfile", (str, Path, type(None)))
-        stream = sys.stdout if self._is_run_from_ipython() else sys.stderr
-        self._logfile = Path(logfile) if logfile else stream
+        if not hasattr(logfile, 'write') and logfile:
+            self.logpath = logfile
+        else:  # file object
+            if not logfile:  # None or ''
+                logfile = sys.stdout if self._is_run_from_ipython() else sys.stderr
+            self._logfile = logfile
+            self._logpath = None
+            from .logging import _set_log_file
+            _set_log_file(self)
 
     @property
     def categories_to_ignore(self) -> List[str]:

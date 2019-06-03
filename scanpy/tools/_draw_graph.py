@@ -2,7 +2,6 @@ import numpy as np
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ._utils import get_init_pos_from_paga
 
 

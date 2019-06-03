@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.sparse import issparse
 
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def score_genes(

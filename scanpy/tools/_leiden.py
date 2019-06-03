@@ -8,7 +8,6 @@ from scipy import sparse
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 

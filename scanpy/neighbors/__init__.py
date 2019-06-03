@@ -11,7 +11,6 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .. import utils
 from ..utils import doc_params
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components

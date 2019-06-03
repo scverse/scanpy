@@ -9,7 +9,6 @@ from scipy.sparse import issparse
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..preprocessing._simple import _get_mean_var
 
 

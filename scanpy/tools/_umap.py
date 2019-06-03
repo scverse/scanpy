@@ -1,10 +1,6 @@
 from ._utils import get_init_pos_from_paga, choose_representation
 from .._settings import settings
 from .. import logging as logg
-from ..logging import (
-    _settings_verbosity_greater_or_equal_than,
-    _VERBOSITY_LEVELS_FROM_STRINGS,
-)
 
 def umap(
     adata,
