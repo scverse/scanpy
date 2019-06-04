@@ -449,8 +449,10 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
             n_dims = 3
 
     if components == 'all':
-        components = ['{},{}'.format(*((i, i+1) if i % 2 == 1 else (i+1, i)))
-            for i in range(1, adata.obsm['X_{}'.format(basis)].shape[1])]
+        from itertools import combinations
+        r_value = 3 if projection == '3d' else 2
+        _components_list = np.arange(adata.obsm['X_{}'.format(basis)].shape[1]) + 1
+        components = [",".join(map(str, x)) for x in combinations(_components_list, r=r_value)]
 
     components_list = []
     offset = 0
