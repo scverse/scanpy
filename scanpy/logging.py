@@ -74,12 +74,14 @@ class LogFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord):
         format_orig = self._style._fmt
-        if record.levelno == logging.INFO:
+        if record.levelno == INFO:
             self._style._fmt = '{asctime} | {message}'
             if '{time_passed}' not in record.msg and record.time_passed:
                 self._style._fmt += ' ({time_passed})'
-        if record.levelno == logging.DEBUG:
-            self._style._fmt = '{message}'
+        elif record.levelno == HINT:
+            self._style._fmt = '--> {message}'
+        elif record.levelno == DEBUG:
+            self._style._fmt = '    {message}'
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
         return result

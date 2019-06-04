@@ -117,7 +117,9 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
         if isinstance(obj, Callable) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
-                yield from (m for m in vars(obj).values() if isinstance(m, Callable))
+                for m in vars(obj).values():
+                    if isinstance(m, Callable) and getattr(m, '__module__', None) != 'builtins':
+                        yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
             encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)

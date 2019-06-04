@@ -1,5 +1,6 @@
 import inspect
 import sys
+from enum import IntEnum
 from pathlib import Path
 from time import time
 from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
@@ -18,6 +19,14 @@ verbosity_names = list(_VERBOSITY_TO_LOGLEVEL.keys())
 # Python 3.7 ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
+
+
+class Verbosity(IntEnum):
+    error = 0
+    warn = 1
+    info = 2
+    hint = 3
+    debug = 4
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
@@ -98,7 +107,7 @@ class ScanpyConfig:
             setattr(logging, fn, getattr(self._root_logger, fn))
 
     @property
-    def verbosity(self) -> int:
+    def verbosity(self) -> Verbosity:
         """
         Set global verbosity level.
 
@@ -106,20 +115,20 @@ class ScanpyConfig:
         Level 1: also show 'warn' messages.
         Level 2: also show 'info' messages.
         Level 3: also show 'hint' messages.
-        Level 4: also show very detailed progress.
-        Level 5: also show even more detailed progress.
-        etc.
+        Level 4: also show very detailed progress for 'debug'ging.
         """
         return self._verbosity
 
     @verbosity.setter
-    def verbosity(self, verbosity):
+    def verbosity(self, verbosity: Union[Verbosity, int, str]):
         verbosity_str_options = [
             v for v in _VERBOSITY_TO_LOGLEVEL
             if isinstance(v, str)
         ]
-        if isinstance(verbosity, int):
+        if isinstance(verbosity, Verbosity):
             self._verbosity = verbosity
+        elif isinstance(verbosity, int):
+            self._verbosity = Verbosity(verbosity)
         elif isinstance(verbosity, str):
             verbosity = verbosity.lower()
             if verbosity not in verbosity_str_options:
@@ -128,7 +137,7 @@ class ScanpyConfig:
                     f"Accepted string values are: {verbosity_str_options}"
                 )
             else:
-                self._verbosity = verbosity_str_options.index(verbosity)
+                self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
         from .logging import _set_log_level
@@ -281,9 +290,9 @@ class ScanpyConfig:
     @logpath.setter
     def logpath(self, logpath: Union[str, Path, None]):
         _type_check(logpath, "logfile", (str, Path))
-        self._logpath = Path(logpath)
         # set via “file object” branch of logfile.setter
-        self.logfile = self._logpath.open('a')
+        self.logfile = Path(logpath).open('a')
+        self._logpath = Path(logpath)
 
     @property
     def logfile(self) -> TextIO:
@@ -292,7 +301,7 @@ class ScanpyConfig:
         Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
         and to :obj:`sys.stderr` otherwise.
-        
+
         For backwards compatibility, setting it to `''` behaves like setting it to `None`.
         """
         return self._logfile
