@@ -1,7 +1,7 @@
-import logging
 import sys
+import time
 from io import StringIO
-from typing import Generator, List, Tuple
+from itertools import count
 
 import pytest
 
@@ -16,6 +16,17 @@ def logging_state():
     s.verbosity = verbosity_orig
 
 
+class Recorder:
+    def __init__(self):
+        self.records = []
+
+    def write(self, s: str):
+        self.records.append(s)
+
+    def pop(self):
+        return self.records.pop()
+
+
 def test_defaults():
     # This is only true when not in IPython,
     # But I hope we’ll never run tests from there
@@ -24,26 +35,19 @@ def test_defaults():
 
 
 def test_formats(logging_state):
-    io = StringIO()
-
-    def pop():
-        v = io.getvalue()
-        io.truncate(0)
-        io.seek(0)
-        return v
-
     s.verbosity = Verbosity.debug
-    s.logfile = io
+    rec = Recorder()
+    s.logfile = rec
     l.error('0')
-    assert pop() == 'ERROR: 0\n'
+    assert rec.pop() == 'ERROR: 0\n'
     l.warning('1')
-    assert pop() == 'WARNING: 1\n'
+    assert rec.pop() == 'WARNING: 1\n'
     l.info('2')
-    assert pop().endswith(' | 2\n')
+    assert rec.pop().endswith(' | 2\n')
     l.hint('3')
-    assert pop() == '--> 3\n'
+    assert rec.pop() == '--> 3\n'
     l.debug('4')
-    assert pop() == '    4\n'
+    assert rec.pop() == '    4\n'
 
 
 def test_logfile(tmp_path, logging_state):
@@ -63,3 +67,29 @@ def test_logfile(tmp_path, logging_state):
     l.hint('test2')
     l.debug('invisible')
     assert s.logpath.read_text() == '--> test2\n'
+
+
+def test_timing(monkeypatch, logging_state):
+    counter = 0
+
+    def inc():
+        nonlocal counter
+        counter += 1
+        return counter
+
+    monkeypatch.setattr(time, 'time', inc)
+    s.verbosity = Verbosity.debug
+    rec = Recorder()
+    s.logfile = rec
+
+    # LogRecord calls time.time() internally,
+    # And we call it twice per info(),
+    # so it increases either by 1 or 3:
+    l.hint('1')
+    assert counter == 1 and rec.pop() == '--> 1\n'
+    l.info('2')
+    assert counter == 4 and rec.pop().endswith(' | 2\n')
+    l.hint('3')
+    assert counter == 5 and rec.pop() == '--> 3\n'
+    l.info('4', time=True)
+    assert counter == 8 and rec.pop().endswith(' | 4 (0:00:02)\n')

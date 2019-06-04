@@ -3,7 +3,7 @@
 import logging
 import time as time_
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import anndata.logging
 
@@ -36,8 +36,9 @@ class RootLogger(logging.RootLogger):
         current_time = time_.time()
         time_passed = None
         if time:
-            time_passed = time_.strftime('%H:%M:%S', time_.gmtime(current_time - self.last_time))
+            time_passed = timedelta(seconds=current_time - self.last_time)
         self.log(INFO, msg, time_passed=time_passed, deep=deep, extra=extra)
+        # Always reset on info calls. TODO: Maybe change to a kwarg?
         self.last_time = time_.time()
 
     def hint(self, msg, *, deep=None, extra=None):
