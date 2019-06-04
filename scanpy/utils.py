@@ -45,7 +45,7 @@ def check_versions():
         from . import __version__
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
-        logg.warn(
+        logg.warning(
             f'Scanpy {__version__} needs umap '
             f'version >=0.3.0, not {umap.__version__}.'
         )
@@ -387,7 +387,7 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     except:
         pass
     if g.vcount() != adjacency.shape[0]:
-        logg.warn(
+        logg.warning(
             f'The constructed graph has only {g.vcount()} nodes. '
             'Your adjacency matrix contained redundant nodes.'
         )

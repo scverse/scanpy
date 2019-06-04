@@ -94,7 +94,7 @@ def draw_graph(
         try:
             from fa2 import ForceAtlas2
         except ImportError:
-            logg.warn(
+            logg.warning(
                 'Package \'fa2\' is not installed, falling back to layout \'fr\'.'
                 'To use the faster and better ForceAtlas2 layout, '
                 'install package \'fa2\' (`pip install fa2`).'

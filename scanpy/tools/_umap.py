@@ -99,7 +99,7 @@ def umap(
     logg.info('computing UMAP')
     if ('params' not in adata.uns['neighbors']
         or adata.uns['neighbors']['params']['method'] != 'umap'):
-        logg.warn('neighbors/connectivities have not been computed using umap')
+        logg.warning('neighbors/connectivities have not been computed using umap')
     from umap.umap_ import find_ab_params, simplicial_set_embedding
     if a is None or b is None:
         a, b = find_ab_params(spread, min_dist)

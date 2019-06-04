@@ -182,7 +182,7 @@ def plot_scatter(
             try:
                 ax.set_title(title[count])
             except IndexError:
-                logg.warn(
+                logg.warning(
                     "The title list is shorter than the number of panels. "
                     "Using 'color' value instead for some plots."
                 )
@@ -445,7 +445,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         # check if the data has a third dimension
         if adata.obsm['X_' + basis].shape[1] == 2:
             if settings._low_resolution_warning:
-                logg.warn(
+                logg.warning(
                     'Selected projections is "3d" but only two dimensions '
                     'are available. Only these two dimensions will be plotted'
                 )
@@ -594,7 +594,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
         # it doesnt matter if the list is shorter than the categories length:
         if isinstance(palette, abc.Sequence):
             if len(palette) < len(categories):
-                logg.warn(
+                logg.warning(
                     "Length of palette colors is smaller than the number of "
                     f"categories (palette length: {len(palette)}, "
                     f"categories length: {len(categories)}. "
@@ -704,7 +704,7 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                             if color in utils.additional_colors:
                                 color = utils.additional_colors[color]
                             else:
-                                logg.warn(
+                                logg.warning(
                                     f"The following color value found in adata.uns['{value_to_plot}_colors'] "
                                     f"is not valid: '{color}'. Default colors are used."
                                 )

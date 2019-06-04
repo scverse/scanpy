@@ -143,7 +143,7 @@ def print_version_and_date():
 
 # will be replaced in settings
 def error(msg, *, deep=None): pass
-def warn(msg, *, deep=None): pass
+def warning(msg, *, deep=None): pass
 def info(msg, *, deep=None, time=False): pass
 def hint(msg, *, deep=None): pass
 def debug(msg, *, deep=None): pass

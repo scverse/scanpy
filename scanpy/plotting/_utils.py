@@ -219,7 +219,7 @@ def savefig(writekey, dpi=None, ext=None):
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
         if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 150:
             if settings._low_resolution_warning:
-                logg.warn(
+                logg.warning(
                     'You are using a low resolution (dpi<150) for saving figures.\n'
                     'Consider running `set_figure_params(dpi_save=...)`, which will '
                     "adjust `matplotlib.rcParams['savefig.dpi']`"
@@ -231,7 +231,7 @@ def savefig(writekey, dpi=None, ext=None):
     if ext is None: ext = settings.file_format_figs
     filename = settings.figdir / f'{writekey}{settings.plot_suffix}.{ext}'
     # output the following msg at warning level; it's really important for the user
-    logg.warn(f'saving figure to file {filename}')
+    logg.warning(f'saving figure to file {filename}')
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 

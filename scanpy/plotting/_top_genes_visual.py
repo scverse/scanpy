@@ -279,7 +279,7 @@ def _zero_inflation_estimate(adata, mask, model='rough'):
     # Method ZINB will be implemented soon
     if model not in {'rough', 'zinb'}:
         model = 'rough'
-        logg.warn('Model should be either rough or zinb (zero-inflated negative binomial)')
+        logg.warning('Model should be either rough or zinb (zero-inflated negative binomial)')
     if adata.X.shape is int:
         X = adata.X[mask]
     else:
@@ -302,7 +302,7 @@ def _tail_mean_estimate(adata, mask, model='rough'):
     # Method ZINB will be implemented soon
     if model not in {'rough', 'zinb'}:
         model = 'rough'
-        logg.warn('Model should be either rough or zinb (zero-inflated negative binomial)')
+        logg.warning('Model should be either rough or zinb (zero-inflated negative binomial)')
     X = adata.X[mask, :]
     n_cells = X.shape[0]
     n_genes = X.shape[1]
@@ -333,7 +333,7 @@ def _tail_var_estimate(adata, mask, model='rough'):
     # Method ZINB will be implemented soon
     if model not in {'rough', 'zinb'}:
         model = 'rough'
-        logg.warn('Model should be either rough or zinb (zero-inflated negative binomial)')
+        logg.warning('Model should be either rough or zinb (zero-inflated negative binomial)')
     X = adata.X[mask, :]
     n_cells = X.shape[0]
     n_genes = X.shape[1]

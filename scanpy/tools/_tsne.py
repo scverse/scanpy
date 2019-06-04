@@ -94,7 +94,7 @@ def tsne(
             X_tsne = tsne.fit_transform(X.astype('float64'))
             multicore_failed = False
         except ImportError:
-            logg.warn('Consider installing the package MulticoreTSNE '
+            logg.warning('Consider installing the package MulticoreTSNE '
                       '(https://github.com/DmitryUlyanov/Multicore-TSNE). '
                       'Even for n_jobs=1 this speeds up the computation considerably '
                       'and might yield better converged results.')

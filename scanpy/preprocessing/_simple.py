@@ -108,7 +108,7 @@ def filter_cells(
     3
     """
     if copy:
-       logg.warn('`copy` is deprecated, use `inplace` instead.')
+       logg.warning('`copy` is deprecated, use `inplace` instead.')
     n_given_options = sum(
         option is not None for option in
         [min_genes, min_counts, max_genes, max_counts])
@@ -196,7 +196,7 @@ def filter_genes(
         `n_counts` or `n_cells` per gene.
     """
     if copy:
-       logg.warn('`copy` is deprecated, use `inplace` instead.')
+       logg.warning('`copy` is deprecated, use `inplace` instead.')
     n_given_options = sum(
         option is not None for option in
         [min_cells, min_counts, max_cells, max_counts])
@@ -825,7 +825,7 @@ def _regress_out_chunk(data):
             result = sm.GLM(data_chunk[:, col_index], regres, family=sm.families.Gaussian()).fit()
             new_column = result.resid_response
         except PerfectSeparationError:  # this emulates R's behavior
-            logg.warn('Encountered PerfectSeparationError, setting to 0 as in R.')
+            logg.warning('Encountered PerfectSeparationError, setting to 0 as in R.')
             new_column = np.zeros(data_chunk.shape[0])
 
         responses_chunk_list.append(new_column)

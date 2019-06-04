@@ -107,7 +107,7 @@ def louvain(
         )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
-            logg.warn('`resolution` parameter has no effect for flavor "igraph"')
+            logg.warning('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.debug('    using the undirected graph')

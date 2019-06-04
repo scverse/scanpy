@@ -69,7 +69,7 @@ def score_genes(
         if gene in var_names:
             gene_list_in_var.append(gene)
         else:
-            logg.warn(f'gene: {gene} is not in adata.var_names and will be ignored')
+            logg.warning(f'gene: {gene} is not in adata.var_names and will be ignored')
     gene_list = set(gene_list_in_var[:])
 
     if not gene_pool:

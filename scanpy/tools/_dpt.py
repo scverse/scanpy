@@ -103,14 +103,14 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         raise ValueError(
             'You need to run `pp.neighbors` and `tl.diffmap` first.')
     if 'iroot' not in adata.uns and 'xroot' not in adata.var:
-        logg.warn(
+        logg.warning(
             'No root cell found. To compute pseudotime, pass the index or '
             'expression vector of a root cell, one of:\n'
             '    adata.uns[\'iroot\'] = root_cell_index\n'
             '    adata.var[\'xroot\'] = adata[root_cell_name, :].X'
         )
     if 'X_diffmap' not in adata.obsm.keys():
-        logg.warn(
+        logg.warning(
             'Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
             'Falling back to `tl.diffmap` with default parameters.'
         )
@@ -644,7 +644,7 @@ class DPT(Neighbors):
         ssegs_tips = []
         for inewseg, newseg in enumerate(ssegs):
             if len(np.flatnonzero(newseg)) <= 1:
-                logg.warn(f'detected group with only {np.flatnonzero(newseg)} cells')
+                logg.warning(f'detected group with only {np.flatnonzero(newseg)} cells')
             secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
         undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
@@ -795,7 +795,7 @@ class DPT(Neighbors):
         if imax > 0.95 * len(idcs) and self.allow_kendall_tau_shift:
             # if "everything" is correlated (very large value of imax), a more
             # conservative choice amounts to reducing this
-            logg.warn(
+            logg.warning(
                 'shifting branching point away from maximal kendall-tau '
                 'correlation (suppress this with `allow_kendall_tau_shift=False`)'
             )

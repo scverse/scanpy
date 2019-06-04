@@ -32,7 +32,7 @@ def choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
                 X = adata.obsm['X_pca'][:, :n_pcs]
                 logg.info(f'    using \'X_pca\' with n_pcs = {X.shape[1]}')
             else:
-                logg.warn(
+                logg.warning(
                     f'You’re trying to run this on {adata.n_vars} dimensions of `.X`, '
                     'if you really want this, set `use_rep=\'X\'`.\n         '
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'

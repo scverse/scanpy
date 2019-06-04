@@ -139,7 +139,7 @@ def paul15() -> AnnData:
     -------
     Annotated data matrix.
     """
-    logg.warn(
+    logg.warning(
         'In Scanpy 0.*, this returned logarithmized data. '
         'Now it returns non-logarithmized data.'
     )

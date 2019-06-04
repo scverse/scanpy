@@ -639,13 +639,13 @@ class Neighbors:
         logg.info('Computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
-            logg.warn(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
+            logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
         if method not in {'umap', 'gauss'}:
             raise ValueError('`method` needs to be \'umap\' or \'gauss\'.')
         if self._adata.shape[0] >= 10000 and not knn:
-            logg.warn('Using high n_obs without `knn=True` takes a lot of memory...')
+            logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
         self.knn = knn
         X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
@@ -847,7 +847,7 @@ class Neighbors:
         logg.info('    eigenvalues of transition matrix\n'
                   '    {}'.format(str(evals).replace('\n', '\n    ')))
         if self._number_connected_components > len(evals)/2:
-            logg.warn('Transition matrix has many disconnected components!')
+            logg.warning('Transition matrix has many disconnected components!')
         self._eigen_values = evals
         self._eigen_basis = evecs
 
@@ -856,7 +856,7 @@ class Neighbors:
         # set iroot directly
         if 'iroot' in self._adata.uns:
             if self._adata.uns['iroot'] >= self._adata.n_obs:
-                logg.warn(
+                logg.warning(
                     f'Root cell index {self._adata.uns["iroot"]} does not '
                     f'exist for {self._adata.n_obs} samples. It’s ignored.'
                 )
@@ -933,5 +933,5 @@ class Neighbors:
                 if np.sqrt(dsqroot) < 1e-10: break
         logg.debug(f'setting root index to {iroot}')
         if self.iroot is not None and iroot != self.iroot:
-            logg.warn(f'Changing index of iroot from {self.iroot} to {iroot}.')
+            logg.warning(f'Changing index of iroot from {self.iroot} to {iroot}.')
         self.iroot = iroot

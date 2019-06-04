@@ -149,7 +149,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not np.all(cell_subset):
-        logg.warn('Some cells have total count of genes equal to zero')
+        logg.warning('Some cells have total count of genes equal to zero')
 
     if layer_norm == 'after':
         after = target_sum

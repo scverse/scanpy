@@ -138,7 +138,7 @@ def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, ad
         try:
             from fa2 import ForceAtlas2
         except:
-            logg.warn(
+            logg.warning(
                 "Package 'fa2' is not installed, falling back to layout 'fr'."
                 'To use the faster and better ForceAtlas2 layout, '
                 "install package 'fa2' (`pip install fa2`)."
@@ -385,7 +385,7 @@ def paga(
     """
     if groups is not None:  # backwards compat
         labels = groups
-        logg.warn('`groups` is deprecated in `pl.paga`: use `labels` instead')
+        logg.warning('`groups` is deprecated in `pl.paga`: use `labels` instead')
     if colors is None:
         colors = color
     # colors is a list that contains no lists
@@ -711,7 +711,7 @@ def _paga_graph(
                              'y': 1000*pos[count][1],
                              'z': 0}}
         filename = settings.writedir / 'paga_graph.gexf'
-        logg.warn(f'exporting to {filename}')
+        logg.warning(f'exporting to {filename}')
         settings.writedir.mkdir(parents=True, exist_ok=True)
         nx.write_gexf(nx_g_solid, settings.writedir / 'paga_graph.gexf')
 

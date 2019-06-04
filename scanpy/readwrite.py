@@ -753,7 +753,7 @@ def is_valid_filename(filename: Path, return_ext=False):
     ext = filename.suffixes
 
     if len(ext) > 2:
-        logg.warn(
+        logg.warning(
             f'Your filename has more than two extensions: {ext}.\n'
             f'Only considering the two last: {ext[-2:]}.'
         )

@@ -10,7 +10,7 @@ from .logging import _set_log_level, _set_log_file, RootLogger
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
-    'warn': 'WARNING',
+    'warning': 'WARNING',
     'info': 'INFO',
     'hint': 'HINT',
     'debug': 'DEBUG',
@@ -49,7 +49,7 @@ class ScanpyConfig:
     def __init__(
         self,
         *,
-        verbosity: str = "warn",
+        verbosity: str = "warning",
         plot_suffix: str = "",
         file_format_data: str = "h5ad",
         file_format_figs: str = "pdf",
@@ -112,7 +112,7 @@ class ScanpyConfig:
         Set global verbosity level.
 
         Level 0: only show 'error' messages.
-        Level 1: also show 'warn' messages.
+        Level 1: also show 'warning' messages.
         Level 2: also show 'info' messages.
         Level 3: also show 'hint' messages.
         Level 4: also show very detailed progress for 'debug'ging.

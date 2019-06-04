@@ -482,7 +482,7 @@ def _scatter_obs(
             utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir / 'pos.csv'
-                logg.warn(f'exporting label positions to {filename}')
+                logg.warning(f'exporting label positions to {filename}')
                 settings.writedir.mkdir(parents=True, exist_ok=True)
                 np.savetxt(filename, all_pos, delimiter=',')
         elif legend_loc == 'right margin':
@@ -851,7 +851,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     elif standard_scale is None:
         pass
     else:
-        logg.warn('Unknown type for standard_scale, ignored')
+        logg.warning('Unknown type for standard_scale, ignored')
 
     if 'color' in kwds:
         row_palette = kwds['color']
@@ -1148,7 +1148,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     elif standard_scale is None:
         pass
     else:
-        logg.warn('Unknown type for standard_scale, ignored')
+        logg.warning('Unknown type for standard_scale, ignored')
 
     if groupby is None or len(categories) <= 1:
         categorical = False
@@ -1188,7 +1188,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             show_gene_labels = True
         else:
             show_gene_labels = False
-            logg.warn(
+            logg.warning(
                 'Gene labels are not shown when more than 50 genes are visualized. '
                 'To show gene labels set `show_gene_labels=True`'
             )
@@ -1455,7 +1455,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     elif standard_scale is None:
         pass
     else:
-        logg.warn('Unknown type for standard_scale, ignored')
+        logg.warning('Unknown type for standard_scale, ignored')
 
     dendro_width = 0.8 if dendrogram else 0
     colorbar_width = 0.2
@@ -1723,7 +1723,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     elif standard_scale is None:
         pass
     else:
-        logg.warn('Unknown type for standard_scale, ignored')
+        logg.warning('Unknown type for standard_scale, ignored')
 
     if dendrogram:
         dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
@@ -2492,7 +2492,7 @@ def _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
             var_group_labels = labels_ordered
             var_group_positions = positions_ordered
         else:
-            logg.warn(
+            logg.warning(
                 "Groups are not reordered because the `groupby` categories "
                 "and the `var_group_labels` are different.\n"
                 f"categories: {_format_first_three_categories(categories)}\n"
@@ -2524,7 +2524,7 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
-        logg.warn(
+        logg.warning(
             f"dendrogram data not found (using key={dendrogram_key}). Running `sc.tl.dendrogram` "
             "with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` "
             "independently."
@@ -2601,7 +2601,7 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
     orig_ticks = np.arange(5, len(leaves) * 10 + 5, 10).astype(float)
     # check that ticks has the same length as orig_ticks
     if ticks is not None and len(orig_ticks) != len(ticks):
-        logg.warn("ticks argument does not have the same size as orig_ticks. The argument will be ignored")
+        logg.warning("ticks argument does not have the same size as orig_ticks. The argument will be ignored")
         ticks = None
 
     for xs, ys in zip(icoord, dcoord):
@@ -2775,7 +2775,7 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
 
     if isinstance(var_names, Mapping):
         if var_group_labels is not None or var_group_positions is not None:
-            logg.warn(
+            logg.warning(
                 "`var_names` is a dictionary. This will reset the current value of "
                 "`var_group_labels` and `var_group_positions`."
             )
