@@ -57,7 +57,7 @@ def score_genes(
     --------
     See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
-    logg.info(f'computing score {score_name!r}')
+    start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
 
     if random_state:
@@ -130,7 +130,7 @@ def score_genes(
 
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             f'    {score_name!r}, score of gene set (adata.obs)'

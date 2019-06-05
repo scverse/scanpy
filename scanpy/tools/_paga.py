@@ -85,7 +85,7 @@ def paga(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    logg.info('running PAGA')
+    start = logg.info('running PAGA')
     paga = PAGA(adata, groups, model=model)
     # only add if not present
     if 'paga' not in adata.uns:
@@ -103,7 +103,7 @@ def paga(
     adata.uns['paga']['groups'] = groups
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep='added\n' + (
             "    'paga/transitions_confidence', connectivities adjacency (adata.uns)"
             # "    'paga/transitions_ttest', t-test on transitions (adata.uns)"

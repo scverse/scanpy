@@ -139,7 +139,7 @@ def normalize_total(
             ' The following highly-expressed genes are not considered during '
             f'normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}'
         )
-    logg.info(msg)
+    start = logg.info(msg)
 
     # counts per cell for subset, if max_fraction!=1
     X = adata.X if gene_subset is None else adata[:, gene_subset].X
@@ -189,7 +189,7 @@ def normalize_total(
     logg.info(
         '    finished ({time_passed}):'
         'normalized adata.X',
-        time=True,
+        time=start,
     )
     if key_added is not None:
         logg.debug(f'and added {key_added!r}, counts per cell before normalization (adata.obs)')

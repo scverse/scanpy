@@ -1,7 +1,6 @@
 import sys
-import time
+from datetime import datetime
 from io import StringIO
-from itertools import count
 
 import pytest
 
@@ -72,24 +71,23 @@ def test_logfile(tmp_path, logging_state):
 def test_timing(monkeypatch, logging_state):
     counter = 0
 
-    def inc():
-        nonlocal counter
-        counter += 1
-        return counter
+    class IncTime:
+        @staticmethod
+        def now(tz):
+            nonlocal counter
+            counter += 1
+            return datetime(2000, 1, 1, second=counter, tzinfo=tz)
 
-    monkeypatch.setattr(time, 'time', inc)
+    monkeypatch.setattr(l, 'datetime', IncTime)
     s.verbosity = Verbosity.debug
     rec = Recorder()
     s.logfile = rec
 
-    # LogRecord calls time.time() internally,
-    # And we call it twice per info(),
-    # so it increases either by 1 or 3:
     l.hint('1')
     assert counter == 1 and rec.pop() == '--> 1\n'
-    l.info('2')
-    assert counter == 4 and rec.pop().endswith(' | 2\n')
+    start = l.info('2')
+    assert counter == 2 and rec.pop().endswith(' | 2\n')
     l.hint('3')
-    assert counter == 5 and rec.pop() == '--> 3\n'
-    l.info('4', time=True)
-    assert counter == 8 and rec.pop().endswith(' | 4 (0:00:02)\n')
+    assert counter == 3 and rec.pop() == '--> 3\n'
+    l.info('4', time=start)
+    assert counter == 4 and rec.pop().endswith(' | 4 (0:00:02)\n')

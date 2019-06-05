@@ -70,15 +70,14 @@ def tsne(
     **X_tsne** : `np.ndarray` (`adata.obs`, dtype `float`)
         tSNE coordinates of data.
     """
-    logg.info('computing tSNE')
+    start = logg.info('computing tSNE')
     adata = adata.copy() if copy else adata
     X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
-    verbosity = _VERBOSITY_LEVELS_FROM_STRINGS.get(settings.verbosity, settings.verbosity)
     params_sklearn = dict(
         perplexity=perplexity,
         random_state=random_state,
-        verbose=max(0, verbosity-3),
+        verbose=settings.verbosity > 3,
         early_exaggeration=early_exaggeration,
         learning_rate=learning_rate,
     )
@@ -109,7 +108,7 @@ def tsne(
     adata.obsm['X_tsne'] = X_tsne  # annotate samples with tSNE coordinates
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             "    'X_tsne', tSNE coordinates (adata.obsm)"

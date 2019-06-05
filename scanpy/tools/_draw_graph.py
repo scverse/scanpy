@@ -70,7 +70,7 @@ def draw_graph(
     **X_draw_graph_layout** : `adata.obsm`
         Coordinates of graph layout. E.g. for layout='fa' (the default), the field is called 'X_draw_graph_fa'
     """
-    logg.info(f'drawing single-cell graph using layout {layout!r}')
+    start = logg.info(f'drawing single-cell graph using layout {layout!r}')
     avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
@@ -144,7 +144,7 @@ def draw_graph(
     adata.obsm[key_added] = positions
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             f'    {key_added!r}, graph_drawing coordinates (adata.obsm)'

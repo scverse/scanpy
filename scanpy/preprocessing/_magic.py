@@ -102,7 +102,7 @@ def magic(adata,
             'Please install magic package via `pip install --user '
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`')
 
-    logg.info('computing PHATE')
+    start = logg.info('computing PHATE')
     needs_copy = not (name_list is None or
                       (isinstance(name_list, str) and
                        name_list in ["all_genes", "pca_only"]))
@@ -128,7 +128,7 @@ def magic(adata,
                                             genes=name_list)
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
             if name_list == "pca_only" else ''

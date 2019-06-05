@@ -109,7 +109,7 @@ def phate(
     (2000, 2)
     >>> sc.pl.phate(adata)
     """
-    logg.info('computing PHATE')
+    start = logg.info('computing PHATE')
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
     if isinstance(settings.verbosity, (str, int)):
@@ -141,7 +141,7 @@ def phate(
     adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             "    'X_phate', PHATE coordinates (adata.obsm)"

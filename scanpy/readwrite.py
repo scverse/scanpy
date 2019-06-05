@@ -137,11 +137,11 @@ def read_10x_h5(
     `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
     The feature types are stored in `adata.var['feature_types']`
     """
-    logg.info(f'reading {filename}')
+    start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
-        adata = _read_v3_10x_h5(filename)
+        adata = _read_v3_10x_h5(filename, start=start)
         if genome:
             if genome not in adata.var['genome'].values:
                 raise ValueError(
@@ -153,10 +153,10 @@ def read_10x_h5(
             adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
         return adata
     else:
-        return _read_legacy_10x_h5(filename, genome=genome)
+        return _read_legacy_10x_h5(filename, genome=genome, start=start)
 
 
-def _read_legacy_10x_h5(filename, genome=None):
+def _read_legacy_10x_h5(filename, *, genome=None, start=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
@@ -201,13 +201,13 @@ def _read_legacy_10x_h5(filename, genome=None):
                     gene_ids=dsets['genes'].astype(str),
                 ),
             )
-            logg.info('', time=True)
+            logg.info('', time=start)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 
 
-def _read_v3_10x_h5(filename):
+def _read_v3_10x_h5(filename, *, start=None):
     """
     Read hdf5 file from Cell Ranger v3 or later versions.
     """
@@ -236,7 +236,7 @@ def _read_v3_10x_h5(filename):
                     genome=dsets['genome'].astype(str),
                 ),
             )
-            logg.info('', time=True)
+            logg.info('', time=start)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')

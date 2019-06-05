@@ -100,7 +100,7 @@ def rank_genes_groups(
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
 
-    logg.info('ranking genes')
+    start = logg.info('ranking genes')
     avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
         raise ValueError('Method must be one of {}.'.format(avail_methods))
@@ -409,7 +409,7 @@ def rank_genes_groups(
             dtype=[(rn, 'float64') for rn in groups_order_save])
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             f'added to `.uns[{key_added!r}]`\n'
             "    'names', sorted np.recarray to be indexed by group ids\n"

@@ -117,7 +117,7 @@ def phenograph( adata,
         
 
     """
-    logg.info('PhenoGraph clustering')
+    start = logg.info('PhenoGraph clustering')
 
     try:
         import phenograph
@@ -140,6 +140,6 @@ def phenograph( adata,
         nn_method=nn_method
     )
 
-    logg.info('    finished', time=True)
+    logg.info('    finished', time=start)
 
     return communities, graph, Q

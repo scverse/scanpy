@@ -1,9 +1,9 @@
 """Logging and Profiling
 """
 import logging
-import time as time_
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import anndata.logging
 
@@ -16,36 +16,43 @@ class RootLogger(logging.RootLogger):
     def __init__(self, level):
         super().__init__(level)
         self.propagate = False
-        self.last_time = time_.time()
 
-    def log(self, level, msg, *, extra=None, deep=None, time_passed=None):
+    def log(
+        self,
+        level: int,
+        msg: str,
+        *,
+        extra: Optional[dict] = None,
+        time: datetime = None,
+        deep: Optional[str] = None,
+    ) -> datetime:
+        now = datetime.now(timezone.utc)
+        time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
             'deep': deep,
-            'time_passed': time_passed,
+            'time_passed': time_passed
         }
         super().log(level, msg, extra=extra)
+        return now
 
-    def error(self, msg, *, deep=None, extra=None):
-        self.log(ERROR, msg, deep=deep, extra=extra)
+    def critical(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(CRITICAL, msg, time=time, deep=deep, extra=extra)
 
-    def warning(self, msg, *, deep=None, extra=None):
-        self.log(WARNING, msg, deep=deep, extra=extra)
+    def error(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(ERROR, msg, time=time, deep=deep, extra=extra)
 
-    def info(self, msg, *, time=False, deep=None, extra=None):
-        current_time = time_.time()
-        time_passed = None
-        if time:
-            time_passed = timedelta(seconds=current_time - self.last_time)
-        self.log(INFO, msg, time_passed=time_passed, deep=deep, extra=extra)
-        # Always reset on info calls. TODO: Maybe change to a kwarg?
-        self.last_time = time_.time()
+    def warning(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(WARNING, msg, time=time, deep=deep, extra=extra)
 
-    def hint(self, msg, *, deep=None, extra=None):
-        self.log(HINT, msg, deep=deep, extra=extra)
+    def info(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(INFO, msg, time=time, deep=deep, extra=extra)
 
-    def debug(self, msg, *, deep=None, extra=None):
-        self.log(DEBUG, msg, deep=deep, extra=extra)
+    def hint(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(HINT, msg, time=time, deep=deep, extra=extra)
+
+    def debug(self, msg, *, time=None, deep=None, extra=None) -> datetime:
+        return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
 def _set_log_file(settings):
@@ -77,12 +84,12 @@ class LogFormatter(logging.Formatter):
         format_orig = self._style._fmt
         if record.levelno == INFO:
             self._style._fmt = '{asctime} | {message}'
-            if '{time_passed}' not in record.msg and record.time_passed:
-                self._style._fmt += ' ({time_passed})'
         elif record.levelno == HINT:
             self._style._fmt = '--> {message}'
         elif record.levelno == DEBUG:
             self._style._fmt = '    {message}'
+        if '{time_passed}' not in record.msg and record.time_passed:
+            self._style._fmt += ' ({time_passed})'
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
         return result
@@ -143,8 +150,8 @@ def print_version_and_date():
 
 
 # will be replaced in settings
-def error(msg, *, deep=None): pass
-def warning(msg, *, deep=None): pass
-def info(msg, *, deep=None, time=False): pass
-def hint(msg, *, deep=None): pass
-def debug(msg, *, deep=None): pass
+def error(msg, *, time=None, deep=None, extra=None) -> datetime: pass
+def warning(msg, *, time=None, deep=None, extra=None) -> datetime: pass
+def info(msg, *, time=None, deep=None, extra=None) -> datetime: pass
+def hint(msg, *, time=None, deep=None, extra=None) -> datetime: pass
+def debug(msg, *, time=None, deep=None, extra=None) -> datetime: pass

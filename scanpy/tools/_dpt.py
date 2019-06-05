@@ -11,7 +11,7 @@ from ..neighbors import Neighbors, OnFlySymMatrix
 
 
 def _diffmap(adata, n_comps=15):
-    logg.info(f'computing Diffusion Maps using n_comps={n_comps}(=n_dcs)')
+    start = logg.info(f'computing Diffusion Maps using n_comps={n_comps}(=n_dcs)')
     dpt = DPT(adata)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps)
@@ -19,7 +19,7 @@ def _diffmap(adata, n_comps=15):
     adata.uns['diffmap_evals'] = dpt.eigen_values
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
@@ -119,7 +119,7 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
     dpt = DPT(adata, n_dcs=n_dcs, min_group_size=min_group_size,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift)
-    logg.info(f'computing Diffusion Pseudotime using n_dcs={n_dcs}')
+    start = logg.info(f'computing Diffusion Pseudotime using n_dcs={n_dcs}')
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
@@ -142,7 +142,7 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         adata.obs['dpt_order_indices'] = dpt.indices
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             'added\n'
             + ("    'dpt_pseudotime', the pseudotime (adata.obs)"

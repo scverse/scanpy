@@ -89,7 +89,7 @@ def leiden(
     except ImportError:
         raise ImportError('Please install the leiden algorithm: `pip3 install leidenalg`.')
 
-    logg.info('running Leiden clustering')
+    start = logg.info('running Leiden clustering')
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
@@ -148,7 +148,7 @@ def leiden(
     )
     logg.info(
         '    finished',
-        time=True,
+        time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
             f'    {key_added!r}, the cluster labels (adata.obs, categorical)'

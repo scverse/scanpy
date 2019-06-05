@@ -445,7 +445,7 @@ def pca(
     else:
         adata = AnnData(data)
 
-    logg.info(f'computing PCA with n_comps = {n_comps}')
+    start = logg.info(f'computing PCA with n_comps = {n_comps}')
 
     if adata.n_vars < n_comps:
         n_comps = adata.n_vars - 1
@@ -520,7 +520,7 @@ def pca(
         adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
-        logg.info('    finished', time=True)
+        logg.info('    finished', time=start)
         logg.debug(
             'and added\n'
             '    \'X_pca\', the PCA coordinates (adata.obs)\n'
@@ -530,7 +530,7 @@ def pca(
         )
         return adata if copy else None
     else:
-        logg.info('    finished', time=True)
+        logg.info('    finished', time=start)
         if return_info:
             return X_pca, pca_.components_, pca_.explained_variance_ratio_, pca_.explained_variance_
         else:
@@ -617,7 +617,7 @@ def normalize_per_cell(
     """
     if key_n_counts is None: key_n_counts = 'n_counts'
     if isinstance(data, AnnData):
-        logg.info('normalizing by total count per cell')
+        start = logg.info('normalizing by total count per cell')
         adata = data.copy() if copy else data
         if counts_per_cell is None:
             cell_subset, counts_per_cell = materialize_as_ndarray(
@@ -644,7 +644,7 @@ def normalize_per_cell(
         logg.info(
             '    finished ({time_passed}): normalized adata.X and added'
             f'    {key_n_counts!r}, counts per cell before normalization (adata.obs)',
-            time=True,
+            time=start,
         )
         return adata if copy else None
     # proceed with data matrix
@@ -729,7 +729,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
     -------
     Depending on `copy` returns or updates `adata` with the corrected data matrix.
     """
-    logg.info(f'regressing out {keys}')
+    start = logg.info(f'regressing out {keys}')
     if issparse(adata.X):
         logg.info(
             '    sparse input is densified and may '
@@ -801,7 +801,7 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
     # res is a list of vectors (each corresponding to a regressed gene column).
     # The transpose is needed to get the matrix in the shape needed
     adata.X = np.vstack(res).T.astype(adata.X.dtype)
-    logg.info('    finished', time=True)
+    logg.info('    finished', time=start)
     return adata if copy else None
 
 

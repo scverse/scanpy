@@ -241,7 +241,7 @@ def highly_variable_genes(
     This function replaces :func:`~scanpy.pp.filter_genes_dispersion`.
     """
 
-    logg.info('extracting highly variable genes')
+    start = logg.info('extracting highly variable genes')
 
     if not isinstance(adata, AnnData):
         raise ValueError(
@@ -298,7 +298,7 @@ def highly_variable_genes(
             ))
             df['highly_variable'] = gene_subset
 
-    logg.info('    finished', time=True)
+    logg.info('    finished', time=start)
 
     if inplace or subset:
         logg.hint(
