@@ -103,9 +103,6 @@ class ScanpyConfig:
         self._previous_memory_usage = -1
         """Stores the previous memory usage."""
 
-        for fn in verbosity_names:
-            setattr(logging, fn, getattr(self._root_logger, fn))
-
     @property
     def verbosity(self) -> Verbosity:
         """
@@ -140,7 +137,6 @@ class ScanpyConfig:
                 self._verbosity = Verbosity(verbosity_str_options.index(verbosity))
         else:
             _type_check(verbosity, "verbosity", (str, int))
-        from .logging import _set_log_level
         _set_log_level(self, _VERBOSITY_TO_LOGLEVEL[self._verbosity])
 
     @property
@@ -315,7 +311,6 @@ class ScanpyConfig:
                 logfile = sys.stdout if self._is_run_from_ipython() else sys.stderr
             self._logfile = logfile
             self._logpath = None
-            from .logging import _set_log_file
             _set_log_file(self)
 
     @property

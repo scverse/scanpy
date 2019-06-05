@@ -1,6 +1,7 @@
 """Logging and Profiling
 """
 import logging
+from functools import update_wrapper, partial
 from logging import CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -150,9 +151,58 @@ def print_version_and_date():
     )
 
 
-# will be replaced in settings
-def error(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
-def warning(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
-def info(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
-def hint(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
-def debug(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
+def copy_docs_and_signature(fn):
+    return partial(update_wrapper, wrapped=fn, assigned=['__doc__', '__annotations__'])
+
+
+def error(
+    msg: str,
+    *,
+    time: datetime = None,
+    deep: Optional[str] = None,
+    extra: Optional[dict] = None,
+) -> datetime:
+    """
+    Log message with specific level and return current time.
+    
+    Parameters
+    ==========
+    msg
+        Message to display.
+    time
+        A time in the past. If this is passed, the time difference from then
+        to now is appended to `msg` as ` (HH:MM:SS)`.
+        If `msg` contains `{time_passed}`, the time difference is instead
+        inserted at that position.
+    deep
+        If the current verbosity is higher than the log function’s level,
+        this gets displayed as well
+    extra
+        Additional values you can specify in `msg` like `{time_passed}`.
+    """
+    from ._settings import settings
+    return settings._root_logger.error(msg, time=time, deep=deep, extra=extra)
+
+
+@copy_docs_and_signature(error)
+def warning(msg, *, time=None, deep=None, extra=None) -> datetime:
+    from ._settings import settings
+    return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
+
+
+@copy_docs_and_signature(error)
+def info(msg, *, time=None, deep=None, extra=None) -> datetime:
+    from ._settings import settings
+    return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
+
+
+@copy_docs_and_signature(error)
+def hint(msg, *, time=None, deep=None, extra=None) -> datetime:
+    from ._settings import settings
+    return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
+
+
+@copy_docs_and_signature(error)
+def debug(msg, *, time=None, deep=None, extra=None) -> datetime:
+    from ._settings import settings
+    return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)
