@@ -16,6 +16,7 @@ class RootLogger(logging.RootLogger):
     def __init__(self, level):
         super().__init__(level)
         self.propagate = False
+        RootLogger.manager = logging.Manager(self)
 
     def log(
         self,
