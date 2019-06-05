@@ -150,8 +150,8 @@ def print_version_and_date():
 
 
 # will be replaced in settings
-def error(msg, *, time=None, deep=None, extra=None) -> datetime: pass
-def warning(msg, *, time=None, deep=None, extra=None) -> datetime: pass
-def info(msg, *, time=None, deep=None, extra=None) -> datetime: pass
-def hint(msg, *, time=None, deep=None, extra=None) -> datetime: pass
-def debug(msg, *, time=None, deep=None, extra=None) -> datetime: pass
+def error(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
+def warning(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
+def info(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
+def hint(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
+def debug(msg, *, time=None, deep=None, extra=None) -> datetime: return datetime.now()
