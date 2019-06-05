@@ -30,13 +30,13 @@ def choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
                     raise ValueError(
                         '`X_pca` does not have enough PCs. Rerun `sc.pp.pca` with adjusted `n_comps`.')
                 X = adata.obsm['X_pca'][:, :n_pcs]
-                logg.info('    using \'X_pca\' with n_pcs = {}'.format(X.shape[1]))
+                logg.info(f'    using \'X_pca\' with n_pcs = {X.shape[1]}')
             else:
-                logg.warn(
-                    'You\'re trying to run this on {} dimensions of `.X`, '
+                logg.warning(
+                    f'You’re trying to run this on {adata.n_vars} dimensions of `.X`, '
                     'if you really want this, set `use_rep=\'X\'`.\n         '
                     'Falling back to preprocessing with `sc.pp.pca` and default params.'
-                    .format(adata.n_vars))
+                )
                 X = pca(adata.X)
                 adata.obsm['X_pca'] = X[:, :n_pcs]
         else:
@@ -68,18 +68,16 @@ def preprocess_with_pca(adata, n_pcs=None, random_state=0):
         logg.info('    using data matrix X directly (no PCA)')
         return adata.X
     elif n_pcs is None and 'X_pca' in adata.obsm_keys():
-        logg.info('    using \'X_pca\' with n_pcs = {}'
-                  .format(adata.obsm['X_pca'].shape[1]))
+        logg.info(f'    using \'X_pca\' with n_pcs = {adata.obsm["X_pca"].shape[1]}')
         return adata.obsm['X_pca']
     elif ('X_pca' in adata.obsm_keys()
           and adata.obsm['X_pca'].shape[1] >= n_pcs):
-        logg.info('    using \'X_pca\' with n_pcs = {}'
-                  .format(n_pcs))
+        logg.info(f'    using \'X_pca\' with n_pcs = {n_pcs}')
         return adata.obsm['X_pca'][:, :n_pcs]
     else:
         n_pcs = N_PCS if n_pcs is None else n_pcs
         if adata.X.shape[1] > n_pcs:
-            logg.info('    computing \'X_pca\' with n_pcs = {}'.format(n_pcs))
+            logg.info(f'    computing \'X_pca\' with n_pcs = {n_pcs}')
             logg.hint('avoid this by setting n_pcs = 0')
             X = pca(adata.X, n_comps=n_pcs, random_state=random_state)
             adata.obsm['X_pca'] = X

@@ -26,7 +26,7 @@ def compute_velocity_graph(adata, adata_u, X_du):
         vals = np.zeros((n_obs * n_neighbors), dtype=np.float32)
         for i in range(n_obs):
             if i % 1000 == 0:
-                logg.debug('{}/{},'.format(i, n_obs), end=' ')
+                logg.debug(f'{i}/{n_obs},')
             for nj in range(n_neighbors):
                 j = knn_indices[i, nj]
                 if j != i:

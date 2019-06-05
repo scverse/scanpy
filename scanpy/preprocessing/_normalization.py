@@ -126,6 +126,7 @@ def normalize_total(
         )
 
     gene_subset = None
+    msg = 'Normalizing counts per cell.'
     if exclude_highly_expressed:
         counts_per_cell = adata.X.sum(1)  # original counts per cell
         counts_per_cell = np.ravel(counts_per_cell)
@@ -133,9 +134,12 @@ def normalize_total(
         # at least one cell as more than max_fraction of counts per cell
         gene_subset = (adata.X > counts_per_cell[:, None]*max_fraction).sum(0)
         gene_subset = (np.ravel(gene_subset) == 0)
-        logg.info(
-            'The following highly-expressed genes are not considered during normalization factor computation:\n{}'
-            .format(adata.var_names[~gene_subset].tolist()))
+
+        msg += (
+            ' The following highly-expressed genes are not considered during '
+            f'normalization factor computation:\n{adata.var_names[~gene_subset].tolist()}'
+        )
+    start = logg.info(msg)
 
     # counts per cell for subset, if max_fraction!=1
     X = adata.X if gene_subset is None else adata[:, gene_subset].X
@@ -145,7 +149,7 @@ def normalize_total(
 
     cell_subset = counts_per_cell > 0
     if not np.all(cell_subset):
-        logg.warn('Some cells have total count of genes equal to zero')
+        logg.warning('Some cells have total count of genes equal to zero')
 
     if layer_norm == 'after':
         after = target_sum
@@ -182,8 +186,11 @@ def normalize_total(
         else:
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
-    logg.debug('    finished', t=True, end=': ')
-    logg.debug('normalized adata.X')
+    logg.info(
+        '    finished ({time_passed}):'
+        'normalized adata.X',
+        time=start,
+    )
     if key_added is not None:
         logg.debug(f'and added {key_added!r}, counts per cell before normalization (adata.obs)')
 

@@ -219,10 +219,11 @@ def savefig(writekey, dpi=None, ext=None):
         # we need this as in notebooks, the internal figures are also influenced by 'savefig.dpi' this...
         if not isinstance(rcParams['savefig.dpi'], str) and rcParams['savefig.dpi'] < 150:
             if settings._low_resolution_warning:
-                logg.warn(
+                logg.warning(
                     'You are using a low resolution (dpi<150) for saving figures.\n'
                     'Consider running `set_figure_params(dpi_save=...)`, which will '
-                    'adjust `matplotlib.rcParams[\'savefig.dpi\']`')
+                    "adjust `matplotlib.rcParams['savefig.dpi']`"
+                )
                 settings._low_resolution_warning = False
         else:
             dpi = rcParams['savefig.dpi']
@@ -230,7 +231,7 @@ def savefig(writekey, dpi=None, ext=None):
     if ext is None: ext = settings.file_format_figs
     filename = settings.figdir / f'{writekey}{settings.plot_suffix}.{ext}'
     # output the following msg at warning level; it's really important for the user
-    logg.warn('saving figure to file', filename)
+    logg.warning(f'saving figure to file {filename}')
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
@@ -271,7 +272,7 @@ def adjust_palette(palette, length):
             palette = palettes.default_64
         else:
             palette = ['grey' for i in range(length)]
-            logg.info('more than 103 colors would be required, initializing as \'grey\'')
+            logg.info("more than 103 colors would be required, initializing as 'grey'")
         return palette if islist else cycler(color=palette)
     elif islist:
         return palette
@@ -284,8 +285,10 @@ def adjust_palette(palette, length):
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force_update_colors=False):
     if key + '_colors' in adata.uns and not force_update_colors:
         if len(adata.obs[key].cat.categories) > len(adata.uns[key + '_colors']):
-            logg.info('    number of colors in `.uns[{}\'_colors\']` smaller than number of categories,'
-                      ' falling back to palette'.format(key))
+            logg.info(
+                f"    number of colors in `.uns[{key}'_colors']` smaller "
+                'than number of categories, falling back to palette'
+            )
         else:
             # make sure that these are valid colors
             adata.uns[key + '_colors'] = [
@@ -293,7 +296,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force
                 for c in adata.uns[key + '_colors']]
             return
     else:
-        logg.debug('generating colors for {} using palette'.format(key))
+        logg.debug(f'generating colors for {key} using palette')
     palette = default_palette(palette)
     palette_adjusted = adjust_palette(palette,
                                       length=len(adata.obs[key].cat.categories))
@@ -306,9 +309,9 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force
     for iname, name in enumerate(adata.obs[key].cat.categories):
         if name in settings.categories_to_ignore:
             logg.info(
-                '    setting color of group \'{}\' in \'{}\' to \'grey\' '
+                f"    setting color of group {name!r} in {key!r} to 'grey' "
                 '(`sc.settings.categories_to_ignore`)'
-                .format(name, key))
+            )
             adata.uns[key + '_colors'][iname] = 'grey'
 
 

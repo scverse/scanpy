@@ -139,8 +139,10 @@ def paul15() -> AnnData:
     -------
     Annotated data matrix.
     """
-    logg.warn('In Scanpy 0.*, this returned logarithmized data. '
-              'Now it returns non-logarithmized data.')
+    logg.warning(
+        'In Scanpy 0.*, this returned logarithmized data. '
+        'Now it returns non-logarithmized data.'
+    )
     import h5py
     filename = settings.datasetdir / 'paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'

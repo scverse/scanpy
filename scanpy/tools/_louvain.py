@@ -8,7 +8,6 @@ from scipy.sparse import spmatrix
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -88,7 +87,7 @@ def louvain(
     :class:`~anndata.AnnData`
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
-    logg.info('running Louvain clustering', r=True)
+    start = logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
             '`partition_type` is only a valid argument when `flavour` is "vtraag"')
@@ -108,7 +107,7 @@ def louvain(
         )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
-            logg.warn('`resolution` parameter has no effect for flavor "igraph"')
+            logg.warning('`resolution` parameter has no effect for flavor "igraph"')
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.debug('    using the undirected graph')
@@ -164,8 +163,12 @@ def louvain(
     )
     adata.uns['louvain'] = {}
     adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('found {} clusters and added\n'
-              '    \'{}\', the cluster labels (adata.obs, categorical)'
-              .format(len(np.unique(groups)), key_added))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            f'found {len(np.unique(groups))} clusters and added\n'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+        ),
+    )
     return adata if copy else None

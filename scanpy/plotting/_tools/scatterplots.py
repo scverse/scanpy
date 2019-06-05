@@ -182,8 +182,10 @@ def plot_scatter(
             try:
                 ax.set_title(title[count])
             except IndexError:
-                logg.warn("The title list is shorter than the number of panels. Using 'color' value instead for"
-                          "some plots.")
+                logg.warning(
+                    "The title list is shorter than the number of panels. "
+                    "Using 'color' value instead for some plots."
+                )
                 ax.set_title(value_to_plot)
 
         if 's' not in kwargs:
@@ -443,8 +445,10 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         # check if the data has a third dimension
         if adata.obsm['X_' + basis].shape[1] == 2:
             if settings._low_resolution_warning:
-                logg.warn('Selected projections is "3d" but only two dimensions '
-                          'are available. Only these two dimensions will be plotted')
+                logg.warning(
+                    'Selected projections is "3d" but only two dimensions '
+                    'are available. Only these two dimensions will be plotted'
+                )
         else:
             n_dims = 3
 
@@ -592,10 +596,12 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
         # it doesnt matter if the list is shorter than the categories length:
         if isinstance(palette, abc.Sequence):
             if len(palette) < len(categories):
-                logg.warn("Length of palette colors is smaller than the number of "
-                          "categories (palette length: {}, categories length: {}. "
-                          "Some categories will have the same color."
-                          .format(len(palette), len(categories)))
+                logg.warning(
+                    "Length of palette colors is smaller than the number of "
+                    f"categories (palette length: {len(palette)}, "
+                    f"categories length: {len(categories)}. "
+                    "Some categories will have the same color."
+                )
             # check that colors are valid
             _color_list = []
             for color in palette:
@@ -651,9 +657,11 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
         elif length <= len(palettes.default_64):  # 103 colors
             palette = palettes.default_64
         else:
-            palette = ['grey' for i in range(length)]
-            logg.info('the obs value: "{}" has more than 103 categories. Uniform '
-                      '\'grey\' color will be used for all categories.')
+            palette = ['grey' for _ in range(length)]
+            logg.info(
+                f'the obs value {value_to_plot!r} has more than 103 categories. Uniform '
+                "'grey' color will be used for all categories."
+            )
 
     adata.uns[value_to_plot + '_colors'] = palette[:length]
 
@@ -698,8 +706,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                             if color in utils.additional_colors:
                                 color = utils.additional_colors[color]
                             else:
-                                logg.warn("The following color value found in adata.uns['{}'] "
-                                          " is not valid: '{}'. Default colors are used.".format(value_to_plot + '_colors', color))
+                                logg.warning(
+                                    f"The following color value found in adata.uns['{value_to_plot}_colors'] "
+                                    f"is not valid: '{color}'. Default colors are used."
+                                )
                                 _set_default_colors_for_categorical_obs(adata, value_to_plot)
                                 _palette = None
                                 break
@@ -725,8 +735,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     else:
         if gene_symbols is not None and gene_symbols in adata.var.columns:
             if value_to_plot not in adata.var[gene_symbols].values:
-                logg.error("Gene symbol {!r} not found in given gene_symbols "
-                           "column: {!r}".format(value_to_plot, gene_symbols))
+                logg.error(
+                    f"Gene symbol {value_to_plot!r} not found in given "
+                    f"gene_symbols column: {gene_symbols!r}"
+                )
                 return
             value_to_plot = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
         if layer is not None and value_to_plot in adata.var_names:

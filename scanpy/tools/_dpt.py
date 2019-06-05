@@ -7,21 +7,25 @@ import networkx as nx
 from natsort import natsorted
 
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..neighbors import Neighbors, OnFlySymMatrix
 
 
 def _diffmap(adata, n_comps=15):
-    logg.info('computing Diffusion Maps using n_comps={}(=n_dcs)'.format(n_comps), r=True)
+    start = logg.info(f'computing Diffusion Maps using n_comps={n_comps}(=n_dcs)')
     dpt = DPT(adata)
     dpt.compute_transitions()
     dpt.compute_eigen(n_comps=n_comps)
     adata.obsm['X_diffmap'] = dpt.eigen_basis
     adata.uns['diffmap_evals'] = dpt.eigen_values
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-              '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
-              '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)')
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            'added\n'
+            '    \'X_diffmap\', diffmap coordinates (adata.obsm)\n'
+            '    \'diffmap_evals\', eigenvalues of transition matrix (adata.uns)'
+        ),
+    )
 
 
 def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
@@ -99,20 +103,23 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         raise ValueError(
             'You need to run `pp.neighbors` and `tl.diffmap` first.')
     if 'iroot' not in adata.uns and 'xroot' not in adata.var:
-        logg.warn(
+        logg.warning(
             'No root cell found. To compute pseudotime, pass the index or '
             'expression vector of a root cell, one of:\n'
             '    adata.uns[\'iroot\'] = root_cell_index\n'
-            '    adata.var[\'xroot\'] = adata[root_cell_name, :].X')
+            '    adata.var[\'xroot\'] = adata[root_cell_name, :].X'
+        )
     if 'X_diffmap' not in adata.obsm.keys():
-        logg.warn('Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
-                  'Falling back to `tl.diffmap` with default parameters.')
+        logg.warning(
+            'Trying to run `tl.dpt` without prior call of `tl.diffmap`. '
+            'Falling back to `tl.diffmap` with default parameters.'
+        )
         _diffmap(adata)
     # start with the actual computation
     dpt = DPT(adata, n_dcs=n_dcs, min_group_size=min_group_size,
               n_branchings=n_branchings,
               allow_kendall_tau_shift=allow_kendall_tau_shift)
-    logg.info('computing Diffusion Pseudotime using n_dcs={}'.format(n_dcs), r=True)
+    start = logg.info(f'computing Diffusion Pseudotime using n_dcs={n_dcs}')
     if n_branchings > 1: logg.info('    this uses a hierarchical implementation')
     if dpt.iroot is not None:
         dpt._set_pseudotime()  # pseudotimes are distances from root point
@@ -133,13 +140,18 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
         for count, idx in enumerate(dpt.indices): ordering_id[idx] = count
         adata.obs['dpt_order'] = ordering_id
         adata.obs['dpt_order_indices'] = dpt.indices
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-           + ('    \'dpt_pseudotime\', the pseudotime (adata.obs)'
-              if dpt.iroot is not None else '')
-           + ('\n    \'dpt_groups\', the branching subgroups of dpt (adata.obs)\n'
-              + '    \'dpt_order\', cell order (adata.obs)'
-              if n_branchings > 0 else ''))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            'added\n'
+            + ("    'dpt_pseudotime', the pseudotime (adata.obs)"
+               if dpt.iroot is not None else '')
+            + ("\n    'dpt_groups', the branching subgroups of dpt (adata.obs)"
+               "\n    'dpt_order', cell order (adata.obs)"
+               if n_branchings > 0 else '')
+        ),
+    )
     return adata if copy else None
 
 
@@ -190,8 +202,8 @@ class DPT(Neighbors):
             List of indices of the tips of segments.
         """
         logg.debug(
-            '    detect', self.n_branchings,
-            'branching' + ('' if self.n_branchings == 1 else 's'),
+            f'    detect {self.n_branchings} '
+            f'branching{"" if self.n_branchings == 1 else "s"}',
         )
         # a segment is a subset of points of the data set (defined by the
         # indices of the points in the segment)
@@ -243,8 +255,7 @@ class DPT(Neighbors):
                 logg.debug('    partitioning converged')
                 break
             logg.debug(
-                '    branching {}:'.format(ibranch + 1),
-                'split group', iseg,
+                f'    branching {ibranch + 1}: split group {iseg}',
             )  # [third start end]
             # detect branching and update segs and segs_tips
             self.detect_branching(segs, segs_tips,
@@ -363,7 +374,7 @@ class DPT(Neighbors):
             score = dseg[tips3[2]] / Dseg[tips3[0], tips3[1]]
             score = len(seg) if self.choose_largest_segment else score  # simply the number of points
             logg.debug(
-                '    group', iseg, 'score', score, 'n_points', len(seg),
+                f'    group {iseg} score {score} n_points {len(seg)} ' +
                 '(too small)' if len(seg) < self.min_group_size else '',
             )
             if len(seg) <= self.min_group_size: score = 0
@@ -416,7 +427,7 @@ class DPT(Neighbors):
                     indices = np.argsort(self.pseudotime[tips])
                     self.segs_tips[itips] = self.segs_tips[itips][indices]
                 else:
-                    logg.debug('    group', itips, 'is very small')
+                    logg.debug(f'    group {itips} is very small')
         # sort indices according to segments
         indices = np.argsort(self.segs_names)
         segs_names = self.segs_names[indices]
@@ -567,12 +578,12 @@ class DPT(Neighbors):
                         segs_connects[jseg_min].append(closest_points_in_kseg[idx])
                         segs_adjacency[kseg].append(jseg_min)
                         segs_connects[kseg].append(closest_points_in_jseg[idx])
-                        logg.debug('    attaching new segment', kseg, 'at', jseg_min)
+                        logg.debug(f'    attaching new segment {kseg} at {jseg_min}')
                         # if we split the cluster, we should not attach kseg
                         do_not_attach_kseg = True
                     else:
                         logg.debug(
-                            '    cannot attach new segment', kseg, 'at', jseg_min,
+                            f'    cannot attach new segment {kseg} at {jseg_min} '
                             '(would produce cycle)'
                         )
                         if kseg != kseg_list[-1]:
@@ -633,7 +644,7 @@ class DPT(Neighbors):
         ssegs_tips = []
         for inewseg, newseg in enumerate(ssegs):
             if len(np.flatnonzero(newseg)) <= 1:
-                logg.warn('detected group with only {} cells'.format(np.flatnonzero(newseg)))
+                logg.warning(f'detected group with only {np.flatnonzero(newseg)} cells')
             secondtip = newseg[np.argmax(Dseg[tips[inewseg]][newseg])]
             ssegs_tips.append([tips[inewseg], secondtip])
         undecided_cells = np.arange(Dseg.shape[0], dtype=int)[nonunique]
@@ -784,7 +795,10 @@ class DPT(Neighbors):
         if imax > 0.95 * len(idcs) and self.allow_kendall_tau_shift:
             # if "everything" is correlated (very large value of imax), a more
             # conservative choice amounts to reducing this
-            logg.warn('shifting branching point away from maximal kendall-tau correlation (suppress this with `allow_kendall_tau_shift=False`)')
+            logg.warning(
+                'shifting branching point away from maximal kendall-tau '
+                'correlation (suppress this with `allow_kendall_tau_shift=False`)'
+            )
             ibranch = int(0.95 * imax)
         else:
             # otherwise, a more conservative choice is the following

@@ -137,11 +137,11 @@ def read_10x_h5(
     `adata.var_names`. The gene IDs are stored in `adata.var['gene_ids']`.
     The feature types are stored in `adata.var['feature_types']`
     """
-    logg.info('reading', filename, r=True, end=' ')
+    start = logg.info(f'reading {filename}')
     with tables.open_file(str(filename), 'r') as f:
         v3 = '/matrix' in f
     if v3:
-        adata = _read_v3_10x_h5(filename)
+        adata = _read_v3_10x_h5(filename, start=start)
         if genome:
             if genome not in adata.var['genome'].values:
                 raise ValueError(
@@ -153,10 +153,10 @@ def read_10x_h5(
             adata = adata[:, list(map(lambda x: x == 'Gene Expression', adata.var['feature_types']))]
         return adata
     else:
-        return _read_legacy_10x_h5(filename, genome=genome)
+        return _read_legacy_10x_h5(filename, genome=genome, start=start)
 
 
-def _read_legacy_10x_h5(filename, genome=None):
+def _read_legacy_10x_h5(filename, *, genome=None, start=None):
     """
     Read hdf5 file from Cell Ranger v2 or earlier versions.
     """
@@ -201,13 +201,13 @@ def _read_legacy_10x_h5(filename, genome=None):
                     gene_ids=dsets['genes'].astype(str),
                 ),
             )
-            logg.info(t=True)
+            logg.info('', time=start)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
 
 
-def _read_v3_10x_h5(filename):
+def _read_v3_10x_h5(filename, *, start=None):
     """
     Read hdf5 file from Cell Ranger v3 or later versions.
     """
@@ -236,7 +236,7 @@ def _read_v3_10x_h5(filename):
                     genome=dsets['genome'].astype(str),
                 ),
             )
-            logg.info(t=True)
+            logg.info('', time=start)
             return adata
         except KeyError:
             raise Exception('File is missing one or more required datasets.')
@@ -492,7 +492,7 @@ def _read(
         filename,
         backup_url=backup_url,
     )
-    if not is_present: logg.debug('... did not find original file', filename)
+    if not is_present: logg.debug(f'... did not find original file {filename}')
     # read hdf5 files
     if ext in {'h5', 'h5ad'}:
         if sheet is None:
@@ -505,12 +505,12 @@ def _read(
     if path_cache.suffix in {'.gz', '.bz2'}:
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
-        logg.info('... reading from cache file', path_cache)
+        logg.info(f'... reading from cache file {path_cache}')
         adata = read_h5ad(path_cache)
     else:
         if not is_present:
             raise FileNotFoundError('Did not find file {}.'.format(filename))
-        logg.debug('reading', filename)
+        logg.debug(f'reading {filename}')
         if not cache and not suppress_cache_warning:
             logg.hint(
                 'This might be very slow. Consider passing `cache=True`, '
@@ -753,7 +753,7 @@ def is_valid_filename(filename: Path, return_ext=False):
     ext = filename.suffixes
 
     if len(ext) > 2:
-        logg.warn(
+        logg.warning(
             f'Your filename has more than two extensions: {ext}.\n'
             f'Only considering the two last: {ext[-2:]}.'
         )

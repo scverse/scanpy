@@ -99,7 +99,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     -------
     Returns or updates `adata` depending on `copy`.
     """
-    logg.info('running recipe zheng17', reset=True)
+    start = logg.info('running recipe zheng17')
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
     pp.normalize_per_cell(adata,  # normalize with total UMI count per cell
@@ -115,5 +115,5 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     pp.normalize_per_cell(adata)  # renormalize after filtering
     if log: pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata)
-    logg.info('    finished', time=True)
+    logg.info('    finished', time=start)
     return adata if copy else None

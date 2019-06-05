@@ -2,7 +2,6 @@ import numpy as np
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ._utils import get_init_pos_from_paga
 
 
@@ -71,8 +70,7 @@ def draw_graph(
     **X_draw_graph_layout** : `adata.obsm`
         Coordinates of graph layout. E.g. for layout='fa' (the default), the field is called 'X_draw_graph_fa'
     """
-    logg.info('drawing single-cell graph using layout "{}"'.format(layout),
-              r=True)
+    start = logg.info(f'drawing single-cell graph using layout {layout!r}')
     avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa'}
     if layout not in avail_layouts:
         raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
@@ -95,10 +93,12 @@ def draw_graph(
     if layout == 'fa':
         try:
             from fa2 import ForceAtlas2
-        except:
-            logg.warn('Package \'fa2\' is not installed, falling back to layout \'fr\'.'
-                      'To use the faster and better ForceAtlas2 layout, '
-                      'install package \'fa2\' (`pip install fa2`).')
+        except ImportError:
+            logg.warning(
+                'Package \'fa2\' is not installed, falling back to layout \'fr\'.'
+                'To use the faster and better ForceAtlas2 layout, '
+                'install package \'fa2\' (`pip install fa2`).'
+            )
             layout = 'fr'
     # actual drawing
     if layout == 'fa':
@@ -142,8 +142,12 @@ def draw_graph(
     adata.uns['draw_graph']['params'] = {'layout': layout, 'random_state': random_state}
     key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
     adata.obsm[key_added] = positions
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-              '    \'{}\', graph_drawing coordinates (adata.obsm)'
-              .format(key_added))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            'added\n'
+            f'    {key_added!r}, graph_drawing coordinates (adata.obsm)'
+        ),
+    )
     return adata if copy else None

@@ -95,7 +95,7 @@ def dendrogram(adata: AnnData, groupby: str,
     if key_added is None:
         key_added = 'dendrogram_' + groupby
 
-    logg.info('Storing dendrogram info using `.uns[{!r}]`'.format(key_added))
+    logg.info(f'Storing dendrogram info using `.uns[{key_added!r}]`')
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()
 
@@ -108,11 +108,8 @@ def dendrogram(adata: AnnData, groupby: str,
     # order of groupby categories
     categories_idx_ordered = dendro_info['leaves']
 
-    adata.uns[key_added] = {'linkage': z_var,
-                            'groupby': groupby,
-                            'use_rep': use_rep,
-                            'cor_method': cor_method,
-                            'linkage_method': linkage_method,
-                            'categories_idx_ordered': categories_idx_ordered,
-                            'dendrogram_info': dendro_info,
-                            'correlation_matrix': corr_matrix.values}
+    adata.uns[key_added] = dict(
+        linkage=z_var, groupby=groupby, use_rep=use_rep, cor_method=cor_method,
+        linkage_method=linkage_method, categories_idx_ordered=categories_idx_ordered,
+        dendrogram_info=dendro_info, correlation_matrix=corr_matrix.values,
+    )

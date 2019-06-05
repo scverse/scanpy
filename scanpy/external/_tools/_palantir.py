@@ -133,7 +133,7 @@ def palantir(adata: AnnData):
 
     """
 
-    logg.info('Palantir diffusion maps', r=True)
+    logg.info('Palantir diffusion maps')
 
     class _wrapper_cls(object):
         """
@@ -185,12 +185,11 @@ def palantir(adata: AnnData):
                 self.data_df = self.adata.to_df()
             except AttributeError:
                 # assume the data is a cell X genes Dataframe
-                logg.info('Assuming the data is a cell X genes Dataframe',
-                	      r=True)
+                logg.info('Assuming the data is a cell X genes Dataframe')
 
             # load palantir
             self.__call__()
-            logg.info('palantir loaded ...', r=True)
+            logg.info('palantir loaded ...')
 
         def __call__(self):
             """
@@ -206,7 +205,7 @@ def palantir(adata: AnnData):
             """
 
             # Principal component analysis
-            logg.info('PCA in progress ...', r=True)
+            logg.info('PCA in progress ...')
 
             self.pca_projections, self.var_r = self.palantir.utils.run_pca(self.data_df)
 
@@ -215,7 +214,7 @@ def palantir(adata: AnnData):
             adata.uns['palantir_pca_results']['variance_ratio'] = self.var_r
 
             # Diffusion maps
-            logg.info('Diffusion maps in progress ...', r=True)
+            logg.info('Diffusion maps in progress ...')
 
             self.dm_res = self.palantir.utils.run_diffusion_maps(self.pca_projections)
             self.ms_data = self.palantir.utils.determine_multiscale_space(self.dm_res)
@@ -224,20 +223,20 @@ def palantir(adata: AnnData):
             adata.uns['palantir_ms_data'] = self.ms_data
 
             # tSNE visualization
-            logg.info('tSNE in progress ...', r=True)
+            logg.info('tSNE in progress ...')
 
             self.tsne = self.palantir.utils.run_tsne(self.ms_data)
 
             adata.uns['palantir_tsne'] = self.tsne
 
             # MAGIC imputation
-            logg.info('imputation in progress ...', r=True)
+            logg.info('imputation in progress ...')
 
             self.imp_df = self.palantir.utils.run_magic_imputation(self.data_df, self.dm_res)
 
             adata.uns['palantir_imp_df'] = self.imp_df
 
-            logg.info('End of processing, start plotting.', r=True)
+            logg.info('End of processing, start plotting.')
 
         @property
         def normalize(self):
@@ -247,7 +246,7 @@ def palantir(adata: AnnData):
             if value is True:
                 self.data_df = self.palantir.preprocess.normalize_counts(self.data_df)
                 adata.uns['palantir_norm_data'] = self.data_df
-                logg.info('data normalized ...', r=True)
+                logg.info('data normalized ...')
 
         @property
         def log_transform(self):
@@ -257,7 +256,7 @@ def palantir(adata: AnnData):
             if value is True:
                 self.data_df = self.palantir.preprocess.log_transform(self.data_df)
                 adata.uns['palantir_norm_data'] = self.data_df
-                logg.info('data log transformed ...', r=True)
+                logg.info('data log transformed ...')
 
         @property
         def filter_low(self):
@@ -267,9 +266,11 @@ def palantir(adata: AnnData):
             if value is True:
                 self.data_df = self.palantir.preprocess.filter_counts_data(self.data_df)
                 adata.uns['palantir_norm_data'] = self.data_df
-                logg.info('data filtered for low counts:\n\t' +\
-                          'cell_min_molecules=1000\n\tgenes_min_cells=10',
-                          r=True)
+                logg.info(
+                    'data filtered for low counts:\n'
+                    '\tcell_min_molecules=1000\n'
+                    '\tgenes_min_cells=10'
+                )
 
 
     def wrapper_cls(adata, func=None):

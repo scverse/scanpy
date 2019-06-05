@@ -7,7 +7,6 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..neighbors import Neighbors
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
@@ -86,7 +85,7 @@ def paga(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
-    logg.info('running PAGA', reset=True)
+    start = logg.info('running PAGA')
     paga = PAGA(adata, groups, model=model)
     # only add if not present
     if 'paga' not in adata.uns:
@@ -102,17 +101,17 @@ def paga(
         adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
         # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    if use_rna_velocity:
-        logg.hint(
-            'added\n'
-            '    \'paga/transitions_confidence\', connectivities adjacency (adata.uns)')
-        #    '    \'paga/transitions_ttest\', t-test on transitions (adata.uns)')
-    else:
-        logg.hint(
-            'added\n'
-            '    \'paga/connectivities\', connectivities adjacency (adata.uns)\n'
-            '    \'paga/connectivities_tree\', connectivities subtree (adata.uns)')
+    logg.info(
+        '    finished',
+        time=start,
+        deep='added\n' + (
+            "    'paga/transitions_confidence', connectivities adjacency (adata.uns)"
+            # "    'paga/transitions_ttest', t-test on transitions (adata.uns)"
+            if use_rna_velocity else
+            "    'paga/connectivities', connectivities adjacency (adata.uns)\n"
+            "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
+        ),
+    )
     return adata if copy else None
 
 
@@ -228,7 +227,7 @@ class PAGA():
         if vkey not in self._adata.uns:
             if 'velocyto_transitions' in self._adata.uns:
                 self._adata.uns[vkey] = self._adata.uns['velocyto_transitions']
-                logg.debug("The key 'velocyto_transitions' has been changed to 'velocity_graph'.", no_indent=True)
+                logg.debug("The key 'velocyto_transitions' has been changed to 'velocity_graph'.")
             else:
                 raise ValueError(
                     'The passed AnnData needs to have an `uns` annotation '
@@ -405,7 +404,7 @@ def paga_compare_paths(adata1, adata2,
     g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
     g2 = nx.Graph(adata2.uns['paga'][adjacency_key2 if adjacency_key2 is not None else adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
-    logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}', no_indent=True)
+    logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}')
     paga_groups = adata1.uns['paga']['groups']
     asso_groups1 = utils.identify_groups(adata1.obs[paga_groups].values,
                                          adata2.obs[paga_groups].values)
@@ -422,12 +421,11 @@ def paga_compare_paths(adata1, adata2,
     # loop over all pairs of leaf nodes in the reference adata1
     for (r, s) in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
-        orig_names = [orig_names1[int(i)] for i in [r, s]]
-        orig_names += [orig_names2[int(i)] for i in [r2, s2]]
+        on1_g1, on2_g1 = [orig_names1[int(i)] for i in [r, s]]
+        on1_g2, on2_g2 = [orig_names2[int(i)] for i in [r2, s2]]
         logg.debug(
-            'compare shortest paths between leafs ({}, {}) '
-            'in graph1 and ({}, {}) in graph2:'.format(*orig_names),
-            no_indent=True,
+            f'compare shortest paths between leafs ({on1_g1}, {on2_g1}) '
+            f'in graph1 and ({on1_g2}, {on2_g2}) in graph2:'
         )
         try:
             path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
@@ -443,7 +441,7 @@ def paga_compare_paths(adata1, adata2,
             n_agreeing_paths += 1
             n_steps += 1
             n_agreeing_steps += 1
-            logg.debug('there are no connecting paths in both graphs', no_indent=True)
+            logg.debug('there are no connecting paths in both graphs')
             continue
         elif path1 is None or path2 is None:
             # non-consistent result
@@ -475,8 +473,8 @@ def paga_compare_paths(adata1, adata2,
                         # make sure that a step backward leads us to the same value of l
                         # in case we "jumped"
                         logg.debug(
-                            'found matching step ({} -> {}) at position {} in path{} and position {} in path_mapped'
-                            .format(l, path_compare_orig_names[il + 1], il, path_compare_id, ip)
+                            f'found matching step ({l} -> {path_compare_orig_names[il + 1]}) '
+                            f'at position {il} in path{path_compare_id} and position {ip} in path_mapped'
                         )
                         consistent_history = True
                         for iip in range(ip, ip_progress, -1):
@@ -485,9 +483,10 @@ def paga_compare_paths(adata1, adata2,
                         if consistent_history:
                             # here, we take one step further back (ip_progress - 1); it's implied that this
                             # was ok in the previous step
+                            poss = list(range(ip - 1, ip_progress - 2, -1))
                             logg.debug(
-                                '    step(s) backward to position(s) {} in path_mapped are fine, too: valid step'
-                                .format(list(range(ip - 1, ip_progress - 2, -1)))
+                                f'    step(s) backward to position(s) {poss} '
+                                'in path_mapped are fine, too: valid step'
                             )
                             n_agreeing_steps_path += 1
                             ip_progress = ip + 1
@@ -506,7 +505,6 @@ def paga_compare_paths(adata1, adata2,
             f'path_mapped = {[list(p) for p in path_mapped_orig_names]},\n'
             f'      path2 = {path2_orig_names},\n'
             f'-> n_agreeing_steps = {n_agreeing_steps_path} / n_steps = {n_steps_path}.',
-            no_indent=True,
         )
     Result = namedtuple('paga_compare_paths_result',
                         ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])

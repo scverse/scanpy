@@ -8,7 +8,6 @@ from scipy import sparse
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 from ._utils_clustering import rename_groups, restrict_adjacency
 
@@ -90,7 +89,7 @@ def leiden(
     except ImportError:
         raise ImportError('Please install the leiden algorithm: `pip3 install leidenalg`.')
 
-    logg.info('running Leiden clustering', r=True)
+    start = logg.info('running Leiden clustering')
     adata = adata.copy() if copy else adata
     # are we clustering a user-provided graph or the default AnnData one?
     if adjacency is None:
@@ -147,8 +146,12 @@ def leiden(
         random_state=random_state,
         n_iterations=n_iterations,
     )
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('found {} clusters and added\n'
-              '    \'{}\', the cluster labels (adata.obs, categorical)'
-              .format(len(np.unique(groups)), key_added))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            f'found {len(np.unique(groups))} clusters and added\n'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+        ),
+    )
     return adata if copy else None

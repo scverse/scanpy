@@ -6,7 +6,6 @@ import pandas as pd
 from scipy.sparse import issparse
 
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def score_genes(
@@ -58,7 +57,7 @@ def score_genes(
     --------
     See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
-    logg.info('computing score \'{}\''.format(score_name), r=True)
+    start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
 
     if random_state:
@@ -70,7 +69,7 @@ def score_genes(
         if gene in var_names:
             gene_list_in_var.append(gene)
         else:
-            logg.warn('gene: {} is not in adata.var_names and will be ignored'.format(gene))
+            logg.warning(f'gene: {gene} is not in adata.var_names and will be ignored')
     gene_list = set(gene_list_in_var[:])
 
     if not gene_pool:
@@ -118,8 +117,9 @@ def score_genes(
     if len(gene_list) == 0:
         # We shouldn't even get here, but just in case
         logg.hint(
-            'could not add \n'
-            '    \'{}\', score of gene set (adata.obs)'.format(score_name))
+            f'could not add \n'
+            f'    {score_name!r}, score of gene set (adata.obs)'
+        )
         return adata if copy else None
     elif len(gene_list) == 1:
         score = _adata[:, gene_list].X - X_control
@@ -128,9 +128,14 @@ def score_genes(
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint('added\n'
-              '    \'{}\', score of gene set (adata.obs)'.format(score_name))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            'added\n'
+            f'    {score_name!r}, score of gene set (adata.obs)'
+        ),
+    )
     return adata if copy else None
 
 

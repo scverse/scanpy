@@ -116,8 +116,10 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
         Plot the timeseries as heatmap.
     """
     if adata.n_vars > 100:
-        logg.warn('Plotting more than 100 genes might take some while,'
-                  'consider selecting only highly variable genes, for example.')
+        logg.warning(
+            'Plotting more than 100 genes might take some while, '
+            'consider selecting only highly variable genes, for example.'
+        )
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
@@ -300,7 +302,7 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
         # get all genes that are 'not-nan'
         genes_list = [gene for gene in adata.uns[key]['names'][group] if not pd.isnull(gene)][:n_genes]
         if len(genes_list) == 0:
-            logg.warn("No genes found for group {}".format(group))
+            logg.warning(f'No genes found for group {group}')
             continue
         gene_names.extend(genes_list)
         end = start + len(genes_list)
@@ -731,8 +733,10 @@ def embedding_density(
         raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
 
     if 'components' in kwargs:
-        logg.warn('Components were specified, but will be ignored. Only the '
-                  'components used to calculate the density can be plotted.')
+        logg.warning(
+            'Components were specified, but will be ignored. Only the '
+            'components used to calculate the density can be plotted.'
+        )
         del kwargs['components']
 
     components = adata.uns[key+'_params']['components']
@@ -752,7 +756,7 @@ def embedding_density(
                          'Please specify a group from this covariate to plot.')
 
     if (group is not None) and (groupby is None):
-        logg.warn('value of \'group\' is ignored because densities were not calculated for an `.obs` covariate.')
+        logg.warning("value of 'group' is ignored because densities were not calculated for an `.obs` covariate.")
         group = None
 
     if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):

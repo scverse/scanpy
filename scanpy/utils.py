@@ -45,8 +45,10 @@ def check_versions():
         from . import __version__
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
-        logg.warn('Scanpy {} needs umap version >=0.3.0, not {}.'
-                  .format(__version__, umap.__version__))
+        logg.warning(
+            f'Scanpy {__version__} needs umap '
+            f'version >=0.3.0, not {umap.__version__}.'
+        )
 
 
 def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
@@ -115,7 +117,9 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
         if isinstance(obj, Callable) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
-                yield from (m for m in vars(obj).values() if isinstance(m, Callable))
+                for m in vars(obj).values():
+                    if isinstance(m, Callable) and getattr(m, '__module__', None) != 'builtins':
+                        yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
             encountered.add(obj)
             yield from descend_classes_and_funcs(obj, root, encountered)
@@ -226,9 +230,9 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     n_edges_cmp = len(graph_cmp.nonzero()[0])
     n_edges_union = len(edgeset_union)
     logg.debug(
-        '... n_edges_ref', n_edges_ref,
-        'n_edges_cmp', n_edges_cmp,
-        'n_edges_union', n_edges_union,
+        f'... n_edges_ref {n_edges_ref} '
+        f'n_edges_cmp {n_edges_cmp} '
+        f'n_edges_union {n_edges_union} '
     )
 
     graph_ref = graph_ref.tocsr()  # need a copy of the csr graph anyways
@@ -253,9 +257,9 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     fraction_edges = n_edges_ref / n_edges_fully_connected
     naive_entropy = (fraction_edges * np.log(1./fraction_edges)
                      + (1-fraction_edges) * np.log(1./(1-fraction_edges)))
-    logg.debug('cross entropy of naive sparse prediction {:.3e}'.format(naive_entropy))
-    logg.debug('cross entropy of random prediction {:.3e}'.format(-np.log(0.5)))
-    logg.info('cross entropy {:.3e}'.format(entropy))
+    logg.debug(f'cross entropy of naive sparse prediction {naive_entropy:.3e}')
+    logg.debug(f'cross entropy of random prediction {-np.log(0.5):.3e}')
+    logg.info(f'cross entropy {entropy:.3e}')
 
     # for manifold analysis, restrict to largest connected component in
     # reference
@@ -265,7 +269,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     largest_component = np.arange(graph_ref.shape[0], dtype=int)
     if n_components > 1:
         component_sizes = np.bincount(labels)
-        logg.debug('largest component has size', component_sizes.max())
+        logg.debug(f'largest component has size {component_sizes.max()}')
         largest_component = np.where(
             component_sizes == component_sizes.max())[0][0]
         graph_ref_red = graph_ref.tocsr()[labels == largest_component, :]
@@ -326,18 +330,18 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
             adata_ref.uns['highlights'][points2[ip]] = 'D' + str(ip)
             found_disconnected_points = True
     if found_disconnected_points:
-        logg.debug('most disconnected points', points)
-        logg.debug('    with weights', weights[max_weights].round(1))
+        logg.debug(f'most disconnected points {points}')
+        logg.debug(f'    with weights {weights[max_weights].round(1)}')
 
     max_weights = np.argpartition(
         weights_overlap, kth=-n_points)[-n_points:]
     points = list(edgeset_union_indices[0][max_weights])
     for p in points:
         adata_ref.uns['highlights'][p] = 'O'
-    logg.debug('most overlapping points', points)
-    logg.debug('    with weights', weights_overlap[max_weights].round(1))
-    logg.debug('    with d_rep', d_cmp[max_weights].round(1))
-    logg.debug('    with d_ref', d_ref[max_weights].round(1))
+    logg.debug(f'most overlapping points {points}')
+    logg.debug(f'    with weights {weights_overlap[max_weights].round(1)}')
+    logg.debug(f'    with d_rep {d_cmp[max_weights].round(1)}')
+    logg.debug(f'    with d_ref {d_ref[max_weights].round(1)}')
 
     geo_entropy_d = np.sum(weights * p_ref * np.log(ratio))
     geo_entropy_o = np.sum(weights_overlap * (1-p_ref) * np.log(ratio_1m))
@@ -345,7 +349,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     geo_entropy_d /= n_edges_fully_connected
     geo_entropy_o /= n_edges_fully_connected
 
-    logg.info('geodesic cross entropy {:.3e}'.format(geo_entropy_d + geo_entropy_o))
+    logg.info(f'geodesic cross entropy {geo_entropy_d + geo_entropy_o:.3e}')
     return entropy, geo_entropy_d, geo_entropy_o
 
 
@@ -383,9 +387,10 @@ def get_igraph_from_adjacency(adjacency, directed=None):
     except:
         pass
     if g.vcount() != adjacency.shape[0]:
-        logg.warn('The constructed graph has only {} nodes. '
-                  'Your adjacency matrix contained redundant nodes.'
-                  .format(g.vcount()))
+        logg.warning(
+            f'The constructed graph has only {g.vcount()} nodes. '
+            'Your adjacency matrix contained redundant nodes.'
+        )
     return g
 
 
@@ -445,9 +450,10 @@ def compute_association_matrix_of_groups(adata, prediction, reference,
     cats = adata.obs[reference].cat.categories
     for cat in cats:
         if cat in settings.categories_to_ignore:
-            logg.info('Ignoring category \'{}\' '
-                      'as it\'s in `settings.categories_to_ignore`.'
-                      .format(cat))
+            logg.info(
+                f'Ignoring category {cat!r} '
+                'as it’s in `settings.categories_to_ignore`.'
+            )
     asso_names = []
     asso_matrix = []
     for ipred_group, pred_group in enumerate(
@@ -721,9 +727,8 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
                                           np.array(groups_order_subset)))[0]
         if len(groups_ids) == 0:
             logg.debug(
-                np.array(groups_order_subset),
-                'invalid! specify valid groups_order (or indices) one of',
-                adata.obs[key].cat.categories,
+                f'{np.array(groups_order_subset)} invalid! specify valid '
+                f'groups_order (or indices) from {adata.obs[key].cat.categories}',
             )
             from sys import exit
             exit(0)
@@ -861,7 +866,7 @@ def subsample(X, subsample=1, seed=0):
         n = int(X.shape[0]/subsample)
         np.random.seed(seed)
         Xsampled, rows = subsample_n(X, n=n)
-    logg.debug('... subsampled to', n, 'of', X.shape[0], 'data points')
+    logg.debug(f'... subsampled to {n} of {X.shape[0]} data points')
     return Xsampled, rows
 
 

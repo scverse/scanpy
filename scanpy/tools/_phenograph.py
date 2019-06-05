@@ -117,7 +117,7 @@ def phenograph( adata,
         
 
     """
-    logg.info('PhenoGraph clustering', r=True)
+    start = logg.info('PhenoGraph clustering')
 
     try:
         import phenograph
@@ -127,19 +127,19 @@ def phenograph( adata,
             'pip3 install git+https://github.com/jacoblevine/phenograph.git')
 
     communities, graph, Q = phenograph.cluster(
-                                        data=adata,
-                                        k=k,
-                                        directed=directed,
-                                        prune=prune,
-                                        min_cluster_size=min_cluster_size,
-                                        jaccard=jaccard,
-                                        primary_metric=primary_metric,
-                                        n_jobs=n_jobs,
-                                        q_tol=q_tol,
-                                        louvain_time_limit=louvain_time_limit,
-                                        nn_method=nn_method
-                                        )
+        data=adata,
+        k=k,
+        directed=directed,
+        prune=prune,
+        min_cluster_size=min_cluster_size,
+        jaccard=jaccard,
+        primary_metric=primary_metric,
+        n_jobs=n_jobs,
+        q_tol=q_tol,
+        louvain_time_limit=louvain_time_limit,
+        nn_method=nn_method
+    )
 
-    logg.info('    finished', time=True)
+    logg.info('    finished', time=start)
 
     return communities, graph, Q

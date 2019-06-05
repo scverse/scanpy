@@ -3,7 +3,6 @@
 
 from .._settings import settings
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 
 
 def magic(adata,
@@ -103,7 +102,7 @@ def magic(adata,
             'Please install magic package via `pip install --user '
             'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`')
 
-    logg.info('computing PHATE', r=True)
+    start = logg.info('computing PHATE')
     needs_copy = not (name_list is None or
                       (isinstance(name_list, str) and
                        name_list in ["all_genes", "pca_only"]))
@@ -115,9 +114,6 @@ def magic(adata,
             "`name_list=='pca_only'` (got {}). Consider setting "
             "`copy=True`".format(name_list))
     adata = adata.copy() if copy else adata
-    verbose = settings.verbosity if verbose is None else verbose
-    if isinstance(verbose, (str, int)):
-        verbose = _settings_verbosity_greater_or_equal_than(2)
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
     X_magic = MAGIC(k=k,
@@ -130,14 +126,18 @@ def magic(adata,
                     verbose=verbose,
                     **kwargs).fit_transform(adata,
                                             genes=name_list)
-    logg.info('    finished', time=True,
-              end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
+            if name_list == "pca_only" else ''
+        )
+    )
     # update AnnData instance
     if name_list == "pca_only":
         # special case - update adata.obsm with smoothed values
         adata.obsm["X_magic"] = X_magic.X
-        logg.hint('added\n'
-                  '    \'X_magic\', PCA on MAGIC coordinates (adata.obsm)')
     elif copy:
         # just return X_magic
         X_magic.raw = adata

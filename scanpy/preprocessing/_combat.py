@@ -42,7 +42,7 @@ def _design_matrix(
     model = model.drop([batch_key], axis=1)
     numerical_covariates = model.select_dtypes('number').columns.values
 
-    logg.info("Found {} batches\n".format(design.shape[1]))
+    logg.info(f"Found {design.shape[1]} batches\n")
     other_cols = [c for c in model.columns.values if c not in numerical_covariates]
 
     if other_cols:
@@ -52,11 +52,11 @@ def _design_matrix(
                                       return_type="dataframe")
 
         design = pd.concat((design, factor_matrix), axis=1)
-        logg.info("Found {} categorical variables:".format(len(other_cols)))
+        logg.info(f"Found {len(other_cols)} categorical variables:")
         logg.info("\t" + ", ".join(other_cols) + '\n')
 
     if numerical_covariates is not None:
-        logg.info("Found {} numerical variables:".format(len(numerical_covariates)))
+        logg.info(f"Found {len(numerical_covariates)} numerical variables:")
         logg.info("\t" + ", ".join(numerical_covariates) + '\n')
 
         for nC in numerical_covariates:

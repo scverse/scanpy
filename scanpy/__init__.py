@@ -28,7 +28,7 @@ check_versions()
 del get_versions, check_versions
 
 # the actual API
-from ._settings import settings  # start with settings as several tools are using it
+from ._settings import settings, Verbosity  # start with settings as several tools are using it
 from . import tools as tl
 from . import preprocessing as pp
 from . import plotting as pl

@@ -90,7 +90,7 @@ def embedding_density(
     """
     sanitize_anndata(adata) # to ensure that newly created covariates are categorical to test for categoy numbers
 
-    logg.info('computing density on \'{}\''.format(basis), r=True)
+    logg.info(f'computing density on {basis!r}')
 
     # Test user inputs
     basis = basis.lower()
@@ -157,11 +157,12 @@ def embedding_density(
     # Note: plot_scatter takes care of correcting diffmap components for plotting automatically
     if basis != 'diffmap': components += 1
 
-    adata.uns[density_covariate+'_params'] = {'covariate':groupby, 'components':components.tolist()}
-    
+    adata.uns[density_covariate+'_params'] = dict(covariate=groupby, components=components.tolist())
 
-    logg.hint('added\n'
-              '    \'{}\', densities (adata.obs)\n'
-              '    \'{}_params\', parameter (adata.uns)'.format(density_covariate, density_covariate))
+    logg.hint(
+        f'added\n'
+        f'    \'{density_covariate}\', densities (adata.obs)\n'
+        f'    \'{density_covariate}_params\', parameter (adata.uns)'
+    )
 
     return None

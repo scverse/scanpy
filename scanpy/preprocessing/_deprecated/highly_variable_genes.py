@@ -113,7 +113,7 @@ def filter_genes_dispersion(data,
         else:
             adata.var['highly_variable'] = result['gene_subset']
         return adata if copy else None
-    logg.debug('extracting highly variable genes', r=True)
+    start = logg.info('extracting highly variable genes')
     X = data  # no copy necessary, X remains unchanged in the following
     mean, var = materialize_as_ndarray(_get_mean_var(X))
     # now actually compute the dispersion
@@ -183,7 +183,7 @@ def filter_genes_dispersion(data,
         gene_subset = np.logical_and.reduce((mean > min_mean, mean < max_mean,
                                              dispersion_norm > min_disp,
                                              dispersion_norm < max_disp))
-    logg.debug('    finished', time=True)
+    logg.info('    finished', time=start)
     return np.rec.fromarrays((
         gene_subset,
         df['mean'].values,

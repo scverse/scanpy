@@ -9,7 +9,6 @@ from scipy.sparse import issparse
 
 from .. import utils
 from .. import logging as logg
-from ..logging import _settings_verbosity_greater_or_equal_than
 from ..preprocessing._simple import _get_mean_var
 
 
@@ -101,7 +100,7 @@ def rank_genes_groups(
     if 'only_positive' in kwds:
         rankby_abs = not kwds.pop('only_positive')  # backwards compat
 
-    logg.info('ranking genes', r=True)
+    start = logg.info('ranking genes')
     avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
         raise ValueError('Method must be one of {}.'.format(avail_methods))
@@ -158,8 +157,8 @@ def rank_genes_groups(
     ns = np.zeros(n_groups, dtype=int)
     for imask, mask in enumerate(groups_masks):
         ns[imask] = np.where(mask)[0].size
-    logg.debug('consider \'{}\' groups:'.format(groupby), groups_order)
-    logg.debug('with sizes:', ns)
+    logg.debug(f'consider {groupby!r} groups:')
+    logg.debug(f'with sizes: {ns}')
     if reference != 'rest':
         ireference = np.where(groups_order == reference)[0][0]
     reference_indices = np.arange(adata_comp.n_vars, dtype=int)
@@ -408,16 +407,22 @@ def rank_genes_groups(
         adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals_adj],
             dtype=[(rn, 'float64') for rn in groups_order_save])
-    logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
-    logg.hint(
-        'added to `.uns[\'{}\']`\n'
-        '    \'names\', sorted np.recarray to be indexed by group ids\n'
-        '    \'scores\', sorted np.recarray to be indexed by group ids\n'
-        .format(key_added)
-        + ('    \'logfoldchanges\', sorted np.recarray to be indexed by group ids\n'
-           '    \'pvals\', sorted np.recarray to be indexed by group ids\n'
-           '    \'pvals_adj\', sorted np.recarray to be indexed by group ids'
-           if method in {'t-test', 't-test_overestim_var', 'wilcoxon'} else ''))
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            f'added to `.uns[{key_added!r}]`\n'
+            "    'names', sorted np.recarray to be indexed by group ids\n"
+            "    'scores', sorted np.recarray to be indexed by group ids\n"
+            + (
+                "    'logfoldchanges', sorted np.recarray to be indexed by group ids\n"
+                "    'pvals', sorted np.recarray to be indexed by group ids\n"
+                "    'pvals_adj', sorted np.recarray to be indexed by group ids"
+                if method in {'t-test', 't-test_overestim_var', 'wilcoxon'} else
+                ''
+            )
+        ),
+    )
     return adata if copy else None
 
 
@@ -475,9 +480,11 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
     fold_change_matrix = pd.DataFrame(np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index)
     fraction_out_cluster_matrix = pd.DataFrame(np.zeros(gene_names.shape), columns=gene_names.columns,
                                                index=gene_names.index)
-    logg.info("Filtering genes using: min_in_group_fraction: {} "
-              "min_fold_change: {}, max_out_group_fraction: {}".format(min_in_group_fraction, min_fold_change,
-                                                                       max_out_group_fraction))
+    logg.info(
+        f"Filtering genes using: "
+        f"min_in_group_fraction: {min_in_group_fraction} "
+        f"min_fold_change: {min_fold_change}, "
+        f"max_out_group_fraction: {max_out_group_fraction}")
     from ..plotting._anndata import _prepare_dataframe
     for cluster in gene_names.columns:
         # iterate per column
