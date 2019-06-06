@@ -195,11 +195,14 @@ def rank_genes_groups(
             elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
             else: raise ValueError('Method does not exist.')
 
-            scores, pvals = stats.ttest_ind_from_stats(
-                mean1=mean_group, std1=np.sqrt(var_group), nobs1=ns_group,
-                mean2=mean_rest,  std2=np.sqrt(var_rest),  nobs2=ns_rest,
-                equal_var=False  # Welch's
-            )
+            # TODO: Come up with better solution. Mask unexpressed genes?
+            # See https://github.com/scipy/scipy/issues/10269
+            with np.errstate(invalid="ignore"):
+                scores, pvals = stats.ttest_ind_from_stats(
+                    mean1=mean_group, std1=np.sqrt(var_group), nobs1=ns_group,
+                    mean2=mean_rest,  std2=np.sqrt(var_rest),  nobs2=ns_rest,
+                    equal_var=False  # Welch's
+                )
 
             # Fold change
             foldchanges = (np.expm1(mean_group) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
