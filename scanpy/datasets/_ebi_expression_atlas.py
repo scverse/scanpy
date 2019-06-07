@@ -1,102 +1,56 @@
-from urllib.request import urlretrieve, urlopen
+from urllib.request import urlopen
 from urllib.error import HTTPError
 from zipfile import ZipFile
-
-from scipy import sparse
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
+from typing import BinaryIO
 
 import anndata
+import pandas as pd
+import numpy as np
+from scipy import sparse
+
+from ..readwrite import download
 from .._settings import settings
+from .. import logging as logg
 
 
-def _filter_boring(dataframe):
+def _filter_boring(dataframe: pd.DataFrame) -> pd.DataFrame:
     unique_vals = dataframe.apply(lambda x: len(x.unique()))
     is_boring = (unique_vals == 1) | (unique_vals == len(dataframe))
     return dataframe.loc[:, ~is_boring]
 
 
-# Copied from tqdm examples
-def tqdm_hook(t):
-    """
-    Wraps tqdm instance.
-
-    Don't forget to close() or __exit__()
-    the tqdm instance once you're done with it (easiest using `with` syntax).
-    Example
-    -------
-    >>> with tqdm(...) as t:
-    ...     reporthook = my_hook(t)
-    ...     urllib.urlretrieve(..., reporthook=reporthook)
-    """
-    last_b = [0]
-
-    def update_to(b=1, bsize=1, tsize=None):
-        """
-        b  : int, optional
-            Number of blocks transferred so far [default: 1].
-        bsize  : int, optional
-            Size of each block (in tqdm units) [default: 1].
-        tsize  : int, optional
-            Total size (in tqdm units). If [default: None] remains unchanged.
-        """
-        if tsize is not None:
-            t.total = tsize
-        t.update((b - last_b[0]) * bsize)
-        last_b[0] = b
-
-    return update_to
-
-
-def sniff_url(accession):
+def sniff_url(accession: str):
     # Note that data is downloaded from gxa/sc/experiment, not experiments
-    base_url = "https://www.ebi.ac.uk/gxa/sc/experiments/{}/".format(accession)
+    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiments/{accession}/"
     try:
-        with urlopen(base_url) as req:  # Check if server up/ dataset exists
+        with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = e.msg + " ({})".format(base_url)  # Report failed url
+        e.msg = e.msg + f" ({base_url})"  # Report failed url
         raise
 
 
-def download_experiment(accession):
+def download_experiment(accession: str):
     sniff_url(accession)
 
-    base_url = "https://www.ebi.ac.uk/gxa/sc/experiment/{}/".format(accession)
+    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}/"
     quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
     sampledata_path = "download?fileType=experiment-design&accessKey="
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    with tqdm(
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-        miniters=1,
-        desc="experimental_design.tsv",
-    ) as t:
-        urlretrieve(
-            base_url + sampledata_path,
-            experiment_dir / "experimental_design.tsv",
-            reporthook=tqdm_hook(t),
-        )
-    with tqdm(
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-        miniters=1,
-        desc="expression_archive.zip",
-    ) as t:
-        urlretrieve(
-            base_url + quantification_path,
-            experiment_dir / "expression_archive.zip",
-            reporthook=tqdm_hook(t),
-        )
+    download(
+        base_url + sampledata_path,
+        experiment_dir / "experimental_design.tsv",
+    )
+    download(
+        base_url + quantification_path,
+        experiment_dir / "expression_archive.zip",
+    )
 
 
-def read_mtx_from_stream(stream):
+def read_mtx_from_stream(stream: BinaryIO) -> sparse.csr_matrix:
     stream.readline()
     n, m, _ = (int(x) for x in stream.readline()[:-1].split(b" "))
     data = pd.read_csv(
@@ -109,12 +63,12 @@ def read_mtx_from_stream(stream):
     return mtx
 
 
-def read_expression_from_archive(archive: ZipFile):
+def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     info = archive.infolist()
     assert len(info) == 3
-    mtx_data_info = [i for i in info if i.filename.endswith(".mtx")][0]
-    mtx_rows_info = [i for i in info if i.filename.endswith(".mtx_rows")][0]
-    mtx_cols_info = [i for i in info if i.filename.endswith(".mtx_cols")][0]
+    mtx_data_info = next(i for i in info if i.filename.endswith(".mtx"))
+    mtx_rows_info = next(i for i in info if i.filename.endswith(".mtx_rows"))
+    mtx_cols_info = next(i for i in info if i.filename.endswith(".mtx_cols"))
     with archive.open(mtx_data_info, "r") as f:
         expr = read_mtx_from_stream(f)
     with archive.open(mtx_rows_info, "r") as f:
@@ -127,7 +81,7 @@ def read_expression_from_archive(archive: ZipFile):
     return adata
 
 
-def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
+def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> anndata.AnnData:
     """Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
 
     Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
@@ -146,7 +100,7 @@ def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
     >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     """
     experiment_dir = settings.datasetdir / accession
-    dataset_path = experiment_dir / "{}.h5ad".format(accession)
+    dataset_path = experiment_dir / f"{accession}.h5ad"
     try:
         adata = anndata.read(dataset_path)
         if filter_boring:
@@ -158,7 +112,7 @@ def ebi_expression_atlas(accession: str, *, filter_boring: bool = False):
 
     download_experiment(accession)
 
-    print("Downloaded {} to {}".format(accession, experiment_dir.absolute()))
+    logg.info(f"Downloaded {accession} to {experiment_dir.absolute()}")
 
     with ZipFile(experiment_dir / "expression_archive.zip", "r") as f:
         adata = read_expression_from_archive(f)
