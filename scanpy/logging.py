@@ -90,8 +90,12 @@ class LogFormatter(logging.Formatter):
             self._style._fmt = '--> {message}'
         elif record.levelno == DEBUG:
             self._style._fmt = '    {message}'
-        if '{time_passed}' not in record.msg and record.time_passed:
-            self._style._fmt += ' ({time_passed})'
+        if record.time_passed:
+            # strip microseconds
+            if record.time_passed.microseconds:
+                record.time_passed = timedelta(seconds=int(record.time_passed.total_seconds()))
+            if '{time_passed}' not in record.msg:
+                self._style._fmt += ' ({time_passed})'
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
         return result
@@ -164,7 +168,7 @@ def error(
 ) -> datetime:
     """
     Log message with specific level and return current time.
-    
+
     Parameters
     ==========
     msg
