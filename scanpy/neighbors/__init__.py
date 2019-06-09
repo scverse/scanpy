@@ -636,7 +636,7 @@ class Neighbors:
         Also writes `.knn_indices` and `.knn_distances` if
         `write_knn_indices==True`.
         """
-        start_neighbors = logg.info('Computing neighbors')
+        start_neighbors = logg.debug('computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
@@ -672,7 +672,7 @@ class Neighbors:
         if write_knn_indices:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
-        start_connect = logg.info('computed neighbors', time=start_neighbors)
+        start_connect = logg.debug('computed neighbors', time=start_neighbors)
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
@@ -686,7 +686,7 @@ class Neighbors:
         # self._distances is unaffected by this
         if method == 'gauss':
             self._compute_connectivities_diffmap()
-        logg.info('computed connectivities', time=start_connect)
+        logg.debug('computed connectivities', time=start_connect)
         self._number_connected_components = 1
         if issparse(self._connectivities):
             from scipy.sparse.csgraph import connected_components
@@ -771,7 +771,7 @@ class Neighbors:
         -------
         Makes attributes `.transitions_sym` and `.transitions` available.
         """
-        start = logg.info('Computing transitions')
+        start = logg.info('computing transitions')
         W = self._connectivities
         # density normalization as of Coifman et al. (2005)
         # ensures that kernel matrix is independent of sampling density
@@ -794,7 +794,7 @@ class Neighbors:
         else:
             self.Z = scipy.sparse.spdiags(1.0/z, 0, K.shape[0], K.shape[0])
         self._transitions_sym = self.Z @ K @ self.Z
-        logg.info('computed transitions', time=start)
+        logg.info('    finished', time=start)
 
     def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
         """Compute eigen decomposition of transition matrix.
