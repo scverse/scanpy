@@ -27,7 +27,7 @@ def test_formats(capsys, logging_state):
     l.warning('1')
     assert capsys.readouterr().err == 'WARNING: 1\n'
     l.info('2')
-    assert capsys.readouterr().err.endswith(' 2\n')
+    assert capsys.readouterr().err == '2\n'
     l.hint('3')
     assert capsys.readouterr().err == '--> 3\n'
     l.debug('4')
@@ -70,8 +70,8 @@ def test_timing(monkeypatch, capsys, logging_state):
     l.hint('1')
     assert counter == 1 and capsys.readouterr().err == '--> 1\n'
     start = l.info('2')
-    assert counter == 2 and capsys.readouterr().err.endswith(' 2\n')
+    assert counter == 2 and capsys.readouterr().err == '2\n'
     l.hint('3')
     assert counter == 3 and capsys.readouterr().err == '--> 3\n'
     l.info('4', time=start)
-    assert counter == 4 and capsys.readouterr().err.endswith(' | 4 (0:00:02)\n')
+    assert counter == 4 and capsys.readouterr().err == '4 (0:00:02)\n'
