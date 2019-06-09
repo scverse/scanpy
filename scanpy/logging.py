@@ -85,7 +85,7 @@ class LogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
         format_orig = self._style._fmt
         if record.levelno == INFO:
-            self._style._fmt = '{asctime} | {message}'
+            self._style._fmt = '{message}'
         elif record.levelno == HINT:
             self._style._fmt = '--> {message}'
         elif record.levelno == DEBUG:
