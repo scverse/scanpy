@@ -617,7 +617,7 @@ def rank_genes_groups_df(
     log2fc_max
         Maximum logfc to return.
     gene_symbols
-        Column name in `.var` DataFrame that stores gene symbols. Specifying 
+        Column name in `.var` DataFrame that stores gene symbols. Specifying
         this will add that column to the returned dataframe.
 
     Example
@@ -642,8 +642,8 @@ def rank_genes_groups_df(
 
 def obs_values_df(
     adata: AnnData,
-    keys: Iterable[str] = [],
-    obsm_keys: Iterable[Tuple[str, int]] = [],
+    keys: Iterable[str] = (),
+    obsm_keys: Iterable[Tuple[str, int]] = (),
     *,
     layer: str = None,
     gene_symbols: str = None,
