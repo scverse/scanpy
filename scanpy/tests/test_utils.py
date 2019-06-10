@@ -27,14 +27,25 @@ def test_descend_classes_and_funcs():
 
 
 def test_obs_values():
-    obs = pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"])
-    var = pd.DataFrame({"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"])
-    obsm = {"eye": np.eye(2)}
-    adata = sc.AnnData(X=np.ones((2, 2)), obs=obs, var=var, obsm=obsm)
-    test_df = pd.DataFrame({"gene2": [1, 1], "obs1": [0, 1], "eye0": [1, 0]}, index=adata.obs_names)
-    assert np.all(obs_values_df(adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0)]) == test_df)
-    test_gene_name_df = pd.DataFrame({"genesymbol2": [1, 1], "obs1": [0, 1], "eye0": [1, 0]}, index=adata.obs_names)
-    assert np.all(obs_values_df(adata, keys=["genesymbol2", "obs1"], obsm_keys=[("eye", 0)], gene_symbols="gene_symbols") == test_gene_name_df)
+    adata = sc.AnnData(
+        X=np.ones((2, 2)),
+        obs=pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]),
+        var=pd.DataFrame({"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]),
+        obsm={"eye": np.eye(2)},
+        layers={"double": np.ones((2, 2)) * 2}
+    )
+    assert np.all(np.equal(
+        obs_values_df(adata, keys=["gene2", "obs1"], obsm_keys=[("eye", 0)]),
+        pd.DataFrame({"gene2": [1, 1], "obs1": [0, 1], "eye0": [1, 0]}, index=adata.obs_names)
+    ))
+    assert np.all(np.equal(
+        obs_values_df(adata, keys=["genesymbol2", "obs1"], obsm_keys=[("eye", 0)], gene_symbols="gene_symbols"),
+        pd.DataFrame({"genesymbol2": [1, 1], "obs1": [0, 1], "eye0": [1, 0]}, index=adata.obs_names)
+    ))
+    assert np.all(np.equal(
+        obs_values_df(adata, keys=["gene2", "obs1"], layer="double"),
+        pd.DataFrame({"gene2": [2, 2], "obs1": [0, 1]}, index=adata.obs_names)
+    ))
     badkeys = ["badkey1", "badkey2"]
     with pytest.raises(KeyError) as badkey_err:
         obs_values_df(adata, keys=badkeys)
