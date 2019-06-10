@@ -6,7 +6,7 @@ import inspect
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
-from functools import partial, wraps, singledispatch
+from functools import partial, wraps
 from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Iterable, Tuple
 
@@ -18,7 +18,6 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 
 from anndata import AnnData
-from . import _docs
 from ._settings import settings
 from . import logging as logg
 import warnings
@@ -641,13 +640,11 @@ def rank_genes_groups_df(
     return d
 
 
-@doc_params(raw_layer_params=_docs.doc_raw_layers)
 def obs_values_df(
     adata: AnnData,
     keys: Iterable[str] = [],
     obsm_keys: Iterable[Tuple[str, int]] = [],
     *,
-    use_raw: bool = False,
     layer: str = None,
     gene_symbols: str = None,
 ) -> pd.DataFrame:
@@ -662,7 +659,8 @@ def obs_values_df(
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
         Tuple of ``(key from obsm, column index of obsm[key])`.
-    {raw_layer_params}
+    layer
+        Layer of `adata` to use as expression values.
     gene_symbols
         Column of `adata.var` to search for `keys` in.
 
@@ -695,8 +693,6 @@ def obs_values_df(
     >>> mean, var = grouped.mean(), grouped.var()
     """
     ### Argument handling
-    if layer is None:
-        layer = "X"
     # Check keys
     if gene_symbols is not None:
         gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
@@ -723,7 +719,7 @@ def obs_values_df(
     ### Make df
     df = pd.DataFrame(index=adata.obs_names)
     for k, l in zip(keys, lookup_keys):
-        df[k] = adata._get_obs_array(l, use_raw=use_raw, layer=layer)
+        df[k] = adata.obs_vector(l, layer=layer)
     for k, idx in obsm_keys:
         added_k = "{}{}".format(k, idx)
         df[added_k] = adata.obsm[k][:, idx]
