@@ -640,7 +640,7 @@ def rank_genes_groups_df(
     return d
 
 
-def obs_values_df(
+def obs_df(
     adata: AnnData,
     keys: Iterable[str] = (),
     obsm_keys: Iterable[Tuple[str, int]] = (),
@@ -674,7 +674,7 @@ def obs_values_df(
     Getting value for plotting:
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
-    >>> plotdf = sc.utils.obs_values_df(
+    >>> plotdf = sc.utils.obs_df(
             pbmc,
             keys=["CD8B", "n_genes"],
             obsm_keys=[("X_umap", 0), ("X_umap", 1)]
@@ -685,7 +685,7 @@ def obs_values_df(
 
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> marker_genes = ['CD79A', 'MS4A1', 'CD8A', 'CD8B', 'LYZ']
-    >>> genedf = sc.utils.obs_values_df(
+    >>> genedf = sc.utils.obs_df(
             pbmc,
             keys=["louvain", *marker_genes]
         )
@@ -725,6 +725,56 @@ def obs_values_df(
         df[added_k] = adata.obsm[k][:, idx]
     return df
 
+
+def var_df(
+    adata: AnnData,
+    keys: Iterable[str] = (),
+    varm_keys: Iterable[Tuple[str, int]] = (),
+    *,
+    layer: str = None,
+) -> pd.DataFrame:
+    """\
+    Return values for observations in adata.
+
+    Params
+    ------
+    adata
+        AnnData object to get values from.
+    keys
+        Keys from either `.obs_names`, or `.var.columns`.
+    varm_keys
+        Tuple of ``(key from varm, column index of varm[key])`.
+    layer
+        Layer of `adata` to use as expression values.
+
+    Returns
+    -------
+    A dataframe with `adata.var_names` as index, and values specified by `keys`
+    and `varm_keys`.
+    """
+    ### Argument handling
+    lookup_keys = []
+    not_found = []
+    for key in keys:
+        if key in adata.var.columns:
+            lookup_keys.append(key)
+        elif key in adata.obs_names:
+            lookup_keys.append(key)
+        else:
+            not_found.append(key)
+    if len(not_found) > 0:
+        raise KeyError(
+            f"Could not find keys '{not_found}' in columns of `adata.var` or in `adata.obs_names`."
+        )
+
+    ### Make df
+    df = pd.DataFrame(index=adata.var_names)
+    for k, l in zip(keys, lookup_keys):
+        df[k] = adata.var_vector(l, layer=layer)
+    for k, idx in varm_keys:
+        added_k = "{}{}".format(k, idx)
+        df[added_k] = adata.varm[k][:, idx]
+    return df
 
 # --------------------------------------------------------------------------------
 # Other stuff
