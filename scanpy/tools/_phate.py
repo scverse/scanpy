@@ -113,7 +113,7 @@ def phate(
     adata = adata.copy() if copy else adata
     verbose = settings.verbosity if verbose is None else verbose
     if isinstance(settings.verbosity, (str, int)):
-        verbose = _settings_verbosity_greater_or_equal_than(2)
+        verbose = verbose if int(verbose) <= 2 else 2
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
