@@ -1,5 +1,7 @@
 import pytest
 
+# Command line options for pytest must be added from conftest.py from where
+# `pytest` is called.
 def pytest_addoption(parser):
     parser.addoption(
         "--internet-tests",
