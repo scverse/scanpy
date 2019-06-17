@@ -4,7 +4,6 @@
 are captured here and accessed through the standard function call sc.pl.
 """
 
-import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.sparse import issparse
@@ -34,7 +33,7 @@ def correlation_matrix(adata,groupby=None ,group=None, corr_matrix=None, annotat
                 If specified, looks in data annotation for this key.
 
         """
-
+    import seaborn as sns  # Slow import, only import if called
     # TODO: At the moment, noly works for int identifiers
 
     if corr_matrix is None:

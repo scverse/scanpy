@@ -10,7 +10,7 @@ from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like
-import seaborn as sns
+
 
 from .._settings import settings
 from .. import logging as logg
@@ -622,6 +622,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
     """
+    import seaborn as sns  # Slow import, only import if called
     sanitize_anndata(adata)
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(keys, str): keys = [keys]
@@ -746,6 +747,7 @@ def clustermap(
     >>> adata = sc.datasets.krumsiek11()
     >>> sc.pl.clustermap(adata, obs_keys='cell_type')
     """
+    import seaborn as sns  # Slow import, only import if called
     if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
@@ -836,6 +838,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
+    import seaborn as sns  # Slow import, only import if called
     if use_raw is None and adata.raw is not None: use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
                                                                              var_group_labels, var_group_positions)

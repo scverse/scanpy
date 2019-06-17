@@ -1,4 +1,3 @@
-import seaborn as sns
 from matplotlib import pyplot as plt
 import pandas as pd
 from . import _utils as utils
@@ -47,6 +46,7 @@ def highest_expr_genes(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes`.
     """
+    import seaborn as sns  # Slow import, only import if called
     from scipy.sparse import issparse
 
     # compute the percentage of each gene per cell
