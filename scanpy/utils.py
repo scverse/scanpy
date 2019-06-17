@@ -11,7 +11,7 @@ from types import ModuleType, MethodType
 from typing import Union, Callable, Optional, Iterable, Tuple
 
 import numpy as np
-import scipy.sparse
+from scipy import sparse
 from natsort import natsorted
 from textwrap import dedent
 import pandas as pd
@@ -267,7 +267,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     # reference
     # now that we clip at a quite high value below, this might not even be
     # necessary
-    n_components, labels = scipy.sparse.csgraph.connected_components(graph_ref)
+    n_components, labels = sparse.csgraph.connected_components(graph_ref)
     largest_component = np.arange(graph_ref.shape[0], dtype=int)
     if n_components > 1:
         component_sizes = np.bincount(labels)
@@ -692,8 +692,7 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """
-    ### Argument handling
-    # Check keys
+    # Argument handling
     if gene_symbols is not None:
         gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
     else:
@@ -713,16 +712,20 @@ def obs_df(
         else:
             gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
         raise KeyError(
-            "Could not find keys '{}' in columns of `adata.obs` or in {}.".format(not_found, gene_error)
+            f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
+            f" {gene_error}."
         )
 
-    ### Make df
+    # Make df
     df = pd.DataFrame(index=adata.obs_names)
     for k, l in zip(keys, lookup_keys):
         df[k] = adata.obs_vector(l, layer=layer)
     for k, idx in obsm_keys:
-        added_k = "{}{}".format(k, idx)
-        df[added_k] = adata.obsm[k][:, idx]
+        added_k = f"{k}-{idx}"
+        if isinstance(adata.obsm[k], (np.ndarray, sparse.csr_matrix)):
+            df[added_k] = np.ravel(adata.obsm[k][:, idx])
+        elif isinstance(adata.obsm[k], pd.DataFrame):
+            df[added_k] = adata.obsm[k].loc[:, idx]
     return df
 
 
@@ -752,7 +755,7 @@ def var_df(
     A dataframe with `adata.var_names` as index, and values specified by `keys`
     and `varm_keys`.
     """
-    ### Argument handling
+    # Argument handling
     lookup_keys = []
     not_found = []
     for key in keys:
@@ -764,16 +767,20 @@ def var_df(
             not_found.append(key)
     if len(not_found) > 0:
         raise KeyError(
-            f"Could not find keys '{not_found}' in columns of `adata.var` or in `adata.obs_names`."
+            f"Could not find keys '{not_found}' in columns of `adata.var` or"
+            " in `adata.obs_names`."
         )
 
-    ### Make df
+    # Make df
     df = pd.DataFrame(index=adata.var_names)
     for k, l in zip(keys, lookup_keys):
         df[k] = adata.var_vector(l, layer=layer)
     for k, idx in varm_keys:
-        added_k = "{}{}".format(k, idx)
-        df[added_k] = adata.varm[k][:, idx]
+        added_k = f"{k}-{idx}"
+        if isinstance(adata.varm[k], (np.ndarray, sparse.csr_matrix)):
+            df[added_k] = np.ravel(adata.varm[k][:, idx])
+        elif isinstance(adata.varm[k], pd.DataFrame):
+            df[added_k] = adata.varm[k].loc[:, idx]
     return df
 
 # --------------------------------------------------------------------------------
