@@ -75,3 +75,5 @@ def test_timing(monkeypatch, capsys, logging_state):
     assert counter == 3 and capsys.readouterr().err == '--> 3\n'
     l.info('4', time=start)
     assert counter == 4 and capsys.readouterr().err == '4 (0:00:02)\n'
+    l.info('5 {time_passed}', time=start)
+    assert counter == 5 and capsys.readouterr().err == '5 0:00:03\n'

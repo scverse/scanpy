@@ -94,7 +94,9 @@ class LogFormatter(logging.Formatter):
             # strip microseconds
             if record.time_passed.microseconds:
                 record.time_passed = timedelta(seconds=int(record.time_passed.total_seconds()))
-            if '{time_passed}' not in record.msg:
+            if '{time_passed}' in record.msg:
+                record.msg = record.msg.replace('{time_passed}', str(record.time_passed))
+            else:
                 self._style._fmt += ' ({time_passed})'
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
