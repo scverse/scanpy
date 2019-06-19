@@ -1,16 +1,15 @@
-anndata>=0.6.15
+anndata>=0.6.22rc1
 # matplotlib 3.1 causes an error in 3d scatter plots. Once solved the dependency can be updated (https://github.com/matplotlib/matplotlib/issues/14298)
 matplotlib==3.0.*
 pandas>=0.21
-# scipy 1.3 version is not compatible with statsmodels. A new statsmodels release is expected to address the issue (https://github.com/statsmodels/statsmodels/issues/5759)
-scipy==1.2.*
+scipy>=1.3
 seaborn
 h5py
 tables
 tqdm
 # exclude buggy versions
 scikit-learn >= 0.19.1, != 0.21.0, != 0.21.1
-statsmodels
+statsmodels>=0.10.0rc2
 patsy
 networkx
 natsort
