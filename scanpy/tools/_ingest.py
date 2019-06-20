@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 from umap import UMAP
 from umap.distances import named_distances
