@@ -5,12 +5,13 @@ from umap.nndescent import make_initialisations, make_initialized_nnd_search
 from umap.umap_ import INT32_MAX, INT32_MIN
 from umap.utils import deheap_sort
 from sklearn.utils import check_random_state
-from ..neighbors import _rp_forest_generate
 from scipy.sparse import issparse
 from scipy.stats import mode
 
-class Ingest:
+from ..neighbors import _rp_forest_generate
 
+
+class Ingest:
     def __init__(self, adata):
         #need to take care of representation
         self._rep = adata.X
@@ -21,47 +22,51 @@ class Ingest:
         if 'PCs' in adata.varm:
             self._pca_basis = adata.varm['PCs']
 
-        if 'neighbors' in adata.uns:
-            if 'metric_kwds' in adata.uns['neighbors']['params']:
-                dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
-            else:
-                dist_args = ()
-            dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
-            self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
-            self._search = make_initialized_nnd_search(dist_func, dist_args)
+        if 'neighbors' not in adata.uns:
+            return
 
-            search_graph = adata.uns['neighbors']['distances'].copy()
-            search_graph.data = (search_graph.data > 0).astype(np.int8)
-            self._search_graph = search_graph.maximum(search_graph.transpose())
+        if 'metric_kwds' in adata.uns['neighbors']['params']:
+            dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
+        else:
+            dist_args = ()
+        dist_func = named_distances[adata.uns['neighbors']['params']['metric']]
+        self._random_init, self._tree_init = make_initialisations(dist_func, dist_args)
+        self._search = make_initialized_nnd_search(dist_func, dist_args)
 
-            if 'rp_forest' in adata.uns['neighbors']:
-                self._rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
-            else:
-                self._rp_forest = None
+        search_graph = adata.uns['neighbors']['distances'].copy()
+        search_graph.data = (search_graph.data > 0).astype(np.int8)
+        self._search_graph = search_graph.maximum(search_graph.transpose())
 
-            if 'X_umap' in adata.obsm:
-                self._umap = UMAP(
-                    metric = adata.uns['neighbors']['params']['metric']
-                )
+        if 'rp_forest' in adata.uns['neighbors']:
+            self._rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
+        else:
+            self._rp_forest = None
 
-                self._umap.embedding_ = adata.obsm['X_umap']
-                self._umap._raw_data = self._rep
-                self._umap._sparse_data = issparse(self._rep)
-                self._umap._small_data = self._rep.shape[0] < 4096
-                self._umap._metric_kwds = adata.uns['neighbors']['params']['metric_kwds']
-                self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
-                self._umap._initial_alpha = self._umap.learning_rate
+        if 'X_umap' not in adata.obsm:
+            return
 
-                self._umap._random_init = self._random_init
-                self._umap._tree_init = self._tree_init
-                self._umap._search = self._search
+        self._umap = UMAP(
+            metric = adata.uns['neighbors']['params']['metric']
+        )
 
-                self._umap._rp_forest = self._rp_forest
+        self._umap.embedding_ = adata.obsm['X_umap']
+        self._umap._raw_data = self._rep
+        self._umap._sparse_data = issparse(self._rep)
+        self._umap._small_data = self._rep.shape[0] < 4096
+        self._umap._metric_kwds = adata.uns['neighbors']['params']['metric_kwds']
+        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        self._umap._initial_alpha = self._umap.learning_rate
 
-                self._umap._search_graph = self._search_graph
+        self._umap._random_init = self._random_init
+        self._umap._tree_init = self._tree_init
+        self._umap._search = self._search
 
-                self._umap._a = adata.uns['umap']['params']['a']
-                self._umap._b = adata.uns['umap']['params']['b']
+        self._umap._rp_forest = self._rp_forest
+
+        self._umap._search_graph = self._search_graph
+
+        self._umap._a = adata.uns['umap']['params']['a']
+        self._umap._b = adata.uns['umap']['params']['b']
 
     def pca(self, adata_small):
         #todo - efficient implementation for sparse matrices
