@@ -94,7 +94,10 @@ class Ingest:
         rep = adata_small.X
         adata_small.obsm['X_umap'] = self._umap.transform(rep)
 
-    def knn_classify(self, adata_small, classes_key, k=10):
+    def knn_classify(self, adata_small, classes_key, k=10, **kwargs):
         #i.e. ingest.knn_classify(adata_small, 'louvain')
         cat_array = self._adata.obs[classes_key]
-        #todo
+        neighbors, _ = self.neighbors(adata_small, k, **kwargs)
+
+        values = [cat_array[inds].mode()[0] for inds in neighbors]
+        adata_small.obs[classes_key] = pd.Categorical(values=values, categories=cat_array.cat.categories)
