@@ -6,7 +6,6 @@ from umap.umap_ import INT32_MAX, INT32_MIN
 from umap.utils import deheap_sort
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from scipy.stats import mode
 
 from ..neighbors import _rp_forest_generate
 
