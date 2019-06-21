@@ -69,8 +69,9 @@ def scatter(
     y : `str` or `None`
         y coordinate.
     color : string or list of strings, optional (default: `None`)
-        Keys for annotations of observations/cells or variables/genes, e.g.,
-        `'ann1'` or `['ann1', 'ann2']`.
+        Keys for annotations of observations/cells or variables/genes,
+        or a hex color specification, e.g.,
+        `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     layers : `str` or tuple of strings, optional (default: `X`)
