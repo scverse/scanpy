@@ -6,6 +6,7 @@ from typing import Any, Union, Optional, Iterable, Dict
 from anndata import AnnData
 import pandas as pd
 
+from ..get import rank_genes_groups_df
 from ..utils import doc_params
 
 
@@ -266,7 +267,7 @@ def enrich(
     )
 
 
-@enrich.register
+@enrich.register(AnnData)
 def _enrich_anndata(
     adata: AnnData,
     group: str,
@@ -274,7 +275,8 @@ def _enrich_anndata(
     org: Optional[str] = "hsapiens",
     key: str = "rank_genes_groups",
     pval_cutoff: float = 0.05,
-    logfc_cutoff: Optional[float] = None,
+    log2fc_min: Optional[float] = None,
+    log2fc_max: Optional[float] = None,
     gene_symbols: Optional[str] = None,
     gprofiler_kwargs: dict = {}
 ) -> pd.DataFrame:
@@ -283,7 +285,8 @@ def _enrich_anndata(
         group=group,
         key=key,
         pval_cutoff=pval_cutoff,
-        logfc_cutoff=logfc_cutoff,
+        log2fc_min=log2fc_min,
+        log2fc_max=log2fc_max,
         gene_symbols=gene_symbols
     )
     if gene_symbols is not None:
@@ -291,25 +294,3 @@ def _enrich_anndata(
     else:
         gene_list = list(de["names"])
     return enrich(gene_list, org=org, gprofiler_kwargs=gprofiler_kwargs)
-
-
-####### Utilities
-
-def rank_genes_groups_df(
-    adata: AnnData,
-    group: str,  # Can this be something else?
-    key: str = "rank_genes_groups",
-    pval_cutoff : Optional[float] = None,
-    logfc_cutoff : Optional[float] = None,
-    gene_symbols : Optional[str] = None
-) -> pd.DataFrame:
-    d = pd.DataFrame()
-    for k in ['scores', 'names', 'logfoldchanges', 'pvals', 'pvals_adj']:
-        d[k] = adata.uns["rank_genes_groups"][k][group]
-    if pval_cutoff is not None:
-        d = d[d["pvals_adj"] < pval_cutoff]
-    if logfc_cutoff is not None:
-        d = d[d["logfoldchanges"].abs() > logfc_cutoff]
-    if gene_symbols is not None:
-        d = d.join(adata.var[gene_symbols], on="names")
-    return d
