@@ -12,7 +12,7 @@ Post v1.4 :small:`May 13, 2019`
 
 New functionality:
 
-- New module :ref:`sc.get<module-get>` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`thanks to I Virshup`
+- New module :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :pr:`618` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :pr:`622` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`) :pr:`604` :smaller:`thanks to P Angerer`

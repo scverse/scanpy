@@ -17,6 +17,9 @@ Import Scanpy as::
 Preprocessing: PP
 ------------------
 
+.. module:: scanpy.pp
+.. currentmodule:: scanpy
+
 Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
 Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
@@ -73,6 +76,9 @@ Neighbors
 
 Tools: TL
 ----------
+
+.. module:: scanpy.tl
+.. currentmodule:: scanpy
 
 Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
 
@@ -132,6 +138,9 @@ Simulations
 Plotting: PL
 ------------
 
+.. module:: scanpy.pl
+.. currentmodule:: scanpy
+
 The plotting module :mod:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
 For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
 
@@ -182,6 +191,9 @@ Read other formats using functions borrowed from :mod:`anndata`
 
 Data access: `get`
 -------------------
+
+.. module:: scanpy.get
+.. currentmodule:: scanpy
 
 The module `sc.get` provides convenience functions for getting values back in
 useful formats.
@@ -272,6 +284,9 @@ Print versions of packages that might influence numerical results.
 
 Datasets
 --------
+
+.. module:: scanpy.datasets
+.. currentmodule:: scanpy
 
 .. autosummary::
    :toctree: .
