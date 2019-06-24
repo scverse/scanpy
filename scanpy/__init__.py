@@ -32,7 +32,7 @@ from ._settings import settings, Verbosity  # start with settings as several too
 from . import tools as tl
 from . import preprocessing as pp
 from . import plotting as pl
-from . import datasets, logging, queries, external
+from . import datasets, logging, queries, external, get
 
 from anndata import AnnData
 from anndata import read_h5ad, read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
