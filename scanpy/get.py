@@ -23,15 +23,15 @@ def rank_genes_groups_df(
     gene_symbols: Optional[str] = None
 ) -> pd.DataFrame:
     """
-    Get `rank_genes_groups` results in the form of a :class:`pd.DataFrame`.
+    :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`pd.DataFrame`.
 
     Params
     ------
     adata
         Object to get results from.
     group
-        Which group (key from :func:`scanpy.tl.rank_genes_groups` `groupby`) to
-        return results from.
+        Which group (as in :func:`scanpy.tl.rank_genes_groups`'s `groupby`
+        argument) to return results from.
     key
         Key differential expression groups were stored under.
     pval_cutoff
@@ -82,7 +82,7 @@ def obs_df(
     keys
         Keys from either `.var_names`, `.var[gene_symbols]`, or `.obs.columns`.
     obsm_keys
-        Tuple of ``(key from obsm, column index of obsm[key])`.
+        Tuple of `(key from obsm, column index of obsm[key])`.
     layer
         Layer of `adata` to use as expression values.
     gene_symbols
@@ -170,7 +170,7 @@ def var_df(
     keys
         Keys from either `.obs_names`, or `.var.columns`.
     varm_keys
-        Tuple of ``(key from varm, column index of varm[key])`.
+        Tuple of `(key from varm, column index of varm[key])`.
     layer
         Layer of `adata` to use as expression values.
 

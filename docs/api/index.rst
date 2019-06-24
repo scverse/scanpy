@@ -178,6 +178,19 @@ Read other formats using functions borrowed from :mod:`anndata`
    read_text
    read_umi_tools
 
+Data access: `get`
+-------------------
+
+The module `sc.get` provides convenience functions for getting values back in
+useful formats.
+
+.. autosummary::
+   :toctree:
+
+   get.obs_df
+   get.var_df
+   get.rank_genes_groups_df
+
 
 Queries
 -------
