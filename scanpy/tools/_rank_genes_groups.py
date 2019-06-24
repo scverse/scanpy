@@ -456,7 +456,7 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
 
     Returns
     -------
-    Same output as :ref:`scanpy.tl.rank_genes_groups` but with filtered genes names set to
+    Same output as :func:`scanpy.tl.rank_genes_groups` but with filtered genes names set to
     `nan`
 
     Examples

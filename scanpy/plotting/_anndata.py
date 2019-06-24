@@ -2100,7 +2100,7 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
     dendrogram: `bool` or `str`, optional (default: `False`)
         If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
         between the `groupby` categories is added. The dendrogram information is computed
-        using :ref:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+        using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
         the function is called with default parameters.
     figsize : (`float`, `float`), optional (default: `None`)
         By default a figure size that aims to produce a squared correlation matrix plot is used.

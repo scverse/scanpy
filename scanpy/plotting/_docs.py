@@ -9,16 +9,16 @@ color
     Keys for annotations of observations/cells or variables/genes, e.g.,
     `'ann1'` or `['ann1', 'ann2']`.
 gene_symbols
-    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
     refer to the index column of the `.var` DataFrame. Setting this option allows
     alternative names to be used.
 use_raw
     Use `.raw` attribute of `adata` for coloring with gene expression. If
     `None`, uses `.raw` if present.
 layer
-    Name of the AnnData object layer that wants to be plotted. By default 
-    adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted. 
-    If `layer` is set to a valid layer name, then the layer is plotted. `layer` 
+    Name of the AnnData object layer that wants to be plotted. By default
+    adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted.
+    If `layer` is set to a valid layer name, then the layer is plotted. `layer`
     takes precedence over `use_raw`.\
 """
 
@@ -119,12 +119,12 @@ adata : :class:`~anndata.AnnData`
     Annotated data matrix.
 var_names : `str`, list of `str`, dict or OrderedDict
     `var_names` should be a valid subset of  `adata.var_names`.
-    If `var_names` is a dict, then the key is used as label 
+    If `var_names` is a dict, then the key is used as label
     to group the values (see var_group_labels). The dict values
-    should be a list or str of valid adata.var_names. In this 
-    case either coloring or 'brackets' are used for the grouping 
-    of var names depending on the plot. When `var_names` is a dict, 
-    then the `var_group_labels` and `var_group_positions` are set. 
+    should be a list or str of valid adata.var_names. In this
+    case either coloring or 'brackets' are used for the grouping
+    of var names depending on the plot. When `var_names` is a dict,
+    then the `var_group_labels` and `var_group_positions` are set.
 groupby : `str` or `None`, optional (default: `None`)
     The key of the observation grouping to consider.
 log : `bool`, optional (default: `False`)
@@ -139,12 +139,12 @@ figsize : (`float`, `float`), optional (default: `None`)
     Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
     Format is (width, height)
 dendrogram: `bool` or `str`, optional (default, `False`)
-    If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering 
+    If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
     between the `groupby` categories is added. The dendrogram information is computed
-    using :ref:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+    using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
     the function is called with default parameters.
 gene_symbols : string, optional (default: `None`)
-    Column name in `.var` DataFrame that stores gene symbols. By default `var_names` 
+    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
     refer to the index column of the `.var` DataFrame. Setting this option allows
     alternative names to be used.
 var_group_positions :  list of `tuples`.
