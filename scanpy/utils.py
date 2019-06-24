@@ -11,7 +11,7 @@ from types import ModuleType, MethodType
 from typing import Union, Callable, Optional
 
 import numpy as np
-import scipy.sparse
+from scipy import sparse
 from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
@@ -265,7 +265,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     # reference
     # now that we clip at a quite high value below, this might not even be
     # necessary
-    n_components, labels = scipy.sparse.csgraph.connected_components(graph_ref)
+    n_components, labels = sparse.csgraph.connected_components(graph_ref)
     largest_component = np.arange(graph_ref.shape[0], dtype=int)
     if n_components > 1:
         component_sizes = np.bincount(labels)
@@ -411,6 +411,9 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     else:
         return csr_matrix(shape)
 
+# --------------------------------------------------------------------------------
+# Group stuff
+# --------------------------------------------------------------------------------
 
 def compute_association_matrix_of_groups(adata, prediction, reference,
                                          normalization='prediction',
@@ -577,6 +580,10 @@ def unique_categories(categories):
     categories = np.setdiff1d(categories, np.array(settings.categories_to_ignore))
     categories = np.array(natsorted(categories, key=lambda v: v.upper()))
     return categories
+
+# --------------------------------------------------------------------------------
+# Other stuff
+# --------------------------------------------------------------------------------
 
 
 def fill_in_datakeys(example_parameters, dexdata):
