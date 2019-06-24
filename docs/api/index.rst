@@ -178,6 +178,8 @@ Read other formats using functions borrowed from :mod:`anndata`
    read_text
    read_umi_tools
 
+.. _module-get:
+
 Data access: `get`
 -------------------
 
