@@ -7,6 +7,17 @@
 .. role:: noteversion
 
 
+.. sidebar:: Key Contributors
+
+    * Isaac Virshup: diverse contributions
+    * Gökcen Eraslan: diverse contributions
+    * Sergei Rybakov: diverse contributions
+    * Fidel Ramirez: plotting
+    * Tom White: distributed computing
+    * Philipp Angerer: initial conception and development regarding code quality and maintainability, implemented first version of `AnnData`
+    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial global conception and development
+
+
 Post v1.4 :small:`May 13, 2019`
 -------------------------------
 
