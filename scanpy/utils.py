@@ -25,11 +25,10 @@ EPS = 1e-15
 
 def check_versions():
     from distutils.version import LooseVersion
-    import importlib
 
-    if importlib.util.find_spec("importlib.metadata") is not None:
+    try:
         from importlib.metadata import version
-    else:
+    except ImportError:  # < Python 3.8: Use backport module
         from importlib_metadata import version
 
     if sys.version_info < (3, 6):
