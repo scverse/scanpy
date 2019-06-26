@@ -16,6 +16,7 @@
     * Tom White: distributed computing
     * Philipp Angerer: initial conception and development regarding code quality and maintainability, implemented first version of `AnnData`
     * `Alex Wolf <https://twitter.com/falexwolf>`__: initial global conception and development
+    * Fabian Theis & lab: enabling support and environment
 
 
 Post v1.4 :small:`May 13, 2019`
