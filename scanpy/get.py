@@ -3,7 +3,7 @@ from typing import Optional, Iterable, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy import sparse
+from scipy.sparse import spmatrix
 
 from anndata import AnnData
 # --------------------------------------------------------------------------------
@@ -146,10 +146,13 @@ def obs_df(
         df[k] = adata.obs_vector(l, layer=layer)
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
-        if isinstance(adata.obsm[k], (np.ndarray, sparse.csr_matrix)):
-            df[added_k] = np.ravel(adata.obsm[k][:, idx])
-        elif isinstance(adata.obsm[k], pd.DataFrame):
-            df[added_k] = adata.obsm[k].loc[:, idx]
+        val = adata.obsm[k]
+        if isinstance(val, np.ndarray):
+            df[added_k] = np.ravel(val[:, idx])
+        elif isinstance(val, spmatrix):
+            df[added_k] = np.ravel(val[:, idx].toarray())
+        elif isinstance(val, pd.DataFrame):
+            df[added_k] = val.loc[:, idx]
     return df
 
 
@@ -201,8 +204,11 @@ def var_df(
         df[k] = adata.var_vector(l, layer=layer)
     for k, idx in varm_keys:
         added_k = f"{k}-{idx}"
-        if isinstance(adata.varm[k], (np.ndarray, sparse.csr_matrix)):
-            df[added_k] = np.ravel(adata.varm[k][:, idx])
-        elif isinstance(adata.varm[k], pd.DataFrame):
-            df[added_k] = adata.varm[k].loc[:, idx]
+        val = adata.varm[k]
+        if isinstance(val, np.ndarray):
+            df[added_k] = np.ravel(val[:, idx])
+        elif isinstance(val, spmatrix):
+            df[added_k] = np.ravel(val[:, idx].toarray())
+        elif isinstance(val, pd.DataFrame):
+            df[added_k] = val.loc[:, idx]
     return df
