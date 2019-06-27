@@ -281,6 +281,9 @@ def log1p(
     elif not isinstance(data, AnnData) and np.issubdtype(data.dtype, np.integer):
         raise TypeError("Cannot perform inplace log1p on integer array")
 
+    if isinstance(data, AnnData) and data.isview:
+        data._init_as_actual(data.copy())
+
     def _log1p(X):
         if issparse(X):
             np.log1p(X.data, out=X.data)
@@ -736,6 +739,9 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
             'lead to high memory use'
         )
     adata = adata.copy() if copy else adata
+
+    sanitize_anndata(adata)
+
     if isinstance(keys, str):
         keys = [keys]
 
@@ -745,7 +751,6 @@ def regress_out(adata, keys, n_jobs=None, copy=False) -> Optional[AnnData]:
     n_jobs = sett.n_jobs if n_jobs is None else n_jobs
 
     # regress on a single categorical variable
-    sanitize_anndata(adata)
     variable_is_categorical = False
     if keys[0] in adata.obs_keys() and is_categorical_dtype(adata.obs[keys[0]]):
         if len(keys) > 1:
@@ -861,6 +866,7 @@ def scale(data, zero_center=True, max_value=None, copy=False) -> Optional[AnnDat
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
+        sanitize_anndata(adata)
         # need to add the following here to make inplace logic work
         if zero_center and issparse(adata.X):
             logg.debug(
