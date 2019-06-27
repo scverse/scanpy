@@ -667,95 +667,74 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 
 
 def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False,
-                      gene_symbols=None, layer=None):
+                      gene_symbols=None, layer=None) -> Tuple[Union[np.ndarray, str], bool]:
     """
     Returns the value or color associated to each data point.
     For categorical data, the return value is list of colors taken
     from the category palette or from the given `palette` value.
 
     For non-categorical data, the values are returned
+
+    Returns
+    -------
+    Tuple of values to plot, and boolean indicating whether they are categorical.
     """
+    if (gene_symbols is not None
+        and value_to_plot not in adata.obs.columns
+        and value_to_plot not in adata.var_names):
+        # We should probably just make an index for this, and share it over runs
+        value_to_plot = adata.var.index[adata.var[gene_symbols] == value_to_plot][0] # TODO: Throw helpful error if this doesn't work
+    if use_raw and value_to_plot not in adata.obs.columns:
+        values = adata.raw.obs_vector(value_to_plot)
+    else:
+        values = adata.obs_vector(value_to_plot, layer=layer)
 
     ###
     # when plotting, the color of the dots is determined for each plot
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
-    categorical = False
     if value_to_plot is None:
-        color_vector = 'lightgray'
-    # check if value to plot is in obs
-    elif value_to_plot in adata.obs.columns:
-        if is_categorical_dtype(adata.obs[value_to_plot]):
-            categorical = True
-
-            if palette:
-                # use category colors base on given palette
-                _set_colors_for_categorical_obs(adata, value_to_plot, palette)
-            else:
-                if value_to_plot + '_colors' not in adata.uns or \
-                    len(adata.uns[value_to_plot + '_colors']) < len(adata.obs[value_to_plot].cat.categories):
-                    #  set a default palette in case that no colors or few colors are found
-                    _set_default_colors_for_categorical_obs(adata, value_to_plot)
-                else:
-                    # check that the colors in 'uns' are valid
-                    _palette = []
-                    for color in adata.uns[value_to_plot + '_colors']:
-                        if not is_color_like(color):
-                            # check if the color is a valid R color and translate it
-                            # to a valid hex color value
-                            if color in utils.additional_colors:
-                                color = utils.additional_colors[color]
-                            else:
-                                logg.warning(
-                                    f"The following color value found in adata.uns['{value_to_plot}_colors'] "
-                                    f"is not valid: '{color}'. Default colors are used."
-                                )
-                                _set_default_colors_for_categorical_obs(adata, value_to_plot)
-                                _palette = None
-                                break
-                        _palette.append(color)
-                    if _palette is not None:
-                        adata.uns[value_to_plot + '_colors'] = _palette
-            # for categorical data, colors should be
-            # stored in adata.uns[value_to_plot + '_colors']
-            # Obtain color vector by converting every category
-            # into its respective color
-
-            color_vector = [adata.uns[value_to_plot + '_colors'][x] for x in adata.obs[value_to_plot].cat.codes]
-            if groups is not None:
-                if isinstance(groups, str):
-                    groups = [groups]
-                color_vector = np.array(color_vector, dtype='<U15')
-                # set color to 'light gray' for all values
-                # that are not in the groups
-                color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        return "light_gray", False
+    elif not is_categorical_dtype(values):
+        return values, False
+    else:  # is_categorical_dtype(values)
+        color_key = f"{value_to_plot}_colors"
+        if palette:
+            _set_colors_for_categorical_obs(adata, value_to_plot, palette)
+        elif color_key not in adata.uns or \
+            len(adata.uns[color_key]) < len(values.categories):
+            #  set a default palette in case that no colors or few colors are found
+            _set_default_colors_for_categorical_obs(adata, value_to_plot)
         else:
-            color_vector = adata.obs[value_to_plot].values
-    # when value_to_plot is not in adata.obs
-    else:
-        if gene_symbols is not None and gene_symbols in adata.var.columns:
-            if value_to_plot not in adata.var[gene_symbols].values:
-                logg.error(
-                    f"Gene symbol {value_to_plot!r} not found in given "
-                    f"gene_symbols column: {gene_symbols!r}"
-                )
-                return
-            value_to_plot = adata.var[adata.var[gene_symbols] == value_to_plot].index[0]
-        if layer is not None and value_to_plot in adata.var_names:
-            if layer not in adata.layers.keys():
-                raise KeyError('Selected layer: {} is not in the layers list. The list of '
-                               'valid layers is: {}'.format(layer, adata.layers.keys()))
-            color_vector = adata[:, value_to_plot].layers[layer]
-        elif use_raw and value_to_plot in adata.raw.var_names:
-            color_vector = adata.raw[:, value_to_plot].X
-        elif value_to_plot in adata.var_names:
-            color_vector = adata[:, value_to_plot].X
-        else:
-            raise ValueError("The passed `color` {} is not a valid observation annotation "
-                             "or variable name. Valid observation annotation keys are: {}"
-                             .format(value_to_plot, adata.obs.columns))
+            _palette = []
+            for color in adata.uns[color_key]:
+                if not is_color_like(color):
+                    # check if the color is a valid R color and translate it
+                    # to a valid hex color value
+                    if color in utils.additional_colors:
+                        color = utils.additional_colors[color]
+                    else:
+                        logg.warning(
+                            f"The following color value found in adata.uns['{value_to_plot}_colors'] "
+                            f"is not valid: '{color}'. Default colors are used."
+                        )
+                        _set_default_colors_for_categorical_obs(adata, value_to_plot)
+                        _palette = None
+                        break
+                _palette.append(color)
+            if _palette is not None:
+                adata.uns[color_key] = _palette
+        color_vector = np.asarray(adata.uns[color_key])[values.codes]
 
-    return color_vector, categorical
+        # Handle groups
+        if groups is not None:
+            if isinstance(groups, str):
+                groups = [groups]
+            color_vector = np.array(color_vector, dtype='<U15')
+            # set color to 'light gray' for all values
+            # that are not in the groups
+            color_vector[~adata.obs[value_to_plot].isin(groups)] = "lightgray"
+        return color_vector, True
 
 
 def _basis2name(basis):
