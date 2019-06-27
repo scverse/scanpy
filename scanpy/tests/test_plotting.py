@@ -259,6 +259,7 @@ def test_scatterplots(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
     pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc.layers["sparse"] = pbmc.raw.X / 2
 
     # test pca
     sc.pl.pca(pbmc, color='bulk_labels', show=False)
@@ -271,6 +272,10 @@ def test_scatterplots(image_comparer):
     sc.pl.pca(pbmc, color=['CD3D', 'CD79A'], components=['1,2', '1,3'],
               vmax=5, use_raw=False, vmin=-5, cmap='seismic', show=False)
     save_and_compare_images('master_multipanel')
+
+    sc.pl.pca(pbmc, color=['CD3D', 'CD79A'], layer="sparse", cmap='viridis',
+              show=False)
+    save_and_compare_images('master_pca_sparse_layer')
 
     # test tsne
     # I am removing this test because  slight differences are present even
