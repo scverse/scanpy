@@ -38,6 +38,12 @@ The PAGA method behind this is described `here <https://rawgit.com/falexwolf/pag
 Further Tutorials
 -----------------
 
+Conversion between AnnData, SingleCellExperiments, and Seurat objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See this `notebook <https://github.com/LuckyMD/Code_snippets/blob/master/Seurat_to_anndata.ipynb>`__
+for a tutorial of `anndata2ri`.
+
 Regressing out cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

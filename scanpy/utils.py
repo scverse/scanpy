@@ -11,7 +11,7 @@ from types import ModuleType, MethodType
 from typing import Union, Callable, Optional
 
 import numpy as np
-import scipy.sparse
+from scipy import sparse
 from natsort import natsorted
 from textwrap import dedent
 from pandas.api.types import CategoricalDtype
@@ -26,28 +26,32 @@ EPS = 1e-15
 def check_versions():
     from distutils.version import LooseVersion
 
+    try:
+        from importlib.metadata import version
+    except ImportError:  # < Python 3.8: Use backport module
+        from importlib_metadata import version
+
     if sys.version_info < (3, 6):
         warnings.warn('Scanpy prefers Python 3.6 or higher. '
                       'Currently, Python 3.5 leads to a bug in `tl.marker_gene_overlap` '
                       'and we might stop supporting it in the future.')
 
-    import anndata, umap
-    # NOTE: pytest does not correctly retrieve anndata's version? why?
-    #       use the following hack...
-    if anndata.__version__ != '0+unknown':
-        if anndata.__version__ < LooseVersion('0.6.10'):
-            from . import __version__
-            raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
-                              'Run `pip install anndata -U --no-deps`.'
-                              .format(__version__, anndata.__version__))
+    anndata_version = version("anndata")
+    umap_version = version("umap-learn")
 
-    if umap.__version__ < LooseVersion('0.3.0'):
+    if anndata_version < LooseVersion('0.6.10'):
+        from . import __version__
+        raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
+                            'Run `pip install anndata -U --no-deps`.'
+                            .format(__version__, anndata_version))
+
+    if umap_version < LooseVersion('0.3.0'):
         from . import __version__
         # make this a warning, not an error
         # it might be useful for people to still be able to run it
         logg.warning(
             f'Scanpy {__version__} needs umap '
-            f'version >=0.3.0, not {umap.__version__}.'
+            f'version >=0.3.0, not {umap_version}.'
         )
 
 
@@ -265,7 +269,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     # reference
     # now that we clip at a quite high value below, this might not even be
     # necessary
-    n_components, labels = scipy.sparse.csgraph.connected_components(graph_ref)
+    n_components, labels = sparse.csgraph.connected_components(graph_ref)
     largest_component = np.arange(graph_ref.shape[0], dtype=int)
     if n_components > 1:
         component_sizes = np.bincount(labels)
@@ -411,6 +415,9 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     else:
         return csr_matrix(shape)
 
+# --------------------------------------------------------------------------------
+# Group stuff
+# --------------------------------------------------------------------------------
 
 def compute_association_matrix_of_groups(adata, prediction, reference,
                                          normalization='prediction',
@@ -577,6 +584,10 @@ def unique_categories(categories):
     categories = np.setdiff1d(categories, np.array(settings.categories_to_ignore))
     categories = np.array(natsorted(categories, key=lambda v: v.upper()))
     return categories
+
+# --------------------------------------------------------------------------------
+# Other stuff
+# --------------------------------------------------------------------------------
 
 
 def fill_in_datakeys(example_parameters, dexdata):

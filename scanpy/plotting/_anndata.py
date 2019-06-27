@@ -10,7 +10,7 @@ from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like
-import seaborn as sns
+
 
 from .._settings import settings
 from .. import logging as logg
@@ -69,8 +69,9 @@ def scatter(
     y : `str` or `None`
         y coordinate.
     color : string or list of strings, optional (default: `None`)
-        Keys for annotations of observations/cells or variables/genes, e.g.,
-        `'ann1'` or `['ann1', 'ann2']`.
+        Keys for annotations of observations/cells or variables/genes,
+        or a hex color specification, e.g.,
+        `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present.
     layers : `str` or tuple of strings, optional (default: `X`)
@@ -621,6 +622,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
     -------
     A :class:`~matplotlib.axes.Axes` object if `ax` is `None` else `None`.
     """
+    import seaborn as sns  # Slow import, only import if called
     sanitize_anndata(adata)
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(keys, str): keys = [keys]
@@ -745,6 +747,7 @@ def clustermap(
     >>> adata = sc.datasets.krumsiek11()
     >>> sc.pl.clustermap(adata, obs_keys='cell_type')
     """
+    import seaborn as sns  # Slow import, only import if called
     if not isinstance(obs_keys, (str, type(None))):
         raise ValueError('Currently, only a single key is supported.')
     sanitize_anndata(adata)
@@ -835,6 +838,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
+    import seaborn as sns  # Slow import, only import if called
     if use_raw is None and adata.raw is not None: use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
                                                                              var_group_labels, var_group_positions)
@@ -2099,7 +2103,7 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
     dendrogram: `bool` or `str`, optional (default: `False`)
         If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
         between the `groupby` categories is added. The dendrogram information is computed
-        using :ref:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+        using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
         the function is called with default parameters.
     figsize : (`float`, `float`), optional (default: `None`)
         By default a figure size that aims to produce a squared correlation matrix plot is used.
