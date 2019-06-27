@@ -13,7 +13,7 @@
     * Gökcen Eraslan: diverse contributions
     * Sergei Rybakov: diverse contributions
     * Fidel Ramirez: plotting
-    * Tom White: distributed computing
+    * `Tom White <https://twitter.com/tom_e_white>`__: distributed computing
     * Philipp Angerer: initial conception and development regarding code quality and maintainability, implemented first version of `AnnData`
     * `Alex Wolf <https://twitter.com/falexwolf>`__: initial global conception and development
     * Fabian Theis & lab: enabling support and environment
