@@ -1,7 +1,7 @@
 """Embed high-dimensional data using PHATE
 """
 
-from .._settings import settings, Verbosity
+from .._settings import settings
 from .. import logging as logg
 
 
@@ -147,4 +147,3 @@ def phate(
         ),
     )
     return adata if copy else None
-https://graphtools.readthedocs.io/en/latest/reference.html#graphtools.api.Graph
