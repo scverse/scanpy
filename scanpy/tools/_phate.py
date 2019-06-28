@@ -81,7 +81,7 @@ def phate(
     random_state : `int`, `numpy.RandomState` or `None`, optional (default: `None`)
         Random seed. Defaults to the global `numpy` random number generator
     verbose : `bool`, `int` or `None`, optional (default: `sc.settings.verbosity`)
-        If `True` or an integer `>= 2`, print status messages.
+        If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
         If `None`, `sc.settings.verbosity` is used.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to `adata`.
@@ -111,9 +111,8 @@ def phate(
     """
     start = logg.info('computing PHATE')
     adata = adata.copy() if copy else adata
-    verbose = settings.verbosity if verbose is None else verbose
-    if isinstance(settings.verbosity, (str, int)):
-        verbose = _settings_verbosity_greater_or_equal_than(2)
+    verbosity = settings.verbosity if verbose is None else verbose
+    verbose = verbosity if isinstance(verbosity, bool) else verbosity >= 2
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
     try:
         import phate
