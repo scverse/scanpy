@@ -9,13 +9,13 @@
 
 .. sidebar:: Key Contributors
 
-    * Isaac Virshup: diverse contributions
+    * Isaac Virshup: anndata rehaul, diverse contributions
     * Gökcen Eraslan: diverse contributions
     * Sergei Rybakov: diverse contributions
     * Fidel Ramirez: plotting
     * `Tom White <https://twitter.com/tom_e_white>`__: distributed computing
-    * Philipp Angerer: initial conception and development regarding code quality and maintainability, implemented first version of `AnnData`
-    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial global conception and development
+    * Philipp Angerer: initial anndata conception, software quality
+    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial anndata & scanpy conception
     * Fabian Theis & lab: enabling support and environment
 
 
