@@ -9,7 +9,7 @@
 
 .. sidebar:: Key Contributors
 
-    * Isaac Virshup: anndata rehaul, diverse contributions
+    * `Isaac Virshup <https://twitter.com/ivirshup>`__: anndata overhaul, diverse contributions
     * Gökcen Eraslan: diverse contributions
     * Sergei Rybakov: diverse contributions
     * Fidel Ramirez: plotting
