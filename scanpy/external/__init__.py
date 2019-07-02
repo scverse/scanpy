@@ -19,6 +19,8 @@ Import Scanpy's wrappers to external tools as::
 
    import scanpy.external as sce
 
+If you'd like to see your tool included here, please open a `pull request <https://github.com/theislab/scanpy>`_!
+
 Preprocessing: PP
 ------------------
 
