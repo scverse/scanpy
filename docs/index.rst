@@ -16,4 +16,5 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018) <h
    basic_usage
    installation
    api/index
+   external/index
    references
