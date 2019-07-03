@@ -1,6 +1,11 @@
+import numpy as np
+from pandas.api.types import is_numeric_dtype
+from sklearn.utils import check_random_state, check_array
+
 from ._utils import get_init_pos_from_paga, choose_representation
 from .._settings import settings
 from .. import logging as logg
+
 
 def umap(
     adata,
@@ -106,13 +111,16 @@ def umap(
     else:
         a = a
         b = b
-    if init_pos in adata.obsm.keys():
+
+    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
-    elif init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state).astype(adata.X.dtype)
+    elif isinstance(init_pos, str) and init_pos == 'paga':
+        init_coords = get_init_pos_from_paga(adata, random_state=random_state)
     else:
-        init_coords = init_pos
-    from sklearn.utils import check_random_state
+        init_coords = init_pos  # Let umap handle it
+    if hasattr(init_coords, "dtype") and is_numeric_dtype(init_pos):
+        init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
+
     random_state = check_random_state(random_state)
     n_epochs = 0 if maxiter is None else maxiter
     neigh_params = adata.uns['neighbors']['params']
