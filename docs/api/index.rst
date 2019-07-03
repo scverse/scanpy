@@ -14,8 +14,8 @@ Import Scanpy as::
    Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
 
 
-Preprocessing: PP
-------------------
+Preprocessing: `pp`
+-------------------
 
 .. module:: scanpy.pp
 .. currentmodule:: scanpy
@@ -74,8 +74,8 @@ Neighbors
    pp.neighbors
 
 
-Tools: TL
-----------
+Tools: `tl`
+-----------
 
 .. module:: scanpy.tl
 .. currentmodule:: scanpy
@@ -135,8 +135,8 @@ Simulations
    tl.sim
 
 
-Plotting: PL
-------------
+Plotting: `pl`
+--------------
 
 .. module:: scanpy.pl
 .. currentmodule:: scanpy
