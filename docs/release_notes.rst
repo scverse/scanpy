@@ -9,14 +9,16 @@
 
 .. sidebar:: Key Contributors
 
-    * `Isaac Virshup <https://twitter.com/ivirshup>`__: anndata overhaul, diverse contributions
-    * Gökcen Eraslan: diverse contributions
-    * Sergei Rybakov: diverse contributions
-    * Fidel Ramirez: plotting
+    The ☀ signifies current maintainers.
+
+    * `Isaac Virshup <https://twitter.com/ivirshup>`__ : anndata overhaul, diverse contributions ☀
+    * Gökcen Eraslan: diverse contributions ☀
+    * Sergei Rybakov: diverse contributions ☀
+    * Fidel Ramirez: plotting ☀
     * `Tom White <https://twitter.com/tom_e_white>`__: distributed computing
-    * Philipp Angerer: initial anndata conception, software quality
-    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial anndata & scanpy conception
-    * Fabian Theis & lab: enabling support and environment
+    * Philipp Angerer: initial anndata conception, software quality ☀
+    * `Alex Wolf <https://twitter.com/falexwolf>`__ : initial anndata & scanpy conception ☀
+    * `Fabian Theis <https://twitter.com/fabian_theis>`__ & lab: enabling guidance, support and environment
 
 
 Post v1.4 :small:`May 13, 2019`

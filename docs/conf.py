@@ -19,7 +19,7 @@ needs_sphinx = '1.7'  # autosummary bugfix
 # General information
 project = 'Scanpy'
 author = scanpy.__author__
-copyright = f'{datetime.now():%Y}, {author}.'
+copyright = f'{datetime.now():%Y}, {author}'
 version = scanpy.__version__.replace('.dirty', '')
 release = version
 
