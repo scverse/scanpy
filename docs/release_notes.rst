@@ -7,12 +7,26 @@
 .. role:: noteversion
 
 
+.. sidebar:: Key Contributors
+
+    [☀ signifies current maintainers]
+
+    * `Isaac Virshup <https://twitter.com/ivirshup>`__: anndata overhaul, diverse contributions ☀
+    * Gökcen Eraslan: diverse contributions ☀
+    * Sergei Rybakov: diverse contributions ☀
+    * Fidel Ramirez: plotting ☀
+    * `Tom White <https://twitter.com/tom_e_white>`__: distributed computing
+    * Philipp Angerer: initial anndata conception, software quality ☀
+    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial anndata & scanpy conception ☀
+    * `Fabian Theis <https://twitter.com/fabian_theis>`__ & lab: enabling guidance, support and environment
+
+
 Post v1.4 :small:`May 13, 2019`
 -------------------------------
 
 New functionality:
 
-- New module :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`thanks to I Virshup`
+- :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :pr:`618` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :pr:`622` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`) :pr:`604` :smaller:`thanks to P Angerer`
