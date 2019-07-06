@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from scipy import sparse as sp
 import scanpy as sc
+from sklearn.utils.testing import assert_allclose
 import pytest
 from anndata import AnnData
 
@@ -54,6 +55,18 @@ def test_subsample():
     assert adata.n_obs == 40
     sc.pp.subsample(adata, fraction=0.1)
     assert adata.n_obs == 4
+
+
+def test_scale():
+    adata = sc.datasets.pbmc68k_reduced()
+    adata.X = adata.raw.X
+    v = adata[:, 0:adata.shape[1] // 2]
+    # Should turn view to copy https://github.com/theislab/anndata/issues/171#issuecomment-508689965
+    assert v.isview
+    sc.pp.scale(v)
+    assert not v.isview
+    assert_allclose(v.X.var(axis=0), np.ones(v.shape[1]), atol=0.01)
+    assert_allclose(v.X.mean(axis=0), np.zeros(v.shape[1]), atol=0.00001)
 
 
 def test_recipe_plotting():
