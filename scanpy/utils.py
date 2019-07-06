@@ -614,6 +614,15 @@ def sanitize_anndata(adata):
     adata._sanitize()
 
 
+def view_to_actual(adata):
+    if adata.isview:
+        warnings.warn(
+            "Revieved a view of an AnnData. Making a copy.",
+            stacklevel=2
+        )
+        adata._init_as_actual(adata.copy())
+
+
 def moving_average(a, n):
     """Moving average over one-dimensional array.
 

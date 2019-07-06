@@ -15,7 +15,7 @@ from anndata import AnnData
 
 from .._settings import settings as sett
 from .. import logging as logg
-from ..utils import sanitize_anndata, deprecated_arg_names
+from ..utils import sanitize_anndata, deprecated_arg_names, view_to_actual
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 
@@ -282,7 +282,7 @@ def log1p(
         raise TypeError("Cannot perform inplace log1p on integer array")
 
     if isinstance(data, AnnData) and data.isview:
-        data._init_as_actual(data.copy())
+        view_to_actual(data)
 
     def _log1p(X):
         if issparse(X):
@@ -866,7 +866,7 @@ def scale(data, zero_center=True, max_value=None, copy=False) -> Optional[AnnDat
     """
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
-        sanitize_anndata(adata)
+        view_to_actual(adata)
         # need to add the following here to make inplace logic work
         if zero_center and issparse(adata.X):
             logg.debug(
