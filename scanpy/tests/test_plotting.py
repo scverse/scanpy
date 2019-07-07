@@ -284,6 +284,10 @@ def test_scatterplots(image_comparer):
     # sc.pl.tsne(pbmc, color=['CD3D', 'louvain'], show=False)
     # save_and_compare_images('master_tsne', tolerance=tolerance)
 
+    # Test umap with no colors
+    sc.pl.umap(pbmc, show=False)
+    save_and_compare_images('master_umap_nocolor')
+
     # test umap with louvain clusters and palette with custom colors
     sc.pl.umap(pbmc, color=['louvain'],
                palette=['b', 'grey80', 'r', 'yellow', 'black', 'gray', 'lightblue'],

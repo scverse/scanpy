@@ -679,6 +679,8 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     -------
     Tuple of values to plot, and boolean indicating whether they are categorical.
     """
+    if value_to_plot is None:
+        return "lightgray", False
     if (gene_symbols is not None
         and value_to_plot not in adata.obs.columns
         and value_to_plot not in adata.var_names):
@@ -693,9 +695,7 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     # when plotting, the color of the dots is determined for each plot
     # the data is either categorical or continuous and the data could be in
     # 'obs' or in 'var'
-    if value_to_plot is None:
-        return "light_gray", False
-    elif not is_categorical_dtype(values):
+    if not is_categorical_dtype(values):
         return values, False
     else:  # is_categorical_dtype(values)
         color_key = f"{value_to_plot}_colors"
