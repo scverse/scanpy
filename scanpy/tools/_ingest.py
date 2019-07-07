@@ -8,13 +8,17 @@ from umap.utils import deheap_sort
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
 
+from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 
 
 class Ingest:
     def __init__(self, adata):
-        #need to take care of representation
+        #assume rep is X if all initializations fail to identify it
         self._rep = adata.X
+        self._use_rep = 'X'
+
+        self._n_pcs = None
 
         #maybe don't need it, rather initialize Ingest class with all needed cluster keys
         self._adata = adata
@@ -24,6 +28,19 @@ class Ingest:
 
         if 'neighbors' not in adata.uns:
             return
+
+        #need to split all these into separate init functions
+        if 'use_rep' in adata.uns['neighbors']['params']:
+            self._use_rep = adata.uns['neighbors']['params']['use_rep']
+            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[use_rep]
+        elif 'n_pcs' in adata.uns['neighbors']['params']:
+            self._use_rep = 'X_pca'
+            self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
+            self._rep = adata.obsm['X_pca'][:, :self._n_pcs]
+        elif adata.n_vars > N_PCS and 'X_pca' in adata.obsm.keys():
+            self._use_rep = 'X_pca'
+            self._rep = adata.obsm['X_pca'][:, :N_PCS]
+            self._n_pcs = self._rep.shape[1]
 
         if 'metric_kwds' in adata.uns['neighbors']['params']:
             dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
@@ -68,19 +85,32 @@ class Ingest:
         self._umap._a = adata.uns['umap']['params']['a']
         self._umap._b = adata.uns['umap']['params']['b']
 
-    def pca(self, adata_small):
+    def pca(self, adata_small, n_pcs=None, inplace=True):
         #todo - efficient implementation for sparse matrices
         rep = adata_small.X
         rep = rep.toarray() if issparse(rep) else rep.copy()
         rep -= rep.mean(axis=0)
-        adata_small.obsm['X_pca'] = np.dot(rep, self._pca_basis)
+        X_pca = np.dot(rep, self._pca_basis[:, :n_pcs])
+        if inplace:
+            adata_small.obsm['X_pca'] = X_pca
+        else:
+            return X_pca
+
+    def same_rep(self, adata_small):
+        if self._n_pcs is not None:
+            return self.pca(adata_small, self._n_pcs, inplace=False)
+        if self._use_rep == 'X':
+            return adata_small.X
+        if self._use_rep in adata.obsm.keys():
+            return adata.obsm[self._use_rep]
+        return adata_small.X
 
     def neighbors(self, adata_small, k=10, queue_size=5, random_state=0):
         random_state = check_random_state(random_state)
         rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
-        #need to take care of representation
+
         train = self._rep
-        test = adata_small.X
+        test = self.same_rep(adata_small)
 
         init = initialise_search(rp_forest, train, test, int(k * queue_size),
                                  self._random_init, self._tree_init, rng_state)
@@ -90,8 +120,7 @@ class Ingest:
         return indices[:, :k], dists[:, :k]
 
     def umap(self, adata_small):
-        #need to take care of representation
-        rep = adata_small.X
+        rep = self.same_rep(adata_small)
         adata_small.obsm['X_umap'] = self._umap.transform(rep)
 
     def knn_classify(self, adata_small, classes_key, k=10, **kwargs):
