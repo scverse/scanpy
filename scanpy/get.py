@@ -71,6 +71,7 @@ def obs_df(
     *,
     layer: str = None,
     gene_symbols: str = None,
+    use_raw: bool = False
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.
@@ -87,6 +88,8 @@ def obs_df(
         Layer of `adata` to use as expression values.
     gene_symbols
         Column of `adata.var` to search for `keys` in.
+    use_raw
+        Whether to get expression values from `adata.raw`.
 
     Returns
     -------
@@ -116,11 +119,17 @@ def obs_df(
     >>> grouped = genedf.groupby("louvain")
     >>> mean, var = grouped.mean(), grouped.var()
     """
-    # Argument handling
-    if gene_symbols is not None:
-        gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
+    if use_raw:
+        assert layer is None, "Cannot specify use_raw=True and a layer at the same time."
+        if gene_symbols is not None:
+            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var[gene_symbols])
+        else:
+            gene_names = pd.Series(adata.raw.var_names, index=adata.raw.var_names)
     else:
-        gene_names = pd.Series(adata.var_names, index=adata.var_names)
+        if gene_symbols is not None:
+            gene_names = pd.Series(adata.var_names, index=adata.var[gene_symbols])
+        else:
+            gene_names = pd.Series(adata.var_names, index=adata.var_names)
     lookup_keys = []
     not_found = []
     for key in keys:
@@ -131,10 +140,16 @@ def obs_df(
         else:
             not_found.append(key)
     if len(not_found) > 0:
-        if gene_symbols is None:
-            gene_error = "`adata.var_names`"
+        if use_raw:
+            if gene_symbols is None:
+                gene_error = "`adata.raw.var_names`"
+            else:
+                gene_error = "gene_symbols column `adata.raw.var[{}].values`".format(gene_symbols)
         else:
-            gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
+            if gene_symbols is None:
+                gene_error = "`adata.var_names`"
+            else:
+                gene_error = "gene_symbols column `adata.var[{}].values`".format(gene_symbols)
         raise KeyError(
             f"Could not find keys '{not_found}' in columns of `adata.obs` or in"
             f" {gene_error}."
@@ -143,7 +158,10 @@ def obs_df(
     # Make df
     df = pd.DataFrame(index=adata.obs_names)
     for k, l in zip(keys, lookup_keys):
-        df[k] = adata.obs_vector(l, layer=layer)
+        if not use_raw or k in adata.obs.columns:
+            df[k] = adata.obs_vector(l, layer=layer)
+        else:
+            df[k] = adata.raw.obs_vector(l)
     for k, idx in obsm_keys:
         added_k = f"{k}-{idx}"
         val = adata.obsm[k]
