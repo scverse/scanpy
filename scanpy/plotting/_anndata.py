@@ -12,6 +12,7 @@ from matplotlib import patheffects
 from matplotlib.colors import is_color_like
 
 
+from .. import get
 from .._settings import settings
 from .. import logging as logg
 from . import _utils as utils
@@ -631,24 +632,10 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
     sanitize_anndata(adata)
     if use_raw is None and adata.raw is not None: use_raw = True
     if isinstance(keys, str): keys = [keys]
-    obs_keys = False
-    for key in keys:
-        if key in adata.obs_keys(): obs_keys = True
-        if obs_keys and key not in set(adata.obs_keys()):
-            raise ValueError(
-                'Either use observation keys or variable names, but do not mix. '
-                'Did not find {} in adata.obs_keys().'.format(key))
-    if obs_keys:
-        obs_df = adata.obs
+    if groupby is not None:
+        obs_df = get.obs_df(adata, keys=[groupby] + keys, use_raw=use_raw)
     else:
-        if groupby is None: obs_df = pd.DataFrame()
-        else: obs_df = pd.DataFrame(adata.obs[groupby])
-        for key in keys:
-            if adata.raw is not None and use_raw:
-                X_col = adata.raw[:, key].X
-            else:
-                X_col = adata[:, key].X
-            obs_df[key] = X_col
+        obs_df = get.obs_df(adata, keys=keys, use_raw=use_raw)
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
