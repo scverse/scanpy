@@ -33,7 +33,7 @@ def scatter(
         y=None,
         color=None,
         use_raw=None,
-        layers='X',
+        layers=None,
         sort_order=True,
         alpha=None,
         basis=None,
@@ -254,7 +254,7 @@ def _scatter_obs(
         y=None,
         color=None,
         use_raw=None,
-        layers='X',
+        layers=None,
         sort_order=True,
         alpha=None,
         basis=None,
@@ -280,20 +280,19 @@ def _scatter_obs(
     from scipy.sparse import issparse
     if use_raw is None and adata.raw is not None: use_raw = True
 
-    # process layers
-    if layers is None:
-        layers = 'X'
-    if isinstance(layers, str) and (layers == 'X' or layers in adata.layers.keys()):
+    # Process layers
+    if (layers is None or layers == 'X' or layers in adata.layers.keys()):
         layers = (layers, layers, layers)
     elif isinstance(layers, (tuple, list)) and len(layers) == 3:
+        layers = tuple(layers)
         for layer in layers:
-            if layer not in adata.layers.keys() and layer != 'X':
+            if layer not in adata.layers.keys() and (layer != 'X' or layer is not None):
                 raise ValueError(
-                    '`layers` should have elements that are either \'X\' or in adata.layers.keys().')
+                    '`layers` should have elements that are either None or in adata.layers.keys().')
     else:
-        raise ValueError('`layers` should be a string or a list/tuple of length 3.')
-    if use_raw and (layers != ('X', 'X', 'X') or layers != ['X', 'X', 'X']):
-        ValueError('`use_raw` must be `False` if layers other than \'X\' are used.')
+        raise ValueError(f"`layers` should be a string or a list/tuple of length 3, had value '{layers}'")
+    if use_raw and (layers != ('X', 'X', 'X') or layers is not (None, None, None)):
+        ValueError('`use_raw` must be `False` if layers are used.')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
@@ -316,13 +315,20 @@ def _scatter_obs(
             raise KeyError('compute coordinates using visualization tool {} first'
                            .format(basis))
     elif x is not None and y is not None:
-        x_arr = adata._get_obs_array(x, use_raw=use_raw, layer=layers[0])
-        y_arr = adata._get_obs_array(y, use_raw=use_raw, layer=layers[1])
+        if use_raw:
+            if x in adata.obs.columns:
+                x_arr = adata.obs_vector(x)
+            else:
+                x_arr = adata.raw.obs_vector(x)
+            if y in adata.obs.columns:
+                y_arr = adata.obs_vector(y)
+            else:
+                y_arr = adata.raw.obs_vector(y)
+        else:
+            x_arr = adata.obs_vector(x, layer=layers[0])
+            y_arr = adata.obs_vector(y, layer=layers[1])
 
-        x_arr = x_arr.toarray().flatten() if issparse(x_arr) else x_arr
-        y_arr = y_arr.toarray().flatten() if issparse(y_arr) else y_arr
-
-        Y = np.c_[x_arr[:, None], y_arr[:, None]]
+        Y = np.c_[x_arr, y_arr]
     else:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
 
@@ -378,10 +384,9 @@ def _scatter_obs(
         elif (use_raw
               and adata.raw is not None
               and key in adata.raw.var_names):
-            c = adata.raw[:, key].X
+            c = adata.raw.obs_vector(key)
         elif key in adata.var_names:
-            c = adata[:, key].X if layers[2] == 'X' else adata[:, key].layers[layers[2]]
-            c = c.toarray().flatten() if issparse(c) else c
+            c = adata.raw.obs_vector(key, layer=layers[2])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False
