@@ -6,18 +6,17 @@
 .. role:: smaller
 .. role:: noteversion
 
-
 .. sidebar:: Key Contributors
 
-    [☀ signifies current maintainers]
+    [`anndata <https://github.com/theislab/anndata/graphs/contributors>`__ & `scanpy <https://github.com/theislab/scanpy/graphs/contributors>`__ graphs; the ☀ signifies current maintainers]
 
     * `Isaac Virshup <https://twitter.com/ivirshup>`__: anndata overhaul, diverse contributions ☀
     * Gökcen Eraslan: diverse contributions ☀
     * Sergei Rybakov: diverse contributions ☀
     * Fidel Ramirez: plotting ☀
     * `Tom White <https://twitter.com/tom_e_white>`__: distributed computing
-    * Philipp Angerer: initial anndata conception, software quality ☀
-    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial anndata & scanpy conception ☀
+    * Philipp Angerer: initial anndata conception/development, software quality ☀
+    * `Alex Wolf <https://twitter.com/falexwolf>`__: initial anndata & scanpy conception/development ☀
     * `Fabian Theis <https://twitter.com/fabian_theis>`__ & lab: enabling guidance, support and environment
 
 
