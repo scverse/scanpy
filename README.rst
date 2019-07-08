@@ -20,6 +20,7 @@ It includes preprocessing, visualization, clustering, pseudotime and trajectory
 inference and differential expression testing. The Python-based implementation
 efficiently deals with datasets of more than one million cells.
 
+Discuss usage on `Discourse <https://scanpy.discourse.group/>`__.
 Read the documentation_.
 If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
