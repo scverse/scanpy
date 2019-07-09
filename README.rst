@@ -22,7 +22,9 @@ efficiently deals with datasets of more than one million cells.
 
 Discuss usage on `Discourse <https://scanpy.discourse.group/>`__.
 Read the documentation_.
+If you'd like to contribute by opening an issue or creating a pull request, please take a look at our `contributing guide`_.
 If Scanpy is useful for your research, consider citing `Genome Biology (2018)`_.
 
 .. _documentation: https://scanpy.readthedocs.io
+.. _contributing guide: CONTRIBUTING.md
 .. _Genome Biology (2018): https://doi.org/10.1186/s13059-017-1382-0
