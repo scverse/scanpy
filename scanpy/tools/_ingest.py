@@ -13,23 +13,32 @@ from ..neighbors import _rp_forest_generate
 
 
 class Ingest:
-    def __init__(self, adata):
-        #assume rep is X if all initializations fail to identify it
-        self._rep = adata.X
-        self._use_rep = 'X'
 
-        self._n_pcs = None
+    def _init_umap(self, adata):
+        self._umap = UMAP(
+            metric = adata.uns['neighbors']['params']['metric']
+        )
 
-        #maybe don't need it, rather initialize Ingest class with all needed cluster keys
-        self._adata = adata
+        self._umap.embedding_ = adata.obsm['X_umap']
+        self._umap._raw_data = self._rep
+        self._umap._sparse_data = issparse(self._rep)
+        self._umap._small_data = self._rep.shape[0] < 4096
+        self._umap._metric_kwds = adata.uns['neighbors']['params']['metric_kwds']
+        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        self._umap._initial_alpha = self._umap.learning_rate
 
-        if 'PCs' in adata.varm:
-            self._pca_basis = adata.varm['PCs']
+        self._umap._random_init = self._random_init
+        self._umap._tree_init = self._tree_init
+        self._umap._search = self._search
 
-        if 'neighbors' not in adata.uns:
-            return
+        self._umap._rp_forest = self._rp_forest
 
-        #need to split all these into separate init functions
+        self._umap._search_graph = self._search_graph
+
+        self._umap._a = adata.uns['umap']['params']['a']
+        self._umap._b = adata.uns['umap']['params']['b']
+
+    def _init_neighbors(self, adata):
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
             self._rep = adata.X if self._use_rep == 'X' else adata.obsm[use_rep]
@@ -59,31 +68,24 @@ class Ingest:
         else:
             self._rp_forest = None
 
-        if 'X_umap' not in adata.obsm:
-            return
+    def __init__(self, adata):
+        #assume rep is X if all initializations fail to identify it
+        self._rep = adata.X
+        self._use_rep = 'X'
 
-        self._umap = UMAP(
-            metric = adata.uns['neighbors']['params']['metric']
-        )
+        self._n_pcs = None
 
-        self._umap.embedding_ = adata.obsm['X_umap']
-        self._umap._raw_data = self._rep
-        self._umap._sparse_data = issparse(self._rep)
-        self._umap._small_data = self._rep.shape[0] < 4096
-        self._umap._metric_kwds = adata.uns['neighbors']['params']['metric_kwds']
-        self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
-        self._umap._initial_alpha = self._umap.learning_rate
+        #maybe don't need it, rather initialize Ingest class with all needed cluster keys
+        self._adata = adata
 
-        self._umap._random_init = self._random_init
-        self._umap._tree_init = self._tree_init
-        self._umap._search = self._search
+        if 'PCs' in adata.varm:
+            self._pca_basis = adata.varm['PCs']
 
-        self._umap._rp_forest = self._rp_forest
+        if 'neighbors' in adata.uns:
+            self._init_neighbors(adata)
 
-        self._umap._search_graph = self._search_graph
-
-        self._umap._a = adata.uns['umap']['params']['a']
-        self._umap._b = adata.uns['umap']['params']['b']
+        if 'X_umap' in adata.obsm:
+            self._init_umap(adata)
 
     def pca(self, adata_small, n_pcs=None, inplace=True):
         #todo - efficient implementation for sparse matrices
