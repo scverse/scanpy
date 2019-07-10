@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from umap import UMAP
 from umap.distances import named_distances
-from umap.nndescent import make_initialisations, make_initialized_nnd_search
+from umap.nndescent import make_initialisations, make_initialized_nnd_search, initialise_search
 from umap.umap_ import INT32_MAX, INT32_MIN
 from umap.utils import deheap_sort
 from sklearn.utils import check_random_state
@@ -23,7 +23,7 @@ class Ingest:
         self._umap._raw_data = self._rep
         self._umap._sparse_data = issparse(self._rep)
         self._umap._small_data = self._rep.shape[0] < 4096
-        self._umap._metric_kwds = adata.uns['neighbors']['params']['metric_kwds']
+        self._umap._metric_kwds = adata.uns['neighbors']['params'].get('metric_kwds', {})
         self._umap._n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         self._umap._initial_alpha = self._umap.learning_rate
 
@@ -37,6 +37,8 @@ class Ingest:
 
         self._umap._a = adata.uns['umap']['params']['a']
         self._umap._b = adata.uns['umap']['params']['b']
+
+        self._umap._input_hash = None
 
     def _init_neighbors(self, adata):
         if 'use_rep' in adata.uns['neighbors']['params']:
@@ -114,7 +116,7 @@ class Ingest:
         train = self._rep
         test = self.same_rep(adata_small)
 
-        init = initialise_search(rp_forest, train, test, int(k * queue_size),
+        init = initialise_search(self._rp_forest, train, test, int(k * queue_size),
                                  self._random_init, self._tree_init, rng_state)
 
         result = self._search(train, self._search_graph.indptr, self._search_graph.indices, init, test)
