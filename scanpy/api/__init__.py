@@ -1,3 +1,11 @@
+import warnings
+warnings.warn(
+    "\n\n"
+    "In a future version of Scanpy, `scanpy.api` will be removed.\n"
+    "Simply use `import scanpy as sc` and `import scanpy.external as sce` instead.\n",
+    FutureWarning
+)
+
 from anndata import AnnData
 from ..neighbors import Neighbors
 
