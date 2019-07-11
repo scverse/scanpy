@@ -20,4 +20,4 @@ def test_embedding_density_plot():
     # Test that sc.pl.embedding_density() runs without error
     adata = sc.datasets.pbmc68k_reduced()
     sc.tl.embedding_density(adata, 'umap')
-    sc.pl.embedding_density(adata, 'umap', 'umap_density')
+    sc.pl.embedding_density(adata, 'umap', 'umap_density', show=False)

@@ -5,6 +5,7 @@ import scanpy as sc
 
 def test_umap_init_dtype():
     pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc[:100, :].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float32))
     embed1 = pbmc.obsm["X_umap"].copy()
     sc.tl.umap(pbmc, init_pos=pbmc.obsm["X_pca"][:, :2].astype(np.float64))
