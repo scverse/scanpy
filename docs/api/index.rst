@@ -307,7 +307,6 @@ Further modules
 .. autosummary::
    :toctree: .
 
-   external
    api
    plotting
 
