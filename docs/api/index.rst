@@ -106,7 +106,6 @@ Clustering and trajectory inference
    tl.dpt
    tl.paga
 
-
 Marker genes
 ~~~~~~~~~~~~
 
@@ -187,10 +186,11 @@ Read other formats using functions borrowed from :mod:`anndata`
    read_text
    read_umi_tools
 
+
 .. _module-get:
 
-Data access: `get`
--------------------
+Get object from `AnnData`: `get`
+--------------------------------
 
 .. module:: scanpy.get
 .. currentmodule:: scanpy
