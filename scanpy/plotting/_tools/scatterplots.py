@@ -71,9 +71,15 @@ def plot_scatter(
     else:
         args_3d = {}
 
+    # Deal with Raw
     if use_raw is None:
         # check if adata.raw is set
-        use_raw = adata.raw is not None
+        use_raw = layer is None and adata.raw is not None
+    if use_raw and layer is not None:
+        raise ValueError(
+            "Cannot use both a layer and the raw representation. Was passed:"
+            f"use_raw={use_raw}, layer={layer}."
+        )
 
     if wspace is None:
         #  try to set a wspace that is not too large or too small given the

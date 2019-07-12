@@ -1,7 +1,14 @@
 from pathlib import Path
+from itertools import repeat, chain, combinations
 
+import pytest
 from matplotlib.testing import setup
 setup()
+
+from matplotlib.testing.compare import compare_images
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 import scanpy as sc
 
@@ -320,3 +327,61 @@ def test_scatterplots(image_comparer):
     pbmc.var["numbers"] = [str(x) for x in range(pbmc.shape[1])]
     sc.pl.umap(pbmc, color=['1', '2', '3'], gene_symbols="numbers", show=False)
     save_and_compare_images('master_umap_symbols')
+
+def test_scatter_specify_layer_and_raw():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc.layers["layer"] = pbmc.raw.X.copy()
+    with pytest.raises(ValueError):
+        sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
+
+
+# TODO: Make more generic
+def test_scatter_rep(tmpdir):
+    """
+    Test to make sure I can predict when scatter reps should be the same
+    """
+    TESTDIR = Path(tmpdir)
+    rep_args = {
+        "raw": {"use_raw": True},
+        "layer": {"layer": "layer", "use_raw": False},
+        "X": {"use_raw": False}
+    }
+    states = pd.DataFrame.from_records(zip(
+            list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
+            list(chain.from_iterable(repeat("abc", 3))),
+            [1,2,3,3,1,2,2,3,1]
+        ),
+        columns=["rep", "gene", "result"]
+    )
+    states["outpth"] = [
+        TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"
+        for state in states.itertuples()
+    ]
+    pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
+    coords = np.c_[np.arange(15) % 5, pattern]
+
+    adata = sc.AnnData(
+        X=np.zeros((15, 3)),
+        layers={"layer": np.zeros((15, 3))},
+        obsm={"X_pca": coords},
+        var=pd.DataFrame(index=[x for x in list("abc")]),
+        obs=pd.DataFrame(
+            index=[f"cell{i}" for i in range(15)]
+        )
+    )
+    adata.raw = adata.copy()
+    adata.X[np.arange(15), pattern] = 1
+    adata.raw.X[np.arange(15), (pattern + 1) % 3] = 1
+    adata.layers["layer"][np.arange(15), (pattern + 2) % 3] = 1
+
+    for state in states.itertuples():
+        sc.pl.pca(adata, color=state.gene, **rep_args[state.rep], show=False)
+        plt.savefig(state.outpth, dpi=60)
+        plt.close()
+
+    for s1, s2 in combinations(states.itertuples(), 2):
+        comp = compare_images(str(s1.outpth), str(s2.outpth), tol=5)
+        if s1.result == s2.result:
+            assert comp is None, comp
+        else:
+            assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
