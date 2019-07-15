@@ -151,7 +151,7 @@ class Ingest:
         else:
             raise NotImplementedError('Ingest supports only umap embeddings for now.')
 
-    def map_labels(self, labels, k=10, **kwargs):
+    def map_labels(self, labels):
         cat_array = self._adata_ref.obs[labels]
 
         values = [cat_array[inds].mode()[0] for inds in self._indices]
@@ -167,3 +167,12 @@ class Ingest:
 
         if not inplace:
             return adata
+
+def ingest(adata, adata_ref, embedding_method='umap', obs=None, inplace=True, **kwargs):
+    ing = Ingest(adata_ref)
+    ing.transform(adata)
+    ing.map_embedding(embedding_method)
+    if obs is not None:
+        ing.neighbors(**kwargs)
+        ing.map_labels(obs)
+    return ing.to_adata(inplace)
