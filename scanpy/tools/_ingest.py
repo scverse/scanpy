@@ -1,12 +1,8 @@
 import pandas as pd
 import numpy as np
-from umap import UMAP
-from umap.distances import named_distances
-from umap.nndescent import make_initialisations, make_initialized_nnd_search, initialise_search
-from umap.umap_ import INT32_MAX, INT32_MIN
-from umap.utils import deheap_sort
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
+from anndata.core.alignedmapping import AxisArrays
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
@@ -15,6 +11,8 @@ from ..neighbors import _rp_forest_generate
 class Ingest:
 
     def _init_umap(self, adata):
+        from umap import UMAP
+
         self._umap = UMAP(
             metric = adata.uns['neighbors']['params']['metric']
         )
@@ -41,6 +39,9 @@ class Ingest:
         self._umap._input_hash = None
 
     def _init_neighbors(self, adata):
+        from umap.distances import named_distances
+        from umap.nndescent import make_initialisations, make_initialized_nnd_search
+
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
             self._rep = adata.X if self._use_rep == 'X' else adata.obsm[use_rep]
@@ -77,8 +78,8 @@ class Ingest:
 
         self._n_pcs = None
 
-        #maybe don't need it, rather initialize Ingest class with all needed cluster keys
-        self._adata = adata
+        self._adata_ref = adata
+        self._adata_new = None
 
         if 'PCs' in adata.varm:
             self._pca_basis = adata.varm['PCs']
@@ -89,48 +90,80 @@ class Ingest:
         if 'X_umap' in adata.obsm:
             self._init_umap(adata)
 
-    def pca(self, adata_small, n_pcs=None, inplace=True):
-        #todo - efficient implementation for sparse matrices
-        rep = adata_small.X
-        rep = rep.toarray() if issparse(rep) else rep.copy()
-        rep -= rep.mean(axis=0)
-        X_pca = np.dot(rep, self._pca_basis[:, :n_pcs])
-        if inplace:
-            adata_small.obsm['X_pca'] = X_pca
-        else:
-            return X_pca
+        self._obsm = None
+        self._obs = None
 
-    def same_rep(self, adata_small):
+        self._indices = None
+        self._distances = None
+
+    def _pca(self, n_pcs=None):
+        #todo - efficient implementation for sparse matrices
+        #todo - check if should be centered
+        #todo - check if used highly_variable
+        X = self._adata_new.X
+        X = X.toarray() if issparse(X) else X.copy()
+        X -= X.mean(axis=0)
+        X_pca = np.dot(X, self._pca_basis[:, :n_pcs])
+        return X_pca
+
+    def _same_rep(self):
+        adata = self._adata_new
         if self._n_pcs is not None:
-            return self.pca(adata_small, self._n_pcs, inplace=False)
+            return self._pca(self._n_pcs)
         if self._use_rep == 'X':
-            return adata_small.X
+            return adata.X
         if self._use_rep in adata.obsm.keys():
             return adata.obsm[self._use_rep]
-        return adata_small.X
+        return adata.X
 
-    def neighbors(self, adata_small, k=10, queue_size=5, random_state=0):
+    def transform(self, adata_new):
+        self._obs = pd.DataFrame(index=adata_new.obs.index)
+        #not sure if it should be AxisArrays
+        self._obsm = AxisArrays(adata_new, 0)
+
+        self._adata_new = adata_new
+        self._obsm['rep'] = self._same_rep()
+
+    def neighbors(self, k=10, queue_size=5, random_state=0):
+        from umap.nndescent import initialise_search
+        from umap.utils import deheap_sort
+        from umap.umap_ import INT32_MAX, INT32_MIN
+
         random_state = check_random_state(random_state)
         rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
 
         train = self._rep
-        test = self.same_rep(adata_small)
+        test = self._obsm['rep']
 
         init = initialise_search(self._rp_forest, train, test, int(k * queue_size),
                                  self._random_init, self._tree_init, rng_state)
 
         result = self._search(train, self._search_graph.indptr, self._search_graph.indices, init, test)
         indices, dists = deheap_sort(result)
-        return indices[:, :k], dists[:, :k]
+        self._indices, self._distances = indices[:, :k], dists[:, :k]
 
-    def umap(self, adata_small):
-        rep = self.same_rep(adata_small)
-        adata_small.obsm['X_umap'] = self._umap.transform(rep)
+    def _umap_transform(self):
+        return self._umap.transform(self._obsm['rep'])
 
-    def knn_classify(self, adata_small, classes_key, k=10, **kwargs):
-        #i.e. ingest.knn_classify(adata_small, 'louvain')
-        cat_array = self._adata.obs[classes_key]
-        neighbors, _ = self.neighbors(adata_small, k, **kwargs)
+    def map_embedding(self, method):
+        if method == 'umap':
+            self._obsm['X_umap'] = self._umap_transform()
+        else:
+            raise NotImplementedError('Ingest supports only umap embeddings for now.')
 
-        values = [cat_array[inds].mode()[0] for inds in neighbors]
-        adata_small.obs[classes_key] = pd.Categorical(values=values, categories=cat_array.cat.categories)
+    def map_labels(self, labels, k=10, **kwargs):
+        cat_array = self._adata_ref.obs[labels]
+
+        values = [cat_array[inds].mode()[0] for inds in self._indices]
+        self._obs[labels] = pd.Categorical(values=values, categories=cat_array.cat.categories)
+
+    def to_adata(self, inplace=False):
+        adata = self._adata_new if inplace else self._adata_new.copy()
+        adata.obsm.update(self._obsm)
+
+        adata.obs.update(self._obs)
+        new_cols = ~self._obs.columns.isin(adata.obs.columns)
+        adata.obs = pd.concat([adata.obs, self._obs.loc[:, new_cols]], axis=1, copy=False)
+
+        if not inplace:
+            return adata
