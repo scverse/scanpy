@@ -13,8 +13,8 @@ gene_symbols
     refer to the index column of the `.var` DataFrame. Setting this option allows
     alternative names to be used.
 use_raw
-    Use `.raw` attribute of `adata` for coloring with gene expression. If
-    `None`, uses `.raw` if present.
+    Use `.raw` attribute of `adata` for coloring with gene expression. If `None`,
+    defaults to `True` if `layer` isn't provided and `adata.raw` is present.
 layer
     Name of the AnnData object layer that wants to be plotted. By default
     adata.raw.X is plotted. If `use_raw=False` is set, then `adata.X` is plotted.
