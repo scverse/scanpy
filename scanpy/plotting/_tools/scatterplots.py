@@ -658,7 +658,9 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
         palette = [next(cc)['color'] for _ in range(length)]
 
     else:
-        if length <= 28:
+        if length <= 20:
+            palette = palettes.default_20
+        elif length <= 26:
             palette = palettes.default_26
         elif length <= len(palettes.default_64):  # 103 colors
             palette = palettes.default_64
