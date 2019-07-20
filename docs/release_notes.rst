@@ -20,12 +20,12 @@
     * `Fabian Theis <https://twitter.com/fabian_theis>`__ & lab: enabling guidance, support and environment
 
 
-Post v1.4 :small:`May 13, 2019`
+Post v1.4 :small:`July 20, 2019`
 -------------------------------
 
 New functionality:
 
-- :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :pr:`619` :smaller:`thanks to I Virshup`
+- :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :noteversion:`1.4.4` :pr:`619` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :pr:`618` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :pr:`622` :noteversion:`1.4.2` :smaller:`thanks to G Eraslan`
 - Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`) :pr:`604` :smaller:`thanks to P Angerer`
@@ -39,6 +39,7 @@ New functionality:
 
 Bug fixes:
 
+- Stopped deprecations warnings from AnnData `0.6.22` :noteversion:`1.4.4` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :pr:`621` :noteversion:`1.4.2` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
 - :func:`~scanpy.pp.neighbors` correctly infers `n_neighbors` again from `params`, which was temporarily broken in `v1.4.2` :noteversion:`1.4.3` :smaller:`thanks to I Virshup`
