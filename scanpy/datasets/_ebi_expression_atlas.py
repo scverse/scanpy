@@ -72,9 +72,9 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     with archive.open(mtx_data_info, "r") as f:
         expr = read_mtx_from_stream(f)
     with archive.open(mtx_rows_info, "r") as f:
-        varname = pd.read_csv(f, sep="\t", header=None)[1]
+        varname = pd.read_csv(f, sep="\t", header=None)[1]  # TODO: Check what other value could be
     with archive.open(mtx_cols_info, "r") as f:
-        obsname = pd.read_csv(f, sep="\t", header=None)[1]
+        obsname = pd.read_csv(f, sep="\t", header=None).iloc[:, 0]
     adata = anndata.AnnData(expr)
     adata.var_names = varname
     adata.obs_names = obsname
