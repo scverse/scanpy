@@ -541,7 +541,7 @@ def _read(
         elif ext == 'loom':
             adata = read_loom(filename=filename, **kwargs)
         else:
-            raise ValueError(f'Unkown extension {ext}.')
+            raise ValueError(f'Unknown extension {ext}.')
         if cache:
             logg.info(
                 f'... writing an {settings.file_format_data} '
