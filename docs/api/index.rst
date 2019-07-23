@@ -153,7 +153,7 @@ Reading
 -------
 
 .. note::
-   For reading annotation use :ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>`
+   For reading annotation use :ref:`pandas.read_… <pandas:io>`
    and add it to your :class:`anndata.AnnData` object. The following read functions are
    intended for the numeric data in the data matrix `X`.
 

@@ -194,8 +194,7 @@ find a plotting function with the same name.
 Reading
 -------
 
-*Note:* For reading annotation use
-:ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>` and add
+*Note:* For reading annotation use :ref:`pandas.read_… <pandas:io>` and add
 it to your `AnnData` object. The following read functions are intended for
 the numeric data in the data matrix `X`.
 
