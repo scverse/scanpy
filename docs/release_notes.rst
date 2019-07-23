@@ -35,7 +35,7 @@ New functionality:
 - :func:`~scanpy.pp.normalize_total` replaces :func:`~scanpy.pp.normalize_per_cell`, is more efficient and provides a parameter to only normalize using a fraction of expressed genes :noteversion:`1.4.1` :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.downsample_counts` has been sped up, changed default value of `replace` parameter to `False` :pr:`474` :noteversion:`1.4.1` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings :pr:`543` :noteversion:`1.4.1` :smaller:`thanks to M Luecken`
-- :func:`~scanpy.external.palantir` interfaces Palantir [Setty18]_ :pr:`493` :noteversion:`1.4.1` :smaller:`thanks to A Mousa`
+- :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_ :pr:`493` :noteversion:`1.4.1` :smaller:`thanks to A Mousa`
 
 Bug fixes:
 
