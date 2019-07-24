@@ -8,8 +8,7 @@ h5py
 tables
 tqdm
 importlib_metadata>=0.7; python_version < '3.8'
-# exclude buggy versions
-scikit-learn >= 0.19.1, != 0.21.0, != 0.21.1
+scikit-learn>=0.21.2
 statsmodels>=0.10.0rc2
 patsy
 networkx
