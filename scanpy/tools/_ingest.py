@@ -151,11 +151,17 @@ class Ingest:
         else:
             raise NotImplementedError('Ingest supports only umap embeddings for now.')
 
-    def map_labels_knn(self, labels):
+    def _knn_classify(self, labels):
         cat_array = self._adata_ref.obs[labels]
 
         values = [cat_array[inds].mode()[0] for inds in self._indices]
-        self._obs[labels] = pd.Categorical(values=values, categories=cat_array.cat.categories)
+        return pd.Categorical(values=values, categories=cat_array.cat.categories)
+
+    def map_labels(self, labels, method):
+        if method == 'knn':
+            self._obs[labels] = self._knn_classify(labels)
+        else:
+            raise NotImplementedError('Ingest supports knn labeling for now.')
 
     def to_adata(self, inplace=False):
         adata = self._adata_new if inplace else self._adata_new.copy()
@@ -168,11 +174,19 @@ class Ingest:
         if not inplace:
             return adata
 
-def ingest(adata, adata_ref, embedding_method='umap', obs=None, inplace=True, **kwargs):
+def ingest(
+    adata,
+    adata_ref,
+    obs=None,
+    inplace=True,
+    embedding_method='umap',
+    labeling_method='knn',
+    **kwargs
+):
     ing = Ingest(adata_ref)
     ing.transform(adata)
     ing.map_embedding(embedding_method)
     if obs is not None:
         ing.neighbors(**kwargs)
-        ing.map_labels_knn(obs)
+        ing.map_labels(obs, labeling_method)
     return ing.to_adata(inplace)
