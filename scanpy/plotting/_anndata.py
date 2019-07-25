@@ -779,9 +779,6 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
 
-    See also :func:`~scanpy.pl.rank_genes_groups_stacked_violin` to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
     Parameters
     ----------
     {common_plot_args}
@@ -827,8 +824,13 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
     ...                      groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    See also
+    --------
+    rank_genes_groups_stacked_violin: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
     import seaborn as sns  # Slow import, only import if called
     if use_raw is None and adata.raw is not None: use_raw = True
@@ -1094,9 +1096,6 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     annotation is turned into a categorical by binning the data into the number
     specified in `num_categories`.
 
-    See also :func:`~scanpy.pl.rank_genes_groups_heatmap` to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
     Parameters
     ----------
     {common_plot_args}
@@ -1123,9 +1122,13 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     ...               groupby='bulk_labels', dendrogram=True, swap_axes=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
 
+    See also
+    --------
+    rank_genes_groups_heatmap: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
     if use_raw is None and adata.raw is not None: use_raw = True
 
@@ -1370,9 +1373,6 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     An example of dotplot usage is to visualize, for multiple marker genes,
     the mean value and the percentage of cells expressing the gene accross multiple clusters.
 
-    See also :func:`~scanpy.pl.rank_genes_groups_dotplot` to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
     Parameters
     ----------
     {common_plot_args}
@@ -1414,8 +1414,13 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
     ...               groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    See also
+    --------
+    rank_genes_groups_dotplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
     if use_raw is None and adata.raw is not None: use_raw = True
     var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
@@ -1669,9 +1674,6 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     If groupby is not given, the matrixplot assumes that all data belongs to a single
     category.
 
-    See also :func:`~scanpy.pl.rank_genes_groups_matrixplot` to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
     Parameters
     ----------
     {common_plot_args}
@@ -1693,9 +1695,13 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
     ... groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
+    See also
+    --------
+    rank_genes_groups_matrixplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     if use_raw is None and adata.raw is not None: use_raw = True
@@ -1879,9 +1885,6 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     `groupby` is required to sort and order the values using the respective group
     and should be a categorical value.
 
-    See also :func:`~scanpy.pl.rank_genes_groups_tracksplot` to plot marker genes
-    identified using the :func:`~scanpy.tl.rank_genes_groups` function.
-
     Parameters
     ----------
     {common_plot_args}
@@ -1900,8 +1903,13 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     ...                  'bulk_labels', dendrogram=True)
 
     Using var_names as dict:
+
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
+
+    See also
+    --------
+    rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':

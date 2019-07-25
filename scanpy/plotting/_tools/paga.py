@@ -377,6 +377,8 @@ def paga(
     mirrors coordinates along the x axis... that is, you should increase the
     `maxiter` parameter by 1 if the layout is flipped.
 
+    .. currentmodule:: scanpy
+
     See also
     --------
     tl.paga

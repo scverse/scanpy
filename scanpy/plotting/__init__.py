@@ -39,6 +39,7 @@ Generic
    pl.scatter
    pl.heatmap
    pl.dotplot
+   pl.tracksplot
    pl.violin
    pl.stacked_violin
    pl.matrixplot
