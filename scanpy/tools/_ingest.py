@@ -71,6 +71,18 @@ class Ingest:
         else:
             self._rp_forest = None
 
+    def _init_pca(self, adata):
+        self._pca_centered = adata.uns['pca']['params']['zero_center']
+        self._pca_use_hvg = adata.uns['pca']['params']['use_highly_variable']
+
+        if self._pca_use_hvg and 'highly_variable' not in adata.var.keys():
+            raise ValueError('Did not find adata.var[\'highly_variable\'].')
+
+        if self._pca_use_hvg:
+            self._pca_basis = adata.varm['PCs'][adata.var['highly_variable']]
+        else:
+            self._pca_basis = adata.varm['PCs']
+
     def __init__(self, adata):
         #assume rep is X if all initializations fail to identify it
         self._rep = adata.X
@@ -81,8 +93,8 @@ class Ingest:
         self._adata_ref = adata
         self._adata_new = None
 
-        if 'PCs' in adata.varm:
-            self._pca_basis = adata.varm['PCs']
+        if 'pca' in adata.uns:
+            self._init_pca(adata)
 
         if 'neighbors' in adata.uns:
             self._init_neighbors(adata)
@@ -98,11 +110,12 @@ class Ingest:
 
     def _pca(self, n_pcs=None):
         #todo - efficient implementation for sparse matrices
-        #todo - check if should be centered
-        #todo - check if used highly_variable
         X = self._adata_new.X
         X = X.toarray() if issparse(X) else X.copy()
-        X -= X.mean(axis=0)
+        if self._pca_use_hvg:
+            X = X[:, self._adata_ref.var['highly_variable']]
+        if self._pca_centered:
+            X -= X.mean(axis=0)
         X_pca = np.dot(X, self._pca_basis[:, :n_pcs])
         return X_pca
 
