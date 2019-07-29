@@ -34,6 +34,20 @@ def test_formats(capsys, logging_state):
     assert capsys.readouterr().err == '    4\n'
 
 
+def test_deep(capsys, logging_state):
+    s.logfile = sys.stderr
+    s.verbosity = Verbosity.hint
+    l.hint('0')
+    assert capsys.readouterr().err == '--> 0\n'
+    l.hint('1', deep='1!')
+    assert capsys.readouterr().err == '--> 1\n'
+    s.verbosity = Verbosity.debug
+    l.hint('2')
+    assert capsys.readouterr().err == '--> 2\n'
+    l.hint('3', deep='3!')
+    assert capsys.readouterr().err == '--> 3: 3!\n'
+
+
 def test_logfile(tmp_path, logging_state):
     s.verbosity = Verbosity.hint
 
