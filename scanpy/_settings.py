@@ -3,6 +3,7 @@ import sys
 from enum import IntEnum
 from pathlib import Path
 from time import time
+from logging import getLevelName
 from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
 
 from . import logging
@@ -15,7 +16,6 @@ _VERBOSITY_TO_LOGLEVEL = {
     'hint': 'HINT',
     'debug': 'DEBUG',
 }
-verbosity_names = list(_VERBOSITY_TO_LOGLEVEL.keys())
 # Python 3.7 ensures iteration order
 for v, level in enumerate(list(_VERBOSITY_TO_LOGLEVEL.values())):
     _VERBOSITY_TO_LOGLEVEL[v] = level
@@ -27,6 +27,11 @@ class Verbosity(IntEnum):
     info = 2
     hint = 3
     debug = 4
+
+    @property
+    def level(self) -> int:
+        # getLevelName(str) returns the int level…
+        return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):

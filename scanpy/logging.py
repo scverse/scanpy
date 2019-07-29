@@ -28,11 +28,12 @@ class RootLogger(logging.RootLogger):
         time: datetime = None,
         deep: Optional[str] = None,
     ) -> datetime:
+        from . import settings
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
-            'deep': deep,
+            'deep': deep if settings.verbosity.level < level else None,
             'time_passed': time_passed
         }
         super().log(level, msg, extra=extra)
@@ -98,6 +99,8 @@ class LogFormatter(logging.Formatter):
                 record.msg = record.msg.replace('{time_passed}', str(record.time_passed))
             else:
                 self._style._fmt += ' ({time_passed})'
+        if record.deep:
+            record.msg = f'{record.msg}: {record.deep}'
         result = logging.Formatter.format(self, record)
         self._style._fmt = format_orig
         return result
