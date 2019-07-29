@@ -9,7 +9,7 @@
 /docs/external/scanpy.*.rst
 !/docs/api/scanpy.api.rst
 !/docs/api/scanpy.api.AnnData.rst
-!/docs/api/scanpy.plotting.rstk
+!/docs/api/scanpy.plotting.rst
 
 # tests
 /.cache/
