@@ -89,3 +89,11 @@ dpt_groups : :class:`pandas.Series` (``adata.obs``, dtype ``category``)
 
 Write tests for your functions! See
 [here](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples.
+
+### Performance
+
+We defer loading a few modules until they’re first needed.
+If you want realistic performance measures, be sure to import them before running scanpy functions:
+
+- Check the list in `test_deferred_imports()` from [`scanpy/tests/test_performance.py`](https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_performance.py)
+- Everything in [`scanpy.external`](https://scanpy.readthedocs.io/en/stable/external/) wraps a 3rd party import.
