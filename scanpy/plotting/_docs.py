@@ -59,8 +59,8 @@ legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
 legend_fontoutline
-    Linewidth of the legend font outline. This uses `matplotlib.patheffects` to
-    draw a white outline around the legend text.
+    Linewidth of the legend font outline. This uses :mod:`matplotlib.patheffects`
+    to draw a white outline around the legend text.
 size
     Point size. If `None`, is automatically computed.
 color_map
@@ -69,11 +69,12 @@ color_map
     `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
 palette
     Colors to use for plotting categorical annotation groups. The palette can be
-    a valid `matplotlib.pyplot.colormap` name like `'Set2'` or `'tab20'`, a list
-    of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a Cycler object. If
-    `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
-    variable already has colors stored in `adata.uns["{var}_colors"]`. If
-    provided, values of `adata.uns["{var}_colors"]` will be set by this palette.
+    a valid :class:`~matplotlib.colors.Colormap` name like `'Set2'` or `'tab20'`,
+    a list of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a
+    :class:`~cycler.Cycler` object. If `None`, `mpl.rcParams["axes.prop_cycle"]`
+    is used unless the categorical variable already has colors stored in
+    `adata.uns["{var}_colors"]`. If provided, values of `adata.uns["{var}_colors"]`
+     will be set by this palette.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.api.tl.set_figure_params`, defaults to `True`.

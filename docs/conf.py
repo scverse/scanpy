@@ -62,6 +62,7 @@ todo_include_todos = False
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
+    cycler=('https://matplotlib.org/cycler/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/', None),
