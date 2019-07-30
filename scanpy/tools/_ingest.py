@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
+from anndata import AnnData
 from anndata.core.alignedmapping import AxisArrays
 
 from ..preprocessing._simple import N_PCS
@@ -182,10 +183,22 @@ class Ingest:
 
         adata.obs.update(self._obs)
         new_cols = ~self._obs.columns.isin(adata.obs.columns)
-        adata.obs = pd.concat([adata.obs, self._obs.loc[:, new_cols]], axis=1, copy=False)
+        adata.obs = pd.concat([adata.obs, self._obs.loc[:, new_cols]], axis=1)
 
         if not inplace:
             return adata
+
+    def to_adata_joint(self):
+        adata = AnnData(np.vstack((self._adata_ref.X, self._adata_new.X)))
+
+        cols = self._adata_ref.obs.columns.isin(self._obs.columns)
+        adata.obs = pd.concat([self._adata_ref.obs.loc[:, cols], self._obs.loc[:, cols]])
+
+        for key in self._obsm:
+            if key in self._adata_ref.obsm:
+                adata.obsm[key] = np.vstack((self._adata_ref.obsm[key], self._obsm[key]))
+
+        return adata
 
 def ingest(
     adata,
