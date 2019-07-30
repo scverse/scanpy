@@ -5,7 +5,6 @@ import scipy
 from anndata import AnnData
 from numpy.random import RandomState
 from scipy.sparse import issparse, coo_matrix, csr_matrix
-from sklearn.metrics import pairwise_distances
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
@@ -636,6 +635,7 @@ class Neighbors:
         Also writes `.knn_indices` and `.knn_distances` if
         `write_knn_indices==True`.
         """
+        from sklearn.metrics import pairwise_distances
         start_neighbors = logg.debug('computing neighbors')
         if n_neighbors > self._adata.shape[0]:  # very small datasets
             n_neighbors = 1 + int(0.5*self._adata.shape[0])

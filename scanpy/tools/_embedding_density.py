@@ -2,7 +2,6 @@
 """
 
 import numpy as np
-from scipy.stats import gaussian_kde
 from anndata import AnnData
 from typing import Union, Optional, Sequence
 
@@ -13,9 +12,10 @@ def _calc_density(
     x: np.ndarray,
     y: np.ndarray,
 ):
+    from scipy.stats import gaussian_kde
     """
     Function to calculate the density of cells in an embedding.
-    """    
+    """
 
     # Calculate the point density
     xy = np.vstack([x,y])
@@ -42,16 +42,16 @@ def embedding_density(
 
     Gaussian kernel density estimation is used to calculate the density of
     cells in an embedded space. This can be performed per category over a
-    categorical cell annotation. The cell density can be plotted using the 
+    categorical cell annotation. The cell density can be plotted using the
     `sc.pl.embedding_density()` function.
 
     Note that density values are scaled to be between 0 and 1. Thus, the
-    density value at each cell is only comparable to other densities in 
+    density value at each cell is only comparable to other densities in
     the same condition category.
 
     This function was written by Sophie Tritschler and implemented into
     Scanpy by Malte Luecken.
-    
+
     Parameters
     ----------
     adata
@@ -83,9 +83,9 @@ def embedding_density(
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='G1')
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase', 
+    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
     ...                         group='S')
     """
     sanitize_anndata(adata) # to ensure that newly created covariates are categorical to test for categoy numbers
@@ -94,7 +94,7 @@ def embedding_density(
 
     # Test user inputs
     basis = basis.lower()
-    
+
     if basis == 'fa':
         basis = 'draw_graph_fa'
 
@@ -117,7 +117,7 @@ def embedding_density(
 
         if adata.obs[groupby].dtype.name != 'category':
             raise ValueError('{!r} column does not contain Categorical data'.format(groupby))
-    
+
         if len(adata.obs[groupby].cat.categories) > 10:
             raise ValueError('More than 10 categories in {!r} column.'.format(groupby))
 
@@ -134,7 +134,7 @@ def embedding_density(
         categories = adata.obs[groupby].cat.categories
 
         density_values = np.zeros(adata.n_obs)
-        
+
         for cat in categories:
             cat_mask = adata.obs[groupby] == cat
             embed_x = adata.obsm['X_'+basis][cat_mask, components[0]]
@@ -144,7 +144,7 @@ def embedding_density(
             density_values[cat_mask] = dens_embed
 
         adata.obs[density_covariate] = density_values
-        
+
     # Calculate the density over the whole embedding without subsetting
     else: #if groupby is None
         embed_x = adata.obsm['X_'+basis][:, components[0]]

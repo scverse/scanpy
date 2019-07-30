@@ -3,7 +3,6 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 import scipy as sp
-import networkx as nx
 from natsort import natsorted
 
 from .. import logging as logg
@@ -521,6 +520,8 @@ class DPT(Neighbors):
             segs_adjacency[iseg] += list(range(len(segs_adjacency) - n_add, len(segs_adjacency)))
             segs_connects[iseg] += ssegs_connects[trunk]
         else:
+            import networkx as nx
+
             segs_adjacency += [[] for i in range(n_add)]
             segs_connects += [[] for i in range(n_add)]
             kseg_list = [iseg] + list(range(len(segs) - n_add, len(segs)))

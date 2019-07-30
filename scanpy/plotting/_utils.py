@@ -2,7 +2,6 @@ import warnings
 from typing import Union, List
 
 import numpy as np
-import networkx as nx
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.axes import Axes
@@ -316,6 +315,8 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force
 
 
 def plot_edges(axs, adata, basis, edges_width, edges_color):
+    import networkx as nx
+
     if not isinstance(axs, list): axs = [axs]
     if 'neighbors' not in adata.uns:
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
@@ -698,6 +699,8 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
 
 
 def hierarchy_sc(G, root, node_sets):
+    import networkx as nx
+
     def make_sc_tree(sc_G, node=root, parent=None):
         sc_G.add_node(node)
         neighbors = G.neighbors(node)

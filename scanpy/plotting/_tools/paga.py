@@ -5,7 +5,6 @@ import warnings
 from collections import Iterable
 from typing import Optional, Union, List
 
-import networkx as nx
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl, rcParams, ticker
 from matplotlib.axes import Axes
@@ -131,6 +130,8 @@ def paga_compare(
 
 
 def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, adj_tree=None, root=0, layout_kwds={}):
+    import networkx as nx
+
     nx_g_solid = nx.Graph(adjacency_solid)
     if layout is None:
         layout = 'fr'
@@ -545,6 +546,8 @@ def _paga_graph(
         cb_kwds={},
         single_component=False,
         arrowsize=30):
+    import networkx as nx
+
     node_labels = labels  # rename for clarity
     if (node_labels is not None
         and isinstance(node_labels, str)

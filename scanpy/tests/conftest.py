@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import matplotlib as mpl
@@ -9,6 +10,14 @@ import pytest
 import scanpy
 
 scanpy.settings.verbosity = "hint"
+
+# define this after importing scanpy but before running tests
+IMPORTED = frozenset(sys.modules.keys())
+
+
+@pytest.fixture
+def imported_modules():
+    return IMPORTED
 
 
 def make_comparer(path_expected: Path, path_actual: Path, *, tol: int):
