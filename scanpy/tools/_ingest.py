@@ -162,6 +162,8 @@ class Ingest:
     def map_embedding(self, method):
         if method == 'umap':
             self._obsm['X_umap'] = self._umap_transform()
+        elif method == 'pca':
+            self._obsm['X_pca'] = self._pca()
         else:
             raise NotImplementedError('Ingest supports only umap embeddings for now.')
 
@@ -207,6 +209,7 @@ def ingest(
     inplace=True,
     embedding_method='umap',
     labeling_method='knn',
+    return_joint = False,
     **kwargs
 ):
     ing = Ingest(adata_ref)
@@ -215,4 +218,4 @@ def ingest(
     if obs is not None:
         ing.neighbors(**kwargs)
         ing.map_labels(obs, labeling_method)
-    return ing.to_adata(inplace)
+    return ing.to_adata(inplace) if not return_joint else ing.to_adata_joint()
