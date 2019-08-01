@@ -9,6 +9,30 @@ from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 
 
+def ingest(
+    adata,
+    adata_ref,
+    obs=None,
+    inplace=True,
+    embedding_method='umap',
+    labeling_method='knn',
+    return_joint = False,
+    **kwargs
+):
+    """
+    Note
+    ----
+    This doesn't update the neighbor graph.
+    """
+    ing = Ingest(adata_ref)
+    ing.transform(adata)
+    ing.map_embedding(embedding_method)
+    if obs is not None:
+        ing.neighbors(**kwargs)
+        ing.map_labels(obs, labeling_method)
+    return ing.to_adata(inplace) if not return_joint else ing.to_adata_joint()
+
+
 class Ingest:
 
     def _init_umap(self, adata):
@@ -105,6 +129,7 @@ class Ingest:
 
         self._obsm = None
         self._obs = None
+        self._labels = None
 
         self._indices = None
         self._distances = None
@@ -174,6 +199,7 @@ class Ingest:
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
+        self._labels = labels
         if method == 'knn':
             self._obs[labels] = self._knn_classify(labels)
         else:
@@ -181,6 +207,10 @@ class Ingest:
 
     def to_adata(self, inplace=False):
         adata = self._adata_new if inplace else self._adata_new.copy()
+        # following is only done as update induces strange behavior if key is already present
+        if self._labels is not None and self._labels in self._adata_new.obs:
+            del adata.obs[self._labels]
+
         adata.obsm.update(self._obsm)
 
         adata.obs.update(self._obs)
@@ -191,31 +221,10 @@ class Ingest:
             return adata
 
     def to_adata_joint(self):
-        adata = AnnData(np.vstack((self._adata_ref.X, self._adata_new.X)))
-
-        cols = self._adata_ref.obs.columns.isin(self._obs.columns)
-        adata.obs = pd.concat([self._adata_ref.obs.loc[:, cols], self._obs.loc[:, cols]])
+        adata = self._adata_ref.concatenate(self._adata_new)
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
                 adata.obsm[key] = np.vstack((self._adata_ref.obsm[key], self._obsm[key]))
 
         return adata
-
-def ingest(
-    adata,
-    adata_ref,
-    obs=None,
-    inplace=True,
-    embedding_method='umap',
-    labeling_method='knn',
-    return_joint = False,
-    **kwargs
-):
-    ing = Ingest(adata_ref)
-    ing.transform(adata)
-    ing.map_embedding(embedding_method)
-    if obs is not None:
-        ing.neighbors(**kwargs)
-        ing.map_labels(obs, labeling_method)
-    return ing.to_adata(inplace) if not return_joint else ing.to_adata_joint()
