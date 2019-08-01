@@ -275,3 +275,18 @@ def pbmc3k() -> AnnData:
     """
     adata = sc.read(settings.datasetdir / 'pbmc3k_raw.h5ad', backup_url='http://falexwolf.de/data/pbmc3k_raw.h5ad')
     return adata
+
+
+def pbmc3k_processed() -> AnnData:
+    """Processed 3k PBMCs from 10x Genomics.
+
+    Processed using the `basic tutorial <https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html>`__.
+
+    Returns
+    -------
+    Annotated data matrix.
+    """
+    adata = sc.read(
+        settings.datasetdir / 'pbmc3k_processed.h5ad',
+        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad')
+    return adata
