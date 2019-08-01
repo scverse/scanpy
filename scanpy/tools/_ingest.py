@@ -199,7 +199,6 @@ class Ingest:
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
-        self._labels = labels
         if method == 'knn':
             self._obs[labels] = self._knn_classify(labels)
         else:
@@ -207,21 +206,26 @@ class Ingest:
 
     def to_adata(self, inplace=False):
         adata = self._adata_new if inplace else self._adata_new.copy()
-        # following is only done as update induces strange behavior if key is already present
-        if self._labels is not None and self._labels in self._adata_new.obs:
-            del adata.obs[self._labels]
 
         adata.obsm.update(self._obsm)
 
-        adata.obs.update(self._obs)
-        new_cols = ~self._obs.columns.isin(adata.obs.columns)
-        adata.obs = pd.concat([adata.obs, self._obs.loc[:, new_cols]], axis=1)
+        for key in self._obs:
+            adata.obs[key] = self._obs[key]
 
         if not inplace:
             return adata
 
     def to_adata_joint(self):
-        adata = self._adata_ref.concatenate(self._adata_new)
+        # can't use adata = self._adata_ref.concatenate(self._adata_new)
+        # because need to concat self._obs and adata_ref, not adata_new and adata_ref
+
+        adata = AnnData(np.vstack((self._adata_ref.X, self._adata_new.X)))
+
+        cols = self._adata_ref.obs.columns.isin(self._obs.columns)
+        adata.obs = pd.concat([self._adata_ref.obs.loc[:, cols], self._obs.loc[:, cols]])
+
+        batches = ['0' if i < self._adata_ref.X.shape[0] else '1' for i in range(adata.X.shape[0])]
+        adata.obs['batch'] = pd.Categorical(values=batches, categories=['0', '1'])
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
