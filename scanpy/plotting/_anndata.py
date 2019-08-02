@@ -387,7 +387,7 @@ def _scatter_obs(
               and key in adata.raw.var_names):
             c = adata.raw.obs_vector(key)
         elif key in adata.var_names:
-            c = adata.raw.obs_vector(key, layer=layers[2])
+            c = adata.obs_vector(key, layer=layers[2])
         elif is_color_like(key):  # a flat color
             c = key
             colorbar = False
