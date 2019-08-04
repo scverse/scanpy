@@ -664,8 +664,10 @@ def normalize_per_cell(
         warnings.simplefilter("ignore")
         counts_per_cell += counts_per_cell == 0
         counts_per_cell /= counts_per_cell_after
-        if not issparse(X): X /= materialize_as_ndarray(counts_per_cell[:, np.newaxis])
-        else: sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
+        if not issparse(X):
+            np.true_divide(X, counts_per_cell[:, np.newaxis], out=X)
+        else:
+            sparsefuncs.inplace_row_scale(X, 1/counts_per_cell)
     return X if copy else None
 
 
