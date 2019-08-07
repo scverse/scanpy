@@ -6,18 +6,26 @@ Contributions to Scanpy are highly welcome!
 Before filing an issue
 ----------------------
 * Search the repository (also google) to see if someone has already reported the same issue.
-  This allows contributors to spend less time responding to issues, and more time on adding features!
+  This allows contributors to spend less time responding to issues, and more time adding new features!
 * Please provide a minimal complete verifiable example for any bug.
   If you're not sure what this means, check out
   [this blog post](http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports)
   by Matthew Rocklin or [this definition](https://stackoverflow.com/help/mcve) from StackOverflow.
-* Let us know a bit about your environment.
-  This can be as easy as pasting the results of `sc.logging.print_versions()`.
+* Let us know about your environment. Environment information is available via: `sc.logging.print_versions()`.
 
 Contributing code
 -----------------
+
+We love code contributions! We have a couple guidelines we'd like you to follow though:
+
+### Tests
+
+Please write tests! You can refer to the [existing test suite](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples. If you haven't written tests before, Software Carpentry has an [in-depth guide](http://katyhuff.github.io/python-testing/) on the topic.
+
+Test are run by issuing the command `pytest` from the root of the repository. `pytest` as well as a few other testing dependencies can be installed by running `pip install ".[test]"` from the repository root, or `pip install scanpy[test]`.
+
 ### Coding style
-We stick to [PEP 8](https://www.python.org/dev/peps/pep-0008) and to this
+We stick to [PEP 8](https://www.python.org/dev/peps/pep-0008) and this
 [editorconfig](https://github.com/theislab/scanpy/blob/master/.editorconfig)
 and *try* to stick to 80-character lines.
 In some cases, wider lines might improve readability, in most cases, not.
@@ -84,11 +92,6 @@ dpt_groups : :class:`pandas.Series` (``adata.obs``, dtype ``category``)
     '1', ...) for each cell. The groups  typically correspond to
     'progenitor cells', 'undecided cells' or 'branches' of a process.
 ```
-
-### Tests
-
-Write tests for your functions! See
-[here](https://github.com/theislab/scanpy/tree/master/scanpy/tests) for examples.
 
 ### Performance
 
