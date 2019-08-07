@@ -118,7 +118,7 @@ def umap(
         init_coords = get_init_pos_from_paga(adata, random_state=random_state)
     else:
         init_coords = init_pos  # Let umap handle it
-    if hasattr(init_coords, "dtype") and is_numeric_dtype(init_pos):
+    if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     random_state = check_random_state(random_state)
