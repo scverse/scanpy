@@ -12,3 +12,10 @@ def test_umap_init_dtype():
     embed2 = pbmc.obsm["X_umap"].copy()
     assert_array_almost_equal(embed1, embed2)
     assert_array_almost_equal(embed1, embed2)
+
+def test_umap_init_paga():
+    pbmc = sc.datasets.pbmc68k_reduced()
+    pbmc = pbmc[:100, :].copy()
+    sc.tl.paga(pbmc)
+    sc.pl.paga(pbmc, show=False)
+    sc.tl.umap(pbmc, init_pos="paga")
