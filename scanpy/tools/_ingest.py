@@ -9,6 +9,10 @@ from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 
 
+def _str_to_list(input):
+    return [input] if isinstance(input, str) else input
+
+
 def ingest(
     adata,
     adata_ref,
@@ -26,10 +30,21 @@ def ingest(
     """
     ing = Ingest(adata_ref)
     ing.transform(adata)
-    ing.map_embedding(embedding_method)
+    embedding_method = _str_to_list(embedding_method)
+    for method in embedding_method:
+        ing.map_embedding(method)
     if obs is not None:
         ing.neighbors(**kwargs)
-        ing.map_labels(obs, labeling_method)
+
+        obs = _str_to_list(obs)
+        labeling_method = _str_to_list(labeling_method)
+
+        if len(labeling_method) == 1 and len(obs) > 1:
+            labeling_method = labeling_method*len(obs)
+
+        for i, col in enumerate(obs):
+            ing.map_labels(col, labeling_method[i])
+
     return ing.to_adata(inplace) if not return_joint else ing.to_adata_joint()
 
 
@@ -135,7 +150,6 @@ class Ingest:
         self._distances = None
 
     def _pca(self, n_pcs=None):
-        #todo - efficient implementation for sparse matrices
         X = self._adata_new.X
         X = X.toarray() if issparse(X) else X.copy()
         if self._pca_use_hvg:
@@ -216,16 +230,11 @@ class Ingest:
             return adata
 
     def to_adata_joint(self):
-        # can't use adata = self._adata_ref.concatenate(self._adata_new)
-        # because need to concat self._obs and adata_ref, not adata_new and adata_ref
+        adata = self._adata_ref.concatenate(self._adata_new)
 
-        adata = AnnData(np.vstack((self._adata_ref.X, self._adata_new.X)))
-
-        cols = self._adata_ref.obs.columns.isin(self._obs.columns)
-        adata.obs = pd.concat([self._adata_ref.obs.loc[:, cols], self._obs.loc[:, cols]])
-
-        batches = ['0' if i < self._adata_ref.X.shape[0] else '1' for i in range(adata.X.shape[0])]
-        adata.obs['batch'] = pd.Categorical(values=batches, categories=['0', '1'])
+        obs_update = self._obs.copy()
+        obs_update.index = adata[adata.obs['batch']=='1'].obs_names
+        adata.obs.update(obs_update)
 
         for key in self._obsm:
             if key in self._adata_ref.obsm:
