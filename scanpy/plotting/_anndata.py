@@ -711,7 +711,7 @@ def violin(
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
     if show is False:
-        if multi_panel:
+        if multi_panel and groupby is None and len(ys) == 1:
             return g
         elif len(axs) == 1:
             return axs[0]
