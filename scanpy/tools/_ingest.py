@@ -9,10 +9,6 @@ from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
 
 
-def _str_to_list(input):
-    return [input] if isinstance(input, str) else input
-
-
 def ingest(
     adata,
     adata_ref,
@@ -28,20 +24,21 @@ def ingest(
     ----
     This doesn't update the neighbor graph.
     """
+    obs = [obs] if isinstance(obs, str) else obs
+    embedding_method = [embedding_method] if isinstance(embedding_method, str) else embedding_method
+    labeling_method = [labeling_method] if isinstance(labeling_method, str) else labeling_method
+
+    if len(labeling_method) == 1 and len(obs or []) > 1:
+        labeling_method = labeling_method*len(obs)
+
     ing = Ingest(adata_ref)
     ing.transform(adata)
-    embedding_method = _str_to_list(embedding_method)
+
     for method in embedding_method:
         ing.map_embedding(method)
+
     if obs is not None:
         ing.neighbors(**kwargs)
-
-        obs = _str_to_list(obs)
-        labeling_method = _str_to_list(labeling_method)
-
-        if len(labeling_method) == 1 and len(obs) > 1:
-            labeling_method = labeling_method*len(obs)
-
         for i, col in enumerate(obs):
             ing.map_labels(col, labeling_method[i])
 
