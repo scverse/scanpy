@@ -1255,8 +1255,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
                                                                           colors=groupby_colors, orientation='left')
 
             # add lines to main heatmap
-            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
-            heatmap_ax.hlines(line_positions, -1, len(var_names) + 1, lw=0.5)
+            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1] - 0.5
+            heatmap_ax.hlines(line_positions, -0.73, len(var_names) - 0.5, lw=0.6,
+                              zorder=10, clip_on=False)
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
@@ -1326,8 +1327,9 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
             ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=groupby_colors,
                                                                           orientation='bottom')
             # add lines to main heatmap
-            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1]
-            heatmap_ax.vlines(line_positions, -1, len(var_names) + 1, lw=0.5)
+            line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1] - 0.5
+            heatmap_ax.vlines(line_positions, -0.5, len(var_names) + .35, lw=0.6,
+                              zorder=10, clip_on=False)
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
