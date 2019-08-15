@@ -147,9 +147,11 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
     key: `str`, optional (default: `"batch"`)
         Key to a categorical annotation from adata.obs that will be used for batch effect removal
     covariates
-        Additional covariates such as adjustment variables or biological condition. Note that
-        not including covariates may introduce bias or lead to the removal of biological signal 
-        in unbalanced designs.
+        Additional covariates besides the batch variable such as adjustment variables or biological 
+        condition. This parameter refers to the design matrix `X` in Equation 2.1 in [Johnson07]_ and 
+        to the `mod` argument in the original combat function in the sva R package. Note that not 
+        including covariates may introduce bias or lead to the removal of biological signal in 
+        unbalanced designs. 
     inplace: bool, optional (default: `True`)
         Wether to replace adata.X or to return the corrected data
 
