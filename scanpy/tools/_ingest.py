@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from anndata import AnnData
 from anndata.core.alignedmapping import AxisArrays
 
 from ..preprocessing._simple import N_PCS
