@@ -1,8 +1,9 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import scipy as sp
+from anndata import AnnData
 from scipy.sparse.csgraph import minimum_spanning_tree
 
 from .. import utils
@@ -13,11 +14,12 @@ _AVAIL_MODELS = {'v1.0', 'v1.2'}
 
 
 def paga(
-        adata,
-        groups='louvain',
-        use_rna_velocity=False,
-        model='v1.2',
-        copy=False):
+    adata: AnnData,
+    groups: Optional[str] = None,
+    use_rna_velocity: bool = False,
+    model: str = 'v1.2',
+    copy: bool = False,
+):
     """Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf19]_.
 
     By quantifying the connectivity of partitions (groups, clusters) of the
@@ -43,19 +45,20 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         An annotated data matrix.
-    groups : key for categorical in `adata.obs`, optional (default: 'louvain')
-        You can pass your predefined groups by choosing any categorical
-        annotation of observations (`adata.obs`).
-    use_rna_velocity : `bool` (default: `False`)
+    groups
+        Key for categorical in `adata.obs`. You can pass your predefined groups
+        by choosing any categorical annotation of observations. Default:
+        The first present key of `'leiden'` or `'louvain'`.
+    use_rna_velocity
         Use RNA velocity to orient edges in the abstracted graph and estimate
         transitions. Requires that `adata.uns` contains a directed single-cell
         graph with key `['velocity_graph']`. This feature might be subject
         to change in the future.
     model : {'v1.2', 'v1.0'}, optional (default: 'v1.2')
         The PAGA connectivity model.
-    copy : `bool`, optional (default: `False`)
+    copy
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
 
@@ -80,9 +83,9 @@ def paga(
     pl.paga_path
     pl.paga_compare
     """
-    if 'neighbors' not in adata.uns:
-        raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
+    if 'neighbors' not in adata.uns: raise ValueError(
+        'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+    )
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     start = logg.info('running PAGA')
@@ -115,13 +118,28 @@ def paga(
     return adata if copy else None
 
 
-class PAGA():
-
-    def __init__(self, adata, groups, model='v1.2'):
+class PAGA:
+    def __init__(self, adata, groups=None, model='v1.2'):
         self._adata = adata
         self._neighbors = Neighbors(adata)
-        self._groups_key = groups
         self._model = model
+
+        if groups is None:
+            for k in ['leiden', 'louvain']:
+                self._groups_key = adata.obs.get(k)
+                if self._groups_key is not None:
+                    break
+            else:
+                raise ValueError(
+                    'You need to run `tl.leiden` or `tl.louvain` to compute '
+                    "community labels, or specify `groups='an_existing_key'`"
+                )
+        elif groups in adata.obs:
+            self._groups_key = groups
+        else:
+            raise ValueError(
+                f'`groups` key {groups!r} missing from `adata.obs`.'
+            )
 
     def compute_connectivities(self):
         if self._model == 'v1.2':
@@ -130,8 +148,8 @@ class PAGA():
             return self._compute_connectivities_v1_0()
         else:
             raise ValueError(
-                '`model` {} needs to be one of {}.'
-                .format(self._model, _AVAIL_MODELS))
+                f'`model` {self._model} needs to be one of {_AVAIL_MODELS}.'
+            )
 
     def _compute_connectivities_v1_2(self):
         import igraph
