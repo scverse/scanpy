@@ -1,10 +1,11 @@
 """Rank genes according to differential expression.
 """
 from math import sqrt, floor
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from scipy.sparse import issparse
 
 from .. import utils
@@ -13,36 +14,36 @@ from ..preprocessing._simple import _get_mean_var
 
 
 def rank_genes_groups(
-    adata,
-    groupby,
-    use_raw=True,
+    adata: AnnData,
+    groupby: str,
+    use_raw: bool = True,
     groups: Union[str, Iterable[str]] = 'all',
-    reference='rest',
-    n_genes=100,
-    rankby_abs=False,
-    key_added=None,
-    copy=False,
-    method='t-test_overestim_var',
-    corr_method='benjamini-hochberg',
+    reference: str = 'rest',
+    n_genes: int = 100,
+    rankby_abs: bool = False,
+    key_added: Optional[str] = None,
+    copy: bool = False,
+    method: str = 't-test_overestim_var',
+    corr_method: str = 'benjamini-hochberg',
     **kwds
 ):
     """Rank genes for characterizing groups.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groupby : `str`
+    groupby
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
     groups
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted, or `'all'` (default), for all groups.
-    reference : `str`, optional (default: `'rest'`)
+    reference
         If `'rest'`, compare each group to the union of the rest of the group.  If
         a group identifier, compare with respect to this group.
-    n_genes : `int`, optional (default: 100)
+    n_genes
         The number of genes that appear in the returned tables.
     method : `{'logreg', 't-test', 'wilcoxon', 't-test_overestim_var'}`, optional (default: 't-test_overestim_var')
         If 't-test', uses t-test, if 'wilcoxon', uses Wilcoxon-Rank-Sum. If
@@ -54,9 +55,11 @@ def rank_genes_groups(
     corr_method : `{'benjamini-hochberg', 'bonferroni'}`, optional (default: 'benjamini-hochberg')
         p-value correction method. Used only for 't-test', 't-test_overestim_var',
         and 'wilcoxon' methods.
-    rankby_abs : `bool`, optional (default: `False`)
+    rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
+    key_added
+        The key in `adata.uns` information is saved to.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
         are passed to `sklearn.linear_model.LogisticRegression
@@ -109,20 +112,27 @@ def rank_genes_groups(
     if corr_method not in avail_corr:
         raise ValueError('Correction method must be one of {}.'.format(avail_corr))
 
-
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     # for clarity, rename variable
-    groups_order = groups if isinstance(groups, str) else list(groups)
-    if isinstance(groups_order, list) and isinstance(groups_order[0], int):
-        groups_order = [str(n) for n in groups_order]
-    if reference != 'rest' and reference not in set(groups_order):
-        groups_order += [reference]
-    if (reference != 'rest'
-        and reference not in set(adata.obs[groupby].cat.categories)):
-        raise ValueError('reference = {} needs to be one of groupby = {}.'
-                         .format(reference,
-                                 adata.obs[groupby].cat.categories.tolist()))
+    if groups == 'all':
+        groups_order = 'all'
+    elif isinstance(groups, (str, int)):
+        raise ValueError('Specify a sequence of groups')
+    else:
+        groups_order = list(groups)
+        if isinstance(groups_order[0], int):
+            groups_order = [str(n) for n in groups_order]
+        if reference != 'rest' and reference not in set(groups_order):
+            groups_order += [reference]
+    if (
+        reference != 'rest'
+        and reference not in set(adata.obs[groupby].cat.categories)
+    ):
+        cats = adata.obs[groupby].cat.categories.tolist()
+        raise ValueError(
+            f'reference = {reference} needs to be one of groupby = {cats}.'
+        )
 
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
