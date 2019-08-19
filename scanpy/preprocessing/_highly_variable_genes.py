@@ -128,12 +128,9 @@ def _highly_variable_genes_single_batch(
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             disp_mad_bin = disp_grouped.apply(robust.mad)
-        df['dispersions_norm'] = (
-            np.abs(
-                df['dispersions'].values
+            df['dispersions_norm'] = (df['dispersions'].values
                 - disp_median_bin[df['mean_bin'].values].values
-            ) / disp_mad_bin[df['mean_bin'].values].values
-        )
+                ) / disp_mad_bin[df['mean_bin'].values].values
     else:
         raise ValueError('`flavor` needs to be "seurat" or "cell_ranger"')
     dispersion_norm = df['dispersions_norm'].values.astype('float32')
