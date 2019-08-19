@@ -318,6 +318,11 @@ def compute_connectivities_umap(
                                           knn_indices=knn_indices, knn_dists=knn_dists,
                                           set_op_mix_ratio=set_op_mix_ratio,
                                           local_connectivity=local_connectivity)
+
+    if isinstance(connectivities, tuple):
+        # In umap-learn 0.4, this returns (result, sigmas, rhos)
+        connectivities = connectivities[0]
+
     distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
 
     return distances, connectivities.tocsr()
