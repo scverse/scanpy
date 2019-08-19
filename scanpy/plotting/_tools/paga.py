@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 from typing import Optional, Union, List
 
 from pandas.api.types import is_categorical_dtype
