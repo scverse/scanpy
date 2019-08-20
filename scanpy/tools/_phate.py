@@ -1,27 +1,32 @@
 """Embed high-dimensional data using PHATE
 """
+from typing import Optional, Union
+
+from anndata import AnnData
+from numpy.random.mtrand import RandomState
 
 from .._settings import settings
 from .. import logging as logg
 
 
 def phate(
-        adata,
-        n_components=2,
-        k=5,
-        a=15,
-        n_landmark=2000,
-        t='auto',
-        gamma=1,
-        n_pca=100,
-        knn_dist='euclidean',
-        mds_dist='euclidean',
-        mds='metric',
-        n_jobs=None,
-        random_state=None,
-        verbose=None,
-        copy=False,
-        **kwargs):
+    adata: AnnData,
+    n_components: int = 2,
+    k: int = 5,
+    a: int = 15,
+    n_landmark: int = 2000,
+    t: Union[int, str] = 'auto',
+    gamma: float = 1.,
+    n_pca: int = 100,
+    knn_dist: str = 'euclidean',
+    mds_dist: str = 'euclidean',
+    mds: str = 'metric',
+    n_jobs: Optional[int] = None,
+    random_state: Optional[Union[int, RandomState]] = None,
+    verbose: Union[bool, int, None] = None,
+    copy: bool = False,
+    **kwargs
+):
     """PHATE [Moon17]_.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
@@ -36,56 +41,57 @@ def phate(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_components : `int`, optional (default: 2)
+    n_components
         number of dimensions in which the data will be embedded
-    k : `int`, optional (default: 5)
+    k
         number of nearest neighbors on which to build kernel
-    a : `int`, optional (default: 15)
+    a
         sets decay rate of kernel tails.
         If None, alpha decaying kernel is not used
-    n_landmark : `int`, optional (default: 2000)
+    n_landmark
         number of landmarks to use in fast PHATE
-    t : `int` or 'auto', optional (default: 'auto')
+    t
         power to which the diffusion operator is powered
         sets the level of diffusion. If 'auto', t is selected
         according to the knee point in the Von Neumann Entropy of
         the diffusion operator
-    gamma : float, optional, default: 1
+    gamma
         Informational distance constant between -1 and 1.
         `gamma=1` gives the PHATE log potential, `gamma=0` gives
         a square root potential.
-    n_pca : `int`, optional (default: 100)
+    n_pca
         Number of principal components to use for calculating
         neighborhoods. For extremely large datasets, using
         n_pca < 20 allows neighborhoods to be calculated in
         log(n_samples) time.
-    knn_dist : string, optional (default: 'euclidean')
+    knn_dist
         recommended values: 'euclidean' and 'cosine'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for building kNN graph
-    mds_dist : string, optional (default: 'euclidean')
+    mds_dist
         recommended values: 'euclidean' and 'cosine'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for MDS
-    mds : {'classic', 'metric', 'nonmetric'}, optional (default: 'metric')
-        Selects which MDS algorithm is used for dimensionality reduction
-    n_jobs : `int` or `None`, optional (default: `sc.settings.n_jobs`)
+    mds : {`'classic'`, `'metric'`, `'nonmetric'`}
+        Selects which MDS algorithm is used for dimensionality reduction.
+    n_jobs
         The number of jobs to use for the computation.
         If `None`, `sc.settings.n_jobs` is used.
         If -1 all CPUs are used. If 1 is given, no parallel computing code is
         used at all, which is useful for debugging.
         For n_jobs below -1, (n_cpus + 1 + n_jobs) are used. Thus for
         n_jobs = -2, all CPUs but one are used
-    random_state : `int`, `numpy.RandomState` or `None`, optional (default: `None`)
+    random_state
         Random seed. Defaults to the global `numpy` random number generator
-    verbose : `bool`, `int` or `None`, optional (default: `sc.settings.verbosity`)
+    verbose
         If `True` or an `int`/`Verbosity` ≥ 2/`hint`, print status messages.
         If `None`, `sc.settings.verbosity` is used.
-    copy : `bool` (default: `False`)
+    copy
         Return a copy instead of writing to `adata`.
-    kwargs : additional arguments to `phate.PHATE`
+    kwargs
+        Additional arguments to `phate.PHATE`
 
     Returns
     -------

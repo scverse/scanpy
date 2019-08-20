@@ -98,7 +98,8 @@ def cyclone(
     adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     marker_pairs : `dict`
-        Dictionary of marker pairs. See :func:`~scanpy.tl.sandbag` output.
+        Dictionary of marker pairs.
+        See :func:`~scanpy.external.tl.sandbag` output.
     gene_names: `list`
         List of genes.
     sample_names: `list`
