@@ -1,22 +1,27 @@
 """Denoise high-dimensional data using MAGIC
 """
+from typing import Union, Sequence
+
+from anndata import AnnData
 
 from .._settings import settings
 from .. import logging as logg
 
 
-def magic(adata,
-          name_list=None,
-          k=10,
-          a=15,
-          t='auto',
-          n_pca=100,
-          knn_dist='euclidean',
-          random_state=None,
-          n_jobs=None,
-          verbose=False,
-          copy=None,
-          **kwargs):
+def magic(
+    adata: AnnData,
+    name_list: Union[str, Sequence[str], None] = None,
+    k=10,
+    a=15,
+    t='auto',
+    n_pca=100,
+    knn_dist='euclidean',
+    random_state=None,
+    n_jobs=None,
+    verbose=False,
+    copy=None,
+    **kwargs
+):
     """Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
 
     MAGIC is an algorithm for denoising and transcript recover of single cells
@@ -29,11 +34,12 @@ def magic(adata,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         An anndata file with `.raw` attribute representing raw counts.
-    name_list : `list`, `'all_genes'`, or `'pca_only'`, optional (default: `'all_genes'`)
-        Denoised genes to return. Default is all genes, but this
+    name_list
+        Denoised genes to return. The default `'all_genes'`/`None`
         may require a large amount of memory if the input data is sparse.
+        Another possibility is `'pca_only'`.
     k : int, optional, default: 10
         number of nearest neighbors on which to build kernel
     a : int, optional, default: 15
@@ -66,14 +72,15 @@ def magic(adata,
         `genes` is not `'all_genes'` or `'pca_only'`. `copy` may only be False
         if `genes` is `'all_genes'` or `'pca_only'`, as the resultant data
         will otherwise have different column names from the input data.
-    kwargs : additional arguments to `magic.MAGIC`
+    kwargs
+        Additional arguments to `magic.MAGIC`
 
     Returns
     -------
     If `copy` is True, AnnData object is returned.
 
-    If `subset_genes` is not `all_genes`, PCA on MAGIC values of cells are stored in
-    `adata.obsm['X_magic']` and `adata.X` is not modified.
+    If `subset_genes` is not `all_genes`, PCA on MAGIC values of cells are
+    stored in `adata.obsm['X_magic']` and `adata.X` is not modified.
 
     The raw counts are stored in `.raw` attribute of AnnData object.
 
@@ -100,32 +107,38 @@ def magic(adata,
     except ImportError:
         raise ImportError(
             'Please install magic package via `pip install --user '
-            'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`')
+            'git+git://github.com/KrishnaswamyLab/MAGIC.git#subdirectory=python`'
+        )
 
     start = logg.info('computing PHATE')
-    needs_copy = not (name_list is None or
-                      (isinstance(name_list, str) and
-                       name_list in ["all_genes", "pca_only"]))
+    all_or_pca = isinstance(name_list, (str, type(None)))
+    if all_or_pca and name_list not in {"all_genes", "pca_only", None}:
+        raise ValueError(
+            "Invalid string value for `name_list`: "
+            "Only `'all_genes'` and `'pca_only'` are allowed."
+        )
     if copy is None:
-        copy = needs_copy
-    elif needs_copy and not copy:
+        copy = not all_or_pca
+    elif not all_or_pca and not copy:
         raise ValueError(
             "Can only perform MAGIC in-place with `name_list=='all_genes' or "
-            "`name_list=='pca_only'` (got {}). Consider setting "
-            "`copy=True`".format(name_list))
+            f"`name_list=='pca_only'` (got {name_list}). Consider setting "
+            "`copy=True`"
+        )
     adata = adata.copy() if copy else adata
     n_jobs = settings.n_jobs if n_jobs is None else n_jobs
 
-    X_magic = MAGIC(k=k,
-                    a=a,
-                    t=t,
-                    n_pca=n_pca,
-                    knn_dist=knn_dist,
-                    random_state=random_state,
-                    n_jobs=n_jobs,
-                    verbose=verbose,
-                    **kwargs).fit_transform(adata,
-                                            genes=name_list)
+    X_magic = MAGIC(
+        k=k,
+        a=a,
+        t=t,
+        n_pca=n_pca,
+        knn_dist=knn_dist,
+        random_state=random_state,
+        n_jobs=n_jobs,
+        verbose=verbose,
+        **kwargs
+    ).fit_transform(adata, genes=name_list)
     logg.info(
         '    finished',
         time=start,

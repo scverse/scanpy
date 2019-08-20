@@ -33,7 +33,7 @@ edges_color : matplotlib color(s), optional (default: `'grey'`)
 arrows
     Show arrows (requires to run :func:`~scanpy.tl.rna_velocity` before).
 arrows_kwds
-    Passed to :func:`~matplotlib.axes.Axes.quiver`\
+    Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
 
 

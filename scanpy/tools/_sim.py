@@ -15,6 +15,7 @@ import shutil
 import sys
 from collections import OrderedDict as odict
 from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import scipy as sp
@@ -28,15 +29,15 @@ from .. import logging as logg
 
 def sim(
     model,
-    params_file=True,
-    tmax=None,
-    branching=None,
-    nrRealizations=None,
-    noiseObs=None,
-    noiseDyn=None,
-    step=None,
-    seed=None,
-    writedir=None,
+    params_file: bool = True,
+    tmax: Optional[int] = None,
+    branching: Optional[bool] = None,
+    nrRealizations: Optional[int] = None,
+    noiseObs: Optional[float] = None,
+    noiseDyn: Optional[float] = None,
+    step: Optional[int] = None,
+    seed: Optional[int] = None,
+    writedir: Optional[Union[str, Path]] = None,
 ) -> AnnData:
     """Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
 
@@ -46,25 +47,25 @@ def sim(
 
     Parameters
     ----------
-    model : {'krumsiek11', 'toggleswitch'}
+    model : {`'krumsiek11'`, `'toggleswitch'`}
         Model file in 'sim_models' directory.
-    params_file : `bool`, (default: `True`)
+    params_file
         Read default params from file.
-    tmax : `int`, optional (default: `None`)
+    tmax
         Number of time steps per realization of time series.
-    branching : `bool`, optional (default: `None`)
+    branching
         Only write realizations that contain new branches.
-    nrRealizations : int, optional (default: `None`)
+    nrRealizations
         Number of realizations.
-    noiseObs : float, optional (default: `None`)
+    noiseObs
         Observatory/Measurement noise.
-    noiseDyn : float, optional (default: `None`)
+    noiseDyn
         Dynamic noise.
-    step : int, optional (default: `None`)
+    step
         Interval for saving state of system.
-    seed : int, optional (default: `None`)
+    seed
         Seed for generation of random numbers.
-    writedir: str, optional (default: `None`)
+    writedir
         Path to directory for writing output files.
 
     Returns
@@ -113,12 +114,14 @@ def sample_dynamic_data(**params):
     Helper function.
     """
     model_key = Path(params['model']).with_suffix('').name
-    if 'writedir' not in params or params['writedir'] is None:
-        params['writedir'] = settings.writedir / (model_key + '_sim')
-    params['writedir'].mkdir(parents=True, exist_ok=True)
+    writedir = params.get('writedir')
+    if writedir is None:
+        writedir = settings.writedir / (model_key + '_sim')
+    else:
+        writedir = Path(writedir)
+    writedir.mkdir(parents=True, exist_ok=True)
     readwrite.write_params(params['writedir'] / 'params.txt', params)
     # init variables
-    writedir = Path(params['writedir'])
     tmax = params['tmax']
     branching = params['branching']
     noiseObs = params['noiseObs']
