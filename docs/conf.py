@@ -1,4 +1,5 @@
 import sys
+import warnings
 from pathlib import Path
 from datetime import datetime
 
@@ -9,6 +10,9 @@ matplotlib.use('agg')
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 import scanpy  # noqa
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', category=FutureWarning)
+    import scanpy.api
 
 
 # -- General configuration ------------------------------------------------
