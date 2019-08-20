@@ -1,11 +1,12 @@
 from collections import abc
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
 from anndata import AnnData
-from typing import Union, Optional, List
+from typing import Union, Optional, List, Sequence, Iterable
 
 from .. import _utils as utils
 from ...utils import doc_params, sanitize_anndata
@@ -42,8 +43,9 @@ def pca_overview(adata, **params):
     show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
     show = params['show'] if 'show' in params else None
     if 'show' in params: del params['show']
@@ -70,8 +72,9 @@ def pca_loadings(adata, components=None, show=None, save=None):
     show : bool, optional (default: `None`)
         Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
     if components is None: components = [1, 2, 3]
     elif isinstance(components, str): components = components.split(',')
@@ -93,8 +96,9 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
     show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
     ranking(adata, 'uns', 'variance_ratio', n_points=n_pcs, dictionary='pca', labels='PC', log=log)
     utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
@@ -162,27 +166,39 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=None, fontsize=8,
-                      ncols=4, sharey=True, show=None, save=None, ax=None, **kwds):
+def rank_genes_groups(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 20,
+    gene_symbols: Optional[str] = None,
+    key: Optional[str] = None,
+    fontsize: int = 8,
+    ncols: int = 4,
+    sharey: bool = True,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    ax: Optional[Axes] = None,
+    **kwds
+):
     """\
     Plot ranking of genes.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : `str` or `list` of `str`
+    groups
         The groups for which to show the gene ranking.
-    gene_symbols : `str`
+    gene_symbols
         Key for field in `.var` that stores gene symbols if you do not want to
         use `.var_names`.
-    n_genes : `int`, optional (default: 20)
+    n_genes
         Number of genes to show.
-    fontsize : `int`, optional (default: 8)
+    fontsize
         Fontsize for gene names.
-    ncols : `int`, optional (default: 4)
+    ncols
         Number of panels shown per row.
-    sharey: `bool`, optional (default: True)
+    sharey
         Controls if the y-axis of each panels should be shared. But passing
         `sharey=False`, each panel has its own y-axis range.
     {show_save_ax}
@@ -264,24 +280,34 @@ def rank_genes_groups(adata, groups=None, n_genes=20, gene_symbols=None, key=Non
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
-                            n_genes=10, groupby=None, key=None,
-                            show=None, save=None, **kwds):
+def _rank_genes_groups_plot(
+    adata: AnnData,
+    plot_type: str = 'heatmap',
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using the specified plot type
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : `str` or `list` of `str`
+    groups
         The groups for which to show the gene ranking.
-    n_genes : `int`, optional (default: 10)
+    n_genes
         Number of genes to show.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. By default,
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.
+    key
+        Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
     """
     if key is None:
@@ -338,8 +364,16 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=None,
-                              show=None, save=None, **kwds):
+def rank_genes_groups_heatmap(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: str = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
 
@@ -349,17 +383,17 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
         Annotated data matrix.
     groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
-    n_genes : `int`, optional (default: 10)
+    n_genes
         Number of genes to show.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. By default,
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
-    key : `str`
+    key
         Key used to store the ranking results in `adata.uns`.
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
     """
@@ -369,28 +403,36 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, key=None,
-                              show=None, save=None, **kwds):
+def rank_genes_groups_tracksplot(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : `str` or `list` of `str`
+    groups
         The groups for which to show the gene ranking.
-    n_genes : `int`, optional (default: 10)
+    n_genes
         Number of genes to show.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. By default,
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
-    key : `str`
+    key
         Key used to store the ranking results in `adata.uns`.
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~scanpy.pl.tracksplot`.
     {show_save_ax}
     """
@@ -400,29 +442,37 @@ def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, k
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=None,
-                              show=None, save=None, **kwds):
+def rank_genes_groups_dotplot(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : `str` or `list` of `str`
+    groups
         The groups for which to show the gene ranking.
-    n_genes : `int`, optional (default: 10)
+    n_genes
         Number of genes to show.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. By default,
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
-    key : `str`
+    key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~scanpy.pl.dotplot`.
     """
 
@@ -431,14 +481,22 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=None, key=None,
-                                     show=None, save=None, **kwds):
+def rank_genes_groups_stacked_violin(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using stacked_violin plot (see :func:`~scanpy.pl.stacked_violin`)
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
     groups : `str` or `list` of `str`
         The groups for which to show the gene ranking.
@@ -450,10 +508,10 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.stacked_violin`).
-    key : `str`
+    key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~scanpy.pl.stacked_violin`.
     """
 
@@ -462,29 +520,37 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, key=None,
-                                 show=None, save=None, **kwds):
+def rank_genes_groups_matrixplot(
+    adata: AnnData,
+    groups: Union[str, Sequence[str]] = None,
+    n_genes: int = 10,
+    groupby: Optional[str] = None,
+    key: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    **kwds
+):
     """\
     Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`)
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : `str` or `list` of `str`
+    groups
         The groups for which to show the gene ranking.
-    n_genes : `int`, optional (default: 10)
+    n_genes
         Number of genes to show.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. By default,
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
-    key : `str`
+    key
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~scanpy.pl.matrixplot`.
     """
 
@@ -494,43 +560,51 @@ def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, k
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_violin(
-        adata, groups=None, n_genes=20,
-        gene_names=None, gene_symbols=None,
-        use_raw=None,
-        key=None,
-        split=True,
-        scale='width',
-        strip=True, jitter=True, size=1,
-        ax=None, show=None, save=None):
+    adata: AnnData,
+    groups: Optional[Sequence[str]] = None,
+    n_genes: int = 20,
+    gene_names: Optional[Iterable[str]] = None,
+    gene_symbols: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    key: Optional[str] = None,
+    split: bool = True,
+    scale: str = 'width',
+    strip: bool = True,
+    jitter: Union[int, float, bool] = True,
+    size: int = 1,
+    ax: Optional[Axes] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None
+):
     """\
     Plot ranking of genes for all tested comparisons.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    groups : list of `str`, optional (default: `None`)
+    groups
         List of group names.
-    n_genes : `int`, optional (default: 20)
+    n_genes
         Number of genes to show. Is ignored if `gene_names` is passed.
-    gene_names : `None` or list of `str` (default: `None`)
+    gene_names
         List of genes to plot. Is only useful if interested in a custom gene list,
         which is not the result of :func:`scanpy.tl.rank_genes_groups`.
-    gene_symbols : `str`, optional (default: `None`)
+    gene_symbols
         Key for field in `.var` that stores gene symbols if you do not want to
         use `.var_names` displayed in the plot.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present. Defaults to the value that
         was used in :func:`~scanpy.tl.rank_genes_groups`.
-    split : `bool`, optional (default: `True`)
+    split
         Whether to split the violins or not.
-    scale : `str`, optional (default: 'width')
+    scale
         See :func:`~seaborn.violinplot`.
-    strip : `bool`, optional (default: `True`)
+    strip
         Show a strip plot on top of the violin plot.
-    jitter : `int`, `float`, `bool`, optional (default: `True`)
+    jitter
         If set to 0, no points are drawn. See :func:`~seaborn.stripplot`.
-    size : `int`, optional (default: 1)
+    size
         Size of the jitter points.
     {show_save_ax}
     """
@@ -608,8 +682,9 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     shuffle : bool, optional (default: False)
         Shuffle the data.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     show : bool, optional (default: `None`)
         Show the plot, do not return axis.
     """

@@ -287,12 +287,15 @@ def paga(
         Two-column array-like storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
-    layout : {'fa', 'fr', 'rt', 'rt_circular', 'eq_tree', ...}, optional (default: 'fr')
-        Plotting layout that computes positions. 'fa' stands for ForceAtlas2, 'fr' stands for
-        Fruchterman-Reingold, 'rt' stands for Reingold Tilford. 'eq_tree' stands
-        for 'eqally spaced tree'. All but 'fa' and 'eq_tree' are igraph
-        layouts. All other igraph layouts are also permitted. See also parameter
-        `pos` and :func:`~scanpy.tl.draw_graph`.
+    layout : {`'fa'`, `'fr'`, `'rt'`, `'rt_circular'`, `'eq_tree'`, ...}, optional (default: `'fr'`)
+        Plotting layout that computes positions.
+        `'fa'` stands for ForceAtlas2,
+        `'fr'` stands for “Fruchterman-Reingold”,
+        `'rt'` stands for “Reingold-Tilford”,
+        `'eq_tree'` stands for “eqally spaced tree”.
+        All but `'fa'` and `'eq_tree'` are igraph layouts.
+        All other igraph layouts are also permitted.
+        See also parameter `pos` and :func:`~scanpy.tl.draw_graph`.
     init_pos : `np.ndarray`, optional (default: `None`)
         Two-column array storing the x and y coordinates for initializing the
         layout.
@@ -360,8 +363,9 @@ def paga(
     plot : `bool`, optional (default: `True`)
         If `False`, do not create the figure, simply compute the layout.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
     ax : :class:`~matplotlib.axes.Axes`
         A matplotlib axes object.
 
@@ -870,8 +874,9 @@ def paga_path(
     show : `bool`, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on \\{'.pdf', '.png', '.svg'\\}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
     ax : :class:`~matplotlib.axes.Axes`
          A matplotlib axes object.
 

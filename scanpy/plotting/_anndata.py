@@ -1,8 +1,10 @@
 """Plotting functions for AnnData.
 """
+from typing import Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
@@ -11,7 +13,6 @@ from matplotlib import gridspec
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like
 
-
 from .. import get
 from .._settings import settings
 from .. import logging as logg
@@ -19,6 +20,7 @@ from . import _utils as utils
 from ._utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
 from ._docs import doc_scatter_temp, doc_show_save_ax, doc_common_plot_args
+
 
 VALID_LEGENDLOCS = {
     'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
@@ -29,7 +31,7 @@ VALID_LEGENDLOCS = {
 
 @doc_params(scatter_temp=doc_scatter_temp, show_save_ax=doc_show_save_ax)
 def scatter(
-        adata,
+        adata: AnnData,
         x=None,
         y=None,
         color=None,
@@ -79,7 +81,7 @@ def scatter(
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
         `(layers, layers, layers)`.
-    basis : {{'pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr', etc.}}
+    basis : {{`'pca'`, `'tsne'`, `'umap'`, `'diffmap'`, `'draw_graph_fr'`, etc.}}
         String that denotes a plotting tool that computed coordinates.
     {scatter_temp}
     {show_save_ax}
@@ -186,7 +188,7 @@ def scatter(
 
 
 def _scatter_var(
-        adata,
+        adata: AnnData,
         x=None,
         y=None,
         color=None,
@@ -250,7 +252,7 @@ def _scatter_var(
 
 
 def _scatter_obs(
-        adata,
+        adata: AnnData,
         x=None,
         y=None,
         color=None,
@@ -528,7 +530,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
     ----------
     adata : AnnData
         The data.
-    attr : {'var', 'obs', 'uns', 'varm', 'obsm'}
+    attr : {`'var'`, `'obs'`, `'uns'`, `'varm'`, `'obsm'`}
         The attribute of AnnData that contains the score.
     keys : str or list of str
         The scores to look up an array from the attribute of adata.
@@ -579,7 +581,7 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def violin(
-    adata,
+    adata: AnnData,
     keys,
     groupby=None,
     log=False,
@@ -604,7 +606,7 @@ def violin(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
     keys : `str` or list of `str`
         Keys for accessing variables of `.var_names` or fields of `.obs`.
@@ -626,7 +628,7 @@ def violin(
         Size of the jitter points.
     order : list of str, optional (default: `True`)
         Order in which to show the categories.
-    scale : {{'area', 'count', 'width'}}, optional (default: 'width')
+    scale : {{`'area'`, `'count'`, `'width'`}}, optional (default: `'width'`)
         The method used to scale the width of each violin. If 'area', each
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
@@ -637,7 +639,7 @@ def violin(
     rotation : `float`, optional (default: `None`)
         Rotation of xtick labels.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Returns
@@ -710,9 +712,9 @@ def violin(
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-    adata,
-    obs_keys=None,
-    use_raw=None,
+    adata: AnnData,
+    obs_keys: str = None,
+    use_raw: Optional[bool] = None,
     show=None,
     save=None,
     **kwds
@@ -724,15 +726,15 @@ def clustermap(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    obs_keys : `str`
+    obs_keys
         Categorical annotation to plot with a different color map.
         Currently, only a single key is supported.
-    use_raw : `bool`, optional (default: `None`)
+    use_raw
         Use `raw` attribute of `adata` if present.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Keyword arguments passed to :func:`~seaborn.clustermap`.
 
     Returns
@@ -775,7 +777,7 @@ def clustermap(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(
-    adata,
+    adata: AnnData,
     var_names,
     groupby=None,
     log=False,
@@ -821,7 +823,7 @@ def stacked_violin(
         Size of the jitter points.
     order : list of str, optional (default: `True`)
         Order in which to show the categories.
-    scale : {{'area', 'count', 'width'}}, optional (default: 'width')
+    scale : {{`'area'`, `'count'`, `'width'`}}, optional (default: `'width'`)
         The method used to scale the width of each violin. If 'area', each
         violin will have the same area. If 'count', the width of the violins
         will be scaled by the number of observations in that bin. If 'width',
@@ -831,7 +833,7 @@ def stacked_violin(
         should be a valid seaborn palette name or a valic matplotlib colormap
         (see https://seaborn.pydata.org/generated/seaborn.color_palette.html). Alternatively,
         a single color name or hex value can be passed. E.g. 'red' or '#cc33ff'
-    standard_scale : {{'var', 'obs'}}, optional (default: None)
+    standard_scale : {{`'var'`, `'obs'`}}, optional (default: `None`)
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
     swap_axes: `bool`, optional (default: `False`)
@@ -839,7 +841,7 @@ def stacked_violin(
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~seaborn.violinplot`.
 
     Returns
@@ -1114,7 +1116,7 @@ def stacked_violin(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(
-    adata,
+    adata: AnnData,
     var_names,
     groupby=None,
     use_raw=None,
@@ -1146,7 +1148,7 @@ def heatmap(
     Parameters
     ----------
     {common_plot_args}
-    standard_scale : {{'var', 'obs'}}, optional (default: None)
+    standard_scale : {{`'var'`, `'obs'`}}, optional (default: `None`)
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
     swap_axes: `bool`, optional (default: `False`)
@@ -1155,7 +1157,7 @@ def heatmap(
     show_gene_labels: `bool`, optional (default: `None`).
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`matplotlib.pyplot.imshow`.
 
     Returns
@@ -1403,7 +1405,7 @@ def heatmap(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(
-    adata,
+    adata: AnnData,
     var_names,
     groupby=None,
     use_raw=None,
@@ -1461,7 +1463,7 @@ def dotplot(
         If none, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
         this value.
-    standard_scale : {{'var', 'group'}}, optional (default: None)
+    standard_scale : {{`'var'`, `'group'`}}, optional (default: `None`)
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     smallest_dot : `float` optional (default: 0.)
@@ -1469,7 +1471,7 @@ def dotplot(
         `smallest_dot` dot size.
 
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns
@@ -1735,7 +1737,7 @@ def dotplot(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(
-    adata,
+    adata: AnnData,
     var_names,
     groupby=None,
     use_raw=None,
@@ -1762,11 +1764,11 @@ def matrixplot(
     Parameters
     ----------
     {common_plot_args}
-    standard_scale : {{'var', 'group'}}, optional (default: None)
+    standard_scale : {{`'var'`, `'group'`}}, optional (default: `None`)
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
@@ -1961,7 +1963,7 @@ def matrixplot(
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(
-    adata,
+    adata: AnnData,
     var_names,
     groupby,
     use_raw=None,
@@ -1988,7 +1990,7 @@ def tracksplot(
     ----------
     {common_plot_args}
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Are passed to :func:`~seaborn.heatmap`.
 
     Returns
@@ -2152,13 +2154,13 @@ def tracksplot(
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def dendrogram(
-    adata,
-    groupby,
-    dendrogram_key=None,
-    orientation='top',
-    remove_labels=False,
-    show=None,
-    save=None,
+    adata: AnnData,
+    groupby: str,
+    dendrogram_key: Optional[str] = None,
+    orientation: str = 'top',
+    remove_labels: bool = False,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
 ):
     """Plots a dendrogram of the categories defined in `groupby`.
 
@@ -2166,15 +2168,16 @@ def dendrogram(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-    groupby : `str`
+    adata
+    groupby
         Categorical data column used to create the dendrogram
-    dendrogram_key : `str`, optional(default: `None`)
+    dendrogram_key
         Key under with the dendrogram information was stored.
         By default the dendrogram information is stored under .uns['dendrogram_' + groupby].
-    orientation : `str`, optional(default: `top`)
-        Options are `top`, `bottom`, `left`, and `right`. Only when `show_correlation` is False
-    remove_labels : `bool`, optional(default: `False`)
+    orientation
+        Options are `top` (default), `bottom`, `left`, and `right`.
+        Only when `show_correlation` is False.
+    remove_labels
     {show_save_ax}
 
     Returns
@@ -2199,34 +2202,34 @@ def dendrogram(
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def correlation_matrix(
-    adata,
-    groupby,
-    show_correlation_numbers=False,
-    dendrogram=True,
-    figsize=None,
-    show=None,
-    save=None,
+    adata: AnnData,
+    groupby: str,
+    show_correlation_numbers: bool = False,
+    dendrogram: Union[bool, str] = True,
+    figsize: Optional[Tuple[float, float]] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
     **kwds
 ):
     """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-    groupby : `str`
+    adata
+    groupby
         Categorical data column used to create the dendrogram
-    show_correlation_numbers : `bool`, optional(default: `False`)
+    show_correlation_numbers
         If `show_correlation` is True, plot the correlation number on top of each cell.
-    dendrogram: `bool` or `str`, optional (default: `False`)
+    dendrogram
         If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
         between the `groupby` categories is added. The dendrogram information is computed
         using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
         the function is called with default parameters.
-    figsize : (`float`, `float`), optional (default: `None`)
+    figsize
         By default a figure size that aims to produce a squared correlation matrix plot is used.
         Format is (width, height)
     {show_save_ax}
-    **kwds : keyword arguments
+    **kwds
         Only if `show_correlation` is True:
         Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
         correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
@@ -2345,7 +2348,7 @@ def correlation_matrix(
 
 
 def _prepare_dataframe(
-    adata,
+    adata: AnnData,
     var_names,
     groupby=None,
     use_raw=None,
@@ -2360,7 +2363,7 @@ def _prepare_dataframe(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
     var_names : `str` or list of `str`
         `var_names` should be a valid subset of  `adata.var_names`.
@@ -2450,7 +2453,7 @@ def _plot_gene_groups_brackets(
     rotation=None,
     orientation='top',
 ):
-    """
+    """\
     Draws brackets that represent groups of genes on the give axis.
     For best results, this axis is located on top of an image whose
     x axis contains gene names.
@@ -2566,7 +2569,7 @@ def _plot_gene_groups_brackets(
 
 
 def _reorder_categories_after_dendrogram(
-    adata,
+    adata: AnnData,
     groupby,
     dendrogram,
     var_names=None,

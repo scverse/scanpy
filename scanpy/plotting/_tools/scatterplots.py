@@ -391,7 +391,7 @@ def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
     Parameters
     ----------
     {adata_color_etc}
-    layout : {{'fa', 'fr', 'drl', ...}}, optional (default: last computed)
+    layout : {{`'fa'`, `'fr'`, `'drl'`, ...}}, optional (default: last computed)
         One of the :func:`~scanpy.tl.draw_graph` layouts.
         By default, the last computed layout is used.
     {edges_arrows}

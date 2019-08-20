@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
@@ -23,8 +25,9 @@ def highly_variable_genes(adata_or_result, log=False, show=None, save=None, high
     show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
     if isinstance(adata_or_result, AnnData):
         result = adata_or_result.var
@@ -63,22 +66,27 @@ def highly_variable_genes(adata_or_result, log=False, show=None, save=None, high
 
 
 # backwards compat
-def filter_genes_dispersion(result, log=False, show=None, save=None):
+def filter_genes_dispersion(
+    result: np.recarray,
+    log: bool = False,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+):
     """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
     Parameters
     ----------
-    result : `np.recarray`
+    result
         Result of :func:`~scanpy.pp.filter_genes_dispersion`.
-    log : `bool`
+    log
         Plot on logarithmic axes.
     show : bool, optional (default: `None`)
          Show the plot, do not return axis.
     save : `bool` or `str`, optional (default: `None`)
-        If `True` or a `str`, save the figure. A string is appended to the
-        default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
+        If `True` or a `str`, save the figure.
+        A string is appended to the default filename.
+        Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
     highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=False)
-    
