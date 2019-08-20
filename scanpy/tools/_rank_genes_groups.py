@@ -17,11 +17,12 @@ def rank_genes_groups(
     adata: AnnData,
     groupby: str,
     use_raw: bool = True,
+    log: bool = True,
     groups: Union[str, Iterable[str]] = 'all',
     reference: str = 'rest',
     n_genes: int = 100,
     rankby_abs: bool = False,
-    key_added: Optional[str] = None,
+    key_added: str = 'rank_genes_groups',
     copy: bool = False,
     method: str = 't-test_overestim_var',
     corr_method: str = 'benjamini-hochberg',
@@ -37,6 +38,9 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw : `bool`, optional (default: `True`)
         Use `raw` attribute of `adata` if present.
+    log : `bool`, optional (default: `True`)
+        True if data has been log scaled.  This parameter is set to False,
+        regardless of user input, if use_raw is True.
     groups
         Subset of groups, e.g. `['g1', 'g2', 'g3']`, to which comparison shall
         be restricted, or `'all'` (default), for all groups.
@@ -58,7 +62,7 @@ def rank_genes_groups(
     rankby_abs
         Rank genes by the absolute value of the score, not by the
         score. The returned scores are never the absolute values.
-    key_added
+    key_added : `str`, optional (default: 'rank_genes_groups')
         The key in `adata.uns` information is saved to.
     **kwds : keyword parameters
         Are passed to test methods. Currently this affects only parameters that
@@ -112,6 +116,9 @@ def rank_genes_groups(
     if corr_method not in avail_corr:
         raise ValueError('Correction method must be one of {}.'.format(avail_corr))
 
+    if use_raw is True:
+        log = False  # raw data has not been log-scaled, by definition
+
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     # for clarity, rename variable
@@ -137,8 +144,6 @@ def rank_genes_groups(
     groups_order, groups_masks = utils.select_groups(
         adata, groups_order, groupby)
 
-    if key_added is None:
-        key_added = 'rank_genes_groups'
     adata.uns[key_added] = {}
     adata.uns[key_added]['params'] = {
         'groupby': groupby,
@@ -195,15 +200,20 @@ def rank_genes_groups(
             if reference == 'rest':
                 mask_rest = ~groups_masks[igroup]
             else:
-                if igroup == ireference: continue
-                else: mask_rest = groups_masks[ireference]
+                if igroup == ireference:
+                    continue
+                else:
+                    mask_rest = groups_masks[ireference]
             mean_group, var_group = means[igroup], vars[igroup]
             mean_rest, var_rest = _get_mean_var(X[mask_rest])
 
             ns_group = ns[igroup]  # number of observations in group
-            if method == 't-test': ns_rest = np.where(mask_rest)[0].size
-            elif method == 't-test_overestim_var': ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
-            else: raise ValueError('Method does not exist.')
+            if method == 't-test':
+                ns_rest = np.where(mask_rest)[0].size
+            elif method == 't-test_overestim_var':
+                ns_rest = ns[igroup]  # hack for overestimating the variance for small groups
+            else:
+                raise ValueError('Method does not exist.')
 
             # TODO: Come up with better solution. Mask unexpressed genes?
             # See https://github.com/scipy/scipy/issues/10269
@@ -215,7 +225,7 @@ def rank_genes_groups(
                 )
 
             # Fold change
-            foldchanges = (np.expm1(mean_group) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+            foldchanges = _mean_fold_change(mean_group, mean_rest, log=log)
 
             scores[np.isnan(scores)] = 0  # I think it's only nan when means are the same and vars are 0
             pvals[np.isnan(pvals)] = 1  # This also has to happen for Benjamini Hochberg
@@ -332,7 +342,7 @@ def rank_genes_groups(
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 # Fold change
-                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+                foldchanges = _mean_fold_change(means[imask], mean_rest, log=log)  # add small value to remove 0's
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -388,7 +398,7 @@ def rank_genes_groups(
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 # Fold change
-                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+                foldchanges = _mean_fold_change(means[imask], mean_rest)
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[imask, partition])[::-1]
@@ -535,10 +545,9 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
         fraction_out_cluster_matrix.loc[:, cluster] = fraction_obs.loc[False].values
 
         # compute fold change.
-        if log:
-            fold_change_matrix.loc[:, cluster] = (np.exp(mean_obs.loc[True]) / np.exp(mean_obs.loc[False])).values
-        else:
-            fold_change_matrix.loc[:, cluster] = (mean_obs.loc[True] / mean_obs.loc[False]).values
+        fold_change_matrix.loc[:, cluster] = (_mean_fold_change(mean_obs.loc[True],
+                                                                mean_obs.loc[False],
+                                                                log=log)).values
 
     # remove temporary columns
     adata.obs.drop(columns='__is_in_cluster__')
@@ -551,3 +560,25 @@ def filter_rank_genes_groups(adata, key=None, groupby=None, use_raw=True, log=Tr
     adata.uns[key_added]['names'] = gene_names.to_records(index=False)
 
 
+def _mean_fold_change(mean_group, mean_rest, log: bool):
+    """Calculate mean fold change, given within-group mean and out-of-group mean.
+
+    Parameters
+    ----------
+    mean_group: Mean expression within group.
+    mean_rest: Mean expression outside group.
+    log: True if count data has been log-scaled.
+
+    Returns
+    -------
+    fold_change: Fold change in gene expression going from the rest to the group.
+
+    """
+
+    if log:
+
+        # Data has been log-scaled.  Exponentiate to get counts.
+        mean_group = np.expm1(mean_group)
+        mean_rest = np.expm1(mean_rest)
+
+    return (mean_group + 1e-9) / (mean_rest + 1e-9)  # so that 0/0 -> 1.
