@@ -18,7 +18,7 @@ using ``pip3`` to access Python 3)::
 PyPI only
 ~~~~~~~~~
 
-If you prefer to exlcusively use PyPI run::
+If you prefer to exclusively use PyPI run::
 
     pip install scanpy[louvain]
 
@@ -57,10 +57,10 @@ If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image fr
 .. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
 .. _bioconda: https://bioconda.github.io/
 
-Trouble shooting
-~~~~~~~~~~~~~~~~
+Troubleshooting
+~~~~~~~~~~~~~~~
 
-If you do not have sudo rights (you get a ``Permission denied`` error)::
+If ou get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or::
 
     pip install --user scanpy
 
@@ -68,6 +68,8 @@ If you do not have sudo rights (you get a ``Permission denied`` error)::
 
 - ``brew install igraph``
 - If python-igraph still fails to install, see `here <https://stackoverflow.com/questions/29589696/problems-compiling-c-core-of-igraph-with-python-2-7-9-anaconda-2-2-0-on-mac-osx>`__ or consider installing gcc via ``brew install gcc --without-multilib`` and exporting ``export CC="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"; export CXX="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"``, where ``X`` and ``x`` refers to the version of ``gcc``; in my case, the path reads ``/usr/local/Cellar/gcc/6.3.0_1/bin/gcc-6``.
+
+**On Windows**, there also often problems installing compiled packages such as `igraph`, but you can find precompiled packages on <https://www.lfd.uci.edu/~gohlke/pythonlibs/>. Download those and install them using `pip install ./path/to/file.whl`
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~
