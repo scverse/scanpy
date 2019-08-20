@@ -1,14 +1,16 @@
+import warnings
+from collections.abc import Iterable, Collection
+from pathlib import Path
+from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
+
 import numpy as np
 import pandas as pd
 import scipy
-import warnings
-from collections.abc import Iterable
-from typing import Optional, Union, List
-
+from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl, rcParams, ticker
 from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, Colormap
 
 from .. import _utils as utils
 from .._utils import matrix
@@ -17,29 +19,30 @@ from ..._settings import settings
 
 
 def paga_compare(
-        adata,
-        basis=None,
-        edges=False,
-        color=None,
-        alpha=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='on data',
-        legend_fontsize=None,
-        legend_fontweight='bold',
-        color_map=None,
-        palette=None,
-        frameon=False,
-        size=None,
-        title=None,
-        right_margin=None,
-        left_margin=0.05,
-        show=None,
-        save=None,
-        title_graph=None,
-        groups_graph=None,
-        **paga_graph_params):
+    adata,
+    basis=None,
+    edges=False,
+    color=None,
+    alpha=None,
+    groups=None,
+    components=None,
+    projection='2d',
+    legend_loc='on data',
+    legend_fontsize=None,
+    legend_fontweight='bold',
+    color_map=None,
+    palette=None,
+    frameon=False,
+    size=None,
+    title=None,
+    right_margin=None,
+    left_margin=0.05,
+    show=None,
+    save=None,
+    title_graph=None,
+    groups_graph=None,
+    **paga_graph_params
+):
     """Scatter and PAGA graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
@@ -129,7 +132,15 @@ def paga_compare(
     if show == False: return axs
 
 
-def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, adj_tree=None, root=0, layout_kwds={}):
+def _compute_pos(
+    adjacency_solid,
+    layout=None,
+    random_state=0,
+    init_pos=None,
+    adj_tree=None,
+    root=0,
+    layout_kwds: Mapping[str, Any] = {}
+):
     import networkx as nx
 
     nx_g_solid = nx.Graph(adjacency_solid)
@@ -219,48 +230,49 @@ def _compute_pos(adjacency_solid, layout=None, random_state=0, init_pos=None, ad
 
 
 def paga(
-    adata,
-    threshold=None,
-    color=None,
-    layout=None,
-    layout_kwds={},
-    init_pos=None,
-    root=0,
-    labels=None,
-    single_component=False,
-    solid_edges='connectivities',
-    dashed_edges=None,
-    transitions=None,
-    fontsize=None,
-    fontweight='bold',
-    text_kwds={},
-    node_size_scale=1,
-    node_size_power=0.5,
-    edge_width_scale=1,
-    min_edge_width=None,
-    max_edge_width=None,
-    arrowsize=30,
-    title=None,
+    adata: AnnData,
+    threshold: Optional[float] = None,
+    color: Optional[str] = None,
+    layout: str = None,
+    layout_kwds: Mapping[str, Any] = {},
+    init_pos: Optional[np.ndarray] = None,
+    root: Union[int, str, Sequence[int], None] = 0,
+    labels: Union[str, Sequence[str], Mapping[str, str], None] = None,
+    single_component: bool = False,
+    solid_edges: str = 'connectivities',
+    dashed_edges: Optional[str] = None,
+    transitions: Optional[str] = None,
+    fontsize: Optional[int] = None,
+    fontweight: str = 'bold',
+    text_kwds: Mapping[str, Any] = {},
+    node_size_scale: float = 1.,
+    node_size_power: float = 0.5,
+    edge_width_scale: float = 1.,
+    min_edge_width: Optional[float] = None,
+    max_edge_width: Optional[float] = None,
+    arrowsize: int = 30,
+    title: Optional[str] = None,
     left_margin=0.01,
-    random_state=0,
-    pos=None,
+    random_state: Optional[int] = 0,
+    pos: Union[np.ndarray, str, Path, None] = None,
     normalize_to_color=False,
-    cmap=None,
-    cax=None,
-    colorbar=None,
-    cb_kwds={},
-    frameon=None,
-    add_pos=True,
-    export_to_gexf=False,
-    use_raw=True,
+    cmap: Union[str, Colormap]=None,
+    cax: Optional[Axes] = None,
+    colorbar=None,  # TODO: this seems to be unused
+    cb_kwds: Mapping[str, Any] = {},
+    frameon: Optional[bool] = None,
+    add_pos: bool = True,
+    export_to_gexf: bool = False,
+    use_raw: bool = True,
     colors=None,   # backwards compat
     groups=None,  # backwards compat
-    plot=True,
-    show=None,
-    save=None,
-    ax=None,
+    plot: bool = True,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    ax: Optional[Axes] = None,
 ) -> Union[Axes, List[Axes], None]:
-    """Plot the PAGA graph through thresholding low-connectivity edges.
+    """\
+    Plot the PAGA graph through thresholding low-connectivity edges.
 
     Compute a coarse-grained layout of the data. Reuse this by passing
     `init_pos='paga'` to :func:`~scanpy.tl.umap` or
@@ -271,102 +283,103 @@ def paga(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    threshold : `float` or `None`, optional (default: 0.01)
+    threshold
         Do not draw edges for weights below this threshold. Set to 0 if you want
         all edges. Discarding low-connectivity edges helps in getting a much
         clearer picture of the graph.
-    color : gene name or obs. annotation, optional (default: `None`)
-        The node colors. Also plots the degree of the abstracted graph when
-        passing {'degree_dashed', 'degree_solid'}.
-    labels : `None`, `str`, `list`, `dict`, optional (default: `None`)
+    color
+        Gene name or `obs` annotation defining the node colors.
+        Also plots the degree of the abstracted graph when
+        passing {`'degree_dashed'`, `'degree_solid'`}.
+    labels
         The node labels. If `None`, this defaults to the group labels stored in
         the categorical for which :func:`~scanpy.tl.paga` has been computed.
-    pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
+    pos
         Two-column array-like storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
     layout : {`'fa'`, `'fr'`, `'rt'`, `'rt_circular'`, `'eq_tree'`, ...}, optional (default: `'fr'`)
         Plotting layout that computes positions.
-        `'fa'` stands for ForceAtlas2,
+        `'fa'` stands for “ForceAtlas2”,
         `'fr'` stands for “Fruchterman-Reingold”,
         `'rt'` stands for “Reingold-Tilford”,
         `'eq_tree'` stands for “eqally spaced tree”.
         All but `'fa'` and `'eq_tree'` are igraph layouts.
         All other igraph layouts are also permitted.
         See also parameter `pos` and :func:`~scanpy.tl.draw_graph`.
-    init_pos : `np.ndarray`, optional (default: `None`)
+    layout_kwds
+        Keywords for the layout.
+    init_pos
         Two-column array storing the x and y coordinates for initializing the
         layout.
-    random_state : `int` or `None`, optional (default: 0)
-        For layouts with random initialization like 'fr', change this to use
+    random_state
+        For layouts with random initialization like `'fr'`, change this to use
         different intial states for the optimization. If `None`, the initial
         state is not reproducible.
-    root : `int`, `str` or list of `int`, optional (default: 0)
+    root
         If choosing a tree layout, this is the index of the root node or a list
         of root node indices. If this is a non-empty vector then the supplied
         node IDs are used as the roots of the trees (or a single tree if the
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
-    transitions : `str` or `None`, optional (default: `None`)
+    transitions
         Key for `.uns['paga']` that specifies the matrix that - for instance
         `'transistions_confidence'` - that specifies the matrix that stores the
         arrows.
-    solid_edges : `str`, optional (default: 'paga_connectivities')
+    solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn solid black.
-    dashed_edges : `str` or `None`, optional (default: `None`)
+    dashed_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
         to be drawn dashed grey. If `None`, no dashed edges are drawn.
-    single_component : `bool`, optional (default: `False`)
+    single_component
         Restrict to largest connected component.
-    fontsize : `int` (default: `None`)
+    fontsize
         Font size for node labels.
-    text_kwds : keywords for `matplotlib.text`
-        See :meth:`~matplotlib.axes.Axes.text`.
-    node_size_scale : `float` (default: 1.0)
+    text_kwds
+        Keywords for :meth:`~matplotlib.axes.Axes.text`.
+    node_size_scale
         Increase or decrease the size of the nodes.
-    node_size_power : `float` (default: 0.5)
+    node_size_power
         The power with which groups sizes influence the radius of the nodes.
-    edge_width_scale : `float`, optional (default: 5)
+    edge_width_scale
         Edge with scale in units of `rcParams['lines.linewidth']`.
-    min_edge_width : `float`, optional (default: `None`)
+    min_edge_width
         Min width of solid edges.
-    max_edge_width : `float`, optional (default: `None`)
+    max_edge_width
         Max width of solid and dashed edges.
-    arrowsize : `int`, optional (default: 30)
+    arrowsize
        For directed graphs, choose the size of the arrow head head's length and
        width. See :py:class: `matplotlib.patches.FancyArrowPatch` for attribute
        `mutation_scale` for more info.
-    export_to_gexf : `bool`, optional (default: `None`)
+    export_to_gexf
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
     normalize_to_color : `bool`, optional (default: `False`)
         Whether to normalize categorical plots to `color` or the underlying
         grouping.
-    cmap : color map
+    cmap
         The color map.
-    cax : :class:`~matplotlib.axes.Axes`
+    cax
         A matplotlib axes object for a potential colorbar.
-    cb_kwds : colorbar keywords
-        See :class:`~matplotlib.colorbar.ColorbarBase`,
+    cb_kwds
+        Keyword arguments for :class:`~matplotlib.colorbar.ColorbarBase`,
         for instance, `ticks`.
-    add_pos : `bool`, optional (default: `True`)
+    add_pos
         Add the positions to `adata.uns['paga']`.
-    title : `str`, optional (default: `None`)
+    title
         Provide a title.
-    frameon : `bool`, optional (default: `None`)
+    frameon
         Draw a frame around the PAGA graph.
-    hide : `bool`, optional (default: `False`)
-        Do not create a plot.
-    plot : `bool`, optional (default: `True`)
+    plot
         If `False`, do not create the figure, simply compute the layout.
-    save : `bool` or `str`, optional (default: `None`)
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
-    ax : :class:`~matplotlib.axes.Axes`
+    ax
         A matplotlib axes object.
 
     Returns
@@ -393,19 +406,27 @@ def paga(
         logg.warning('`groups` is deprecated in `pl.paga`: use `labels` instead')
     if colors is None:
         colors = color
-    # colors is a list that contains no lists
-    groups_key = adata.uns['paga']['groups']
-    if ((isinstance(colors, Iterable) and len(colors) == len(adata.obs[groups_key].cat.categories))
-        or colors is None or isinstance(colors, str)):
-        colors = [colors]
 
+    groups_key = adata.uns['paga']['groups']
+
+    def is_flat(x):
+        has_one_per_category = (
+            isinstance(x, Collection)
+            and len(x) == len(adata.obs[groups_key].cat.categories)
+        )
+        return (
+            has_one_per_category
+            or x is None
+            or isinstance(x, str)
+        )
+
+    if is_flat(colors):
+        colors = [colors]
     if frameon is None:
         frameon = settings._frameon
-
     # labels is a list that contains no lists
-    if ((isinstance(labels, Iterable) and len(labels) == len(adata.obs[groups_key].cat.categories))
-        or labels is None or isinstance(labels, (str, dict))):
-        labels = [labels for i in range(len(colors))]
+    if is_flat(labels):
+        labels = [labels for _ in range(len(colors))]
 
     if title is None and len(colors) > 1:
         title = [c for c in colors]
@@ -450,12 +471,17 @@ def paga(
         if layout in {'rt', 'rt_circular', 'eq_tree'}:
             adj_tree = adata.uns['paga']['connectivities_tree']
         pos = _compute_pos(
-            adjacency_solid, layout=layout, random_state=random_state, init_pos=init_pos, layout_kwds=layout_kwds, adj_tree=adj_tree, root=root)
+            adjacency_solid,
+            layout=layout, random_state=random_state, init_pos=init_pos,
+            layout_kwds=layout_kwds, adj_tree=adj_tree, root=root,
+        )
 
     if plot:
         if ax is None:
             axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
-                panels=colors, colorbars=colorbars)
+                panels=colors,
+                colorbars=colorbars,
+            )
         else:
             axs = ax
 
@@ -496,7 +522,8 @@ def paga(
                 export_to_gexf=export_to_gexf,
                 single_component=single_component,
                 arrowsize=arrowsize,
-                pos=pos)
+                pos=pos,
+            )
             if colorbars[icolor]:
                 bottom = panel_pos[0][0]
                 height = panel_pos[1][0] - bottom
@@ -517,37 +544,38 @@ def paga(
 
 
 def _paga_graph(
-        adata,
-        ax,
-        solid_edges=None,
-        dashed_edges=None,
-        adjacency_solid=None,
-        adjacency_dashed=None,
-        transitions=None,
-        threshold=None,
-        root=0,
-        colors=None,
-        labels=None,
-        fontsize=None,
-        fontweight=None,
-        text_kwds=None,
-        node_size_scale=1,
-        node_size_power=0.5,
-        edge_width_scale=1,
-        normalize_to_color='reference',
-        title=None,
-        pos=None,
-        cmap=None,
-        frameon=True,
-        min_edge_width=None,
-        max_edge_width=None,
-        export_to_gexf=False,
-        cax=None,
-        colorbar=None,
-        use_raw=True,
-        cb_kwds={},
-        single_component=False,
-        arrowsize=30):
+    adata,
+    ax,
+    solid_edges=None,
+    dashed_edges=None,
+    adjacency_solid=None,
+    adjacency_dashed=None,
+    transitions=None,
+    threshold=None,
+    root=0,
+    colors=None,
+    labels=None,
+    fontsize=None,
+    fontweight=None,
+    text_kwds=None,
+    node_size_scale=1.,
+    node_size_power=0.5,
+    edge_width_scale=1.,
+    normalize_to_color='reference',
+    title=None,
+    pos=None,
+    cmap=None,
+    frameon=True,
+    min_edge_width=None,
+    max_edge_width=None,
+    export_to_gexf=False,
+    cax=None,
+    colorbar=None,
+    use_raw=True,
+    cb_kwds={},
+    single_component=False,
+    arrowsize=30,
+):
     import networkx as nx
 
     node_labels = labels  # rename for clarity
@@ -573,13 +601,18 @@ def _paga_graph(
     if dashed_edges is not None:
         nx_g_dashed = nx.Graph(adjacency_dashed)
 
-    # convert pos to dict
-    if isinstance(pos, str):
-        if not pos.endswith('.gdf'):
-            raise ValueError('Currently only supporting reading positions from .gdf files.'
-                             'Consider generating them using, for instance, Gephi.')
+    # convert pos to array and dict
+    if not isinstance(pos, (Path, str)):
+        pos_array = pos
+    else:
+        pos = Path(pos)
+        if pos.suffix != '.gdf':
+            raise ValueError(
+                'Currently only supporting reading positions from .gdf files. '
+                'Consider generating them using, for instance, Gephi.'
+            )
         s = ''  # read the node definition from the file
-        with open(pos) as f:
+        with pos.open() as f:
             f.readline()
             for line in f:
                 if line.startswith('edgedef>'):
@@ -587,10 +620,10 @@ def _paga_graph(
                 s += line
         from io import StringIO
         df = pd.read_csv(StringIO(s), header=-1)
-        pos = df[[4, 5]].values
-    pos_array = pos
+        pos_array = df[[4, 5]].values
+
     # convert to dictionary
-    pos = {n: [p[0], p[1]] for n, p in enumerate(pos)}
+    pos = {n: [p[0], p[1]] for n, p in enumerate(pos_array)}
 
     # uniform color
     if isinstance(colors, str) and is_color_like(colors):
@@ -801,83 +834,83 @@ def _paga_graph(
 
 
 def paga_path(
-    adata,
-    nodes,
-    keys,
-    use_raw=True,
-    annotations=['dpt_pseudotime'],
-    color_map=None,
-    color_maps_annotations={'dpt_pseudotime': 'Greys'},
-    palette_groups=None,
-    n_avg=1,
-    groups_key=None,
-    xlim=[None, None],
-    title=None,
+    adata: AnnData,
+    nodes: Sequence[Union[str, int]],
+    keys: Sequence[str],
+    use_raw: bool = True,
+    annotations: Sequence[str] = ('dpt_pseudotime',),
+    color_map: Union[str, Colormap, None] = None,
+    color_maps_annotations: Optional[Mapping[str, Union[str, Colormap]]] = {'dpt_pseudotime': 'Greys'},
+    palette_groups: Optional[Sequence[str]] = None,
+    n_avg: int = 1,
+    groups_key: Optional[str] = None,
+    xlim: Tuple[Optional[int], Optional[int]] = (None, None),
+    title: Optional[str] = None,
     left_margin=None,
-    ytick_fontsize=None,
-    title_fontsize=None,
-    show_node_names=True,
-    show_yticks=True,
-    show_colorbar=True,
-    legend_fontsize=None,
-    legend_fontweight=None,
-    normalize_to_zero_one=False,
-    as_heatmap=True,
-    return_data=False,
-    show=None,
-    save=None,
-    ax=None,
+    ytick_fontsize: Optional[int] = None,
+    title_fontsize: Optional[int] = None,
+    show_node_names: bool = True,
+    show_yticks: bool = True,
+    show_colorbar: bool = True,
+    legend_fontsize: Optional[int] = None,
+    legend_fontweight: Optional[str] = None,
+    normalize_to_zero_one: bool = False,
+    as_heatmap: bool = True,
+    return_data: bool = False,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    ax: Optional[Axes] = None,
 ) -> Optional[Axes]:
     """Gene expression and annotation changes along paths in the abstracted graph.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         An annotated data matrix.
-    nodes : list of group names or their category indices
+    nodes
         A path through nodes of the abstracted graph, that is, names or indices
         (within `.categories`) of groups that have been used to run PAGA.
-    keys : list of str
+    keys
         Either variables in `adata.var_names` or annotations in
         `adata.obs`. They are plotted using `color_map`.
-    use_raw : `bool`, optional (default: `True`)
+    use_raw
         Use `adata.raw` for retrieving gene expressions if it has been set.
-    annotations : list of annotations, optional (default: ['dpt_pseudotime'])
+    annotations
         Plot these keys with `color_maps_annotations`. Need to be keys for
         `adata.obs`.
-    color_map : color map for plotting keys or `None`, optional (default: `None`)
+    color_map
         Matplotlib colormap.
-    color_maps_annotations : dict storing color maps or `None`, optional (default: {'dpt_pseudotime': 'Greys'})
+    color_maps_annotations
         Color maps for plotting the annotations. Keys of the dictionary must
         appear in `annotations`.
-    palette_groups : list of colors or `None`, optional (default: `None`)
+    palette_groups
         Ususally, use the same `sc.pl.palettes...` as used for coloring the
         abstracted graph.
-    n_avg : `int`, optional (default: 1)
+    n_avg
         Number of data points to include in computation of running average.
-    groups_key : `str`, optional (default: `None`)
+    groups_key
         Key of the grouping used to run PAGA. If `None`, defaults to
         `adata.uns['paga']['groups']`.
-    as_heatmap : `bool`, optional (default: `True`)
+    as_heatmap
         Plot the timeseries as heatmap. If not plotting as heatmap,
         `annotations` have no effect.
-    show_node_names : `bool`, optional (default: `True`)
+    show_node_names
         Plot the node names on the nodes bar.
-    show_colorbar : `bool`, optional (default: `True`)
+    show_colorbar
         Show the colorbar.
-    show_yticks : `bool`, optional (default: `True`)
+    show_yticks
         Show the y ticks.
-    normalize_to_zero_one : `bool`, optional (default: `True`)
+    normalize_to_zero_one
         Shift and scale the running average to [0, 1] per gene.
-    return_data : `bool`, optional (default: `False`)
+    return_data
         Return the timeseries data in addition to the axes if `True`.
-    show : `bool`, optional (default: `None`)
+    show
          Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on \\{`'.pdf'`, `'.png'`, `'.svg'`\\}.
-    ax : :class:`~matplotlib.axes.Axes`
+    ax
          A matplotlib axes object.
 
     Returns

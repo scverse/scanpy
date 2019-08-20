@@ -110,13 +110,19 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
 # ------------------------------------------------------------------------------
 
 
-def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True):
+def dpt_timeseries(
+    adata: AnnData,
+    color_map: Union[str, Colormap] = None,
+    show: Optional[bool] = None,
+    save: Optional[bool] = None,
+    as_heatmap: bool = True,
+):
     """\
     Heatmap of pseudotime series.
 
     Parameters
     ----------
-    as_heatmap : bool (default: False)
+    as_heatmap
         Plot the timeseries as heatmap.
     """
     if adata.n_vars > 100:
@@ -127,16 +133,20 @@ def dpt_timeseries(adata, color_map=None, show=None, save=None, as_heatmap=True)
     # only if number of genes is not too high
     if as_heatmap:
         # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-        timeseries_as_heatmap(adata.X[adata.obs['dpt_order_indices'].values],
-                              var_names=adata.var_names,
-                              highlightsX=adata.uns['dpt_changepoints'],
-                              color_map=color_map)
+        timeseries_as_heatmap(
+            adata.X[adata.obs['dpt_order_indices'].values],
+            var_names=adata.var_names,
+            highlightsX=adata.uns['dpt_changepoints'],
+            color_map=color_map,
+        )
     else:
         # plot time series as gene expression vs time
-        timeseries(adata.X[adata.obs['dpt_order_indices'].values],
-                   var_names=adata.var_names,
-                   highlightsX=adata.uns['dpt_changepoints'],
-                   xlim=[0, 1.3*adata.X.shape[0]])
+        timeseries(
+            adata.X[adata.obs['dpt_order_indices'].values],
+            var_names=adata.var_names,
+            highlightsX=adata.uns['dpt_changepoints'],
+            xlim=[0, 1.3*adata.X.shape[0]],
+        )
     pl.xlabel('dpt order')
     utils.savefig_or_show('dpt_timeseries', save=save, show=show)
 

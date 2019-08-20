@@ -618,7 +618,7 @@ class Neighbors:
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
         method: str = 'umap',
-        random_state: Optional[Union[RandomState, int]] = 0,
+        random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
         metric: str = 'euclidean',
         metric_kwds: Mapping[str, Any] = {}

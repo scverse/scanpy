@@ -9,15 +9,16 @@ from .. import logging as logg
 
 
 def score_genes(
-        adata,
-        gene_list,
-        ctrl_size=50,
-        gene_pool=None,
-        n_bins=25,
-        score_name='score',
-        random_state=0,
-        copy=False,
-        use_raw=False):  # we use the scikit-learn convention of calling the seed "random_state"
+    adata,
+    gene_list,
+    ctrl_size=50,
+    gene_pool=None,
+    n_bins=25,
+    score_name='score',
+    random_state=0,
+    copy=False,
+    use_raw=False,
+):  # we use the scikit-learn convention of calling the seed "random_state"
     """Score a set of genes [Satija15]_.
 
     The score is the average expression of a set of genes subtracted with the
@@ -60,7 +61,7 @@ def score_genes(
     start = logg.info(f'computing score {score_name!r}')
     adata = adata.copy() if copy else adata
 
-    if random_state:
+    if random_state is not None:
         np.random.seed(random_state)
 
     gene_list_in_var = []

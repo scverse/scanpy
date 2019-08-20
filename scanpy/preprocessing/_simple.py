@@ -8,6 +8,7 @@ from typing import Union, Optional, Tuple, Collection
 import numba
 import numpy as np
 import scipy as sp
+from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
@@ -353,7 +354,7 @@ def pca(
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'auto',
-    random_state: int = 0,
+    random_state: Optional[Union[int, RandomState]] = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
     dtype: str = 'float32',
@@ -945,7 +946,7 @@ def downsample_counts(
     adata: AnnData,
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
-    random_state: Optional[int] = 0,
+    random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -1052,8 +1053,13 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 
 
 @numba.njit(cache=True)
-def _downsample_array(col: np.array, target: int, random_state: int=0,
-                      replace: bool = True, inplace: bool=False):
+def _downsample_array(
+    col: np.array,
+    target: int,
+    random_state: Optional[Union[int, RandomState]] = 0,
+    replace: bool = True,
+    inplace: bool = False,
+):
     """
     Evenly reduce counts in cell to target amount.
 
