@@ -147,11 +147,11 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
     key: `str`, optional (default: `"batch"`)
         Key to a categorical annotation from adata.obs that will be used for batch effect removal
     covariates
-        Additional covariates besides the batch variable such as adjustment variables or biological 
-        condition. This parameter refers to the design matrix `X` in Equation 2.1 in [Johnson07]_ and 
-        to the `mod` argument in the original combat function in the sva R package. Note that not 
-        including covariates may introduce bias or lead to the removal of biological signal in 
-        unbalanced designs. 
+        Additional covariates besides the batch variable such as adjustment variables or biological
+        condition. This parameter refers to the design matrix `X` in Equation 2.1 in [Johnson07]_ and
+        to the `mod` argument in the original combat function in the sva R package. Note that not
+        including covariates may introduce bias or lead to the removal of biological signal in
+        unbalanced designs.
     inplace: bool, optional (default: `True`)
         Wether to replace adata.X or to return the corrected data
 
@@ -248,7 +248,6 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
     for j, batch_idxs in enumerate(batch_info):
-
         # we basically substract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
@@ -268,8 +267,16 @@ def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[s
         return bayesdata.values.transpose()
 
 
-@numba.jit
-def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001) -> Tuple[float, float]:
+def _it_sol(
+    s_data: np.ndarray,
+    g_hat: np.ndarray,
+    d_hat: np.ndarray,
+    g_bar: float,
+    t2: float,
+    a: float,
+    b: float,
+    conv: float = 0.0001,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Iteratively compute the conditional posterior means for gamma and delta.
 
@@ -280,22 +287,22 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001) -> Tuple[float, 
 
     Parameters
     --------
-    s_data : pd.DataFrame
+    s_data
         Contains the standardized Data
-    g_hat : float
+    g_hat
         Initial guess for gamma
-    d_hat : float
+    d_hat
         Initial guess for delta
-    g_bar, t_2, a, b : float
+    g_bar, t_2, a, b
         Hyperparameters
     conv: float, optional (default: `0.0001`)
         convergence criterium
 
     Returns:
     --------
-    gamma : float
+    gamma
         estimated value for gamma
-    delta : float
+    delta
         estimated value for delta
     """
 
@@ -306,6 +313,9 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001) -> Tuple[float, 
     change = 1
     count = 0
 
+    # They need to be initialized for numba to properly infer types
+    g_new = g_old
+    d_new = d_old
     # we place a normally distributed prior on gamma and and inverse gamma prior on delta
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
