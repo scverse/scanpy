@@ -15,12 +15,14 @@ def adata():
         X=np.ones((2, 2)),
         obs=pd.DataFrame({"obs1": [0, 1], "obs2": ["a", "b"]}, index=["cell1", "cell2"]),
         var=pd.DataFrame({"gene_symbols": ["genesymbol1", "genesymbol2"]}, index=["gene1", "gene2"]),
-        obsm={"eye": np.eye(2), "sparse": sparse.csr_matrix(np.eye(2))},
         layers={"double": np.ones((2, 2)) * 2}
     )
 
 
 def test_obs_df(adata):
+    adata.obsm["eye"] = np.eye(2)
+    adata.obsm["sparse"] = sparse.csr_matrix(np.eye(2))
+
     adata.raw = AnnData(
         X=np.zeros((2, 2)),
         var=pd.DataFrame({"gene_symbols": ["raw1", "raw2"]}, index=["gene1", "gene2"])
@@ -50,6 +52,9 @@ def test_obs_df(adata):
 
 
 def test_var_df(adata):
+    adata.varm["eye"] = np.eye(2)
+    adata.varm["sparse"] = sparse.csr_matrix(np.eye(2))
+
     assert np.all(np.equal(
         sc.get.var_df(adata, keys=["cell2", "gene_symbols"], varm_keys=[("eye", 0), ("sparse", 1)]),
         pd.DataFrame({"cell2": [1, 1], "gene_symbols": ["genesymbol1", "genesymbol2"], "eye-0": [1, 0], "sparse-1": [0, 1]}, index=adata.obs_names)
