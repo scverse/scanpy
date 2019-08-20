@@ -74,6 +74,14 @@ Gene scores, Cell cycle
 
    tl.sandbag
    tl.cyclone
+   
+Cell annotation
+~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.annotator
 
 
 Plotting: PL
