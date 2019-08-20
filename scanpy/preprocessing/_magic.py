@@ -1,8 +1,9 @@
 """Denoise high-dimensional data using MAGIC
 """
-from typing import Union, Sequence
+from typing import Union, Sequence, Optional
 
 from anndata import AnnData
+from numpy.random.mtrand import RandomState
 
 from .._settings import settings
 from .. import logging as logg
@@ -11,15 +12,15 @@ from .. import logging as logg
 def magic(
     adata: AnnData,
     name_list: Union[str, Sequence[str], None] = None,
-    k=10,
-    a=15,
-    t='auto',
-    n_pca=100,
-    knn_dist='euclidean',
-    random_state=None,
-    n_jobs=None,
-    verbose=False,
-    copy=None,
+    k: int = 10,
+    a: int = 15,
+    t: str = 'auto',
+    n_pca: int = 100,
+    knn_dist: str = 'euclidean',
+    random_state: Optional[Union[int, RandomState]] = None,
+    n_jobs: Optional[int] = None,
+    verbose: bool = False,
+    copy: Optional[bool] = None,
     **kwargs
 ):
     """Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
@@ -40,34 +41,34 @@ def magic(
         Denoised genes to return. The default `'all_genes'`/`None`
         may require a large amount of memory if the input data is sparse.
         Another possibility is `'pca_only'`.
-    k : int, optional, default: 10
+    k
         number of nearest neighbors on which to build kernel
-    a : int, optional, default: 15
+    a
         sets decay rate of kernel tails.
         If None, alpha decaying kernel is not used
-    t : int, optional, default: 'auto'
+    t
         power to which the diffusion operator is powered.
         This sets the level of diffusion. If 'auto', t is selected
         according to the Procrustes disparity of the diffused data
-    n_pca : int, optional, default: 100
+    n_pca
         Number of principal components to use for calculating
         neighborhoods. For extremely large datasets, using
         n_pca < 20 allows neighborhoods to be calculated in
         roughly log(n_samples) time.
-    knn_dist : string, optional, default: 'euclidean'
+    knn_dist
         recommended values: 'euclidean', 'cosine', 'precomputed'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for building kNN graph. If 'precomputed',
         `data` should be an n_samples x n_samples distance or
         affinity matrix
-    random_state : `int`, `numpy.RandomState` or `None`, optional (default: `None`)
+    random_state
         Random seed. Defaults to the global `numpy` random number generator
-    n_jobs : `int` or None, optional. Default: None
+    n_jobs
         Number of threads to use in training. All cores are used by default.
-    verbose : `bool`, `int` or `None`, optional (default: `sc.settings.verbosity`)
+    verbose
         If `True` or an integer `>= 2`, print status messages.
         If `None`, `sc.settings.verbosity` is used.
-    copy : `bool` or `None`, optional. Default: `None`.
+    copy
         If true, a copy of anndata is returned. If `None`, `copy` is True if
         `genes` is not `'all_genes'` or `'pca_only'`. `copy` may only be False
         if `genes` is `'all_genes'` or `'pca_only'`, as the resultant data
