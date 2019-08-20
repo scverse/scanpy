@@ -309,7 +309,7 @@ class ScanpyConfig:
         """\
         The open file to write logs to.
 
-        Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
+        Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
         and to :obj:`sys.stderr` otherwise.
 
@@ -348,48 +348,51 @@ class ScanpyConfig:
 
     def set_figure_params(
         self,
-        scanpy=True,
-        dpi=80,
-        dpi_save=150,
-        frameon=True,
-        vector_friendly=True,
-        fontsize=14,
-        color_map=None,
-        format="pdf",
-        transparent=False,
-        ipython_format="png2x",
+        scanpy: bool = True,
+        dpi: int = 80,
+        dpi_save: int = 150,
+        frameon: bool = True,
+        vector_friendly: bool = True,
+        fontsize: int = 14,
+        color_map: Optional[str] = None,
+        format: Union[str, Iterable[str]] = "pdf",
+        transparent: bool = False,
+        ipython_format: str = "png2x",
     ):
-        """Set resolution/size, styling and format of figures.
+        """\
+        Set resolution/size, styling and format of figures.
 
         Parameters
         ----------
-        scanpy : `bool`, optional (default: `True`)
-            Init default values for ``matplotlib.rcParams`` suited for Scanpy.
-        dpi : `int`, optional (default: `80`)
+        scanpy
+            Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
+        dpi
             Resolution of rendered figures - this influences the size of figures in notebooks.
-        dpi_save : `int`, optional (default: `150`)
+        dpi_save
             Resolution of saved figures. This should typically be higher to achieve
             publication quality.
-        frameon : `bool`, optional (default: `True`)
+        frameon
             Add frames and axes labels to scatter plots.
-        vector_friendly : `bool`, optional (default: `True`)
+        vector_friendly
             Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
-        fontsize : `int`, optional (default: 14)
+        fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
-        color_map : `str`, optional (default: `None`)
+        color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
+        format: {`'png'`, `'pdf'`, `'svg'`, etc.}, optional (default: `'pdf'`)
             This sets the default format for saving figures: `file_format_figs`.
-        transparent : `bool`, optional (default: `True`)
+        transparent
             Save figures with transparent back ground. Sets
             `rcParams['savefig.transparent']`.
-        ipython_format : list of `str`, optional (default: 'png2x')
+        ipython_format
             Only concerns the notebook/IPython environment; see
-            `IPython.core.display.set_matplotlib_formats` for more details.
+            :func:`~IPython.display.set_matplotlib_formats` for details.
         """
         try:
             import IPython
-            IPython.core.display.set_matplotlib_formats(ipython_format)
+            if isinstance(ipython_format, str):
+                ipython_format = [ipython_format]
+            IPython.display.set_matplotlib_formats(*ipython_format)
         except Exception:
             pass
         from matplotlib import rcParams

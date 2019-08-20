@@ -19,6 +19,7 @@ with warnings.catch_warnings():
 
 
 nitpicky = True       # Warn about broken links
+nitpick_ignore = []   # populated below
 needs_sphinx = '1.7'  # autosummary bugfix
 
 # General information
@@ -68,6 +69,7 @@ intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/latest/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
+    ipython=('https://ipython.readthedocs.io/en/stable/', None),
     leidenalg=('https://leidenalg.readthedocs.io/en/latest/', None),
     louvain=('https://louvain-igraph.readthedocs.io/en/latest/', None),
     matplotlib=('https://matplotlib.org/', None),
@@ -188,3 +190,24 @@ if os.environ.get('DEBUG') is not None:
         pd(app, what, name, obj, options, lines)
         print(*lines, sep='\n')
     sphinx.ext.napoleon._process_docstring = pd_new
+
+
+# -- Suppress link warnings ----------------------------------------------------
+
+
+for mod_name in [
+    'pp', 'tl', 'pl',
+    'queries', 'logging', 'datasets', 'export_to',
+    None,
+]:
+    if mod_name is None:
+        mod = scanpy.api
+        mod_name = 'scanpy.api'
+    else:
+        mod = getattr(scanpy.api, mod_name)
+        mod_name = f'scanpy.api.{mod_name}'
+    for name, item in vars(mod).items():
+        if not callable(item):
+            continue
+        for kind in ['func', 'obj']:
+            nitpick_ignore.append((f'py:{kind}', f'{mod_name}.{name}'))

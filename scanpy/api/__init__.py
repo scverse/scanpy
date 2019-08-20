@@ -95,7 +95,8 @@ Recipes
 Batch effect correction
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Note that a simple batch correction method is available via :func:`pp.regress_out`.
+Note that a simple batch correction method is available via
+:func:`scanpy.api.pp.regress_out`.
 
 ``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
 
@@ -240,36 +241,15 @@ Represent data as a neighborhood structure, usually a knn graph.
 Settings
 --------
 
+An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as
+`scanpy.settings` and allows configuring Scanpy.
+
 A convenience function for setting some default ``matplotlib.rcParams`` and a
 high-resolution jupyter display backend useful for use in notebooks.
 
 .. autosummary::
 
    set_figure_params
-
-Influence the global behavior of plotting functions. In non-interactive scripts,
-you'd usually want to set :class:`settings.autoshow` to ``False``.
-
-==============================================  ===================================
-:class:`settings.autoshow`                      Automatically show figures (default: ``True``).
-:class:`settings.autosave`                      Automatically save figures (default: ``False``).
-==============================================  ===================================
-
-The default directories for saving figures and caching files.
-
-==============================================  ===================================
-:class:`settings.figdir`                        Directory for saving figures (default: `Path('figures')`).
-:class:`settings.cachedir`                      Directory for cache files (default: `Path('cache')`).
-:class:`settings.datasetdir`                    Directory for example datasets (default: `Path('data')`).
-==============================================  ===================================
-
-The verbosity of logging output, where verbosity levels have the following
-meaning: 0='error', 1='warning', 2='info', 3='hint', 4=more details, 5=even more
-details, etc.
-
-==============================================  ===================================
-:class:`settings.verbosity`                     Verbosity level (default: 1).
-==============================================  ===================================
 
 Print versions of packages that might influence numerical results.
 

@@ -256,8 +256,8 @@ Some selected settings are discussed in the following.
 Influence the global behavior of plotting functions. In non-interactive scripts,
 you'd usually want to set :class:`settings.autoshow` to ``False``.
 
+.. no :toctree: here because they are linked under the class
 .. autosummary::
-   :toctree: .
 
    ~_settings.ScanpyConfig.autoshow
    ~_settings.ScanpyConfig.autosave
@@ -265,7 +265,6 @@ you'd usually want to set :class:`settings.autoshow` to ``False``.
 The default directories for saving figures, caching files and storing datasets.
 
 .. autosummary::
-   :toctree: .
 
    ~_settings.ScanpyConfig.figdir
    ~_settings.ScanpyConfig.cachedir
@@ -276,7 +275,6 @@ meaning: 0='error', 1='warning', 2='info', 3='hint', 4=more details, 5=even more
 details, etc.
 
 .. autosummary::
-   :toctree: .
 
    ~_settings.ScanpyConfig.verbosity
 

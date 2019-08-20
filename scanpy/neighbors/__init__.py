@@ -463,7 +463,8 @@ class OnFlySymMatrix:
 
 
 class Neighbors:
-    """Data represented as graph of nearest neighbors.
+    """\
+    Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a graph of nearest neighbor relations (edges)
     among data points (nodes).
