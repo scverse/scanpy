@@ -83,7 +83,7 @@ def read(
     cache
         If ``False``, read from source, if ``True``, read from fast 'h5ad' cache.
     kwargs
-        Parameters passed to :func:`~anndata.readwrite.read_loom`.
+        Parameters passed to :func:`~anndata.read_loom`.
 
     Returns
     -------
@@ -257,7 +257,7 @@ def read_10x_mtx(
     path
         Path to directory for `.mtx` and `.tsv` files,
         e.g. './filtered_gene_bc_matrices/hg19/'.
-    var_names : {'gene_symbols', 'gene_ids'} (default: 'gene_symbols')
+    var_names: {`'gene_symbols'`, `'gene_ids'`}
         The variables index.
     make_unique
         Whether to make the variables index unique by appending '-1',

@@ -23,7 +23,7 @@ from matplotlib.colors import Colormap
 
 
 @doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
-def pca_overview(adata, **params):
+def pca_overview(adata: AnnData, **params):
     """\
     Plot PCA results.
 
@@ -32,7 +32,7 @@ def pca_overview(adata, **params):
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
     color : string or list of strings, optional (default: `None`)
         Keys for observation/cell annotation either as list `["ann1", "ann2"]` or
@@ -58,20 +58,25 @@ def pca_overview(adata, **params):
 pca_scatter = pca
 
 
-def pca_loadings(adata, components=None, show=None, save=None):
+def pca_loadings(
+    adata: AnnData,
+    components: Union[str, Sequence[int], None] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
+):
     """\
     Rank genes according to contributions to PCs.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    components : str or list of integers, optional
+    components
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
-    show : bool, optional (default: `None`)
+    show
         Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
@@ -677,26 +682,32 @@ def rank_genes_groups_violin(
     if show == False: return axs
 
 
-def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
-        show=None, save=None):
+def sim(
+    adata,
+    tmax_realization: Optional[int] = None,
+    as_heatmap: bool = False,
+    shuffle: bool = False,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+):
     """\
     Plot results of simulation.
 
     Parameters
     ----------
-    as_heatmap : bool (default: False)
-        Plot the timeseries as heatmap.
-    tmax_realization : int or None (default: False)
+    tmax_realization
         Number of observations in one realization of the time series. The data matrix
         adata.X consists in concatenated realizations.
-    shuffle : bool, optional (default: False)
+    as_heatmap
+        Plot the timeseries as heatmap.
+    shuffle
         Shuffle the data.
-    save : `bool` or `str`, optional (default: `None`)
+    show
+        Show the plot, do not return axis.
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
-    show : bool, optional (default: `None`)
-        Show the plot, do not return axis.
     """
     from ... import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
@@ -705,28 +716,36 @@ def sim(adata, tmax_realization=None, as_heatmap=False, shuffle=False,
     n_realizations = adata.n_obs/tmax
     if not shuffle:
         if not as_heatmap:
-            timeseries(adata.X,
-                       var_names=adata.var_names,
-                       xlim=[0, 1.25*adata.n_obs],
-                       highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
-                       xlabel='realizations')
+            timeseries(
+                adata.X,
+                var_names=adata.var_names,
+                xlim=[0, 1.25*adata.n_obs],
+                highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+                xlabel='realizations',
+            )
         else:
             # plot time series as heatmap, as in Haghverdi et al. (2016), Fig. 1d
-            timeseries_as_heatmap(adata.X,
-                                  var_names=adata.var_names,
-                                  highlightsX=np.arange(tmax, n_realizations*tmax, tmax))
-        pl.xticks(np.arange(0, n_realizations*tmax, tmax),
-                  np.arange(n_realizations).astype(int) + 1)
+            timeseries_as_heatmap(
+                adata.X,
+                var_names=adata.var_names,
+                highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+            )
+        pl.xticks(
+            np.arange(0, n_realizations*tmax, tmax),
+            np.arange(n_realizations).astype(int) + 1,
+        )
         utils.savefig_or_show('sim', save=save, show=show)
     else:
         # shuffled data
         X = adata.X
         X, rows = sc_utils.subsample(X, seed=1)
-        timeseries(X,
-                   var_names=adata.var_names,
-                   xlim=[0, 1.25*adata.n_obs],
-                   highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
-                   xlabel='index (arbitrary order)')
+        timeseries(
+            X,
+            var_names=adata.var_names,
+            xlim=[0, 1.25*adata.n_obs],
+            highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
+            xlabel='index (arbitrary order)',
+        )
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
 
 

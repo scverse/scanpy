@@ -931,7 +931,8 @@ def paga_path(
     if 'dpt_pseudotime' not in adata.obs.keys():
         raise ValueError(
             '`pl.paga_path` requires computation of a pseudotime `tl.dpt` '
-            'for ordering at single-cell resolution')
+            'for ordering at single-cell resolution'
+        )
 
     if palette_groups is None:
         utils.add_colors_for_categorical_sample_annotation(adata, groups_key)

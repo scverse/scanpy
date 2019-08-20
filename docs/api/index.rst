@@ -254,7 +254,7 @@ An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as `scan
 Some selected settings are discussed in the following.
 
 Influence the global behavior of plotting functions. In non-interactive scripts,
-you'd usually want to set :class:`settings.autoshow` to ``False``.
+you'd usually want to set `settings.autoshow` to ``False``.
 
 .. no :toctree: here because they are linked under the class
 .. autosummary::

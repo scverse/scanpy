@@ -1,23 +1,26 @@
 """Calculate scores based on the expression of gene lists.
 """
+from typing import Sequence, Optional, Union
 
 import numpy as np
 import pandas as pd
+from anndata import AnnData
+from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse
 
 from .. import logging as logg
 
 
 def score_genes(
-    adata,
-    gene_list,
-    ctrl_size=50,
-    gene_pool=None,
-    n_bins=25,
-    score_name='score',
-    random_state=0,
-    copy=False,
-    use_raw=False,
+    adata: AnnData,
+    gene_list: Sequence[str],
+    ctrl_size: int = 50,
+    gene_pool: Optional[Sequence[str]] = None,
+    n_bins: int = 25,
+    score_name: str = 'score',
+    random_state: Optional[Union[int, RandomState]] = 0,
+    copy: bool = False,
+    use_raw: bool = False,
 ):  # we use the scikit-learn convention of calling the seed "random_state"
     """Score a set of genes [Satija15]_.
 
@@ -30,24 +33,24 @@ def score_genes(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    gene_list : iterable
+    gene_list
         The list of gene names used for score calculation.
-    ctrl_size : `int`, optional (default: 50)
+    ctrl_size
         Number of reference genes to be sampled. If `len(gene_list)` is not too
         low, you can set `ctrl_size=len(gene_list)`.
-    gene_pool : `list` or `None`, optional (default: `None`)
+    gene_pool
         Genes for sampling the reference set. Default is all genes.
-    n_bins : `int`, optional (default: 25)
+    n_bins
         Number of expression level bins for sampling.
-    score_name : `str`, optional (default: `'score'`)
+    score_name
         Name of the field to be added in `.obs`.
-    random_state : `int`, optional (default: 0)
+    random_state
         The random seed for sampling.
-    copy : `bool`, optional (default: `False`)
+    copy
         Copy `adata` or modify it inplace.
-    use_raw : `bool`, optional (default: `False`)
+    use_raw
         Use `raw` attribute of `adata` if present.
     Returns
     -------
@@ -141,11 +144,12 @@ def score_genes(
 
 
 def score_genes_cell_cycle(
-        adata,
-        s_genes,
-        g2m_genes,
-        copy=False,
-        **kwargs):
+    adata: AnnData,
+    s_genes: Sequence[str],
+    g2m_genes: Sequence[str],
+    copy: bool = False,
+    **kwargs
+):
     """Score cell cycle genes [Satija15]_.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
@@ -154,15 +158,15 @@ def score_genes_cell_cycle(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    s_genes : `list`
+    s_genes
         List of genes associated with S phase.
-    g2m_genes : `list`
+    g2m_genes
         List of genes associated with G2M phase.
-    copy : `bool`, optional (default: `False`)
+    copy
         Copy `adata` or modify it inplace.
-    **kwargs : optional keyword arguments
+    **kwargs
         Are passed to :func:`~scanpy.tl.score_genes`. `ctrl_size` is not
         possible, as it's set as `min(len(s_genes), len(g2m_genes))`.
 

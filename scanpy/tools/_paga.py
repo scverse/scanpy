@@ -56,7 +56,7 @@ def paga(
         transitions. Requires that `adata.uns` contains a directed single-cell
         graph with key `['velocity_graph']`. This feature might be subject
         to change in the future.
-    model : {'v1.2', 'v1.0'}, optional (default: 'v1.2')
+    model: {`'v1.2'`, `'v1.0'`}
         The PAGA connectivity model.
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform
@@ -76,6 +76,8 @@ def paga(
     Together with a random walk-based distance measure
     (e.g. :func:`scanpy.tl.dpt`) this generates a partial coordinatization of
     data useful for exploring and explaining its variation.
+
+    .. currentmodule:: scanpy
 
     See Also
     --------

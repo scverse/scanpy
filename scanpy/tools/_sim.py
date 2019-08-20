@@ -120,7 +120,7 @@ def sample_dynamic_data(**params):
     else:
         writedir = Path(writedir)
     writedir.mkdir(parents=True, exist_ok=True)
-    readwrite.write_params(params['writedir'] / 'params.txt', params)
+    readwrite.write_params(writedir / 'params.txt', params)
     # init variables
     tmax = params['tmax']
     branching = params['branching']

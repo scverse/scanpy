@@ -38,7 +38,7 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
     be run in a `hierarchical` mode by setting the parameter
     `n_branchings>1`. We recommend, however, to only use
     :func:`~scanpy.tl.dpt` for computing pseudotime (`n_branchings=0`) and
-    to detect branchings via :func:`~scanpy.paga`. For pseudotime, you need
+    to detect branchings via :func:`~scanpy.tl.paga`. For pseudotime, you need
     to annotate your data with a root cell. For instance::
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]

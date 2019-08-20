@@ -52,23 +52,23 @@ def draw_graph(
         'rt' (Reingold Tilford tree layout).
     root
         Root for tree layouts.
-    random_state : `int` or `None`, optional (default: 0)
+    random_state
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    adjacency : sparse matrix or `None`, optional (default: `None`)
+    adjacency
         Sparse adjacency matrix of the graph, defaults to
         `adata.uns['neighbors']['connectivities']`.
     key_added_ext
         By default, append `layout`.
-    proceed : `bool`, optional (default: `None`)
+    proceed
         Continue computation, starting off with 'X_draw_graph_`layout`'.
     init_pos
         `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
         If `False`/`None` (the default), initialize randomly.
-    copy : `bool` (default: `False`)
+    copy
         Return a copy instead of writing to adata.
-    **kwds : further parameters
+    **kwds
         Parameters of chosen igraph layout. See e.g. `fruchterman-reingold`_
         [Fruchterman91]_. One of the most important ones is `maxiter`.
 

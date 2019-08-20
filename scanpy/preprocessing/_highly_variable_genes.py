@@ -12,9 +12,11 @@ from ..utils import sanitize_anndata
 
 
 def _highly_variable_genes_single_batch(
-    adata,
-    min_disp=None, max_disp=None,
-    min_mean=None, max_mean=None,
+    adata: AnnData,
+    min_disp=None,
+    max_disp=None,
+    min_mean=None,
+    max_mean=None,
     n_top_genes=None,
     n_bins=20,
     flavor='seurat',
@@ -33,7 +35,7 @@ def _highly_variable_genes_single_batch(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_mean : `float`, optional (default: 0.0125)
@@ -55,7 +57,7 @@ def _highly_variable_genes_single_batch(
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
-    flavor : `{'seurat', 'cell_ranger'}`, optional (default: 'seurat')
+    flavor : {`'seurat'`, `'cell_ranger'`}
         Choose the flavor for computing normalized dispersion. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
@@ -154,8 +156,9 @@ def _highly_variable_genes_single_batch(
     df['highly_variable'] = gene_subset
     return df
 
+
 def highly_variable_genes(
-    adata,
+    adata: AnnData,
     min_disp=None, max_disp=None,
     min_mean=None, max_mean=None,
     n_top_genes=None,
@@ -165,7 +168,8 @@ def highly_variable_genes(
     inplace=True,
     batch_key=None,
 ) -> Optional[np.recarray]:
-    """Annotate highly variable genes [Satija15]_ [Zheng17]_.
+    """\
+    Annotate highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
 
@@ -179,7 +183,7 @@ def highly_variable_genes(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
     min_mean : `float`, optional (default: 0.0125)
@@ -201,7 +205,7 @@ def highly_variable_genes(
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
-    flavor : `{'seurat', 'cell_ranger'}`, optional (default: 'seurat')
+    flavor : {`'seurat'`, `'cell_ranger'`}
         Choose the flavor for computing normalized dispersion. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.

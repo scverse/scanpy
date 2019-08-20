@@ -1,10 +1,11 @@
 """Plotting functions for AnnData.
 """
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Sequence
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from matplotlib.axes import Axes
 from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
@@ -519,20 +520,30 @@ def _scatter_obs(
     if show == False: return axs if len(keys) > 1 else axs[0]
 
 
-def ranking(adata, attr, keys, dictionary=None, indices=None,
-            labels=None, color='black', n_points=30,
-            log=False, show=None):
-    """Plot rankings.
+def ranking(
+    adata: AnnData,
+    attr: str,
+    keys: Union[str, Sequence[str]],
+    dictionary=None,
+    indices=None,
+    labels=None,
+    color='black',
+    n_points=30,
+    log=False,
+    show=None,
+):
+    """\
+    Plot rankings.
 
     See, for example, how this is used in pl.pca_ranking.
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         The data.
-    attr : {`'var'`, `'obs'`, `'uns'`, `'varm'`, `'obsm'`}
+    attr: {`'var'`, `'obs'`, `'uns'`, `'varm'`, `'obsm'`}
         The attribute of AnnData that contains the score.
-    keys : str or list of str
+    keys
         The scores to look up an array from the attribute of adata.
 
     Returns
@@ -582,21 +593,21 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 @doc_params(show_save_ax=doc_show_save_ax)
 def violin(
     adata: AnnData,
-    keys,
-    groupby=None,
-    log=False,
-    use_raw=None,
-    stripplot=True,
-    jitter=True,
-    size=1,
-    scale='width',
-    order=None,
-    multi_panel=None,
-    show=None,
-    xlabel='',
-    rotation=None,
-    save=None,
-    ax=None,
+    keys: Union[str, Sequence[str]],
+    groupby: Optional[str] = None,
+    log: bool = False,
+    use_raw: Optional[bool] = None,
+    stripplot: bool = True,
+    jitter: Union[float, bool] = True,
+    size: int = 1,
+    scale: str = 'width',
+    order: Optional[Sequence[str]] = None,
+    multi_panel: Optional[bool] = None,
+    xlabel: str = '',
+    rotation: Optional[float] = None,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    ax: Optional[Axes] = None,
     **kwds
 ):
     """\
@@ -608,35 +619,35 @@ def violin(
     ----------
     adata
         Annotated data matrix.
-    keys : `str` or list of `str`
+    keys
         Keys for accessing variables of `.var_names` or fields of `.obs`.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider.
-    log : `bool`, optional (default: `False`)
+    log
         Plot on logarithmic axis.
-    use_raw : `bool`, optional (default: `None`)
+    use_raw
         Use `raw` attribute of `adata` if present.
-    multi_panel : `bool`, optional (default: `False`)
-        Display keys in multiple panels also when `groupby is not None`.
-    stripplot : `bool` optional (default: `True`)
+    stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
-    jitter : `float` or `bool`, optional (default: `True`)
+    jitter
         Add jitter to the stripplot (only when stripplot is True)
         See :func:`~seaborn.stripplot`.
-    size : int, optional (default: 1)
+    size
         Size of the jitter points.
-    order : list of str, optional (default: `True`)
+    scale : {{`'area'`, `'count'`, `'width'`}}
+        The method used to scale the width of each violin.
+        If 'width' (the default), each violin will have the same width.
+        If 'area', each violin will have the same area.
+        If 'count', a violin’s width corresponds to the number of observations.
+    order
         Order in which to show the categories.
-    scale : {{`'area'`, `'count'`, `'width'`}}, optional (default: `'width'`)
-        The method used to scale the width of each violin. If 'area', each
-        violin will have the same area. If 'count', the width of the violins
-        will be scaled by the number of observations in that bin. If 'width',
-        each violin will have the same width.
-    xlabel : `str`, optional (default: `''`)
+    multi_panel
+        Display keys in multiple panels also when `groupby is not None`.
+    xlabel
         Label of the x axis. Defaults to `groupby` if `rotation` is `None`,
         otherwise, no label is shown.
-    rotation : `float`, optional (default: `None`)
+    rotation
         Rotation of xtick labels.
     {show_save_ax}
     **kwds
@@ -715,8 +726,8 @@ def clustermap(
     adata: AnnData,
     obs_keys: str = None,
     use_raw: Optional[bool] = None,
-    show=None,
-    save=None,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
     **kwds
 ):
     """\
@@ -788,55 +799,58 @@ def stacked_violin(
     gene_symbols=None,
     var_group_positions=None,
     var_group_labels=None,
-    standard_scale=None,
+    standard_scale: Optional[str] = None,
     var_group_rotation=None,
     layer=None,
-    stripplot=False,
-    jitter=False,
-    size=1,
-    scale='width',
-    order=None,
-    swap_axes=False,
-    show=None,
-    save=None,
-    row_palette='muted',
+    stripplot: bool = False,
+    jitter: Union[float, bool] = False,
+    size: int = 1,
+    scale: str = 'width',
+    order: Optional[Sequence[str]] = None,
+    swap_axes: bool = False,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    row_palette: str = 'muted',
     **kwds
 ):
     """\
     Stacked violin plots.
 
-    Makes a compact image composed of individual violin plots (from :func:`~seaborn.violinplot`)
-    stacked on top of each other. Useful to visualize gene expression per cluster.
+    Makes a compact image composed of individual violin plots
+    (from :func:`~seaborn.violinplot`) stacked on top of each other.
+    Useful to visualize gene expression per cluster.
 
     Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
     {common_plot_args}
-    stripplot : `bool` optional (default: `True`)
+    stripplot
         Add a stripplot on top of the violin plot.
         See :func:`~seaborn.stripplot`.
-    jitter : `float` or `bool`, optional (default: `True`)
+    jitter
         Add jitter to the stripplot (only when stripplot is True)
         See :func:`~seaborn.stripplot`.
-    size : int, optional (default: 1)
+    size
         Size of the jitter points.
-    order : list of str, optional (default: `True`)
+    order
         Order in which to show the categories.
-    scale : {{`'area'`, `'count'`, `'width'`}}, optional (default: `'width'`)
-        The method used to scale the width of each violin. If 'area', each
-        violin will have the same area. If 'count', the width of the violins
-        will be scaled by the number of observations in that bin. If 'width',
-        each violin will have the same width.
-    row_palette: `str` (default: `muted`)
-        The row palette determines the colors to use in each of the stacked violin plots. The value
-        should be a valid seaborn palette name or a valic matplotlib colormap
-        (see https://seaborn.pydata.org/generated/seaborn.color_palette.html). Alternatively,
-        a single color name or hex value can be passed. E.g. 'red' or '#cc33ff'
-    standard_scale : {{`'var'`, `'obs'`}}, optional (default: `None`)
-        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
+    scale: {{`'area'`, `'count'`, `'width'`}}
+        The method used to scale the width of each violin.
+        If 'width' (the default), each violin will have the same width.
+        If 'area', each violin will have the same area.
+        If 'count', a violin’s width corresponds to the number of observations.
+    row_palette
+        The row palette determines the colors to use for the stacked violins.
+        The value should be a valid seaborn or matplotlib palette name
+        (see :func:`~seaborn.color_palette`).
+        Alternatively, a single color name or hex value can be passed,
+        e.g. `'red'` or `'#cc33ff'`.
+    standard_scale: {{`'var'`, `'obs'`}}
+        Whether or not to standardize a dimension between 0 and 1,
+        meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
-    swap_axes: `bool`, optional (default: `False`)
+    swap_axes
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby` categories.
          By setting `swap_axes` then x are the `groupby` categories and y the `var_names`. When swapping
          axes var_group_positions are no longer used
@@ -2009,9 +2023,11 @@ def tracksplot(
     >>> markers = {{'T-cell': 'CD3D', 'B-cell': 'CD79A', 'myeloid': 'CST3'}}
     >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True)
 
+    .. currentmodule:: scanpy
+
     See also
     --------
-    rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    pl.rank_genes_groups_tracksplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':

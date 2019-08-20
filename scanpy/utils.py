@@ -11,6 +11,7 @@ from types import ModuleType, MethodType
 from typing import Union, Callable, Optional
 
 import numpy as np
+from anndata import AnnData
 from scipy import sparse
 from natsort import natsorted
 from textwrap import dedent
@@ -415,41 +416,48 @@ def get_sparse_from_igraph(graph, weight_attr=None):
     else:
         return csr_matrix(shape)
 
+
 # --------------------------------------------------------------------------------
 # Group stuff
 # --------------------------------------------------------------------------------
 
-def compute_association_matrix_of_groups(adata, prediction, reference,
-                                         normalization='prediction',
-                                         threshold=0.01, max_n_names=2):
+
+def compute_association_matrix_of_groups(
+    adata: AnnData,
+    prediction: str,
+    reference: str,
+    normalization: str = 'prediction',
+    threshold: float = 0.01,
+    max_n_names: Optional[int] = 2,
+):
     """Compute overlaps between groups.
 
     See ``identify_groups`` for identifying the groups.
 
     Parameters
     ----------
-    adata : AnnData
-    prediction : str
+    adata
+    prediction
         Field name of adata.obs.
-    reference : str
+    reference
         Field name of adata.obs.
-    normalization : {'prediction', 'reference'}
+    normalization: {`'prediction'`, `'reference'`}
         Whether to normalize with respect to the predicted groups or the
         reference groups.
-    threshold : float, optional (default: 0.01)
+    threshold
         Do not consider associations whose overlap is below this fraction.
-    max_n_names : int or None, optional (default: 2)
+    max_n_names
         Control how many reference names you want to be associated with per
         predicted name. Set to `None`, if you want all.
 
     Returns
     -------
-    Tuple of
-    asso_names : list of associated reference names (`max_n_names` for each
-        predicted name)
-    asso_matrix : matrix where rows correspond to the predicted labels and
-        columns to the reference labels, entries are proportional to degree of
-        association
+    asso_names
+        List of associated reference names
+        (`max_n_names` for each predicted name).
+    asso_matrix
+        Matrix where rows correspond to the predicted labels and columns to the
+        reference labels, entries are proportional to degree of association.
     """
     if normalization not in {'prediction', 'reference'}:
         raise ValueError('`normalization` needs to be either "prediction" or "reference".')
