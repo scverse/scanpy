@@ -86,6 +86,19 @@ def paga(
     if 'neighbors' not in adata.uns: raise ValueError(
         'You need to run `pp.neighbors` first to compute a neighborhood graph.'
     )
+    if groups is None:
+        for k in ("leiden", "louvain"):
+            if k in adata.obs.columns:
+                groups = k
+                break
+    if groups is None:
+        raise ValueError(
+            'You need to run `tl.leiden` or `tl.louvain` to compute '
+            "community labels, or specify `groups='an_existing_key'`"
+        )
+    elif groups not in adata.obs.columns:
+        raise KeyError(f'`groups` key {groups!r} not found in `adata.obs`.')
+
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     start = logg.info('running PAGA')
@@ -119,27 +132,12 @@ def paga(
 
 
 class PAGA:
-    def __init__(self, adata, groups=None, model='v1.2'):
+    def __init__(self, adata, groups, model='v1.2'):
+        assert groups in adata.obs.columns
         self._adata = adata
         self._neighbors = Neighbors(adata)
         self._model = model
-
-        if groups is None:
-            for k in ['leiden', 'louvain']:
-                self._groups_key = adata.obs.get(k)
-                if self._groups_key is not None:
-                    break
-            else:
-                raise ValueError(
-                    'You need to run `tl.leiden` or `tl.louvain` to compute '
-                    "community labels, or specify `groups='an_existing_key'`"
-                )
-        elif groups in adata.obs:
-            self._groups_key = groups
-        else:
-            raise ValueError(
-                f'`groups` key {groups!r} missing from `adata.obs`.'
-            )
+        self._groups_key = groups
 
     def compute_connectivities(self):
         if self._model == 'v1.2':
