@@ -23,7 +23,8 @@ def rank_genes_groups_df(
     gene_symbols: Optional[str] = None
 ) -> pd.DataFrame:
     """
-    :func:`scanpy.tl.rank_genes_groups` results in the form of a :class:`pd.DataFrame`.
+    :func:`scanpy.tl.rank_genes_groups` results in the form of a
+    :class:`~pandas.DataFrame`.
 
     Params
     ------

@@ -18,6 +18,7 @@ with warnings.catch_warnings():
 # -- General configuration ------------------------------------------------
 
 
+nitpicky = True       # Warn about broken links
 needs_sphinx = '1.7'  # autosummary bugfix
 
 # General information

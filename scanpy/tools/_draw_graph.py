@@ -16,7 +16,8 @@ def draw_graph(
         key_added_ext=None,
         copy=False,
         **kwds):
-    """Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
+    """\
+    Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 
     An alternative to tSNE that often preserves the topology of the data
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.
@@ -60,8 +61,10 @@ def draw_graph(
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
     **kwds : further parameters
-        Parameters of chosen igraph layout. See, e.g.,
-        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`__. One of the most important ones is `maxiter`.
+        Parameters of chosen igraph layout. See e.g. `fruchterman-reingold`_
+        [Fruchterman91]_. One of the most important ones is `maxiter`.
+
+        .. _fruchterman-reingold: http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold
 
     Returns
     -------

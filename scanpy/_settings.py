@@ -93,8 +93,7 @@ class ScanpyConfig:
         """bool: See set_figure_params."""
 
         self._vector_friendly = _vector_friendly
-        """Set to true if you want to include pngs in svgs and pdfs.
-        """
+        """Set to true if you want to include pngs in svgs and pdfs."""
 
         self._low_resolution_warning = _low_resolution_warning
         """Print warning when saving a figure with low resolution."""
@@ -111,7 +110,7 @@ class ScanpyConfig:
     @property
     def verbosity(self) -> Verbosity:
         """
-        Set global verbosity level.
+        Verbosity level (default `warning`)
 
         Level 0: only show 'error' messages.
         Level 1: also show 'warning' messages.
@@ -191,7 +190,8 @@ class ScanpyConfig:
 
     @property
     def autosave(self) -> bool:
-        """bool: Save plots/figures as files in directory 'figs'.
+        """\
+        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
@@ -204,7 +204,8 @@ class ScanpyConfig:
 
     @property
     def autoshow(self) -> bool:
-        """bool: Show all plots/figures automatically if autosave == False.
+        """\
+        Automatically show figures if `autosave == False` (default `True`).
 
         There is no need to call the matplotlib pl.show() in this case.
         """
@@ -217,7 +218,8 @@ class ScanpyConfig:
 
     @property
     def writedir(self) -> Path:
-        """Directory where the function scanpy.write writes to by default.
+        """\
+        Directory where the function scanpy.write writes to by default.
         """
         return self._writedir
 
@@ -228,7 +230,8 @@ class ScanpyConfig:
 
     @property
     def cachedir(self) -> Path:
-        """Default cache directory.
+        """\
+        Directory for cache files (default `'./cache/'`).
         """
         return self._cachedir
 
@@ -239,7 +242,8 @@ class ScanpyConfig:
 
     @property
     def datasetdir(self) -> Path:
-        """Default directory for ``sc.datasets`` to download data to.
+        """\
+        Directory for example :mod:`~scanpy.datasets` (default `'./data/'`).
         """
         return self._datasetdir
 
@@ -250,7 +254,8 @@ class ScanpyConfig:
 
     @property
     def figdir(self) -> Path:
-        """Directory where plots are saved.
+        """\
+        Directory for saving figures (default `'./figures/'`).
         """
         return self._figdir
 
@@ -261,7 +266,8 @@ class ScanpyConfig:
 
     @property
     def max_memory(self) -> Union[int, float]:
-        """Maximal memory usage in Gigabyte.
+        """\
+        Maximal memory usage in Gigabyte.
 
         Is currently not well respected....
         """
@@ -274,7 +280,8 @@ class ScanpyConfig:
 
     @property
     def n_jobs(self) -> int:
-        """Default number of jobs/ CPUs to use for parallel computing.
+        """\
+        Default number of jobs/ CPUs to use for parallel computing.
         """
         return self._n_jobs
 
@@ -285,7 +292,9 @@ class ScanpyConfig:
 
     @property
     def logpath(self) -> Optional[Path]:
-        """The file path `logfile` was set to."""
+        """\
+        The file path `logfile` was set to.
+        """
         return self._logpath
 
     @logpath.setter
@@ -297,7 +306,8 @@ class ScanpyConfig:
 
     @property
     def logfile(self) -> TextIO:
-        """The open file to write logs to.
+        """\
+        The open file to write logs to.
 
         Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
@@ -320,7 +330,8 @@ class ScanpyConfig:
 
     @property
     def categories_to_ignore(self) -> List[str]:
-        """Categories that are omitted in plotting etc.
+        """\
+        Categories that are omitted in plotting etc.
         """
         return self._categories_to_ignore
 

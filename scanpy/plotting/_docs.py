@@ -74,7 +74,7 @@ palette
     :class:`~cycler.Cycler` object. If `None`, `mpl.rcParams["axes.prop_cycle"]`
     is used unless the categorical variable already has colors stored in
     `adata.uns["{var}_colors"]`. If provided, values of `adata.uns["{var}_colors"]`
-     will be set by this palette.
+    will be set by this palette.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.

@@ -71,16 +71,14 @@ def normalize_total(
     layer_norm
         Specifies how to normalize layers:
 
-        * If ``None``, after normalization, for each layer in *layers* each cell
-        has a total count equal to the median of the *counts_per_cell* before
-        normalization of the layer.
-
-        * If ``'after'``, for each layer in *layers* each cell has
-        a total count equal to ``target_sum``.
-
-        * If ``'X'``, for each layer in *layers* each cell has a total count equal
-        to the median of total counts for observations (cells) of ``adata.X``
-        before normalization.
+        * If `None`, after normalization, for each layer in *layers* each cell
+          has a total count equal to the median of the *counts_per_cell* before
+          normalization of the layer.
+        * If `'after'`, for each layer in *layers* each cell has
+          a total count equal to `target_sum`.
+        * If `'X'`, for each layer in *layers* each cell has a total count
+          equal to the median of total counts for observations (cells) of
+          `adata.X` before normalization.
 
     inplace
         Whether to update ``adata`` or return dictionary with normalized copies of
