@@ -62,8 +62,9 @@ def phenograph( adata,
         Example
         -------
         
+        >>> from anndata import AnnData
+        >>> import scanpy as sc
         >>> import scanpy.external as sce
-        >>> import scanpy.api as sc
         >>> import numpy as np
         >>> import pandas as pd
         
@@ -112,7 +113,7 @@ def phenograph( adata,
         New results can be pushed into adata object:
         
         >>> dframe = pd.DataFrame(data=df, columns=range(df.shape[1]),index=range(df.shape[0]) )
-        >>> adata = sc.AnnData( X=dframe, obs=dframe, var=dframe)
+        >>> adata = AnnData( X=dframe, obs=dframe, var=dframe)
         >>> adata.obs['pheno'] = pd.Categorical(result[0])
         
 

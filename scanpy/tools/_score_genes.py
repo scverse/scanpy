@@ -149,7 +149,7 @@ def score_genes_cell_cycle(
 
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
-    :func:`~scanpy.api.score_genes` for more explanation.
+    :func:`~scanpy.tl.score_genes` for more explanation.
 
     Parameters
     ----------
@@ -162,7 +162,7 @@ def score_genes_cell_cycle(
     copy : `bool`, optional (default: `False`)
         Copy `adata` or modify it inplace.
     **kwargs : optional keyword arguments
-        Are passed to :func:`~scanpy.api.score_genes`. `ctrl_size` is not
+        Are passed to :func:`~scanpy.tl.score_genes`. `ctrl_size` is not
         possible, as it's set as `min(len(s_genes), len(g2m_genes))`.
 
     Returns

@@ -339,21 +339,26 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
 
     Examples
     --------
-    >>> import scanpy.api as sc
+    >>> from anndata import AnnData
+    >>> import scanpy.external as sce
     >>> import phate
-    >>> data, branches = phate.tree.gen_dla(n_dim=100,
-                                            n_branch=20,
-                                            branch_length=100)
+    >>> data, branches = phate.tree.gen_dla(
+    ... n_dim=100,
+    ... n_branch=20,
+    ... branch_length=100,
+    ... )
     >>> data.shape
     (2000, 100)
-    >>> adata = sc.AnnData(data)
+    >>> adata = AnnData(data)
     >>> adata.obs['branches'] = branches
-    >>> sc.tl.phate(adata, k=5, a=20, t=150)
+    >>> sce.tl.phate(adata, k=5, a=20, t=150)
     >>> adata.obsm['X_phate'].shape
     (2000, 2)
-    >>> sc.pl.phate(adata,
-                    color='branches',
-                    color_map='tab20')
+    >>> sce.pl.phate(
+    ...     adata,
+    ...     color='branches',
+    ...     color_map='tab20',
+    ... )
     """
     return plot_scatter(adata, 'phate', **kwargs)
 
@@ -387,9 +392,8 @@ def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
     ----------
     {adata_color_etc}
     layout : {{'fa', 'fr', 'drl', ...}}, optional (default: last computed)
-        One of the `draw_graph` layouts, see
-        :func:`~scanpy.api.tl.draw_graph`. By default, the last computed layout
-        is used.
+        One of the :func:`~scanpy.tl.draw_graph` layouts.
+        By default, the last computed layout is used.
     {edges_arrows}
     {scatter_bulk}
     {show_save_ax}

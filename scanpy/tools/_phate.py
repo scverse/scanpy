@@ -96,18 +96,21 @@ def phate(
 
     Examples
     --------
-    >>> import scanpy.api as sc
+    >>> from anndata import AnnData
+    >>> import scanpy.external as sce
     >>> import phate
-    >>> tree_data, tree_clusters = phate.tree.gen_dla(n_dim=100,
-                                                      n_branch=20,
-                                                      branch_length=100)
+    >>> tree_data, tree_clusters = phate.tree.gen_dla(
+    ...     n_dim=100,
+    ...     n_branch=20,
+    ...     branch_length=100,
+    ... )
     >>> tree_data.shape
     (2000, 100)
-    >>> adata = sc.AnnData(tree_data)
-    >>> sc.tl.phate(adata, k=5, a=20, t=150)
+    >>> adata = AnnData(tree_data)
+    >>> sce.tl.phate(adata, k=5, a=20, t=150)
     >>> adata.obsm['X_phate'].shape
     (2000, 2)
-    >>> sc.pl.phate(adata)
+    >>> sce.pl.phate(adata)
     """
     start = logg.info('computing PHATE')
     adata = adata.copy() if copy else adata

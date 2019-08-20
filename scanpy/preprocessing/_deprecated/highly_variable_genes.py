@@ -21,7 +21,7 @@ def filter_genes_dispersion(data,
 
     .. warning::
         .. deprecated:: 1.3.6
-            Use :func:`~scanpy.api.pp.highly_variable_genes`
+            Use :func:`~scanpy.pp.highly_variable_genes`
             instead. The new function is equivalent to the present
             function, except that
 
@@ -43,7 +43,7 @@ def filter_genes_dispersion(data,
     variable genes are selected.
 
     Use `flavor='cell_ranger'` with care and in the same way as in
-    :func:`~scanpy.api.pp.recipe_zheng17`.
+    :func:`~scanpy.pp.recipe_zheng17`.
 
     Parameters
     ----------

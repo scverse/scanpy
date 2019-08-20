@@ -341,7 +341,7 @@ def _rank_genes_groups_plot(adata, plot_type='heatmap', groups=None,
 def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=None,
                               show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using heatmap plot (see `scanpy.api.pl.heatmap`)
+    Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
 
     Parameters
     ----------
@@ -356,11 +356,11 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see `scanpy.api.pl.heatmap`).
+        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
     key : `str`
         Key used to store the ranking results in `adata.uns`.
     **kwds : keyword arguments
-        Are passed to `scanpy.api.pl.heatmap`.
+        Are passed to :func:`~scanpy.pl.heatmap`.
     {show_save_ax}
     """
 
@@ -372,7 +372,7 @@ def rank_genes_groups_heatmap(adata, groups=None, n_genes=10, groupby=None, key=
 def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, key=None,
                               show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using heatmap plot (see `scanpy.api.pl.heatmap`)
+    Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
 
     Parameters
     ----------
@@ -387,11 +387,11 @@ def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, k
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see `scanpy.api.pl.heatmap`).
+        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.heatmap`).
     key : `str`
         Key used to store the ranking results in `adata.uns`.
     **kwds : keyword arguments
-        Are passed to `scanpy.api.pl.tracksplot`.
+        Are passed to :func:`~scanpy.pl.tracksplot`.
     {show_save_ax}
     """
 
@@ -403,7 +403,7 @@ def rank_genes_groups_tracksplot(adata, groups=None, n_genes=10, groupby=None, k
 def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=None,
                               show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using dotplot plot (see `scanpy.api.pl.dotplot`)
+    Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
 
     Parameters
     ----------
@@ -418,12 +418,12 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see `scanpy.api.pl.dotplot`).
+        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.dotplot`).
     key : `str`
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `scanpy.api.pl.dotplot`.
+        Are passed to :func:`~scanpy.pl.dotplot`.
     """
 
     _rank_genes_groups_plot(adata, plot_type='dotplot', groups=groups, n_genes=n_genes,
@@ -434,7 +434,7 @@ def rank_genes_groups_dotplot(adata, groups=None, n_genes=10, groupby=None, key=
 def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=None, key=None,
                                      show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using stacked_violin plot (see `scanpy.api.pl.stacked_violin`)
+    Plot ranking of genes using stacked_violin plot (see :func:`~scanpy.pl.stacked_violin`)
 
     Parameters
     ----------
@@ -449,12 +449,12 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see `scanpy.api.pl.stacked_violin`).
+        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.stacked_violin`).
     key : `str`
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `scanpy.api.pl.stacked_violin`.
+        Are passed to :func:`~scanpy.pl.stacked_violin`.
     """
 
     _rank_genes_groups_plot(adata, plot_type='stacked_violin', groups=groups, n_genes=n_genes,
@@ -465,7 +465,7 @@ def rank_genes_groups_stacked_violin(adata, groups=None, n_genes=10, groupby=Non
 def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, key=None,
                                  show=None, save=None, **kwds):
     """\
-    Plot ranking of genes using matrixplot plot (see `scanpy.api.pl.matrixplot`)
+    Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`)
 
     Parameters
     ----------
@@ -480,12 +480,12 @@ def rank_genes_groups_matrixplot(adata, groups=None, n_genes=10, groupby=None, k
         the groupby is chosen from the rank genes groups parameter but
         other groupby options can be used.  It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
-        it would be subdivided into `num_categories` (see `scanpy.api.pl.matrixplot`).
+        it would be subdivided into `num_categories` (see :func:`~scanpy.pl.matrixplot`).
     key : `str`
         Key used to store the ranking results in `adata.uns`.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `scanpy.api.pl.matrixplot`.
+        Are passed to :func:`~scanpy.pl.matrixplot`.
     """
 
     _rank_genes_groups_plot(adata, plot_type='matrixplot', groups=groups, n_genes=n_genes,
@@ -515,21 +515,21 @@ def rank_genes_groups_violin(
         Number of genes to show. Is ignored if `gene_names` is passed.
     gene_names : `None` or list of `str` (default: `None`)
         List of genes to plot. Is only useful if interested in a custom gene list,
-        which is not the result of :func:`scanpy.api.tl.rank_genes_groups`.
+        which is not the result of :func:`scanpy.tl.rank_genes_groups`.
     gene_symbols : `str`, optional (default: `None`)
         Key for field in `.var` that stores gene symbols if you do not want to
         use `.var_names` displayed in the plot.
     use_raw : `bool`, optional (default: `None`)
         Use `raw` attribute of `adata` if present. Defaults to the value that
-        was used in :func:`~scanpy.api.tl.rank_genes_groups`.
+        was used in :func:`~scanpy.tl.rank_genes_groups`.
     split : `bool`, optional (default: `True`)
         Whether to split the violins or not.
     scale : `str`, optional (default: 'width')
-        See `seaborn.violinplot`.
+        See :func:`~seaborn.violinplot`.
     strip : `bool`, optional (default: `True`)
         Show a strip plot on top of the violin plot.
     jitter : `int`, `float`, `bool`, optional (default: `True`)
-        If set to 0, no points are drawn. See `seaborn.stripplot`.
+        If set to 0, no points are drawn. See :func:`~seaborn.stripplot`.
     size : `int`, optional (default: 1)
         Size of the jitter points.
     {show_save_ax}

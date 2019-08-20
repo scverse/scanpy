@@ -64,12 +64,11 @@ Filtering of highly-variable genes, batch-effect correction, per-cell normalizat
 Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
-For visual quality control, see :func:`~scanpy.api.pl.highest_expr_gens` and
+For visual quality control, see :func:`~scanpy.api.pl.highest_expr_genes` and
 :func:`~scanpy.api.pl.filter_genes_dispersion` in the :doc:`plotting API
 <plotting>`.
 
 .. autosummary::
-   :toctree: .
 
    pp.calculate_qc_metrics
    pp.filter_cells
@@ -88,7 +87,6 @@ Recipes
 ~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    pp.recipe_zheng17
    pp.recipe_weinreb17
@@ -102,7 +100,6 @@ Note that a simple batch correction method is available via :func:`pp.regress_ou
 ``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
 
 .. autosummary::
-   :toctree: .
 
    pp.bbknn
    pp.mnn_correct
@@ -114,7 +111,6 @@ Note that the fundamental limitations of imputation are still under `debate
 <https://github.com/theislab/scanpy/issues/189>`__.
 
 .. autosummary::
-   :toctree: .
 
    pp.dca
    pp.magic
@@ -123,7 +119,6 @@ Neighbors
 ~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    pp.neighbors
 
@@ -135,7 +130,6 @@ Embeddings
 ~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.pca
    tl.tsne
@@ -148,7 +142,6 @@ Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.leiden
    tl.louvain
@@ -159,7 +152,6 @@ Marker genes
 ~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.rank_genes_groups
 
@@ -167,7 +159,6 @@ Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.score_genes
    tl.score_genes_cell_cycle
@@ -178,7 +169,6 @@ Simulations
 ~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.sim
 
@@ -201,14 +191,12 @@ the numeric data in the data matrix `X`.
 Read common file formats using
 
 .. autosummary::
-   :toctree: .
 
    read
 
 Read 10x formatted hdf5 files and directories containing `.mtx` files using
 
 .. autosummary::
-   :toctree: .
 
     read_10x_h5
     read_10x_mtx
@@ -216,7 +204,6 @@ Read 10x formatted hdf5 files and directories containing `.mtx` files using
 Read other formats using functions borrowed from :mod:`anndata`
 
 .. autosummary::
-   :toctree: .
 
    read_h5ad
    read_csv
@@ -232,7 +219,6 @@ Queries
 -------
 
 .. autosummary::
-   :toctree: .
 
    queries.mitochondrial_genes
 
@@ -245,7 +231,6 @@ Classes
 Represent data as a neighborhood structure, usually a knn graph.
 
 .. autosummary::
-   :toctree: .
 
    Neighbors
 
@@ -259,7 +244,6 @@ A convenience function for setting some default ``matplotlib.rcParams`` and a
 high-resolution jupyter display backend useful for use in notebooks.
 
 .. autosummary::
-   :toctree: .
 
    set_figure_params
 
@@ -290,7 +274,6 @@ details, etc.
 Print versions of packages that might influence numerical results.
 
 .. autosummary::
-   :toctree: .
 
    logging.print_versions
 
@@ -299,7 +282,6 @@ Datasets
 --------
 
 .. autosummary::
-   :toctree: .
 
    datasets.blobs
    datasets.krumsiek11
@@ -313,7 +295,6 @@ Exporting
 ---------
 
 .. autosummary::
-   :toctree: .
 
    export_to.spring_project
 """

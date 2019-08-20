@@ -19,7 +19,7 @@ def draw_graph(
     """Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+    better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package `fa2
     <https://github.com/bhargavchippada/forceatlas2>`__ [Chippada18]_, which can

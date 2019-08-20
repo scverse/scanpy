@@ -348,8 +348,8 @@ def write(
     filename
         If the filename has no file extension, it is interpreted as a key for
         generating a filename via `sc.settings.writedir / (filename +
-        sc.settings.file_format_data)`.  This is the same behavior as in
-        :func:`~scanpy.api.read`.
+        sc.settings.file_format_data)`. This is the same behavior as in
+        :func:`~scanpy.read`.
     adata
         Annotated data matrix.
     ext : {`None`, `'h5'`, `'csv'`, `'txt'`, `'npz'`} (default: `None`)

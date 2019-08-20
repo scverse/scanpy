@@ -11,42 +11,41 @@ from .. import logging as logg
 
 
 def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=20, data='Complete', method='pearson', annotation_key=None):
-    """Calculate correlation matrix.
+    """\
+    Calculate correlation matrix.
 
-        Calculate a correlation matrix for genes strored in sample annotation using :func:`~scanpy.api.tl.rank_genes_groups`.
+    Calculate a correlation matrix for genes strored in sample annotation
+    using :func:`~scanpy.tl.rank_genes_groups`.
 
-        Parameters
-        ----------
-        adata : :class:`~anndata.AnnData`
-            Annotated data matrix.
-        name_list : list, optional (default: None)
-            Takes a list of genes for which to calculate the correlation matrix
-        groupby : `str`, optional (default: None)
-            If no name list is passed, genes are selected from the
-            results of rank_gene_groups. Then this is the key of the sample grouping to consider.
-            Note that in this case also a group index has to be specified.
-        group : `int`, optional (default: None)
-            Group index for which the correlation matrix for top_ranked genes should be calculated.
-            Currently only int is supported, will change very soon
-        n_genes : `int`, optional (default: 20)
-            For how many genes to calculate correlation matrix? If specified, cuts the name list
-            (in whatever order it is passed).
-        data : {'Complete', 'Group', 'Rest'}, optional (default: 'Complete')
-            At the moment, this is only relevant for the case that name_list is drawn from rank_gene_groups results.
-            If specified, collects mask for the called group and then takes only those cells specified.
-            If 'Complete', calculate correlation using full data
-            If 'Group', calculate correlation within the selected group.
-            If 'Rest', calculate corrlation for everything except the group
-        method : {‘pearson’, ‘kendall’, ‘spearman’} optional (default: 'pearson')
-            Which kind of correlation coefficient to use
-            pearson : standard correlation coefficient
-            kendall : Kendall Tau correlation coefficient
-            spearman : Spearman rank correlation
-        annotation_key: String, optional (default: None)
-            Allows to define the name of the anndata entry where results are stored.
-
-
-
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        Annotated data matrix.
+    name_list : list, optional (default: None)
+        Takes a list of genes for which to calculate the correlation matrix
+    groupby : `str`, optional (default: None)
+        If no name list is passed, genes are selected from the
+        results of rank_gene_groups. Then this is the key of the sample grouping to consider.
+        Note that in this case also a group index has to be specified.
+    group : `int`, optional (default: None)
+        Group index for which the correlation matrix for top_ranked genes should be calculated.
+        Currently only int is supported, will change very soon
+    n_genes : `int`, optional (default: 20)
+        For how many genes to calculate correlation matrix? If specified, cuts the name list
+        (in whatever order it is passed).
+    data : {'Complete', 'Group', 'Rest'}, optional (default: 'Complete')
+        At the moment, this is only relevant for the case that name_list is drawn from rank_gene_groups results.
+        If specified, collects mask for the called group and then takes only those cells specified.
+        If 'Complete', calculate correlation using full data
+        If 'Group', calculate correlation within the selected group.
+        If 'Rest', calculate corrlation for everything except the group
+    method : {‘pearson’, ‘kendall’, ‘spearman’} optional (default: 'pearson')
+        Which kind of correlation coefficient to use
+        pearson : standard correlation coefficient
+        kendall : Kendall Tau correlation coefficient
+        spearman : Spearman rank correlation
+    annotation_key: String, optional (default: None)
+        Allows to define the name of the anndata entry where results are stored.
     """
 
     # TODO: At the moment, only works for int identifiers

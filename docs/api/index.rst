@@ -1,5 +1,6 @@
 .. module:: scanpy
 .. automodule:: scanpy
+   :noindex:
 
 API
 ===
@@ -12,7 +13,6 @@ Import Scanpy as::
 .. note::
    Wrappers to external functionality are found in :mod:`scanpy.external`.
    Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
-
 
 Preprocessing: `pp`
 -------------------
@@ -27,7 +27,7 @@ Any transformation of the data matrix that is not a *tool*. Other than *tools*, 
 Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
-For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
+For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
 :func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.plotting`.
 
 .. autosummary::

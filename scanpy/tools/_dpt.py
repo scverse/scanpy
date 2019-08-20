@@ -37,25 +37,25 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
     version, which is able to deal with disconnected graphs [Wolf19]_ and can
     be run in a `hierarchical` mode by setting the parameter
     `n_branchings>1`. We recommend, however, to only use
-    :func:`~scanpy.api.tl.dpt` for computing pseudotime (`n_branchings=0`) and
-    to detect branchings via :func:`~scanpy.api.paga`. For pseudotime, you need
+    :func:`~scanpy.tl.dpt` for computing pseudotime (`n_branchings=0`) and
+    to detect branchings via :func:`~scanpy.paga`. For pseudotime, you need
     to annotate your data with a root cell. For instance::
 
         adata.uns['iroot'] = np.flatnonzero(adata.obs['cell_types'] == 'Stem')[0]
 
-    This requires to run :func:`~scanpy.api.pp.neighbors`, first. In order to
+    This requires to run :func:`~scanpy.pp.neighbors`, first. In order to
     reproduce the original implementation of DPT, use `method=='gauss'` in
     this. Using the default `method=='umap'` only leads to minor quantitative
     differences, though.
 
     .. versionadded:: 1.1
 
-    :func:`~scanpy.api.tl.dpt` also requires to run
-    :func:`~scanpy.api.tl.diffmap` first. As previously,
-    :func:`~scanpy.api.tl.dpt` came with a default parameter of ``n_dcs=10`` but
-    :func:`~scanpy.api.tl.diffmap` has a default parameter of ``n_comps=15``,
-    you need to pass ``n_comps=10`` in :func:`~scanpy.api.tl.diffmap` in order
-    to exactly reproduce previous :func:`~scanpy.api.tl.dpt` results.
+    :func:`~scanpy.tl.dpt` also requires to run
+    :func:`~scanpy.tl.diffmap` first. As previously,
+    :func:`~scanpy.tl.dpt` came with a default parameter of ``n_dcs=10`` but
+    :func:`~scanpy.tl.diffmap` has a default parameter of ``n_comps=15``,
+    you need to pass ``n_comps=10`` in :func:`~scanpy.tl.diffmap` in order
+    to exactly reproduce previous :func:`~scanpy.tl.dpt` results.
 
     Parameters
     ----------

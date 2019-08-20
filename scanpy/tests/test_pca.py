@@ -1,7 +1,9 @@
-import scanpy as sc
-import numpy as np
 import pytest
+import numpy as np
+from anndata import AnnData
 from scipy.sparse import csr_matrix
+
+import scanpy as sc
 
 A_list = [
     [0, 0, 7, 0, 0],
@@ -30,13 +32,14 @@ A_svd = np.array([
     [-1.50180389,  5.56886849,  1.64034442,  2.24476032, -0.05109001]
 ])
 
+
 @pytest.mark.parametrize('typ', [np.array, csr_matrix])
 def test_pca_transform(typ):
     A = typ(A_list, dtype='float32')
     A_pca_abs = np.abs(A_pca)
     A_svd_abs = np.abs(A_svd)
 
-    adata = sc.AnnData(A)
+    adata = AnnData(A)
 
     sc.pp.pca(adata, n_comps=4, zero_center=True, svd_solver='arpack', dtype='float64')
 

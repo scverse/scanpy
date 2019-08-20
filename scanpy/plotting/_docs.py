@@ -31,7 +31,7 @@ edges_width
 edges_color : matplotlib color(s), optional (default: 'grey')
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
 arrows
-    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
+    Show arrows (requires to run :func:`~scanpy.tl.rna_velocity` before).
 arrows_kwds
     Passed to :func:`~matplotlib.axes.Axes.quiver`\
 """
@@ -77,7 +77,7 @@ palette
      will be set by this palette.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
-    :func:`~scanpy.api.tl.set_figure_params`, defaults to `True`.
+    :func:`~scanpy.set_figure_params`, defaults to `True`.
 """
 _doc_scatter_panels = """\
 ncols

@@ -578,13 +578,29 @@ def ranking(adata, attr, keys, dictionary=None, indices=None,
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, jitter=True,
-           size=1, scale='width', order=None, multi_panel=None, show=None,
-           xlabel='', rotation=None, save=None, ax=None, **kwds):
+def violin(
+    adata,
+    keys,
+    groupby=None,
+    log=False,
+    use_raw=None,
+    stripplot=True,
+    jitter=True,
+    size=1,
+    scale='width',
+    order=None,
+    multi_panel=None,
+    show=None,
+    xlabel='',
+    rotation=None,
+    save=None,
+    ax=None,
+    **kwds
+):
     """\
     Violin plot.
 
-    Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
+    Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
@@ -602,10 +618,10 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
         Display keys in multiple panels also when `groupby is not None`.
     stripplot : `bool` optional (default: `True`)
         Add a stripplot on top of the violin plot.
-        See `seaborn.stripplot`.
+        See :func:`~seaborn.stripplot`.
     jitter : `float` or `bool`, optional (default: `True`)
         Add jitter to the stripplot (only when stripplot is True)
-        See `seaborn.stripplot`.
+        See :func:`~seaborn.stripplot`.
     size : int, optional (default: 1)
         Size of the jitter points.
     order : list of str, optional (default: `True`)
@@ -622,7 +638,7 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
         Rotation of xtick labels.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `seaborn.violinplot`.
+        Are passed to :func:`~seaborn.violinplot`.
 
     Returns
     -------
@@ -694,13 +710,17 @@ def violin(adata, keys, groupby=None, log=False, use_raw=None, stripplot=True, j
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
-        adata, obs_keys=None, use_raw=None, show=None, save=None, **kwds):
+    adata,
+    obs_keys=None,
+    use_raw=None,
+    show=None,
+    save=None,
+    **kwds
+):
     """\
     Hierarchically-clustered heatmap.
 
-    Wraps `seaborn.clustermap
-    <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__ for
-    :class:`~anndata.AnnData`.
+    Wraps :func:`seaborn.clustermap` for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
@@ -713,29 +733,18 @@ def clustermap(
         Use `raw` attribute of `adata` if present.
     {show_save_ax}
     **kwds : keyword arguments
-        Keyword arguments passed to `seaborn.clustermap
-        <https://seaborn.pydata.org/generated/seaborn.clustermap.html>`__.
+        Keyword arguments passed to :func:`~seaborn.clustermap`.
 
     Returns
     -------
-    If `show == False`, a `seaborn.ClusterGrid` object.
-
-    Notes
-    -----
-    The returned object has a savefig() method that should be used if you want
-    to save the figure object without clipping the dendrograms.
-
-    To access the reordered row indices, use:
-    clustergrid.dendrogram_row.reordered_ind
-
-    Column indices, use: clustergrid.dendrogram_col.reordered_ind
+    If `show == False`, a :class:`~seaborn.ClusterGrid` object
+    (see :func:`~seaborn.clustermap`).
 
     Examples
     --------
-    Soon to come with figures. In the meanwile, see
-    https://seaborn.pydata.org/generated/seaborn.clustermap.html.
+    Soon to come with figures. In the meanwile, see :func:`~seaborn.clustermap`.
 
-    >>> import scanpy.api as sc
+    >>> import scanpy as sc
     >>> adata = sc.datasets.krumsiek11()
     >>> sc.pl.clustermap(adata, obs_keys='cell_type')
     """
@@ -765,29 +774,49 @@ def clustermap(
 
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_categories=7,
-                   figsize=None,  dendrogram=False, gene_symbols=None,
-                   var_group_positions=None, var_group_labels=None, standard_scale=None,
-                   var_group_rotation=None, layer=None, stripplot=False, jitter=False, size=1,
-                   scale='width', order=None, swap_axes=False, show=None, save=None,
-                   row_palette='muted', **kwds):
+def stacked_violin(
+    adata,
+    var_names,
+    groupby=None,
+    log=False,
+    use_raw=None,
+    num_categories=7,
+    figsize=None,
+    dendrogram=False,
+    gene_symbols=None,
+    var_group_positions=None,
+    var_group_labels=None,
+    standard_scale=None,
+    var_group_rotation=None,
+    layer=None,
+    stripplot=False,
+    jitter=False,
+    size=1,
+    scale='width',
+    order=None,
+    swap_axes=False,
+    show=None,
+    save=None,
+    row_palette='muted',
+    **kwds
+):
     """\
     Stacked violin plots.
 
-    Makes a compact image composed of individual violin plots (from `seaborn.violinplot`)
+    Makes a compact image composed of individual violin plots (from :func:`~seaborn.violinplot`)
     stacked on top of each other. Useful to visualize gene expression per cluster.
 
-    Wraps `seaborn.violinplot` for :class:`~anndata.AnnData`.
+    Wraps :func:`seaborn.violinplot` for :class:`~anndata.AnnData`.
 
     Parameters
     ----------
     {common_plot_args}
     stripplot : `bool` optional (default: `True`)
         Add a stripplot on top of the violin plot.
-        See `seaborn.stripplot`.
+        See :func:`~seaborn.stripplot`.
     jitter : `float` or `bool`, optional (default: `True`)
         Add jitter to the stripplot (only when stripplot is True)
-        See `seaborn.stripplot`.
+        See :func:`~seaborn.stripplot`.
     size : int, optional (default: 1)
         Size of the jitter points.
     order : list of str, optional (default: `True`)
@@ -811,7 +840,7 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
          axes var_group_positions are no longer used
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `seaborn.violinplot`.
+        Are passed to :func:`~seaborn.violinplot`.
 
     Returns
     -------
@@ -819,9 +848,10 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
     Examples
     -------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.stacked_violin(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...                      groupby='bulk_labels', dendrogram=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.stacked_violin(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
@@ -1083,10 +1113,27 @@ def stacked_violin(adata, var_names, groupby=None, log=False, use_raw=None, num_
 
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
-            var_group_rotation=None, layer=None, standard_scale=None, swap_axes=False,
-            show_gene_labels=None, show=None, save=None, figsize=None, **kwds):
+def heatmap(
+    adata,
+    var_names,
+    groupby=None,
+    use_raw=None,
+    log=False,
+    num_categories=7,
+    dendrogram=False,
+    gene_symbols=None,
+    var_group_positions=None,
+    var_group_labels=None,
+    var_group_rotation=None,
+    layer=None,
+    standard_scale=None,
+    swap_axes=False,
+    show_gene_labels=None,
+    show=None,
+    save=None,
+    figsize=None,
+    **kwds
+):
     """\
     Heatmap of the expression values of genes.
 
@@ -1109,7 +1156,7 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `matplotlib.imshow`.
+        Are passed to :func:`matplotlib.pyplot.imshow`.
 
     Returns
     -------
@@ -1117,9 +1164,10 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Examples
     -------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.heatmap(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...               groupby='bulk_labels', dendrogram=True, swap_axes=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.heatmap(adata, markers, groupby='bulk_labels', dendrogram=True, swap_axes=True)
 
     Using var_names as dict:
 
@@ -1354,12 +1402,31 @@ def heatmap(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-            expression_cutoff=0., mean_only_expressed=False, color_map='Reds', dot_max=None,
-            dot_min=None, figsize=None, dendrogram=False, gene_symbols=None,
-            var_group_positions=None, standard_scale=None, smallest_dot=0.,
-            var_group_labels=None, var_group_rotation=None, layer=None, show=None,
-            save=None, **kwds):
+def dotplot(
+    adata,
+    var_names,
+    groupby=None,
+    use_raw=None,
+    log=False,
+    num_categories=7,
+    expression_cutoff=0.,
+    mean_only_expressed=False,
+    color_map='Reds',
+    dot_max=None,
+    dot_min=None,
+    figsize=None,
+    dendrogram=False,
+    gene_symbols=None,
+    var_group_positions=None,
+    standard_scale=None,
+    smallest_dot=0.,
+    var_group_labels=None,
+    var_group_rotation=None,
+    layer=None,
+    show=None,
+    save=None,
+    **kwds
+):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
@@ -1403,7 +1470,7 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `matplotlib.pyplot.scatter`.
+        Are passed to :func:`matplotlib.pyplot.scatter`.
 
     Returns
     -------
@@ -1411,9 +1478,10 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
     Examples
     -------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...               groupby='bulk_labels', dendrogram=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
@@ -1666,11 +1734,26 @@ def dotplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categor
 
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_categories=7,
-               figsize=None, dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
-               var_group_rotation=None, layer=None, standard_scale=None, swap_axes=False, show=None,
-               save=None, **kwds):
-
+def matrixplot(
+    adata,
+    var_names,
+    groupby=None,
+    use_raw=None,
+    log=False,
+    num_categories=7,
+    figsize=None,
+    dendrogram=False,
+    gene_symbols=None,
+    var_group_positions=None,
+    var_group_labels=None,
+    var_group_rotation=None,
+    layer=None,
+    standard_scale=None,
+    swap_axes=False,
+    show=None,
+    save=None,
+    **kwds
+):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
     If groupby is not given, the matrixplot assumes that all data belongs to a single
@@ -1684,7 +1767,7 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `matplotlib.pyplot.pcolor`.
+        Are passed to :func:`matplotlib.pyplot.pcolor`.
 
     Returns
     -------
@@ -1692,9 +1775,10 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.matrixplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ... groupby='bulk_labels', dendrogram=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.matrixplot(adata, markers, groupby='bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
@@ -1876,9 +1960,22 @@ def matrixplot(adata, var_names, groupby=None, use_raw=None, log=False, num_cate
 
 
 @doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
-def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
-               dendrogram=False, gene_symbols=None, var_group_positions=None, var_group_labels=None,
-               layer=None, show=None, save=None, figsize=None, **kwds):
+def tracksplot(
+    adata,
+    var_names,
+    groupby,
+    use_raw=None,
+    log=False,
+    dendrogram=False,
+    gene_symbols=None,
+    var_group_positions=None,
+    var_group_labels=None,
+    layer=None,
+    show=None,
+    save=None,
+    figsize=None,
+    **kwds
+):
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
     y values correspond to the var_name values and x is each of the cells. Best results
@@ -1892,7 +1989,7 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
     {common_plot_args}
     {show_save_ax}
     **kwds : keyword arguments
-        Are passed to `seaborn.heatmap`.
+        Are passed to :func:`~seaborn.heatmap`.
 
     Returns
     -------
@@ -1900,9 +1997,10 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
-    >>> sc.pl.tracksplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...                  'bulk_labels', dendrogram=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.tracksplot(adata, markers, 'bulk_labels', dendrogram=True)
 
     Using var_names as dict:
 
@@ -2053,8 +2151,15 @@ def tracksplot(adata, var_names, groupby, use_raw=None, log=False,
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_labels=False,
-               show=None, save=None):
+def dendrogram(
+    adata,
+    groupby,
+    dendrogram_key=None,
+    orientation='top',
+    remove_labels=False,
+    show=None,
+    save=None,
+):
     """Plots a dendrogram of the categories defined in `groupby`.
 
     See :func:`~scanpy.tl.dendrogram`.
@@ -2074,9 +2179,11 @@ def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_la
 
     Returns
     -------
+    :class:`matplotlib.axes.Axes`
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, 'bulk_labels')
     >>> sc.pl.dendrogram(adata, 'bulk_labels')
@@ -2091,8 +2198,16 @@ def dendrogram(adata, groupby, dendrogram_key=None, orientation='top', remove_la
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
-def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogram=True, figsize=None,
-                       show=None, save=None, **kwds):
+def correlation_matrix(
+    adata,
+    groupby,
+    show_correlation_numbers=False,
+    dendrogram=True,
+    figsize=None,
+    show=None,
+    save=None,
+    **kwds
+):
     """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
@@ -2112,14 +2227,16 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
         Format is (width, height)
     {show_save_ax}
     **kwds : keyword arguments
-        Only if `show_correlation` is True: Are passed to `matplotlib.pyplot.pcolormesh` when plotting
-        the correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
+        Only if `show_correlation` is True:
+        Are passed to :func:`matplotlib.pyplot.pcolormesh` when plotting the
+        correlation heatmap. Useful values to pas are `vmax`, `vmin` and `cmap`.
 
     Returns
     -------
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, 'bulk_labels')
     >>> sc.pl.correlation(adata, 'bulk_labels')
@@ -2227,8 +2344,16 @@ def correlation_matrix(adata, groupby, show_correlation_numbers=False, dendrogra
     return axs
 
 
-def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
-                       num_categories=7, layer=None, gene_symbols=None):
+def _prepare_dataframe(
+    adata,
+    var_names,
+    groupby=None,
+    use_raw=None,
+    log=False,
+    num_categories=7,
+    layer=None,
+    gene_symbols=None,
+):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
     defined by group by and the columns correspond to var_names.
@@ -2316,8 +2441,15 @@ def _prepare_dataframe(adata, var_names, groupby=None, use_raw=None, log=False,
     return categories, obs_tidy
 
 
-def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
-                               left_adjustment=-0.3, right_adjustment=0.3, rotation=None, orientation='top'):
+def _plot_gene_groups_brackets(
+    gene_groups_ax,
+    group_positions,
+    group_labels,
+    left_adjustment=-0.3,
+    right_adjustment=0.3,
+    rotation=None,
+    orientation='top',
+):
     """
     Draws brackets that represent groups of genes on the give axis.
     For best results, this axis is located on top of an image whose
@@ -2433,10 +2565,14 @@ def _plot_gene_groups_brackets(gene_groups_ax, group_positions, group_labels,
     gene_groups_ax.tick_params(axis='x', bottom=False, labelbottom=False, labeltop=False)
 
 
-def _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                         var_names=None,
-                                         var_group_labels=None,
-                                         var_group_positions=None):
+def _reorder_categories_after_dendrogram(
+    adata,
+    groupby,
+    dendrogram,
+    var_names=None,
+    var_group_labels=None,
+    var_group_positions=None,
+):
     """
     Function used by plotting functions that need to reorder the the groupby observations
     based on the dendrogram results.

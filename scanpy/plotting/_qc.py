@@ -40,7 +40,7 @@ def highest_expr_genes(
     gene_symbols : `str`, optional (default:None)
         Key for field in .var that stores gene symbols if you do not want to use .var_names.
     **kwds : keyword arguments
-        Are passed to `seaborn.boxplot`.
+        Are passed to :func:`~seaborn.boxplot`.
 
     Returns
     -------

@@ -43,9 +43,9 @@ def paga_compare(
     """Scatter and PAGA graph side-by-side.
 
     Consists in a scatter plot and the abstracted graph. See
-    :func:`~scanpy.api.pl.paga` for all related parameters.
+    :func:`~scanpy.pl.paga` for all related parameters.
 
-    See :func:`~scanpy.api.pl.paga_path` for visualizing gene changes along paths
+    See :func:`~scanpy.pl.paga_path` for visualizing gene changes along paths
     through the abstracted graph.
 
     Additional parameters are as follows.
@@ -55,13 +55,13 @@ def paga_compare(
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     kwds_scatter : `dict`
-        Keywords for :func:`~scanpy.api.pl.scatter`.
+        Keywords for :func:`~scanpy.pl.scatter`.
     kwds_paga : `dict`
-        Keywords for :func:`~scanpy.api.pl.paga`.
+        Keywords for :func:`~scanpy.pl.paga`.
 
     Returns
     -------
-    A list of `matplotlib.axes.Axes` if `show` is `False`.
+    A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
     """
     axs, _, _, _ = utils.setup_axes(panels=[0, 1],
                                     right_margin=right_margin)
@@ -263,8 +263,8 @@ def paga(
     """Plot the PAGA graph through thresholding low-connectivity edges.
 
     Compute a coarse-grained layout of the data. Reuse this by passing
-    `init_pos='paga'` to :func:`~scanpy.api.tl.umap` or
-    :func:`~scanpy.api.tl.draw_graph` and obtain embeddings with more meaningful
+    `init_pos='paga'` to :func:`~scanpy.tl.umap` or
+    :func:`~scanpy.tl.draw_graph` and obtain embeddings with more meaningful
     global topology [Wolf19]_.
 
     This uses ForceAtlas2 or igraph's layout algorithms for most layouts [Csardi06]_.
@@ -282,7 +282,7 @@ def paga(
         passing {'degree_dashed', 'degree_solid'}.
     labels : `None`, `str`, `list`, `dict`, optional (default: `None`)
         The node labels. If `None`, this defaults to the group labels stored in
-        the categorical for which :func:`~scanpy.api.tl.paga` has been computed.
+        the categorical for which :func:`~scanpy.tl.paga` has been computed.
     pos : `np.ndarray`, filename of `.gdf` file,  optional (default: `None`)
         Two-column array-like storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
@@ -292,7 +292,7 @@ def paga(
         Fruchterman-Reingold, 'rt' stands for Reingold Tilford. 'eq_tree' stands
         for 'eqally spaced tree'. All but 'fa' and 'eq_tree' are igraph
         layouts. All other igraph layouts are also permitted. See also parameter
-        `pos` and :func:`~scanpy.api.tl.draw_graph`.
+        `pos` and :func:`~scanpy.tl.draw_graph`.
     init_pos : `np.ndarray`, optional (default: `None`)
         Two-column array storing the x and y coordinates for initializing the
         layout.
@@ -321,8 +321,7 @@ def paga(
     fontsize : `int` (default: `None`)
         Font size for node labels.
     text_kwds : keywords for `matplotlib.text`
-        See `here
-        <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.text.html#matplotlib.axes.Axes.text>`_.
+        See :meth:`~matplotlib.axes.Axes.text`.
     node_size_scale : `float` (default: 1.0)
         Increase or decrease the size of the nodes.
     node_size_power : `float` (default: 0.5)
@@ -348,8 +347,7 @@ def paga(
     cax : :class:`~matplotlib.axes.Axes`
         A matplotlib axes object for a potential colorbar.
     cb_kwds : colorbar keywords
-        See `here
-        <https://matplotlib.org/api/colorbar_api.html#matplotlib.colorbar.ColorbarBase>`__,
+        See :class:`~matplotlib.colorbar.ColorbarBase`,
         for instance, `ticks`.
     add_pos : `bool`, optional (default: `True`)
         Add the positions to `adata.uns['paga']`.

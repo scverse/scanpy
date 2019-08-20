@@ -29,7 +29,7 @@ def magic(adata,
 
     Parameters
     ----------
-    adata : :class:`~scanpy.api.AnnData`
+    adata : :class:`~anndata.AnnData`
         An anndata file with `.raw` attribute representing raw counts.
     name_list : `list`, `'all_genes'`, or `'pca_only'`, optional (default: `'all_genes'`)
         Denoised genes to return. Default is all genes, but this
@@ -79,18 +79,18 @@ def magic(adata,
 
     Examples
     --------
-    >>> import scanpy.api as sc
-    >>> import magic
+    >>> import scanpy as sc
+    >>> import scanpy.external as sce
     >>> adata = sc.datasets.paul15()
     >>> sc.pp.normalize_per_cell(adata)
     >>> sc.pp.sqrt(adata)  # or sc.pp.log1p(adata)
-    >>> adata_magic = sc.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], k=5)
+    >>> adata_magic = sce.pp.magic(adata, name_list=['Mpo', 'Klf1', 'Ifitm1'], k=5)
     >>> adata_magic.shape
     (2730, 3)
-    >>> sc.pp.magic(adata, name_list='pca_only', k=5)
+    >>> sce.pp.magic(adata, name_list='pca_only', k=5)
     >>> adata.obsm['X_magic'].shape
     (2730, 100)
-    >>> sc.pp.magic(adata, name_list='all_genes', k=5)
+    >>> sce.pp.magic(adata, name_list='all_genes', k=5)
     >>> adata.X.shape
     (2730, 3451)
     """

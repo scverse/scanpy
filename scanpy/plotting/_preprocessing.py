@@ -17,7 +17,7 @@ def highly_variable_genes(adata_or_result, log=False, show=None, save=None, high
     Parameters
     ----------
     adata : :class:`~anndata.AnnData`, `np.recarray`
-        Result of :func:`~scanpy.api.pp.highly_variable_genes`.
+        Result of :func:`~scanpy.pp.highly_variable_genes`.
     log : `bool`
         Plot on logarithmic axes.
     show : bool, optional (default: `None`)
@@ -33,7 +33,7 @@ def highly_variable_genes(adata_or_result, log=False, show=None, save=None, high
     if highly_variable_genes:
         gene_subset = result.highly_variable
     else:
-        gene_subset = result.gene_subset        
+        gene_subset = result.gene_subset
     means = result.means
     dispersions = result.dispersions
     dispersions_norm = result.dispersions_norm
@@ -71,7 +71,7 @@ def filter_genes_dispersion(result, log=False, show=None, save=None):
     Parameters
     ----------
     result : `np.recarray`
-        Result of :func:`~scanpy.api.pp.filter_genes_dispersion`.
+        Result of :func:`~scanpy.pp.filter_genes_dispersion`.
     log : `bool`
         Plot on logarithmic axes.
     show : bool, optional (default: `None`)
@@ -79,6 +79,6 @@ def filter_genes_dispersion(result, log=False, show=None, save=None):
     save : `bool` or `str`, optional (default: `None`)
         If `True` or a `str`, save the figure. A string is appended to the
         default filename. Infer the filetype if ending on {{'.pdf', '.png', '.svg'}}.
-    """    
+    """
     highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=False)
     

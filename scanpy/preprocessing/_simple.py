@@ -321,7 +321,7 @@ def sqrt(
         The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
         Rows correspond to cells and columns to genes.
     copy
-        If an :class:`~scanpy.api.AnnData` is passed,
+        If an :class:`~anndata.AnnData` object is passed,
         determines whether a copy is returned.
     chunked
         Process the data matrix in chunks, which will save memory.
@@ -554,12 +554,12 @@ def normalize_per_cell(
 
     .. warning::
         .. deprecated:: 1.3.7
-            Use :func:`~scanpy.api.pp.normalize_total` instead.
+            Use :func:`~scanpy.pp.normalize_total` instead.
             The new function is equivalent to the present
             function, except that
 
             * the new function doesn't filter cells based on `min_counts`,
-              use :func:`~scanpy.api.pp.filter_cells` if filtering is needed.
+              use :func:`~scanpy.pp.filter_cells` if filtering is needed.
             * some arguments were renamed
             * `copy` is replaced by `inplace`
 
