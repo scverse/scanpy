@@ -19,8 +19,8 @@ with warnings.catch_warnings():
 
 
 nitpicky = True       # Warn about broken links
-nitpick_ignore = []   # populated below
 needs_sphinx = '1.7'  # autosummary bugfix
+suppress_warnings = ['ref.citation']
 
 # General information
 project = 'Scanpy'
@@ -106,10 +106,10 @@ gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(html_contex
 
 
 def setup(app):
+    app.warningiserror = True
     app.add_stylesheet('css/custom.css')
     app.connect('autodoc-process-docstring', insert_function_images)
     app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
-
 
 # -- Options for other output formats ------------------------------------------
 
@@ -194,6 +194,16 @@ if os.environ.get('DEBUG') is not None:
 
 # -- Suppress link warnings ----------------------------------------------------
 
+nitpick_ignore = [
+    # Will probably be documented
+    ('py:class', 'scanpy._settings.Verbosity'),
+    # Will probably be removed: https://github.com/theislab/scanpy/issues/792
+    ('py:func', 'scanpy.tl.rna_velocity'),
+    # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
+    ('py:class', 'seaborn.ClusterGrid'),
+    # Bug: https://github.com/agronholm/sphinx-autodoc-typehints/issues/96
+    ('py:class', 'typing.Textio'),
+]
 
 for mod_name in [
     'pp', 'tl', 'pl',

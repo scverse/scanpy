@@ -1,7 +1,7 @@
 from copy import copy
 from functools import singledispatch
 from collections import abc
-from typing import Any, Union, Optional, Iterable, Dict
+from typing import Any, Union, Optional, Iterable, Dict, Mapping
 
 from anndata import AnnData
 import pandas as pd
@@ -100,6 +100,7 @@ def biomart_annotations(
     --------
     Retrieve genes coordinates and chromosomes
 
+    >>> import scanpy as sc
     >>> annot = sc.queries.biomart_annotations(
             "hsapiens",
             ["ensembl_gene_id", "start_position", "end_position", "chromosome_name"],
@@ -125,12 +126,12 @@ def gene_coordinates(
     Parameters
     ----------
     {doc_org}
-    gene_name :
+    gene_name
         The gene symbol (e.g. "hgnc_symbol" for human) for which to retrieve
         coordinates.
-    gene_attr : `str`, optional (default: "external_gene_name")
+    gene_attr
         The biomart attribute the gene symbol should show up for.
-    chr_exclude :
+    chr_exclude
         A list of chromosomes to exclude from query.
     {doc_host}
     {doc_use_cache}
@@ -141,6 +142,7 @@ def gene_coordinates(
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> sc.queries.gene_coordinates("hsapiens", "MT-TF")
     """
     res = simple_query(
@@ -180,6 +182,7 @@ def mitochondrial_genes(
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> mito_gene_names = sc.queries.mitochondrial_genes("hsapiens")
     >>> mito_ensembl_ids = sc.queries.mitochondrial_genes("hsapiens", attrname="ensembl_gene_id")
     """
@@ -198,13 +201,12 @@ def enrich(
     container: Iterable[str],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: dict = {}
+    gprofiler_kwargs: Mapping[str, Any] = {}
 ) -> pd.DataFrame:
     """\
     Get enrichment for DE results.
 
-    This is a thin convenience wrapper around the very useful
-    `gprofiler <https://pypi.org/project/gprofiler-official/#description>`_.
+    This is a thin convenience wrapper around the very useful gprofiler_.
 
     This method dispatches on the first argument, leading to the following two
     signatures::
@@ -215,6 +217,8 @@ def enrich(
     Where::
 
         enrich(adata, group, key, ...) = enrich(adata.uns[key]["names"][group], ...)
+
+    .. _gprofiler: https://pypi.org/project/gprofiler-official/#description
 
     Parameters
     ----------
@@ -228,7 +232,7 @@ def enrich(
         Key in `uns` to find group under.
     {doc_org}
     gprofiler_kwargs
-        Keyword arguments to pass to :func:`gprofiler.GProfiler.profile`.
+        Keyword arguments to pass to `GProfiler.profile`, see gprofiler_.
 
     Returns
     -------
@@ -238,6 +242,7 @@ def enrich(
     --------
     Using `sc.queries.enrich` on a list of genes:
 
+    >>> import scanpy as sc
     >>> sc.queries.enrich(['Klf4', 'Pax5', 'Sox2', 'Nanog'], org="hsapiens")
 
     Using `sc.queries.enrich` on an :class:`anndata.AnnData` object:

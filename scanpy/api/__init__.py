@@ -236,8 +236,6 @@ Represent data as a neighborhood structure, usually a knn graph.
    Neighbors
 
 
-.. _settings:
-
 Settings
 --------
 

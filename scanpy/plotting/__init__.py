@@ -116,6 +116,7 @@ Marker genes
    pl.rank_genes_groups_heatmap
    pl.rank_genes_groups_dotplot
    pl.rank_genes_groups_matrixplot
+   pl.rank_genes_groups_tracksplot
 
 Simulations
 ~~~~~~~~~~~
