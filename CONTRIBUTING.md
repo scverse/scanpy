@@ -31,13 +31,21 @@ and *try* to stick to 80-character lines.
 In some cases, wider lines might improve readability, in most cases, not.
 Docstrings should always be 80 characters.
 
-### Docs
+### Docs and type annotations
 We use the numpydoc style for writing docstrings.
-Either take a look at any Scanpy or Numpy function or
-[here](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html).
+Look at [`sc.tl.louvain`][] as an example for everything mentioned here:
 
 The `Params` abbreviation is a legit replacement for `Parameters`.
+There are two ways of documenting parameter types:
 
+1. In most cases, the type annotations you add to function parameters should be enough.
+   Use the [`typing`](https://docs.python.org/3/library/typing.html) module for containers,
+   e.g. `Sequence`s (like `list`), `Iterable`s (like `set`), and `Mapping`s (like `dict`).
+   Always specify what these contain, e.g. `{'a': (1, 2)}` → `Mapping[str, Tuple[int, int]]`.
+   If you can’t use one of those, use a concrete class like `AnnData`.
+2. If your parameter only accepts an enumeration of strings, specify them like so:
+   ``{`elem-1`, 'elem-2'}``. These contain `a`–`z`, `0`-`9`, and sometimes `.`, `_` or `-`.
+   
 The `Returns` section deserves special attention:
 There are three types of return sections – prose, tuple, and a mix of both.
 
@@ -48,6 +56,8 @@ There are three types of return sections – prose, tuple, and a mix of both.
    or by separation with a colon, as in parameters.
 3. Mix of prose and tuple is relevant in complicated cases,
    e.g. when you want to describe that you *added something as annotation to an `AnnData` object*.
+
+[`sc.tl.louvain`]: https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90
 
 #### Examples
 For simple cases, use prose as in [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
