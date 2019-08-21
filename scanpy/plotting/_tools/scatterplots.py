@@ -162,10 +162,14 @@ def embedding(
             ax = fig.add_subplot(111, **args_3d)
 
     # turn vmax and vmin into a sequence
-    if not isinstance(vmax, Sequence):
+    if not isinstance(vmax, List):
         vmax = [vmax]
-    if not isinstance(vmin, Sequence):
+    if not isinstance(vmin, List):
         vmin = [vmin]
+
+    if 's' not in kwargs:
+        kwargs['s'] = 120000 / _data_points.shape[0]
+    size = kwargs.pop('s')
 
     ###
     # make the plots
@@ -222,10 +226,6 @@ def embedding(
                 )
                 ax.set_title(value_to_plot)
 
-        if 's' not in kwargs:
-            kwargs['s'] = 120000 / _data_points.shape[0]
-        size = kwargs.pop('s')
-
         # check vmin and vmax options
         kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
 
@@ -251,7 +251,6 @@ def embedding(
                 point = np.sqrt(size)
                 white_size = (point + (point * white_width)*2)**2
                 black_size = (np.sqrt(white_size) + (point * black_width)*2)**2
-
                 # the default black and white colors can be changes using
                 # the contour_config parameter
                 black_color, white_color = contour_config['color']
@@ -275,7 +274,7 @@ def embedding(
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
             cax = ax.scatter(
-                _data_points[:, 0], _data_points[:, 1],
+                _data_points[:, 0], _data_points[:, 1], s=size,
                 marker=".", c=color_vector, rasterized=settings._vector_friendly,
                 **kwargs,
             )
@@ -377,7 +376,6 @@ def _get_vmin_vmax(
             if isinstance(v_value, str) and v_value.startswith('q'):
                 # interpret value of vmin/vmax as quantile with the following syntax 'q99'
                 v_value = np.quantile(color_vector, q=float("0.{}".format(v_value[1:])))
-#                v_value = np.quantile(color_vector, q=int(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
