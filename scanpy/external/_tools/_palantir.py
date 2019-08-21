@@ -6,7 +6,7 @@ from scanpy import logging as logg
 
 
 def palantir(adata: AnnData):
-    """
+    """\
     Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 
     Palantir is an algorithm to align cells along differentiation trajectories.
@@ -18,7 +18,7 @@ def palantir(adata: AnnData):
     from diverse technologies such as Mass cytometry and single cell RNA-seq.
 
     .. note::
-        More information and bug reports `here <https://github.com/dpeerlab/Palantir>`__.
+       More information and bug reports `here <https://github.com/dpeerlab/Palantir>`__.
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def palantir(adata: AnnData):
 
     To view the plots, it is recommended to run Jupyter notebook
 
-    *Load sample data*
+    **Load sample data**
 
     >>> adata = sc.read_csv(filename="Palantir/data/marrow_sample_scseq_counts.csv.gz")
 
@@ -124,13 +124,13 @@ def palantir(adata: AnnData):
     >>> pr_res = d.palantir.core.run_palantir(d.ms_data, start_cell, num_waypoints=500)
     >>> palantir.plot.plot_palantir_results(pr_res, d.tsne)
 
-    - note that a `start_cell` must be defined for every data set. The start cell for
-    this dataset was chosen based on high expression of CD34.
+    .. note::
+       A `start_cell` must be defined for every data set. The start cell for
+       this dataset was chosen based on high expression of CD34.
 
     For further demonstration of palantir visualizations please follow this notebook
     `Palantir_sample_notebook.ipynb <https://github.com/dpeerlab/Palantir/blob/master/notebooks/Palantir_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*, amongst other things.
-
     """
 
     logg.info('Palantir diffusion maps')

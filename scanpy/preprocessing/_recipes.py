@@ -1,23 +1,35 @@
 """Preprocessing recipes from the literature
 """
+from anndata import AnnData
 
 from . import _simple as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
 from .. import logging as logg
 
 
-def recipe_weinreb17(adata, log=True, mean_threshold=0.01, cv_threshold=2,
-                     n_pcs=50, svd_solver='randomized', random_state=0,
-                     copy=False):
-    """Normalization and filtering as of [Weinreb17]_.
+def recipe_weinreb17(
+    adata: AnnData,
+    log: bool = True,
+    mean_threshold=0.01,
+    cv_threshold=2,
+    n_pcs=50,
+    svd_solver='randomized',
+    random_state=0,
+    copy: bool = False,
+):
+    """\
+    Normalization and filtering as of [Weinreb17]_.
 
-    Expects non-logarithmized data. If using logarithmized data, pass `log=False`.
+    Expects non-logarithmized data.
+    If using logarithmized data, pass `log=False`.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    copy : bool (default: False)
+    log
+        Logarithmize data?
+    copy
         Return a copy if true.
     """
     from scipy.sparse import issparse

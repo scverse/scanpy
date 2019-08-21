@@ -2,7 +2,7 @@
 Computes a dendrogram based on a given categorical observation.
 """
 
-from typing import Optional, List
+from typing import Optional, Sequence
 import pandas as pd
 from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
@@ -13,15 +13,17 @@ from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
 
 
 @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
-def dendrogram(adata: AnnData, groupby: str,
-               n_pcs: Optional[int]=None,
-               use_rep: Optional[str]=None,
-               var_names: Optional[List[str]]=None,
-               use_raw: Optional[bool]=None,
-               cor_method: Optional[str]='pearson',
-               linkage_method: Optional[str]='complete',
-               key_added: Optional[str]=None) -> None:
-
+def dendrogram(
+    adata: AnnData,
+    groupby: str,
+    n_pcs: Optional[int] = None,
+    use_rep: Optional[str] = None,
+    var_names: Optional[Sequence[str]] = None,
+    use_raw: Optional[bool] = None,
+    cor_method: str = 'pearson',
+    linkage_method: str = 'complete',
+    key_added: Optional[str] = None,
+) -> None:
     """\
     Computes a hierarchical clustering for the given `groupby` categories.
 
@@ -41,37 +43,40 @@ def dendrogram(adata: AnnData, groupby: str,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix
     {n_pcs}
     {use_rep}
-    var_names : `list of str` (default: None)
-        List of var_names to use for computing the hierarchical clustering. If `var_names` is given,
-        then `use_rep` and `n_pcs` is ignored.
-    use_raw : `bool`, optional (default: None)
-        Only when `var_names` is not None. Use `raw` attribute of `adata` if present.
-    cor_method : `str`, optional (default: `"pearson"`)
-        correlation method to use. Options are 'pearson', 'kendall', and 'spearman'
-    linkage_method : `str`, optional (default: `"complete"`)
-        linkage method to use. See https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+    var_names
+        List of var_names to use for computing the hierarchical clustering.
+        If `var_names` is given, then `use_rep` and `n_pcs` is ignored.
+    use_raw
+        Only when `var_names` is not None.
+        Use `raw` attribute of `adata` if present.
+    cor_method
+        correlation method to use.
+        Options are 'pearson', 'kendall', and 'spearman'
+    linkage_method
+        linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
-    key_added : : `str`, optional (default: `None`)
-        By default, the dendrogram information is added to `.uns['dendrogram_' + groupby]`. Notice
-        that the `groupby` information is added to the dendrogram.
+    key_added
+        By default, the dendrogram information is added to
+        `.uns[f'dendrogram_{{groupby}}']`.
+        Notice that the `groupby` information is added to the dendrogram.
 
     Returns
     -------
-    adata.uns['dendrogram'] (or instead of 'dendrogram' the value selected for `key_added`) is updated
-    with the dendrogram information
+    `adata.uns['dendrogram']` (or instead of 'dendrogram' the value selected
+    for `key_added`) is updated with the dendrogram information
 
     Examples
     --------
-
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, groupby='bulk_labels')
     >>> sc.pl.dendrogram(adata)
-    >>> sc.pl.dotplot(adata, ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ'],
-    ...               groupby='bulk_labels', dendrogram=True)
+    >>> markers = ['C1QA', 'PSAP', 'CD79A', 'CD79B', 'CST3', 'LYZ']
+    >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
     if groupby not in adata.obs_keys():
         raise ValueError('groupby has to be a valid observation. Given value: {}, '

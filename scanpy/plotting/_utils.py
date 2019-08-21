@@ -439,7 +439,7 @@ def setup_axes(
 
 
 def scatter_base(
-    Y,
+    Y: np.ndarray,
     colors='blue',
     sort_order=True,
     alpha=None,
@@ -461,9 +461,9 @@ def scatter_base(
 
     Parameters
     ----------
-    Y : np.ndarray
+    Y
         Data array.
-    projection : {'2d', '3d'}
+    projection: {`'2d'`, `'3d'`}
 
     Returns
     -------

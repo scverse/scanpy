@@ -8,6 +8,7 @@ from typing import Union, Optional, Tuple, Collection
 import numba
 import numpy as np
 import scipy as sp
+from numpy.random.mtrand import RandomState
 from scipy.sparse import issparse, isspmatrix_csr, csr_matrix, spmatrix
 from sklearn.utils import sparsefuncs
 from pandas.api.types import is_categorical_dtype
@@ -321,7 +322,7 @@ def sqrt(
         The (annotated) data matrix of shape ``n_obs`` × ``n_vars``.
         Rows correspond to cells and columns to genes.
     copy
-        If an :class:`~scanpy.api.AnnData` is passed,
+        If an :class:`~anndata.AnnData` object is passed,
         determines whether a copy is returned.
     chunked
         Process the data matrix in chunks, which will save memory.
@@ -353,7 +354,7 @@ def pca(
     n_comps: int = N_PCS,
     zero_center: Optional[bool] = True,
     svd_solver: str = 'auto',
-    random_state: int = 0,
+    random_state: Optional[Union[int, RandomState]] = 0,
     return_info: bool = False,
     use_highly_variable: Optional[bool] = None,
     dtype: str = 'float32',
@@ -554,12 +555,12 @@ def normalize_per_cell(
 
     .. warning::
         .. deprecated:: 1.3.7
-            Use :func:`~scanpy.api.pp.normalize_total` instead.
+            Use :func:`~scanpy.pp.normalize_total` instead.
             The new function is equivalent to the present
             function, except that
 
             * the new function doesn't filter cells based on `min_counts`,
-              use :func:`~scanpy.api.pp.filter_cells` if filtering is needed.
+              use :func:`~scanpy.pp.filter_cells` if filtering is needed.
             * some arguments were renamed
             * `copy` is replaced by `inplace`
 
@@ -945,7 +946,7 @@ def downsample_counts(
     adata: AnnData,
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
-    random_state: Optional[int] = 0,
+    random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -1052,8 +1053,13 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 
 
 @numba.njit(cache=True)
-def _downsample_array(col: np.array, target: int, random_state: int=0,
-                      replace: bool = True, inplace: bool=False):
+def _downsample_array(
+    col: np.array,
+    target: int,
+    random_state: Optional[Union[int, RandomState]] = 0,
+    replace: bool = True,
+    inplace: bool = False,
+):
     """
     Evenly reduce counts in cell to target amount.
 
