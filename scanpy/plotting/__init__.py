@@ -88,6 +88,7 @@ Embeddings
    pl.umap
    pl.diffmap
    pl.draw_graph
+   pl.embedding
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering
