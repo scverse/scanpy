@@ -60,7 +60,7 @@ If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image fr
 Troubleshooting
 ~~~~~~~~~~~~~~~
 
-If ou get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or::
+If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or::
 
     pip install --user scanpy
 
