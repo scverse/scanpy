@@ -109,6 +109,7 @@ def setup(app):
     app.warningiserror = True
     app.add_stylesheet('css/custom.css')
     app.connect('autodoc-process-docstring', insert_function_images)
+    app.connect('build-finished', show_param_warnings)
     app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
 
 # -- Options for other output formats ------------------------------------------
@@ -175,6 +176,39 @@ def scanpy_parse_returns_section(self, section):
 
 
 NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
+
+
+# -- Warn for non-annotated params ---------------------------------------------
+
+
+_format_docutils_params_orig = NumpyDocstring._format_docutils_params
+param_warnings = {}
+
+
+def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
+    for _name, _type, _desc in fields:
+        if not _type: continue
+        set_item = r"`'[a-z0-9_.-]+'`"
+        if re.fullmatch(rf"{{{set_item}(, {set_item})*}}", _type): continue
+        param_warnings.setdefault((self._name, self._obj), []).append((_name, _type))
+    return _format_docutils_params_orig(self, fields, field_role, type_role)
+
+
+def show_param_warnings(app, exception):
+    import inspect
+    for (fname, fun), params in param_warnings.items():
+        _, line = inspect.getsourcelines(fun)
+        file_name = inspect.getsourcefile(fun)
+        params_str = '\n'.join(f'\t{n}: {t}' for n, t in params)
+        warnings.warn_explicit(
+            f'\nParameters in `{fname}` not set-like: {{`elm-1`, `s_el.2`}}.\n'
+            'Convert to this format or replace with type annotations:\n'
+            + params_str,
+            UserWarning, file_name, line,
+        )
+
+
+NumpyDocstring._format_docutils_params = scanpy_log_param_types
 
 
 # -- Debug code ----------------------------------------------------------------
