@@ -30,6 +30,8 @@ def plot_scatter(
     edges: bool = False,
     edges_width: float = 0.1,
     edges_color: Union[str, Sequence[float], Sequence[str]] = 'grey',
+    add_contour: Optional[bool] = False,
+    contour_config: Optional[dict] = {'color': ['black', 'white'], 'edge_width': [0.3, 0.05]},
     arrows: bool = False,
     arrows_kwds: Optional[Mapping[str, Any]] = None,
     groups: Optional[str] = None,
@@ -196,6 +198,7 @@ def plot_scatter(
 
         if 's' not in kwargs:
             kwargs['s'] = 120000 / _data_points.shape[0]
+        size = kwargs.pop('s')
 
         # make the scatter plot
         if projection == '3d':
@@ -205,6 +208,40 @@ def plot_scatter(
                 **kwargs,
             )
         else:
+            if add_contour:
+                # the contour is a black edge added around connected clusters.
+                # To add a contour
+                # three overlapping scatter plots are drawn:
+                # First black dots with slightly larger size,
+                # then, white dots a bit smaller, but still larger
+                # than the final dots. Then the final dots are drawn
+                # with some transparency.
+
+                black_width, white_width = contour_config['edge_width']
+                point = np.sqrt(size)
+                white_size = (point + (point * white_width)*2)**2
+                black_size = (np.sqrt(white_size) + (point * black_width)*2)**2
+
+                black_color, white_color = contour_config['color']
+
+                # remove edge from kwargs if present
+                # because edge needs to be set to None
+                kwargs['edgecolor'] = 'none'
+
+                # remove alpha for contour
+                alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
+
+                ax.scatter(
+                    _data_points[:, 0], _data_points[:, 1], s=black_size,
+                    marker=".", c=black_color, rasterized=settings._vector_friendly,
+                    **kwargs)
+                ax.scatter(
+                    _data_points[:, 0], _data_points[:, 1], s=white_size,
+                    marker=".", c=white_color, rasterized=settings._vector_friendly,
+                    **kwargs)
+                # if user did not set alpha, set alpha to 0.7
+                kwargs['alpha'] = 0.7 if alpha is None else alpha
+
             cax = ax.scatter(
                 _data_points[:, 0], _data_points[:, 1],
                 marker=".", c=color_vector, rasterized=settings._vector_friendly,
