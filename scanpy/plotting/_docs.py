@@ -67,6 +67,7 @@ color_map
     Color map to use for continous variables. Anything that works for `cmap`
     argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
     `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
+    The default color_map can be set using :func:`~scanpy.settings.set_figure_params` 
 palette
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid :class:`~matplotlib.colors.Colormap` name like `'Set2'` or `'tab20'`,
@@ -77,7 +78,27 @@ palette
      will be set by this palette.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
-    :func:`~scanpy.api.tl.set_figure_params`, defaults to `True`.
+    :func:`~scanpy.settings.set_figure_params`, defaults to `True`.
+vmin
+    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
+    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `qN`, 
+    this is interpreted as a vmin=quantile .N. For example vmin='q01' is interpreted as 
+    the 0.01 quantile. If vmin is function, then vmin is interpreted as the return value
+    of the function over the list of values to plot. For example to set vmin tp the mean of
+    the values to plot, `def my_vmin(values): return np.mean(values)` and then 
+    set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
+    as defined by matplotlib `scatter` function. When making multiple plots, vmin can 
+    be a list of values, one for each plot. For example `vmin=[0.1, 'q1', None, my_vmin]
+vmax
+    Maximum value to plot. The format is the same as for `vmin`
+add_contour
+    If set to True, this will add a thin border around groups of dots. In some situations
+    this can enhance the aesthetics of the resulting image 
+contour_config
+    Used to adjust the add_contour parameters. This is a dictionary with two keys: 'color'
+    and 'edge_width'. 'color' should be a tuple with the outermost and innermost colors to use
+    and 'edge_width' should be a tuple with the with for the outermost and for the innermost 
+    colors. The edge unit is fraction with respect to the size of the scatterplot dot.      
 """
 _doc_scatter_panels = """\
 ncols
