@@ -1,7 +1,7 @@
 from anndata import AnnData
 import scanpy as sc
 import pandas as pd
-
+import numpy as np
 
 def test_cell_hashing():
     X = np.ones((10, 10))
