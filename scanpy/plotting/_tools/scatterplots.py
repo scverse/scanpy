@@ -1,5 +1,5 @@
 from collections import abc
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
+from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
 from anndata import AnnData
@@ -45,8 +45,8 @@ def embedding(
     legend_fontweight: str = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    vmax: Union[float, str, callable, Sequence, None] = None,
-    vmin: Union[float, str, callable, Sequence, None] = None,
+    vmax: Union[float, str, Callable[[Sequence[float]], float], Sequence[Union[str, float, Callable[[Sequence[float]], float]]], None] = None,
+    vmin: Union[float, str, Callable[[Sequence[float]], float], Sequence[Union[str, float, Callable[[Sequence[float]], float]]], None] = None,
     add_contour: Optional[bool] = False,
     contour_config: Optional[dict] = {'color': ('black', 'white'), 'edge_width': (0.3, 0.05)},
     ncols: int = 4,
@@ -64,8 +64,9 @@ def embedding(
 
     Parameters
     ----------
-    basis: Name of the `obsm` basis to use. Usually, in `obsm` the basis is stored as
-           'X_umap', for the umap basis. Only the part after the `X_` is required.
+    basis
+        Name of the `obsm` basis to use. Usually, in `obsm` the basis is stored as
+        'X_umap', for the umap basis. Only the part after the `X_` is required.
     {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
@@ -331,12 +332,13 @@ def embedding(
 
 
 def _get_vmin_vmax(
-    vmin: Union[Sequence[str], Sequence[float], Sequence[callable]],
-    vmax: Union[Sequence[str], Sequence[float], Sequence[callable]],
+    vmin: Sequence[Union[str, float, Callable[[Sequence[float]], float]]],
+    vmax: Sequence[Union[str, float, Callable[[Sequence[float]], float]]],
     index: int,
-    color_vector: Sequence[float]):
+    color_vector: Sequence[float]
+) -> Tuple[Union[float, None], Union[float, None]]:
 
-    '''
+    """
     Evaluates the value of vmin and vmax, which could be a
     str in which case is interpreted as a quantile and should
     be specified in the form 'qxx' where xx is the quantile fraction.
@@ -350,25 +352,30 @@ def _get_vmin_vmax(
 
     Parameters
     ----------
-    index: This index of the plot
-    color_vector: list or values for the plot
+    index
+        This index of the plot
+    color_vector
+        List or values for the plot
 
     Returns
     -------
 
-    [vmin, vmax] containing None or float values
+    (vmin, vmax) containing None or float values
 
-    '''
+    """
     out = []
-    for v_name in ['vmin', 'vmax']:
-        if len(eval(v_name)) == 1:
-            v_value = eval(v_name)[0]
+    for v_name, v in [('vmin', vmin), ('vmax', vmax)]:
+        if len(v) == 1:
+            # this case usually happens when the user sets eg vmax=0.9, which
+            # is internally converted into list of len=1, but is expected that this
+            # value applies to all plots.
+            v_value = v[0]
         else:
             try:
-                v_value = eval(v_name)[index]
+                v_value = v[index]
             except IndexError:
-                logg.error(f"The parameter {v_name} is not valid. If setting multiple vmin values,"
-                           "check that the length of the {v_name} list is equal to the number "
+                logg.error(f"The parameter {v_name} is not valid. If setting multiple {v_name} values,"
+                           f"check that the length of the {v_name} list is equal to the number "
                            "of plots. ")
                 v_value = None
 
@@ -379,8 +386,12 @@ def _get_vmin_vmax(
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
+                if not isinstance(v_value, float):
+                    logg.error(f"The return of the function given for {v_name} is not valid. "
+                               "Please check that the function returns a number.")
+                    v_value = None
         out.append(v_value)
-    return out
+    return tuple(out)
 
 
 def _wraps_plot_scatter(wrapper):
