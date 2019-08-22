@@ -1,9 +1,10 @@
-from typing import Optional, Tuple, Sequence, Type, Mapping, Any
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Union
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
+from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
 from .. import utils
@@ -21,7 +22,7 @@ except ImportError:
 def louvain(
     adata: AnnData,
     resolution: Optional[float] = None,
-    random_state: int = 0,
+    random_state: Optional[Union[int, RandomState]] = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: Optional[str] = 'louvain',
     adjacency: Optional[spmatrix] = None,

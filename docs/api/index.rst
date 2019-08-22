@@ -1,5 +1,6 @@
 .. module:: scanpy
 .. automodule:: scanpy
+   :noindex:
 
 API
 ===
@@ -12,7 +13,6 @@ Import Scanpy as::
 .. note::
    Wrappers to external functionality are found in :mod:`scanpy.external`.
    Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
-
 
 Preprocessing: `pp`
 -------------------
@@ -27,7 +27,7 @@ Any transformation of the data matrix that is not a *tool*. Other than *tools*, 
 Basic Preprocessing
 ~~~~~~~~~~~~~~~~~~~
 
-For visual quality control, see :func:`~scanpy.pl.highest_expr_gens` and
+For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
 :func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.plotting`.
 
 .. autosummary::
@@ -212,7 +212,10 @@ Queries
 .. autosummary::
    :toctree: .
 
+   queries.biomart_annotations
+   queries.gene_coordinates
    queries.mitochondrial_genes
+   queries.enrich
 
 
 Classes
@@ -251,28 +254,29 @@ An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as `scan
 Some selected settings are discussed in the following.
 
 Influence the global behavior of plotting functions. In non-interactive scripts,
-you'd usually want to set :class:`settings.autoshow` to ``False``.
+you'd usually want to set `settings.autoshow` to ``False``.
 
-==============================================  ===================================
-:class:`settings.autoshow`                      Automatically show figures (default: `True`).
-:class:`settings.autosave`                      Automatically save figures (default: `False`).
-==============================================  ===================================
+.. no :toctree: here because they are linked under the class
+.. autosummary::
+
+   ~_settings.ScanpyConfig.autoshow
+   ~_settings.ScanpyConfig.autosave
 
 The default directories for saving figures, caching files and storing datasets.
 
-==============================================  ===================================
-:class:`settings.figdir`                        Directory for saving figures (default: `'./figures/'`).
-:class:`settings.cachedir`                      Directory for cache files (default: `'./cache/'`).
-:class:`settings.datasetdir`                    Directory for example datasets (default: `'./data/'`).
-==============================================  ===================================
+.. autosummary::
+
+   ~_settings.ScanpyConfig.figdir
+   ~_settings.ScanpyConfig.cachedir
+   ~_settings.ScanpyConfig.datasetdir
 
 The verbosity of logging output, where verbosity levels have the following
 meaning: 0='error', 1='warning', 2='info', 3='hint', 4=more details, 5=even more
 details, etc.
 
-==============================================  ===================================
-:class:`settings.verbosity`                     Verbosity level (default: 1).
-==============================================  ===================================
+.. autosummary::
+
+   ~_settings.ScanpyConfig.verbosity
 
 Print versions of packages that might influence numerical results.
 

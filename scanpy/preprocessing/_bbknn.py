@@ -7,7 +7,8 @@ def bbknn(adata, batch_key='batch', copy=False, **kwargs):
     entire cell pool with no accounting for batch. Aligns batches in a
     quick and lightweight manner.
 
-    For use in the scanpy workflow as an alternative to :func:`scanpi.pp.neighbors`.
+    For use in the scanpy workflow as an alternative to
+    :func:`~scanpy.pp.neighbors`.
 
     .. note::
 

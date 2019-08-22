@@ -93,8 +93,7 @@ class ScanpyConfig:
         """bool: See set_figure_params."""
 
         self._vector_friendly = _vector_friendly
-        """Set to true if you want to include pngs in svgs and pdfs.
-        """
+        """Set to true if you want to include pngs in svgs and pdfs."""
 
         self._low_resolution_warning = _low_resolution_warning
         """Print warning when saving a figure with low resolution."""
@@ -111,7 +110,7 @@ class ScanpyConfig:
     @property
     def verbosity(self) -> Verbosity:
         """
-        Set global verbosity level.
+        Verbosity level (default `warning`)
 
         Level 0: only show 'error' messages.
         Level 1: also show 'warning' messages.
@@ -191,7 +190,8 @@ class ScanpyConfig:
 
     @property
     def autosave(self) -> bool:
-        """bool: Save plots/figures as files in directory 'figs'.
+        """\
+        Automatically save figures in :attr:`~scanpy._settings.ScanpyConfig.figdir` (default `False`).
 
         Do not show plots/figures interactively.
         """
@@ -204,7 +204,8 @@ class ScanpyConfig:
 
     @property
     def autoshow(self) -> bool:
-        """bool: Show all plots/figures automatically if autosave == False.
+        """\
+        Automatically show figures if `autosave == False` (default `True`).
 
         There is no need to call the matplotlib pl.show() in this case.
         """
@@ -217,7 +218,8 @@ class ScanpyConfig:
 
     @property
     def writedir(self) -> Path:
-        """Directory where the function scanpy.write writes to by default.
+        """\
+        Directory where the function scanpy.write writes to by default.
         """
         return self._writedir
 
@@ -228,7 +230,8 @@ class ScanpyConfig:
 
     @property
     def cachedir(self) -> Path:
-        """Default cache directory.
+        """\
+        Directory for cache files (default `'./cache/'`).
         """
         return self._cachedir
 
@@ -239,7 +242,8 @@ class ScanpyConfig:
 
     @property
     def datasetdir(self) -> Path:
-        """Default directory for ``sc.datasets`` to download data to.
+        """\
+        Directory for example :mod:`~scanpy.datasets` (default `'./data/'`).
         """
         return self._datasetdir
 
@@ -250,7 +254,8 @@ class ScanpyConfig:
 
     @property
     def figdir(self) -> Path:
-        """Directory where plots are saved.
+        """\
+        Directory for saving figures (default `'./figures/'`).
         """
         return self._figdir
 
@@ -261,7 +266,8 @@ class ScanpyConfig:
 
     @property
     def max_memory(self) -> Union[int, float]:
-        """Maximal memory usage in Gigabyte.
+        """\
+        Maximal memory usage in Gigabyte.
 
         Is currently not well respected....
         """
@@ -274,7 +280,8 @@ class ScanpyConfig:
 
     @property
     def n_jobs(self) -> int:
-        """Default number of jobs/ CPUs to use for parallel computing.
+        """\
+        Default number of jobs/ CPUs to use for parallel computing.
         """
         return self._n_jobs
 
@@ -285,7 +292,9 @@ class ScanpyConfig:
 
     @property
     def logpath(self) -> Optional[Path]:
-        """The file path `logfile` was set to."""
+        """\
+        The file path `logfile` was set to.
+        """
         return self._logpath
 
     @logpath.setter
@@ -297,9 +306,10 @@ class ScanpyConfig:
 
     @property
     def logfile(self) -> TextIO:
-        """The open file to write logs to.
+        """\
+        The open file to write logs to.
 
-        Set it to a :class:`~pathlib.Path` or :class:`str: to open a new one.
+        Set it to a :class:`~pathlib.Path` or :class:`str` to open a new one.
         The default `None` corresponds to :obj:`sys.stdout` in jupyter notebooks
         and to :obj:`sys.stderr` otherwise.
 
@@ -320,7 +330,8 @@ class ScanpyConfig:
 
     @property
     def categories_to_ignore(self) -> List[str]:
-        """Categories that are omitted in plotting etc.
+        """\
+        Categories that are omitted in plotting etc.
         """
         return self._categories_to_ignore
 
@@ -337,48 +348,51 @@ class ScanpyConfig:
 
     def set_figure_params(
         self,
-        scanpy=True,
-        dpi=80,
-        dpi_save=150,
-        frameon=True,
-        vector_friendly=True,
-        fontsize=14,
-        color_map=None,
-        format="pdf",
-        transparent=False,
-        ipython_format="png2x",
+        scanpy: bool = True,
+        dpi: int = 80,
+        dpi_save: int = 150,
+        frameon: bool = True,
+        vector_friendly: bool = True,
+        fontsize: int = 14,
+        color_map: Optional[str] = None,
+        format: Union[str, Iterable[str]] = "pdf",
+        transparent: bool = False,
+        ipython_format: str = "png2x",
     ):
-        """Set resolution/size, styling and format of figures.
+        """\
+        Set resolution/size, styling and format of figures.
 
         Parameters
         ----------
-        scanpy : `bool`, optional (default: `True`)
-            Init default values for ``matplotlib.rcParams`` suited for Scanpy.
-        dpi : `int`, optional (default: `80`)
+        scanpy
+            Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
+        dpi
             Resolution of rendered figures - this influences the size of figures in notebooks.
-        dpi_save : `int`, optional (default: `150`)
+        dpi_save
             Resolution of saved figures. This should typically be higher to achieve
             publication quality.
-        frameon : `bool`, optional (default: `True`)
+        frameon
             Add frames and axes labels to scatter plots.
-        vector_friendly : `bool`, optional (default: `True`)
+        vector_friendly
             Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
-        fontsize : `int`, optional (default: 14)
+        fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
-        color_map : `str`, optional (default: `None`)
+        color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format : {'png', 'pdf', 'svg', etc.}, optional (default: 'pdf')
+        format: {`'png'`, `'pdf'`, `'svg'`, etc.}, optional (default: `'pdf'`)
             This sets the default format for saving figures: `file_format_figs`.
-        transparent : `bool`, optional (default: `True`)
+        transparent
             Save figures with transparent back ground. Sets
             `rcParams['savefig.transparent']`.
-        ipython_format : list of `str`, optional (default: 'png2x')
+        ipython_format
             Only concerns the notebook/IPython environment; see
-            `IPython.core.display.set_matplotlib_formats` for more details.
+            :func:`~IPython.display.set_matplotlib_formats` for details.
         """
         try:
             import IPython
-            IPython.core.display.set_matplotlib_formats(ipython_format)
+            if isinstance(ipython_format, str):
+                ipython_format = [ipython_format]
+            IPython.display.set_matplotlib_formats(*ipython_format)
         except Exception:
             pass
         from matplotlib import rcParams

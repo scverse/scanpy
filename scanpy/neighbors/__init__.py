@@ -62,7 +62,7 @@ def neighbors(
         `n_neighbors` nearest neighbor.
     random_state
         A numpy random seed.
-    method : {{'umap', 'gauss', `None`}}  (default: `'umap'`)
+    method : {{`'umap'`, `'gauss'`, `None`}}  (default: `'umap'`)
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
     metric
@@ -318,6 +318,11 @@ def compute_connectivities_umap(
                                           knn_indices=knn_indices, knn_dists=knn_dists,
                                           set_op_mix_ratio=set_op_mix_ratio,
                                           local_connectivity=local_connectivity)
+
+    if isinstance(connectivities, tuple):
+        # In umap-learn 0.4, this returns (result, sigmas, rhos)
+        connectivities = connectivities[0]
+
     distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
 
     return distances, connectivities.tocsr()
@@ -458,7 +463,8 @@ class OnFlySymMatrix:
 
 
 class Neighbors:
-    """Data represented as graph of nearest neighbors.
+    """\
+    Data represented as graph of nearest neighbors.
 
     Represent a data matrix as a graph of nearest neighbor relations (edges)
     among data points (nodes).
@@ -612,7 +618,7 @@ class Neighbors:
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
         method: str = 'umap',
-        random_state: Optional[Union[RandomState, int]] = 0,
+        random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
         metric: str = 'euclidean',
         metric_kwds: Mapping[str, Any] = {}

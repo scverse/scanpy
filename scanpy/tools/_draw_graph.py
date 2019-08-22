@@ -1,4 +1,9 @@
+from typing import Union, Optional
+
 import numpy as np
+from anndata import AnnData
+from numpy.random.mtrand import RandomState
+from scipy.sparse import spmatrix
 
 from .. import utils
 from .. import logging as logg
@@ -6,20 +11,22 @@ from ._utils import get_init_pos_from_paga
 
 
 def draw_graph(
-        adata,
-        layout='fa',
-        init_pos=None,
-        root=None,
-        random_state=0,
-        n_jobs=None,
-        adjacency=None,
-        key_added_ext=None,
-        copy=False,
-        **kwds):
-    """Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
+    adata: AnnData,
+    layout: str = 'fa',
+    init_pos: Union[str, bool, None] = None,
+    root: Optional[int] = None,
+    random_state: Optional[Union[int, RandomState]] = 0,
+    n_jobs: Optional[int] = None,
+    adjacency: Optional[spmatrix] = None,
+    key_added_ext: Optional[str] = None,
+    copy: bool = False,
+    **kwds
+):
+    """\
+    Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.
 
     An alternative to tSNE that often preserves the topology of the data
-    better. This requires to run :func:`~scanpy.api.pp.neighbors`, first.
+    better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
     The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package `fa2
     <https://github.com/bhargavchippada/forceatlas2>`__ [Chippada18]_, which can
@@ -34,34 +41,38 @@ def draw_graph(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    layout : `str`, optional (default: 'fa')
+    layout
         'fa' (`ForceAtlas2`) or any valid `igraph layout
         <http://igraph.org/c/doc/igraph-Layout.html>`__. Of particular interest
         are 'fr' (Fruchterman Reingold), 'grid_fr' (Grid Fruchterman Reingold,
         faster than 'fr'), 'kk' (Kamadi Kawai', slower than 'fr'), 'lgl' (Large
         Graph, very fast), 'drl' (Distributed Recursive Layout, pretty fast) and
         'rt' (Reingold Tilford tree layout).
-    root : `int` or `None`, optional (default: `None`)
+    root
         Root for tree layouts.
-    random_state : `int` or `None`, optional (default: 0)
+    random_state
         For layouts with random initialization like 'fr', change this to use
         different intial states for the optimization. If `None`, no seed is set.
-    adjacency : sparse matrix or `None`, optional (default: `None`)
+    adjacency
         Sparse adjacency matrix of the graph, defaults to
         `adata.uns['neighbors']['connectivities']`.
-    key_ext : `str`, optional (default: `None`)
+    key_added_ext
         By default, append `layout`.
-    proceed : `bool`, optional (default: `None`)
+    proceed
         Continue computation, starting off with 'X_draw_graph_`layout`'.
-    init_pos : {'paga', any valid 2d-`.obsm` key, `False`}, optional (default: `False`)
+    init_pos
+        `'paga'`/`True`, `None`/`False`, or any valid 2d-`.obsm` key.
         Use precomputed coordinates for initialization.
-    copy : `bool` (default: `False`)
+        If `False`/`None` (the default), initialize randomly.
+    copy
         Return a copy instead of writing to adata.
-    **kwds : further parameters
-        Parameters of chosen igraph layout. See, e.g.,
-        `fruchterman_reingold <http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold>`__. One of the most important ones is `maxiter`.
+    **kwds
+        Parameters of chosen igraph layout. See e.g. `fruchterman-reingold`_
+        [Fruchterman91]_. One of the most important ones is `maxiter`.
+
+        .. _fruchterman-reingold: http://igraph.org/python/doc/igraph.Graph-class.html#layout_fruchterman_reingold
 
     Returns
     -------
@@ -84,7 +95,7 @@ def draw_graph(
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
-    elif init_pos == 'paga':
+    elif init_pos == 'paga' or init_pos:
         init_coords = get_init_pos_from_paga(adata, adjacency, random_state=random_state)
     else:
         np.random.seed(random_state)

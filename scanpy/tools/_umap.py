@@ -70,7 +70,7 @@ def umap(
         Options are:
 
         * Any key for `adata.obsm`.
-        * 'paga': positions from :func:`~scanpy.api.pl.paga`.
+        * 'paga': positions from :func:`~scanpy.pl.paga`.
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
         * A numpy array of initial embedding positions.

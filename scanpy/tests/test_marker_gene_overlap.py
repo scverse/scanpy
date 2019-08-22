@@ -1,14 +1,17 @@
+from anndata import AnnData
+
 import scanpy as sc
 import numpy as np
 
+
 def generate_test_data():
     # Create an artificial data set
-    test_data = sc.AnnData(X = np.ones((9,10)))
+    test_data = AnnData(X=np.ones((9,10)))
     test_data.uns['rank_genes_groups'] = dict()
     test_data.uns['rank_genes_groups']['names'] = np.rec.fromarrays(
         [['a', 'b','c','d','e'], ['a','f','g','h','i']], names='c0,c1')
     test_data.uns['rank_genes_groups']['pvals_adj'] = np.rec.fromarrays(
-        [[0.001, 0.01, 0.02, 0.05, 0.6], [0.001, 0.01, 0.02, 0.05, 0.6]], 
+        [[0.001, 0.01, 0.02, 0.05, 0.6], [0.001, 0.01, 0.02, 0.05, 0.6]],
         names='c0,c1')
 
     marker_genes = {'type 1':{'a','b','c'}, 'type 2':{'a','f','g'}}

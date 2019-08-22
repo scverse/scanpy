@@ -73,7 +73,7 @@ def krumsiek11() -> AnnData:
 
     See also the discussion of this data in [Wolf19]_.
 
-    Simulate via :func:`~scanpy.api.sim`.
+    Simulate via :func:`~scanpy.tl.sim`.
 
     Returns
     -------
@@ -185,7 +185,7 @@ def toggleswitch() -> AnnData:
     Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
     (2000) <https://doi.org/10.1038/35002131>`__.
 
-    Simulate via :func:`~scanpy.api.sim`.
+    Simulate via :func:`~scanpy.tl.sim`.
 
     Returns
     -------

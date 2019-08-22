@@ -9,6 +9,7 @@ from matplotlib.testing.compare import compare_images
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from anndata import AnnData
 
 import scanpy as sc
 
@@ -328,6 +329,24 @@ def test_scatterplots(image_comparer):
     sc.pl.umap(pbmc, color=['1', '2', '3'], gene_symbols="numbers", show=False)
     save_and_compare_images('master_umap_symbols')
 
+
+def test_scatter_raw(tmp_path):
+    pbmc = sc.datasets.pbmc68k_reduced()[:100].copy()
+    raw_pth = tmp_path / "raw.png"
+    x_pth = tmp_path / "X.png"
+
+    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=True)
+    plt.savefig(raw_pth, dpi=60)
+    plt.close()
+
+    sc.pl.scatter(pbmc, color="HES4", basis="umap", use_raw=False)
+    plt.savefig(x_pth, dpi=60)
+    plt.close()
+
+    comp = compare_images(str(raw_pth), str(x_pth), tol=5)
+    assert "Error" in comp, "Plots should change depending on use_raw."
+
+
 def test_scatter_specify_layer_and_raw():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["layer"] = pbmc.raw.X.copy()
@@ -360,7 +379,7 @@ def test_scatter_rep(tmpdir):
     pattern = np.array(list(chain.from_iterable(repeat(i, 5) for i in range(3))))
     coords = np.c_[np.arange(15) % 5, pattern]
 
-    adata = sc.AnnData(
+    adata = AnnData(
         X=np.zeros((15, 3)),
         layers={"layer": np.zeros((15, 3))},
         obsm={"X_pca": coords},

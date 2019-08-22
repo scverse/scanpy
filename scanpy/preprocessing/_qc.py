@@ -238,8 +238,8 @@ def calculate_qc_metrics(
 
     Returns
     -------
-    Depending on `inplace` returns calculated metrics (`pd.DataFrame`) or
-    updates `adata`'s `obs` and `var`.
+    Depending on `inplace` returns calculated metrics
+    (as :class:`~pandas.DataFrame`) or updates `adata`'s `obs` and `var`.
 
     {doc_obs_qc_returns}
 
@@ -249,6 +249,8 @@ def calculate_qc_metrics(
     -------
     Calculate qc metrics for visualization.
 
+    >>> import scanpy as sc
+    >>> import seaborn as sns
     >>> adata = sc.datasets.pbmc3k()
     >>> sc.pp.calculate_qc_metrics(adata, inplace=True)
     >>> sns.jointplot(

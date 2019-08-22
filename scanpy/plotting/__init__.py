@@ -24,7 +24,7 @@ __doc__ = """\
 Plotting API
 ============
 
-.. automodule:: scanpy
+.. currentmodule:: scanpy
 
 .. note::
 

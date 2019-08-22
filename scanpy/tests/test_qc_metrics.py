@@ -1,22 +1,23 @@
 import numpy as np
 import pandas as pd
 import pytest
+from anndata import AnnData
 from scipy import sparse
 
-
 import scanpy as sc
-import scanpy
 from scanpy.preprocessing._qc import top_proportions, top_segment_proportions, describe_var, describe_obs
+
 
 @pytest.fixture
 def anndata():
     a = np.random.binomial(100, .005, (1000, 1000))
-    adata = sc.AnnData(
+    adata = AnnData(
         sparse.csr_matrix(a),
         obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
         var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
     )
     return adata
+
 
 def test_proportions():
     a_dense = np.ones((100, 100))
@@ -72,14 +73,15 @@ def test_top_segments_sparse():
         propfull = top_proportions(a, 100)
         assert (segfull == propfull).all()
 
+
 # While many of these are trivial, they're also just making sure the metrics are there
 def test_qc_metrics():
-    adata = sc.AnnData(X=sparse.csr_matrix(
+    adata = AnnData(X=sparse.csr_matrix(
         np.random.binomial(100, .005, (1000, 1000))))
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
     adata.var["negative"] = False
-    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], 
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"],
                                inplace=True)
     assert (adata.obs["n_genes_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]).all()
@@ -117,22 +119,23 @@ def test_qc_metrics_format():
     a = np.random.binomial(100, .005, (1000, 1000))
     init_var = pd.DataFrame({"mito": np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
-    adata_dense = sc.AnnData(X=a, var=init_var.copy())
-    sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], 
+    adata_dense = AnnData(X=a, var=init_var.copy())
+    sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"],
         inplace=True)
     for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
-        adata = sc.AnnData(X=fmt(a), var=init_var.copy())
-        sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], 
+        adata = AnnData(X=fmt(a), var=init_var.copy())
+        sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"],
             inplace=True)
         assert np.allclose(adata.obs, adata_dense.obs)
         for col in adata.var: # np.allclose doesn't like mix of types
             assert np.allclose(adata.var[col], adata_dense.var[col])
 
+
 def test_qc_metrics_percentage(): # In response to #421
     a = np.random.binomial(100, .005, (1000, 1000))
     init_var = pd.DataFrame({"mito": np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
-    adata_dense = sc.AnnData(X=a, var=init_var.copy())
+    adata_dense = AnnData(X=a, var=init_var.copy())
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=[])
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=())
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=(None))

@@ -28,12 +28,12 @@ edges
     Show edges.
 edges_width
     Width of edges.
-edges_color : matplotlib color(s), optional (default: 'grey')
+edges_color : matplotlib color(s), optional (default: `'grey'`)
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
 arrows
-    Show arrows (requires to run :func:`~scanpy.api.tl.rna_velocity` before).
+    Show arrows (requires to run :func:`~scanpy.tl.rna_velocity` before).
 arrows_kwds
-    Passed to :func:`~matplotlib.axes.Axes.quiver`\
+    Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
 
 
@@ -47,14 +47,14 @@ groups
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
-projection : {'2d', '3d'}, optional (default: '2d')
+projection : {`'2d'`, `'3d'`}, optional (default: `'2d'`)
     Projection of plot.
 legend_loc
     Location of legend, either 'on data', 'right margin' or valid keywords for
     `matplotlib.legend`.
 legend_fontsize
     Legend font size.
-legend_fontweight : {'normal', 'bold', ...}, optional (default: `None`)
+legend_fontweight : {`'normal'`, `'bold'`, ...}, optional (default: `None`)
     Legend font weight. Defaults to 'bold' if `legend_loc == 'on data'`,
     otherwise to 'normal'. Available are `['light', 'normal', 'medium',
     'semibold', 'bold', 'heavy', 'black']`.
@@ -67,7 +67,7 @@ color_map
     Color map to use for continous variables. Anything that works for `cmap`
     argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
     `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
-    The default color_map can be set using :func:`~scanpy.settings.set_figure_params` 
+    The default color_map can be set using :func:`~scanpy.set_figure_params` 
 palette
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid :class:`~matplotlib.colors.Colormap` name like `'Set2'` or `'tab20'`,
@@ -75,10 +75,10 @@ palette
     :class:`~cycler.Cycler` object. If `None`, `mpl.rcParams["axes.prop_cycle"]`
     is used unless the categorical variable already has colors stored in
     `adata.uns["{var}_colors"]`. If provided, values of `adata.uns["{var}_colors"]`
-     will be set by this palette.
+    will be set by this palette.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
-    :func:`~scanpy.settings.set_figure_params`, defaults to `True`.
+    :func:`~scanpy.set_figure_params`, defaults to `True`.
 vmin
     Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
     vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `qN`, 
@@ -112,7 +112,7 @@ _doc_scatter_meta = """\
 title
     Provide title for panels either as string or list of strings,
     e.g. `['title1', 'title2', ...]`.
-kwargs : further keyword arguments, optional
+kwargs
     Arguments to pass to :func:`matplotlib.pyplot.scatter`,
     for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).
 return_fig
@@ -129,8 +129,9 @@ doc_show_save_ax = """\
 show
      Show the plot, do not return axis.
 save
-    If `True` or a `str`, save the figure. A string is appended to the default
-    filename. Infer the filetype if ending on {'.pdf', '.png', '.svg'}.
+    If `True` or a `str`, save the figure.
+    A string is appended to the default filename.
+    Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
 ax
     A matplotlib axes object. Only works if plotting a single component.\
 """
