@@ -168,7 +168,7 @@ def embedding(
         vmin = [vmin]
 
     if 's' not in kwargs:
-        kwargs['s'] = 120000 / _data_points.shape[0]
+        kwargs['s'] = 120000 / adata.shape[0]
     size = kwargs.pop('s')
 
     ###
