@@ -333,14 +333,31 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
     if not isinstance(axs, list): axs = [axs]
-    if 'Delta_' + basis not in adata.obsm.keys():
-        raise ValueError('`arrows=True` requires \'Delta_\' + basis from velocyto.')
-    X = adata.obsm['X_' + basis]
-    V = adata.obsm['Delta_' + basis]
+    v_prefix = next((
+        p for p in ['velocity', 'Delta']
+        if f'{p}_{basis}' in adata.obsm
+    ), None)
+    if v_prefix is None:
+        raise ValueError(
+            "`arrows=True` requires "
+            f"`'velocity_{basis}'` from scvelo or "
+            f"`'Delta_{basis}'` from velocyto."
+        )
+    if v_prefix == 'velocity':
+        logg.warning(
+            'The module `scvelo` has improved plotting facilities. '
+            'Prefer using `scv.pl.velocity_embedding` to `arrows=True`.'
+        )
+    X = adata.obsm[f'X_{basis}']
+    V = adata.obsm[f'{v_prefix}_{basis}']
     for ax in axs:
         quiver_kwds = arrows_kwds if arrows_kwds is not None else {}
-        ax.quiver(X[:, 0], X[:, 1], V[:, 0], V[:, 1], **quiver_kwds,
-                  rasterized=settings._vector_friendly)
+        ax.quiver(
+            X[:, 0], X[:, 1],
+            V[:, 0], V[:, 1],
+            **quiver_kwds,
+            rasterized=settings._vector_friendly,
+        )
 
 
 def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None):

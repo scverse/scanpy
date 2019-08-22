@@ -78,6 +78,7 @@ intersphinx_mapping = dict(
     pandas=('https://pandas.pydata.org/pandas-docs/stable/', None),
     python=('https://docs.python.org/3', None),
     scipy=('https://docs.scipy.org/doc/scipy/reference/', None),
+    scvelo=('https://scvelo.readthedocs.io/en/stable/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
     scanpy_tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest', None),
@@ -231,8 +232,6 @@ if os.environ.get('DEBUG') is not None:
 nitpick_ignore = [
     # Will probably be documented
     ('py:class', 'scanpy._settings.Verbosity'),
-    # Will probably be removed: https://github.com/theislab/scanpy/issues/792
-    ('py:func', 'scanpy.tl.rna_velocity'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
     # Bug: https://github.com/agronholm/sphinx-autodoc-typehints/issues/96
