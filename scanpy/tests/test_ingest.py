@@ -33,7 +33,7 @@ def test_representation(adatas):
     ing = sc.tl.Ingest(adata_ref)
     ing.transform(adata_new)
 
-    assert ing._use_rep  = 'X_pca'
+    assert ing._use_rep  == 'X_pca'
     assert ing._obsm['rep'].shape == (adata_new.n_obs, 30)
     assert not ing._pca_centered
 
