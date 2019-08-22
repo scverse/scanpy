@@ -65,8 +65,7 @@ def embedding(
     Parameters
     ----------
     basis
-        Name of the `obsm` basis to use. Usually, in `obsm` the basis is stored as
-        'X_umap', for the umap basis. Only the part after the `X_` is required.
+        Name of the `obsm` basis to use.
     {adata_color_etc}
     {edges_arrows}
     {scatter_bulk}
@@ -582,10 +581,22 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
         for components = [1,2] and components=['1,2', '2,3'] respectively
     """
+
+    if basis in adata.obsm.keys():
+        basis_key = basis
+
+    elif f"X_{basis}" in adata.obsm.keys():
+        basis_key = f"X_{basis}"
+    else:
+        raise KeyError(
+            f"Could not find entry in `obsm` for '{basis}'.\n"
+            f"Available keys are: {list(adata.obsm.keys())}."
+        )
+
     n_dims = 2
     if projection == '3d':
         # check if the data has a third dimension
-        if adata.obsm['X_' + basis].shape[1] == 2:
+        if adata.obsm[basis_key].shape[1] == 2:
             if settings._low_resolution_warning:
                 logg.warning(
                     'Selected projections is "3d" but only two dimensions '
@@ -597,7 +608,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
     if components == 'all':
         from itertools import combinations
         r_value = 3 if projection == '3d' else 2
-        _components_list = np.arange(adata.obsm['X_{}'.format(basis)].shape[1]) + 1
+        _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
         components = [",".join(map(str, x)) for x in combinations(_components_list, r=r_value)]
 
     components_list = []
@@ -630,7 +641,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         try:
             data_points = []
             for comp in components_list:
-                data_points.append(adata.obsm['X_' + basis][:, comp])
+                data_points.append(adata.obsm[basis_key][:, comp])
         except:
             raise ValueError("Given components: '{}' are not valid. Please check. "
                              "A valid example is `components='2,3'`")
@@ -640,7 +651,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
             # plot_scatter can print the labels correctly.
             components_list = [tuple(number-1 for number in comp) for comp in components_list]
     else:
-        data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
+        data_points = [adata.obsm[basis_key][:, offset:offset+n_dims]]
         components_list = []
     return data_points, components_list
 
