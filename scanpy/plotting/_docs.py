@@ -31,7 +31,8 @@ edges_width
 edges_color : matplotlib color(s), optional (default: `'grey'`)
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
 arrows
-    Show arrows (requires to run :func:`~scanpy.tl.rna_velocity` before).
+    Show arrows (requires to run :func:`scvelo.tl.velocity_embedding` before).
+    Deprecated in favor of :func:`scvelo.pl.velocity_embedding` and friends.
 arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
