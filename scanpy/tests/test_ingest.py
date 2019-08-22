@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import scanpy as sc
 from scanpy.preprocessing._simple import N_PCS
