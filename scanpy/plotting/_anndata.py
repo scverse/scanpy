@@ -2343,7 +2343,6 @@ def correlation_matrix(
         which='both',
         left=False,
         right=False)
-    print(corr_matrix_ax.get_ylim())
 
     if show_correlation_numbers:
         for row in range(num_rows):
