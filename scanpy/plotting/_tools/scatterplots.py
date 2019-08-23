@@ -341,9 +341,10 @@ def _get_vmin_vmax(
 
     """
     Evaluates the value of vmin and vmax, which could be a
-    str in which case is interpreted as a quantile and should
-    be specified in the form 'qxx' where xx is the quantile fraction.
-    Eg. for a quantile of .845 the format would be 'q845'.
+    str in which case is interpreted as a percentile and should
+    be specified in the form 'pN' where N is the percentile.
+    Eg. for a percentile of 85 the format would be 'p85'.
+    Floats are accepted as p99.9
 
     Alternatively, vmin/vmax could be a function that is applied to
     the list of color values (`color_vector`).  E.g.
@@ -381,9 +382,14 @@ def _get_vmin_vmax(
                 v_value = None
 
         if v_value is not None:
-            if isinstance(v_value, str) and v_value.startswith('q'):
-                # interpret value of vmin/vmax as quantile with the following syntax 'q99'
-                v_value = np.quantile(color_vector, q=float("0.{}".format(v_value[1:])))
+            if isinstance(v_value, str) and v_value.startswith('p'):
+                try:
+                    float(v_value[1:])
+                except ValueError:
+                    logg.error(f"The parameter {v_name}={v_value} is not valid. Please check the "
+                               f"correct format for percentiles.")
+                # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
+                v_value = np.percentile(color_vector, q=float(v_value[1:]))
             elif callable(v_value):
                 # interpret vmin/vmax as function
                 v_value = v_value(color_vector)
