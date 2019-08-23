@@ -330,6 +330,18 @@ def test_scatterplots(image_comparer):
     save_and_compare_images('master_umap_symbols')
 
 
+def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+    from functools import partial
+    sc.pl.embedding(pbmc, 'X_umap', color=['percent_mito', 'n_counts'], s=200,
+                    frameon=False, add_outline=True,
+                    vmax=['p99.0', partial(np.percentile, q=90)], vmin=0.01,
+                    outline_color=('#555555', '0.9'), outline_width=(0.5, 0.5),
+                    cmap='viridis_r', alpha=0.9)
+    save_and_compare_images('master_embedding_outline_vmin_vmax')
+
+
 def test_scatter_raw(tmp_path):
     pbmc = sc.datasets.pbmc68k_reduced()[:100].copy()
     raw_pth = tmp_path / "raw.png"
