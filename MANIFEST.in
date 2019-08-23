@@ -1,4 +1,3 @@
-include versioneer.py
-include requirements.txt
-include scanpy/_version.py
-include scanpy/*/*.txt
+# Exclude everything not needed for importing, building, and tests
+exclude .coveragerc .editorconfig .gitattributes .gitignore .readthedocs.yml .travis.yml
+exclude CONTRIBUTING.md

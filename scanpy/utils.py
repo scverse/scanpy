@@ -24,27 +24,26 @@ import warnings
 EPS = 1e-15
 
 
-def check_versions():
-    from distutils.version import LooseVersion
-
+def version(package):
     try:
         from importlib.metadata import version
     except ImportError:  # < Python 3.8: Use backport module
         from importlib_metadata import version
+    return version(package)
 
-    if sys.version_info < (3, 6):
-        warnings.warn('Scanpy prefers Python 3.6 or higher. '
-                      'Currently, Python 3.5 leads to a bug in `tl.marker_gene_overlap` '
-                      'and we might stop supporting it in the future.')
+
+def check_versions():
+    from distutils.version import LooseVersion
 
     anndata_version = version("anndata")
     umap_version = version("umap-learn")
 
     if anndata_version < LooseVersion('0.6.10'):
         from . import __version__
-        raise ImportError('Scanpy {} needs anndata version >=0.6.10, not {}.\n'
-                            'Run `pip install anndata -U --no-deps`.'
-                            .format(__version__, anndata_version))
+        raise ImportError(
+            f'Scanpy {__version__} needs anndata version >=0.6.10, '
+            f'not {anndata_version}.\nRun `pip install anndata -U --no-deps`.'
+        )
 
     if umap_version < LooseVersion('0.3.0'):
         from . import __version__
