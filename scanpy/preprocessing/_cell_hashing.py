@@ -21,7 +21,6 @@ def _demultiplex_per_barcode(x):
     maxima = argrelextrema(dist, np.greater_equal)[0]
     min_maxima = np.min(maxima)
     max_maxima = np.max(maxima)
-    dist[min_maxima], dist[max_maxima]
     intermediate_thresh = (percentiles[min_maxima] + percentiles[max_maxima]) / 2
     all_low_maxima = maxima[np.where(percentiles[maxima] < intermediate_thresh)[0]]
     low_maxima = all_low_maxima[np.argmax(dist[all_low_maxima])]
