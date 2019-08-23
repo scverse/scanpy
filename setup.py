@@ -1,10 +1,9 @@
 import sys
-if sys.version_info < (3,):
+if sys.version_info < (3, 6):
     sys.exit('scanpy requires Python >= 3.6')
 from pathlib import Path
 
 from setuptools import setup, find_packages
-import versioneer
 
 
 try:
@@ -14,8 +13,8 @@ except ImportError:  # Deps not yet installed
 
 setup(
     name='scanpy',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     description='Single-Cell Analysis in Python.',
     long_description=Path('README.rst').read_text('utf-8'),
     url='http://github.com/theislab/scanpy',
@@ -35,11 +34,6 @@ setup(
         test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr'],
     ),
     packages=find_packages(),
-    # `package_data` does NOT work for source distributions!!!
-    # you also need MANIFTEST.in
-    # https://stackoverflow.com/questions/7522250/how-to-include-package-data-with-setuptools-distribute
-    package_data={'': '*.txt'},
-    include_package_data=True,
     entry_points=dict(
         console_scripts=['scanpy=scanpy.cli:console_main'],
     ),
