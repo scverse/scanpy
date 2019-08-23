@@ -2,7 +2,7 @@ from ._anndata import scatter, violin, ranking, clustermap, stacked_violin, heat
 
 from ._preprocessing import filter_genes_dispersion, highly_variable_genes
 
-from ._tools.scatterplots import pca, diffmap, draw_graph, tsne, umap
+from ._tools.scatterplots import embedding, pca, diffmap, draw_graph, tsne, umap
 from ._tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
 from ._tools.paga import paga, paga_adjacency, paga_compare, paga_path
 from ._tools import dpt_timeseries, dpt_groups_pseudotime
@@ -88,6 +88,7 @@ Embeddings
    pl.umap
    pl.diffmap
    pl.draw_graph
+   pl.embedding
    pl.embedding_density
 
 Branching trajectories and pseudotime, clustering

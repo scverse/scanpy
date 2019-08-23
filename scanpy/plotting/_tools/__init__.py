@@ -14,7 +14,7 @@ from ... import logging as logg
 from .._anndata import scatter, ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
 from .._docs import doc_scatter_bulk, doc_show_save_ax, _doc_scatter_panels
-from .scatterplots import pca, plot_scatter
+from .scatterplots import pca, embedding
 from matplotlib.colors import Colormap
 
 # ------------------------------------------------------------------------------
@@ -925,7 +925,7 @@ def embedding_density(
                 title = group_name
             else:
                 title = kwargs.pop('title')
-            ax=plot_scatter(adata, basis, components=components, color=density_col_name,
+            ax=embedding(adata, basis, components=components, color=density_col_name,
                          color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
                          vmin=vmin, save=False, title=title, ax=ax, show=False, **kwargs)
             axs.append(ax)
@@ -944,9 +944,9 @@ def embedding_density(
             title = kwargs.pop('title')
 
         # Plot the graph
-        ax = plot_scatter(adata, basis, components=components, color=density_col_name,
-                     color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
-                     vmin=vmin, save=False, show=False, title=title, **kwargs)
+        ax = embedding(adata, basis, components=components, color=density_col_name,
+                       color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
+                       vmin=vmin, save=False, show=False, title=title, **kwargs)
 
     # remove temporary column name
     adata.obs = adata.obs.drop(columns=[density_col_name])

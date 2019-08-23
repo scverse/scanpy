@@ -68,6 +68,7 @@ color_map
     Color map to use for continous variables. Anything that works for `cmap`
     argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
     `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
+    The default color_map can be set using :func:`~scanpy.set_figure_params` 
 palette
     Colors to use for plotting categorical annotation groups. The palette can be
     a valid :class:`~matplotlib.colors.Colormap` name like `'Set2'` or `'tab20'`,
@@ -79,6 +80,29 @@ palette
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
+vmin
+    Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
+    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`, 
+    this is interpreted as a vmin=percentile(N). For example vmin='p1.5' is interpreted as 
+    the 1.5 percentile. If vmin is function, then vmin is interpreted as the return value
+    of the function over the list of values to plot. For example to set vmin tp the mean of
+    the values to plot, `def my_vmin(values): return np.mean(values)` and then 
+    set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
+    as defined by matplotlib `scatter` function. When making multiple plots, vmin can 
+    be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]
+vmax
+    Maximum value to plot. The format is the same as for `vmin`
+add_outline
+    If set to True, this will add a thin border around groups of dots. In some situations
+    this can enhance the aesthetics of the resulting image 
+outline_color
+    Tuple with two valid color names used to adjust the add_outline. The first color is the
+    border color (default: black), while the second color is a gap color between the
+    border color and the scatter dot (default: white).   
+outline_width
+    Tuple with two width numbers used to adjust the outline. The first value is the width
+    of the border color as a fraction of the scatter dot size (default: 0.3). The second value is
+    width of the gap color (default: 0.05).
 """
 _doc_scatter_panels = """\
 ncols

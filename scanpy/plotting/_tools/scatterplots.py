@@ -1,5 +1,5 @@
 from collections import abc
-from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple
+from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
 from anndata import AnnData
@@ -18,8 +18,10 @@ from ..._settings import settings
 from ...utils import sanitize_anndata, doc_params
 from ... import logging as logg
 
+VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
-def plot_scatter(
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+def embedding(
     adata: AnnData,
     basis: str,
     *,
@@ -44,6 +46,11 @@ def plot_scatter(
     legend_fontweight: str = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
+    vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
+    vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
+    add_outline: Optional[bool] = False,
+    outline_width: Tuple[float, float] = (0.3, 0.05),
+    outline_color: Tuple[str, str] = ('black', 'white'),
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
@@ -54,6 +61,23 @@ def plot_scatter(
     return_fig: Optional[bool] = None,
     **kwargs
 ) -> Union[Figure, Axes, None]:
+    """\
+    Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
+
+    Parameters
+    ----------
+    basis
+        Name of the `obsm` basis to use.
+    {adata_color_etc}
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+    """
+
     sanitize_anndata(adata)
     if color_map is not None:
         kwargs['cmap'] = color_map
@@ -139,6 +163,16 @@ def plot_scatter(
             fig = pl.figure()
             ax = fig.add_subplot(111, **args_3d)
 
+    # turn vmax and vmin into a sequence
+    if not isinstance(vmax, List):
+        vmax = [vmax]
+    if not isinstance(vmin, List):
+        vmin = [vmin]
+
+    if 's' not in kwargs:
+        kwargs['s'] = 120000 / adata.shape[0]
+    size = kwargs.pop('s')
+
     ###
     # make the plots
     axs = []
@@ -194,8 +228,8 @@ def plot_scatter(
                 )
                 ax.set_title(value_to_plot)
 
-        if 's' not in kwargs:
-            kwargs['s'] = 120000 / _data_points.shape[0]
+        # check vmin and vmax options
+        kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
 
         # make the scatter plot
         if projection == '3d':
@@ -205,8 +239,44 @@ def plot_scatter(
                 **kwargs,
             )
         else:
+            if add_outline:
+                # the default contour is a black edge followd by a
+                # thin white edged added around connected clusters.
+                # To add a contour
+                # three overlapping scatter plots are drawn:
+                # First black dots with slightly larger size,
+                # then, white dots a bit smaller, but still larger
+                # than the final dots. Then the final dots are drawn
+                # with some transparency.
+
+                bg_width, gap_width = outline_width
+                point = np.sqrt(size)
+                gap_size = (point + (point * gap_width)*2)**2
+                bg_size = (np.sqrt(gap_size) + (point * bg_width)*2)**2
+                # the default black and white colors can be changes using
+                # the contour_config parameter
+                bg_color, gap_color = outline_color
+
+                # remove edge from kwargs if present
+                # because edge needs to be set to None
+                kwargs['edgecolor'] = 'none'
+
+                # remove alpha for contour
+                alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
+
+                ax.scatter(
+                    _data_points[:, 0], _data_points[:, 1], s=bg_size,
+                    marker=".", c=bg_color, rasterized=settings._vector_friendly,
+                    **kwargs)
+                ax.scatter(
+                    _data_points[:, 0], _data_points[:, 1], s=gap_size,
+                    marker=".", c=gap_color, rasterized=settings._vector_friendly,
+                    **kwargs)
+                # if user did not set alpha, set alpha to 0.7
+                kwargs['alpha'] = 0.7 if alpha is None else alpha
+
             cax = ax.scatter(
-                _data_points[:, 0], _data_points[:, 1],
+                _data_points[:, 0], _data_points[:, 1], s=size,
                 marker=".", c=color_vector, rasterized=settings._vector_friendly,
                 **kwargs,
             )
@@ -262,17 +332,86 @@ def plot_scatter(
         return axs
 
 
+def _get_vmin_vmax(
+    vmin: Sequence[VMinMax],
+    vmax: Sequence[VMinMax],
+    index: int,
+    color_vector: Sequence[float]
+) -> Tuple[Union[float, None], Union[float, None]]:
+
+    """
+    Evaluates the value of vmin and vmax, which could be a
+    str in which case is interpreted as a percentile and should
+    be specified in the form 'pN' where N is the percentile.
+    Eg. for a percentile of 85 the format would be 'p85'.
+    Floats are accepted as p99.9
+
+    Alternatively, vmin/vmax could be a function that is applied to
+    the list of color values (`color_vector`).  E.g.
+
+    def my_vmax(color_vector): np.percentile(color_vector, p=80)
+
+
+    Parameters
+    ----------
+    index
+        This index of the plot
+    color_vector
+        List or values for the plot
+
+    Returns
+    -------
+
+    (vmin, vmax) containing None or float values
+
+    """
+    out = []
+    for v_name, v in [('vmin', vmin), ('vmax', vmax)]:
+        if len(v) == 1:
+            # this case usually happens when the user sets eg vmax=0.9, which
+            # is internally converted into list of len=1, but is expected that this
+            # value applies to all plots.
+            v_value = v[0]
+        else:
+            try:
+                v_value = v[index]
+            except IndexError:
+                logg.error(f"The parameter {v_name} is not valid. If setting multiple {v_name} values,"
+                           f"check that the length of the {v_name} list is equal to the number "
+                           "of plots. ")
+                v_value = None
+
+        if v_value is not None:
+            if isinstance(v_value, str) and v_value.startswith('p'):
+                try:
+                    float(v_value[1:])
+                except ValueError:
+                    logg.error(f"The parameter {v_name}={v_value} is not valid. Please check the "
+                               f"correct format for percentiles.")
+                # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
+                v_value = np.percentile(color_vector, q=float(v_value[1:]))
+            elif callable(v_value):
+                # interpret vmin/vmax as function
+                v_value = v_value(color_vector)
+                if not isinstance(v_value, float):
+                    logg.error(f"The return of the function given for {v_name} is not valid. "
+                               "Please check that the function returns a number.")
+                    v_value = None
+        out.append(v_value)
+    return tuple(out)
+
+
 def _wraps_plot_scatter(wrapper):
     annots_orig = {
         k: v for k, v in wrapper.__annotations__.items()
         if k not in {'adata', 'kwargs'}
     }
     annots_scatter = {
-        k: v for k, v in plot_scatter.__annotations__.items()
+        k: v for k, v in embedding.__annotations__.items()
         if k != 'basis'
     }
     wrapper.__annotations__ = {**annots_scatter, **annots_orig}
-    wrapper.__wrapped__ = plot_scatter
+    wrapper.__wrapped__ = embedding
     return wrapper
 
 
@@ -296,7 +435,7 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return plot_scatter(adata, 'umap', **kwargs)
+    return embedding(adata, 'umap', **kwargs)
 
 
 @_wraps_plot_scatter
@@ -316,7 +455,7 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return plot_scatter(adata, 'tsne', **kwargs)
+    return embedding(adata, 'tsne', **kwargs)
 
 
 @_wraps_plot_scatter
@@ -360,7 +499,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
     ...     color_map='tab20',
     ... )
     """
-    return plot_scatter(adata, 'phate', **kwargs)
+    return embedding(adata, 'phate', **kwargs)
 
 
 @_wraps_plot_scatter
@@ -379,7 +518,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return plot_scatter(adata, 'diffmap', **kwargs)
+    return embedding(adata, 'diffmap', **kwargs)
 
 
 @_wraps_plot_scatter
@@ -409,7 +548,7 @@ def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
         raise ValueError('Did not find {} in adata.obs. Did you compute layout {}?'
                          .format('draw_graph_' + layout, layout))
 
-    return plot_scatter(adata, basis, **kwargs)
+    return embedding(adata, basis, **kwargs)
 
 
 @_wraps_plot_scatter
@@ -428,7 +567,7 @@ def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
-    return plot_scatter(adata, 'pca', **kwargs)
+    return embedding(adata, 'pca', **kwargs)
 
 
 # Helpers
@@ -450,10 +589,22 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
         for components = [1,2] and components=['1,2', '2,3'] respectively
     """
+
+    if basis in adata.obsm.keys():
+        basis_key = basis
+
+    elif f"X_{basis}" in adata.obsm.keys():
+        basis_key = f"X_{basis}"
+    else:
+        raise KeyError(
+            f"Could not find entry in `obsm` for '{basis}'.\n"
+            f"Available keys are: {list(adata.obsm.keys())}."
+        )
+
     n_dims = 2
     if projection == '3d':
         # check if the data has a third dimension
-        if adata.obsm['X_' + basis].shape[1] == 2:
+        if adata.obsm[basis_key].shape[1] == 2:
             if settings._low_resolution_warning:
                 logg.warning(
                     'Selected projections is "3d" but only two dimensions '
@@ -465,7 +616,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
     if components == 'all':
         from itertools import combinations
         r_value = 3 if projection == '3d' else 2
-        _components_list = np.arange(adata.obsm['X_{}'.format(basis)].shape[1]) + 1
+        _components_list = np.arange(adata.obsm[basis_key].shape[1]) + 1
         components = [",".join(map(str, x)) for x in combinations(_components_list, r=r_value)]
 
     components_list = []
@@ -498,7 +649,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
         try:
             data_points = []
             for comp in components_list:
-                data_points.append(adata.obsm['X_' + basis][:, comp])
+                data_points.append(adata.obsm[basis_key][:, comp])
         except:
             raise ValueError("Given components: '{}' are not valid. Please check. "
                              "A valid example is `components='2,3'`")
@@ -508,7 +659,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
             # plot_scatter can print the labels correctly.
             components_list = [tuple(number-1 for number in comp) for comp in components_list]
     else:
-        data_points = [adata.obsm['X_' + basis][:, offset:offset+n_dims]]
+        data_points = [adata.obsm[basis_key][:, offset:offset+n_dims]]
         components_list = []
     return data_points, components_list
 

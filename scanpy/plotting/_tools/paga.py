@@ -85,8 +85,8 @@ def paga_compare(
             basis = 'draw_graph_fr'
         else:
             basis = 'umap'
-    from .scatterplots import plot_scatter
-    plot_scatter(
+    from .scatterplots import embedding
+    embedding(
         adata,
         ax=axs[0],
         basis=basis,
