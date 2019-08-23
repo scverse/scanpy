@@ -18,6 +18,7 @@ from ..._settings import settings
 from ...utils import sanitize_anndata, doc_params
 from ... import logging as logg
 
+VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 @doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
 def embedding(
@@ -45,10 +46,11 @@ def embedding(
     legend_fontweight: str = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
-    vmax: Union[float, str, Callable[[Sequence[float]], float], Sequence[Union[str, float, Callable[[Sequence[float]], float]]], None] = None,
-    vmin: Union[float, str, Callable[[Sequence[float]], float], Sequence[Union[str, float, Callable[[Sequence[float]], float]]], None] = None,
-    add_contour: Optional[bool] = False,
-    contour_config: Optional[dict] = {'color': ('black', 'white'), 'edge_width': (0.3, 0.05)},
+    vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
+    vmin: Union[VMinMax, Sequence[VMinMax], None] = None,
+    add_outline: Optional[bool] = False,
+    outline_width: Tuple[float, float] = (0.3, 0.05),
+    outline_color: Tuple[str, str] = ('black', 'white'),
     ncols: int = 4,
     hspace: float = 0.25,
     wspace: Optional[float] = None,
@@ -237,7 +239,7 @@ def embedding(
                 **kwargs,
             )
         else:
-            if add_contour:
+            if add_outline:
                 # the default contour is a black edge followd by a
                 # thin white edged added around connected clusters.
                 # To add a contour
@@ -247,13 +249,13 @@ def embedding(
                 # than the final dots. Then the final dots are drawn
                 # with some transparency.
 
-                black_width, white_width = contour_config['edge_width']
+                bg_width, gap_width = outline_width
                 point = np.sqrt(size)
-                white_size = (point + (point * white_width)*2)**2
-                black_size = (np.sqrt(white_size) + (point * black_width)*2)**2
+                gap_size = (point + (point * gap_width)*2)**2
+                bg_size = (np.sqrt(gap_size) + (point * bg_width)*2)**2
                 # the default black and white colors can be changes using
                 # the contour_config parameter
-                black_color, white_color = contour_config['color']
+                bg_color, gap_color = outline_color
 
                 # remove edge from kwargs if present
                 # because edge needs to be set to None
@@ -263,12 +265,12 @@ def embedding(
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
-                    _data_points[:, 0], _data_points[:, 1], s=black_size,
-                    marker=".", c=black_color, rasterized=settings._vector_friendly,
+                    _data_points[:, 0], _data_points[:, 1], s=bg_size,
+                    marker=".", c=bg_color, rasterized=settings._vector_friendly,
                     **kwargs)
                 ax.scatter(
-                    _data_points[:, 0], _data_points[:, 1], s=white_size,
-                    marker=".", c=white_color, rasterized=settings._vector_friendly,
+                    _data_points[:, 0], _data_points[:, 1], s=gap_size,
+                    marker=".", c=gap_color, rasterized=settings._vector_friendly,
                     **kwargs)
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
@@ -331,8 +333,8 @@ def embedding(
 
 
 def _get_vmin_vmax(
-    vmin: Sequence[Union[str, float, Callable[[Sequence[float]], float]]],
-    vmax: Sequence[Union[str, float, Callable[[Sequence[float]], float]]],
+    vmin: Sequence[VMinMax],
+    vmax: Sequence[VMinMax],
     index: int,
     color_vector: Sequence[float]
 ) -> Tuple[Union[float, None], Union[float, None]]:

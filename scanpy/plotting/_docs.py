@@ -91,14 +91,17 @@ vmin
     be a list of values, one for each plot. For example `vmin=[0.1, 'q1', None, my_vmin]
 vmax
     Maximum value to plot. The format is the same as for `vmin`
-add_contour
+add_outline
     If set to True, this will add a thin border around groups of dots. In some situations
     this can enhance the aesthetics of the resulting image 
-contour_config
-    Used to adjust the add_contour parameters. This is a dictionary with two keys: 'color'
-    and 'edge_width'. 'color' should be a tuple with the outermost and innermost colors to use
-    and 'edge_width' should be a tuple with the with for the outermost and for the innermost 
-    colors. The edge unit is fraction with respect to the size of the scatterplot dot.      
+outline_color
+    Tuple with two valid color names used to adjust the add_outline. The first color is the
+    border color (default: black), while the second color is a gap color between the
+    border color and the scatter dot (default: white).   
+outline_width
+    Tuple with two width numbers used to adjust the outline. The first value is the width
+    of the border color as a fraction of the scatter dot size (default: 0.3). The second value is
+    width of the gap color (default: 0.05).
 """
 _doc_scatter_panels = """\
 ncols
