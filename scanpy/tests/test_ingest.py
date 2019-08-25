@@ -6,6 +6,7 @@ from scanpy.preprocessing._simple import N_PCS
 from sklearn.neighbors import KDTree
 from umap import UMAP
 
+
 X = np.array([
     [ 1. ,  2.5,  3. ,  5. ,  8.7],
     [ 4.2,  7. ,  9. , 11. ,  7. ],
@@ -30,6 +31,7 @@ def adatas():
 
     sc.pp.pca(adata_ref)
     sc.pp.neighbors(adata_ref)
+    sc.tl.umap(adata_ref)
 
     return adata_ref, adata_new
 
@@ -82,6 +84,47 @@ def test_neighbors(adatas):
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
+
+
+def test_ingest_function(adatas):
+    adata_ref = adatas[0].copy()
+    adata_new = adatas[1].copy()
+
+    sc.tl.ingest(
+        adata_new, adata_ref,
+        obs='bulk_labels',
+        embedding_method=['umap', 'pca'],
+        inplace=True
+    )
+
+    assert 'bulk_labels' in adata_new.obs
+    assert 'X_umap' in adata_new.obsm
+    assert 'X_pca' in adata_new.obsm
+
+    ad = sc.tl.ingest(
+            adata_new,
+            adata_ref,
+            obs='bulk_labels',
+            embedding_method=['umap', 'pca'],
+            inplace=False
+        )
+
+    assert 'bulk_labels' in ad.obs
+    assert 'X_umap' in ad.obsm
+    assert 'X_pca' in ad.obsm
+
+    ad = sc.tl.ingest(
+            adata_new,
+            adata_ref,
+            obs='bulk_labels',
+            embedding_method=['umap', 'pca'],
+            return_joint = True
+        )
+
+    assert ad.shape == (adata_new.n_obs+adata_ref.n_obs, adata_ref.n_vars)
+    assert 'bulk_labels' in ad.obs
+    assert 'X_umap' in ad.obsm
+    assert 'X_pca' in ad.obsm
 
 
 def test_ingest_map_embedding_umap():
