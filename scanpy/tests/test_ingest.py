@@ -4,6 +4,7 @@ import scanpy as sc
 from scanpy.preprocessing._simple import N_PCS
 
 from sklearn.neighbors import KDTree
+from umap import UMAP
 
 X = np.array([
     [ 1. ,  2.5,  3. ,  5. ,  8.7],
@@ -17,14 +18,6 @@ X = np.array([
 T = np.array([
     [2. , 3.5, 4. , 1. , 4.7],
     [3.2, 2. , 5. , 5. , 8. ]
-])
-
-# reducer = umap.UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
-# reducer.fit(X)
-# umap_transformed_T = reducer.transform(T)
-umap_transformed_T = np.array([
-    [ 13.332415, -11.528713],
-    [ 15.844523, -12.827222]
 ])
 
 
@@ -101,5 +94,9 @@ def test_ingest_map_embedding_umap():
     ing = sc.tl.Ingest(adata_ref)
     ing.transform(adata_new)
     ing.map_embedding(method='umap')
+
+    reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
+    reducer.fit(X)
+    umap_transformed_T = reducer.transform(T)
 
     assert np.allclose(ing._obsm['X_umap'], umap_transformed_T)
