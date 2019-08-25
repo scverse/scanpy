@@ -5,6 +5,29 @@ from scanpy.preprocessing._simple import N_PCS
 
 from sklearn.neighbors import KDTree
 
+X = np.array([
+    [ 1. ,  2.5,  3. ,  5. ,  8.7],
+    [ 4.2,  7. ,  9. , 11. ,  7. ],
+    [ 5.1,  2. ,  9. ,  4. ,  9. ],
+    [ 7. ,  9.4,  6.8,  9.1,  8. ],
+    [ 8.9,  8.6,  9.6,  1. ,  2. ],
+    [ 6.5,  8.9,  2.2,  4.5,  8.9]
+])
+
+T = np.array([
+    [2. , 3.5, 4. , 1. , 4.7],
+    [3.2, 2. , 5. , 5. , 8. ]
+])
+
+# reducer = umap.UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
+# reducer.fit(X)
+# umap_transformed_T = reducer.transform(T)
+umap_transformed_T = np.array([
+    [ 13.332415, -11.528713],
+    [ 15.844523, -12.827222]
+])
+
+
 @pytest.fixture
 def adatas():
     pbmc = sc.datasets.pbmc68k_reduced()
@@ -16,6 +39,7 @@ def adatas():
     sc.pp.neighbors(adata_ref)
 
     return adata_ref, adata_new
+
 
 def test_representation(adatas):
     adata_ref = adatas[0].copy()
@@ -46,6 +70,7 @@ def test_representation(adatas):
     assert ing._use_rep == 'X'
     assert ing._obsm['rep'] is adata_new.X
 
+
 def test_neighbors(adatas):
     adata_ref = adatas[0].copy()
     adata_new = adatas[1].copy()
@@ -64,3 +89,17 @@ def test_neighbors(adatas):
     percent_correct = num_correct / (adata_new.n_obs * 10)
 
     assert percent_correct > 0.99
+
+
+def test_ingest_map_embedding_umap():
+    adata_ref = sc.AnnData(X)
+    adata_new = sc.AnnData(T)
+
+    sc.pp.neighbors(adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0)
+    sc.tl.umap(adata_ref, random_state=0)
+
+    ing = sc.tl.Ingest(adata_ref)
+    ing.transform(adata_new)
+    ing.map_embedding(method='umap')
+
+    assert np.allclose(ing._obsm['X_umap'], umap_transformed_T)

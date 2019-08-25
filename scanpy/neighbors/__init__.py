@@ -94,7 +94,7 @@ def neighbors(
         random_state=random_state,
     )
     adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
+    adata.uns['neighbors']['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
     adata.uns['neighbors']['params']['metric'] = metric
     if metric_kwds:
         adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
