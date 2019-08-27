@@ -252,14 +252,13 @@ def rank_genes_groups(
         reference = groups_order[0]
         if len(groups) == 1:
             raise Exception('Cannot perform logistic regression on a single cluster.')
-        adata_copy = adata[adata.obs[groupby].isin(groups_order)]
-        adata_comp = adata_copy
-        if adata.raw is not None and use_raw:
-            adata_comp = adata_copy.raw
-        X = adata_comp.X
+
+        grouping_mask = adata.obs[groupby].isin(groups_order)
+        grouping = adata.obs.loc[grouping_mask, groupby]
+        X = X[grouping_mask.values, :]  # Indexing with a series causes issues, possibly segfault
 
         clf = LogisticRegression(**kwds)
-        clf.fit(X, adata_copy.obs[groupby].cat.codes)
+        clf.fit(X, grouping.cat.codes)
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
             if len(groups_order) <= 2:  # binary logistic regression
