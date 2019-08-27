@@ -482,9 +482,9 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
     >>> import scanpy.external as sce
     >>> import phate
     >>> data, branches = phate.tree.gen_dla(
-    ... n_dim=100,
-    ... n_branch=20,
-    ... branch_length=100,
+    ...     n_dim=100,
+    ...     n_branch=20,
+    ...     branch_length=100,
     ... )
     >>> data.shape
     (2000, 100)

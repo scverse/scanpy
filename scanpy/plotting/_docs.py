@@ -89,7 +89,7 @@ vmin
     the values to plot, `def my_vmin(values): return np.mean(values)` and then 
     set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
     as defined by matplotlib `scatter` function. When making multiple plots, vmin can 
-    be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]
+    be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
     Maximum value to plot. The format is the same as for `vmin`
 add_outline
