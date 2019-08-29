@@ -85,9 +85,13 @@ def pca_loadings(
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
     if components is None: components = [1, 2, 3]
-    elif isinstance(components, str): components = components.split(',')
+    elif isinstance(components, str): components = [int(x) for x in components.split(',')]
     components = np.array(components) - 1
-    ranking(adata, 'varm', 'PCs', indices=components, include_lowest=include_lowest)
+    ranking(adata,
+            'varm',
+            'PCs',
+            indices=components,
+            include_lowest=include_lowest)
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 

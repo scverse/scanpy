@@ -373,6 +373,12 @@ def test_rankings(image_comparer):
     sc.pl.pca_loadings(pbmc)
     save_and_compare_images('master_pca_loadings')
 
+    sc.pl.pca_loadings(pbmc, components='1,2,3')
+    save_and_compare_images('master_pca_loadings')
+
+    sc.pl.pca_loadings(pbmc, components=[1,2,3])
+    save_and_compare_images('master_pca_loadings')
+
     sc.pl.pca_loadings(pbmc, include_lowest=True)
     save_and_compare_images('master_pca_loadings_lowest_loadings')
 
