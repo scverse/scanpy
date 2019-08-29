@@ -595,6 +595,7 @@ def ranking(
                 pl.text(ig+len(indices)+2, score[g], labels[g], color=color,
                         rotation='vertical', verticalalignment='bottom',
                         horizontalalignment='center', fontsize=8)
+            pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols: pl.xlabel('ranking')
         pl.xlim(-0.9, n_points + 0.9 + (1 if include_lowest else 0))
