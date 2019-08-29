@@ -160,6 +160,10 @@ def test_violin(image_comparer):
                  stripplot=True, multi_panel=True, jitter=True, show=False)
     save_and_compare_images('master_violin_multi_panel')
 
+    sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], groupby='bulk_labels',
+                 stripplot=True, multi_panel=True, jitter=True, show=False)
+    save_and_compare_images('master_violin_multi_panel_with_groupby')
+
 
 def test_dendrogram(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=10)
