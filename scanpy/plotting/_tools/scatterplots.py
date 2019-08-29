@@ -229,7 +229,10 @@ def embedding(
                 ax.set_title(value_to_plot)
 
         # check vmin and vmax options
-        kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
+        if categorical:
+            kwargs['vmin'] =  kwargs['vmax'] = None
+        else:
+            kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
 
         # make the scatter plot
         if projection == '3d':
@@ -386,8 +389,8 @@ def _get_vmin_vmax(
                 try:
                     float(v_value[1:])
                 except ValueError:
-                    logg.error(f"The parameter {v_name}={v_value} is not valid. Please check the "
-                               f"correct format for percentiles.")
+                    logg.error(f"The parameter {v_name}={v_value} for plot number {index + 1} is not valid. "
+                               f"Please check the correct format for percentiles.")
                 # interpret value of vmin/vmax as quantile with the following syntax 'p99.9'
                 v_value = np.percentile(color_vector, q=float(v_value[1:]))
             elif callable(v_value):
@@ -396,6 +399,14 @@ def _get_vmin_vmax(
                 if not isinstance(v_value, float):
                     logg.error(f"The return of the function given for {v_name} is not valid. "
                                "Please check that the function returns a number.")
+                    v_value = None
+            else:
+                try:
+                    float(v_value)
+                except ValueError:
+                    logg.error(f"The given {v_name}={v_value} for plot number {index + 1} is not valid. "
+                               f"Please check that the value given is a valid number, a string "
+                               f"starting with 'p' for percentiles or a valid function.")
                     v_value = None
         out.append(v_value)
     return tuple(out)
