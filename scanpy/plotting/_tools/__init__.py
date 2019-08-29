@@ -76,7 +76,7 @@ def pca_loadings(
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
     include_lowest
-        Show the genes with lowest loadings in addition to the ones with highest loadings.
+        Show the genes with both highest and lowest loadings.
     show
         Show the plot, do not return axis.
     save
