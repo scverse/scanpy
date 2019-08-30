@@ -1,11 +1,8 @@
-from typing import Iterable
-
 from anndata import AnnData
-
 from scipy.signal import argrelextrema
 from scipy.stats import gaussian_kde
+
 import numpy as np
-import itertools
 import pandas as pd
 
 
@@ -33,7 +30,6 @@ def _demultiplex_per_barcode(x):
 
 
 def demultiplex_hashing(adata: AnnData,
-                        percentile_candidates: Iterable[int] = None,
                         inplace: bool = True):
     """
     Demultiplexing cell hashing data
@@ -42,10 +38,8 @@ def demultiplex_hashing(adata: AnnData,
     ------
     adata
         The annotated data matrix of shape ``n_obs`` × ``n_vars``. Rows correspond
-        to cells and columns to genes.
-    percentile_candidates
-        Choose exact percentiles to evaluate thresholding at
-
+        to cells and columns to genes. This adata object should only contain counts
+        for hashing barcodes
     inplace
         Whether to update ``adata`` or return dictionary with normalized copies of
         ``adata.X`` and ``adata.layers``.
@@ -54,6 +48,30 @@ def demultiplex_hashing(adata: AnnData,
     -------
     Returns `adata.obs` with columns "ID" and "CLASSIFICATION" which identify
     which cell hashing barcodes a cell has
+
+    Example
+    --------
+    >>> import numpy as np
+    >>> import scanpy as sc
+    >>> from anndata import AnnData
+    >>> X = np.ones((10, 10))
+    >>> for x in range(10):
+    ...     X[x, x] = 1000
+    ...
+    >>> X[0, 1] = 1000
+    >>> ## should only contain hashing barcode counts
+    >>> hto_data = AnnData(X)
+    >>> sc.pp.demultiplex_hashing(hto_data)
+    # CLASSIFICATION are the hashing ID for a cells seperated by and underscore
+    # ID refers to if it is a doublet or not
+    >>> hto_data.obs.head()
+                ID CLASSIFICATION
+        0  Doublet            0_1
+        1        1              1
+        2        2              2
+        3        3              3
+        4        4              4
+
     """
     barcodes_hits = []
     number_of_barcodes = adata.X.shape[1]
@@ -65,11 +83,8 @@ def demultiplex_hashing(adata: AnnData,
         barcodes_hits.append(info)
     number_of_singlets = []
     thresh_results = np.array(barcodes_hits)[:, :, 0]
-    if percentile_candidates is not None:
-        all_products = list(itertools.product(percentile_candidates,
-                                              repeat=number_of_barcodes))
-    else:
-        all_products = [[q] * number_of_barcodes for q in range(1, 99)]
+
+    all_products = [[q] * number_of_barcodes for q in range(1, 99)]
     for x in all_products:
         subsets = thresh_results[np.arange(number_of_barcodes), x]
         subsets = np.array([np.array(subset) for subset in subsets])
