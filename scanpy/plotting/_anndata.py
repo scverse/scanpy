@@ -673,25 +673,23 @@ def violin(
         obs_tidy = obs_df
         x = groupby
         ys = keys
-    if multi_panel:
-        if groupby is None and len(ys) == 1:
-            # This is a quick and dirty way for adapting scales across several
-            # keys if groupby is None.
-            y = ys[0]
-            g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-            # don't really know why this gives a warning without passing `order`
-            g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwds)
-            if stripplot:
-                g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
-                          color='black')
-            if log:
-                g.set(yscale='log')
-            g.set_titles(col_template='{col_name}').set_xlabels('')
-            if rotation is not None:
-                for ax in g.axes[0]:
-                    ax.tick_params(labelrotation=rotation)
-
+    if multi_panel and groupby is None and len(ys) == 1:
+        # This is a quick and dirty way for adapting scales across several
+        # keys if groupby is None.
+        y = ys[0]
+        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
+        # don't really know why this gives a warning without passing `order`
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical',
+                  scale=scale, order=keys, **kwds)
+        if stripplot:
+            g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
+                      color='black')
+        if log:
+            g.set(yscale='log')
+        g.set_titles(col_template='{col_name}').set_xlabels('')
+        if rotation is not None:
+            for ax in g.axes[0]:
+                ax.tick_params(labelrotation=rotation)
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
@@ -713,7 +711,7 @@ def violin(
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
     if show is False:
-        if multi_panel:
+        if multi_panel and groupby is None and len(ys) == 1:
             return g
         elif len(axs) == 1:
             return axs[0]
