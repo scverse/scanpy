@@ -493,13 +493,11 @@ def paga(
         )
 
     if plot:
-        if ax is None:
-            axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
-                panels=colors,
-                colorbars=colorbars,
-            )
-        else:
-            axs = ax
+        axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
+            ax=ax,
+            panels=colors,
+            colorbars=colorbars,
+        )
 
         if len(colors) == 1 and not isinstance(axs, list):
             axs = [axs]
