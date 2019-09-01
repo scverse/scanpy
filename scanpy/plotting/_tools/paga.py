@@ -9,6 +9,7 @@ import scipy
 from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl, rcParams, ticker
+from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 
@@ -30,6 +31,7 @@ def paga_compare(
     legend_loc='on data',
     legend_fontsize=None,
     legend_fontweight='bold',
+    legend_fontoutline=None,
     color_map=None,
     palette=None,
     frameon=False,
@@ -98,6 +100,7 @@ def paga_compare(
         legend_loc=legend_loc,
         legend_fontsize=legend_fontsize,
         legend_fontweight=legend_fontweight,
+        legend_fontoutline=legend_fontoutline,
         color_map=color_map,
         palette=palette,
         frameon=frameon,
@@ -117,6 +120,12 @@ def paga_compare(
         labels = paga_graph_params.pop('labels')
     else:
         labels = groups_graph
+    if legend_fontsize is not None:
+        paga_graph_params['fontsize'] = legend_fontsize
+    if legend_fontweight is not None:
+        paga_graph_params['fontweight'] = legend_fontweight
+    if legend_fontoutline is not None:
+        paga_graph_params['fontoutline'] = legend_fontoutline
     paga(
         adata,
         ax=axs[1],
@@ -234,7 +243,7 @@ def paga(
     threshold: Optional[float] = None,
     color: Optional[str] = None,
     layout: str = None,
-    layout_kwds: Mapping[str, Any] = {},
+    layout_kwds: Optional[Mapping[str, Any]] = None,
     init_pos: Optional[np.ndarray] = None,
     root: Union[int, str, Sequence[int], None] = 0,
     labels: Union[str, Sequence[str], Mapping[str, str], None] = None,
@@ -244,7 +253,8 @@ def paga(
     transitions: Optional[str] = None,
     fontsize: Optional[int] = None,
     fontweight: str = 'bold',
-    text_kwds: Mapping[str, Any] = {},
+    fontoutline: Optional[int] = None,
+    text_kwds: Optional[Mapping[str, Any]] = None,
     node_size_scale: float = 1.,
     node_size_power: float = 0.5,
     edge_width_scale: float = 1.,
@@ -259,7 +269,7 @@ def paga(
     cmap: Union[str, Colormap]=None,
     cax: Optional[Axes] = None,
     colorbar=None,  # TODO: this seems to be unused
-    cb_kwds: Mapping[str, Any] = {},
+    cb_kwds: Optional[Mapping[str, Any]] = None,
     frameon: Optional[bool] = None,
     add_pos: bool = True,
     export_to_gexf: bool = False,
@@ -338,6 +348,8 @@ def paga(
         Restrict to largest connected component.
     fontsize
         Font size for node labels.
+    fontoutline
+        Width of the white outline around fonts.
     text_kwds
         Keywords for :meth:`~matplotlib.axes.Axes.text`.
     node_size_scale
@@ -401,6 +413,10 @@ def paga(
     pl.paga_compare
     pl.paga_path
     """
+    if layout_kwds is None: layout_kwds = {}
+    if text_kwds is None: text_kwds = {}
+    if cb_kwds is None: cb_kwds = {}
+
     if groups is not None:  # backwards compat
         labels = groups
         logg.warning('`groups` is deprecated in `pl.paga`: use `labels` instead')
@@ -505,6 +521,7 @@ def paga(
                 labels=labels[icolor],
                 fontsize=fontsize,
                 fontweight=fontweight,
+                fontoutline=fontoutline,
                 text_kwds=text_kwds,
                 node_size_scale=node_size_scale,
                 node_size_power=node_size_power,
@@ -557,6 +574,7 @@ def _paga_graph(
     labels=None,
     fontsize=None,
     fontweight=None,
+    fontoutline=None,
     text_kwds=None,
     node_size_scale=1.,
     node_size_power=0.5,
@@ -572,11 +590,13 @@ def _paga_graph(
     cax=None,
     colorbar=None,
     use_raw=True,
-    cb_kwds={},
+    cb_kwds=None,
     single_component=False,
     arrowsize=30,
 ):
     import networkx as nx
+    if text_kwds is None: text_kwds = {}
+    if cb_kwds is None: cb_kwds = {}
 
     node_labels = labels  # rename for clarity
     if (node_labels is not None
@@ -773,7 +793,9 @@ def _paga_graph(
 
     if fontsize is None:
         fontsize = rcParams['legend.fontsize']
-
+    if fontoutline is not None:
+        text_kwds['path_effects'] = [patheffects.withStroke(linewidth=fontoutline,
+                                                            foreground='w')]
     # usual scatter plot
     if not isinstance(colors[0], dict):
         n_groups = len(pos_array)
