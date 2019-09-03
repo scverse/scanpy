@@ -157,12 +157,12 @@ def rank_genes_groups(
     # otherwise it's just the AnnData object
     adata_comp = adata
     if layer is not None:
-        assert not use_raw, "Cannot specify layer and have `use_raw=True`."
+        if use_raw:
+            raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
         X = adata_comp.layers[layer]
-    elif adata.raw is not None and use_raw:
-        adata_comp = adata.raw
-        X = adata_comp.X
     else:
+        if use_raw and adata.raw is not None:
+            adata_comp = adata.raw
         X = adata_comp.X
 
     # for clarity, rename variable
