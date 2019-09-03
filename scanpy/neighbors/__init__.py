@@ -130,7 +130,7 @@ RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, None, None]:
     props = FlatTree._fields
-    num_trees = len(rp_forest_dict[props]['start'])-1
+    num_trees = len(rp_forest_dict[props[0]]['start'])-1
 
     for i in range(num_trees):
         tree = []
