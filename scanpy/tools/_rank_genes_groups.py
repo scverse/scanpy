@@ -13,6 +13,7 @@ from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 
 
+# TODO: Make arguments after groupby keyword only
 def rank_genes_groups(
     adata: AnnData,
     groupby: str,
@@ -25,6 +26,7 @@ def rank_genes_groups(
     copy: bool = False,
     method: str = 't-test_overestim_var',
     corr_method: str = 'benjamini-hochberg',
+    layer: Optional[str] = None,
     **kwds
 ):
     """Rank genes for characterizing groups.
@@ -37,6 +39,8 @@ def rank_genes_groups(
         The key of the observations grouping to consider.
     use_raw
         Use `raw` attribute of `adata` if present.
+    layer
+        Key from `adata.layers` whose value will be used to perform tests on.
     groups
         Subset of groups, e.g. [`'g1'`, `'g2'`, `'g3'`], to which comparison
         shall be restricted, or `'all'` (default), for all groups.
@@ -145,15 +149,21 @@ def rank_genes_groups(
         'reference': reference,
         'method': method,
         'use_raw': use_raw,
+        'layer': layer,
         'corr_method': corr_method,
     }
 
     # adata_comp mocks an AnnData object if use_raw is True
     # otherwise it's just the AnnData object
     adata_comp = adata
-    if adata.raw is not None and use_raw:
-        adata_comp = adata.raw
-    X = adata_comp.X
+    if layer is not None:
+        if use_raw:
+            raise ValueError("Cannot specify `layer` and have `use_raw=True`.")
+        X = adata_comp.layers[layer]
+    else:
+        if use_raw and adata.raw is not None:
+            adata_comp = adata.raw
+        X = adata_comp.X
 
     # for clarity, rename variable
     n_genes_user = n_genes
@@ -242,14 +252,13 @@ def rank_genes_groups(
         reference = groups_order[0]
         if len(groups) == 1:
             raise Exception('Cannot perform logistic regression on a single cluster.')
-        adata_copy = adata[adata.obs[groupby].isin(groups_order)]
-        adata_comp = adata_copy
-        if adata.raw is not None and use_raw:
-            adata_comp = adata_copy.raw
-        X = adata_comp.X
+
+        grouping_mask = adata.obs[groupby].isin(groups_order)
+        grouping = adata.obs.loc[grouping_mask, groupby]
+        X = X[grouping_mask.values, :]  # Indexing with a series causes issues, possibly segfault
 
         clf = LogisticRegression(**kwds)
-        clf.fit(X, adata_copy.obs[groupby].cat.codes)
+        clf.fit(X, grouping.cat.codes)
         scores_all = clf.coef_
         for igroup, group in enumerate(groups_order):
             if len(groups_order) <= 2:  # binary logistic regression

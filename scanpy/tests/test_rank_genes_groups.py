@@ -86,3 +86,38 @@ def test_results_sparse():
     for name in true_scores_t_test.dtype.names:
         assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
     assert np.array_equal(true_names_wilcoxon[:7], adata.uns['rank_genes_groups']['names'][:7])
+
+
+def test_results_layers():
+    seed(1234)
+
+    adata = get_example_data(sparse=False)
+    adata.layers["to_test"] = adata.X.copy()
+    adata.X = adata.X * np.random.randint(0, 2, adata.shape, dtype=bool)
+
+    true_names_t_test, true_names_wilcoxon,\
+    true_scores_t_test, true_scores_wilcoxon = get_true_scores()
+
+    # Wilcoxon
+    rank_genes_groups(
+        adata, 'true_groups', method='wilcoxon',
+        layer="to_test", use_raw=False, n_genes=20,
+    )
+    for name in true_scores_t_test.dtype.names:
+        assert np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
+
+    rank_genes_groups(adata, 'true_groups', method='wilcoxon', n_genes=20)
+    for name in true_scores_t_test.dtype.names:
+        assert not np.allclose(true_scores_wilcoxon[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
+
+    # t-test
+    rank_genes_groups(
+        adata, 'true_groups', method='t-test',
+        layer="to_test", use_raw=False, n_genes=20,
+    )
+    for name in true_scores_t_test.dtype.names:
+        assert np.allclose(true_scores_t_test[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
+
+    rank_genes_groups(adata, 'true_groups', method='t-test', n_genes=20)
+    for name in true_scores_t_test.dtype.names:
+        assert not np.allclose(true_scores_t_test[name][:7], adata.uns['rank_genes_groups']['scores'][name][:7])
