@@ -1,16 +1,26 @@
-from matplotlib import pyplot as plt
+from typing import Optional, Union
+
 import pandas as pd
+from anndata import AnnData
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+
 from . import _utils as utils
+from ._docs import doc_show_save_ax
 from ..preprocessing._simple import normalize_per_cell
 from ..utils import doc_params
-from ._docs import doc_show_save_ax
 
 
 @doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
-        adata, n_top=30, show=None, save=None,
-        ax=None, gene_symbols=None, **kwds
-    ):
+    adata: AnnData,
+    n_top: int = 30,
+    show: Optional[bool] = None,
+    save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
+    gene_symbols: Optional[str] = None,
+    **kwds,
+):
     """\
     Fraction of counts assigned to each gene over all cells.
 
@@ -32,12 +42,12 @@ def highest_expr_genes(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_top : `int`, optional (default:30)
+    n_top
         Number of top
     {show_save_ax}
-    gene_symbols : `str`, optional (default:None)
+    gene_symbols
         Key for field in .var that stores gene symbols if you do not want to use .var_names.
     **kwds
         Are passed to :func:`~seaborn.boxplot`.

@@ -148,7 +148,7 @@ def score_genes_cell_cycle(
     s_genes: Sequence[str],
     g2m_genes: Sequence[str],
     copy: bool = False,
-    **kwargs
+    **kwargs,
 ):
     """Score cell cycle genes [Satija15]_.
 

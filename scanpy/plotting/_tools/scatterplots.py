@@ -59,7 +59,7 @@ def embedding(
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
     return_fig: Optional[bool] = None,
-    **kwargs
+    **kwargs,
 ) -> Union[Figure, Axes, None]:
     """\
     Scatter plot for user specified embedding basis (e.g. umap, pca, etc)
@@ -339,7 +339,7 @@ def _get_vmin_vmax(
     vmin: Sequence[VMinMax],
     vmax: Sequence[VMinMax],
     index: int,
-    color_vector: Sequence[float]
+    color_vector: Sequence[float],
 ) -> Tuple[Union[float, None], Union[float, None]]:
 
     """

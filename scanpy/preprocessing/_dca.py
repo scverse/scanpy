@@ -1,30 +1,31 @@
-def dca(adata,
-        mode='denoise',
-        ae_type='zinb-conddisp',
-        normalize_per_cell=True,
-        scale=True,
-        log1p=True,
-        # network args
-        hidden_size=(64, 32, 64),
-        hidden_dropout=0.,
-        batchnorm=True,
-        activation='relu',
-        init='glorot_uniform',
-        network_kwds={},
-        # training args
-        epochs=300,
-        reduce_lr=10,
-        early_stop=15,
-        batch_size=32,
-        optimizer='rmsprop',
-        random_state=0,
-        threads=None,
-        verbose=False,
-        training_kwds={},
-        return_model=False,
-        return_info=False,
-        copy=False
-        ):
+def dca(
+    adata,
+    mode='denoise',
+    ae_type='zinb-conddisp',
+    normalize_per_cell=True,
+    scale=True,
+    log1p=True,
+    # network args
+    hidden_size=(64, 32, 64),
+    hidden_dropout=0.,
+    batchnorm=True,
+    activation='relu',
+    init='glorot_uniform',
+    network_kwds={},
+    # training args
+    epochs=300,
+    reduce_lr=10,
+    early_stop=15,
+    batch_size=32,
+    optimizer='rmsprop',
+    random_state=0,
+    threads=None,
+    verbose=False,
+    training_kwds={},
+    return_model=False,
+    return_info=False,
+    copy=False,
+):
     """Deep count autoencoder [Eraslan18]_.
 
     Fits a count autoencoder to the raw count data given in the anndata object

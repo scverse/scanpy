@@ -381,12 +381,13 @@ def test_scatter_rep(tmpdir):
         "layer": {"layer": "layer", "use_raw": False},
         "X": {"use_raw": False}
     }
-    states = pd.DataFrame.from_records(zip(
+    states = pd.DataFrame.from_records(
+        zip(
             list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
-            [1,2,3,3,1,2,2,3,1]
+            [1, 2, 3, 3, 1, 2, 2, 3, 1],
         ),
-        columns=["rep", "gene", "result"]
+        columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
         TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"

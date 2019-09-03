@@ -608,7 +608,7 @@ def violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Violin plot.
@@ -726,7 +726,7 @@ def clustermap(
     use_raw: Optional[bool] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Hierarchically-clustered heatmap.
@@ -809,7 +809,7 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     row_palette: str = 'muted',
-    **kwds
+    **kwds,
 ):
     """\
     Stacked violin plots.
@@ -1146,7 +1146,7 @@ def heatmap(
     show=None,
     save=None,
     figsize=None,
-    **kwds
+    **kwds,
 ):
     """\
     Heatmap of the expression values of genes.
@@ -1439,7 +1439,7 @@ def dotplot(
     layer=None,
     show=None,
     save=None,
-    **kwds
+    **kwds,
 ):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1766,7 +1766,7 @@ def matrixplot(
     swap_axes=False,
     show=None,
     save=None,
-    **kwds
+    **kwds,
 ):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -1988,7 +1988,7 @@ def tracksplot(
     show=None,
     save=None,
     figsize=None,
-    **kwds
+    **kwds,
 ):
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
@@ -2222,8 +2222,8 @@ def correlation_matrix(
     dendrogram: Union[bool, str] = True,
     figsize: Optional[Tuple[float, float]] = None,
     show: Optional[bool] = None,
-    save: Optional[bool] = None,
-    **kwds
+    save: Optional[Union[bool, str]] = None,
+    **kwds,
 ):
     """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 

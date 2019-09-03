@@ -52,7 +52,7 @@ def test_krumsiek11(tmp_dataset_dir):
     adata = sc.datasets.krumsiek11()
     assert adata.shape == (640, 11)
     assert all(
-           np.unique(adata.obs["cell_type"])
+        np.unique(adata.obs["cell_type"])
         == np.array(["Ery", "Mk", "Mo", "Neu", "progenitor"])
     )
 

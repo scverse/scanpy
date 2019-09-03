@@ -41,7 +41,7 @@ def paga_compare(
     save=None,
     title_graph=None,
     groups_graph=None,
-    **paga_graph_params
+    **paga_graph_params,
 ):
     """Scatter and PAGA graph side-by-side.
 
@@ -139,7 +139,7 @@ def _compute_pos(
     init_pos=None,
     adj_tree=None,
     root=0,
-    layout_kwds: Mapping[str, Any] = {}
+    layout_kwds: Mapping[str, Any] = {},
 ):
     import networkx as nx
 

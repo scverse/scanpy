@@ -20,7 +20,7 @@ def draw_graph(
     adjacency: Optional[spmatrix] = None,
     key_added_ext: Optional[str] = None,
     copy: bool = False,
-    **kwds
+    **kwds,
 ):
     """\
     Force-directed graph drawing [Islam11]_ [Jacomy14]_ [Chippada18]_.

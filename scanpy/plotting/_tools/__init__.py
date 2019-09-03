@@ -196,7 +196,7 @@ def rank_genes_groups(
     show: Optional[bool] = None,
     save: Optional[bool] = None,
     ax: Optional[Axes] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes.
@@ -307,7 +307,7 @@ def _rank_genes_groups_plot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using the specified plot type
@@ -390,7 +390,7 @@ def rank_genes_groups_heatmap(
     key: str = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
@@ -429,7 +429,7 @@ def rank_genes_groups_tracksplot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using heatmap plot (see :func:`~scanpy.pl.heatmap`)
@@ -468,7 +468,7 @@ def rank_genes_groups_dotplot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using dotplot plot (see :func:`~scanpy.pl.dotplot`)
@@ -507,7 +507,7 @@ def rank_genes_groups_stacked_violin(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using stacked_violin plot (see :func:`~scanpy.pl.stacked_violin`)
@@ -546,7 +546,7 @@ def rank_genes_groups_matrixplot(
     key: Optional[str] = None,
     show: Optional[bool] = None,
     save: Optional[bool] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Plot ranking of genes using matrixplot plot (see :func:`~scanpy.pl.matrixplot`)
@@ -592,7 +592,7 @@ def rank_genes_groups_violin(
     size: int = 1,
     ax: Optional[Axes] = None,
     show: Optional[bool] = None,
-    save: Optional[bool] = None
+    save: Optional[bool] = None,
 ):
     """\
     Plot ranking of genes for all tested comparisons.
@@ -769,7 +769,7 @@ def embedding_density(
     wspace: Optional[None] = None,
     save: Union[bool, str, None] = None,
     show: Optional[bool] = None,
-    **kwargs
+    **kwargs,
 ):
     """\
     Plot the density of cells in an embedding (per condition)

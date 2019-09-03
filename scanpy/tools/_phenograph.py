@@ -138,7 +138,7 @@ def phenograph( adata,
         n_jobs=n_jobs,
         q_tol=q_tol,
         louvain_time_limit=louvain_time_limit,
-        nn_method=nn_method
+        nn_method=nn_method,
     )
 
     logg.info('    finished', time=start)

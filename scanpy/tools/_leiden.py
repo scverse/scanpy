@@ -32,7 +32,7 @@ def leiden(
     n_iterations: int = -1,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
     copy: bool = False,
-    **partition_kwargs
+    **partition_kwargs,
 ):
     """Cluster cells into subgroups [Traag18]_.
 
@@ -103,7 +103,7 @@ def leiden(
             adata,
             restrict_key,
             restrict_categories,
-            adjacency
+            adjacency,
         )
     # convert it to igraph
     g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
@@ -134,7 +134,7 @@ def leiden(
             restrict_key,
             restrict_categories,
             restrict_indices,
-            groups
+            groups,
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),

@@ -625,7 +625,7 @@ def view_to_actual(adata):
     if adata.isview:
         warnings.warn(
             "Revieved a view of an AnnData. Making a copy.",
-            stacklevel=2
+            stacklevel=2,
         )
         adata._init_as_actual(adata.copy())
 

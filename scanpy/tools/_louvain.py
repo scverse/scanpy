@@ -104,7 +104,7 @@ def louvain(
             adata,
             restrict_key,
             restrict_categories,
-            adjacency
+            adjacency,
         )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
@@ -156,7 +156,7 @@ def louvain(
             restrict_key,
             restrict_categories,
             restrict_indices,
-            groups
+            groups,
         )
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),

@@ -23,7 +23,7 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
     if use_raw and is_layer:
         raise ValueError(
             "Cannot use expression from both layer and raw. You provided:"
-            "'use_raw={}' and 'layer={}'".format(use_raw, layer)
+            f"'use_raw={use_raw}' and 'layer={layer}'"
         )
     if is_layer:
         return adata.layers[layer]
@@ -51,7 +51,7 @@ def describe_obs(
     use_raw: bool = False,
     inplace: bool = False,
     X=None,
-    parallel=None
+    parallel=None,
 ) -> Optional[pd.DataFrame]:
     """\
     Describe observations of anndata.
@@ -215,7 +215,7 @@ def calculate_qc_metrics(
     layer: Optional[str] = None,
     use_raw: bool = False,
     inplace: bool = False,
-    parallel: Optional[bool] = None
+    parallel: Optional[bool] = None,
 ) -> Optional[Tuple[pd.DataFrame, pd.DataFrame]]:
     """\
     Calculate quality control metrics.
@@ -273,7 +273,7 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
-        parallel=parallel
+        parallel=parallel,
     )
     var_metrics = describe_var(
         adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X

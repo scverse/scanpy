@@ -27,7 +27,7 @@ def rank_genes_groups(
     method: str = 't-test_overestim_var',
     corr_method: str = 'benjamini-hochberg',
     layer: Optional[str] = None,
-    **kwds
+    **kwds,
 ):
     """Rank genes for characterizing groups.
 

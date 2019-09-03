@@ -36,7 +36,7 @@ def embedding_density(
     *,
     groupby: Optional[str] = None,
     key_added: Optional[str] = None,
-    components: Union[str, Sequence[str]] = None
+    components: Union[str, Sequence[str]] = None,
 ):
     """Calculate the density of cells in an embedding (per condition)
 
