@@ -89,38 +89,33 @@ def describe_obs(
             X.eliminate_zeros()
     obs_metrics = pd.DataFrame(index=adata.obs_names)
     if issparse(X):
-        obs_metrics["n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
+        obs_metrics[f"n_{var_type}_by_{expr_type}"] = X.getnnz(axis=1)
     else:
-        obs_metrics["n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
-    obs_metrics["log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
-        obs_metrics["n_{var_type}_by_{expr_type}"]
+        obs_metrics[f"n_{var_type}_by_{expr_type}"] = np.count_nonzero(X, axis=1)
+    obs_metrics[f"log1p_n_{var_type}_by_{expr_type}"] = np.log1p(
+        obs_metrics[f"n_{var_type}_by_{expr_type}"]
     )
-    obs_metrics["total_{expr_type}"] = X.sum(axis=1)
-    obs_metrics["log1p_total_{expr_type}"] = np.log1p(obs_metrics["total_{expr_type}"])
+    obs_metrics[f"total_{expr_type}"] = X.sum(axis=1)
+    obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
         proportions = top_segment_proportions(X, percent_top, parallel)
-        # Since there are local loop variables, formatting must occur in their scope
-        # Probably worth looking into a python3.5 compatable way to make this better
         for i, n in enumerate(percent_top):
-            obs_metrics["pct_{expr_type}_in_top_{n}_{var_type}".format(**locals())] = (
+            obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
                 proportions[:, i] * 100
             )
     for qc_var in qc_vars:
-        obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] = \
+        obs_metrics[f"total_{expr_type}_{qc_var}"] = (
             X[:, adata.var[qc_var].values].sum(axis=1)
-        obs_metrics["log1p_total_{expr_type}_{qc_var}".format(**locals())] = np.log1p(
-                obs_metrics["total_{expr_type}_{qc_var}".format(**locals())]
-            )
+        )
+        obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
+            obs_metrics[f"total_{expr_type}_{qc_var}"]
+        )
         # "total_{expr_type}" not formatted yet
-        obs_metrics["pct_{expr_type}_{qc_var}".format(**locals())] = \
-            obs_metrics["total_{expr_type}_{qc_var}".format(**locals())] / \
-            obs_metrics["total_{expr_type}"] * 100
-    # Relabel
-    new_colnames = []
-    for col in obs_metrics.columns:
-        new_colnames.append(col.format(**locals()))
-    obs_metrics.columns = new_colnames
+        obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
+            obs_metrics[f"total_{expr_type}_{qc_var}"] /
+            obs_metrics[f"total_{expr_type}"] * 100
+        )
     if inplace:
         adata.obs[obs_metrics.columns] = obs_metrics
     else:
