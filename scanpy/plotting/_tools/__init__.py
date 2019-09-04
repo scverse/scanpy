@@ -61,6 +61,7 @@ pca_scatter = pca
 def pca_loadings(
     adata: AnnData,
     components: Union[str, Sequence[int], None] = None,
+    include_lowest: bool = True,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
 ):
@@ -74,6 +75,8 @@ def pca_loadings(
     components
         For example, ``'1,2,3'`` means ``[1, 2, 3]``, first, second, third
         principal component.
+    include_lowest
+        Show the genes with both highest and lowest loadings.
     show
         Show the plot, do not return axis.
     save
@@ -82,12 +85,16 @@ def pca_loadings(
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
     if components is None: components = [1, 2, 3]
-    elif isinstance(components, str): components = components.split(',')
+    elif isinstance(components, str): components = [int(x) for x in components.split(',')]
     components = np.array(components) - 1
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
-    ranking(adata, 'varm', 'PCs', indices=components)
+    ranking(adata,
+            'varm',
+            'PCs',
+            indices=components,
+            include_lowest=include_lowest)
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 

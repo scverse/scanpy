@@ -369,6 +369,22 @@ def test_scatter_specify_layer_and_raw():
     with pytest.raises(ValueError):
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
 
+def test_rankings(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pp.pca(pbmc)
+    sc.pl.pca_loadings(pbmc)
+    save_and_compare_images('master_pca_loadings')
+
+    sc.pl.pca_loadings(pbmc, components='1,2,3')
+    save_and_compare_images('master_pca_loadings')
+
+    sc.pl.pca_loadings(pbmc, components=[1,2,3])
+    save_and_compare_images('master_pca_loadings')
+
+    sc.pl.pca_loadings(pbmc, include_lowest=False)
+    save_and_compare_images('master_pca_loadings_without_lowest')
 
 # TODO: Make more generic
 def test_scatter_rep(tmpdir):

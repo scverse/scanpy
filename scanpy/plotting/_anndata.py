@@ -530,6 +530,7 @@ def ranking(
     color='black',
     n_points=30,
     log=False,
+    include_lowest=False,
     show=None,
 ):
     """\
@@ -576,15 +577,29 @@ def ranking(
                            top=1-(n_rows-1)*bottom-0.1/n_rows)
     for iscore, score in enumerate(scores.T):
         pl.subplot(gs[iscore])
-        indices = np.argsort(score)[::-1][:n_points+1]
+        if not include_lowest:
+            indices = np.argsort(score)[::-1][:n_points+1]
+        else:
+            sorted_scores = np.argsort(score)[::-1]
+            indices = sorted_scores[:(n_points//2)]
+            neg_indices = sorted_scores[-(n_points-(n_points//2)):]
         for ig, g in enumerate(indices):
             pl.text(ig, score[g], labels[g], color=color,
                     rotation='vertical', verticalalignment='bottom',
                     horizontalalignment='center', fontsize=8)
+        if include_lowest:
+            pl.text(len(indices), (score[g]+score[neg_indices[0]])/2, '⋮', color=color,
+                    rotation='vertical', verticalalignment='bottom',
+                    horizontalalignment='center', fontsize=8)
+            for ig, g in enumerate(neg_indices):
+                pl.text(ig+len(indices)+2, score[g], labels[g], color=color,
+                        rotation='vertical', verticalalignment='bottom',
+                        horizontalalignment='center', fontsize=8)
+            pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols: pl.xlabel('ranking')
-        pl.xlim(-0.9, ig + 0.9)
-        score_min, score_max = np.min(score[indices]), np.max(score[indices])
+        pl.xlim(-0.9, n_points + 0.9 + (1 if include_lowest else 0))
+        score_min, score_max = np.min(score[neg_indices if include_lowest else indices]), np.max(score[indices])
         pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
                 (1.05 if score_max > 0 else 0.95) * score_max)
     if show == False: return gs
