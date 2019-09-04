@@ -623,7 +623,7 @@ def violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     ax: Optional[Axes] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Violin plot.
@@ -688,25 +688,23 @@ def violin(
         obs_tidy = obs_df
         x = groupby
         ys = keys
-    if multi_panel:
-        if groupby is None and len(ys) == 1:
-            # This is a quick and dirty way for adapting scales across several
-            # keys if groupby is None.
-            y = ys[0]
-            g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
-            # don't really know why this gives a warning without passing `order`
-            g = g.map(sns.violinplot, y, inner=None, orient='vertical',
-                      scale=scale, order=keys, **kwds)
-            if stripplot:
-                g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
-                          color='black')
-            if log:
-                g.set(yscale='log')
-            g.set_titles(col_template='{col_name}').set_xlabels('')
-            if rotation is not None:
-                for ax in g.axes[0]:
-                    ax.tick_params(labelrotation=rotation)
-
+    if multi_panel and groupby is None and len(ys) == 1:
+        # This is a quick and dirty way for adapting scales across several
+        # keys if groupby is None.
+        y = ys[0]
+        g = sns.FacetGrid(obs_tidy, col=x, col_order=keys, sharey=False)
+        # don't really know why this gives a warning without passing `order`
+        g = g.map(sns.violinplot, y, inner=None, orient='vertical',
+                  scale=scale, order=keys, **kwds)
+        if stripplot:
+            g = g.map(sns.stripplot, y, orient='vertical', jitter=jitter, size=size, order=keys,
+                      color='black')
+        if log:
+            g.set(yscale='log')
+        g.set_titles(col_template='{col_name}').set_xlabels('')
+        if rotation is not None:
+            for ax in g.axes[0]:
+                ax.tick_params(labelrotation=rotation)
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
@@ -728,7 +726,7 @@ def violin(
                 ax.tick_params(labelrotation=rotation)
     utils.savefig_or_show('violin', show=show, save=save)
     if show is False:
-        if multi_panel:
+        if multi_panel and groupby is None and len(ys) == 1:
             return g
         elif len(axs) == 1:
             return axs[0]
@@ -743,7 +741,7 @@ def clustermap(
     use_raw: Optional[bool] = None,
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
-    **kwds
+    **kwds,
 ):
     """\
     Hierarchically-clustered heatmap.
@@ -826,7 +824,7 @@ def stacked_violin(
     show: Optional[bool] = None,
     save: Union[bool, str, None] = None,
     row_palette: str = 'muted',
-    **kwds
+    **kwds,
 ):
     """\
     Stacked violin plots.
@@ -1163,7 +1161,7 @@ def heatmap(
     show=None,
     save=None,
     figsize=None,
-    **kwds
+    **kwds,
 ):
     """\
     Heatmap of the expression values of genes.
@@ -1456,7 +1454,7 @@ def dotplot(
     layer=None,
     show=None,
     save=None,
-    **kwds
+    **kwds,
 ):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
@@ -1783,7 +1781,7 @@ def matrixplot(
     swap_axes=False,
     show=None,
     save=None,
-    **kwds
+    **kwds,
 ):
     """\
     Creates a heatmap of the mean expression values per cluster of each var_names
@@ -2005,7 +2003,7 @@ def tracksplot(
     show=None,
     save=None,
     figsize=None,
-    **kwds
+    **kwds,
 ):
     """\
     In this type of plot each var_name is plotted as a filled line plot where the
@@ -2239,8 +2237,8 @@ def correlation_matrix(
     dendrogram: Union[bool, str] = True,
     figsize: Optional[Tuple[float, float]] = None,
     show: Optional[bool] = None,
-    save: Optional[bool] = None,
-    **kwds
+    save: Optional[Union[bool, str]] = None,
+    **kwds,
 ):
     """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 

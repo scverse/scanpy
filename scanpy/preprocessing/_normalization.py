@@ -121,8 +121,7 @@ def normalize_total(
         layers = adata.layers.keys()
     elif isinstance(layers, str):
         raise ValueError(
-            "`layers` needs to be a list of strings or 'all', not {!r}"
-            .format(layers)
+            f"`layers` needs to be a list of strings or 'all', not {layers!r}"
         )
 
     gene_subset = None

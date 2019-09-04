@@ -70,7 +70,7 @@ class ScanpyConfig:
         categories_to_ignore: Iterable[str] = ("N/A", "dontknow", "no_gate", "?"),
         _frameon: bool = True,
         _vector_friendly: bool = False,
-        _low_resolution_warning: bool = True
+        _low_resolution_warning: bool = True,
     ):
         # logging
         self._root_logger = RootLogger(logging.INFO)  # level will be replaced

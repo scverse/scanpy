@@ -55,7 +55,6 @@ def sandbag(
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
 
-
     from pypairs.pairs import sandbag
     from . import settings
     from pypairs import settings as pp_settings
@@ -67,24 +66,25 @@ def sandbag(
     pp_settings.logfile = settings.logfile
 
     return sandbag(
-        data = adata,
-        annotation = annotation,
-        gene_names = gene_names,
-        sample_names = sample_names,
-        fraction = fraction,
-        filter_genes = filter_genes,
-        filter_samples = filter_samples
+        data=adata,
+        annotation=annotation,
+        gene_names=gene_names,
+        sample_names=sample_names,
+        fraction=fraction,
+        filter_genes=filter_genes,
+        filter_samples=filter_samples,
     )
 
 
 def cyclone(
-        adata,
-        marker_pairs,
-        gene_names,
-        sample_names,
-        iterations=1000,
-        min_iter=100,
-        min_pairs=50):
+    adata,
+    marker_pairs,
+    gene_names,
+    sample_names,
+    iterations=1000,
+    min_iter=100,
+    min_pairs=50
+):
     """Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 
     Calculates scores for each observation and each phase and assigns prediction
@@ -132,7 +132,6 @@ def cyclone(
     except ImportError:
         raise ImportError('You need to install the package `pypairs`.')
 
-
     from pypairs.pairs import cyclone
     from . import settings
     from pypairs import settings as pp_settings
@@ -144,11 +143,11 @@ def cyclone(
     pp_settings.logfile = settings.logfile
 
     return cyclone(
-        data = adata,
-        marker_pairs = marker_pairs,
-        gene_names = gene_names,
-        sample_names = sample_names,
-        iterations = iterations,
-        min_iter = min_iter,
-        min_pairs = min_pairs
+        data=adata,
+        marker_pairs=marker_pairs,
+        gene_names=gene_names,
+        sample_names=sample_names,
+        iterations=iterations,
+        min_iter=min_iter,
+        min_pairs=min_pairs,
     )

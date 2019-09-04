@@ -25,7 +25,7 @@ def phate(
     random_state: Optional[Union[int, RandomState]] = None,
     verbose: Union[bool, int, None] = None,
     copy: bool = False,
-    **kwargs
+    **kwargs,
 ):
     """PHATE [Moon17]_.
 
@@ -143,7 +143,7 @@ def phate(
         n_jobs=n_jobs,
         random_state=random_state,
         verbose=verbose,
-        **kwargs
+        **kwargs,
     ).fit_transform(adata)
     # update AnnData instance
     adata.obsm['X_phate'] = X_phate  # annotate samples with PHATE coordinates

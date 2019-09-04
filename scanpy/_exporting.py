@@ -3,7 +3,7 @@
 import json
 import logging as logg
 from pathlib import Path
-from typing import Union, Optional, Iterable
+from typing import Union, Optional, Iterable, Mapping
 
 import numpy as np
 import scipy.sparse
@@ -413,66 +413,71 @@ def export_PAGA_to_SPRING(adata, paga_coords, outpath):
 
 
 def cellbrowser(
-    adata, data_dir, data_name,
-    embedding_keys = None,
-    annot_keys = ["louvain", "percent_mito", "n_genes", "n_counts"],
-    cluster_field = "louvain",
-    nb_marker = 50,
-    skip_matrix = False,
-    html_dir = None,
-    port = None,
-    do_debug = False
+    adata: AnnData,
+    data_dir: Union[Path, str],
+    data_name: str,
+    embedding_keys: Union[Iterable[str], Mapping[str, str], str, None] = None,
+    annot_keys: Union[Iterable[str], Mapping[str, str], None] = (
+        "louvain", "percent_mito", "n_genes", "n_counts"
+    ),
+    cluster_field: str = "louvain",
+    nb_marker: int = 50,
+    skip_matrix: bool = False,
+    html_dir: Union[Path, str, None] = None,
+    port: Optional[int] = None,
+    do_debug: bool = False,
 ):
-    """
+    """\
     Export adata to a UCSC Cell Browser project directory. If `html_dir` is
     set, subsequently build the html files from the project directory into
-    `html_dir`.  If `port` is set, start an HTTP server in the background and
+    `html_dir`. If `port` is set, start an HTTP server in the background and
     serve `html_dir` on `port`.
 
     By default, export all gene expression data from `adata.raw`, the
     annotations `louvain`, `percent_mito`, `n_genes` and `n_counts` and the top
     `nb_marker` cluster markers. All existing files in data_dir are
-    overwritten, except cellbrowser.conf.
+    overwritten, except `cellbrowser.conf`.
 
     See `UCSC Cellbrowser <https://github.com/maximilianh/cellBrowser>`__ for
     details.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix
-    data_dir : `str`
+    data_dir
         Path to directory for exported Cell Browser files.
         Usually these are the files `exprMatrix.tsv.gz`, `meta.tsv`,
         coordinate files like `tsne.coords.tsv`,
         and cluster marker gene lists like `markers.tsv`.
         A file `cellbrowser.conf` is also created with pointers to these files.
         As a result, each adata object should have its own project_dir.
-    data_name : `str`
+    data_name
         Name of dataset in Cell Browser, a string without special characters.
-        This is written to `data_dir`/cellbrowser.conf.
+        This is written to `data_dir/cellbrowser.conf`.
         Ideally this is a short unique name for the dataset,
-        like "pbmc3k" or "tabulamuris".
-    embedding_keys: `list` of `str` or `dict` of `key (str)`->`display label (str)`
+        like `"pbmc3k"` or `"tabulamuris"`.
+    embedding_keys
         2-D embeddings in `adata.obsm` to export.
-        The prefix "`X_`" or "`X_draw_graph_`" is not necessary.
+        The prefix `X_` or `X_draw_graph_` is not necessary.
         Coordinates missing from `adata` are skipped.
-        By default, these keys are tried: ["tsne", "umap", "pagaFa", "pagaFr",
-        "pagaUmap", "phate", "fa", "fr", "kk", "drl", "rt"].
+        By default (or when specifying `'all'` or `None`), these keys are tried:
+        [`"tsne"`, `"umap"`, `"pagaFa"`, `"pagaFr"`, `"pagaUmap"`, `"phate"`,
+        `"fa"`, `"fr"`, `"kk"`, `"drl"`, `"rt"`].
         For these, default display labels are automatically used.
-        For other values, you can specify a dictionary instead of a list,
-        the values of the dictionary are then the display labels for the
-        coordinates, e.g. `{'tsne' : "t-SNE by Scanpy"}`
-    annot_keys: `list` of `str` or `dict` of `key (str)`->`display label (str)`
+        For other values, you can specify a mapping from coordinate name to
+        display label, e.g. `{"tsne": "t-SNE by Scanpy"}`.
+    annot_keys
         Annotations in `adata.obsm` to export.
-        Can be a dictionary with key -> display label.
-    skip_matrix: `boolean`
+        Can be a mapping from annotation column name to display label.
+        Specify `None` for all available columns in `.obs`.
+    skip_matrix
         Do not export the matrix.
         If you had previously exported this adata into the same `data_dir`,
         then there is no need to export the whole matrix again.
         This option will make the export a lot faster,
         e.g. when only coordinates or meta data were changed.
-    html_dir: `str`
+    html_dir
         If this variable is set, the export will build html
         files from `data_dir` to `html_dir`, creating html/js/json files.
         Usually there is one global html output directory for all datasets.
@@ -483,12 +488,12 @@ def cellbrowser(
         Existing files will be overwritten.
         If do not to use html_dir,
         you can use the command line tool `cbBuild` to build the html directory.
-    port: `int`
+    port
         If this variable and `html_dir` are set,
         Python's built-in web server will be spawned as a daemon in the
         background and serve the files under `html_dir`.
         To kill the process, call `cellbrowser.cellbrowser.stop()`.
-    do_debug: `boolean`
+    do_debug
         Activate debugging output
 
     Examples
@@ -500,21 +505,29 @@ def cellbrowser(
     try:
         import cellbrowser.cellbrowser as cb
     except ImportError:
-        print("The package cellbrowser is not installed. Install with 'pip "
-                "install cellbrowser' and retry.")
+        logg.error(
+            "The package cellbrowser is not installed. "
+            "Install with 'pip install cellbrowser' and retry."
+        )
+        raise
+
+    data_dir = str(data_dir)
 
     cb.setDebug(do_debug)
-
-    cb.scanpyToCellbrowser(adata, data_dir, data_name,
-            coordFields=embedding_keys,
-            metaFields=annot_keys,
-            clusterField=cluster_field,
-            nb_marker=nb_marker,
-            skipMatrix=skip_matrix,
-            doDebug = None
+    cb.scanpyToCellbrowser(
+        adata,
+        data_dir,
+        data_name,
+        coordFields=embedding_keys,
+        metaFields=annot_keys,
+        clusterField=cluster_field,
+        nb_marker=nb_marker,
+        skipMatrix=skip_matrix,
+        doDebug=None,
     )
 
-    if html_dir:
+    if html_dir is not None:
+        html_dir = str(html_dir)
         cb.build(data_dir, html_dir, doDebug=None)
-    if port:
-        cb.serve(html_dir, port)
+        if port is not None:
+            cb.serve(html_dir, port)

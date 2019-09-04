@@ -20,7 +20,7 @@ def rank_genes_groups_df(
     pval_cutoff: Optional[float] = None,
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
-    gene_symbols: Optional[str] = None
+    gene_symbols: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     :func:`scanpy.tl.rank_genes_groups` results in the form of a
@@ -72,7 +72,7 @@ def obs_df(
     *,
     layer: str = None,
     gene_symbols: str = None,
-    use_raw: bool = False
+    use_raw: bool = False,
 ) -> pd.DataFrame:
     """\
     Return values for observations in adata.

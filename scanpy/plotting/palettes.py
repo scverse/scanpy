@@ -63,7 +63,7 @@ default_64 = godsnot_64
 from typing import Mapping, Sequence
 
 
-def _plot_color_cylce(clists: Mapping[str, Sequence[str]]):
+def _plot_color_cycle(clists: Mapping[str, Sequence[str]]):
     import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -92,7 +92,7 @@ def _plot_color_cylce(clists: Mapping[str, Sequence[str]]):
 
 
 if __name__ == '__main__':
-    _plot_color_cylce({
+    _plot_color_cycle({
         name: colors
         for name, colors in globals().items()
         if isinstance(colors, list)

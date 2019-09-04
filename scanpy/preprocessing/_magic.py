@@ -21,7 +21,7 @@ def magic(
     n_jobs: Optional[int] = None,
     verbose: bool = False,
     copy: Optional[bool] = None,
-    **kwargs
+    **kwargs,
 ):
     """Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
 
@@ -138,7 +138,7 @@ def magic(
         random_state=random_state,
         n_jobs=n_jobs,
         verbose=verbose,
-        **kwargs
+        **kwargs,
     ).fit_transform(adata, genes=name_list)
     logg.info(
         '    finished',

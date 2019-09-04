@@ -36,7 +36,7 @@ def simple_query(
     *,
     filters: Optional[Dict[str, Any]] = None,
     host: str = "www.ensembl.org",
-    use_cache: bool = False
+    use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
     A simple interface to biomart.
@@ -57,7 +57,7 @@ def simple_query(
         attrs = list(attrs)
     else:
         raise TypeError(
-            "attrs must be of type list or str, was {}.".format(type(attrs))
+            f"attrs must be of type list or str, was {type(attrs)}."
         )
     try:
         from pybiomart import Server
@@ -79,7 +79,7 @@ def biomart_annotations(
     attrs: Iterable[str],
     *,
     host: str = "www.ensembl.org",
-    use_cache: bool = False
+    use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
     Retrieve gene annotations from ensembl biomart.
@@ -118,7 +118,7 @@ def gene_coordinates(
     gene_attr: str = "external_gene_name",
     chr_exclude: Iterable[str] = (),
     host: str = "www.ensembl.org",
-    use_cache: bool = False
+    use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
     Retrieve gene coordinates for specific organism through BioMart.
@@ -161,7 +161,7 @@ def mitochondrial_genes(
     *,
     attrname: str = "external_gene_name",
     host: str = "www.ensembl.org",
-    use_cache: bool = False
+    use_cache: bool = False,
 ) -> pd.DataFrame:
     """\
     Mitochondrial gene symbols for specific organism through BioMart.
@@ -201,7 +201,7 @@ def enrich(
     container: Iterable[str],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: Mapping[str, Any] = {}
+    gprofiler_kwargs: Mapping[str, Any] = {},
 ) -> pd.DataFrame:
     """\
     Get enrichment for DE results.
@@ -262,13 +262,13 @@ def enrich(
     for k in ["organism"]:
         if gprofiler_kwargs.get(k) is not None:
             raise ValueError(
-                "Argument `{}` should be passed directly through `enrich`, not"
-                " through `gprofiler_kwargs`".format(k)
+                f"Argument `{k}` should be passed directly through `enrich`, "
+                "not through `gprofiler_kwargs`"
             )
     return gprofiler.profile(
         list(container),
         organism=org,
-        **gprofiler_kwargs
+        **gprofiler_kwargs,
     )
 
 
@@ -283,7 +283,7 @@ def _enrich_anndata(
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
     gene_symbols: Optional[str] = None,
-    gprofiler_kwargs: dict = {}
+    gprofiler_kwargs: dict = {},
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,
@@ -292,7 +292,7 @@ def _enrich_anndata(
         pval_cutoff=pval_cutoff,
         log2fc_min=log2fc_min,
         log2fc_max=log2fc_max,
-        gene_symbols=gene_symbols
+        gene_symbols=gene_symbols,
     )
     if gene_symbols is not None:
         gene_list = list(de[gene_symbols])

@@ -160,6 +160,10 @@ def test_violin(image_comparer):
                  stripplot=True, multi_panel=True, jitter=True, show=False)
     save_and_compare_images('master_violin_multi_panel')
 
+    sc.pl.violin(pbmc, ['n_genes', 'percent_mito', 'n_counts'], groupby='bulk_labels',
+                 stripplot=True, multi_panel=True, jitter=True, show=False)
+    save_and_compare_images('master_violin_multi_panel_with_groupby')
+
 
 def test_dendrogram(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=10)
@@ -334,7 +338,7 @@ def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
     from functools import partial
-    sc.pl.embedding(pbmc, 'X_umap', color=['percent_mito', 'n_counts'], s=200,
+    sc.pl.embedding(pbmc, 'X_umap', color=['percent_mito', 'n_counts', 'bulk_labels'], s=200,
                     frameon=False, add_outline=True,
                     vmax=['p99.0', partial(np.percentile, q=90)], vmin=0.01,
                     outline_color=('#555555', '0.9'), outline_width=(0.5, 0.5),
@@ -393,12 +397,13 @@ def test_scatter_rep(tmpdir):
         "layer": {"layer": "layer", "use_raw": False},
         "X": {"use_raw": False}
     }
-    states = pd.DataFrame.from_records(zip(
+    states = pd.DataFrame.from_records(
+        zip(
             list(chain.from_iterable(repeat(x, 3) for x in ["X", "raw", "layer"])),
             list(chain.from_iterable(repeat("abc", 3))),
-            [1,2,3,3,1,2,2,3,1]
+            [1, 2, 3, 3, 1, 2, 2, 3, 1],
         ),
-        columns=["rep", "gene", "result"]
+        columns=["rep", "gene", "result"],
     )
     states["outpth"] = [
         TESTDIR / f"{state.gene}_{state.rep}_{state.result}.png"

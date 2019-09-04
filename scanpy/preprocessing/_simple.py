@@ -115,7 +115,7 @@ def filter_cells(
         [min_genes, min_counts, max_genes, max_counts])
     if n_given_options != 1:
         raise ValueError(
-            'Only provide one of the optional parameters `min_counts`,'
+            'Only provide one of the optional parameters `min_counts`, '
             '`min_genes`, `max_counts`, `max_genes` per call.')
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
@@ -139,7 +139,7 @@ def filter_cells(
 
     s = np.sum(~cell_subset)
     if s > 0:
-        msg = f'filtered out {s} cells that have'
+        msg = f'filtered out {s} cells that have '
         if min_genes is not None or min_counts is not None:
             msg += 'less than '
             msg += f'{min_genes} genes expressed' if min_counts is None else f'{min_counts} counts'
@@ -203,7 +203,7 @@ def filter_genes(
         [min_cells, min_counts, max_cells, max_counts])
     if n_given_options != 1:
         raise ValueError(
-            'Only provide one of the optional parameters `min_counts`,'
+            'Only provide one of the optional parameters `min_counts`, '
             '`min_cells`, `max_counts`, `max_cells` per call.')
 
     if isinstance(data, AnnData):
@@ -235,7 +235,7 @@ def filter_genes(
 
     s = np.sum(~gene_subset)
     if s > 0:
-        msg = f'filtered out {s} genes that are detected'
+        msg = f'filtered out {s} genes that are detected '
         if min_cells is not None or min_counts is not None:
             msg += 'in less than '
             msg += f'{min_cells} cells' if min_counts is None else f'{min_counts} counts'

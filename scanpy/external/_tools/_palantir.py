@@ -2,10 +2,17 @@
 """
 
 from anndata import AnnData
-from scanpy import logging as logg
+
+from ... import logging as logg
 
 
-def palantir(adata: AnnData):
+def palantir(
+    adata: AnnData,
+    normalize: bool = False,
+    log_transform: bool = False,
+    filter_low: bool = False,
+    inplace: bool = True,
+):
     """\
     Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 
@@ -24,6 +31,16 @@ def palantir(adata: AnnData):
     ----------
     adata
         An AnnData object, or Dataframe of cells X genes.
+    normalize
+        property setter passed to palantir to normalize using palantir method
+        `palantir.preprocess.normalize_counts`.
+    log_transform
+        property setter passed to palantir. Some datasets show better signal in the log
+        scale. Applied using `palantir.preprocess.log_transform`
+    filter_low
+        property setter passed to palantir to remove low molecule count cells and low detection genes
+    inplace
+        Set fields in `adata` or return a copy?
 
     Returns
     -------
@@ -68,7 +85,7 @@ def palantir(adata: AnnData):
 
     The provided adata will be used as input to the embedded `palantir` methods:
 
-    >>> d = sce.tl.palantir( adata=adata )
+    >>> d = sce.tl.palantir(adata)
 
     At this point, a new class object, `d`, will be instantiated. If the data
     needs pre-processing - filtering low genes/cells counts, or normalization,
@@ -135,167 +152,58 @@ def palantir(adata: AnnData):
 
     logg.info('Palantir diffusion maps')
 
-    class _wrapper_cls(object):
-        """
-        A wrapper class to instantiate a new object that wraps `palantir` as an
-        attribute reference attached to the class, together with other attribute
-        references. The class uses instance variables, to preprocess and generate
-        data using the embedded palantir package.
-        Pre-processing of data is important step before start using the palantir
-        methods.
-        palantir accepts as input a Counts matrix: Cells x Genes.
+    try:
+        import palantir
+    except ImportError:
+        raise ImportError(
+            '\nplease install palantir: \n\n'
+            '\tgit clone git://github.com/dpeerlab/Palantir.git\n'
+            '\tcd Palantir\n'
+            '\tsudo -H pip3 install .'
+        )
 
-        Methods used are:
-            - instantiation initiation
-            - instance function to embed palantir
-            - pre-processing of input data
-        """
+    # Palantir normalizations
 
-        def __init__(self ,
-                     adata,
-                     func=None ,
-                     normalize = False,
-                     log_transform = False,
-                     filter_low = False
-                    ):
-            """
-            Parameters
-            ----------
-            adata : AnnData, or Dataframe of cells X genes
-            func : function wrapper to import palantir (not to be used)
-            normalize : `bool` (default: `False`)
-                property setter passed to palantir to normalize using palantir method
-                `palantir.preprocess.normalize_counts`.
-            log_transform : `bool` (default: `False`)
-                property setter passed to palantir. Some datasets show better signal in the log
-                scale. Applied using `palantir.preprocess.log_transform`
-            filter_low : `bool` (default: `False`)
-                property setter passed to palantir to remove low molecule count cells and low detection genes
-            """
+    if not inplace:
+        adata = adata.copy()
+    data_df = adata.to_df()
+    if normalize:
+        data_df = palantir.preprocess.normalize_counts(data_df)
+        logg.info('data normalized ...')
+    if log_transform:
+        data_df = palantir.preprocess.log_transform(data_df)
+        logg.info('data log transformed ...')
+    if filter_low:
+        data_df = palantir.preprocess.filter_counts_data(data_df)
+        logg.info(
+            'data filtered for low counts:\n'
+            '\tcell_min_molecules=1000\n'
+            '\tgenes_min_cells=10'
+        )
+    if normalize or log_transform or filter_low:
+        adata.uns['palantir_norm_data'] = data_df
 
-            # instantiate variables
-            self.func = func
-            self.adata = adata
-            self._normalize = normalize
-            self._log_transform = log_transform
-            self._filter_low = filter_low
+    # Processing
 
-            try:
-                # for AnnData
-                self.data_df = self.adata.to_df()
-            except AttributeError:
-                # assume the data is a cell X genes Dataframe
-                logg.info('Assuming the data is a cell X genes Dataframe')
+    logg.info('PCA in progress ...')
+    pca_projections, var_r = palantir.utils.run_pca(data_df)
+    adata.uns['palantir_pca_results'] = dict(
+        pca_projections=pca_projections,
+        variance_ratio=var_r,
+    )
 
-            # load palantir
-            self.__call__()
-            logg.info('palantir loaded ...')
+    logg.info('Diffusion maps in progress ...')
+    dm_res = adata.uns['palantir_diff_maps'] = \
+        palantir.utils.run_diffusion_maps(pca_projections)
+    ms_data = adata.uns['palantir_ms_data'] = \
+        palantir.utils.determine_multiscale_space(dm_res)
 
-        def __call__(self):
-            """
-            Call for function to import palantir and instantiate it as a class
-            attribute
-            """
-            self.palantir = self.func()
+    logg.info('tSNE in progress ...')
+    adata.uns['palantir_tsne'] = palantir.utils.run_tsne(ms_data)
 
-        def process(self):
+    logg.info('imputation in progress ...')
+    adata.uns['palantir_imp_df'] = \
+        palantir.utils.run_magic_imputation(data_df, dm_res)
 
-            """
-            A method to run `palantir` on input Data Frame
-            """
-
-            # Principal component analysis
-            logg.info('PCA in progress ...')
-
-            self.pca_projections, self.var_r = self.palantir.utils.run_pca(self.data_df)
-
-            adata.uns['palantir_pca_results'] = {}
-            adata.uns['palantir_pca_results']['pca_projections'] = self.pca_projections
-            adata.uns['palantir_pca_results']['variance_ratio'] = self.var_r
-
-            # Diffusion maps
-            logg.info('Diffusion maps in progress ...')
-
-            self.dm_res = self.palantir.utils.run_diffusion_maps(self.pca_projections)
-            self.ms_data = self.palantir.utils.determine_multiscale_space(self.dm_res)
-
-            adata.uns['palantir_diff_maps'] = self.dm_res
-            adata.uns['palantir_ms_data'] = self.ms_data
-
-            # tSNE visualization
-            logg.info('tSNE in progress ...')
-
-            self.tsne = self.palantir.utils.run_tsne(self.ms_data)
-
-            adata.uns['palantir_tsne'] = self.tsne
-
-            # MAGIC imputation
-            logg.info('imputation in progress ...')
-
-            self.imp_df = self.palantir.utils.run_magic_imputation(self.data_df, self.dm_res)
-
-            adata.uns['palantir_imp_df'] = self.imp_df
-
-            logg.info('End of processing, start plotting.')
-
-        @property
-        def normalize(self):
-            return self._normalize
-        @normalize.setter
-        def normalize(self , value):
-            if value is True:
-                self.data_df = self.palantir.preprocess.normalize_counts(self.data_df)
-                adata.uns['palantir_norm_data'] = self.data_df
-                logg.info('data normalized ...')
-
-        @property
-        def log_transform(self):
-            return self._log_transform
-        @log_transform.setter
-        def log_transform(self , value):
-            if value is True:
-                self.data_df = self.palantir.preprocess.log_transform(self.data_df)
-                adata.uns['palantir_norm_data'] = self.data_df
-                logg.info('data log transformed ...')
-
-        @property
-        def filter_low(self):
-            return self._filter_low
-        @filter_low.setter
-        def filter_low(self , value):
-            if value is True:
-                self.data_df = self.palantir.preprocess.filter_counts_data(self.data_df)
-                adata.uns['palantir_norm_data'] = self.data_df
-                logg.info(
-                    'data filtered for low counts:\n'
-                    '\tcell_min_molecules=1000\n'
-                    '\tgenes_min_cells=10'
-                )
-
-
-    def wrapper_cls(adata, func=None):
-        """
-        Class wrapper to pass a function to the class alongside positional argument
-        """
-        if func:
-            return _wrapper_cls(func)
-        else:
-            def wrapper(func):
-                return _wrapper_cls(adata, func)
-            return wrapper
-
-    # import palantir and wrap it in a function passed to the wrapper class
-    # this method allows passing positional argument of adata to `_wrapper_cls`
-    @wrapper_cls(adata)
-    def _run():
-        import importlib
-        try:
-            palantir = importlib.import_module('palantir')
-        except ImportError:
-            raise ImportError(
-                '\nplease install palantir: \n\n\t'
-                'git clone git://github.com/dpeerlab/Palantir.git\n\t'
-                'cd Palantir\n\t'
-                'sudo -H pip3 install .\n')
-        return palantir
-    return _run
+    logg.info('End of processing, start plotting.')
+    return None if inplace else adata

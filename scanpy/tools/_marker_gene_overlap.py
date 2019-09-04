@@ -77,7 +77,7 @@ def marker_gene_overlap(
     top_n_markers: Optional[int] = None,
     adj_pval_threshold: Optional[float] = None,
     key_added: Optional[str] = 'marker_gene_overlap',
-    inplace: Optional[bool] = False
+    inplace: Optional[bool] = False,
 ):
     """Calculate an overlap score between data-deriven marker genes and
     provided markers

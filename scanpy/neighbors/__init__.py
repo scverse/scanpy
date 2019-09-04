@@ -30,7 +30,7 @@ def neighbors(
     method: str = 'umap',
     metric: Union[str, Metric] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
-    copy: bool = False
+    copy: bool = False,
 ) -> Optional[AnnData]:
     """\
     Compute a neighborhood graph of observations [McInnes18]_.
@@ -621,7 +621,7 @@ class Neighbors:
         random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
         metric: str = 'euclidean',
-        metric_kwds: Mapping[str, Any] = {}
+        metric_kwds: Mapping[str, Any] = {},
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.

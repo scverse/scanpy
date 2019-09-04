@@ -25,8 +25,8 @@ def test_clustering_subset(adata_neighbors, clustering, key):
         clustering(
             adata_neighbors,
             restrict_to=(key, [c]),
-            key_added=key_sub
-        ) 
+            key_added=key_sub,
+        )
         # Get new clustering labels
         new_partition = adata_neighbors.obs[key_sub]
 
