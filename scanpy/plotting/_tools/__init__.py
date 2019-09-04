@@ -90,11 +90,13 @@ def pca_loadings(
     if np.any(components < 0):
         logg.error("Component indices must be greater than zero.")
         return
-    ranking(adata,
-            'varm',
-            'PCs',
-            indices=components,
-            include_lowest=include_lowest)
+    ranking(
+        adata,
+        'varm',
+        'PCs',
+        indices=components,
+        include_lowest=include_lowest,
+    )
     utils.savefig_or_show('pca_loadings', show=show, save=save)
 
 
