@@ -25,11 +25,11 @@ Please write tests! You can refer to the [existing test suite](https://github.co
 Test are run by issuing the command `pytest` from the root of the repository. `pytest` as well as a few other testing dependencies can be installed by running `pip install ".[test]"` from the repository root, or `pip install scanpy[test]`.
 
 ### Coding style
-We stick to [PEP 8](https://www.python.org/dev/peps/pep-0008) and this
-[editorconfig](https://github.com/theislab/scanpy/blob/master/.editorconfig)
-and *try* to stick to 80-character lines.
-In some cases, wider lines might improve readability, in most cases, not.
-Docstrings should always be 80 characters.
+New code should follow [Black][] and Scanpy’s [EditorConfig][],
+so using an editor/IDE with support for both is helpful.
+
+[Black]: https://black.readthedocs.io/en/stable/the_black_code_style.html
+[EditorConfig]: https://github.com/theislab/scanpy/blob/master/.editorconfig
 
 ### Docs and type annotations
 We use the numpydoc style for writing docstrings.
@@ -44,7 +44,7 @@ There are two ways of documenting parameter types:
    Always specify what these contain, e.g. `{'a': (1, 2)}` → `Mapping[str, Tuple[int, int]]`.
    If you can’t use one of those, use a concrete class like `AnnData`.
 2. If your parameter only accepts an enumeration of strings, specify them like so:
-   ``{`elem-1`, 'elem-2'}``. These contain `a`–`z`, `0`-`9`, and sometimes `.`, `_` or `-`.
+   ``{`'elem-1'`, `'elem-2'`}``. These contain `a`–`z`, `0`-`9`, and sometimes `.`, `_` or `-`.
    
 The `Returns` section deserves special attention:
 There are three types of return sections – prose, tuple, and a mix of both.
