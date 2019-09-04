@@ -568,40 +568,49 @@ def ranking(
         labels = [labels + str(i+1) for i in range(scores.shape[0])]
     if n_panels <= 5: n_rows, n_cols = 1, n_panels
     else: n_rows, n_cols = 2, int(n_panels/2 + 0.5)
-    fig = pl.figure(figsize=(n_cols * rcParams['figure.figsize'][0],
-                             n_rows * rcParams['figure.figsize'][1]))
+    fig = pl.figure(figsize=(
+        n_cols * rcParams['figure.figsize'][0],
+        n_rows * rcParams['figure.figsize'][1],
+    ))
     left, bottom = 0.2/n_cols, 0.13/n_rows
-    gs = gridspec.GridSpec(nrows=n_rows, ncols=n_cols, wspace=0.2,
-                           left=left, bottom=bottom,
-                           right=1-(n_cols-1)*left-0.01/n_cols,
-                           top=1-(n_rows-1)*bottom-0.1/n_rows)
+    gs = gridspec.GridSpec(
+        wspace=0.2,
+        nrows=n_rows, ncols=n_cols,
+        left=left, bottom=bottom,
+        right=1 - (n_cols-1)*left - 0.01/n_cols,
+        top=1 - (n_rows-1)*bottom - 0.1/n_rows,
+    )
     for iscore, score in enumerate(scores.T):
         pl.subplot(gs[iscore])
+        order_scores = np.argsort(score)[::-1]
         if not include_lowest:
-            indices = np.argsort(score)[::-1][:n_points+1]
+            indices = order_scores[:n_points+1]
         else:
-            sorted_scores = np.argsort(score)[::-1]
-            indices = sorted_scores[:(n_points//2)]
-            neg_indices = sorted_scores[-(n_points-(n_points//2)):]
+            indices = order_scores[:n_points//2]
+            neg_indices = order_scores[-(n_points-(n_points//2)):]
+        txt_args = dict(
+            color=color,
+            rotation='vertical',
+            verticalalignment='bottom',
+            horizontalalignment='center',
+            fontsize=8,
+        )
         for ig, g in enumerate(indices):
-            pl.text(ig, score[g], labels[g], color=color,
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center', fontsize=8)
+            pl.text(ig, score[g], labels[g], **txt_args)
         if include_lowest:
-            pl.text(len(indices), (score[g]+score[neg_indices[0]])/2, '⋮', color=color,
-                    rotation='vertical', verticalalignment='bottom',
-                    horizontalalignment='center', fontsize=8)
+            score_mid = (score[g] + score[neg_indices[0]]) / 2
+            pl.text(len(indices), score_mid, '⋮', **txt_args)
             for ig, g in enumerate(neg_indices):
-                pl.text(ig+len(indices)+2, score[g], labels[g], color=color,
-                        rotation='vertical', verticalalignment='bottom',
-                        horizontalalignment='center', fontsize=8)
+                pl.text(ig+len(indices)+2, score[g], labels[g], **txt_args)
             pl.xticks([])
         pl.title(keys[iscore].replace('_', ' '))
         if n_panels <= 5 or iscore > n_cols: pl.xlabel('ranking')
         pl.xlim(-0.9, n_points + 0.9 + (1 if include_lowest else 0))
         score_min, score_max = np.min(score[neg_indices if include_lowest else indices]), np.max(score[indices])
-        pl.ylim((0.95 if score_min > 0 else 1.05) * score_min,
-                (1.05 if score_max > 0 else 0.95) * score_max)
+        pl.ylim(
+            (0.95 if score_min > 0 else 1.05) * score_min,
+            (1.05 if score_max > 0 else 0.95) * score_max,
+        )
     if show == False: return gs
 
 
