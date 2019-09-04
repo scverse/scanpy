@@ -35,6 +35,10 @@
     margin: 0 0 12px;
     padding: 3px 0 0;
 }
+.rst-content dl.field-list:not(.docutils) dl dt {
+    /* parameter lists contain <strong> parts and don’t need bold font */
+    font-weight: unset;
+}
 
 .rst-content p.rubric {
     font-weight: bold;
