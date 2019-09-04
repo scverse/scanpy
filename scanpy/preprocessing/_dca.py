@@ -20,6 +20,7 @@ def dca(
     optimizer='rmsprop',
     random_state=0,
     threads=None,
+    learning_rate=None,
     verbose=False,
     training_kwds={},
     return_model=False,
@@ -88,6 +89,8 @@ def dca(
         Seed for python, numpy and tensorflow.
     threads : `int` or None, optional. Default: None
         Number of threads to use in training. All cores are used by default.
+    learning_rate : `float`, optional. Default: None.
+        Learning rate to use in the training.
     verbose : `bool`, optional. Default: `False`.
         If true, prints additional information about training and architecture.
     training_kwds : `dict`, optional.
@@ -150,6 +153,7 @@ def dca(
         optimizer=optimizer,
         random_state=random_state,
         threads=threads,
+        learning_rate=learning_rate,
         verbose=verbose,
         training_kwds=training_kwds,
         return_model=return_model,
