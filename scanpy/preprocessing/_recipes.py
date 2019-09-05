@@ -4,6 +4,7 @@ from anndata import AnnData
 
 from . import _simple as pp
 from ._deprecated.highly_variable_genes import filter_genes_dispersion, filter_genes_cv_deprecated
+from ._normalization import normalize_total
 from .. import logging as logg
 
 
@@ -114,8 +115,8 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     start = logg.info('running recipe zheng17')
     if copy: adata = adata.copy()
     pp.filter_genes(adata, min_counts=1)  # only consider genes with more than 1 count
-    pp.normalize_per_cell(adata,  # normalize with total UMI count per cell
-                          key_n_counts='n_counts_all')
+    normalize_total(adata,  # normalize with total UMI count per cell
+                    key_added='n_counts_all')
     filter_result = filter_genes_dispersion(
         adata.X, flavor='cell_ranger', n_top_genes=n_top_genes, log=False)
     if plot:
@@ -124,7 +125,7 @@ def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     # actually filter the genes, the following is the inplace version of
     #     adata = adata[:, filter_result.gene_subset]
     adata._inplace_subset_var(filter_result.gene_subset)  # filter genes
-    pp.normalize_per_cell(adata)  # renormalize after filtering
+    normalize_total(adata)  # renormalize after filtering
     if log: pp.log1p(adata)  # log transform: X = log(X + 1)
     pp.scale(adata)
     logg.info('    finished', time=start)
