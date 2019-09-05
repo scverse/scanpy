@@ -82,21 +82,24 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
 
 
 def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> anndata.AnnData:
-    """Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
+    """\
+    Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
 
     Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
 
     Params
     ------
     accession
-        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``. This can
-        be found in the url on the datasets page. For example:
-        ``https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne``
+        Dataset accession. Like ``E-GEOD-98816`` or ``E-MTAB-4888``.
+        This can be found in the url on the datasets page, for example
+        https://www.ebi.ac.uk/gxa/sc/experiments/E-GEOD-98816/results/tsne.
     filter_boring
-        Whether boring labels in `.obs` should be automatically removed.
+        Whether boring labels in `.obs` should be automatically removed, such as
+        labels with a single or :attr:`~anndata.AnnData.n_obs` distinct values.
 
     Example
     -------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.ebi_expression_atlas("E-MTAB-4888")
     """
     experiment_dir = settings.datasetdir / accession

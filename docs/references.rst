@@ -46,6 +46,10 @@ References
    *Graph drawing by force-directed placement*,
    `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
 
+.. [Gardner00] Gardner *et al.*, (2000)
+   *Construction of a genetic toggle switch in Escherichia coli*,
+   `Nature <https://doi.org/10.1038/35002131>`__.
+
 .. [Hagberg08] Hagberg *et al.* (2008),
    *Exploring Network Structure, Dynamics, and Function using NetworkX*,
    `Scipy Conference <http://conference.scipy.org/proceedings/SciPy2008/paper_2/>`__.
@@ -98,7 +102,7 @@ References
 .. [Lambiotte09] Lambiotte *et al.* (2009)
    *Laplacian Dynamics and Multiscale Modular Structure in Networks*
    `arXiv <https://arxiv.org/abs/0812.1770>`__.
-   
+
 .. [Leek12] Leek *et al.* (2012),
    *sva: Surrogate Variable Analysis. R package*
    `Bioconductor <https://doi.org/10.18129/B9.bioc.sva>`__.
@@ -147,11 +151,11 @@ References
 .. [Park18] Park *et al.* (2018),
    *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
    `bioRxiv <https://doi.org/10.1101/397042>`__.
-   
+
 .. [Pedersen12] Pedersen (2012),
    *Python implementation of ComBat*
    `GitHub <https://github.com/brentp/combat.py>`__.
-   
+
 .. [Pedregosa11] Pedregosa *et al.* (2011),
    *Scikit-learn: Machine Learning in Python*,
    `JMLR <http://www.jmlr.org/papers/v12/pedregosa11a.html>`__.
@@ -167,7 +171,7 @@ References
 .. [Setty18] Setty *et al.* (2018),
    *Palantir characterizes cell fate continuities in human hematopoiesis*
    `bioRxiv <https://doi.org/10.1101/385328>`__.
-   
+
 .. [Traag17] Traag (2017),
    *Louvain*,
    `GitHub <https://doi.org/10.5281/zenodo.35117>`__.
@@ -202,7 +206,7 @@ References
 
 .. [Wolf19] Wolf *et al.* (2019),
    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
-   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__, 
+   `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__,
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
 .. [Zheng17] Zheng *et al.* (2017),

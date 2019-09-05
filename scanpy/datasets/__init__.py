@@ -15,20 +15,26 @@ from ._ebi_expression_atlas import ebi_expression_atlas
 HERE = Path(__file__).parent
 
 
-def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640) -> AnnData:
-    """Gaussian Blobs.
+def blobs(
+    n_variables: int = 11,
+    n_centers: int = 5,
+    cluster_std: float = 1.0,
+    n_observations: int = 640,
+) -> AnnData:
+    """\
+    Gaussian Blobs.
 
     Parameters
     ----------
-    n_variables : `int`, optional (default: 11)
+    n_variables
         Dimension of feature space.
-    n_centers : `int`, optional (default: 5)
+    n_centers
         Number of cluster centers.
-    cluster_std : `float`, optional (default: 1.0)
+    cluster_std
         Standard deviation of clusters.
-    n_observations : `int`, optional (default: 640)
-        Number of observations. By default, this is the same observation number as in
-        ``sc.datasets.krumsiek11()``.
+    n_observations
+        Number of observations. By default, this is the same observation number
+        as in :func:`scanpy.datasets.krumsiek11`.
 
     Returns
     -------
@@ -36,16 +42,19 @@ def blobs(n_variables=11, n_centers=5, cluster_std=1.0, n_observations=640) -> A
     indicates cluster identity.
     """
     import sklearn.datasets
-    X, y = sklearn.datasets.make_blobs(n_samples=n_observations,
-                                       n_features=n_variables,
-                                       centers=n_centers,
-                                       cluster_std=cluster_std,
-                                       random_state=0)
-    return AnnData(X, obs={'blobs': y.astype(str)})
+    X, y = sklearn.datasets.make_blobs(
+        n_samples=n_observations,
+        n_features=n_variables,
+        centers=n_centers,
+        cluster_std=cluster_std,
+        random_state=0,
+    )
+    return AnnData(X, obs=dict(blobs=y.astype(str)))
 
 
 def burczynski06() -> AnnData:
-    """Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
+    """\
+    Bulk data with conditions ulcerative colitis (UC) and Crohn's disease (CD).
 
     The study assesses transcriptional profiles in peripheral blood mononuclear
     cells from 42 healthy individuals, 59 CD patients, and 26 UC patients by
@@ -65,7 +74,8 @@ def burczynski06() -> AnnData:
 
 
 def krumsiek11() -> AnnData:
-    """Simulated myeloid progenitors [Krumsiek11]_.
+    """\
+    Simulated myeloid progenitors [Krumsiek11]_.
 
     The literature-curated boolean network from [Krumsiek11]_ was used to
     simulate the data. It describes development to four cell fates: 'monocyte',
@@ -99,7 +109,8 @@ def krumsiek11() -> AnnData:
 
 
 def moignard15() -> AnnData:
-    """Hematopoiesis in early mouse embryos [Moignard15]_.
+    """\
+    Hematopoiesis in early mouse embryos [Moignard15]_.
 
     Returns
     -------
@@ -118,16 +129,19 @@ def moignard15() -> AnnData:
     # annotate each observation/cell
     adata.obs['exp_groups'] = [
         next(gname for gname in groups_order if sname.startswith(gname))
-        for sname in adata.obs_names]
+        for sname in adata.obs_names
+    ]
     # fix the order and colors of names in "groups"
-    adata.obs['exp_groups'] = pd.Categorical(adata.obs['exp_groups'],
-                                             categories=groups_order)
+    adata.obs['exp_groups'] = pd.Categorical(
+        adata.obs['exp_groups'], categories=groups_order
+    )
     adata.uns['exp_groups_colors'] = ['#D7A83E', '#7AAE5D', '#497ABC', '#AF353A', '#765099']
     return adata
 
 
 def paul15() -> AnnData:
-    """Development of Myeloid Progenitors [Paul15]_.
+    """\
+    Development of Myeloid Progenitors [Paul15]_.
 
     Non-logarithmized raw data.
 
@@ -158,9 +172,11 @@ def paul15() -> AnnData:
     adata.var_names = gene_names
     adata.row_names = cell_names
     # names reflecting the cell type identifications from the paper
-    cell_type = {7: 'MEP', 8: 'Mk', 9: 'GMP', 10: 'GMP', 11: 'DC',
-                 12: 'Baso', 13: 'Baso', 14: 'Mo', 15: 'Mo',
-                 16: 'Neu', 17: 'Neu', 18: 'Eos', 19: 'Lymph'}
+    cell_type = {
+        7: 'MEP', 8: 'Mk', 9: 'GMP', 10: 'GMP', 11: 'DC',
+        12: 'Baso', 13: 'Baso', 14: 'Mo', 15: 'Mo',
+        16: 'Neu', 17: 'Neu', 18: 'Eos', 19: 'Lymph',
+    }
     cell_type.update({i: 'Ery' for i in range(1, 7)})
     adata.obs['paul15_clusters'] = [
         str(i) + cell_type[i] for i in clusters.astype(int)]
@@ -180,10 +196,10 @@ def paul15() -> AnnData:
 
 
 def toggleswitch() -> AnnData:
-    """Simulated toggleswitch.
+    """\
+    Simulated toggleswitch.
 
-    Data obtained simulating a simple toggleswitch `Gardner *et al.*, Nature
-    (2000) <https://doi.org/10.1038/35002131>`__.
+    Data obtained simulating a simple toggleswitch [Gardner00]_
 
     Simulate via :func:`~scanpy.tl.sim`.
 
@@ -198,7 +214,8 @@ def toggleswitch() -> AnnData:
 
 
 def pbmc68k_reduced() -> AnnData:
-    """Subsampled and processed 68k PBMCs.
+    """\
+    Subsampled and processed 68k PBMCs.
 
     10x PBMC 68k dataset from
     https://support.10xgenomics.com/single-cell-gene-expression/datasets
@@ -206,8 +223,9 @@ def pbmc68k_reduced() -> AnnData:
     The original PBMC 68k dataset was preprocessed using scanpy and was saved
     keeping only 724 cells and 221 highly variable genes.
 
-    The saved file contains the annotation of cell types (key: 'bulk_labels'), UMAP coordinates,
-    louvain clustering and gene rankings based on the bulk_labels.
+    The saved file contains the annotation of cell types (key: `'bulk_labels'`),
+    UMAP coordinates, louvain clustering and gene rankings based on the
+    `bulk_labels`.
 
     Returns
     -------
@@ -219,7 +237,8 @@ def pbmc68k_reduced() -> AnnData:
 
 
 def pbmc3k() -> AnnData:
-    """3k PBMCs from 10x Genomics.
+    """\
+    3k PBMCs from 10x Genomics.
 
     The data consists in 3k PBMCs from a Healthy Donor and is freely available
     from 10x Genomics (`here
@@ -239,9 +258,13 @@ def pbmc3k() -> AnnData:
     .. code:: python
 
         adata = sc.read_10x_mtx(
-        './data/filtered_gene_bc_matrices/hg19/',  # the directory with the `.mtx` file
-        var_names='gene_symbols',                  # use gene symbols for the variable names (variables-axis index)
-        cache=True)                                # write a cache file for faster subsequent reading
+            # the directory with the `.mtx` file
+            './data/filtered_gene_bc_matrices/hg19/',
+            # use gene symbols for the variable names (variables-axis index)
+            var_names='gene_symbols',
+            # write a cache file for faster subsequent reading
+            cache=True,
+        )
 
         adata.var_names_make_unique()  # this is unnecessary if using 'gene_ids'
         adata.write('write/pbmc3k_raw.h5ad', compression='gzip')
