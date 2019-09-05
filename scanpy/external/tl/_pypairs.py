@@ -1,17 +1,26 @@
-"""Calculate scores based on relative expression change of maker pairs
+"""\
+Calculate scores based on relative expression change of maker pairs
 """
+from typing import Mapping, Optional, Collection, Union, Tuple, List, Dict
+
+from anndata import AnnData
+
+from ... import settings
+
+
+Genes = Collection[Union[str, int, bool]]
 
 
 def sandbag(
-    adata,
-    annotation,
-    gene_names,
-    sample_names,
-    fraction=0.65,
-    filter_genes=None,
-    filter_samples=None,
-):
-    """Generate pairs of genes [Scialdone15]_ [Fechtner18]_.
+    adata: Union[AnnData],
+    annotation: Optional[Mapping[str, Genes]] = None,
+    *,
+    fraction: float = 0.65,
+    filter_genes: Optional[Genes] = None,
+    filter_samples: Optional[Genes] = None,
+) -> Dict[str, List[Tuple[str, str]]]:
+    """\
+    Calculate marker pairs of genes. [Scialdone15]_ [Fechtner18]_.
 
     Calculates the pairs of genes serving as marker pairs for each phase,
     based on a matrix of gene counts and an annotation of known phases.
@@ -24,27 +33,29 @@ def sandbag(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    categories : `dict`
-        Dictionary of lists, i.e. {phase: [sample, ...]},
-        containing annotation of samples to their phase
-    gene_names: `list`
-        List of genes.
-    sample_names: `list`
-        List of samples.
-    fraction : `float`, optional (default: 0.5)
-        Fraction to be used as threshold.
-    filter_genes : `list` or `None`, optional (default: `None`)
-        Genes for sampling the reference set. Default is all genes.
-    filter_samples : `list` or `None`, optional (default: `None`)
-        Cells for sampling the reference set. Default is all samples.
+    annotation
+        Mapping from category to genes, e.g. `{'phase': [Gene1, ...]}`.
+        Defaults to ``data.vars['category']``.
+    fraction
+        Fraction of cells per category where marker criteria must be satisfied.
+    filter_genes
+        Genes for sampling the reference set. Defaults to all genes.
+    filter_samples
+        Cells for sampling the reference set. Defaults to all samples.
 
     Returns
     -------
-    `dict` of `list` of `tuple`, i.e.
-    {phase: [(Gene1, Gene2), ...]},
-    containing marker pairs per phase
+    A dict mapping from category to lists of marker pairs, e.g.:
+    `{'Category_1': [(Gene_1, Gene_2), ...], ...}`.
+
+    Examples
+    --------
+    >>> from scanpy.external.tl import sandbag
+    >>> from pypairs import datasets
+    >>> adata = datasets.leng15()
+    >>> marker_pairs = sandbag(adata, fraction=0.5)
     """
     try:
         from pypairs import __version__ as pypairsversion
@@ -56,7 +67,6 @@ def sandbag(
         raise ImportError('You need to install the package `pypairs`.')
 
     from pypairs.pairs import sandbag
-    from . import settings
     from pypairs import settings as pp_settings
 
     pp_settings.verbosity = settings.verbosity
@@ -68,8 +78,6 @@ def sandbag(
     return sandbag(
         data=adata,
         annotation=annotation,
-        gene_names=gene_names,
-        sample_names=sample_names,
         fraction=fraction,
         filter_genes=filter_genes,
         filter_samples=filter_samples,
@@ -77,15 +85,15 @@ def sandbag(
 
 
 def cyclone(
-    adata,
-    marker_pairs,
-    gene_names,
-    sample_names,
-    iterations=1000,
-    min_iter=100,
-    min_pairs=50
+    adata: AnnData,
+    marker_pairs: Optional[Mapping[str, Collection[Tuple[str, str]]]] = None,
+    *,
+    iterations: int = 1000,
+    min_iter: int = 100,
+    min_pairs: int = 50
 ):
-    """Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
+    """\
+    Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 
     Calculates scores for each observation and each phase and assigns prediction
     based on marker pairs indentified by sandbag.
@@ -95,24 +103,20 @@ def cyclone(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         The annotated data matrix.
-    marker_pairs : `dict`
-        Dictionary of marker pairs.
+    marker_pairs
+        Mapping of categories to lists of marker pairs.
         See :func:`~scanpy.external.tl.sandbag` output.
-    gene_names: `list`
-        List of genes.
-    sample_names: `list`
-        List of samples.
-    iterations : `int`, optional (default: 1000)
+    iterations
         An integer scalar specifying the number of
         iterations for random sampling to obtain a cycle score.
-    min_iter : `int`, optional (default: 100)
+    min_iter
         An integer scalar specifying the minimum number of iterations
-        for score estimation
-    min_pairs : `int`, optional (default: 50)
-        An integer scalar specifying the minimum number of iterations
-        for score estimation
+        for score estimation.
+    min_pairs
+        An integer scalar specifying the minimum number of pairs
+        for score estimation.
 
     Returns
     -------
@@ -133,7 +137,6 @@ def cyclone(
         raise ImportError('You need to install the package `pypairs`.')
 
     from pypairs.pairs import cyclone
-    from . import settings
     from pypairs import settings as pp_settings
 
     pp_settings.verbosity = settings.verbosity
@@ -145,8 +148,6 @@ def cyclone(
     return cyclone(
         data=adata,
         marker_pairs=marker_pairs,
-        gene_names=gene_names,
-        sample_names=sample_names,
         iterations=iterations,
         min_iter=min_iter,
         min_pairs=min_pairs,
