@@ -56,6 +56,15 @@ def test_heatmap(image_comparer):
                   standard_scale='obs')
     save_and_compare_images('master_heatmap_std_scale_obs')
 
+def test_clustermap(image_comparer):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+
+    adata = sc.datasets.krumsiek11()
+    sc.pl.clustermap(adata)
+    save_and_compare_images('master_clustermap')
+
+    sc.pl.clustermap(adata, 'cell_type')
+    save_and_compare_images('master_clustermap_withcolor')
 
 def test_dotplot(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)

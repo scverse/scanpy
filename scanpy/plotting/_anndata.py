@@ -800,7 +800,7 @@ def clustermap(
             row_colors.cat.categories,
             adata.uns[obs_keys + '_colors']))
         row_colors = adata.obs[obs_keys].map(lut)
-        g = sns.clustermap(df, row_colors=row_colors, **kwds)
+        g = sns.clustermap(df, row_colors=row_colors.values, **kwds)
     else:
         g = sns.clustermap(df, **kwds)
     show = settings.autoshow if show is None else show
