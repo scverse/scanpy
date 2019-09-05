@@ -1,12 +1,13 @@
-"""Denoise high-dimensional data using MAGIC
+"""\
+Denoise high-dimensional data using MAGIC
 """
 from typing import Union, Sequence, Optional
 
 from anndata import AnnData
 from numpy.random.mtrand import RandomState
 
-from .._settings import settings
-from .. import logging as logg
+from scanpy._settings import settings
+from scanpy import logging as logg
 
 
 def magic(
@@ -23,7 +24,8 @@ def magic(
     copy: Optional[bool] = None,
     **kwargs,
 ):
-    """Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
+    """\
+    Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
 
     MAGIC is an algorithm for denoising and transcript recover of single cells
     applied to single-cell sequencing data. MAGIC builds a graph from the data

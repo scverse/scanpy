@@ -14,5 +14,4 @@ from ..tools._top_genes import correlation_matrix, ROC_AUC_analysis
 
 from ..tools._score_genes import score_genes, score_genes_cell_cycle
 
-from ..external.tl import cyclone, sandbag
-from ..external.tl import phate
+from ..external.tl import cyclone, sandbag, phate

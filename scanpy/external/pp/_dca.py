@@ -27,13 +27,14 @@ def dca(
     return_info=False,
     copy=False,
 ):
-    """Deep count autoencoder [Eraslan18]_.
+    """\
+    Deep count autoencoder [Eraslan18]_.
 
     Fits a count autoencoder to the raw count data given in the anndata object
     in order to denoise the data and to capture hidden representation of
     cells in low dimensions. Type of the autoencoder and return values are
     determined by the parameters.
-    
+
     .. note::
         More information and bug reports `here <https://github.com/theislab/dca>`__.
 
@@ -134,7 +135,8 @@ def dca(
     except ImportError:
         raise ImportError('Please install dca package (>= 0.2.1) via `pip install dca`')
 
-    return dca(adata,
+    return dca(
+        adata,
         mode=mode,
         ae_type=ae_type,
         normalize_per_cell=normalize_per_cell,
@@ -158,4 +160,5 @@ def dca(
         training_kwds=training_kwds,
         return_model=return_model,
         return_info=return_info,
-        copy=copy)
+        copy=copy,
+    )

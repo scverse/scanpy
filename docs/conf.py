@@ -229,6 +229,10 @@ if os.environ.get('DEBUG') is not None:
 
 # -- Suppress link warnings ----------------------------------------------------
 
+qualname_overrides = {
+    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+}
+
 nitpick_ignore = [
     # Will probably be documented
     ('py:class', 'scanpy._settings.Verbosity'),

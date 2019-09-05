@@ -48,9 +48,9 @@ def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
 
 
 class ScanpyConfig:
-    """Config manager for scanpy.
+    """\
+    Config manager for scanpy.
     """
-
     def __init__(
         self,
         *,
