@@ -5,8 +5,8 @@ from typing import Optional, Union
 from anndata import AnnData
 from numpy.random.mtrand import RandomState
 
-from .._settings import settings
-from .. import logging as logg
+from ..._settings import settings
+from ... import logging as logg
 
 
 def phate(
