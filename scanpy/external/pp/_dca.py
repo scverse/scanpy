@@ -1,5 +1,10 @@
+from typing import Optional
+
+from anndata import AnnData
+
+
 def dca(
-    adata,
+    adata: AnnData,
     mode='denoise',
     ae_type='zinb-conddisp',
     normalize_per_cell=True,
@@ -26,7 +31,7 @@ def dca(
     return_model=False,
     return_info=False,
     copy=False,
-):
+) -> Optional[AnnData]:
     """\
     Deep count autoencoder [Eraslan18]_.
 
@@ -40,7 +45,7 @@ def dca(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         An anndata file with `.raw` attribute representing raw counts.
     mode : `str`, optional. `denoise`(default), or `latent`.
         `denoise` overwrites `adata.X` with denoised expression values.

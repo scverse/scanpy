@@ -1,5 +1,7 @@
-"""Run Diffusion maps using the adaptive anisotropic kernel
+"""\
+Run Diffusion maps using the adaptive anisotropic kernel
 """
+from typing import Optional
 
 from anndata import AnnData
 
@@ -12,7 +14,7 @@ def palantir(
     log_transform: bool = False,
     filter_low: bool = False,
     inplace: bool = True,
-):
+) -> Optional[AnnData]:
     """\
     Run Diffusion maps using the adaptive anisotropic kernel [Setty18]_.
 

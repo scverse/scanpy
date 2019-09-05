@@ -1,6 +1,7 @@
-from typing import Union, Collection, Optional, Any, Sequence
+from typing import Union, Collection, Optional, Any, Sequence, Tuple, List
 
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 
 from ..._settings import settings
@@ -26,7 +27,11 @@ def mnn_correct(
     save_raw: bool = False,
     n_jobs: Optional[int] = None,
     **kwargs,
-):
+) -> Tuple[
+    Union[np.ndarray, AnnData],
+    List[pd.DataFrame],
+    Optional[List[Tuple[Optional[float], int]]],
+]:
     """\
     Correct batch effects by matching mutual nearest neighbors [Haghverdi18]_ [Kang18]_.
 

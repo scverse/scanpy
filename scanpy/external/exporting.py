@@ -1,4 +1,5 @@
-"""Exporting to formats for other software.
+"""\
+Exporting to formats for other software.
 """
 import json
 import logging as logg
@@ -23,7 +24,8 @@ def spring_project(
     total_counts_key: str = 'n_counts',
     overwrite: bool = False,
 ):
-    """Exports to a SPRING project directory [Weinreb17]_.
+    """\
+    Exports to a SPRING project directory [Weinreb17]_.
 
     Visualize annotation present in `adata`. By default, export all gene expression data
     from `adata.raw` and categorical and continuous annotations present in `adata.obs`.
@@ -200,8 +202,6 @@ def spring_project(
         uniq_clusts = adata.obs[adata.uns['paga']['groups']].cat.categories
         paga_coords = [coords[clusts == i, :].mean(0) for i in range(len(uniq_clusts))]
         export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json')
-
-    return None
 
 
 # --------------------------------------------------------------------------------

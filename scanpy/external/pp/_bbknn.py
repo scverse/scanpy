@@ -18,7 +18,7 @@ def bbknn(
     set_op_mix_ratio: float = 1.,
     local_connectivity: int = 1,
     **kwargs,
-):
+) -> AnnData:
     """\
     Batch balanced kNN [Park18]_.
 

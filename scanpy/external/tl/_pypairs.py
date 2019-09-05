@@ -3,6 +3,7 @@ Calculate scores based on relative expression change of maker pairs
 """
 from typing import Mapping, Optional, Collection, Union, Tuple, List, Dict
 
+import pandas as pd
 from anndata import AnnData
 
 from ... import settings
@@ -91,7 +92,7 @@ def cyclone(
     iterations: int = 1000,
     min_iter: int = 100,
     min_pairs: int = 50
-):
+) -> pd.DataFrame:
     """\
     Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 

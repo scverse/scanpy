@@ -1,4 +1,5 @@
-"""Embed high-dimensional data using PHATE
+"""\
+Embed high-dimensional data using PHATE
 """
 from typing import Optional, Union
 
@@ -26,8 +27,9 @@ def phate(
     verbose: Union[bool, int, None] = None,
     copy: bool = False,
     **kwargs,
-):
-    """PHATE [Moon17]_.
+) -> Optional[AnnData]:
+    """\
+    PHATE [Moon17]_.
 
     Potential of Heat-diffusion for Affinity-based Trajectory Embedding (PHATE)
     embeds high dimensional single-cell data into two or three dimensions for

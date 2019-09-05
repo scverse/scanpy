@@ -23,7 +23,7 @@ def magic(
     verbose: bool = False,
     copy: Optional[bool] = None,
     **kwargs,
-):
+) -> Optional[AnnData]:
     """\
     Markov Affinity-based Graph Imputation of Cells (MAGIC) API [vanDijk18]_.
 
