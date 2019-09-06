@@ -58,15 +58,7 @@ def sandbag(
     >>> adata = datasets.leng15()
     >>> marker_pairs = sandbag(adata, fraction=0.5)
     """
-    try:
-        from pypairs import __version__ as pypairsversion
-        from distutils.version import LooseVersion
-
-        if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
-            raise ImportError('Please only use `pypairs` >= v3.0.9 ')
-    except ImportError:
-        raise ImportError('You need to install the package `pypairs`.')
-
+    _check_import()
     from pypairs.pairs import sandbag
     from pypairs import settings as pp_settings
 
@@ -97,7 +89,7 @@ def cyclone(
     Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.
 
     Calculates scores for each observation and each phase and assigns prediction
-    based on marker pairs indentified by sandbag.
+    based on marker pairs indentified by :func:`~scanpy.external.tl.sandbag`.
 
     This reproduces the approach of [Scialdone15]_ in the implementation of
     [Fechtner18]_.
@@ -121,22 +113,15 @@ def cyclone(
 
     Returns
     -------
-    A :class:`~pandas.DataFrame` with samples as index and categories as columns with scores for each category for each
-    sample and a additional column with the name of the max scoring category for each sample.
+    A :class:`~pandas.DataFrame` with samples as index and categories as columns
+    with scores for each category for each sample and a additional column with
+    the name of the max scoring category for each sample.
 
-    If marker pairs contain only the cell cycle categories G1, S and G2M an additional column
-    ``pypairs_cc_prediction`` will be added. Where category S is assigned to samples where G1 and G2M score are
-    below 0.5.
+    If `marker_pairs` contains only the cell cycle categories G1, S and G2M an
+    additional column `pypairs_cc_prediction` will be added.
+    Where category S is assigned to samples where G1 and G2M score are < 0.5.
     """
-    try:
-        from pypairs import __version__ as pypairsversion
-        from distutils.version import LooseVersion
-
-        if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
-            raise ImportError('Please only use `pypairs` >= v3.0.9 ')
-    except ImportError:
-        raise ImportError('You need to install the package `pypairs`.')
-
+    _check_import()
     from pypairs.pairs import cyclone
     from pypairs import settings as pp_settings
 
@@ -153,3 +138,14 @@ def cyclone(
         min_iter=min_iter,
         min_pairs=min_pairs,
     )
+
+
+def _check_import():
+    try:
+        from pypairs import __version__ as pypairsversion
+        from distutils.version import LooseVersion
+
+        if LooseVersion(pypairsversion) < LooseVersion("v3.0.9"):
+            raise ImportError('Please only use `pypairs` >= v3.0.9 ')
+    except ImportError:
+        raise ImportError('You need to install the package `pypairs`.')
