@@ -22,7 +22,7 @@ def rank_genes_groups_df(
     log2fc_max: Optional[float] = None,
     gene_symbols: Optional[str] = None,
 ) -> pd.DataFrame:
-    """
+    """\
     :func:`scanpy.tl.rank_genes_groups` results in the form of a
     :class:`~pandas.DataFrame`.
 
@@ -47,6 +47,7 @@ def rank_genes_groups_df(
 
     Example
     -------
+    >>> import scanpy as sc
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(pbmc, groupby="louvain", use_raw=True, n_genes=pbmc.shape[1])
     >>> dedf = sc.get.rank_genes_groups_df(pbmc, group="0")

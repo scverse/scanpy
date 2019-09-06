@@ -1,12 +1,20 @@
 import inspect
+import traceback
+
+import pytest
+
 import scanpy as sc
 
 
 def iterate_over_functions():
     functions_all = {}
     for mn in dir(sc):
-        # skip privates and duplicates and stuff we haven't formatted in the righ way, yet
-        if mn.startswith('_') or mn in {'tl', 'pl', 'pp', 'cli', 'readwrite', 'utils', 'logging', 'neighbors'}:
+        # skip privates and duplicates and stuff we haven’t formatted
+        # in the right way, yet
+        if mn.startswith('_') or mn in {
+            'tl', 'pl', 'pp',
+            'cli', 'readwrite', 'utils', 'logging', 'neighbors'
+        }:
             continue
         module = sc.__dict__[mn]
         if not inspect.ismodule(module):
@@ -17,12 +25,26 @@ def iterate_over_functions():
     return functions_all
 
 
-def test_function_headers():
-    for descr, f in iterate_over_functions().items():
-        assert f.__doc__ is not None, '{} has no docstring'.format(f)
-        lines = f.__doc__.split('\n')
-        # assert lines[0] and not lines[0].startswith('    '), (
-        #     'Header of docstring of function `{}` should start with one-line description:\n'
-        #     '"""My one-line description.\n'
-        #     'not\n{}'.format(descr, lines[:2])
-        # )
+@pytest.mark.parametrize("descr,f", iterate_over_functions().items())
+def test_function_headers(descr, f):
+    assert f.__doc__ is not None, f"{f} has no docstring"
+    lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
+    assert lines[0], "Expected single-line summary"
+    broken = [
+        i for i, l in enumerate(lines)
+        if l and not l.startswith("    ")
+    ]
+    if any(broken):
+        msg = f'''\
+Header of function `{descr}`’s docstring should start with one-line description:
+
+␣␣␣␣"""\\
+␣␣␣␣My one-line␣description.
+
+␣␣␣␣…
+␣␣␣␣"""
+'''
+        filename = inspect.getsourcefile(f)
+        _, lineno = inspect.getsourcelines(f)
+        text = f">{lines[broken[0]]}<"
+        raise SyntaxError(msg, (filename, lineno, 2, text))
