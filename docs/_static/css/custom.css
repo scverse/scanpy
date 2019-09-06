@@ -10,49 +10,55 @@
     font-size:40%;
 }
 
-.smaller {
+.smaller, .pr {
     font-size:70%;
 }
 
-.pr {
-    font-size:70%;
+.rst-content tt:not(.xref),
+.rst-content code:not(.xref),
+.rst-content *:not(a) > tt.xref,
+.rst-content *:not(a) > code.xref {
+    /* slim font weight for non-link literals */
+    font-weight: normal;
+}
+.rst-content tt.literal,
+.rst-content code.literal {
+    color: #404040;
+}
+.rst-content a tt.xref,
+.rst-content a code.xref {
+    text-decoration: underline;
 }
 
-.rst-content dl:not(.docutils) tt.xref, .rst-content dl:not(.docutils) code.xref {
-    font-weight: bold;  /* restore bold for hyperref literals */
+
+.rst-content .annotation {
+    padding: 2px 5px;
+    background-color: white;
+    border: 1px solid #e1e4e5;
+}
+.rst-content .annotation tt,
+.rst-content .annotation code {
+    padding: 0 0;
+    background-color: transparent;
+    border: 0 solid transparent;
 }
 
-.rst-content dl:not(.docutils) tt, .rst-content dl:not(.docutils) code {
-    font-weight: normal;  /* ovewrite bold for default literals */
-}
 
-.rst-content dl:not(.docutils) dl dt {
-    /* mimic rubric style used for other headings  */
+.rst-content dl:not(.docutils) dl > dt {
+    /* mimick rubric style used for other headings */
+    /* TODO: once scanpydoc adds classes, also change return types */
     font-weight: bold;
-    font-size: 16px;
     background: none transparent;
     border-left: none;
     margin: 0 0 12px;
     padding: 3px 0 0;
+    font-size: 111.11%;
 }
-.rst-content dl.field-list:not(.docutils) dl dt {
+.rst-content dl.field-list dl > dt {
     /* parameter lists contain <strong> parts and don’t need bold font */
     font-weight: unset;
 }
-
-.rst-content p.rubric {
-    font-weight: bold;
-    font-size: 16px;
-    background: none transparent;
-    border-left: none;
-    margin: 0 0 12px;
-    padding: 3px 0 0;
-}
-
-.rst-content dl:not(.docutils) dl dt .classifier::before {
+.rst-content dl:not(.docutils) dl > dt .classifier::before {
+    /* Add colon between return tuple element name and type */
     content: ' : ';
-}
-
-.rst-content tt.literal, .rst-content tt.literal, .rst-content code.literal {
-    color: #404040;
 }
