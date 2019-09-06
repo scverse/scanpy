@@ -1,3 +1,4 @@
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -14,6 +15,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
     import scanpy.api
 
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 # -- General configuration ------------------------------------------------
 
@@ -107,7 +109,7 @@ gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(html_contex
 
 
 def setup(app):
-    app.warningiserror = True
+    app.warningiserror = on_rtd
     app.add_stylesheet('css/custom.css')
     app.connect('autodoc-process-docstring', insert_function_images)
     app.connect('build-finished', show_param_warnings)
