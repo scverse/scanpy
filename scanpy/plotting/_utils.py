@@ -1,4 +1,5 @@
 import warnings
+from collections import abc
 from typing import Union, List
 
 import numpy as np
@@ -384,13 +385,14 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
 
 
 def setup_axes(
-        ax=None,
-        panels='blue',
-        colorbars=[False],
-        right_margin=None,
-        left_margin=None,
-        projection='2d',
-        show_ticks=False):
+    ax=None,
+    panels='blue',
+    colorbars=(False,),
+    right_margin=None,
+    left_margin=None,
+    projection='2d',
+    show_ticks=False,
+):
     """Grid of axes for plotting, legends and colorbars.
     """
     if '3d' in projection: from mpl_toolkits.mplot3d import Axes3D
@@ -398,7 +400,7 @@ def setup_axes(
     if projection not in avail_projections:
         raise ValueError('choose projection from', avail_projections)
     if left_margin is not None:
-        raise ValueError('Currently not supporting to pass `left_margin`.')
+        raise NotImplementedError('We currently don’t support `left_margin`.')
     if np.any(colorbars) and right_margin is None:
         right_margin = 1 - rcParams['figure.subplot.right'] + 0.21  # 0.25
     elif right_margin is None:
@@ -460,16 +462,16 @@ def scatter_base(
     colors='blue',
     sort_order=True,
     alpha=None,
-    highlights=[],
+    highlights=(),
     right_margin=None,
     left_margin=None,
     projection='2d',
     title=None,
     component_name='DC',
-    component_indexnames=[1, 2, 3],
+    component_indexnames=(1, 2, 3),
     axis_labels=None,
-    colorbars=[False],
-    sizes=[1],
+    colorbars=(False,),
+    sizes=(1,),
     color_map='viridis',
     show_ticks=True,
     ax=None,
@@ -487,7 +489,7 @@ def scatter_base(
     Depending on whether supplying a single array or a list of arrays,
     return a single axis or a list of axes.
     """
-    if isinstance(highlights, dict):
+    if isinstance(highlights, abc.Mapping):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
     else:
@@ -496,11 +498,12 @@ def scatter_base(
     # if we have a single array, transform it into a list with a single array
     if type(colors) == str: colors = [colors]
     if len(sizes) != len(colors) and len(sizes) == 1:
-        sizes = [sizes[0] for i in range(len(colors))]
+        sizes = [sizes[0] for _ in range(len(colors))]
     axs, panel_pos, draw_region_width, figure_width = setup_axes(
         ax=ax, panels=colors, colorbars=colorbars, projection=projection,
         right_margin=right_margin, left_margin=left_margin,
-        show_ticks=show_ticks)
+        show_ticks=show_ticks,
+    )
     for icolor, color in enumerate(colors):
         ax = axs[icolor]
         left = panel_pos[2][2*icolor]
@@ -514,23 +517,31 @@ def scatter_base(
             Y_sort = Y[sort]
         if projection == '2d': data = Y_sort[:, 0], Y_sort[:, 1]
         elif projection == '3d': data = Y_sort[:, 0], Y_sort[:, 1], Y_sort[:, 2]
+        else: raise ValueError(
+            f"Unknown projection {projection!r} not in '2d', '3d'"
+        )
         if not isinstance(color, str) or color != 'white':
-            sct = ax.scatter(*data,
-                             marker='.',
-                             c=color,
-                             alpha=alpha,
-                             edgecolors='none',  # 'face',
-                             s=sizes[icolor],
-                             cmap=color_map,
-                             rasterized=settings._vector_friendly)
+            sct = ax.scatter(
+                *data,
+                marker='.',
+                c=color,
+                alpha=alpha,
+                edgecolors='none',  # 'face',
+                s=sizes[icolor],
+                cmap=color_map,
+                rasterized=settings._vector_friendly,
+            )
         if colorbars[icolor]:
             width = 0.006 * draw_region_width / len(colors)
             left = panel_pos[2][2*icolor+1] + (1.2 if projection == '3d' else 0.2) * width
             rectangle = [left, bottom, width, height]
             fig = pl.gcf()
             ax_cb = fig.add_axes(rectangle)
-            cb = pl.colorbar(sct, format=ticker.FuncFormatter(ticks_formatter),
-                             cax=ax_cb)
+            cb = pl.colorbar(
+                sct,
+                format=ticker.FuncFormatter(ticks_formatter),
+                cax=ax_cb,
+            )
         # set the title
         if title is not None: ax.set_title(title[icolor])
         # output highlighted data points
@@ -539,28 +550,35 @@ def scatter_base(
             data = [Y[ihighlight, 0]], [Y[ihighlight, 1]]
             if '3d' in projection:
                 data = [Y[ihighlight, 0]], [Y[ihighlight, 1]], [Y[ihighlight, 2]]
-            ax.scatter(*data, c='black',
-                       facecolors='black', edgecolors='black',
-                       marker='x', s=10, zorder=20)
-            highlight_text = (highlights_labels[iihighlight] if
-                              len(highlights_labels) > 0
-                              else str(ihighlight))
+            ax.scatter(
+                *data, c='black',
+                facecolors='black', edgecolors='black',
+                marker='x', s=10, zorder=20,
+            )
+            highlight_text = (
+                highlights_labels[iihighlight]
+                if len(highlights_labels) > 0 else
+                str(ihighlight)
+            )
             # the following is a Python 2 compatibility hack
-            ax.text(*([d[0] for d in data] + [highlight_text]),
-                    zorder=20,
-                    fontsize=10,
-                    color='black')
+            ax.text(
+                *([d[0] for d in data] + [highlight_text]),
+                zorder=20,
+                fontsize=10,
+                color='black',
+            )
         if not show_ticks:
             ax.set_xticks([])
             ax.set_yticks([])
             if '3d' in projection: ax.set_zticks([])
     # set default axis_labels
     if axis_labels is None:
-        axis_labels = [[component_name + str(i) for i in idcs]
-                       for idcs in
-                       [component_indexnames for iax in range(len(axs))]]
+        axis_labels = [
+            [component_name + str(i) for i in component_indexnames]
+            for _ in range(len(axs))
+        ]
     else:
-        axis_labels = [[axis_labels[0], axis_labels[1]] for i in range(len(axs))]
+        axis_labels = [axis_labels for _ in range(len(axs))]
     for iax, ax in enumerate(axs):
         ax.set_xlabel(axis_labels[iax][0])
         ax.set_ylabel(axis_labels[iax][1])

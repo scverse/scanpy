@@ -48,57 +48,61 @@ groups
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
-projection : {`'2d'`, `'3d'`}, optional (default: `'2d'`)
-    Projection of plot.
+projection : {`'2d'`, `'3d'`}
+    Projection of plot (default: `'2d'`).
 legend_loc
-    Location of legend, either 'on data', 'right margin' or valid keywords for
-    `matplotlib.legend`.
+    Location of legend, either `'on data'`, `'right margin'` or a valid keyword
+    for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
 legend_fontsize
-    Legend font size.
-legend_fontweight : {`'normal'`, `'bold'`, ...}, optional (default: `None`)
-    Legend font weight. Defaults to 'bold' if `legend_loc == 'on data'`,
-    otherwise to 'normal'. Available are `['light', 'normal', 'medium',
-    'semibold', 'bold', 'heavy', 'black']`.
+    Numeric size in pt or {`'[x-|xx-]small'`, `'medium'`, `'[x-|xx-]large'`}.
+    See :func:`~matplotlib.text.Text.set_fontsize`.
+legend_fontweight : {`'normal'`, `'bold'`, ...}
+    Legend font weight. A numeric value in range 0-1000 or a string like
+    [`'light'`, `'normal'`, `'medium'`, `'[semi]bold'`, `'heavy'`, `'black'`].
+    Defaults to `'bold'` if `legend_loc == 'on data'`, otherwise to `'normal'`.
+    See :func:`~matplotlib.text.Text.set_fontweight`.
 legend_fontoutline
-    Linewidth of the legend font outline. This uses :mod:`matplotlib.patheffects`
-    to draw a white outline around the legend text.
+    Line width of the legend font outline in pt. Draws a white outline using
+    the path effect :class:`~matplotlib.patheffects.withStroke`.
 size
     Point size. If `None`, is automatically computed.
 color_map
-    Color map to use for continous variables. Anything that works for `cmap`
-    argument of `pyplot.scatter` should work here (e.g. `"magma"`, `"viridis"`,
-    `mpl.cm.cividis`). If `None` value of `mpl.rcParams["image.cmap"]` is used.
-    The default color_map can be set using :func:`~scanpy.set_figure_params` 
+    Color map to use for continous variables. Can be a name or a
+    :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
+    or `mpl.cm.cividis`), see :func:`~matplotlib.cm.get_cmap`.
+    If `None`, the value of `mpl.rcParams["image.cmap"]` is used.
+    The default `color_map` can be set using :func:`~scanpy.set_figure_params`.
 palette
-    Colors to use for plotting categorical annotation groups. The palette can be
-    a valid :class:`~matplotlib.colors.Colormap` name like `'Set2'` or `'tab20'`,
-    a list of colors like `['red', '#ccdd11', (0.1, 0.2, 1)]` or a
-    :class:`~cycler.Cycler` object. If `None`, `mpl.rcParams["axes.prop_cycle"]`
-    is used unless the categorical variable already has colors stored in
-    `adata.uns["{var}_colors"]`. If provided, values of `adata.uns["{var}_colors"]`
-    will be set by this palette.
+    Colors to use for plotting categorical annotation groups.
+    The palette can be a valid :class:`~matplotlib.colors.ListedColormap` name
+    (`'Set2'`, `'tab20'`, …), a :class:`~cycler.Cycler` object, or a sequence of
+    matplotlib colors like `['red', '#ccdd11', (0.1, 0.2, 1)]`
+    (see :func:`~matplotlib.colors.is_color_like`).
+    If `None`, `mpl.rcParams["axes.prop_cycle"]` is used unless the categorical
+    variable already has colors stored in `adata.uns["{var}_colors"]`.
+    If provided, values of `adata.uns["{var}_colors"]` will be set.
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
 vmin
     Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
-    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`, 
-    this is interpreted as a vmin=percentile(N). For example vmin='p1.5' is interpreted as 
+    vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`,
+    this is interpreted as a vmin=percentile(N). For example vmin='p1.5' is interpreted as
     the 1.5 percentile. If vmin is function, then vmin is interpreted as the return value
     of the function over the list of values to plot. For example to set vmin tp the mean of
-    the values to plot, `def my_vmin(values): return np.mean(values)` and then 
+    the values to plot, `def my_vmin(values): return np.mean(values)` and then
     set `vmin=my_vmin`. If vmin is None (default) an automatic minimum value is used
-    as defined by matplotlib `scatter` function. When making multiple plots, vmin can 
+    as defined by matplotlib `scatter` function. When making multiple plots, vmin can
     be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
     Maximum value to plot. The format is the same as for `vmin`
 add_outline
     If set to True, this will add a thin border around groups of dots. In some situations
-    this can enhance the aesthetics of the resulting image 
+    this can enhance the aesthetics of the resulting image
 outline_color
     Tuple with two valid color names used to adjust the add_outline. The first color is the
     border color (default: black), while the second color is a gap color between the
-    border color and the scatter dot (default: white).   
+    border color and the scatter dot (default: white).
 outline_width
     Tuple with two width numbers used to adjust the outline. The first value is the width
     of the border color as a fraction of the scatter dot size (default: 0.3). The second value is

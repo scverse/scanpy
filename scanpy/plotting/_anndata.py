@@ -1,10 +1,13 @@
 """Plotting functions for AnnData.
 """
-from typing import Optional, Union, Tuple, Sequence
+from collections import abc
+from typing import Optional, Union
+from typing import Tuple, Sequence, Collection, Iterable
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
+from cycler import Cycler
 from matplotlib.axes import Axes
 from pandas.api.types import is_categorical_dtype
 from scipy.sparse import issparse
@@ -12,7 +15,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import gridspec
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, Colormap, ListedColormap
 
 from .. import get
 from .._settings import settings
@@ -24,40 +27,46 @@ from ._docs import doc_scatter_temp, doc_show_save_ax, doc_common_plot_args
 
 
 VALID_LEGENDLOCS = {
-    'none', 'right margin', 'on data', 'on data export', 'best', 'upper right', 'upper left',
-    'lower left', 'lower right', 'right', 'center left', 'center right',
-    'lower center', 'upper center', 'center'
+    'none', 'right margin', 'on data', 'on data export', 'best',
+    'upper right', 'upper left',
+    'lower left', 'lower right', 'right',
+    'center left', 'center right',
+    'lower center', 'upper center', 'center',
 }
+
+
+ColorLike = Union[str, Tuple[float, ...]]
 
 
 @doc_params(scatter_temp=doc_scatter_temp, show_save_ax=doc_show_save_ax)
 def scatter(
-        adata: AnnData,
-        x=None,
-        y=None,
-        color=None,
-        use_raw=None,
-        layers=None,
-        sort_order=True,
-        alpha=None,
-        basis=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        legend_fontoutline=None,
-        color_map=None,
-        palette=None,
-        frameon=None,
-        right_margin=None,
-        left_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
+    adata: AnnData,
+    x: Optional[str] = None,
+    y: Optional[str] = None,
+    color: Union[str, Collection[str]] = None,
+    use_raw: Optional[bool] = None,
+    layers: Union[str, Collection[str]] = None,
+    sort_order: bool = True,
+    alpha: Optional[float] = None,
+    basis: Optional[str] = None,
+    groups: Union[str, Iterable[str]] = None,
+    components: Union[str, Collection[str]] = None,
+    projection: str = '2d',
+    legend_loc: str = 'right margin',
+    legend_fontsize: Union[int, float, str] = None,
+    legend_fontweight: Union[int, str] = None,
+    legend_fontoutline: float = None,
+    color_map: Union[str, Colormap] = None,
+    palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
+    frameon: Optional[bool] = None,
+    right_margin: Optional[float] = None,
+    left_margin: Optional[float] = None,
+    size: Union[int, float, None] = None,
+    title: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
+    ax: Optional[Axes] = None,
+):
     """\
     Scatter plot along observations or variables axes.
 
@@ -66,19 +75,19 @@ def scatter(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    x : `str` or `None`
+    x
         x coordinate.
-    y : `str` or `None`
+    y
         y coordinate.
-    color : string or list of strings, optional (default: `None`)
+    color
         Keys for annotations of observations/cells or variables/genes,
         or a hex color specification, e.g.,
         `'ann1'`, `'#fe57a1'`, or `['ann1', 'ann2']`.
-    use_raw : `bool`, optional (default: `None`)
+    use_raw
         Use `raw` attribute of `adata` if present.
-    layers : `str` or tuple of strings, optional (default: `X`)
+    layers
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
         `(layers, layers, layers)`.
@@ -91,216 +100,95 @@ def scatter(
     -------
     If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
     """
+    args = locals()
     if basis is not None:
-        axs = _scatter_obs(
-            adata=adata,
-            x=x,
-            y=y,
-            color=color,
-            use_raw=use_raw,
-            layers=layers,
-            sort_order=sort_order,
-            alpha=alpha,
-            basis=basis,
-            groups=groups,
-            components=components,
-            projection=projection,
-            legend_loc=legend_loc,
-            legend_fontsize=legend_fontsize,
-            legend_fontweight=legend_fontweight,
-            legend_fontoutline=legend_fontoutline,
-            color_map=color_map,
-            palette=palette,
-            frameon=frameon,
-            right_margin=right_margin,
-            left_margin=left_margin,
-            size=size,
-            title=title,
-            show=show,
-            save=save,
-            ax=ax)
-    elif x is not None and y is not None:
-        if ((x in adata.obs.keys() or x in adata.var.index)
-            and (y in adata.obs.keys() or y in adata.var.index)
-            and (color is None or color in adata.obs.keys() or color in adata.var.index)):
-            axs = _scatter_obs(
-                adata=adata,
-                x=x,
-                y=y,
-                color=color,
-                use_raw=use_raw,
-                layers=layers,
-                sort_order=sort_order,
-                alpha=alpha,
-                basis=basis,
-                groups=groups,
-                components=components,
-                projection=projection,
-                legend_loc=legend_loc,
-                legend_fontsize=legend_fontsize,
-                legend_fontweight=legend_fontweight,
-                legend_fontoutline=legend_fontoutline,
-                color_map=color_map,
-                palette=palette,
-                frameon=frameon,
-                right_margin=right_margin,
-                left_margin=left_margin,
-                size=size,
-                title=title,
-                show=show,
-                save=save,
-                ax=ax)
-        elif ((x in adata.var.keys() or x in adata.obs.index)
-                and (y in adata.var.keys() or y in adata.obs.index)
-                and (color is None or color in adata.var.keys() or color in adata.obs.index)):
-            axs = _scatter_var(
-                adata=adata,
-                x=x,
-                y=y,
-                color=color,
-                use_raw=use_raw,
-                layers=layers,
-                sort_order=sort_order,
-                alpha=alpha,
-                basis=basis,
-                groups=groups,
-                components=components,
-                projection=projection,
-                legend_loc=legend_loc,
-                legend_fontsize=legend_fontsize,
-                legend_fontweight=legend_fontweight,
-                legend_fontoutline=legend_fontoutline,
-                color_map=color_map,
-                palette=palette,
-                frameon=frameon,
-                right_margin=right_margin,
-                left_margin=left_margin,
-                size=size,
-                title=title,
-                show=show,
-                save=save,
-                ax=ax)
-        else:
-            raise ValueError(
-                '`x`, `y`, and potential `color` inputs must all come from either `.obs` or `.var`')
-    else:
+        return _scatter_obs(**args)
+    if x is None or y is None:
         raise ValueError('Either provide a `basis` or `x` and `y`.')
-    return axs
-
-
-def _scatter_var(
-        adata: AnnData,
-        x=None,
-        y=None,
-        color=None,
-        use_raw=None,
-        layers='X',
-        sort_order=True,
-        alpha=None,
-        basis=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        legend_fontoutline=None,
-        color_map=None,
-        palette=None,
-        frameon=None,
-        right_margin=None,
-        left_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
-
-    adata_T = adata.T
-
-    axs = _scatter_obs(
-        adata=adata_T,
-        x=x,
-        y=y,
-        color=color,
-        use_raw=use_raw,
-        layers=layers,
-        sort_order=sort_order,
-        alpha=alpha,
-        basis=basis,
-        groups=groups,
-        components=components,
-        projection=projection,
-        legend_loc=legend_loc,
-        legend_fontsize=legend_fontsize,
-        legend_fontweight=legend_fontweight,
-        legend_fontoutline=legend_fontoutline,
-        color_map=color_map,
-        palette=palette,
-        frameon=frameon,
-        right_margin=right_margin,
-        left_margin=left_margin,
-        size=size,
-        title=title,
-        show=show,
-        save=save,
-        ax=ax)
-
-    # store .uns annotations that were added to the new adata object
-    adata.uns = adata_T.uns
-
-    return axs
+    if (
+        (x in adata.obs.keys() or x in adata.var.index)
+        and (y in adata.obs.keys() or y in adata.var.index)
+        and (color is None or color in adata.obs.keys() or color in adata.var.index)
+    ):
+        return _scatter_obs(**args)
+    if (
+        (x in adata.var.keys() or x in adata.obs.index)
+        and (y in adata.var.keys() or y in adata.obs.index)
+        and (color is None or color in adata.var.keys() or color in adata.obs.index)
+    ):
+        adata_T = adata.T
+        axs = _scatter_obs(
+            adata=adata_T,
+            **{name: val for name, val in args.items() if name != 'adata'}
+        )
+        # store .uns annotations that were added to the new adata object
+        adata.uns = adata_T.uns
+        return axs
+    raise ValueError(
+        '`x`, `y`, and potential `color` inputs must all '
+        'come from either `.obs` or `.var`'
+    )
 
 
 def _scatter_obs(
-        adata: AnnData,
-        x=None,
-        y=None,
-        color=None,
-        use_raw=None,
-        layers=None,
-        sort_order=True,
-        alpha=None,
-        basis=None,
-        groups=None,
-        components=None,
-        projection='2d',
-        legend_loc='right margin',
-        legend_fontsize=None,
-        legend_fontweight=None,
-        legend_fontoutline=None,
-        color_map=None,
-        palette=None,
-        frameon=None,
-        right_margin=None,
-        left_margin=None,
-        size=None,
-        title=None,
-        show=None,
-        save=None,
-        ax=None):
+    adata: AnnData,
+    x=None,
+    y=None,
+    color=None,
+    use_raw=None,
+    layers=None,
+    sort_order=True,
+    alpha=None,
+    basis=None,
+    groups=None,
+    components=None,
+    projection='2d',
+    legend_loc='right margin',
+    legend_fontsize=None,
+    legend_fontweight=None,
+    legend_fontoutline=None,
+    color_map=None,
+    palette=None,
+    frameon=None,
+    right_margin=None,
+    left_margin=None,
+    size=None,
+    title=None,
+    show=None,
+    save=None,
+    ax=None,
+):
     """See docstring of scatter."""
     sanitize_anndata(adata)
     from scipy.sparse import issparse
     if use_raw is None and adata.raw is not None: use_raw = True
 
     # Process layers
-    if (layers is None or layers == 'X' or layers in adata.layers.keys()):
+    if (
+        layers in ['X', None]
+        or (isinstance(layers, str) and layers in adata.layers.keys())
+    ):
         layers = (layers, layers, layers)
-    elif isinstance(layers, (tuple, list)) and len(layers) == 3:
+    elif isinstance(layers, abc.Collection) and len(layers) == 3:
         layers = tuple(layers)
         for layer in layers:
-            if layer not in adata.layers.keys() and (layer != 'X' or layer is not None):
+            if layer not in adata.layers.keys() and layer not in ['X', None]:
                 raise ValueError(
-                    '`layers` should have elements that are either None or in adata.layers.keys().')
+                    '`layers` should have elements that are '
+                    'either None or in adata.layers.keys().'
+                )
     else:
-        raise ValueError(f"`layers` should be a string or a list/tuple of length 3, had value '{layers}'")
-    if use_raw and (layers != ('X', 'X', 'X') or layers is not (None, None, None)):
+        raise ValueError(
+            "`layers` should be a string or a collection of strings "
+            f"with length 3, had value '{layers}'"
+        )
+    if use_raw and layers not in [('X', 'X', 'X'), (None, None, None)]:
         ValueError('`use_raw` must be `False` if layers are used.')
 
     if legend_loc not in VALID_LEGENDLOCS:
         raise ValueError(
-            'Invalid `legend_loc`, need to be one of: {}.'.format(VALID_LEGENDLOCS))
+            f'Invalid `legend_loc`, need to be one of: {VALID_LEGENDLOCS}.'
+        )
     if components is None: components = '1,2' if '2d' in projection else '1,2,3'
     if isinstance(components, str): components = components.split(',')
     components = np.array(components).astype(int) - 1
@@ -316,8 +204,9 @@ def _scatter_obs(
             # correct the component vector for use in labeling etc.
             if basis == 'diffmap': components -= 1
         except KeyError:
-            raise KeyError('compute coordinates using visualization tool {} first'
-                           .format(basis))
+            raise KeyError(
+                f'compute coordinates using visualization tool {basis} first'
+            )
     elif x is not None and y is not None:
         if use_raw:
             if x in adata.obs.columns:
@@ -347,13 +236,13 @@ def _scatter_obs(
 
     palette_was_none = False
     if palette is None: palette_was_none = True
-    if isinstance(palette, list):
+    if isinstance(palette, abc.Sequence):
         if not is_color_like(palette[0]):
             palettes = palette
         else:
             palettes = [palette]
     else:
-        palettes = [palette for i in range(len(keys))]
+        palettes = [palette for _ in range(len(keys))]
     for i, palette in enumerate(palettes):
         palettes[i] = utils.default_palette(palette)
 
@@ -364,7 +253,8 @@ def _scatter_obs(
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
             else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
-            else basis)
+            else basis
+        )
     else:
         component_name = None
     axis_labels = (x, y) if component_name is None else None
@@ -396,9 +286,9 @@ def _scatter_obs(
             colorbar = False
         else:
             raise ValueError(
-                'key \'{}\' is invalid! pass valid observation annotation, '
-                'one of {} or a gene name {}'
-                .format(key, adata.obs_keys(), adata.var_names))
+                f'key {key!r} is invalid! pass valid observation annotation, '
+                f'one of {adata.obs_keys()} or a gene name {adata.var_names}'
+            )
         if colorbar is None:
             colorbar = not categorical
         colorbars.append(colorbar)
@@ -410,22 +300,24 @@ def _scatter_obs(
     if title is None and keys[0] is not None:
         title = [key.replace('_', ' ') if not is_color_like(key) else '' for key in keys]
 
-    axs = scatter_base(Y,
-                       title=title,
-                       alpha=alpha,
-                       component_name=component_name,
-                       axis_labels=axis_labels,
-                       component_indexnames=components + 1,
-                       projection=projection,
-                       colors=color_ids,
-                       highlights=highlights,
-                       colorbars=colorbars,
-                       right_margin=right_margin,
-                       left_margin=left_margin,
-                       sizes=[size for c in keys],
-                       color_map=color_map,
-                       show_ticks=show_ticks,
-                       ax=ax)
+    axs = scatter_base(
+        Y,
+        title=title,
+        alpha=alpha,
+        component_name=component_name,
+        axis_labels=axis_labels,
+        component_indexnames=components + 1,
+        projection=projection,
+        colors=color_ids,
+        highlights=highlights,
+        colorbars=colorbars,
+        right_margin=right_margin,
+        left_margin=left_margin,
+        sizes=[size for _ in keys],
+        color_map=color_map,
+        show_ticks=show_ticks,
+        ax=ax,
+    )
 
     def add_centroid(centroids, name, Y, mask):
         Y_mask = Y[mask]
@@ -454,34 +346,45 @@ def _scatter_obs(
             groups = [groups] if isinstance(groups, str) else groups
             for name in groups:
                 if name not in set(adata.obs[key].cat.categories):
-                    raise ValueError('"' + name + '" is invalid!'
-                                     + ' specify valid name, one of '
-                                     + str(adata.obs[key].cat.categories))
+                    raise ValueError(
+                        f'{name!r} is invalid! specify valid name, '
+                        f'one of {adata.obs[key].cat.categories}'
+                    )
                 else:
                     iname = np.flatnonzero(adata.obs[key].cat.categories.values == name)[0]
-                    mask = scatter_group(axs[ikey], key, iname,
-                                         adata, Y, projection, size=size, alpha=alpha)
+                    mask = scatter_group(
+                        axs[ikey], key, iname,
+                        adata, Y, projection,
+                        size=size, alpha=alpha,
+                    )
                     if legend_loc.startswith('on data'): add_centroid(centroids, name, Y, mask)
                     mask_remaining[mask] = False
         if mask_remaining.sum() > 0:
             data = [Y[mask_remaining, 0], Y[mask_remaining, 1]]
             if projection == '3d': data.append(Y[mask_remaining, 2])
-            axs[ikey].scatter(*data, marker='.', c='lightgrey', s=size,
-                                    edgecolors='none', zorder=-1)
+            axs[ikey].scatter(
+                *data,
+                marker='.', c='lightgrey', s=size,
+                edgecolors='none', zorder=-1,
+            )
         legend = None
         if legend_loc.startswith('on data'):
             if legend_fontweight is None:
                 legend_fontweight = 'bold'
             if legend_fontoutline is not None:
-                legend_fontoutline = [patheffects.withStroke(linewidth=legend_fontoutline,
-                                                             foreground='w')]
+                legend_fontoutline = [patheffects.withStroke(
+                    linewidth=legend_fontoutline,
+                    foreground='w',
+                )]
             for name, pos in centroids.items():
-                axs[ikey].text(pos[0], pos[1], name,
-                               weight=legend_fontweight,
-                               verticalalignment='center',
-                               horizontalalignment='center',
-                               fontsize=legend_fontsize,
-                               path_effects=legend_fontoutline)
+                axs[ikey].text(
+                    pos[0], pos[1], name,
+                    weight=legend_fontweight,
+                    verticalalignment='center',
+                    horizontalalignment='center',
+                    fontsize=legend_fontsize,
+                    path_effects=legend_fontoutline,
+                )
 
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))
             for iname, name in enumerate(adata.obs[key].cat.categories):
@@ -499,12 +402,16 @@ def _scatter_obs(
             legend = axs[ikey].legend(
                 frameon=False, loc='center left',
                 bbox_to_anchor=(1, 0.5),
-                ncol=(1 if len(adata.obs[key].cat.categories) <= 14
-                      else 2 if len(adata.obs[key].cat.categories) <= 30 else 3),
+                ncol=(
+                    1 if len(adata.obs[key].cat.categories) <= 14 else
+                    2 if len(adata.obs[key].cat.categories) <= 30 else
+                    3
+                ),
                 fontsize=legend_fontsize)
         elif legend_loc != 'none':
             legend = axs[ikey].legend(
-                frameon=False, loc=legend_loc, fontsize=legend_fontsize)
+                frameon=False, loc=legend_loc, fontsize=legend_fontsize
+            )
         if legend is not None:
             for handle in legend.legendHandles: handle.set_sizes([300.0])
 
@@ -717,7 +624,11 @@ def violin(
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
-                ax=ax, panels=['x'] if groupby is None else keys, show_ticks=True, right_margin=0.3)
+                ax=ax,
+                panels=['x'] if groupby is None else keys,
+                show_ticks=True,
+                right_margin=0.3,
+            )
         else:
             axs = [ax]
         for ax, y in zip(axs, ys):
