@@ -1,6 +1,6 @@
 """Utility functions and classes
 """
-
+import importlib.util
 import sys
 import inspect
 from pathlib import Path
@@ -955,3 +955,16 @@ def hierarch_cluster(M):
         pl.matshow(Mclus)
         pl.colorbar()
     return Mclus, indices
+
+
+def lazy_import(full_name):
+    """Imports a module in a way that it’s only executed on member access"""
+    try:
+        return sys.modules[full_name]
+    except KeyError:
+        spec = importlib.util.find_spec(full_name)
+        module = importlib.util.module_from_spec(spec)
+        loader = importlib.util.LazyLoader(spec.loader)
+        # Make module with proper locking and get it inserted into sys.modules.
+        loader.exec_module(module)
+        return module

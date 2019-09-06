@@ -1,14 +1,20 @@
 from typing import Union, Optional
 
 from anndata import AnnData
-from sklearn.neighbors import DistanceMetric
+import sklearn
+
+from ...utils import lazy_import
+
+
+# Import this lazily so we don’t slowly import sklearn.stats just for annotation
+lazy_import("sklearn.neighbors")
 
 
 def bbknn(
     adata: AnnData,
     batch_key: str = 'batch',
     approx: bool = True,
-    metric: Union[str, DistanceMetric] = 'angular',
+    metric: Union[str, 'sklearn.neighbors.DistanceMetric'] = 'angular',
     copy: bool = False,
     *,
     n_pcs: int = 50,
