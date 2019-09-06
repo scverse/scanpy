@@ -453,7 +453,8 @@ def paga(
 
     if colorbar is None:
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names
-        colorbars = [True if c in var_names else False for c in colors]
+        colorbars = [((c in adata.obs_keys() and adata.obs[c].dtype.name != 'category') or
+                      (c in var_names)) for c in colors]
     else:
         colorbars = [False for c in colors]
 
@@ -529,7 +530,6 @@ def paga(
                 normalize_to_color=normalize_to_color,
                 frameon=frameon,
                 cmap=cmap,
-                cax=cax,
                 colorbar=colorbars[icolor],
                 cb_kwds=cb_kwds,
                 use_raw=use_raw,
@@ -540,15 +540,16 @@ def paga(
                 pos=pos,
             )
             if colorbars[icolor]:
-                bottom = panel_pos[0][0]
-                height = panel_pos[1][0] - bottom
-                width = 0.006 * draw_region_width / len(colors)
-                left = panel_pos[2][2*icolor+1] + 0.2 * width
-                rectangle = [left, bottom, width, height]
-                fig = pl.gcf()
-                ax_cb = fig.add_axes(rectangle)
+                if cax is None:
+                    bottom = panel_pos[0][0]
+                    height = panel_pos[1][0] - bottom
+                    width = 0.006 * draw_region_width / len(colors)
+                    left = panel_pos[2][2*icolor+1] + 0.2 * width
+                    rectangle = [left, bottom, width, height]
+                    fig = pl.gcf()
+                    cax = fig.add_axes(rectangle)
                 cb = pl.colorbar(sct, format=ticker.FuncFormatter(utils.ticks_formatter),
-                                 cax=ax_cb)
+                                 cax=cax)
     if add_pos:
         adata.uns['paga']['pos'] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
@@ -585,7 +586,6 @@ def _paga_graph(
     min_edge_width=None,
     max_edge_width=None,
     export_to_gexf=False,
-    cax=None,
     colorbar=None,
     use_raw=True,
     cb_kwds=None,

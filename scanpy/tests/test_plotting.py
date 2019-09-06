@@ -448,7 +448,7 @@ def test_scatter_rep(tmpdir):
             assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
 
 def test_paga(image_comparer):
-    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)
 
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
@@ -458,6 +458,10 @@ def test_paga(image_comparer):
 
     sc.pl.paga(pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga_continuous')
+
+    pbmc.obs['cool_feature'] = pbmc[:, 'CST3'].X.squeeze()
+    sc.pl.paga(pbmc, color='cool_feature', threshold=0.5, max_edge_width=1.0, show=False)
+    save_and_compare_images('master_paga_continuous_obs')
 
     sc.pl.paga_compare(pbmc, legend_fontoutline=2, threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga_compare')
