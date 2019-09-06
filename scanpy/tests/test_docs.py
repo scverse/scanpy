@@ -4,16 +4,13 @@ from types import FunctionType
 import pytest
 from scanpy._utils import descend_classes_and_funcs
 
-import scanpy
-
-
-blacklist = []
+# CLI is locally not imported by default but on travis it is?
+import scanpy.cli
 
 
 @pytest.mark.parametrize("f", [
     c_or_f for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
     if isinstance(c_or_f, FunctionType)
-    and not any(c_or_f.__qualname__.startswith(b) for b in blacklist)
 ])
 def test_function_headers(f):
     name = f"{f.__module__}.{f.__qualname__}"
