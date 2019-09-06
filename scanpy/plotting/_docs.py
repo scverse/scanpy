@@ -1,4 +1,5 @@
-"""Shared docstrings for plotting function parameters.
+"""\
+Shared docstrings for plotting function parameters.
 """
 
 
@@ -22,7 +23,6 @@ layer
     takes precedence over `use_raw`.\
 """
 
-
 doc_edges_arrows = """\
 edges
     Show edges.
@@ -37,8 +37,8 @@ arrows_kwds
     Passed to :meth:`~matplotlib.axes.Axes.quiver`\
 """
 
-
-_doc_scatter_common = """\
+# Docs for pl.scatter
+doc_scatter_basic = """\
 sort_order
     For continuous annotations used as color parameter, plot data points
     with higher values on top of others.
@@ -84,6 +84,12 @@ palette
 frameon
     Draw a frame around the scatter plot. Defaults to value set in
     :func:`~scanpy.set_figure_params`, defaults to `True`.
+title
+    Provide title for panels either as string or list of strings,
+    e.g. `['title1', 'title2', ...]`.\
+"""
+
+doc_vminmax = """\
 vmin
     Minimum value to plot. Values smaller than vmin are plotted with the same color as vmin.
     vmin can be a number, a string, a function or `None`. If vmin is a string and has the format `pN`,
@@ -95,7 +101,10 @@ vmin
     as defined by matplotlib `scatter` function. When making multiple plots, vmin can
     be a list of values, one for each plot. For example `vmin=[0.1, 'p1', None, my_vmin]`
 vmax
-    Maximum value to plot. The format is the same as for `vmin`
+    Maximum value to plot. The format is the same as for `vmin`\
+"""
+
+doc_outline = """\
 add_outline
     If set to True, this will add a thin border around groups of dots. In some situations
     this can enhance the aesthetics of the resulting image
@@ -106,32 +115,30 @@ outline_color
 outline_width
     Tuple with two width numbers used to adjust the outline. The first value is the width
     of the border color as a fraction of the scatter dot size (default: 0.3). The second value is
-    width of the gap color (default: 0.05).
+    width of the gap color (default: 0.05).\
 """
-_doc_scatter_panels = """\
+
+doc_panels = """\
 ncols
     Number of panels per row.
 wspace
     Adjust the width of the space between multiple panels.
 hspace
     Adjust the height of the space between multiple panels.
-"""
-_doc_scatter_meta = """\
-title
-    Provide title for panels either as string or list of strings,
-    e.g. `['title1', 'title2', ...]`.
-kwargs
-    Arguments to pass to :func:`matplotlib.pyplot.scatter`,
-    for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).
 return_fig
     Return the matplotlib figure.\
 """
 
-# temporarily add a special variable doc_scatter_temp for pl.scatter
-# because currently pl.scatter does not accept ncols, wspace, and hspace
-doc_scatter_temp = _doc_scatter_common + _doc_scatter_meta
-doc_scatter_bulk = _doc_scatter_common + _doc_scatter_panels + _doc_scatter_meta
-
+# Docs for pl.pca, pl.tsne, … (everything in _tools.scatterplots)
+doc_scatter_embedding = f"""\
+{doc_scatter_basic}
+{doc_vminmax}
+{doc_outline}
+{doc_panels}
+kwargs
+    Arguments to pass to :func:`matplotlib.pyplot.scatter`,
+    for instance: the maximum and minimum values (e.g. `vmin=-2, vmax=5`).\
+"""
 
 doc_show_save_ax = """\
 show

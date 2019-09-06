@@ -13,14 +13,15 @@ from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap
 
 from .. import _utils as utils
-from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_bulk, doc_show_save_ax
+from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
 from ..._settings import settings
 from ...utils import sanitize_anndata, doc_params
 from ... import logging as logg
 
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def embedding(
     adata: AnnData,
     basis: str,
@@ -120,53 +121,39 @@ def embedding(
         # turn title into a python list if not None
         title = [title] if isinstance(title, str) else list(title)
 
-    ####
-    # get the points position and the components list (only if components is not 'None)
+    # get the points position and the components list
+    # (only if components is not None)
     data_points, components_list = _get_data_points(adata, basis, projection, components)
 
-    ###
-    # setup layout. Most of the code is for the case when multiple plots are required
-    # 'color' is a list of names that want to be plotted. Eg. ['Gene1', 'louvain', 'Gene2'].
+    # Setup layout.
+    # Most of the code is for the case when multiple plots are required
+    # 'color' is a list of names that want to be plotted.
+    # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
     if (isinstance(color, abc.Sequence) and len(color) > 1) or len(components_list) > 1:
         if ax is not None:
             raise ValueError(
-                "When plotting multiple panels (each for a given value of 'color') "
-                "a given ax can not be used"
+                "Cannot specify `ax` when plotting multiple panels "
+                "(each for a given value of 'color')."
             )
         if len(components_list) == 0:
             components_list = [None]
 
-        multi_panel = True
         # each plot needs to be its own panel
-        from matplotlib import gridspec
-        # set up the figure
         num_panels = len(color) * len(components_list)
-        n_panels_x = min(ncols, num_panels)
-        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
-        # each panel will have the size of rcParams['figure.figsize']
-        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
-                                 n_panels_y * rcParams['figure.figsize'][1]))
-        left = 0.2 / n_panels_x
-        bottom = 0.13 / n_panels_y
-        gs = gridspec.GridSpec(
-            nrows=n_panels_y, ncols=n_panels_x,
-            left=left, right=1-(n_panels_x-1)*left-0.01/n_panels_x,
-            bottom=bottom, top=1-(n_panels_y-1)*bottom-0.1/n_panels_y,
-            hspace=hspace, wspace=wspace,
-        )
+        fig, grid = _panel_grid(hspace, wspace, ncols, num_panels)
     else:
         if len(components_list) == 0:
             components_list = [None]
-        multi_panel = False
+        grid = None
         if ax is None:
             fig = pl.figure()
             ax = fig.add_subplot(111, **args_3d)
 
     # turn vmax and vmin into a sequence
-    if not isinstance(vmax, List):
+    if not isinstance(vmax, abc.Sequence):
         vmax = [vmax]
-    if not isinstance(vmin, List):
+    if not isinstance(vmin, abc.Sequence):
         vmin = [vmin]
 
     if 's' not in kwargs:
@@ -181,8 +168,10 @@ def embedding(
 
     # use itertools.product to make a plot for each color and for each component
     # For example if color=[gene1, gene2] and components=['1,2, '2,3'].
-    # The plots are: [color=gene1, components=[1,2], color=gene1, components=[2,3],
-    #                 color=gene2, components = [1, 2], color=gene2, components=[2,3]]
+    # The plots are: [
+    #     color=gene1, components=[1,2], color=gene1, components=[2,3],
+    #     color=gene2, components = [1, 2], color=gene2, components=[2,3],
+    # ]
     for count, (value_to_plot, component_idx) in enumerate(itertools.product(color, idx_components)):
         color_vector, categorical = _get_color_values(
             adata, value_to_plot, layer=layer,
@@ -199,17 +188,24 @@ def embedding(
             # check if 'size' is given (stored in kwargs['s']
             # and reorder it.
             import pandas.core.series
-            if 's' in kwargs and kwargs['s'] is not None \
-                and isinstance(kwargs['s'],(list, pandas.core.series.Series, np.ndarray)) \
-                and len(kwargs['s']) == len(color_vector):
+            if (
+                's' in kwargs
+                and kwargs['s'] is not None
+                and isinstance(kwargs['s'], (
+                    abc.Sequence,
+                    pandas.core.series.Series,
+                    np.ndarray,
+                ))
+                and len(kwargs['s']) == len(color_vector)
+            ):
                 kwargs['s'] = np.array(kwargs['s'])[order]
         else:
             _data_points = data_points[component_idx]
 
         # if plotting multiple panels, get the ax from the grid spec
         # else use the ax value (either user given or created previously)
-        if multi_panel is True:
-            ax = pl.subplot(gs[count], **args_3d)
+        if grid:
+            ax = pl.subplot(grid[count], **args_3d)
             axs.append(ax)
         if not (settings._frameon if frameon is None else frameon):
             ax.axis('off')
@@ -230,7 +226,7 @@ def embedding(
 
         # check vmin and vmax options
         if categorical:
-            kwargs['vmin'] =  kwargs['vmax'] = None
+            kwargs['vmin'] = kwargs['vmax'] = None
         else:
             kwargs['vmin'], kwargs['vmax'] = _get_vmin_vmax(vmin, vmax, count, color_vector)
 
@@ -324,15 +320,35 @@ def embedding(
         _add_legend_or_colorbar(
             adata, ax, cax, categorical, value_to_plot, legend_loc,
             _data_points, legend_fontweight, legend_fontsize, legend_fontoutline,
-            groups, multi_panel,
+            groups, bool(grid),
         )
 
     if return_fig is True:
         return fig
-    axs = axs if multi_panel else ax
+    axs = axs if grid else ax
     utils.savefig_or_show(basis, show=show, save=save)
     if show is False:
         return axs
+
+
+def _panel_grid(hspace, wspace, ncols, num_panels):
+    from matplotlib import gridspec
+    n_panels_x = min(ncols, num_panels)
+    n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
+    # each panel will have the size of rcParams['figure.figsize']
+    fig = pl.figure(figsize=(
+        n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
+        n_panels_y * rcParams['figure.figsize'][1]),
+    )
+    left = 0.2 / n_panels_x
+    bottom = 0.13 / n_panels_y
+    gs = gridspec.GridSpec(
+        nrows=n_panels_y, ncols=n_panels_x,
+        left=left, right=1 - (n_panels_x - 1) * left - 0.01 / n_panels_x,
+        bottom=bottom, top=1 - (n_panels_y - 1) * bottom - 0.1 / n_panels_y,
+        hspace=hspace, wspace=wspace,
+    )
+    return fig, gs
 
 
 def _get_vmin_vmax(
@@ -430,7 +446,7 @@ def _wraps_plot_scatter(wrapper):
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in UMAP basis.
@@ -450,7 +466,7 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in tSNE basis.
@@ -470,7 +486,7 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def phate(adata, **kwargs) -> Union[List[Axes], None]:
     """\
     Scatter plot in PHATE basis.
@@ -514,7 +530,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in Diffusion Map basis.
@@ -533,7 +549,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
@@ -563,7 +579,7 @@ def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.

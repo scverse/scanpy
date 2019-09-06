@@ -2,6 +2,7 @@ from collections import abc
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from scipy.sparse import issparse
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, cm, colors
@@ -11,10 +12,10 @@ from typing import Union, Optional, List, Sequence, Iterable
 from .. import _utils as utils
 from ...utils import doc_params, sanitize_anndata
 from ... import logging as logg
-from .._anndata import scatter, ranking
+from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
-from .._docs import doc_scatter_bulk, doc_show_save_ax, _doc_scatter_panels
-from .scatterplots import pca, embedding
+from .._docs import doc_scatter_embedding, doc_show_save_ax, doc_vminmax, doc_panels
+from .scatterplots import pca, embedding, _panel_grid
 from matplotlib.colors import Colormap
 
 # ------------------------------------------------------------------------------
@@ -22,7 +23,7 @@ from matplotlib.colors import Colormap
 # ------------------------------------------------------------------------------
 
 
-@doc_params(scatter_bulk=doc_scatter_bulk, show_save_ax=doc_show_save_ax)
+@doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def pca_overview(adata: AnnData, **params):
     """\
     Plot PCA results.
@@ -761,7 +762,7 @@ def sim(
         utils.savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@doc_params(show_save_ax=doc_show_save_ax, panels=_doc_scatter_panels)
+@doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
 def embedding_density(
     adata: AnnData,
     basis: str,
@@ -776,10 +777,13 @@ def embedding_density(
     ncols: Optional[int] = 4,
     hspace: Optional[float] = 0.25,
     wspace: Optional[None] = None,
-    save: Union[bool, str, None] = None,
+    title: str = None,
     show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    ax: Optional[Axes] = None,
+    return_fig: Optional[bool] = None,
     **kwargs,
-):
+) -> Union[Figure, Axes, None]:
     """\
     Plot the density of cells in an embedding (per condition)
 
@@ -810,15 +814,13 @@ def embedding_density(
         Dot size for background data points not in the `group`.
     fg_dotsize
         Dot size for foreground data points in the `group`.
-    vmax
-        Density that corresponds to color bar maximum.
-    vmin
-        Density that corresponds to color bar minimum.
+    {vminmax}
     {panels}
     {show_save_ax}
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.umap(adata)
     >>> sc.tl.embedding_density(adata, basis='umap', groupby='phase')
@@ -827,8 +829,12 @@ def embedding_density(
     >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase')
 
     Plot selected categories
-    >>> sc.pl.embedding_density(adata, basis='umap', key='umap_density_phase',
-    ...                         group=['G1', 'S'])
+    >>> sc.pl.embedding_density(
+    ...     adata,
+    ...     basis='umap',
+    ...     key='umap_density_phase',
+    ...     group=['G1', 'S'],
+    ... )
     """
     sanitize_anndata(adata)
 
@@ -838,15 +844,17 @@ def embedding_density(
     if basis == 'fa':
         basis = 'draw_graph_fa'
 
-    if 'X_'+basis not in adata.obsm_keys():
-        raise ValueError('Cannot find the embedded representation `adata.obsm[X_{!r}]`. '
-                         'Compute the embedding first.'.format(basis))
+    if f'X_{basis}' not in adata.obsm_keys():
+        raise ValueError(
+            f'Cannot find the embedded representation `adata.obsm[X_{basis!r}]`. '
+            'Compute the embedding first.'
+        )
 
-    if key not in adata.obs:
-        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
-
-    if key+'_params' not in adata.uns:
-        raise ValueError('Please run `sc.tl.embedding_density()` first and specify the correct key.')
+    if key not in adata.obs or f'{key}_params' not in adata.uns:
+        raise ValueError(
+            'Please run `sc.tl.embedding_density()` first '
+            'and specify the correct key.'
+        )
 
     if 'components' in kwargs:
         logg.warning(
@@ -855,8 +863,8 @@ def embedding_density(
         )
         del kwargs['components']
 
-    components = adata.uns[key+'_params']['components']
-    groupby = adata.uns[key+'_params']['covariate']
+    components = adata.uns[f'{key}_params']['components']
+    groupby = adata.uns[f'{key}_params']['covariate']
 
     # turn group into a list if needed
     if group == 'all':
@@ -867,15 +875,20 @@ def embedding_density(
     elif isinstance(group, str):
         group = [group]
 
-    if (group is None) and (groupby is not None):
-        raise ValueError('Densities were calculated over an `.obs` covariate. '
-                         'Please specify a group from this covariate to plot.')
+    if group is None and groupby is not None:
+        raise ValueError(
+            'Densities were calculated over an `.obs` covariate. '
+            'Please specify a group from this covariate to plot.'
+        )
 
-    if (group is not None) and (groupby is None):
-        logg.warning("value of 'group' is ignored because densities were not calculated for an `.obs` covariate.")
+    if group is not None and groupby is None:
+        logg.warning(
+            "value of 'group' is ignored because densities "
+            "were not calculated for an `.obs` covariate."
+        )
         group = None
 
-    if (np.min(adata.obs[key]) < 0) or (np.max(adata.obs[key]) > 1):
+    if np.min(adata.obs[key]) < 0 or np.max(adata.obs[key]) > 1:
         raise ValueError('Densities should be scaled between 0 and 1.')
 
     if wspace is None:
@@ -885,44 +898,40 @@ def embedding_density(
 
     # Make the color map
     if isinstance(color_map, str):
-        cmap = cm.get_cmap(color_map)
-    else:
-        cmap = color_map
+        color_map = cm.get_cmap(color_map)
 
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
-    cmap.set_over('black')
-    cmap.set_under('lightgray')
+    color_map.set_over('black')
+    color_map.set_under('lightgray')
     # a name to store the density values is needed. To avoid
     # overwriting a user name a new random name is created
     while True:
-        density_col_name = '_tmp_embedding_density_column_{}_'.format(np.random.randint(1000, 10000))
+        col_id = np.random.randint(1000, 10000)
+        density_col_name = f'_tmp_embedding_density_column_{col_id}_'
         if density_col_name not in adata.obs.columns:
             break
 
-    # if group is set, then plot it using multiple panels (even if only one group is set)
-    if group is not None and isinstance(group, abc.Sequence):
-        from matplotlib import gridspec
-        # set up the figure
-        num_panels = len(group)
-        n_panels_x = min(ncols, num_panels)
-        n_panels_y = np.ceil(num_panels / n_panels_x).astype(int)
-        # each panel will have the size of rcParams['figure.figsize']
-        fig = pl.figure(figsize=(n_panels_x * rcParams['figure.figsize'][0] * (1 + wspace),
-                                 n_panels_y * rcParams['figure.figsize'][1]))
-        left = 0.2 / n_panels_x
-        bottom = 0.13 / n_panels_y
-        gs = gridspec.GridSpec(
-            nrows=n_panels_y, ncols=n_panels_x,
-            left=left, right=1 - (n_panels_x - 1) * left - 0.01 / n_panels_x,
-            bottom=bottom, top=1 - (n_panels_y - 1) * bottom - 0.1 / n_panels_y,
-            hspace=hspace, wspace=wspace,
-        )
+    # if group is set, then plot it using multiple panels
+    # (even if only one group is set)
+    if (
+        group is not None
+        and not isinstance(group, str)
+        and isinstance(group, abc.Sequence)
+    ):
+        if ax is not None:
+            raise ValueError(
+                "Can only specify `ax` if no `group` sequence is given."
+            )
+        fig, gs = _panel_grid(hspace, wspace, ncols, len(group))
 
         axs = []
         for count, group_name in enumerate(group):
             if group_name not in adata.obs[groupby].cat.categories:
-                raise ValueError('Please specify a group from the `.obs` category over which the density '
-                                 'was calculated. Invalid group name: {}'.format(group_name))
+                raise ValueError(
+                    'Please specify a group from the `.obs` category '
+                    'over which the density was calculated. '
+                    f'Invalid group name: {group_name}'
+                )
 
             ax = pl.subplot(gs[count])
             # Define plotting data
@@ -933,13 +942,14 @@ def embedding_density(
             adata.obs[density_col_name] = dens_values
             dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
 
-            if 'title' not in kwargs:
+            if title is None:
                 title = group_name
-            else:
-                title = kwargs.pop('title')
-            ax=embedding(adata, basis, components=components, color=density_col_name,
-                         color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
-                         vmin=vmin, save=False, title=title, ax=ax, show=False, **kwargs)
+            ax = embedding(
+                adata, basis, components=components, color=density_col_name,
+                color_map=color_map, norm=norm, size=dot_sizes, vmax=vmax,
+                vmin=vmin, save=False, title=title, ax=ax, show=False,
+                **kwargs,
+            )
             axs.append(ax)
 
         ax = axs
@@ -950,19 +960,25 @@ def embedding_density(
         adata.obs[density_col_name] = dens_values
 
         # Ensure title is blank as default
-        if 'title' not in kwargs:
+        if title is None:
             title = group if group is not None else ""
-        else:
-            title = kwargs.pop('title')
 
         # Plot the graph
-        ax = embedding(adata, basis, components=components, color=density_col_name,
-                       color_map=cmap, norm=norm, size=dot_sizes, vmax=vmax,
-                       vmin=vmin, save=False, show=False, title=title, **kwargs)
+        fig_or_ax = embedding(
+            adata, basis, components=components, color=density_col_name,
+            color_map=color_map, norm=norm, size=dot_sizes, vmax=vmax,
+            vmin=vmin, save=False, show=False, title=title,
+            ax=ax, return_fig=return_fig,
+            **kwargs,
+        )
+        if return_fig: fig = fig_or_ax
+        else: ax = fig_or_ax
 
     # remove temporary column name
     adata.obs = adata.obs.drop(columns=[density_col_name])
 
-    utils.savefig_or_show(key + "_", show=show, save=save)
+    if return_fig:
+        return fig
+    utils.savefig_or_show(f"{key}_", show=show, save=save)
     if show is False:
         return ax

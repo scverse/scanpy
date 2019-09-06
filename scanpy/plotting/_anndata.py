@@ -23,7 +23,7 @@ from .. import logging as logg
 from . import _utils as utils
 from ._utils import scatter_base, scatter_group, setup_axes
 from ..utils import sanitize_anndata, doc_params
-from ._docs import doc_scatter_temp, doc_show_save_ax, doc_common_plot_args
+from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
 VALID_LEGENDLOCS = {
@@ -38,7 +38,7 @@ VALID_LEGENDLOCS = {
 ColorLike = Union[str, Tuple[float, ...]]
 
 
-@doc_params(scatter_temp=doc_scatter_temp, show_save_ax=doc_show_save_ax)
+@doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(
     adata: AnnData,
     x: Optional[str] = None,
