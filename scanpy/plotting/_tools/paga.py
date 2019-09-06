@@ -547,9 +547,12 @@ def paga(
                     left = panel_pos[2][2*icolor+1] + 0.2 * width
                     rectangle = [left, bottom, width, height]
                     fig = pl.gcf()
-                    cax = fig.add_axes(rectangle)
+                    ax_cb = fig.add_axes(rectangle)
+                else:
+                    ax_cb = cax[icolor]
+
                 cb = pl.colorbar(sct, format=ticker.FuncFormatter(utils.ticks_formatter),
-                                 cax=cax)
+                                 cax=ax_cb)
     if add_pos:
         adata.uns['paga']['pos'] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")

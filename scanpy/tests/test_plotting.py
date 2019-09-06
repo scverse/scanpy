@@ -463,6 +463,9 @@ def test_paga(image_comparer):
     sc.pl.paga(pbmc, color='cool_feature', threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga_continuous_obs')
 
+    sc.pl.paga(pbmc, color=['CST3', 'GATA2'], threshold=0.5, max_edge_width=1.0, show=False)
+    save_and_compare_images('master_paga_continuous_multiple')
+
     sc.pl.paga_compare(pbmc, legend_fontoutline=2, threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga_compare')
 
