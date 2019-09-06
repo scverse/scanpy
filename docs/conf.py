@@ -68,7 +68,7 @@ napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
 
 intersphinx_mapping = dict(
-    anndata=('https://anndata.readthedocs.io/en/latest/', None),
+    anndata=('https://anndata.readthedocs.io/en/stable/', None),
     bbknn=('https://bbknn.readthedocs.io/en/latest/', None),
     cycler=('https://matplotlib.org/cycler/', None),
     ipython=('https://ipython.readthedocs.io/en/stable/', None),

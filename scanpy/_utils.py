@@ -128,8 +128,6 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
             continue
         if isinstance(obj, Callable) and not isinstance(obj, MethodType):
             yield obj
-            if "_utils" in obj.__module__:
-                warnings.warn(f"Found an util with public name: {obj}")
             if isinstance(obj, type):
                 for m in vars(obj).values():
                     if isinstance(m, Callable) and _one_of_ours(m, root):
