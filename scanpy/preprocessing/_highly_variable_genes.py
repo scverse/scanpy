@@ -8,7 +8,7 @@ from anndata import AnnData
 from .. import logging as logg
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
-from ..utils import sanitize_anndata
+from .._utils import sanitize_anndata
 
 
 def _highly_variable_genes_single_batch(

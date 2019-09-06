@@ -15,7 +15,7 @@ from ._docs import (
     doc_var_qc_returns,
     doc_adata_basic,
 )
-from ..utils import doc_params
+from .._utils import _doc_params
 
 
 def _choose_mtx_rep(adata, use_raw=False, layer=None):
@@ -33,7 +33,7 @@ def _choose_mtx_rep(adata, use_raw=False, layer=None):
         return adata.X
 
 
-@doc_params(
+@_doc_params(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
     doc_obs_qc_args=doc_obs_qc_args,
@@ -122,7 +122,7 @@ def describe_obs(
         return obs_metrics
 
 
-@doc_params(
+@_doc_params(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
     doc_qc_metric_naming=doc_qc_metric_naming,
@@ -192,7 +192,7 @@ def describe_var(
         return var_metrics
 
 
-@doc_params(
+@_doc_params(
     doc_adata_basic=doc_adata_basic,
     doc_expr_reps=doc_expr_reps,
     doc_obs_qc_args=doc_obs_qc_args,

@@ -16,7 +16,7 @@ from anndata import AnnData
 
 from .._settings import settings as sett
 from .. import logging as logg
-from ..utils import sanitize_anndata, deprecated_arg_names, view_to_actual
+from .._utils import sanitize_anndata, deprecated_arg_names, view_to_actual
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 

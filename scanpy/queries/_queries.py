@@ -7,7 +7,7 @@ from anndata import AnnData
 import pandas as pd
 
 from ..get import rank_genes_groups_df
-from ..utils import doc_params
+from .._utils import _doc_params
 
 
 _doc_org = """\
@@ -29,7 +29,7 @@ use_cache
 """
 
 
-@doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
+@_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def simple_query(
     org: str,
     attrs: Union[Iterable[str], str],
@@ -73,7 +73,7 @@ def simple_query(
     return res
 
 
-@doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
+@_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def biomart_annotations(
     org: str,
     attrs: Iterable[str],
@@ -110,7 +110,7 @@ def biomart_annotations(
     return simple_query(org=org, attrs=attrs, host=host, use_cache=use_cache)
 
 
-@doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
+@_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def gene_coordinates(
     org: str,
     gene_name: str,
@@ -155,7 +155,7 @@ def gene_coordinates(
     return res[~res["chromosome_name"].isin(chr_exclude)]
 
 
-@doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
+@_doc_params(doc_org=_doc_org, doc_host=_doc_host, doc_use_cache=_doc_use_cache)
 def mitochondrial_genes(
     org: str,
     *,
@@ -196,7 +196,7 @@ def mitochondrial_genes(
 
 
 @singledispatch
-@doc_params(doc_org=_doc_org)
+@_doc_params(doc_org=_doc_org)
 def enrich(
     container: Iterable[str],
     *,

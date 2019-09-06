@@ -2,11 +2,14 @@ import numpy as np
 from scipy.sparse import issparse
 
 
+STANDARD_SCALER_FIXED = False
+
+
 def _get_mean_var(X):
     # - using sklearn.StandardScaler throws an error related to
     #   int to long trafo for very large matrices
     # - using X.multiply is slower
-    if True:
+    if not STANDARD_SCALER_FIXED:
         mean = X.mean(axis=0)
         if issparse(X):
             mean_sq = X.multiply(X).mean(axis=0)

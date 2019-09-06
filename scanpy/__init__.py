@@ -1,6 +1,6 @@
 # some technical stuff
 import sys
-from .utils import version, check_versions, annotate_doc_types
+from ._utils import version, check_versions, annotate_doc_types
 
 __author__ = ', '.join([
     'Alex Wolf',

@@ -104,7 +104,7 @@ def krumsiek11() -> AnnData:
     cell_type[400:480] = 'Mk'
     cell_type[560:640] = 'Neu'
     adata.obs['cell_type'] = cell_type
-    sc.utils.sanitize_anndata(adata)
+    sc._utils.sanitize_anndata(adata)
     return adata
 
 
@@ -160,7 +160,7 @@ def paul15() -> AnnData:
     import h5py
     filename = settings.datasetdir / 'paul15/paul15.h5'
     backup_url = 'http://falexwolf.de/data/paul15.h5'
-    sc.utils.check_presence_download(filename, backup_url)
+    sc._utils.check_presence_download(filename, backup_url)
     with h5py.File(filename, 'r') as f:
         X = f['data.debatched'][()]
         gene_names = f['data.debatched_rownames'][()].astype(str)
@@ -181,7 +181,7 @@ def paul15() -> AnnData:
     adata.obs['paul15_clusters'] = [
         str(i) + cell_type[i] for i in clusters.astype(int)]
     # make string annotations categorical (optional)
-    sc.utils.sanitize_anndata(adata)
+    sc._utils.sanitize_anndata(adata)
     # just keep the first of the two equivalent names per gene
     adata.var_names = [gn.split(';')[0] for gn in adata.var_names]
     # remove 10 corrupted gene names

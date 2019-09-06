@@ -7,7 +7,7 @@ from natsort import natsorted
 from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
-from .. import utils
+from .. import _utils
 from .. import logging as logg
 
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -112,7 +112,7 @@ def louvain(
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.debug('    using the undirected graph')
-        g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)
         else:

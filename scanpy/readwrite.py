@@ -1,7 +1,6 @@
 """Reading and Writing
 """
 
-import time
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
@@ -375,7 +374,7 @@ def write(
     else:
         key = filename
         ext = settings.file_format_data if ext is None else ext
-        filename = get_filename_from_key(key, ext)
+        filename = _get_filename_from_key(key, ext)
     if ext == 'csv':
         adata.write_csvs(filename)
     else:
@@ -488,7 +487,7 @@ def _read(
         )
     else:
         ext = is_valid_filename(filename, return_ext=True)
-    is_present = check_datafile_present_and_download(
+    is_present = _check_datafile_present_and_download(
         filename,
         backup_url=backup_url,
     )
@@ -706,17 +705,12 @@ def get_used_files():
     return set(filenames)
 
 
-def wait_until_file_unused(filename):
-    while filename in get_used_files():
-        time.sleep(1)
-
-
-def get_filename_from_key(key, ext=None) -> Path:
+def _get_filename_from_key(key, ext=None) -> Path:
     ext = settings.file_format_data if ext is None else ext
     return settings.writedir / f'{key}.{ext}'
 
 
-def download(url: str, path: Path):
+def _download(url: str, path: Path):
     from tqdm.auto import tqdm
     from urllib.request import urlretrieve
 
@@ -730,7 +724,7 @@ def download(url: str, path: Path):
         urlretrieve(url, str(path), reporthook=update_to)
 
 
-def check_datafile_present_and_download(path, backup_url=None):
+def _check_datafile_present_and_download(path, backup_url=None):
     """Check whether the file is present, otherwise download.
     """
     path = Path(path)
@@ -744,7 +738,7 @@ def check_datafile_present_and_download(path, backup_url=None):
         logg.info(f'creating directory {path.parent}/ for saving data')
         path.parent.mkdir(parents=True)
 
-    download(backup_url, path)
+    _download(backup_url, path)
     return True
 
 

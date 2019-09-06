@@ -8,7 +8,7 @@ import pandas as pd
 from anndata import AnnData
 from scipy.sparse import issparse
 
-from .. import utils
+from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
 
@@ -117,7 +117,7 @@ def rank_genes_groups(
         raise ValueError('Correction method must be one of {}.'.format(avail_corr))
 
     adata = adata.copy() if copy else adata
-    utils.sanitize_anndata(adata)
+    _utils.sanitize_anndata(adata)
     # for clarity, rename variable
     if groups == 'all':
         groups_order = 'all'
@@ -138,8 +138,9 @@ def rank_genes_groups(
             f'reference = {reference} needs to be one of groupby = {cats}.'
         )
 
-    groups_order, groups_masks = utils.select_groups(
-        adata, groups_order, groupby)
+    groups_order, groups_masks = _utils.select_groups(
+        adata, groups_order, groupby
+    )
 
     if key_added is None:
         key_added = 'rank_genes_groups'

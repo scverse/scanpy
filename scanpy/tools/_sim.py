@@ -21,7 +21,7 @@ import numpy as np
 import scipy as sp
 from anndata import AnnData
 
-from .. import utils
+from .. import _utils
 from .. import readwrite
 from .._settings import settings
 from .. import logging as logg
@@ -85,7 +85,7 @@ def sim(
             / f'{model_key}_params.txt'
         )
         default_params = readwrite.read_params(pfile_sim)
-        params = utils.update_params(default_params, params)
+        params = _utils.update_params(default_params, params)
     adata = sample_dynamic_data(**params)
     adata.uns['iroot'] = 0
     return adata
@@ -105,7 +105,7 @@ def add_args(p):
             'type': str,
             'help': 'Specify a parameter file '
                     '(default: "sim/${exkey}_params.txt")'}}
-    p = utils.add_args(p, dadd_args)
+    p = _utils.add_args(p, dadd_args)
     return p
 
 

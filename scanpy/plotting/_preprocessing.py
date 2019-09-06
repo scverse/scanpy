@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from anndata import AnnData
-from . import _utils as utils
+from . import _utils
 
 # --------------------------------------------------------------------------------
 # Plot result of preprocessing functions
@@ -62,7 +62,7 @@ def highly_variable_genes(adata_or_result, log=False, show=None, save=None, high
         pl.xlabel(('$log_{10}$ ' if False else '') + 'mean expressions of genes')
         pl.ylabel(('$log_{10}$ ' if False else '') + 'dispersions of genes'
                   + (' (normalized)' if idx == 0 else ' (not normalized)'))
-    utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
+    _utils.savefig_or_show('filter_genes_dispersion', show=show, save=save)
 
 
 # backwards compat

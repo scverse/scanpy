@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 from anndata import AnnData
 from pandas.api.types import is_categorical
 
+from ..preprocessing._utils import _get_mean_var
+
 
 def spring_project(
     adata: AnnData,
@@ -158,23 +160,23 @@ def spring_project(
 
     # Write continuous colors
     continuous_extras['Uniform'] = np.zeros(E.shape[0])
-    write_color_tracks(continuous_extras, subplot_dir / 'color_data_gene_sets.csv')
+    _write_color_tracks(continuous_extras, subplot_dir / 'color_data_gene_sets.csv')
 
     # Create and write a dictionary of color profiles to be used by the visualizer
     color_stats = {}
-    color_stats = get_color_stats_genes(color_stats, E, gene_list)
-    color_stats = get_color_stats_custom(color_stats, continuous_extras)
-    write_color_stats(subplot_dir / 'color_stats.json', color_stats)
+    color_stats = _get_color_stats_genes(color_stats, E, gene_list)
+    color_stats = _get_color_stats_custom(color_stats, continuous_extras)
+    _write_color_stats(subplot_dir / 'color_stats.json', color_stats)
 
     # Write categorical data
     categorical_coloring_data = {}
-    categorical_coloring_data = build_categ_colors(categorical_coloring_data, categorical_extras)
-    write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
+    categorical_coloring_data = _build_categ_colors(categorical_coloring_data, categorical_extras)
+    _write_cell_groupings(subplot_dir / 'categorical_coloring_data.json', categorical_coloring_data)
 
     # Write graph in two formats for backwards compatibility
-    edges = get_edges(adata)
-    write_graph(subplot_dir / 'graph_data.json', E.shape[0], edges)
-    write_edges(subplot_dir / 'edges.csv', edges)
+    edges = _get_edges(adata)
+    _write_graph(subplot_dir / 'graph_data.json', E.shape[0], edges)
+    _write_edges(subplot_dir / 'edges.csv', edges)
 
     # Write cell filter; for now, subplots must be generated from within SPRING,
     # so cell filter includes all cells.
@@ -201,7 +203,7 @@ def spring_project(
         clusts = np.array(adata.obs[adata.uns['paga']['groups']].cat.codes)
         uniq_clusts = adata.obs[adata.uns['paga']['groups']].cat.categories
         paga_coords = [coords[clusts == i, :].mean(0) for i in range(len(uniq_clusts))]
-        export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json')
+        _export_PAGA_to_SPRING(adata, paga_coords, subplot_dir / 'PAGA_data.json')
 
 
 # --------------------------------------------------------------------------------
@@ -209,21 +211,7 @@ def spring_project(
 # --------------------------------------------------------------------------------
 
 
-def get_mean_var(X):
-    mean = X.mean(axis=0)
-    if scipy.sparse.issparse(X):
-        mean_sq = X.multiply(X).mean(axis=0)
-        mean = mean.A1
-        mean_sq = mean_sq.A1
-    else:
-        mean_sq = np.multiply(X, X).mean(axis=0)
-    # enforce R convention (unbiased estimator) for variance
-    var = (mean_sq - mean**2) * (X.shape[0]/(X.shape[0]-1))
-
-    return mean, var
-
-
-def get_edges(adata):
+def _get_edges(adata):
     if 'distances' in adata.uns['neighbors']:  # these are sparse matrices
         matrix = adata.uns['neighbors']['distances']
     else:
@@ -284,20 +272,20 @@ def write_sparse_npz(E, filename, compressed = False):
     scipy.sparse.save_npz(filename, E, compressed = compressed)
 
 
-def write_graph(filename, n_nodes, edges):
+def _write_graph(filename, n_nodes, edges):
     nodes = [{'name':int(i),'number':int(i)} for i in range(n_nodes)]
     edges = [{'source':int(i), 'target':int(j), 'distance':0} for i,j in edges]
     out = {'nodes':nodes,'links':edges}
     open(filename,'w').write(json.dumps(out,indent=4, separators=(',', ': ')))
 
 
-def write_edges(filename, edges):
+def _write_edges(filename, edges):
     with open(filename, 'w') as f:
         for e in edges:
             f.write('%i;%i\n' %(e[0], e[1]))
 
 
-def write_color_tracks(ctracks, fname):
+def _write_color_tracks(ctracks, fname):
     out = []
     for name,score in ctracks.items():
         line = name + ',' + ','.join(['%.3f' %x for x in score])
@@ -306,13 +294,13 @@ def write_color_tracks(ctracks, fname):
     open(fname,'w').write('\n'.join(out))
 
 
-def frac_to_hex(frac):
+def _frac_to_hex(frac):
     rgb = tuple(np.array(np.array(plt.cm.jet(frac)[:3])*255,dtype=int))
     return '#%02x%02x%02x' % rgb
 
 
-def get_color_stats_genes(color_stats, E, gene_list):
-    means, variances = get_mean_var(E)
+def _get_color_stats_genes(color_stats, E, gene_list):
+    means, variances = _get_mean_var(E)
     stdevs = np.zeros(variances.shape, dtype=float)
     stdevs[variances > 0] = np.sqrt(variances[variances > 0])
     mins = E.min(0).todense().A1
@@ -331,31 +319,30 @@ def get_color_stats_genes(color_stats, E, gene_list):
     return color_stats
 
 
-def get_color_stats_custom(color_stats, custom_colors):
+def _get_color_stats_custom(color_stats, custom_colors):
     for k,v in custom_colors.items():
         color_stats[k] = tuple(map(float, (np.mean(v),np.std(v),np.min(v),np.max(v),np.percentile(v,99))))
     return color_stats
 
 
-def write_color_stats(filename, color_stats):
+def _write_color_stats(filename, color_stats):
     with open(filename,'w') as f:
         f.write(json.dumps(color_stats,indent=4, sort_keys=True))#.decode('utf-8'))
 
 
-def build_categ_colors(categorical_coloring_data, cell_groupings):
+def _build_categ_colors(categorical_coloring_data, cell_groupings):
     for k,labels in cell_groupings.items():
-        label_colors = {l:frac_to_hex(float(i)/len(set(labels))) for i,l in enumerate(list(set(labels)))}
+        label_colors = {l:_frac_to_hex(float(i) / len(set(labels))) for i, l in enumerate(list(set(labels)))}
         categorical_coloring_data[k] = {'label_colors':label_colors, 'label_list':labels}
     return categorical_coloring_data
 
 
-def write_cell_groupings(filename, categorical_coloring_data):
+def _write_cell_groupings(filename, categorical_coloring_data):
     with open(filename,'w') as f:
         f.write(json.dumps(categorical_coloring_data,indent=4, sort_keys=True))#.decode('utf-8'))
 
 
-def export_PAGA_to_SPRING(adata, paga_coords, outpath):
-
+def _export_PAGA_to_SPRING(adata, paga_coords, outpath):
     # retrieve node data
     group_key = adata.uns['paga']['groups']
     names = adata.obs[group_key].cat.categories

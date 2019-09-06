@@ -3,16 +3,17 @@ Computes a dendrogram based on a given categorical observation.
 """
 
 from typing import Optional, Sequence
+
 import pandas as pd
 from anndata import AnnData
 from pandas.api.types import is_categorical_dtype
 
-from .. utils import doc_params
 from .. import logging as logg
-from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
+from .._utils import _doc_params
+from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
 
-@doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def dendrogram(
     adata: AnnData,
     groupby: str,
@@ -88,7 +89,7 @@ def dendrogram(
                          'Column type: {}'.format(groupby, adata.obs[groupby].dtype))
 
     if var_names is None:
-        rep_df = pd.DataFrame(choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs))
+        rep_df = pd.DataFrame(_choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs))
         rep_df.set_index(adata.obs[groupby], inplace=True)
         categories = rep_df.index.categories
     else:

@@ -17,7 +17,7 @@ n_pcs : `int` or `None`, optional (default: `None`)
 """
 
 
-def choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
+def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     verbosity = settings.verbosity
     if silent and settings.verbosity > 1:
         settings.verbosity = 1

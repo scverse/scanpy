@@ -1,7 +1,5 @@
-import sys
 from typing import Collection, Tuple, Optional
 
-import numba
 import pandas as pd
 import numpy as np
 from numpy import linalg as la
@@ -9,7 +7,8 @@ from scipy.sparse import issparse
 from anndata import AnnData
 
 from .. import logging as logg
-from ..utils import sanitize_anndata
+from .._utils import sanitize_anndata
+
 
 def _design_matrix(
         model: pd.DataFrame,

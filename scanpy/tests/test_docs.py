@@ -1,45 +1,30 @@
 import inspect
 from types import FunctionType
-from typing import Iterable
 
 import pytest
+from scanpy._utils import descend_classes_and_funcs
 
-import scanpy as sc
-
-
-def iterate_over_functions() -> Iterable[FunctionType]:
-    functions_all = {}
-    for mn in dir(sc):
-        # skip privates and duplicates and stuff we haven’t formatted
-        # in the right way, yet
-        if mn.startswith('_') or mn in {
-            'tl', 'pl', 'pp',
-            'cli', 'readwrite', 'utils', 'logging', 'neighbors'
-        }:
-            continue
-        module = sc.__dict__[mn]
-        if not inspect.ismodule(module):
-            continue
-        function_names = [
-            fn for fn in dir(module)
-            if inspect.isfunction(module.__dict__[fn])
-        ]
-        functions = {f"{mn}.{fn}": module.__dict__[fn] for fn in function_names}
-        functions_all.update(functions)
-    return functions_all.values()
+import scanpy
 
 
-@pytest.mark.parametrize("f", iterate_over_functions())
+blacklist = []
+
+
+@pytest.mark.parametrize("f", [
+    c_or_f for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
+    if isinstance(c_or_f, FunctionType)
+    and not any(c_or_f.__qualname__.startswith(b) for b in blacklist)
+])
 def test_function_headers(f):
-    assert f.__doc__ is not None, f"{f} has no docstring"
+    name = f"{f.__module__}.{f.__qualname__}"
+    assert f.__doc__ is not None, f"{name} has no docstring"
     lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
-    assert lines[0], "Expected single-line summary"
+    assert lines[0], f"{name} needs a single-line summary"
     broken = [
         i for i, l in enumerate(lines)
         if l and not l.startswith("    ")
     ]
     if any(broken):
-        name = f"{f.__module__}.{f.__qualname__}"
         msg = f'''\
 Header of function `{name}`’s docstring should start with one-line description:
 

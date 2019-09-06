@@ -1,12 +1,13 @@
 # Author: T. Callies
 #
-"""This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
+"""\
+This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
 
-import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
-from .. import utils
+
+from .._utils import select_groups
 from .. import logging as logg
 
 
@@ -74,8 +75,7 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
             Data_array = adata_relevant.X
     else:
         # get group_mask
-        groups_order, groups_masks = utils.select_groups(
-            adata, groups, groupby)
+        groups_order, groups_masks = select_groups(adata, groups, groupby)
         if data == 'Group':
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[groups_masks[group], :].todense()
@@ -139,8 +139,7 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
 
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
     groups = 'all'
-    groups_order, groups_masks = utils.select_groups(
-        adata, groups, groupby)
+    groups_order, groups_masks = select_groups(adata, groups, groupby)
 
     # Use usual convention, better for looping later.
     imask = group

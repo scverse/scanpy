@@ -6,7 +6,7 @@ import scipy as sp
 from anndata import AnnData
 from scipy.sparse.csgraph import minimum_spanning_tree
 
-from .. import utils
+from .. import _utils
 from .. import logging as logg
 from ..neighbors import Neighbors
 
@@ -102,7 +102,7 @@ def paga(
         raise KeyError(f'`groups` key {groups!r} not found in `adata.obs`.')
 
     adata = adata.copy() if copy else adata
-    utils.sanitize_anndata(adata)
+    _utils.sanitize_anndata(adata)
     start = logg.info('running PAGA')
     paga = PAGA(adata, groups, model=model)
     # only add if not present
@@ -156,14 +156,15 @@ class PAGA:
         ones = self._neighbors.distances.copy()
         ones.data = np.ones(len(ones.data))
         # should be directed if we deal with distances
-        g = utils.get_igraph_from_adjacency(ones, directed=True)
+        g = _utils.get_igraph_from_adjacency(ones, directed=True)
         vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
         ns = vc.sizes()
         n = sum(ns)
         es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
         cg = vc.cluster_graph(combine_edges='sum')
-        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
+        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight')
         es = np.array(es_inner_cluster) + inter_es.sum(axis=1).A1
         inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
         connectivities = inter_es.copy()
@@ -190,12 +191,13 @@ class PAGA:
         import igraph
         ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
-        g = utils.get_igraph_from_adjacency(ones)
+        g = _utils.get_igraph_from_adjacency(ones)
         vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
         ns = vc.sizes()
         cg = vc.cluster_graph(combine_edges='sum')
-        inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight') / 2
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         n_neighbors_sq = self._neighbors.n_neighbors**2
@@ -261,13 +263,16 @@ class PAGA:
         #     raise ValueError(
         #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
         import igraph
-        g = utils.get_igraph_from_adjacency(
-            self._adata.uns[vkey].astype('bool'), directed=True)
+        g = _utils.get_igraph_from_adjacency(
+            self._adata.uns[vkey].astype('bool'),
+            directed=True,
+        )
         vc = igraph.VertexClustering(
-            g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
         # set combine_edges to False if you want self loops
         cg_full = vc.cluster_graph(combine_edges='sum')
-        transitions = utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
+        transitions = _utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
         transitions = transitions - transitions.T
         transitions_conf = transitions.copy()
         transitions = transitions.tocoo()
@@ -290,19 +295,25 @@ class PAGA:
 
     def compute_transitions_old(self):
         import igraph
-        g = utils.get_igraph_from_adjacency(
-            self._adata.uns['velocyto_transitions'], directed=True)
+        g = _utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'],
+            directed=True,
+        )
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         # this stores all single-cell edges in the cluster graph
         cg_full = vc.cluster_graph(combine_edges=False)
         # this is the boolean version that simply counts edges in the clustered graph
-        g_bool = utils.get_igraph_from_adjacency(
-            self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
+        g_bool = _utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'].astype('bool'),
+            directed=True,
+        )
         vc_bool = igraph.VertexClustering(
-            g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values)
+            g_bool,
+            membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
-        transitions = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
+        transitions = _utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
         total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
         transitions_ttest = transitions.copy()
         transitions_confidence = transitions.copy()
@@ -378,8 +389,9 @@ def paga_expression_entropies(adata) -> List[float]:
     Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
-    groups_order, groups_masks = utils.select_groups(
-        adata, key=adata.uns['paga']['groups'])
+    groups_order, groups_masks = _utils.select_groups(
+        adata, key=adata.uns['paga']['groups']
+    )
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask].todense()
@@ -424,10 +436,14 @@ def paga_compare_paths(adata1, adata2,
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
     logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}')
     paga_groups = adata1.uns['paga']['groups']
-    asso_groups1 = utils.identify_groups(adata1.obs[paga_groups].values,
-                                         adata2.obs[paga_groups].values)
-    asso_groups2 = utils.identify_groups(adata2.obs[paga_groups].values,
-                                         adata1.obs[paga_groups].values)
+    asso_groups1 = _utils.identify_groups(
+        adata1.obs[paga_groups].values,
+        adata2.obs[paga_groups].values,
+    )
+    asso_groups2 = _utils.identify_groups(
+        adata2.obs[paga_groups].values,
+        adata1.obs[paga_groups].values,
+    )
     orig_names1 = adata1.obs[paga_groups].cat.categories
     orig_names2 = adata2.obs[paga_groups].cat.categories
 

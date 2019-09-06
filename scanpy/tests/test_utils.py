@@ -1,6 +1,6 @@
 from types import ModuleType
 
-from scanpy.utils import descend_classes_and_funcs
+from scanpy._utils import descend_classes_and_funcs
 
 
 def test_descend_classes_and_funcs():

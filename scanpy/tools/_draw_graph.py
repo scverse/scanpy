@@ -5,7 +5,7 @@ from anndata import AnnData
 from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
-from .. import utils
+from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
 
@@ -140,7 +140,7 @@ def draw_graph(
             adjacency, pos=init_coords, iterations=iterations)
         positions = np.array(positions)
     else:
-        g = utils.get_igraph_from_adjacency(adjacency)
+        g = _utils.get_igraph_from_adjacency(adjacency)
         if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
         elif 'rt' in layout:

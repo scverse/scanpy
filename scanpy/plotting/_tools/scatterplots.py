@@ -12,16 +12,16 @@ from matplotlib import rcParams
 from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap
 
-from .. import _utils as utils
+from .. import _utils
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
 from ..._settings import settings
-from ...utils import sanitize_anndata, doc_params
+from ..._utils import sanitize_anndata, _doc_params
 from ... import logging as logg
 
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
 
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def embedding(
     adata: AnnData,
     basis: str,
@@ -304,9 +304,9 @@ def embedding(
         ax.autoscale_view()
 
         if edges:
-            utils.plot_edges(ax, adata, basis, edges_width, edges_color)
+            _utils.plot_edges(ax, adata, basis, edges_width, edges_color)
         if arrows:
-            utils.plot_arrows(ax, adata, basis, arrows_kwds)
+            _utils.plot_arrows(ax, adata, basis, arrows_kwds)
 
         if value_to_plot is None:
             # if only dots were plotted without an associated value
@@ -326,7 +326,7 @@ def embedding(
     if return_fig is True:
         return fig
     axs = axs if grid else ax
-    utils.savefig_or_show(basis, show=show, save=save)
+    _utils.savefig_or_show(basis, show=show, save=save)
     if show is False:
         return axs
 
@@ -446,7 +446,7 @@ def _wraps_plot_scatter(wrapper):
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in UMAP basis.
@@ -466,7 +466,7 @@ def umap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in tSNE basis.
@@ -486,7 +486,7 @@ def tsne(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def phate(adata, **kwargs) -> Union[List[Axes], None]:
     """\
     Scatter plot in PHATE basis.
@@ -530,7 +530,7 @@ def phate(adata, **kwargs) -> Union[List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in Diffusion Map basis.
@@ -549,7 +549,7 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
@@ -579,7 +579,7 @@ def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
 
 
 @_wraps_plot_scatter
-@doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(adata_color_etc=doc_adata_color_etc, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def pca(adata, **kwargs) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in PCA coordinates.
@@ -744,7 +744,7 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
 
                 all_pos[ilabel] = [x_pos, y_pos]
             # this is temporary storage for access by other tools
-            utils._tmp_cluster_pos = all_pos
+            _utils._tmp_cluster_pos = all_pos
     else:
         # add colorbar to figure
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
@@ -796,8 +796,8 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                 if not is_color_like(color):
                     # check if the color is a valid R color and translate it
                     # to a valid hex color value
-                    if color in utils.additional_colors:
-                        color = utils.additional_colors[color]
+                    if color in _utils.additional_colors:
+                        color = _utils.additional_colors[color]
                     else:
                         raise ValueError("The following color value of the given palette is not valid: {}".format(color))
                 _color_list.append(color)
@@ -901,8 +901,8 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
                 if not is_color_like(color):
                     # check if the color is a valid R color and translate it
                     # to a valid hex color value
-                    if color in utils.additional_colors:
-                        color = utils.additional_colors[color]
+                    if color in _utils.additional_colors:
+                        color = _utils.additional_colors[color]
                     else:
                         logg.warning(
                             f"The following color value found in adata.uns['{value_to_plot}_colors'] "

@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from scipy import sparse
 
-from ..readwrite import download
+from ..readwrite import _download
 from .._settings import settings
 from .. import logging as logg
 
@@ -40,11 +40,11 @@ def download_experiment(accession: str):
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    download(
+    _download(
         base_url + sampledata_path,
         experiment_dir / "experimental_design.tsv",
     )
-    download(
+    _download(
         base_url + quantification_path,
         experiment_dir / "expression_archive.zip",
     )

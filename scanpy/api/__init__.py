@@ -37,10 +37,10 @@ from .._settings import settings
 set_figure_params = settings.set_figure_params
 
 # some stuff that is not actually documented...
-from .. import utils
+from .. import _utils
 
 import sys
-utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
+_utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
 del sys
 
 

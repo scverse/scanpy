@@ -8,9 +8,9 @@ from scipy.sparse import issparse, coo_matrix, csr_matrix
 from sklearn.utils import check_random_state
 
 from .. import logging as logg
-from .. import utils
-from ..utils import doc_params
-from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
+from .. import _utils
+from .._utils import _doc_params
+from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
@@ -19,7 +19,7 @@ N_PCS = 50  # default number of PCs
 Metric = Callable[[np.ndarray, np.ndarray], float]
 
 
-@doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def neighbors(
     adata: AnnData,
     n_neighbors: int = 15,
@@ -147,44 +147,6 @@ def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, Non
     yield FlatTree(*tree)
 
 
-def neighbors_update(adata, adata_new, k=10, queue_size=5, random_state=0):
-    # only with use_rep='X' for now
-    from umap.nndescent import make_initialisations, make_initialized_nnd_search, initialise_search
-    from umap.umap_ import INT32_MAX, INT32_MIN
-    from umap.utils import deheap_sort
-    import umap.distances as dist
-
-    if 'metric_kwds' in adata.uns['neighbors']['params']:
-        dist_args = tuple(adata.uns['neighbors']['params']['metric_kwds'].values())
-    else:
-        dist_args = ()
-    dist_func = dist.named_distances[adata.uns['neighbors']['params']['metric']]
-
-    random_init, tree_init = make_initialisations(dist_func, dist_args)
-    search = make_initialized_nnd_search(dist_func, dist_args)
-
-    search_graph = adata.uns['neighbors']['distances'].copy()
-    search_graph.data = (search_graph.data > 0).astype(np.int8)
-    search_graph = search_graph.maximum(search_graph.transpose())
-    # prune it?
-
-    random_state = check_random_state(random_state)
-    rng_state = random_state.randint(INT32_MIN, INT32_MAX, 3).astype(np.int64)
-
-    if 'rp_forest' in adata.uns['neighbors']:
-        rp_forest = _rp_forest_generate(adata.uns['neighbors']['rp_forest'])
-    else:
-        rp_forest = None
-    train = adata.X
-    test = adata_new.X
-
-    init = initialise_search(rp_forest, train, test, int(k * queue_size), random_init, tree_init, rng_state)
-    result = search(train, search_graph.indptr, search_graph.indices, init, test)
-
-    indices, dists = deheap_sort(result)
-    return indices[:, :k], dists[:, :k]
-
-
 def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
@@ -273,7 +235,7 @@ def compute_neighbors_umap(
     return knn_indices, knn_dists, forest
 
 
-def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
+def _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
     rows = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     cols = np.zeros((n_obs * n_neighbors), dtype=np.int64)
     vals = np.zeros((n_obs * n_neighbors), dtype=np.float64)
@@ -297,12 +259,13 @@ def get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs,
     return result.tocsr()
 
 
-def compute_connectivities_umap(
+def _compute_connectivities_umap(
     knn_indices, knn_dists,
     n_obs, n_neighbors, set_op_mix_ratio=1.0,
     local_connectivity=1.0,
 ):
-    """This is from umap.fuzzy_simplicial_set [McInnes18]_.
+    """\
+    This is from umap.fuzzy_simplicial_set [McInnes18]_.
 
     Given a set of data X, a neighborhood size, and a measure of distance
     compute the fuzzy simplicial set (here represented as a fuzzy graph in
@@ -323,12 +286,12 @@ def compute_connectivities_umap(
         # In umap-learn 0.4, this returns (result, sigmas, rhos)
         connectivities = connectivities[0]
 
-    distances = get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
+    distances = _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
 
     return distances, connectivities.tocsr()
 
 
-def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
+def _get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_neighbors):
     n_nonzero = n_obs * n_neighbors
     indptr = np.arange(0, n_nonzero + 1, n_neighbors)
     D = csr_matrix((
@@ -340,7 +303,7 @@ def get_sparse_matrix_from_indices_distances_numpy(indices, distances, n_obs, n_
     return D
 
 
-def get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
+def _get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
     indices = np.zeros((D.shape[0], n_neighbors), dtype=int)
     distances = np.zeros((D.shape[0], n_neighbors), dtype=D.dtype)
     n_neighbors_m1 = n_neighbors - 1
@@ -362,7 +325,7 @@ def get_indices_distances_from_sparse_matrix(D, n_neighbors: int):
     return indices, distances
 
 
-def get_indices_distances_from_dense_matrix(D, n_neighbors: int):
+def _get_indices_distances_from_dense_matrix(D, n_neighbors: int):
     sample_range = np.arange(D.shape[0])[:, None]
     indices = np.argpartition(D, n_neighbors-1, axis=1)[:, :n_neighbors]
     indices = indices[sample_range, np.argsort(D[sample_range, indices])]
@@ -608,9 +571,9 @@ class Neighbors:
     def to_igraph(self):
         """Generate igraph from connectiviies.
         """
-        return utils.get_igraph_from_adjacency(self.connectivities)
+        return _utils.get_igraph_from_adjacency(self.connectivities)
 
-    @doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+    @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
     def compute_neighbors(
         self,
         n_neighbors: int = 30,
@@ -654,15 +617,15 @@ class Neighbors:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
         self.knn = knn
-        X = choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
+        X = _choose_representation(self._adata, use_rep=use_rep, n_pcs=n_pcs)
         # neighbor search
         use_dense_distances = (metric == 'euclidean' and X.shape[0] < 8192) or knn == False
         if use_dense_distances:
             _distances = pairwise_distances(X, metric=metric, **metric_kwds)
-            knn_indices, knn_distances = get_indices_distances_from_dense_matrix(
+            knn_indices, knn_distances = _get_indices_distances_from_dense_matrix(
                 _distances, n_neighbors)
             if knn:
-                self._distances = get_sparse_matrix_from_indices_distances_numpy(
+                self._distances = _get_sparse_matrix_from_indices_distances_numpy(
                     knn_indices, knn_distances, X.shape[0], n_neighbors)
             else:
                 self._distances = _distances
@@ -682,7 +645,7 @@ class Neighbors:
         if not use_dense_distances or method == 'umap':
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
-            self._distances, self._connectivities = compute_connectivities_umap(
+            self._distances, self._connectivities = _compute_connectivities_umap(
                 knn_indices,
                 knn_distances,
                 self._adata.shape[0],
@@ -703,11 +666,11 @@ class Neighbors:
         # init distances
         if self.knn:
             Dsq = self._distances.power(2)
-            indices, distances_sq = get_indices_distances_from_sparse_matrix(
+            indices, distances_sq = _get_indices_distances_from_sparse_matrix(
                 Dsq, self.n_neighbors)
         else:
             Dsq = np.power(self._distances, 2)
-            indices, distances_sq = get_indices_distances_from_dense_matrix(
+            indices, distances_sq = _get_indices_distances_from_dense_matrix(
                 Dsq, self.n_neighbors)
 
         # exclude the first point, the 0th neighbor

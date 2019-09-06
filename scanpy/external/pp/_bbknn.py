@@ -3,11 +3,12 @@ from typing import Union, Optional
 from anndata import AnnData
 import sklearn
 
-from ...utils import lazy_import
+from ..._utils import lazy_import
 
 
 # Import this lazily so we don’t slowly import sklearn.stats just for annotation
 lazy_import("sklearn.neighbors")
+del lazy_import
 
 
 def bbknn(

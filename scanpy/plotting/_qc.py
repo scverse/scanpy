@@ -5,13 +5,13 @@ from anndata import AnnData
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 
-from . import _utils as utils
+from . import _utils
 from ._docs import doc_show_save_ax
 from ..preprocessing._simple import normalize_per_cell
-from ..utils import doc_params
+from .._utils import _doc_params
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def highest_expr_genes(
     adata: AnnData,
     n_top: int = 30,
@@ -80,5 +80,5 @@ def highest_expr_genes(
         fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=dat, orient='h', ax=ax, fliersize=1, **kwds)
     ax.set_xlabel('% of total counts')
-    utils.savefig_or_show('highest_expr_genes', show=show, save=save)
-    return ax if show == False else None
+    _utils.savefig_or_show('highest_expr_genes', show=show, save=save)
+    return ax if not show else None

@@ -2,7 +2,7 @@ import numpy as np
 from pandas.api.types import is_numeric_dtype
 from sklearn.utils import check_random_state, check_array
 
-from ._utils import get_init_pos_from_paga, choose_representation
+from ._utils import get_init_pos_from_paga, _choose_representation
 from .._settings import settings
 from .. import logging as logg
 
@@ -124,7 +124,7 @@ def umap(
     random_state = check_random_state(random_state)
     n_epochs = 0 if maxiter is None else maxiter
     neigh_params = adata.uns['neighbors']['params']
-    X = choose_representation(
+    X = _choose_representation(
         adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
     # the data matrix X is really only used for determining the number of connected components
     # for the init condition in the UMAP embedding

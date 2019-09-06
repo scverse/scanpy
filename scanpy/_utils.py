@@ -112,17 +112,27 @@ def deprecated_arg_names(arg_mapping):
     return decorator
 
 
+def _one_of_ours(obj, root: str):
+    return (
+        hasattr(obj, "__name__")
+        and not obj.__name__.split(".")[-1].startswith("_")
+        and getattr(obj, '__module__', getattr(obj, '__qualname__', obj.__name__)).startswith(root)
+    )
+
+
 def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     if encountered is None:
         encountered = WeakSet()
     for obj in vars(mod).values():
-        if not getattr(obj, '__module__', getattr(obj, '__qualname__', getattr(obj, '__name__', ''))).startswith(root):
+        if not _one_of_ours(obj, root):
             continue
         if isinstance(obj, Callable) and not isinstance(obj, MethodType):
             yield obj
+            if "_utils" in obj.__module__:
+                warnings.warn(f"Found an util with public name: {obj}")
             if isinstance(obj, type):
                 for m in vars(obj).values():
-                    if isinstance(m, Callable) and getattr(m, '__module__', None) != 'builtins':
+                    if isinstance(m, Callable) and _one_of_ours(m, root):
                         yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
             encountered.add(obj)
@@ -134,7 +144,7 @@ def annotate_doc_types(mod: ModuleType, root: str):
         c_or_f.getdoc = partial(getdoc, c_or_f)
 
 
-def doc_params(**kwds):
+def _doc_params(**kwds):
     """\
     Docstrings should start with "\" in the first line for proper formatting.
     """
@@ -215,7 +225,7 @@ def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
     n_neighbors = adata_ref.uns['neighbors']['params']['n_neighbors']
     from .neighbors import neighbors
     neighbors(adata_cmp, n_neighbors=n_neighbors, use_rep=use_rep)
-    from .tools.diffmap import diffmap
+    from .tools import diffmap
     diffmap(adata_cmp)
 
     graph_ref = adata_ref.uns['neighbors']['connectivities']
@@ -927,8 +937,8 @@ def subsample_n(X, n=0, seed=0):
 def check_presence_download(filename: Path, backup_url):
     """Check if file is present otherwise download."""
     if not filename.is_file():
-        from .readwrite import download
-        download(backup_url, filename)
+        from .readwrite import _download
+        _download(backup_url, filename)
 
 
 def hierarch_cluster(M):

@@ -7,7 +7,7 @@ from anndata import AnnData
 from numpy.random.mtrand import RandomState
 from scipy import sparse
 
-from .. import utils
+from .. import _utils
 from .. import logging as logg
 
 from ._utils_clustering import rename_groups, restrict_adjacency
@@ -106,7 +106,7 @@ def leiden(
             adjacency,
         )
     # convert it to igraph
-    g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
+    g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
     # flip to the default partition type if not overriden by the user
     if partition_type is None:
         partition_type = leidenalg.RBConfigurationVertexPartition

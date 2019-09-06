@@ -13,9 +13,9 @@ from matplotlib import patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 
-from .. import _utils as utils
+from .. import _utils
 from .._utils import matrix
-from ... import utils as sc_utils, logging as logg
+from ... import _utils as _sc_utils, logging as logg
 from ..._settings import settings
 
 
@@ -68,8 +68,10 @@ def paga_compare(
     -------
     A list of :class:`~matplotlib.axes.Axes` if `show` is `False`.
     """
-    axs, _, _, _ = utils.setup_axes(panels=[0, 1],
-                                    right_margin=right_margin)
+    axs, _, _, _ = _utils.setup_axes(
+        panels=[0, 1],
+        right_margin=right_margin,
+    )
     if color is None:
         color = adata.uns['paga']['groups']
     suptitle = None  # common title for entire figure
@@ -110,7 +112,7 @@ def paga_compare(
         save=False)
     if 'pos' not in paga_graph_params:
         if color == adata.uns['paga']['groups']:
-            paga_graph_params['pos'] = utils._tmp_cluster_pos
+            paga_graph_params['pos'] = _utils._tmp_cluster_pos
         else:
             paga_graph_params['pos'] = adata.uns['paga']['pos']
     xlim, ylim = axs[0].get_xlim(), axs[0].get_ylim()
@@ -137,7 +139,7 @@ def paga_compare(
         frameon=frameon,
         **paga_graph_params)
     if suptitle is not None: pl.suptitle(suptitle)
-    utils.savefig_or_show('paga_compare', show=show, save=save)
+    _utils.savefig_or_show('paga_compare', show=show, save=save)
     if show == False: return axs
 
 
@@ -199,16 +201,15 @@ def _compute_pos(
         pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
     elif layout == 'eq_tree':
         nx_g_tree = nx.Graph(adj_tree)
-        pos = utils.hierarchy_pos(nx_g_tree, root)
+        pos = _utils.hierarchy_pos(nx_g_tree, root)
         if len(pos) < adjacency_solid.shape[0]:
             raise ValueError('This is a forest and not a single tree. '
                              'Try another `layout`, e.g., {\'fr\'}.')
     else:
         # igraph layouts
-        from ... import utils as sc_utils
-        g = sc_utils.get_igraph_from_adjacency(adjacency_solid)
+        g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
-            g_tree = sc_utils.get_igraph_from_adjacency(adj_tree)
+            g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
             pos_list = g_tree.layout(
                 layout, root=root if isinstance(root, list) else [root]).coords
         elif layout == 'circle':
@@ -494,7 +495,7 @@ def paga(
         )
 
     if plot:
-        axs, panel_pos, draw_region_width, figure_width = utils.setup_axes(
+        axs, panel_pos, draw_region_width, figure_width = _utils.setup_axes(
             ax=ax,
             panels=colors,
             colorbars=colorbars,
@@ -551,15 +552,18 @@ def paga(
                 else:
                     ax_cb = cax[icolor]
 
-                cb = pl.colorbar(sct, format=ticker.FuncFormatter(utils.ticks_formatter),
-                                 cax=ax_cb)
+                cb = pl.colorbar(
+                    sct,
+                    format=ticker.FuncFormatter(_utils.ticks_formatter),
+                    cax=ax_cb,
+                )
     if add_pos:
         adata.uns['paga']['pos'] = pos
         logg.hint("added 'pos', the PAGA positions (adata.uns['paga'])")
     if plot:
-        utils.savefig_or_show('paga', show=show, save=save)
+        _utils.savefig_or_show('paga', show=show, save=save)
         if len(colors) == 1 and isinstance(axs, list): axs = axs[0]
-        return axs if show == False else None
+        return axs if not show else None
 
 
 def _paga_graph(
@@ -613,7 +617,7 @@ def _paga_graph(
         if (groups_key + '_colors' not in adata.uns
             or len(adata.obs[groups_key].cat.categories)
                != len(adata.uns[groups_key + '_colors'])):
-            utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
+            _utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         colors = adata.uns[groups_key + '_colors']
         for iname, name in enumerate(adata.obs[groups_key].cat.categories):
             if name in settings.categories_to_ignore: colors[iname] = 'grey'
@@ -686,15 +690,19 @@ def _paga_graph(
         colors = x_color
 
     # plot categorical annotation
-    if (isinstance(colors, str) and colors in adata.obs and
-        is_categorical_dtype(adata.obs[colors])):
-        from ... import utils as sc_utils
-        asso_names, asso_matrix = sc_utils.compute_association_matrix_of_groups(
+    if (
+        isinstance(colors, str)
+        and colors in adata.obs
+        and is_categorical_dtype(adata.obs[colors])
+    ):
+        asso_names, asso_matrix = _sc_utils.compute_association_matrix_of_groups(
             adata, prediction=groups_key, reference=colors,
-            normalization='reference' if normalize_to_color else 'prediction')
-        utils.add_colors_for_categorical_sample_annotation(adata, colors)
-        asso_colors = sc_utils.get_associated_colors_of_groups(
-            adata.uns[colors + '_colors'], asso_matrix)
+            normalization='reference' if normalize_to_color else 'prediction',
+        )
+        _utils.add_colors_for_categorical_sample_annotation(adata, colors)
+        asso_colors = _sc_utils.get_associated_colors_of_groups(
+            adata.uns[colors + '_colors'], asso_matrix
+        )
         colors = asso_colors
 
     if len(colors) < len(node_labels):
@@ -958,11 +966,11 @@ def paga_path(
         )
 
     if palette_groups is None:
-        utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
+        _utils.add_colors_for_categorical_sample_annotation(adata, groups_key)
         palette_groups = adata.uns[groups_key + '_colors']
 
     def moving_average(a):
-        return sc_utils.moving_average(a, n_avg)
+        return _sc_utils.moving_average(a, n_avg)
 
     ax = pl.gca() if ax is None else ax
     from matplotlib import transforms
@@ -1085,7 +1093,7 @@ def paga_path(
         groups_axis.set_frame_on(False)
         if show_node_names:
             ypos = (groups_axis.get_ylim()[1] + groups_axis.get_ylim()[0])/2
-            x_tick_locs = sc_utils.moving_average(x_tick_locs, n=2)
+            x_tick_locs = _sc_utils.moving_average(x_tick_locs, n=2)
             for ilabel, label in enumerate(x_tick_labels):
                 groups_axis.text(x_tick_locs[ilabel], ypos, x_tick_labels[ilabel],
                                  fontdict={'horizontalalignment': 'center',
@@ -1097,10 +1105,12 @@ def paga_path(
         y_shift = ax_bounds[3] / len(keys)
         for ianno, anno in enumerate(annotations):
             if ianno > 0: y_shift = ax_bounds[3] / len(keys) / 2
-            anno_axis = pl.axes([ax_bounds[0],
-                                 ax_bounds[1] - (ianno+2) * y_shift,
-                                 ax_bounds[2],
-                                 y_shift])
+            anno_axis = pl.axes([
+                ax_bounds[0],
+                ax_bounds[1] - (ianno+2) * y_shift,
+                ax_bounds[2],
+                y_shift,
+            ])
             arr = np.array(anno_dict[anno])[None, :]
             if anno not in color_maps_annotations:
                 color_map_anno = ('Vega10' if is_categorical_dtype(adata.obs[anno])
@@ -1122,25 +1132,26 @@ def paga_path(
     if title is not None: ax.set_title(title, fontsize=title_fontsize)
     if show is None and not ax_was_none: show = False
     else: show = settings.autoshow if show is None else show
-    utils.savefig_or_show('paga_path', show=show, save=save)
+    _utils.savefig_or_show('paga_path', show=show, save=save)
     if return_data:
         df = pd.DataFrame(data=X.T, columns=keys)
         df['groups'] = moving_average(groups)  # groups is without moving average, yet
         if 'dpt_pseudotime' in anno_dict:
             df['distance'] = anno_dict['dpt_pseudotime'].T
-        return ax, df if ax_was_none and show == False else df
+        return ax, df if ax_was_none and not show else df
     else:
-        return ax if ax_was_none and show == False else None
+        return ax if ax_was_none and not show else None
 
 
 def paga_adjacency(
-        adata,
-        adjacency='connectivities',
-        adjacency_tree='connectivities_tree',
-        as_heatmap=True,
-        color_map=None,
-        show=None,
-        save=None):
+    adata,
+    adjacency='connectivities',
+    adjacency_tree='connectivities_tree',
+    as_heatmap=True,
+    color_map=None,
+    show=None,
+    save=None,
+):
     """Connectivity of paga groups.
     """
     connectivity = adata.uns[adjacency].toarray()
@@ -1160,4 +1171,4 @@ def paga_adjacency(
             neighbors = connectivity_select[i].nonzero()[1]
             pl.scatter([i for j in neighbors],
                        cs[neighbors], color='black', s=1)
-    utils.savefig_or_show('paga_connectivity', show=show, save=save)
+    _utils.savefig_or_show('paga_connectivity', show=show, save=save)

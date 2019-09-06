@@ -9,8 +9,8 @@ from matplotlib import rcParams, cm, colors
 from anndata import AnnData
 from typing import Union, Optional, List, Sequence, Iterable
 
-from .. import _utils as utils
-from ...utils import doc_params, sanitize_anndata
+from .._utils import savefig_or_show
+from ..._utils import _doc_params, sanitize_anndata, subsample
 from ... import logging as logg
 from .._anndata import ranking
 from .._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
@@ -23,7 +23,7 @@ from matplotlib.colors import Colormap
 # ------------------------------------------------------------------------------
 
 
-@doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+@_doc_params(scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
 def pca_overview(adata: AnnData, **params):
     """\
     Plot PCA results.
@@ -98,7 +98,7 @@ def pca_loadings(
         indices=components,
         include_lowest=include_lowest,
     )
-    utils.savefig_or_show('pca_loadings', show=show, save=save)
+    savefig_or_show('pca_loadings', show=show, save=save)
 
 
 def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
@@ -119,7 +119,7 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
         Infer the filetype if ending on {`'.pdf'`, `'.png'`, `'.svg'`}.
     """
     ranking(adata, 'uns', 'variance_ratio', n_points=n_pcs, dictionary='pca', labels='PC', log=log)
-    utils.savefig_or_show('pca_variance_ratio', show=show, save=save)
+    savefig_or_show('pca_variance_ratio', show=show, save=save)
 
 
 # ------------------------------------------------------------------------------
@@ -166,7 +166,7 @@ def dpt_timeseries(
             xlim=[0, 1.3*adata.X.shape[0]],
         )
     pl.xlabel('dpt order')
-    utils.savefig_or_show('dpt_timeseries', save=save, show=show)
+    savefig_or_show('dpt_timeseries', save=save, show=show)
 
 
 def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=None):
@@ -182,18 +182,20 @@ def dpt_groups_pseudotime(adata, color_map=None, palette=None, show=None, save=N
                                      if len(adata.obs['dpt_groups'].cat.categories) < 5 else None),
                        palette=palette)
     pl.subplot(212)
-    timeseries_subplot(adata.obs['dpt_pseudotime'].values,
-                       time=adata.obs['dpt_order'].values,
-                       color=adata.obs['dpt_pseudotime'].values,
-                       xlabel='dpt order',
-                       highlightsX=adata.uns['dpt_changepoints'],
-                       ylabel='pseudotime',
-                       yticks=[0, 1],
-                       color_map=color_map)
-    utils.savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
+    timeseries_subplot(
+        adata.obs['dpt_pseudotime'].values,
+        time=adata.obs['dpt_order'].values,
+        color=adata.obs['dpt_pseudotime'].values,
+        xlabel='dpt order',
+        highlightsX=adata.uns['dpt_changepoints'],
+        ylabel='pseudotime',
+        yticks=[0, 1],
+        color_map=color_map,
+    )
+    savefig_or_show('dpt_groups_pseudotime', save=save, show=show)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -302,12 +304,11 @@ def rank_genes_groups(
         ymax += 0.3*(ymax-ymin)
         ax.set_ylim(ymin, ymax)
 
-    writekey = ('rank_genes_groups_'
-                + str(adata.uns[key]['params']['groupby']))
-    utils.savefig_or_show(writekey, show=show, save=save)
+    writekey = f"rank_genes_groups_{adata.uns[key]['params']['groupby']}"
+    savefig_or_show(writekey, show=show, save=save)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def _rank_genes_groups_plot(
     adata: AnnData,
     plot_type: str = 'heatmap',
@@ -391,7 +392,7 @@ def _rank_genes_groups_plot(
                    var_group_positions=group_positions, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_heatmap(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -430,7 +431,7 @@ def rank_genes_groups_heatmap(
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_tracksplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -469,7 +470,7 @@ def rank_genes_groups_tracksplot(
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_dotplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -508,7 +509,7 @@ def rank_genes_groups_dotplot(
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_stacked_violin(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -547,7 +548,7 @@ def rank_genes_groups_stacked_violin(
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_matrixplot(
     adata: AnnData,
     groups: Union[str, Sequence[str]] = None,
@@ -586,7 +587,7 @@ def rank_genes_groups_matrixplot(
                             groupby=groupby, key=key, show=show, save=save, **kwds)
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def rank_genes_groups_violin(
     adata: AnnData,
     groups: Optional[Sequence[str]] = None,
@@ -687,10 +688,12 @@ def rank_genes_groups_violin(
         _ax.legend_.remove()
         _ax.set_ylabel('expression')
         _ax.set_xticklabels(new_gene_names, rotation='vertical')
-        writekey = ('rank_genes_groups_'
-                    + str(adata.uns[key]['params']['groupby'])
-                    + '_' + group_name)
-        utils.savefig_or_show(writekey, show=show, save=save)
+        writekey = (
+            f"rank_genes_groups_"
+            f"{adata.uns[key]['params']['groupby']}_"
+            f"{group_name}"
+        )
+        savefig_or_show(writekey, show=show, save=save)
         axs.append(_ax)
     if show == False: return axs
 
@@ -722,7 +725,6 @@ def sim(
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
-    from ... import utils as sc_utils
     if tmax_realization is not None: tmax = tmax_realization
     elif 'tmax_write' in adata.uns: tmax = adata.uns['tmax_write']
     else: tmax = adata.n_obs
@@ -747,11 +749,11 @@ def sim(
             np.arange(0, n_realizations*tmax, tmax),
             np.arange(n_realizations).astype(int) + 1,
         )
-        utils.savefig_or_show('sim', save=save, show=show)
+        savefig_or_show('sim', save=save, show=show)
     else:
         # shuffled data
         X = adata.X
-        X, rows = sc_utils.subsample(X, seed=1)
+        X, rows = subsample(X, seed=1)
         timeseries(
             X,
             var_names=adata.var_names,
@@ -759,10 +761,10 @@ def sim(
             highlightsX=np.arange(tmax, n_realizations*tmax, tmax),
             xlabel='index (arbitrary order)',
         )
-        utils.savefig_or_show('sim_shuffled', save=save, show=show)
+        savefig_or_show('sim_shuffled', save=save, show=show)
 
 
-@doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
+@_doc_params(vminmax=doc_vminmax, panels=doc_panels, show_save_ax=doc_show_save_ax)
 def embedding_density(
     adata: AnnData,
     basis: str,
@@ -979,6 +981,6 @@ def embedding_density(
 
     if return_fig:
         return fig
-    utils.savefig_or_show(f"{key}_", show=show, save=save)
+    savefig_or_show(f"{key}_", show=show, save=save)
     if show is False:
         return ax

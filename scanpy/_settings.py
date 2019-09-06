@@ -7,7 +7,7 @@ from logging import getLevelName
 from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
 
 from . import logging
-from .logging import _set_log_level, _set_log_file, RootLogger
+from .logging import _set_log_level, _set_log_file, _RootLogger
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
@@ -73,7 +73,7 @@ class ScanpyConfig:
         _low_resolution_warning: bool = True,
     ):
         # logging
-        self._root_logger = RootLogger(logging.INFO)  # level will be replaced
+        self._root_logger = _RootLogger(logging.INFO)  # level will be replaced
         self.logfile = logfile
         self.verbosity = verbosity
         # rest

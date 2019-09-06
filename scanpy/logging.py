@@ -13,11 +13,11 @@ HINT = (INFO + DEBUG) // 2
 logging.addLevelName(HINT, 'HINT')
 
 
-class RootLogger(logging.RootLogger):
+class _RootLogger(logging.RootLogger):
     def __init__(self, level):
         super().__init__(level)
         self.propagate = False
-        RootLogger.manager = logging.Manager(self)
+        _RootLogger.manager = logging.Manager(self)
 
     def log(
         self,
@@ -63,7 +63,7 @@ def _set_log_file(settings):
     name = settings.logpath
     root = settings._root_logger
     h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
-    h.setFormatter(LogFormatter())
+    h.setFormatter(_LogFormatter())
     h.setLevel(root.level)
     if len(root.handlers) == 1:
         root.removeHandler(root.handlers[0])
@@ -79,7 +79,7 @@ def _set_log_level(settings, level: int):
     h.setLevel(level)
 
 
-class LogFormatter(logging.Formatter):
+class _LogFormatter(logging.Formatter):
     def __init__(self, fmt='{levelname}: {message}', datefmt='%Y-%m-%d %H:%M', style='{'):
         super().__init__(fmt, datefmt, style)
 
@@ -138,7 +138,8 @@ def _versions_dependencies(dependencies):
 
 
 def print_versions():
-    """Versions that might influence the numerical results.
+    """\
+    Versions that might influence the numerical results.
 
     Matplotlib and Seaborn are excluded from this.
     """
@@ -151,6 +152,9 @@ def print_versions():
 
 
 def print_version_and_date():
+    """\
+    Useful for starting a notebook so you see when you started working.
+    """
     from . import __version__
     from ._settings import settings
     print(
@@ -160,7 +164,7 @@ def print_version_and_date():
     )
 
 
-def copy_docs_and_signature(fn):
+def _copy_docs_and_signature(fn):
     return partial(update_wrapper, wrapped=fn, assigned=['__doc__', '__annotations__'])
 
 
@@ -171,7 +175,7 @@ def error(
     deep: Optional[str] = None,
     extra: Optional[dict] = None,
 ) -> datetime:
-    """
+    """\
     Log message with specific level and return current time.
 
     Parameters
@@ -193,25 +197,25 @@ def error(
     return settings._root_logger.error(msg, time=time, deep=deep, extra=extra)
 
 
-@copy_docs_and_signature(error)
+@_copy_docs_and_signature(error)
 def warning(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
     return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
 
 
-@copy_docs_and_signature(error)
+@_copy_docs_and_signature(error)
 def info(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
     return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
 
 
-@copy_docs_and_signature(error)
+@_copy_docs_and_signature(error)
 def hint(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
     return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
 
 
-@copy_docs_and_signature(error)
+@_copy_docs_and_signature(error)
 def debug(msg, *, time=None, deep=None, extra=None) -> datetime:
     from ._settings import settings
     return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)

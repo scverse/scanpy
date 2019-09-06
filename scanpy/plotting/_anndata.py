@@ -20,9 +20,9 @@ from matplotlib.colors import is_color_like, Colormap, ListedColormap
 from .. import get
 from .._settings import settings
 from .. import logging as logg
-from . import _utils as utils
+from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
-from ..utils import sanitize_anndata, doc_params
+from .._utils import sanitize_anndata, _doc_params
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -38,7 +38,7 @@ VALID_LEGENDLOCS = {
 ColorLike = Union[str, Tuple[float, ...]]
 
 
-@doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
+@_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
 def scatter(
     adata: AnnData,
     x: Optional[str] = None,
@@ -244,7 +244,7 @@ def _scatter_obs(
     else:
         palettes = [palette for _ in range(len(keys))]
     for i, palette in enumerate(palettes):
-        palettes[i] = utils.default_palette(palette)
+        palettes[i] = _utils.default_palette(palette)
 
     if basis is not None:
         component_name = (
@@ -330,8 +330,9 @@ def _scatter_obs(
     for i, ikey in enumerate(categoricals):
         palette = palettes[i]
         key = keys[ikey]
-        utils.add_colors_for_categorical_sample_annotation(
-            adata, key, palette, force_update_colors=not palette_was_none)
+        _utils.add_colors_for_categorical_sample_annotation(
+            adata, key, palette, force_update_colors=not palette_was_none
+        )
         # actually plot the groups
         mask_remaining = np.ones(Y.shape[0], dtype=bool)
         centroids = {}
@@ -392,7 +393,7 @@ def _scatter_obs(
                     all_pos[iname] = centroids[name]
                 else:
                     all_pos[iname] = [np.nan, np.nan]
-            utils._tmp_cluster_pos = all_pos
+            _utils._tmp_cluster_pos = all_pos
             if legend_loc == 'on data export':
                 filename = settings.writedir / 'pos.csv'
                 logg.warning(f'exporting label positions to {filename}')
@@ -423,7 +424,7 @@ def _scatter_obs(
             ax.set_ylabel('')
             ax.set_frame_on(False)
 
-    utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
+    _utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
     if show == False: return axs if len(keys) > 1 else axs[0]
 
 
@@ -521,7 +522,7 @@ def ranking(
     if show == False: return gs
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def violin(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
@@ -644,7 +645,7 @@ def violin(
                 ax.set_yscale('log')
             if rotation is not None:
                 ax.tick_params(labelrotation=rotation)
-    utils.savefig_or_show('violin', show=show, save=save)
+    _utils.savefig_or_show('violin', show=show, save=save)
     if show is False:
         if multi_panel and groupby is None and len(ys) == 1:
             return g
@@ -654,7 +655,7 @@ def violin(
             return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def clustermap(
     adata: AnnData,
     obs_keys: str = None,
@@ -705,7 +706,7 @@ def clustermap(
     df = pd.DataFrame(X, index=adata.obs_names, columns=adata.var_names)
     if obs_keys is not None:
         row_colors = adata.obs[obs_keys]
-        utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
+        _utils.add_colors_for_categorical_sample_annotation(adata, obs_keys)
         # do this more efficiently... just a quick solution
         lut = dict(zip(
             row_colors.cat.categories,
@@ -719,7 +720,7 @@ def clustermap(
     else: return g
 
 
-@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(
     adata: AnnData,
     var_names,
@@ -1056,12 +1057,12 @@ def stacked_violin(
     # remove the spacing between subplots
     pl.subplots_adjust(wspace=0, hspace=0)
 
-    utils.savefig_or_show('stacked_violin', show=show, save=save)
+    _utils.savefig_or_show('stacked_violin', show=show, save=save)
 
     return axs_list
 
 
-@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(
     adata: AnnData,
     var_names,
@@ -1345,12 +1346,12 @@ def heatmap(
         # plot colorbar
         _plot_colorbar(im, fig, axs[1, 2])
 
-    utils.savefig_or_show('heatmap', show=show, save=save)
+    _utils.savefig_or_show('heatmap', show=show, save=save)
 
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(
     adata: AnnData,
     var_names,
@@ -1678,11 +1679,11 @@ def dotplot(
     ymin, ymax = size_legend.get_ylim()
     size_legend.set_ylim(ymin, ymax+0.5)
 
-    utils.savefig_or_show('dotplot', show=show, save=save)
+    _utils.savefig_or_show('dotplot', show=show, save=save)
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(
     adata: AnnData,
     var_names,
@@ -1904,11 +1905,11 @@ def matrixplot(
         # plot colorbar
         _plot_colorbar(pc, fig, axs[1, 2])
 
-    utils.savefig_or_show('matrixplot', show=show, save=save)
+    _utils.savefig_or_show('matrixplot', show=show, save=save)
     return axs
 
 
-@doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(
     adata: AnnData,
     var_names,
@@ -2097,11 +2098,11 @@ def tracksplot(
         gene_groups_ax.axis('off')
         axs_list.append(gene_groups_ax)
 
-    utils.savefig_or_show('tracksplot', show=show, save=save)
+    _utils.savefig_or_show('tracksplot', show=show, save=save)
     return axs_list
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def dendrogram(
     adata: AnnData,
     groupby: str,
@@ -2144,12 +2145,12 @@ def dendrogram(
     _plot_dendrogram(ax, adata, groupby, dendrogram_key=dendrogram_key,
                      remove_labels=remove_labels, orientation=orientation)
 
-    utils.savefig_or_show('dendrogram', show=show, save=save)
+    _utils.savefig_or_show('dendrogram', show=show, save=save)
 
     return ax
 
 
-@doc_params(show_save_ax=doc_show_save_ax)
+@_doc_params(show_save_ax=doc_show_save_ax)
 def correlation_matrix(
     adata: AnnData,
     groupby: str,

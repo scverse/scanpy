@@ -1,10 +1,10 @@
-from .. utils import doc_params
-from ..tools._utils import choose_representation, doc_use_rep, doc_n_pcs
+from .._utils import _doc_params
+from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 from .._settings import settings
 from .. import logging as logg
 
 
-@doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
+@_doc_params(doc_n_pcs=doc_n_pcs, use_rep=doc_use_rep)
 def tsne(
     adata,
     n_pcs=None,
@@ -72,7 +72,7 @@ def tsne(
     """
     start = logg.info('computing tSNE')
     adata = adata.copy() if copy else adata
-    X = choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+    X = _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
     # params for sklearn
     params_sklearn = dict(
         perplexity=perplexity,

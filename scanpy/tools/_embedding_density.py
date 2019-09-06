@@ -6,7 +6,7 @@ from anndata import AnnData
 from typing import Union, Optional, Sequence
 
 from .. import logging as logg
-from ..utils import sanitize_anndata
+from .._utils import sanitize_anndata
 
 def _calc_density(
     x: np.ndarray,
