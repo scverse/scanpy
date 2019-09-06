@@ -55,12 +55,12 @@ legend_loc
     for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
 legend_fontsize
     Numeric size in pt or {`'[x-|xx-]small'`, `'medium'`, `'[x-|xx-]large'`}.
-    See :func:`~matplotlib.text.Text.set_fontsize`.
+    See :meth:`~matplotlib.text.Text.set_fontsize`.
 legend_fontweight : {`'normal'`, `'bold'`, ...}
     Legend font weight. A numeric value in range 0-1000 or a string like
     [`'light'`, `'normal'`, `'medium'`, `'[semi]bold'`, `'heavy'`, `'black'`].
     Defaults to `'bold'` if `legend_loc == 'on data'`, otherwise to `'normal'`.
-    See :func:`~matplotlib.text.Text.set_fontweight`.
+    See :meth:`~matplotlib.text.Text.set_fontweight`.
 legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
