@@ -173,7 +173,7 @@ def leiden(
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)\n'
             f'{quality_msg}'
         ),
     )
