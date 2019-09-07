@@ -114,6 +114,9 @@ def louvain(
             restrict_categories,
             adjacency,
         )
+    uns_key = 'louvain' if key_added == 'louvain' else f'louvain_{key_added}'
+    adata.uns[uns_key] = {}
+    adata.uns[uns_key]['params'] = {'resolution': resolution, 'random_state': random_state}
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warning(
@@ -141,7 +144,8 @@ def louvain(
                 g, partition_type,
                 **partition_kwargs,
             )
-            # adata.uns['louvain_quality'] = part.quality()
+            if 'quality' in dir(part):
+                adata.uns[uns_key]['quality'] = part.quality()
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
@@ -192,17 +196,14 @@ def louvain(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
     )
-    adata.uns['louvain'] = {}
-    adata.uns['louvain']['params'] = dict(
-        resolution=resolution,
-        random_state=random_state,
-    )
     logg.info(
         '    finished',
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical).\n'
+            f'    quality of the partitioning is {adata.uns[uns_key].get("quality", "unknown")}\n'
+            f'    added "quality" key to adata.uns["{uns_key}"]'
         ),
     )
     return adata if copy else None
