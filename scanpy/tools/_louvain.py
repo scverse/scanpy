@@ -117,6 +117,7 @@ def louvain(
     uns_key = 'louvain' if key_added == 'louvain' else f'louvain_{key_added}'
     adata.uns[uns_key] = {}
     adata.uns[uns_key]['params'] = {'resolution': resolution, 'random_state': random_state}
+    quality_msg = ''
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
             logg.warning(
@@ -150,6 +151,11 @@ def louvain(
                     m = weights.sum() if use_weights else g.ecount()
                     q /= m if directed else m*2
                 adata.uns[uns_key]['quality'] = q
+                quality_msg = (
+                    f'\n'
+                    f'    quality of the partitioning (scaled modularity) is {q:.3f}\n'
+                    f'    added "quality" key to adata.uns["{uns_key}"]'
+                )
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
@@ -200,14 +206,6 @@ def louvain(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
     )
-    if 'quality' in adata.uns[uns_key]:
-        quality_msg = (
-            f'\n'
-            f'    quality of the partitioning (scaled modularity) is {adata.uns[uns_key]["quality"]:.3f}\n'
-            f'    added "quality" key to adata.uns["{uns_key}"]'
-        )
-    else:
-        quality_msg = ''
     logg.info(
         '    finished',
         time=start,
