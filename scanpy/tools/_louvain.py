@@ -145,7 +145,10 @@ def louvain(
                 **partition_kwargs,
             )
             if 'quality' in dir(part):
-                adata.uns[uns_key]['quality'] = part.quality()
+                q = part.quality()
+                if q > 1.0:
+                    q /= g.ecount()
+                adata.uns[uns_key]['quality'] = q
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
@@ -199,7 +202,7 @@ def louvain(
     if 'quality' in adata.uns[uns_key]:
         quality_msg = (
             f'\n'
-            f'    quality of the partitioning is {adata.uns[uns_key]["quality"]:.2f}\n'
+            f'    quality of the partitioning (scaled modularity) is {adata.uns[uns_key]["quality"]:.2f}\n'
             f'    added "quality" key to adata.uns["{uns_key}"]'
         )
     else:

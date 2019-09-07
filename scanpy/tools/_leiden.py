@@ -161,10 +161,13 @@ def leiden(
         n_iterations=n_iterations,
     )
     if 'quality' in dir(part):
-        adata.uns[uns_key]['quality'] = part.quality()
+        q = part.quality()
+        if q > 1.0: # scale by 2*num_edges
+            q /= g.ecount()
+        adata.uns[uns_key]['quality'] = q
         quality_msg = (
             f'\n'
-            f'    quality of the partitioning is {adata.uns[uns_key]["quality"]:.2f}\n'
+            f'    quality of the partitioning (scaled modularity) is {q:.3f}\n'
             f'    added "quality" key to adata.uns["{uns_key}"]'
         )
     else:
