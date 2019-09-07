@@ -8,7 +8,10 @@ def adata_neighbors():
 
 
 def test_leiden_basic(adata_neighbors):
-    sc.tl.leiden(adata_neighbors)
+    sc.tl.leiden(adata_neighbors, use_weights=True, directed=True)
+    sc.tl.leiden(adata_neighbors, use_weights=True, directed=False)
+    sc.tl.leiden(adata_neighbors, use_weights=False, directed=True)
+    sc.tl.leiden(adata_neighbors, use_weights=False, directed=False)
 
 @pytest.mark.parametrize('clustering,key', [
     (sc.tl.louvain, 'louvain'),
@@ -43,7 +46,10 @@ def test_clustering_subset(adata_neighbors, clustering, key):
 
 def test_louvain_basic(adata_neighbors):
     sc.tl.louvain(adata_neighbors)
-    sc.tl.louvain(adata_neighbors, use_weights=True)
+    sc.tl.louvain(adata_neighbors, use_weights=True, directed=True)
+    sc.tl.louvain(adata_neighbors, use_weights=True, directed=False)
+    sc.tl.louvain(adata_neighbors, use_weights=False, directed=True)
+    sc.tl.louvain(adata_neighbors, use_weights=False, directed=False)
     sc.tl.louvain(adata_neighbors, use_weights=True, flavor="igraph")
     sc.tl.louvain(adata_neighbors, flavor="igraph")
 
@@ -52,3 +58,7 @@ def test_partition_type(adata_neighbors):
     import louvain
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
+
+    import leidenalg
+    sc.tl.leiden(adata_neighbors, partition_type=leidenalg.RBERVertexPartition)
+    sc.tl.leiden(adata_neighbors, partition_type=leidenalg.SurpriseVertexPartition, resolution=None)

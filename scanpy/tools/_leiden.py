@@ -162,8 +162,9 @@ def leiden(
     )
     if 'quality' in dir(part):
         q = part.quality()
-        if q > 1.0: # scale by 2*num_edges
-            q /= g.ecount()
+        if isinstance(part, leidenalg.RBConfigurationVertexPartition) and q > 1.0: #scale quality
+            m = partition_kwargs['weights'].sum() if use_weights else g.ecount()
+            q /= m if directed else m*2
         adata.uns[uns_key]['quality'] = q
         quality_msg = (
             f'\n'

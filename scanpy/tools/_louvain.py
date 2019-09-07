@@ -146,8 +146,9 @@ def louvain(
             )
             if 'quality' in dir(part):
                 q = part.quality()
-                if q > 1.0:
-                    q /= g.ecount()
+                if isinstance(part, louvain.RBConfigurationVertexPartition) and q > 1.0: #scale
+                    m = weights.sum() if use_weights else g.ecount()
+                    q /= m if directed else m*2
                 adata.uns[uns_key]['quality'] = q
         else:
             part = g.community_multilevel(weights=weights)
@@ -202,7 +203,7 @@ def louvain(
     if 'quality' in adata.uns[uns_key]:
         quality_msg = (
             f'\n'
-            f'    quality of the partitioning (scaled modularity) is {adata.uns[uns_key]["quality"]:.2f}\n'
+            f'    quality of the partitioning (scaled modularity) is {adata.uns[uns_key]["quality"]:.3f}\n'
             f'    added "quality" key to adata.uns["{uns_key}"]'
         )
     else:
