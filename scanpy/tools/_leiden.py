@@ -163,6 +163,7 @@ def leiden(
     if 'quality' in dir(part):
         adata.uns[uns_key]['quality'] = part.quality()
         quality_msg = (
+            f'\n'
             f'    quality of the partitioning is {adata.uns[uns_key]["quality"]:.2f}\n'
             f'    added "quality" key to adata.uns["{uns_key}"]'
         )
@@ -173,7 +174,7 @@ def leiden(
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)\n'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
             f'{quality_msg}'
         ),
     )
