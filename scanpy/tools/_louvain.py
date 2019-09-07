@@ -196,14 +196,20 @@ def louvain(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
     )
+    if 'quality' in adata.uns[uns_key]:
+        quality_msg = (
+            f'    quality of the partitioning is {adata.uns[uns_key]["quality"]:.2f}\n'
+            f'    added "quality" key to adata.uns["{uns_key}"]'
+        )
+    else:
+        quality_msg = ''
     logg.info(
         '    finished',
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
             f'    {key_added!r}, the cluster labels (adata.obs, categorical).\n'
-            f'    quality of the partitioning is {adata.uns[uns_key].get("quality", "unknown")}\n'
-            f'    added "quality" key to adata.uns["{uns_key}"]'
+            f'{quality_msg}'
         ),
     )
     return adata if copy else None
