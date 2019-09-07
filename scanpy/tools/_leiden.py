@@ -138,7 +138,7 @@ def leiden(
     # store output into adata.obs
     groups = np.array(part.membership)
     if restrict_to is not None:
-        if key_added == 'louvain':
+        if key_added == 'leiden':
             key_added += '_R'
         groups = rename_groups(
             adata,
@@ -153,18 +153,28 @@ def leiden(
         categories=natsorted(np.unique(groups).astype('U')),
     )
     # store information on the clustering parameters
-    adata.uns['leiden'] = {}
-    adata.uns['leiden']['params'] = dict(
+    uns_key = 'leiden' if key_added == 'leiden' else f'leiden_{key_added}'
+    adata.uns[uns_key] = {}
+    adata.uns[uns_key]['params'] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,
     )
+    if 'quality' in dir(part):
+        adata.uns[uns_key]['quality'] = part.quality()
+        quality_msg = (
+            f'    quality of the partitioning is {adata.uns[uns_key]["quality"]:.2f}\n'
+            f'    added "quality" key to adata.uns["{uns_key}"]'
+        )
+    else:
+        quality_msg = ''
     logg.info(
         '    finished',
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
             f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+            f'{quality_msg}'
         ),
     )
     return adata if copy else None
