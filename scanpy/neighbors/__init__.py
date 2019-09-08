@@ -30,6 +30,7 @@ def neighbors(
     method: str = 'umap',
     metric: Union[str, Metric] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
+    write_knn_indices: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -69,6 +70,8 @@ def neighbors(
         A known metric’s name or a callable that returns a distance.
     metric_kwds
         Options for the metric.
+    write_knn_indices
+        Saves kNN indices into adata.uns['neighbors'].
     copy
         Return a copy instead of writing to adata.
 
@@ -91,7 +94,7 @@ def neighbors(
     neighbors.compute_neighbors(
         n_neighbors=n_neighbors, knn=knn, n_pcs=n_pcs, use_rep=use_rep,
         method=method, metric=metric, metric_kwds=metric_kwds,
-        random_state=random_state,
+        write_knn_indices=write_knn_indices, random_state=random_state,
     )
     adata.uns['neighbors'] = {}
     adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
@@ -106,6 +109,8 @@ def neighbors(
     adata.uns['neighbors']['connectivities'] = neighbors.connectivities
     if neighbors.rp_forest is not None:
         adata.uns['neighbors']['rp_forest'] = neighbors.rp_forest
+    if write_knn_indices and knn:
+        adata.uns['neighbors']['knn_indices'] = neighbors.knn_indices
     logg.info(
         '    finished',
         time=start,
