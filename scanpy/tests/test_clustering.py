@@ -56,9 +56,11 @@ def test_louvain_basic(adata_neighbors):
 
 def test_partition_type(adata_neighbors):
     import louvain
+    sc.tl.louvain(adata_neighbors, partition_type=louvain.ModularityVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.RBERVertexPartition)
     sc.tl.louvain(adata_neighbors, partition_type=louvain.SurpriseVertexPartition)
 
     import leidenalg
+    sc.tl.leiden(adata_neighbors, partition_type=leidenalg.ModularityVertexPartition, resolution=None)
     sc.tl.leiden(adata_neighbors, partition_type=leidenalg.RBERVertexPartition)
     sc.tl.leiden(adata_neighbors, partition_type=leidenalg.SurpriseVertexPartition, resolution=None)

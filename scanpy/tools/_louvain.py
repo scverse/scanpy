@@ -114,7 +114,7 @@ def louvain(
             restrict_categories,
             adjacency,
         )
-    uns_key = 'louvain' if key_added == 'louvain' else f'louvain_{key_added}'
+    uns_key = key_added if key_added.startswith('louvain') else f'louvain_{key_added}'
     adata.uns[uns_key] = {}
     adata.uns[uns_key]['params'] = {'resolution': resolution, 'random_state': random_state}
     quality_msg = ''
@@ -150,10 +150,15 @@ def louvain(
                 if isinstance(part, louvain.RBConfigurationVertexPartition) and q > 1.0: #scale
                     m = weights.sum() if use_weights else g.ecount()
                     q /= m if directed else m*2
+                if isinstance(part, (louvain.RBConfigurationVertexPartition,
+                                     louvain.ModularityVertexPartition)):
+                    qual_type = ' (scaled modularity)'
+                else:
+                    qual_type = ''
                 adata.uns[uns_key]['quality'] = q
                 quality_msg = (
                     f'\n'
-                    f'    quality of the partitioning (scaled modularity) is {q:.3f}\n'
+                    f'    quality of the partitioning{qual_type} is {q:.3f}\n'
                     f'    added "quality" key to adata.uns["{uns_key}"]'
                 )
         else:

@@ -153,7 +153,7 @@ def leiden(
         categories=natsorted(np.unique(groups).astype('U')),
     )
     # store information on the clustering parameters
-    uns_key = 'leiden' if key_added == 'leiden' else f'leiden_{key_added}'
+    uns_key = key_added if key_added.startswith('leiden') else f'leiden_{key_added}'
     adata.uns[uns_key] = {}
     adata.uns[uns_key]['params'] = dict(
         resolution=resolution,
@@ -165,10 +165,15 @@ def leiden(
         if isinstance(part, leidenalg.RBConfigurationVertexPartition) and q > 1.0: #scale quality
             m = partition_kwargs['weights'].sum() if use_weights else g.ecount()
             q /= m if directed else m*2
+        if isinstance(part, (leidenalg.RBConfigurationVertexPartition,
+                             leidenalg.ModularityVertexPartition)):
+            qual_type = ' (scaled modularity)'
+        else:
+            qual_type = ''
         adata.uns[uns_key]['quality'] = q
         quality_msg = (
             f'\n'
-            f'    quality of the partitioning (scaled modularity) is {q:.3f}\n'
+            f'    quality of the partitioning{qual_type} is {q:.3f}\n'
             f'    added "quality" key to adata.uns["{uns_key}"]'
         )
     else:
