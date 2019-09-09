@@ -4,7 +4,7 @@ matplotlib==3.0.*
 pandas>=0.21
 scipy>=1.3
 seaborn
-h5py
+h5py!=2.10.0
 tables
 tqdm
 importlib_metadata>=0.7; python_version < '3.8'
