@@ -159,14 +159,19 @@ def leiden(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,
+        use_weights=use_weights,
+        directed=directed,
+        partition_type=None if partition_type is None else partition_type.__name__,
     )
     if 'quality' in dir(part):
         q = part.quality()
         if isinstance(part, leidenalg.RBConfigurationVertexPartition) and q > 1.0: #scale quality
             m = partition_kwargs['weights'].sum() if use_weights else g.ecount()
             q /= m if directed else m*2
-        if isinstance(part, (leidenalg.RBConfigurationVertexPartition,
-                             leidenalg.ModularityVertexPartition)):
+        if isinstance(part, (
+            leidenalg.RBConfigurationVertexPartition,
+            leidenalg.ModularityVertexPartition),
+        ):
             qual_type = ' (scaled modularity)'
         else:
             qual_type = ''

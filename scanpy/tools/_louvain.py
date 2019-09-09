@@ -116,7 +116,6 @@ def louvain(
         )
     uns_key = key_added if key_added.startswith('louvain') else f'louvain_{key_added}'
     adata.uns[uns_key] = {}
-    adata.uns[uns_key]['params'] = {'resolution': resolution, 'random_state': random_state}
     quality_msg = ''
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
@@ -150,8 +149,10 @@ def louvain(
                 if isinstance(part, louvain.RBConfigurationVertexPartition) and q > 1.0: #scale
                     m = weights.sum() if use_weights else g.ecount()
                     q /= m if directed else m*2
-                if isinstance(part, (louvain.RBConfigurationVertexPartition,
-                                     louvain.ModularityVertexPartition)):
+                if isinstance(part, (
+                    louvain.RBConfigurationVertexPartition,
+                    louvain.ModularityVertexPartition),
+                ):
                     qual_type = ' (scaled modularity)'
                 else:
                     qual_type = ''
@@ -207,6 +208,13 @@ def louvain(
             restrict_indices,
             groups,
         )
+    adata.uns[uns_key]['params'] = {
+        'resolution': resolution,
+        'random_state': random_state,
+        'partition_type': None if partition_type is None else partition_type.__name__,
+        'use_weights': use_weights,
+        'directed': directed,
+    }
     adata.obs[key_added] = pd.Categorical(
         values=groups.astype('U'),
         categories=natsorted(np.unique(groups).astype('U')),
