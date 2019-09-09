@@ -170,8 +170,8 @@ def leiden(
             q /= m if directed else m*2
         if isinstance(part, (
             leidenalg.RBConfigurationVertexPartition,
-            leidenalg.ModularityVertexPartition),
-        ):
+            leidenalg.ModularityVertexPartition,
+        )):
             qual_type = ' (scaled modularity)'
         else:
             qual_type = ''

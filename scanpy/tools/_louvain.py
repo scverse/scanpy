@@ -151,8 +151,8 @@ def louvain(
                     q /= m if directed else m*2
                 if isinstance(part, (
                     louvain.RBConfigurationVertexPartition,
-                    louvain.ModularityVertexPartition),
-                ):
+                    louvain.ModularityVertexPartition,
+                )):
                     qual_type = ' (scaled modularity)'
                 else:
                     qual_type = ''
