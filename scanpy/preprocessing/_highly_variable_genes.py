@@ -9,7 +9,7 @@ from .. import logging as logg
 from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 from .._utils import sanitize_anndata
-
+from ._simple import filter_genes
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
@@ -262,13 +262,35 @@ def highly_variable_genes(
         df = []
         for batch in batches:
             adata_subset = adata[adata.obs[batch_key] == batch]
+
+            # Filter to genes that are in the dataset
+            genes_before = adata_subset.var_names
+            filter_genes(adata_subset, min_cells=1)
+            genes_after = adata_subset.var_names
+            
+            genes_missing = genes_before.difference(genes_after)
             hvg = _highly_variable_genes_single_batch(adata_subset,
                                                       min_disp=min_disp, max_disp=max_disp,
                                                       min_mean=min_mean, max_mean=max_mean,
                                                       n_top_genes=n_top_genes,
                                                       n_bins=n_bins,
                                                       flavor=flavor)
-            hvg['gene'] = adata.var_names.values
+
+            # Add 0 values for genes that were filtered out
+            missing_hvg = pd.DataFrame(np.zeros((len(genes_missing),len(hvg.columns))),
+                                       columns=hvg.columns
+            )
+            missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
+            missing_hvg['gene'] = genes_missing
+            hvg['gene'] = adata_subset.var_names.values
+            hvg = hvg.append(missing_hvg, ignore_index=True)
+
+            # Order as before filtering
+            tmp = hvg.set_index('gene')
+            tmp = tmp.loc[genes_before]
+            tmp['gene'] = tmp.index
+            tmp.index = hvg.index
+
             df.append(hvg)
 
         df = pd.concat(df, axis=0)
