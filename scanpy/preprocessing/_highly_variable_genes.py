@@ -250,12 +250,14 @@ def highly_variable_genes(
             'pass `inplace=False` if you want to return a `np.recarray`.')
 
     if batch_key is None:
-        df = _highly_variable_genes_single_batch(adata,
-                                                 min_disp=min_disp, max_disp=max_disp,
-                                                 min_mean=min_mean, max_mean=max_mean,
-                                                 n_top_genes=n_top_genes,
-                                                 n_bins=n_bins,
-                                                 flavor=flavor)
+        df = _highly_variable_genes_single_batch(
+            adata,
+            min_disp=min_disp, max_disp=max_disp,
+            min_mean=min_mean, max_mean=max_mean,
+            n_top_genes=n_top_genes,
+            n_bins=n_bins,
+            flavor=flavor,
+        )
     else:
         sanitize_anndata(adata)
         batches = adata.obs[batch_key].cat.categories
@@ -269,16 +271,19 @@ def highly_variable_genes(
             genes_after = adata_subset.var_names
             genes_missing = genes_before.difference(genes_after)
 
-            hvg = _highly_variable_genes_single_batch(adata_subset,
-                                                      min_disp=min_disp, max_disp=max_disp,
-                                                      min_mean=min_mean, max_mean=max_mean,
-                                                      n_top_genes=n_top_genes,
-                                                      n_bins=n_bins,
-                                                      flavor=flavor)
+            hvg = _highly_variable_genes_single_batch(
+                adata_subset,
+                min_disp=min_disp, max_disp=max_disp,
+                min_mean=min_mean, max_mean=max_mean,
+                n_top_genes=n_top_genes,
+                n_bins=n_bins,
+                flavor=flavor,
+            )
 
             # Add 0 values for genes that were filtered out
-            missing_hvg = pd.DataFrame(np.zeros((len(genes_missing),len(hvg.columns))),
-                                       columns=hvg.columns
+            missing_hvg = pd.DataFrame(
+                np.zeros((len(genes_missing), len(hvg.columns))),
+                columns=hvg.columns,
             )
             missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
             missing_hvg['gene'] = genes_missing
