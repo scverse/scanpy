@@ -267,8 +267,8 @@ def highly_variable_genes(
             genes_before = adata_subset.var_names
             filter_genes(adata_subset, min_cells=1)
             genes_after = adata_subset.var_names
-            
             genes_missing = genes_before.difference(genes_after)
+
             hvg = _highly_variable_genes_single_batch(adata_subset,
                                                       min_disp=min_disp, max_disp=max_disp,
                                                       min_mean=min_mean, max_mean=max_mean,
