@@ -18,7 +18,7 @@ def normalize_scran(
     scaling: Union[str, Collection[float], None] = None,
     min_mean: Union[int, float] = 1,
     subset_gene: Union[str, Index, None] = None,
-    inplace: bool = True,
+    copy: bool = True,
 ):
     """\
     One sentence to describe it.
@@ -46,6 +46,9 @@ def normalize_scran(
     if isinstance(subset_gene, str):
         subset_gene = adata.var[subset_gene]
 
+    if copy:
+        adata = adata.copy()
+
     ...
 
-    return adata if not inplace else None
+    return adata if copy else None
