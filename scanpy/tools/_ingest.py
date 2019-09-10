@@ -13,7 +13,7 @@ def ingest(
     adata_ref,
     obs=None,
     inplace=True,
-    embedding_method=['umap', 'pca'],
+    embedding_method=('umap', 'pca'),
     labeling_method='knn',
     return_joint = False,
     **kwargs
