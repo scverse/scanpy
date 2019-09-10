@@ -13,7 +13,7 @@ def ingest(
     adata_ref,
     obs=None,
     inplace=True,
-    embedding_method='umap',
+    embedding_method=['umap', 'pca'],
     labeling_method='knn',
     return_joint = False,
     **kwargs
@@ -225,8 +225,8 @@ class Ingest:
         if not inplace:
             return adata
 
-    def to_adata_joint(self):
-        adata = self._adata_ref.concatenate(self._adata_new)
+    def to_adata_joint(self, batch_key='batch'):
+        adata = self._adata_ref.concatenate(self._adata_new, batch_key=batch_key)
 
         obs_update = self._obs.copy()
         obs_update.index = adata[adata.obs['batch']=='1'].obs_names
@@ -235,5 +235,11 @@ class Ingest:
         for key in self._obsm:
             if key in self._adata_ref.obsm:
                 adata.obsm[key] = np.vstack((self._adata_ref.obsm[key], self._obsm[key]))
+
+        if 'X_umap' in self._obsm:
+            adata.uns['umap'] = self._adata_ref.uns['umap']
+        if 'X_pca' in self._obsm:
+            adata.uns['pca'] = self._adata_ref.uns['pca']
+            adata.varm['PCs'] = self._adata_ref.varm['PCs']
 
         return adata
