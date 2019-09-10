@@ -1,10 +1,12 @@
 import inspect
 import sys
+from contextlib import contextmanager
 from enum import IntEnum
 from pathlib import Path
 from time import time
 from logging import getLevelName
-from typing import Tuple, Union, Any, List, Iterable, TextIO, Optional
+from typing import Any, Union, Optional, Iterable, TextIO
+from typing import Tuple, List, ContextManager
 
 from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
@@ -32,6 +34,16 @@ class Verbosity(IntEnum):
     def level(self) -> int:
         # getLevelName(str) returns the int level…
         return getLevelName(_VERBOSITY_TO_LOGLEVEL[self])
+
+
+    @contextmanager
+    def override(self, verbosity: "Verbosity") -> ContextManager["Verbosity"]:
+        """\
+        Temporarily override verbosity
+        """
+        settings.verbosity = verbosity
+        yield self
+        settings.verbosity = self
 
 
 def _type_check(var: Any, varname: str, types: Union[type, Tuple[type, ...]]):
