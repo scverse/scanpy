@@ -296,7 +296,7 @@ def highly_variable_genes(
             tmp['gene'] = tmp.index
             tmp.index = hvg.index
 
-            df.append(hvg)
+            df.append(tmp)
 
         df = pd.concat(df, axis=0)
         df['highly_variable'] = df['highly_variable'].astype(int)
