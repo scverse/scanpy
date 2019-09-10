@@ -621,7 +621,7 @@ def violin(
         g.set_titles(col_template='{col_name}').set_xlabels('')
         if rotation is not None:
             for ax in g.axes[0]:
-                ax.tick_params(labelrotation=rotation)
+                ax.tick_params(axis='x', labelrotation=rotation)
     else:
         if ax is None:
             axs, _, _, _ = setup_axes(
@@ -644,7 +644,7 @@ def violin(
             if log:
                 ax.set_yscale('log')
             if rotation is not None:
-                ax.tick_params(labelrotation=rotation)
+                ax.tick_params(axis='x', labelrotation=rotation)
     _utils.savefig_or_show('violin', show=show, save=save)
     if show is False:
         if multi_panel and groupby is None and len(ys) == 1:
