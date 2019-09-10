@@ -16,6 +16,9 @@ def ingest(
     embedding_method=('umap', 'pca'),
     labeling_method='knn',
     return_joint = False,
+    batch_key='batch',
+    batch_categories=None,
+    index_unique='-',
     **kwargs
 ):
     """
@@ -41,7 +44,10 @@ def ingest(
         for i, col in enumerate(obs):
             ing.map_labels(col, labeling_method[i])
 
-    return ing.to_adata(inplace) if not return_joint else ing.to_adata_joint()
+    if return_joint:
+        return ing.to_adata_joint(batch_key, batch_categories, index_unique)
+    else:
+        return ing.to_adata(inplace)
 
 
 class Ingest:
@@ -225,8 +231,10 @@ class Ingest:
         if not inplace:
             return adata
 
-    def to_adata_joint(self, batch_key='batch'):
-        adata = self._adata_ref.concatenate(self._adata_new, batch_key=batch_key)
+    def to_adata_joint(self, batch_key='batch', batch_categories=None, index_unique='-'):
+        adata = self._adata_ref.concatenate(self._adata_new, batch_key=batch_key,
+                                            batch_categories=batch_categories,
+                                            index_unique=index_unique)
 
         obs_update = self._obs.copy()
         obs_update.index = adata[adata.obs['batch']=='1'].obs_names
