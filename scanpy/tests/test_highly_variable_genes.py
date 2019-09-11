@@ -107,7 +107,7 @@ def test_highly_variable_genes_batches():
     adata_1 = adata[adata.obs.batch.isin(['0']),:]
     adata_2 = adata[adata.obs.batch.isin(['1']),:]
 
-    adata = sc.pp.highly_variable_genes(
+    sc.pp.highly_variable_genes(
         adata,
         batch_key='batch',
         flavor='cell_ranger',
