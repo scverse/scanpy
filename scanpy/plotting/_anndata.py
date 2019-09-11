@@ -373,10 +373,12 @@ def _scatter_obs(
             if legend_fontweight is None:
                 legend_fontweight = 'bold'
             if legend_fontoutline is not None:
-                legend_fontoutline = [patheffects.withStroke(
+                path_effect = [patheffects.withStroke(
                     linewidth=legend_fontoutline,
                     foreground='w',
                 )]
+            else:
+                path_effect = None
             for name, pos in centroids.items():
                 axs[ikey].text(
                     pos[0], pos[1], name,
@@ -384,7 +386,7 @@ def _scatter_obs(
                     verticalalignment='center',
                     horizontalalignment='center',
                     fontsize=legend_fontsize,
-                    path_effects=legend_fontoutline,
+                    path_effects=path_effect,
                 )
 
             all_pos = np.zeros((len(adata.obs[key].cat.categories), 2))

@@ -314,12 +314,16 @@ def embedding(
             continue
 
         if legend_fontoutline is not None:
-            legend_fontoutline = [patheffects.withStroke(linewidth=legend_fontoutline,
-                                                         foreground='w')]
+            path_effect = [patheffects.withStroke(
+                linewidth=legend_fontoutline,
+                foreground='w',
+            )]
+        else:
+            path_effect = None
 
         _add_legend_or_colorbar(
             adata, ax, cax, categorical, value_to_plot, legend_loc,
-            _data_points, legend_fontweight, legend_fontsize, legend_fontoutline,
+            _data_points, legend_fontweight, legend_fontsize, path_effect,
             groups, bool(grid),
         )
 

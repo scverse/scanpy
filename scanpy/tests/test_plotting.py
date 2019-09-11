@@ -286,6 +286,11 @@ def test_scatterplots(image_comparer):
     sc.pl.pca(pbmc, color='bulk_labels', show=False)
     save_and_compare_images('master_pca')
 
+    sc.pl.pca(pbmc, color=['bulk_labels', 'louvain'],
+              legend_loc='on data', legend_fontoutline=2,
+              legend_fontweight='normal', legend_fontsize=10, show=False)
+    save_and_compare_images('master_pca_with_fonts')
+
     # test projection='3d'
     sc.pl.pca(pbmc, color='bulk_labels', projection='3d', show=False)
     save_and_compare_images('master_3dprojection')
