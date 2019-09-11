@@ -99,11 +99,10 @@ def test_filter_genes_dispersion_compare_to_seurat():
 
 
 def test_highly_variable_genes_batches():
-    adata = sc.datasets.pbmc3k()
-    sc.pp.filter_genes(adata, min_cells=1)
-    sc.pp.normalize_per_cell(adata, counts_per_cell_after=10000)
+    adata = sc.datasets.pbmc68k_reduced()
+    adata[:100,:100].X = np.zeros((100,100))
 
-    adata.obs['batch'] = ['0' if i<200 else '1' for i in range(adata.n_obs)]
+    adata.obs['batch'] = ['0' if i<100 else '1' for i in range(adata.n_obs)]
     adata_1 = adata[adata.obs.batch.isin(['0']),:]
     adata_2 = adata[adata.obs.batch.isin(['1']),:]
 
@@ -130,12 +129,12 @@ def test_highly_variable_genes_batches():
     )
 
     assert np.isclose(
-        adata.var['dispersions_norm'][3],
-        0.5*hvg1['dispersions_norm'][0] + 0.5*hvg2['dispersions_norm'][3]
+        adata.var['dispersions_norm'][100],
+        0.5*hvg1['dispersions_norm'][0] + 0.5*hvg2['dispersions_norm'][100]
     )
     assert np.isclose(
-        adata.var['dispersions_norm'][4],
-        0.5*hvg1['dispersions_norm'][1] + 0.5*hvg2['dispersions_norm'][4]
+        adata.var['dispersions_norm'][101],
+        0.5*hvg1['dispersions_norm'][1] + 0.5*hvg2['dispersions_norm'][101]
     )
     assert np.isclose(
         adata.var['dispersions_norm'][0],
