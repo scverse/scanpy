@@ -163,33 +163,21 @@ def leiden(
         directed=directed,
         partition_type=None if partition_type is None else partition_type.__name__,
     )
-    if 'quality' in dir(part):
-        q = part.quality()
-        if isinstance(part, leidenalg.RBConfigurationVertexPartition) and q > 1.0: #scale quality
-            m = partition_kwargs['weights'].sum() if use_weights else g.ecount()
-            q /= m if directed else m*2
-        if isinstance(part, (
-            leidenalg.RBConfigurationVertexPartition,
-            leidenalg.ModularityVertexPartition,
-        )):
-            qual_type = ' (scaled modularity)'
-        else:
-            qual_type = ''
-        adata.uns[uns_key]['quality'] = q
-        quality_msg = (
-            f'\n'
-            f'    quality of the partitioning{qual_type} is {q:.3f}\n'
-            f'    added "quality" key to adata.uns["{uns_key}"]'
-        )
-    else:
-        quality_msg = ''
+    # calculate modularity
+    modularity_part = leidenalg.ModularityVertexPartition(
+        g,
+        initial_membership=part.membership,
+    )
+    q = modularity_part.quality()
+    adata.uns[uns_key]['modularity'] = q
     logg.info(
         '    finished',
         time=start,
         deep=(
             f'found {len(np.unique(groups))} clusters and added\n'
-            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
-            f'{quality_msg}'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)\n'
+            f'    modularity: {q:.3f}, resolution: {resolution}\n'
+            f'    added "modularity" key to adata.uns["{uns_key}"]'
         ),
     )
     return adata if copy else None

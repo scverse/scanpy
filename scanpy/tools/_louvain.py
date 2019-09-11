@@ -144,24 +144,18 @@ def louvain(
                 g, partition_type,
                 **partition_kwargs,
             )
-            if 'quality' in dir(part):
-                q = part.quality()
-                if isinstance(part, louvain.RBConfigurationVertexPartition) and q > 1.0: #scale
-                    m = weights.sum() if use_weights else g.ecount()
-                    q /= m if directed else m*2
-                if isinstance(part, (
-                    louvain.RBConfigurationVertexPartition,
-                    louvain.ModularityVertexPartition,
-                )):
-                    qual_type = ' (scaled modularity)'
-                else:
-                    qual_type = ''
-                adata.uns[uns_key]['quality'] = q
-                quality_msg = (
-                    f'\n'
-                    f'    quality of the partitioning{qual_type} is {q:.3f}\n'
-                    f'    added "quality" key to adata.uns["{uns_key}"]'
-                )
+            # modularity calculation
+            modularity_part = louvain.ModularityVertexPartition(
+                g,
+                initial_membership=part.membership,
+            )
+            q = modularity_part.quality()
+            adata.uns[uns_key]['modularity'] = q
+            quality_msg = (
+                f'\n'
+                f'    modularity: {q:.3f}, resolution: {resolution}\n'
+                f'    added "modularity" key to adata.uns["{uns_key}"]'
+            )
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
