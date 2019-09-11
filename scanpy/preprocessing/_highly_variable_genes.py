@@ -10,6 +10,7 @@ from ._distributed import materialize_as_ndarray
 from ._utils import _get_mean_var
 from .._utils import sanitize_anndata
 from ._simple import filter_genes
+from .._settings import settings, Verbosity
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
@@ -262,14 +263,15 @@ def highly_variable_genes(
         sanitize_anndata(adata)
         batches = adata.obs[batch_key].cat.categories
         df = []
+        gene_list = adata.var_names
         for batch in batches:
             adata_subset = adata[adata.obs[batch_key] == batch]
 
             # Filter to genes that are in the dataset
-            genes_before = adata_subset.var_names
-            filter_genes(adata_subset, min_cells=1)
-            genes_after = adata_subset.var_names
-            genes_missing = genes_before.difference(genes_after)
+            with settings.verbosity.override(Verbosity.error):
+                filt = filter_genes(adata_subset, min_cells=1, inplace=False)[0]
+
+            adata_subset = adata_subset[:,filt]
 
             hvg = _highly_variable_genes_single_batch(
                 adata_subset,
@@ -282,21 +284,19 @@ def highly_variable_genes(
 
             # Add 0 values for genes that were filtered out
             missing_hvg = pd.DataFrame(
-                np.zeros((len(genes_missing), len(hvg.columns))),
+                np.zeros((np.sum(~filt), len(hvg.columns))),
                 columns=hvg.columns,
             )
             missing_hvg['highly_variable'] = missing_hvg['highly_variable'].astype(bool)
-            missing_hvg['gene'] = genes_missing
+            missing_hvg['gene'] = gene_list[~filt]
             hvg['gene'] = adata_subset.var_names.values
             hvg = hvg.append(missing_hvg, ignore_index=True)
 
             # Order as before filtering
-            tmp = hvg.set_index('gene')
-            tmp = tmp.loc[genes_before]
-            tmp['gene'] = tmp.index
-            tmp.index = hvg.index
+            idxs = np.concatenate((np.where(filt)[0], np.where(~filt)[0]))
+            hvg = hvg.loc[np.argsort(idxs)]
 
-            df.append(tmp)
+            df.append(hvg)
 
         df = pd.concat(df, axis=0)
         df['highly_variable'] = df['highly_variable'].astype(int)
