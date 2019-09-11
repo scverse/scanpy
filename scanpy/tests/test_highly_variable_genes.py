@@ -123,7 +123,7 @@ def test_highly_variable_genes_batches():
         inplace=False
     )
     hvg2 = sc.pp.highly_variable_genes(
-        adata_1,
+        adata_2,
         flavor='cell_ranger',
         n_top_genes=200,
         inplace=False
