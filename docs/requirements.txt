@@ -4,7 +4,7 @@ sphinx_rtd_theme>=0.3.1
 # Sphinx 2 has nicer looking sections
 sphinx>=2.0.1
 sphinx-autodoc-typehints
-scanpydoc>=0.4
+scanpydoc>=0.4.1
 # same as ../requires.txt, but omitting the c++ packages
 anndata>=0.6.18
 matplotlib>=2.2

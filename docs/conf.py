@@ -20,8 +20,8 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 # -- General configuration ------------------------------------------------
 
 
-nitpicky = True       # Warn about broken links
-needs_sphinx = '1.7'  # autosummary bugfix
+nitpicky = True  # Warn about broken links
+needs_sphinx = '2.0'  # Nicer param docs
 suppress_warnings = ['ref.citation']
 
 # General information
@@ -240,8 +240,6 @@ nitpick_ignore = [
     ('py:class', 'scanpy._settings.Verbosity'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
-    # Bug: https://github.com/agronholm/sphinx-autodoc-typehints/issues/96
-    ('py:class', 'typing.Textio'),
 ]
 
 for mod_name in [
