@@ -153,9 +153,8 @@ def leiden(
         categories=natsorted(np.unique(groups).astype('U')),
     )
     # store information on the clustering parameters
-    uns_key = key_added if key_added.startswith('leiden') else f'leiden_{key_added}'
-    adata.uns[uns_key] = {}
-    adata.uns[uns_key]['params'] = dict(
+    adata.uns[key_added] = {}
+    adata.uns[key_added]['params'] = dict(
         resolution=resolution,
         random_state=random_state,
         n_iterations=n_iterations,
@@ -169,7 +168,7 @@ def leiden(
         initial_membership=part.membership,
     )
     q = modularity_part.quality()
-    adata.uns[uns_key]['modularity'] = q
+    adata.uns[key_added]['modularity'] = q
     logg.info(
         '    finished',
         time=start,
@@ -177,7 +176,7 @@ def leiden(
             f'found {len(np.unique(groups))} clusters and added\n'
             f'    {key_added!r}, the cluster labels (adata.obs, categorical)\n'
             f'    modularity: {q:.3f}, resolution: {resolution}\n'
-            f'    added "modularity" key to adata.uns["{uns_key}"]'
+            f'    added "modularity" key to adata.uns["{key_added}"]'
         ),
     )
     return adata if copy else None

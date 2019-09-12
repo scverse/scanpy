@@ -114,8 +114,7 @@ def louvain(
             restrict_categories,
             adjacency,
         )
-    uns_key = key_added if key_added.startswith('louvain') else f'louvain_{key_added}'
-    adata.uns[uns_key] = {}
+    adata.uns[key_added] = {}
     quality_msg = ''
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
@@ -150,11 +149,11 @@ def louvain(
                 initial_membership=part.membership,
             )
             q = modularity_part.quality()
-            adata.uns[uns_key]['modularity'] = q
+            adata.uns[key_added]['modularity'] = q
             quality_msg = (
                 f'\n'
                 f'    modularity: {q:.3f}, resolution: {resolution}\n'
-                f'    added "modularity" key to adata.uns["{uns_key}"]'
+                f'    added "modularity" key to adata.uns["{key_added}"]'
             )
         else:
             part = g.community_multilevel(weights=weights)
@@ -202,7 +201,7 @@ def louvain(
             restrict_indices,
             groups,
         )
-    adata.uns[uns_key]['params'] = {
+    adata.uns[key_added]['params'] = {
         'resolution': resolution,
         'random_state': random_state,
         'partition_type': None if partition_type is None else partition_type.__name__,
