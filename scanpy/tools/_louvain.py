@@ -201,6 +201,10 @@ def louvain(
             restrict_indices,
             groups,
         )
+    adata.obs[key_added] = pd.Categorical(
+        values=groups.astype('U'),
+        categories=natsorted(np.unique(groups).astype('U')),
+    )
     adata.uns[key_added]['params'] = {
         'resolution': resolution,
         'random_state': random_state,
@@ -208,10 +212,6 @@ def louvain(
         'use_weights': use_weights,
         'directed': directed,
     }
-    adata.obs[key_added] = pd.Categorical(
-        values=groups.astype('U'),
-        categories=natsorted(np.unique(groups).astype('U')),
-    )
     logg.info(
         '    finished',
         time=start,
