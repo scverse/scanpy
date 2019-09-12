@@ -131,6 +131,7 @@ def umap(
     if hasattr(init_coords, "dtype"):
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
+    parallel = random_state is None
     random_state = check_random_state(random_state)
     neigh_params = adata.uns['neighbors']['params']
     X = _choose_representation(
@@ -153,6 +154,7 @@ def umap(
             random_state,
             neigh_params.get('metric', 'euclidean'),
             neigh_params.get('metric_kwds', {}),
+            parallel=parallel,
             verbose=settings.verbosity > 3,
         )
     elif method == 'rapids':
