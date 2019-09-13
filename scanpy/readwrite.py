@@ -1,6 +1,5 @@
 """Reading and Writing
 """
-import collections.abc as cabc
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
