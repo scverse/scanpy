@@ -37,7 +37,7 @@ setup(
             'sphinx_autodoc_typehints',
             'scanpydoc',
         ],
-        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr'],
+        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr', 'black'],
     ),
     packages=find_packages(),
     entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
