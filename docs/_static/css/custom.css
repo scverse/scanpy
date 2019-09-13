@@ -1,34 +1,39 @@
-.noteversion {
-    font-size:70%;
-}
+/* ReadTheDocs theme colors */
 
-.noteversion:after {
-    content: "/";
-}
 
-.small {
-    font-size:40%;
-}
+.wy-side-nav-search { background-color: transparent }
+.wy-nav-top { background-color: #f07e44 }
 
-.smaller, .pr {
-    font-size:70%;
-}
 
-.rst-content tt:not(.xref),
-.rst-content code:not(.xref),
-.rst-content *:not(a) > tt.xref,
-.rst-content *:not(a) > code.xref {
-    /* slim font weight for non-link literals */
-    font-weight: normal;
-}
+/* Custom classes */
+
+
+.small { font-size:40% }
+.smaller, .pr, .noteversion { font-size:70% }
+.noteversion::after { content: "/" }
+
+
+/* Code: literals and links */
+
+
 .rst-content tt.literal,
 .rst-content code.literal {
     color: #404040;
 }
-.rst-content a tt.xref,
-.rst-content a code.xref {
+/* slim font weight for non-link code */
+.rst-content tt:not(.xref),
+.rst-content code:not(.xref),
+.rst-content *:not(a) > tt.xref,
+.rst-content *:not(a) > code.xref {
+    font-weight: normal;
+}
+.rst-content a > tt.xref,
+.rst-content a > code.xref {
     text-decoration: underline;
 }
+
+
+/* Just one box for annotation code for a less noisy look */
 
 
 .rst-content .annotation {
@@ -44,9 +49,12 @@
 }
 
 
+/* Parameter lists */
+
+
+/* Mimick rubric style used for other headings */
+/* TODO: once scanpydoc adds classes, also change return types like this */
 .rst-content dl:not(.docutils) dl > dt {
-    /* mimick rubric style used for other headings */
-    /* TODO: once scanpydoc adds classes, also change return types */
     font-weight: bold;
     background: none transparent;
     border-left: none;
@@ -54,11 +62,7 @@
     padding: 3px 0 0;
     font-size: 111.11%;
 }
-.rst-content dl.field-list dl > dt {
-    /* parameter lists contain <strong> parts and don’t need bold font */
-    font-weight: unset;
-}
-.rst-content dl:not(.docutils) dl > dt .classifier::before {
-    /* Add colon between return tuple element name and type */
-    content: ' : ';
-}
+/* Parameters contain <strong> parts and don’t need bold font */
+.rst-content dl.field-list dl > dt { font-weight: unset }
+/* Add colon between return tuple element name and type */
+.rst-content dl:not(.docutils) dl > dt .classifier::before { content: ' : ' }
