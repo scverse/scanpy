@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Iterable, Collection
+import collections.abc as cabc
 from pathlib import Path
 from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
 
@@ -428,7 +428,7 @@ def paga(
 
     def is_flat(x):
         has_one_per_category = (
-            isinstance(x, Collection)
+            isinstance(x, cabc.Collection)
             and len(x) == len(adata.obs[groups_key].cat.categories)
         )
         return (
@@ -457,16 +457,16 @@ def paga(
         colorbars = [((c in adata.obs_keys() and adata.obs[c].dtype.name != 'category') or
                       (c in var_names)) for c in colors]
     else:
-        colorbars = [False for c in colors]
+        colorbars = [False for _ in colors]
 
     if isinstance(root, str):
-        if root in labels:
-            root = list(labels).index(root)
-        else:
+        if root not in labels:
             raise ValueError(
-                'If `root` is a string, it needs to be one of {} not \'{}\'.'
-                .format(labels, root))
-    if isinstance(root, list) and root[0] in labels:
+                'If `root` is a string, '
+                f'it needs to be one of {labels} not {root!r}.'
+            )
+        root = list(labels).index(root)
+    if isinstance(root, cabc.Sequence) and root[0] in labels:
         root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
@@ -806,7 +806,7 @@ def _paga_graph(
         text_kwds['path_effects'] = [patheffects.withStroke(linewidth=fontoutline,
                                                             foreground='w')]
     # usual scatter plot
-    if not isinstance(colors[0], dict):
+    if not isinstance(colors[0], cabc.Mapping):
         n_groups = len(pos_array)
         sct = ax.scatter(
             pos_array[:, 0], pos_array[:, 1],
@@ -844,9 +844,11 @@ def _paga_graph(
             pie_axs.append(pl.axes([xa, ya, pie_size * ax_len_x, pie_size * ax_len_y], frameon=False))
             pie_axs[count].set_xticks([])
             pie_axs[count].set_yticks([])
-            if not isinstance(colors[count], dict):
-                raise ValueError('{} is neither a dict of valid matplotlib colors '
-                                 'nor a valid matplotlib color.'.format(colors[count]))
+            if not isinstance(colors[count], cabc.Mapping):
+                raise ValueError(
+                    f'{colors[count]} is neither a dict of valid '
+                    'matplotlib colors nor a valid matplotlib color.'
+                )
             color_single = colors[count].keys()
             fracs = [colors[count][c] for c in color_single]
             if sum(fracs) < 1:

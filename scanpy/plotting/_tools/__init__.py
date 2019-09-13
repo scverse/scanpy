@@ -1,4 +1,4 @@
-from collections import abc
+import collections.abc as cabc
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
@@ -918,7 +918,7 @@ def embedding_density(
     if (
         group is not None
         and not isinstance(group, str)
-        and isinstance(group, abc.Sequence)
+        and isinstance(group, cabc.Sequence)
     ):
         if ax is not None:
             raise ValueError(

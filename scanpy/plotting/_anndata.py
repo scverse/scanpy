@@ -1,6 +1,6 @@
 """Plotting functions for AnnData.
 """
-from collections import abc
+import collections.abc as cabc
 from typing import Optional, Union
 from typing import Tuple, Sequence, Collection, Iterable
 
@@ -169,7 +169,7 @@ def _scatter_obs(
         or (isinstance(layers, str) and layers in adata.layers.keys())
     ):
         layers = (layers, layers, layers)
-    elif isinstance(layers, abc.Collection) and len(layers) == 3:
+    elif isinstance(layers, cabc.Collection) and len(layers) == 3:
         layers = tuple(layers)
         for layer in layers:
             if layer not in adata.layers.keys() and layer not in ['X', None]:
@@ -236,7 +236,7 @@ def _scatter_obs(
 
     palette_was_none = False
     if palette is None: palette_was_none = True
-    if isinstance(palette, abc.Sequence):
+    if isinstance(palette, cabc.Sequence):
         if not is_color_like(palette[0]):
             palettes = palette
         else:
@@ -2865,15 +2865,11 @@ def _check_var_names_type(var_names, var_group_labels, var_group_positions):
     var_names, var_group_labels, var_group_positions
 
     """
-
-    # Mapping is used to test if var_names is a dictionary or an OrderedDictionary
-    from collections import Mapping
-
-    if isinstance(var_names, Mapping):
+    if isinstance(var_names, cabc.Mapping):
         if var_group_labels is not None or var_group_positions is not None:
             logg.warning(
-                "`var_names` is a dictionary. This will reset the current value of "
-                "`var_group_labels` and `var_group_positions`."
+                "`var_names` is a dictionary. This will reset the current "
+                "value of `var_group_labels` and `var_group_positions`."
             )
         var_group_labels = []
         _var_names = []
