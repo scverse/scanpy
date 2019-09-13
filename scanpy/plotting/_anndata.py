@@ -18,11 +18,11 @@ from matplotlib import patheffects
 from matplotlib.colors import is_color_like, Colormap, ListedColormap
 
 from .. import get
-from .._settings import settings
 from .. import logging as logg
-from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes
+from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
+from . import _utils
+from ._utils import scatter_base, scatter_group, setup_axes, ColorLike
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -33,9 +33,6 @@ VALID_LEGENDLOCS = {
     'center left', 'center right',
     'lower center', 'upper center', 'center',
 }
-
-
-ColorLike = Union[str, Tuple[float, ...]]
 
 
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)

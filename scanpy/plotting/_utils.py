@@ -1,6 +1,6 @@
 import warnings
 import collections.abc as cabc
-from typing import Union, List, Sequence
+from typing import Union, List, Sequence, Tuple
 
 import numpy as np
 from matplotlib import pyplot as pl
@@ -10,13 +10,14 @@ from matplotlib.colors import is_color_like, ListedColormap
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 
-from scanpy.plotting._anndata import ColorLike
 from .. import logging as logg
 from .._settings import settings
 from . import palettes
 
 
 _tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
+
+ColorLike = Union[str, Tuple[float, ...]]
 
 
 # -------------------------------------------------------------------------------
