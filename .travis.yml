@@ -23,5 +23,7 @@ jobs:
   include:
     - stage: static analysis
       python: "3.7"
-      script: black . --diff
+      script:
+        - black . --diff
+        - python -m scanpy.tests.blackdiff 10
       after_success: skip
