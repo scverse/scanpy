@@ -265,11 +265,7 @@ def enrich(
                 f"Argument `{k}` should be passed directly through `enrich`, "
                 "not through `gprofiler_kwargs`"
             )
-    return gprofiler.profile(
-        list(container),
-        organism=org,
-        **gprofiler_kwargs,
-    )
+    return gprofiler.profile(list(container), organism=org, **gprofiler_kwargs)
 
 
 @enrich.register(AnnData)

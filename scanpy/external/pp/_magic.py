@@ -147,8 +147,9 @@ def magic(
         time=start,
         deep=(
             "added\n    'X_magic', PCA on MAGIC coordinates (adata.obsm)"
-            if name_list == "pca_only" else ''
-        )
+            if name_list == "pca_only"
+            else ''
+        ),
     )
     # update AnnData instance
     if name_list == "pca_only":

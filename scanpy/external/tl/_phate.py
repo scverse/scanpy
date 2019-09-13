@@ -17,7 +17,7 @@ def phate(
     a: int = 15,
     n_landmark: int = 2000,
     t: Union[int, str] = 'auto',
-    gamma: float = 1.,
+    gamma: float = 1.0,
     n_pca: int = 100,
     knn_dist: str = 'euclidean',
     mds_dist: str = 'euclidean',
@@ -130,7 +130,8 @@ def phate(
     except ImportError:
         raise ImportError(
             'You need to install the package `phate`: please run `pip install '
-            '--user phate` in a terminal.')
+            '--user phate` in a terminal.'
+        )
     X_phate = phate.PHATE(
         n_components=n_components,
         k=k,
@@ -152,9 +153,6 @@ def phate(
     logg.info(
         '    finished',
         time=start,
-        deep=(
-            'added\n'
-            "    'X_phate', PHATE coordinates (adata.obsm)"
-        ),
+        deep=('added\n' "    'X_phate', PHATE coordinates (adata.obsm)"),
     )
     return adata if copy else None

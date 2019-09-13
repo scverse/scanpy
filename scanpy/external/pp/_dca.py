@@ -12,7 +12,7 @@ def dca(
     log1p=True,
     # network args
     hidden_size=(64, 32, 64),
-    hidden_dropout=0.,
+    hidden_dropout=0.0,
     batchnorm=True,
     activation='relu',
     init='glorot_uniform',
@@ -138,7 +138,9 @@ def dca(
     try:
         from dca.api import dca
     except ImportError:
-        raise ImportError('Please install dca package (>= 0.2.1) via `pip install dca`')
+        raise ImportError(
+            'Please install dca package (>= 0.2.1) via `pip install dca`'
+        )
 
     return dca(
         adata,

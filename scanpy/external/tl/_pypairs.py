@@ -83,7 +83,7 @@ def cyclone(
     *,
     iterations: int = 1000,
     min_iter: int = 100,
-    min_pairs: int = 50
+    min_pairs: int = 50,
 ) -> pd.DataFrame:
     """\
     Assigns scores and predicted class to observations [Scialdone15]_ [Fechtner18]_.

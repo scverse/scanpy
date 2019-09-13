@@ -16,7 +16,9 @@ required = ['dask', 'zappy', 'zarr']
 installed = {mod: bool(find_spec(mod)) for mod in required}
 
 
-@pytest.mark.skipif(not all(installed.values()), reason=f'{required} all required: {installed}')
+@pytest.mark.skipif(
+    not all(installed.values()), reason=f'{required} all required: {installed}'
+)
 class TestPreprocessingDistributed:
     @pytest.fixture()
     def adata(self):

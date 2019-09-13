@@ -15,7 +15,7 @@ def mnn_correct(
     index_unique: str = '-',
     batch_categories: Optional[Collection[Any]] = None,
     k: int = 20,
-    sigma: float = 1.,
+    sigma: float = 1.0,
     cos_norm_in: bool = True,
     cos_norm_out: bool = True,
     svd_dim: Optional[int] = None,
@@ -121,6 +121,7 @@ def mnn_correct(
     """
     try:
         from mnnpy import mnn_correct
+
         n_jobs = settings.n_jobs if n_jobs is None else n_jobs
         datas, mnn_list, angle_list = mnn_correct(
             *datas,

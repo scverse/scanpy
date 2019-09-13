@@ -22,7 +22,7 @@ def bbknn(
     trim: Optional[int] = None,
     n_trees: int = 10,
     use_faiss: bool = True,
-    set_op_mix_ratio: float = 1.,
+    set_op_mix_ratio: float = 1.0,
     local_connectivity: int = 1,
     **kwargs,
 ) -> AnnData:

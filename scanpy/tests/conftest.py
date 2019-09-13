@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import matplotlib as mpl
+
 mpl.use('agg')
 from matplotlib import pyplot
 from matplotlib.testing.compare import compare_images
@@ -28,8 +29,11 @@ def make_comparer(path_expected: Path, path_actual: Path, *, tol: int):
         pyplot.close()
         if tolerance is None:
             tolerance = tol
-        res = compare_images(str(path_expected / f'{basename}.png'), str(out_path), tolerance)
+        res = compare_images(
+            str(path_expected / f'{basename}.png'), str(out_path), tolerance
+        )
         assert res is None, res
+
     return save_and_compare
 
 

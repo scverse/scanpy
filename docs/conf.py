@@ -5,12 +5,14 @@ from pathlib import Path
 from datetime import datetime
 
 import matplotlib  # noqa
+
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use('agg')
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent))
 import scanpy  # noqa
+
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning)
     import scanpy.api
@@ -83,7 +85,10 @@ intersphinx_mapping = dict(
     scvelo=('https://scvelo.readthedocs.io/en/stable/', None),
     seaborn=('https://seaborn.pydata.org/', None),
     sklearn=('https://scikit-learn.org/stable/', None),
-    scanpy_tutorials=('https://scanpy-tutorials.readthedocs.io/en/latest', None),
+    scanpy_tutorials=(
+        'https://scanpy-tutorials.readthedocs.io/en/latest',
+        None,
+    ),
 )
 
 
@@ -92,20 +97,21 @@ intersphinx_mapping = dict(
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = dict(
-    navigation_depth=4,
-    logo_only=True,           # Only show the logo
+    navigation_depth=4, logo_only=True  # Only show the logo
 )
 html_context = dict(
-    display_github=True,      # Integrate GitHub
-    github_user='theislab',   # Username
-    github_repo='scanpy',     # Repo name
+    display_github=True,  # Integrate GitHub
+    github_user='theislab',  # Username
+    github_repo='scanpy',  # Repo name
     github_version='master',  # Version
-    conf_py_path='/docs/',    # Path in the checkout to the docs root
+    conf_py_path='/docs/',  # Path in the checkout to the docs root
 )
 html_static_path = ['_static']
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_RGB.png'
-gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(html_context)
+gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(
+    html_context
+)
 
 
 def setup(app):
@@ -115,19 +121,24 @@ def setup(app):
     app.connect('build-finished', show_param_warnings)
     app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
 
+
 # -- Options for other output formats ------------------------------------------
 
 
 htmlhelp_basename = f'{project}doc'
 doc_title = f'{project} Documentation'
-latex_documents = [
-    (master_doc, f'{project}.tex', doc_title, author, 'manual'),
-]
-man_pages = [
-    (master_doc, project, doc_title, [author], 1)
-]
+latex_documents = [(master_doc, f'{project}.tex', doc_title, author, 'manual')]
+man_pages = [(master_doc, project, doc_title, [author], 1)]
 texinfo_documents = [
-    (master_doc, project, doc_title, author, project, 'One line description of project.', 'Miscellaneous'),
+    (
+        master_doc,
+        project,
+        doc_title,
+        author,
+        project,
+        'One line description of project.',
+        'Miscellaneous',
+    )
 ]
 
 
@@ -136,8 +147,14 @@ texinfo_documents = [
 
 def insert_function_images(app, what, name, obj, options, lines):
     path = Path(__file__).parent / 'api' / f'{name}.png'
-    if what != 'function' or not path.is_file(): return
-    lines[0:0] = [f'.. image:: {path.name}', '   :width: 200', '   :align: right', '']
+    if what != 'function' or not path.is_file():
+        return
+    lines[0:0] = [
+        f'.. image:: {path.name}',
+        '   :width: 200',
+        '   :align: right',
+        '',
+    ]
 
 
 # -- GitHub links --------------------------------------------------------------
@@ -145,11 +162,13 @@ def insert_function_images(app, what, name, obj, options, lines):
 
 def autolink(url_template, title_template='{}'):
     from docutils import nodes
+
     def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         url = url_template.format(text)
         title = title_template.format(text)
         node = nodes.reference(rawtext, title, refuri=url, **options)
         return [node], []
+
     return role
 
 
@@ -171,7 +190,9 @@ def process_return(lines):
 
 
 def scanpy_parse_returns_section(self, section):
-    lines_raw = list(process_return(self._dedent(self._consume_to_next_section())))
+    lines_raw = list(
+        process_return(self._dedent(self._consume_to_next_section()))
+    )
     lines = self._format_block(':returns: ', lines_raw)
     if lines and lines[-1]:
         lines.append('')
@@ -190,15 +211,20 @@ param_warnings = {}
 
 def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
     for _name, _type, _desc in fields:
-        if not _type: continue
+        if not _type:
+            continue
         set_item = r"`'[a-z0-9_.-]+'`"
-        if re.fullmatch(rf"{{{set_item}(, {set_item})*}}", _type): continue
-        param_warnings.setdefault((self._name, self._obj), []).append((_name, _type))
+        if re.fullmatch(rf"{{{set_item}(, {set_item})*}}", _type):
+            continue
+        param_warnings.setdefault((self._name, self._obj), []).append(
+            (_name, _type)
+        )
     return _format_docutils_params_orig(self, fields, field_role, type_role)
 
 
 def show_param_warnings(app, exception):
     import inspect
+
     for (fname, fun), params in param_warnings.items():
         _, line = inspect.getsourcelines(fun)
         file_name = inspect.getsourcefile(fun)
@@ -207,7 +233,9 @@ def show_param_warnings(app, exception):
             f'\nParameters in `{fname}` not set-like: {{`elm-1`, `s_el.2`}}.\n'
             'Convert to this format or replace with type annotations:\n'
             + params_str,
-            UserWarning, file_name, line,
+            UserWarning,
+            file_name,
+            line,
         )
 
 
@@ -220,19 +248,23 @@ NumpyDocstring._format_docutils_params = scanpy_log_param_types
 # Just do the following to see the rst of a function:
 # rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
 import os
+
 if os.environ.get('DEBUG') is not None:
     import sphinx.ext.napoleon
+
     pd = sphinx.ext.napoleon._process_docstring
+
     def pd_new(app, what, name, obj, options, lines):
         pd(app, what, name, obj, options, lines)
         print(*lines, sep='\n')
+
     sphinx.ext.napoleon._process_docstring = pd_new
 
 
 # -- Suppress link warnings ----------------------------------------------------
 
 qualname_overrides = {
-    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
+    "sklearn.neighbors.dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric"
 }
 
 nitpick_ignore = [
@@ -243,8 +275,13 @@ nitpick_ignore = [
 ]
 
 for mod_name in [
-    'pp', 'tl', 'pl',
-    'queries', 'logging', 'datasets', 'export_to',
+    'pp',
+    'tl',
+    'pl',
+    'queries',
+    'logging',
+    'datasets',
+    'export_to',
     None,
 ]:
     if mod_name is None:
