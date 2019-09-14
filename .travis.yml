@@ -24,6 +24,6 @@ jobs:
     - stage: static analysis
       python: "3.7"
       script:
-        - black . --diff
+        - black . --check --diff
         - python -m scanpy.tests.blackdiff 10
       after_success: skip

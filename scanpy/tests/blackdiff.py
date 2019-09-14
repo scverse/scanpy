@@ -37,7 +37,8 @@ if __name__ == '__main__':
     exclude_re = re.compile(ppt['tool']['black']['exclude'], re.VERBOSE)
 
     excluded = [
-        black_diff(src) for src in Path().glob('**/*.py')
+        black_diff(src)
+        for src in Path().glob('**/*.py')
         if exclude_re.match(str(Path('/') / src))
     ]
     for diff in sorted(excluded, key=lambda d: -(d.added + d.removed)):
