@@ -6,11 +6,12 @@ import pandas as pd
 from anndata import AnnData
 
 from .. import logging as logg
-from ._distributed import materialize_as_ndarray
-from ._utils import _get_mean_var
-from .._utils import sanitize_anndata
-from ._simple import filter_genes
 from .._settings import settings, Verbosity
+from .._utils import sanitize_anndata
+from ._utils import _get_mean_var
+from ._distributed import materialize_as_ndarray
+from ._simple import filter_genes
+
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
@@ -22,7 +23,8 @@ def _highly_variable_genes_single_batch(
     n_bins=20,
     flavor='seurat',
 ) -> pd.DataFrame:
-    """Internal function for annotating highly variable genes [Satija15]_ [Zheng17]_.
+    """\
+    Internal function for annotating highly variable genes [Satija15]_ [Zheng17]_.
 
     Expects logarithmized data.
 
@@ -69,8 +71,9 @@ def _highly_variable_genes_single_batch(
         A DataFrame that contains colums highly_variable, means, dispersions and dispersions_norm.
     """
 
-    if n_top_genes is not None and not all([
-            min_disp is None, max_disp is None, min_mean is None, max_mean is None]):
+    if n_top_genes is not None and not all(m is None for m in [
+        min_disp, max_disp, min_mean, max_mean
+    ]):
         logg.info('If you pass `n_top_genes`, all cutoffs are ignored.')
 
     if min_disp is None: min_disp = 0.5
@@ -140,6 +143,9 @@ def _highly_variable_genes_single_batch(
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
+        if n_top_genes > adata.n_vars:
+            logg.info(f'`n_top_genes` > `adata.n_var`, returning all genes.')
+            n_top_genes = adata.n_vars
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
         logg.debug(
