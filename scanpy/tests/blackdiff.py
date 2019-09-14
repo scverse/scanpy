@@ -1,11 +1,12 @@
 import re
 import sys
-from datetime import datetime
+from collections import Counter
+from difflib import Differ
 from pathlib import Path
+from typing import Tuple
 
 import black
 import toml
-from unidiff import PatchSet, PatchedFile
 
 mode = black.FileMode(
     target_versions={black.TargetVersion.PY36},
@@ -15,20 +16,19 @@ mode = black.FileMode(
 )
 
 
-def black_diff(src: Path) -> PatchedFile:
+def black_diff(src: Path, differ=Differ()) -> Tuple[int, int]:
     src_contents = src.read_text()
-    then = datetime.utcfromtimestamp(src.stat().st_mtime)
-    now = datetime.utcnow()
-    src_name = f"{src}\t{then} +0000"
-    dst_name = f"{src}\t{now} +0000"
-    try:
-        dst_contents = black.format_file_contents(
-            src_contents, fast=True, mode=mode
+    dst_contents = black.format_str(src_contents, mode=mode)
+    if src_contents == dst_contents:
+        return 0, 0
+
+    counts = Counter(
+        line[0]
+        for line in differ.compare(
+            src_contents.splitlines(), dst_contents.splitlines()
         )
-        diff_str = black.diff(src_contents, dst_contents, src_name, dst_name)
-        return PatchSet(diff_str.split('\n'))[0]
-    except black.NothingChanged:
-        return PatchedFile(src)
+    )
+    return counts['+'], counts['-']
 
 
 if __name__ == '__main__':
@@ -37,13 +37,14 @@ if __name__ == '__main__':
     exclude_re = re.compile(ppt['tool']['black']['exclude'], re.VERBOSE)
 
     excluded = [
-        black_diff(src)
+        (src, black_diff(src))
         for src in Path().glob('**/*.py')
         if exclude_re.match(str(Path('/') / src))
+        and not src.parts[0] == 'build'
     ]
-    for diff in sorted(excluded, key=lambda d: -(d.added + d.removed)):
-        print(f'{diff.source_file}: +{diff.added} -{diff.removed}')
-        if diff.added + diff.removed < thresh:
+    for file, (added, removed) in sorted(excluded, key=lambda sd: -sum(sd[1])):
+        print(f'{file}: +{added} -{removed}')
+        if added + removed < thresh:
             print('File has < 10 changes to black formatting. Do it!')
             sys.exit(1)
     sys.exit(0)
