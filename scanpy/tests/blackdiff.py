@@ -23,7 +23,7 @@ def black_diff(src: Path) -> PatchedFile:
     dst_name = f"{src}\t{now} +0000"
     try:
         dst_contents = black.format_file_contents(
-            src_contents, fast=False, mode=mode
+            src_contents, fast=True, mode=mode
         )
         diff_str = black.diff(src_contents, dst_contents, src_name, dst_name)
         return PatchSet(diff_str.split('\n'))[0]
