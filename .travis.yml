@@ -1,10 +1,13 @@
 dist: xenial
 language: python
+stages:
+    - name: static analysis
+    - name: test
 python:
   - '3.6'
   - '3.7'
   #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
-cache: 
+cache:
   - pip
   - directories: data
 install:
@@ -16,3 +19,11 @@ script:
   - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null
+jobs:
+  include:
+    - stage: static analysis
+      python: "3.7"
+      script:
+        - black . --check --diff
+        - python -m scanpy.tests.blackdiff 10
+      after_success: skip

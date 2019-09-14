@@ -37,10 +37,10 @@ def diffmap(adata, n_comps=15, copy=False):
     """
     if 'neighbors' not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
+            'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+        )
     if n_comps <= 2:
-        raise ValueError(
-            'Provide any value greater than 2 for `n_comps`. ')
+        raise ValueError('Provide any value greater than 2 for `n_comps`. ')
     adata = adata.copy() if copy else adata
     _diffmap(adata, n_comps=n_comps)
     return adata if copy else None

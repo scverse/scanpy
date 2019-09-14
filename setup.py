@@ -1,4 +1,5 @@
 import sys
+
 if sys.version_info < (3, 6):
     sys.exit('scanpy requires Python >= 3.6')
 from pathlib import Path
@@ -23,20 +24,23 @@ setup(
     license='BSD',
     python_requires='>=3.6',
     install_requires=[
-        l.strip() for l in
-        Path('requirements.txt').read_text('utf-8').splitlines()
+        l.strip()
+        for l in Path('requirements.txt').read_text('utf-8').splitlines()
     ],
     extras_require=dict(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
-        doc=['sphinx', 'sphinx_rtd_theme', 'sphinx_autodoc_typehints', 'scanpydoc'],
-        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr'],
+        doc=[
+            'sphinx',
+            'sphinx_rtd_theme',
+            'sphinx_autodoc_typehints',
+            'scanpydoc',
+        ],
+        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr', 'black'],
     ),
     packages=find_packages(),
-    entry_points=dict(
-        console_scripts=['scanpy=scanpy.cli:console_main'],
-    ),
+    entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
     zip_safe=False,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
