@@ -143,9 +143,9 @@ def _highly_variable_genes_single_batch(
     if n_top_genes is not None:
         dispersion_norm = dispersion_norm[~np.isnan(dispersion_norm)]
         dispersion_norm[::-1].sort()  # interestingly, np.argpartition is slightly slower
-        if n_top_genes > adata.n_var:
+        if n_top_genes > adata.n_vars:
             logg.info(f'`n_top_genes` > `adata.n_var`, returning all genes.')
-            n_top_genes = adata.n_var
+            n_top_genes = adata.n_vars
         disp_cut_off = dispersion_norm[n_top_genes-1]
         gene_subset = np.nan_to_num(df['dispersions_norm'].values) >= disp_cut_off
         logg.debug(
