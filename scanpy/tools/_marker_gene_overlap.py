@@ -1,12 +1,14 @@
 """Calculate overlaps of rank_genes_groups marker genes with marker gene dictionaries
 """
+import collections.abc as cabc
+from typing import Union, Optional, Dict
+
 import numpy as np
 import pandas as pd
-
-from typing import Union, Optional, Dict
 from anndata import AnnData
 
 from .. import logging as logg
+
 
 def _calc_overlap_count(
     markers1: dict,
@@ -170,7 +172,7 @@ def marker_gene_overlap(
     if normalize is not None and method != 'overlap_count':
         raise ValueError('Can only normalize with method=`overlap_count`.')
 
-    if not np.all([isinstance(val, set) for val in reference_markers.values()]):
+    if not all(isinstance(val, cabc.Set) for val in reference_markers.values()):
         try:
             reference_markers = {key:set(val) for key,val
                                  in reference_markers.items()}

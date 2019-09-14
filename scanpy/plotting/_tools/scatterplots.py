@@ -1,4 +1,4 @@
-from collections import abc
+import collections.abc as cabc
 from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
@@ -130,7 +130,13 @@ def embedding(
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
-    if (isinstance(color, abc.Sequence) and len(color) > 1) or len(components_list) > 1:
+    if (
+        (
+            not isinstance(color, str)
+            and isinstance(color, cabc.Sequence)
+            and len(color) > 1
+        ) or len(components_list) > 1
+    ):
         if ax is not None:
             raise ValueError(
                 "Cannot specify `ax` when plotting multiple panels "
@@ -151,9 +157,9 @@ def embedding(
             ax = fig.add_subplot(111, **args_3d)
 
     # turn vmax and vmin into a sequence
-    if not isinstance(vmax, abc.Sequence):
+    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
         vmax = [vmax]
-    if not isinstance(vmin, abc.Sequence):
+    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
 
     if 's' not in kwargs:
@@ -192,7 +198,7 @@ def embedding(
                 's' in kwargs
                 and kwargs['s'] is not None
                 and isinstance(kwargs['s'], (
-                    abc.Sequence,
+                    cabc.Sequence,
                     pandas.core.series.Series,
                     np.ndarray,
                 ))
@@ -661,7 +667,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
             # eg: components='1,2'
             components_list.append(tuple(int(x.strip()) - 1 + offset for x in components.split(',')))
 
-        elif isinstance(components, abc.Sequence):
+        elif isinstance(components, cabc.Sequence):
             if isinstance(components[0], int):
                 # components=[1,2]
                 components_list.append(tuple(int(x) - 1 + offset for x in components))
@@ -786,7 +792,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
     else:
         # check if palette is a list and convert it to a cycler, thus
         # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, abc.Sequence):
+        if isinstance(palette, cabc.Sequence):
             if len(palette) < len(categories):
                 logg.warning(
                     "Length of palette colors is smaller than the number of "

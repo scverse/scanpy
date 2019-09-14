@@ -1,12 +1,12 @@
 import warnings
-from collections import abc
-from typing import Union, List
+import collections.abc as cabc
+from typing import Union, List, Sequence, Tuple
 
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like
+from matplotlib.colors import is_color_like, ListedColormap
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 
@@ -16,6 +16,8 @@ from . import palettes
 
 
 _tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
+
+ColorLike = Union[str, Tuple[float, ...]]
 
 
 # -------------------------------------------------------------------------------
@@ -71,7 +73,7 @@ def timeseries_subplot(X,
     """
 
     if color is not None:
-        use_color_map = isinstance(color[0], float) or isinstance(color[0], np.float32)
+        use_color_map = isinstance(color[0], (float, np.floating))
     palette = default_palette(palette)
     x_range = np.arange(X.shape[0]) if time is None else time
     if X.ndim == 1: X = X[:, None]
@@ -260,12 +262,16 @@ def default_palette(palette=None):
     else: return palette
 
 
-def adjust_palette(palette, length):
-    islist = False
-    if isinstance(palette, list):
-        islist = True
-    if ((islist and len(palette) < length)
-       or (not isinstance(palette, list) and len(palette.by_key()['color']) < length)):
+def adjust_palette(palette: Union[Cycler, ListedColormap, Sequence[ColorLike]], length: int):
+    if isinstance(palette, cabc.Sequence):
+        length_pal = len(palette)
+    elif isinstance(palette, Cycler):
+        length_pal = len(palette.by_key()['color'])
+    elif isinstance(palette, ListedColormap):
+        length_pal = len(palette.colors)
+    else:
+        raise ValueError(f'Unknown palette type {type(palette)}')
+    if length_pal < length:
         if length <= 28:
             palette = palettes.default_26
         elif length <= len(palettes.default_64):  # 103 colors
@@ -273,13 +279,10 @@ def adjust_palette(palette, length):
         else:
             palette = ['grey' for i in range(length)]
             logg.info("more than 103 colors would be required, initializing as 'grey'")
-        return palette if islist else cycler(color=palette)
-    elif islist:
+    if isinstance(palette, (Cycler, ListedColormap, cabc.Sequence)):
         return palette
-    elif not isinstance(palette, Cycler):
-        return cycler(color=palette)
     else:
-        return palette
+        return cycler(color=palette)
 
 
 def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force_update_colors=False):
@@ -318,7 +321,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None, force
 def plot_edges(axs, adata, basis, edges_width, edges_color):
     import networkx as nx
 
-    if not isinstance(axs, list): axs = [axs]
+    if not isinstance(axs, cabc.Sequence): axs = [axs]
     if 'neighbors' not in adata.uns:
         raise ValueError('`edges=True` requires `pp.neighbors` to be run before.')
     g = nx.Graph(adata.uns['neighbors']['connectivities'])
@@ -333,7 +336,7 @@ def plot_edges(axs, adata, basis, edges_width, edges_color):
 
 
 def plot_arrows(axs, adata, basis, arrows_kwds=None):
-    if not isinstance(axs, list): axs = [axs]
+    if not isinstance(axs, cabc.Sequence): axs = [axs]
     v_prefix = next((
         p for p in ['velocity', 'Delta']
         if f'{p}_{basis}' in adata.obsm
@@ -385,7 +388,7 @@ def scatter_group(ax, key, imask, adata, Y, projection='2d', size=3, alpha=None)
 
 
 def setup_axes(
-    ax=None,
+    ax: Union[Axes, Sequence[Axes]] = None,
     panels='blue',
     colorbars=(False,),
     right_margin=None,
@@ -452,7 +455,7 @@ def setup_axes(
             elif projection == '3d': ax = pl.axes([left, bottom, width, height], projection='3d')
             axs.append(ax)
     else:
-        axs = ax if isinstance(ax, list) else [ax]
+        axs = ax if isinstance(ax, cabc.Sequence) else [ax]
 
     return axs, panel_pos, draw_region_width, figure_width
 
@@ -489,7 +492,7 @@ def scatter_base(
     Depending on whether supplying a single array or a list of arrays,
     return a single axis or a list of axes.
     """
-    if isinstance(highlights, abc.Mapping):
+    if isinstance(highlights, cabc.Mapping):
         highlights_indices = sorted(highlights)
         highlights_labels = [highlights[i] for i in highlights_indices]
     else:

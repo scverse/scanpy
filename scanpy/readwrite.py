@@ -1,6 +1,5 @@
 """Reading and Writing
 """
-
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
@@ -440,27 +439,9 @@ def write_params(path: Union[Path, str], *args, **maps):
     with path.open('w') as f:
         for header, map in maps.items():
             if header is not None:
-                f.write('[{}]\n'.format(header))
+                f.write(f'[{header}]\n')
             for key, val in map.items():
-                f.write('{} = {}\n'.format(key, val))
-
-
-def get_params_from_list(params_list):
-    """Transform params list to dictionary.
-    """
-    params = {}
-    key = None
-    for param in params_list:
-        if '=' not in param:
-            if key is None or key not in params:
-                raise ValueError('Pass parameters like `key1=a key2=b c d key3=...`.')
-            if not isinstance(params[key], list):
-                params[key] = [params[key]]
-            params[key] += [param]
-        else:
-            key, val = param.split('=')
-            params[key] = convert_string(val)
-    return params
+                f.write(f'{key} = {val}\n')
 
 
 # -------------------------------------------------------------------------------

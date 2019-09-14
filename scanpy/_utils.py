@@ -126,11 +126,11 @@ def descend_classes_and_funcs(mod: ModuleType, root: str, encountered=None):
     for obj in vars(mod).values():
         if not _one_of_ours(obj, root):
             continue
-        if isinstance(obj, Callable) and not isinstance(obj, MethodType):
+        if callable(obj) and not isinstance(obj, MethodType):
             yield obj
             if isinstance(obj, type):
                 for m in vars(obj).values():
-                    if isinstance(m, Callable) and _one_of_ours(m, root):
+                    if callable(m) and _one_of_ours(m, root):
                         yield m
         elif isinstance(obj, ModuleType) and obj not in encountered:
             encountered.add(obj)

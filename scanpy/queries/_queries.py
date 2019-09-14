@@ -1,10 +1,10 @@
+import collections.abc as cabc
 from copy import copy
 from functools import singledispatch
-from collections import abc
 from typing import Any, Union, Optional, Iterable, Dict, Mapping
 
-from anndata import AnnData
 import pandas as pd
+from anndata import AnnData
 
 from ..get import rank_genes_groups_df
 from .._utils import _doc_params
@@ -53,7 +53,7 @@ def simple_query(
     """
     if isinstance(attrs, str):
         attrs = [attrs]
-    elif isinstance(attrs, abc.Iterable):
+    elif isinstance(attrs, cabc.Iterable):
         attrs = list(attrs)
     else:
         raise TypeError(
