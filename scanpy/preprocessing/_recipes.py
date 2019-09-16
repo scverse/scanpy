@@ -60,7 +60,7 @@ def recipe_seurat(adata, log=True, plot=False, copy=False):
     if copy: adata = adata.copy()
     pp.filter_cells(adata, min_genes=200)
     pp.filter_genes(adata, min_cells=3)
-    pp.normalize_per_cell(adata, counts_per_cell_after=1e4)
+    normalize_total(adata, target_sum=1e4)
     filter_result = filter_genes_dispersion(
         adata.X, min_mean=0.0125, max_mean=3, min_disp=0.5, log=not log)
     if plot:
