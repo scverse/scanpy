@@ -187,8 +187,6 @@ Read other formats using functions borrowed from :mod:`anndata`
    read_umi_tools
 
 
-.. _module-get:
-
 Get object from `AnnData`: `get`
 --------------------------------
 
@@ -208,6 +206,11 @@ useful formats.
 
 Queries
 -------
+
+.. module:: scanpy.queries
+.. currentmodule:: scanpy
+
+This module provides useful queries for annotation and enrichment.
 
 .. autosummary::
    :toctree: .
