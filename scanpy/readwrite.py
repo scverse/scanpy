@@ -44,6 +44,7 @@ def read(
     first_column_names: bool = False,
     backup_url: Optional[str] = None,
     cache: bool = False,
+    cache_compression: Optional[str] = None,
     **kwargs,
 ) -> AnnData:
     """\
@@ -80,6 +81,8 @@ def read(
         Retrieve the file from an URL if not present on disk.
     cache
         If ``False``, read from source, if ``True``, read from fast 'h5ad' cache.
+    cache_compression : {`'gzip'`, `'lzf'`, `None`}
+        See the h5py :ref:`dataset_compression`.
     kwargs
         Parameters passed to :func:`~anndata.read_loom`.
 
@@ -90,9 +93,16 @@ def read(
     filename = Path(filename)  # allow passing strings
     if is_valid_filename(filename):
         return _read(
-            filename, backed=backed, sheet=sheet, ext=ext,
-            delimiter=delimiter, first_column_names=first_column_names,
-            backup_url=backup_url, cache=cache, **kwargs,
+            filename,
+            backed=backed,
+            sheet=sheet,
+            ext=ext,
+            delimiter=delimiter,
+            first_column_names=first_column_names,
+            backup_url=backup_url,
+            cache=cache,
+            cache_compression=cache_compression,
+            **kwargs,
         )
     # generate filename and read to dict
     filekey = str(filename)
@@ -458,6 +468,7 @@ def _read(
     first_column_names=None,
     backup_url=None,
     cache=False,
+    cache_compression=None,
     suppress_cache_warning=False,
     **kwargs,
 ):
@@ -530,7 +541,7 @@ def _read(
             if not path_cache.parent.is_dir():
                 path_cache.parent.mkdir(parents=True)
             # write for faster reading when calling the next time
-            adata.write(path_cache)
+            adata.write(path_cache, compression=cache_compression)
     return adata
 
 
