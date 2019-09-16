@@ -70,8 +70,7 @@ def describe_obs(
     X
         Matrix to calculate values on. Meant for internal usage.
     parallel
-        Whether values are calculated in parallel. If `None`, heuristic based
-        on numba compilation time is used.
+        Deprecated argument, doesn't do anything.
 
     Returns
     -------
@@ -99,7 +98,7 @@ def describe_obs(
     obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
-        proportions = top_segment_proportions(X, percent_top, parallel)
+        proportions = top_segment_proportions(X, percent_top)
         for i, n in enumerate(percent_top):
             obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
                 proportions[:, i] * 100
@@ -111,10 +110,10 @@ def describe_obs(
         obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
             obs_metrics[f"total_{expr_type}_{qc_var}"]
         )
-        # "total_{expr_type}" not formatted yet
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
-            obs_metrics[f"total_{expr_type}_{qc_var}"] /
-            obs_metrics[f"total_{expr_type}"] * 100
+            obs_metrics[f"total_{expr_type}_{qc_var}"]
+            / obs_metrics[f"total_{expr_type}"]
+            * 100
         )
     if inplace:
         adata.obs[obs_metrics.columns] = obs_metrics
@@ -177,8 +176,9 @@ def describe_var(
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
     var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
-    var_metrics["pct_dropout_by_{expr_type}"] = \
-        (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
+    var_metrics["pct_dropout_by_{expr_type}"] = (
+        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
+    ) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
     var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
     # Relabel
@@ -228,8 +228,7 @@ def calculate_qc_metrics(
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
     parallel
-        Whether to force parallelism. Otherwise usage of paralleism is based on
-        compilation time and sample size heuristics.
+        Deprecated argument, doesn't do anything.
 
     Returns
     -------
@@ -268,7 +267,6 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
-        parallel=parallel,
     )
     var_metrics = describe_var(
         adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
@@ -329,7 +327,7 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(mtx, ns, parallel=None):
+def top_segment_proportions(mtx, ns):
     """
     Calculates total percentage of counts in top ns genes.
 
@@ -349,7 +347,7 @@ def top_segment_proportions(mtx, ns, parallel=None):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int), parallel
+            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
         )
     else:
         return top_segment_proportions_dense(mtx, ns)
@@ -359,9 +357,7 @@ def top_segment_proportions_dense(mtx, ns):
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][
-        :, : ns[-1]
-    ]
+    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
     values = np.zeros((mtx.shape[0], len(ns)))
     acc = np.zeros((mtx.shape[0]))
     prev = 0
@@ -372,15 +368,8 @@ def top_segment_proportions_dense(mtx, ns):
     return values / sums[:, None]
 
 
-def top_segment_proportions_sparse_csr(data, indptr, ns, parallel: bool = None):
-    # Rough estimate for when compilation + paralleziation is faster than single-threaded
-    if (indptr.size > 300_000) or (parallel == True):
-        return _top_segment_proportions_sparse_csr_parallel(data, indptr, ns)
-    else:
-        return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
-
-
-def _top_segment_proportions_sparse_csr(data, indptr, ns):
+@numba.njit(cache=True, parallel=True)
+def top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -403,12 +392,3 @@ def _top_segment_proportions_sparse_csr(data, indptr, ns):
         values[:, j] = acc
         prev = n
     return values / sums.reshape((indptr.size - 1, 1))
-
-
-_top_segment_proportions_sparse_csr_cached = numba.njit(cache=True)(
-    _top_segment_proportions_sparse_csr
-)
-
-_top_segment_proportions_sparse_csr_parallel = numba.njit(parallel=True)(
-    _top_segment_proportions_sparse_csr
-)
