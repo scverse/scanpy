@@ -20,6 +20,11 @@
     * `Fabian Theis <https://twitter.com/fabian_theis>`__ & lab: enabling guidance, support and environment
 
 
+On master
+---------
+
+- :mod:`scanpy.queries` recieved many updates. This includes enrichment through `gprofiler <https://biit.cs.ut.ee/gprofiler/>`_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
+
 Post v1.4 :small:`July 20, 2019`
 --------------------------------
 
