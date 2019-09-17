@@ -1,5 +1,6 @@
 """Reading and Writing
 """
+from enum import Enum
 from pathlib import Path, PurePath
 from typing import Union, Dict, Optional, Tuple, BinaryIO
 
@@ -30,6 +31,12 @@ avail_exts = {
 """Available file formats for reading data. """
 
 
+class Empty(Enum):
+    token = 0
+
+_empty = Empty.token
+
+
 # --------------------------------------------------------------------------------
 # Reading and Writing data files and AnnData objects
 # --------------------------------------------------------------------------------
@@ -44,7 +51,7 @@ def read(
     first_column_names: bool = False,
     backup_url: Optional[str] = None,
     cache: bool = False,
-    cache_compression: Optional[str] = None,
+    cache_compression: Union[str, None, Empty] = _empty,
     **kwargs,
 ) -> AnnData:
     """\
@@ -80,9 +87,10 @@ def read(
     backup_url
         Retrieve the file from an URL if not present on disk.
     cache
-        If ``False``, read from source, if ``True``, read from fast 'h5ad' cache.
+        If `False`, read from source, if `True`, read from fast 'h5ad' cache.
     cache_compression : {`'gzip'`, `'lzf'`, `None`}
         See the h5py :ref:`dataset_compression`.
+        (Default: `settings.cache_compression`)
     kwargs
         Parameters passed to :func:`~anndata.read_loom`.
 
@@ -255,6 +263,7 @@ def read_10x_mtx(
     var_names: str = 'gene_symbols',
     make_unique: bool = True,
     cache: bool = False,
+    cache_compression: Union[str, None, Empty] = _empty,
     gex_only: bool = True,
 ) -> AnnData:
     """\
@@ -272,6 +281,9 @@ def read_10x_mtx(
         '-2' etc. or not.
     cache
         If `False`, read from source, if `True`, read from fast 'h5ad' cache.
+    cache_compression : {`'gzip'`, `'lzf'`, `None`}
+        See the h5py :ref:`dataset_compression`.
+        (Default: `settings.cache_compression`)
     gex_only
         Only keep 'Gene Expression' data and ignore other feature types,
         e.g. 'Antibody Capture', 'CRISPR Guide Capture', or 'Custom'
@@ -288,6 +300,7 @@ def read_10x_mtx(
         var_names=var_names,
         make_unique=make_unique,
         cache=cache,
+        cache_compression=cache_compression,
     )
     if genefile_exists or not gex_only:
         return adata
@@ -296,12 +309,22 @@ def read_10x_mtx(
         return adata[:, gex_rows]
 
 
-def _read_legacy_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+def _read_legacy_10x_mtx(
+    path,
+    var_names='gene_symbols',
+    make_unique=True,
+    cache=False,
+    cache_compression=_empty,
+):
     """
     Read mex from output from Cell Ranger v2 or earlier versions
     """
     path = Path(path)
-    adata = read(path / 'matrix.mtx', cache=cache).T  # transpose the data
+    adata = read(
+        path / 'matrix.mtx',
+        cache=cache,
+        cache_compression=cache_compression,
+    ).T  # transpose the data
     genes = pd.read_csv(path / 'genes.tsv', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1]
@@ -318,12 +341,22 @@ def _read_legacy_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache
     return adata
 
 
-def _read_v3_10x_mtx(path, var_names='gene_symbols', make_unique=True, cache=False):
+def _read_v3_10x_mtx(
+    path,
+    var_names='gene_symbols',
+    make_unique=True,
+    cache=False,
+    cache_compression=_empty,
+):
     """
     Read mex from output from Cell Ranger v3 or later versions
     """
     path = Path(path)
-    adata = read(path / 'matrix.mtx.gz', cache=cache).T  # transpose the data
+    adata = read(
+        path / 'matrix.mtx.gz',
+        cache=cache,
+        cache_compression=cache_compression
+    ).T  # transpose the data
     genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
     if var_names == 'gene_symbols':
         var_names = genes[1]
@@ -497,51 +530,53 @@ def _read(
         path_cache = path_cache.with_suffix('')
     if cache and path_cache.is_file():
         logg.info(f'... reading from cache file {path_cache}')
-        adata = read_h5ad(path_cache)
-    else:
-        if not is_present:
-            raise FileNotFoundError('Did not find file {}.'.format(filename))
-        logg.debug(f'reading {filename}')
-        if not cache and not suppress_cache_warning:
-            logg.hint(
-                'This might be very slow. Consider passing `cache=True`, '
-                'which enables much faster reading from a cache file.'
+        return read_h5ad(path_cache)
+
+    if not is_present:
+        raise FileNotFoundError(f'Did not find file {filename}.')
+    logg.debug(f'reading {filename}')
+    if not cache and not suppress_cache_warning:
+        logg.hint(
+            'This might be very slow. Consider passing `cache=True`, '
+            'which enables much faster reading from a cache file.'
+        )
+    # do the actual reading
+    if ext == 'xlsx' or ext == 'xls':
+        if sheet is None:
+            raise ValueError(
+                "Provide `sheet` parameter when reading '.xlsx' files."
             )
-        # do the actual reading
-        if ext == 'xlsx' or ext == 'xls':
-            if sheet is None:
-                raise ValueError(
-                    "Provide `sheet` parameter when reading '.xlsx' files."
-                )
-            else:
-                adata = read_excel(filename, sheet)
-        elif ext in {'mtx', 'mtx.gz'}:
-            adata = read_mtx(filename)
-        elif ext == 'csv':
-            adata = read_csv(filename, first_column_names=first_column_names)
-        elif ext in {'txt', 'tab', 'data', 'tsv'}:
-            if ext == 'data':
-                logg.hint(
-                    "... assuming '.data' means tab or white-space "
-                    'separated text file',
-                )
-                logg.hint('change this by passing `ext` to sc.read')
-            adata = read_text(filename, delimiter, first_column_names)
-        elif ext == 'soft.gz':
-            adata = _read_softgz(filename)
-        elif ext == 'loom':
-            adata = read_loom(filename=filename, **kwargs)
         else:
-            raise ValueError(f'Unknown extension {ext}.')
-        if cache:
-            logg.info(
-                f'... writing an {settings.file_format_data} '
-                'cache file to speedup reading next time'
+            adata = read_excel(filename, sheet)
+    elif ext in {'mtx', 'mtx.gz'}:
+        adata = read_mtx(filename)
+    elif ext == 'csv':
+        adata = read_csv(filename, first_column_names=first_column_names)
+    elif ext in {'txt', 'tab', 'data', 'tsv'}:
+        if ext == 'data':
+            logg.hint(
+                "... assuming '.data' means tab or white-space "
+                'separated text file',
             )
-            if not path_cache.parent.is_dir():
-                path_cache.parent.mkdir(parents=True)
-            # write for faster reading when calling the next time
-            adata.write(path_cache, compression=cache_compression)
+            logg.hint('change this by passing `ext` to sc.read')
+        adata = read_text(filename, delimiter, first_column_names)
+    elif ext == 'soft.gz':
+        adata = _read_softgz(filename)
+    elif ext == 'loom':
+        adata = read_loom(filename=filename, **kwargs)
+    else:
+        raise ValueError(f'Unknown extension {ext}.')
+    if cache:
+        logg.info(
+            f'... writing an {settings.file_format_data} '
+            'cache file to speedup reading next time'
+        )
+        if cache_compression is _empty:
+            cache_compression = settings.cache_compression
+        if not path_cache.parent.is_dir():
+            path_cache.parent.mkdir(parents=True)
+        # write for faster reading when calling the next time
+        adata.write(path_cache, compression=cache_compression)
     return adata
 
 

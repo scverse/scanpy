@@ -273,6 +273,8 @@ nitpick_ignore = [
     ('py:class', 'scanpy._settings.Verbosity'),
     # Currently undocumented: https://github.com/mwaskom/seaborn/issues/1810
     ('py:class', 'seaborn.ClusterGrid'),
+    # Won’t be documented
+    ('py:class', 'scanpy.readwrite.Empty'),
 ]
 
 for mod_name in [

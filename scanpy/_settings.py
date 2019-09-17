@@ -76,6 +76,7 @@ class ScanpyConfig:
         cachedir: Union[str, Path] = "./cache/",
         datasetdir: Union[str, Path] = "./data/",
         figdir: Union[str, Path] = "./figures/",
+        cache_compression: Union[str, None] = 'lzf',
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
@@ -98,6 +99,7 @@ class ScanpyConfig:
         self.cachedir = cachedir
         self.datasetdir = datasetdir
         self.figdir = figdir
+        self.cache_compression = cache_compression
         self.max_memory = max_memory
         self.n_jobs = n_jobs
         self.categories_to_ignore = categories_to_ignore
@@ -275,6 +277,24 @@ class ScanpyConfig:
     def figdir(self, figdir: Union[str, Path]):
         _type_check(figdir, "figdir", (str, Path))
         self._figdir = Path(figdir)
+
+    @property
+    def cache_compression(self) -> Optional[str]:
+        """\
+        Compression for `sc.read(..., cache=True)` (default `'lzf'`).
+
+        May be `'lzf'`, `'gzip'`, or `None`.
+        """
+        return self._cache_compression
+
+    @cache_compression.setter
+    def cache_compression(self, cache_compression: Optional[str]):
+        if cache_compression not in {'lzf', 'gzip', None}:
+            raise ValueError(
+                f"`cache_compression` ({cache_compression}) "
+                "must be in {'lzf', 'gzip', None}"
+            )
+        self._cache_compression = cache_compression
 
     @property
     def max_memory(self) -> Union[int, float]:
