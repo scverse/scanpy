@@ -291,8 +291,8 @@ class ScanpyConfig:
     def cache_compression(self, cache_compression: Optional[str]):
         if cache_compression not in {'lzf', 'gzip', None}:
             raise ValueError(
-                f"Invalid cache_compression={cache_compression} "
-                "∉ {{'lzf', 'gzip', None}}"
+                f"`cache_compression` ({cache_compression}) "
+                "must be in {'lzf', 'gzip', None}"
             )
         self._cache_compression = cache_compression
 
