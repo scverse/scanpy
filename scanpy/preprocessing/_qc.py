@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, Collection
+from warnings import warn
 
 import numba
 import numpy as np
@@ -69,8 +70,6 @@ def describe_obs(
         Whether to place calculated metrics in `adata.obs`.
     X
         Matrix to calculate values on. Meant for internal usage.
-    parallel
-        Deprecated argument, doesn't do anything.
 
     Returns
     -------
@@ -79,6 +78,11 @@ def describe_obs(
 
     {doc_obs_qc_returns}
     """
+    if parallel is not None:
+        warn(
+            "Argument `parallel` is deprecated, and currently has no effect.",
+            FutureWarning
+        )
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw, layer)
@@ -227,8 +231,6 @@ def calculate_qc_metrics(
     {doc_expr_reps}
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
-    parallel
-        Deprecated argument, doesn't do anything.
 
     Returns
     -------
@@ -252,6 +254,11 @@ def calculate_qc_metrics(
             data=adata.obs, kind="hex"
         )
     """
+    if parallel is not None:
+        warn(
+            "Argument `parallel` is deprecated, and currently has no effect.",
+            FutureWarning
+        )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw, layer)
     if isspmatrix_coo(X):
