@@ -1,8 +1,9 @@
 """Utility functions and classes
 """
-import importlib.util
 import sys
 import inspect
+import warnings
+import importlib.util
 from pathlib import Path
 from weakref import WeakSet
 from collections import namedtuple
@@ -12,14 +13,10 @@ from typing import Union, Callable, Optional
 
 import numpy as np
 from anndata import AnnData
-from scipy import sparse
-from natsort import natsorted
 from textwrap import dedent
-from pandas.api.types import CategoricalDtype
 
 from ._settings import settings
 from . import logging as logg
-import warnings
 
 EPS = 1e-15
 
@@ -65,15 +62,15 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
         sig = inspect.signature(c_or_f)
 
     def type_doc(name: str):
-        param = sig.parameters[name]  # type: inspect.Parameter
+        param: inspect.Parameter = sig.parameters[name]
         cls = getattr(param.annotation, '__qualname__', repr(param.annotation))
         if param.default is not param.empty:
-            return '{}, optional (default: {!r})'.format(cls, param.default)
+            return f'{cls}, optional (default: {param.default!r})'
         else:
             return cls
 
     return '\n'.join(
-        '{} : {}'.format(line, type_doc(line)) if line.strip() in sig.parameters else line
+        f'{line} : {type_doc(line)}' if line.strip() in sig.parameters else line
         for line in doc.split('\n')
     )
 
@@ -97,16 +94,16 @@ def deprecated_arg_names(arg_mapping):
             for old, new in arg_mapping.items():
                 if old in kwargs:
                     warnings.warn(
-                        "Keyword argument '{0}' has been deprecated in favour "
-                        "of '{1}'. '{0}' will be removed in a future version."
-                        .format(old, new),
+                        f"Keyword argument '{old}' has been "
+                        f"deprecated in favour of '{new}'. "
+                        f"'{old}' will be removed in a future version.",
                         category=DeprecationWarning,
                         stacklevel=2,
                     )
                     val = kwargs.pop(old)
                     kwargs[new] = val
-            warnings.simplefilter(
-                'default', DeprecationWarning)  # reset filter
+            # reset filter
+            warnings.simplefilter('default', DeprecationWarning)
             return func(*args, **kwargs)
         return func_wrapper
     return decorator
@@ -153,236 +150,9 @@ def _doc_params(**kwds):
     return dec
 
 
-def merge_groups(adata, key, map_groups, key_added=None, map_colors=None):
-    """
-    Parameters
-    ----------
-    map_colors : `dict`
-        Dict with color specification for new groups that have no corresponding
-        old group.
-    """
-    if key_added is None:
-        key_added = key + '_merged'
-    adata.obs[key_added] = adata.obs[key].map(
-        map_groups).astype(CategoricalDtype())
-    old_categories = adata.obs[key].cat.categories
-    new_categories = adata.obs[key_added].cat.categories
-    # map_colors is passed
-    if map_colors is not None:
-        old_colors = None
-        if key + '_colors' in adata.uns:
-            old_colors = adata.uns[key + '_colors']
-        new_colors = []
-        for group in adata.obs[key_added].cat.categories:
-            if group in map_colors:
-                new_colors.append(map_colors[group])
-            elif group in old_categories and old_colors is not None:
-                new_colors.append(old_colors[old_categories.get_loc(group)])
-            else:
-                raise ValueError('You didn\'t specify a color for {}.'
-                                 .format(group))
-        adata.uns[key_added + '_colors'] = new_colors
-    # map_colors is not passed
-    elif key + '_colors' in adata.uns:
-        old_colors = adata.uns[key + '_colors']
-        inverse_map_groups = {g: [] for g in new_categories}
-        for old_group in old_categories:
-            inverse_map_groups[map_groups[old_group]].append(old_group)
-        new_colors = []
-        for group in new_categories:
-            # take the largest of the old groups
-            old_group = adata.obs[key][adata.obs[key].isin(
-                inverse_map_groups[group])].value_counts().index[0]
-            new_colors.append(old_colors[old_categories.get_loc(old_group)])
-        adata.uns[key_added + '_colors'] = new_colors
-
-
 # --------------------------------------------------------------------------------
 # Graph stuff
 # --------------------------------------------------------------------------------
-
-
-def cross_entropy_neighbors_in_rep(adata, use_rep, n_points=3):
-    """Compare neighborhood graph of representation based on cross entropy.
-
-    `n_points` denotes the number of points to add as highlight annotation.
-
-    Returns
-    -------
-    The cross entropy and the geodesic-distance-weighted cross entropy as
-    ``entropy, geo_entropy_d, geo_entropy_o``.
-
-    Adds the most overlapping or disconnected points as annotation to `adata`.
-    """
-    # see below why we need this
-    if 'X_diffmap' not in adata.obsm.keys():
-        raise ValueError('Run `tl.diffmap` on `adata`, first.')
-
-    adata_ref = adata  # simple renaming, don't need copy here
-    adata_cmp = adata.copy()
-    n_neighbors = adata_ref.uns['neighbors']['params']['n_neighbors']
-    from .neighbors import neighbors
-    neighbors(adata_cmp, n_neighbors=n_neighbors, use_rep=use_rep)
-    from .tools import diffmap
-    diffmap(adata_cmp)
-
-    graph_ref = adata_ref.uns['neighbors']['connectivities']
-    graph_cmp = adata_cmp.uns['neighbors']['connectivities']
-
-    graph_ref = graph_ref.tocoo()  # makes a copy
-    graph_cmp = graph_cmp.tocoo()
-
-    edgeset_ref = {e for e in zip(graph_ref.row, graph_ref.col)}
-    edgeset_cmp = {e for e in zip(graph_cmp.row, graph_cmp.col)}
-    edgeset_union = list(edgeset_ref.union(edgeset_cmp))
-
-    edgeset_union_indices = tuple(zip(*edgeset_union))
-    edgeset_union_indices = (np.array(edgeset_union_indices[0]), np.array(edgeset_union_indices[1]))
-
-    n_edges_ref = len(graph_ref.nonzero()[0])
-    n_edges_cmp = len(graph_cmp.nonzero()[0])
-    n_edges_union = len(edgeset_union)
-    logg.debug(
-        f'... n_edges_ref {n_edges_ref} '
-        f'n_edges_cmp {n_edges_cmp} '
-        f'n_edges_union {n_edges_union} '
-    )
-
-    graph_ref = graph_ref.tocsr()  # need a copy of the csr graph anyways
-    graph_cmp = graph_cmp.tocsr()
-
-    p_ref = graph_ref[edgeset_union_indices].A1
-    p_cmp = graph_cmp[edgeset_union_indices].A1
-
-    # the following is how one compares it to log_loss form sklearn
-    # p_ref[p_ref.nonzero()] = 1
-    # from sklearn.metrics import log_loss
-    # print(log_loss(p_ref, p_cmp))
-    p_cmp = np.clip(p_cmp, EPS, 1-EPS)
-    ratio = np.clip(p_ref / p_cmp, EPS, None)
-    ratio_1m = np.clip((1 - p_ref) / (1 - p_cmp), EPS, None)
-
-    entropy = np.sum(p_ref * np.log(ratio) + (1-p_ref) * np.log(ratio_1m))
-
-    n_edges_fully_connected = (graph_ref.shape[0]**2 - graph_ref.shape[0])
-    entropy /= n_edges_fully_connected
-
-    fraction_edges = n_edges_ref / n_edges_fully_connected
-    naive_entropy = (fraction_edges * np.log(1./fraction_edges)
-                     + (1-fraction_edges) * np.log(1./(1-fraction_edges)))
-    logg.debug(f'cross entropy of naive sparse prediction {naive_entropy:.3e}')
-    logg.debug(f'cross entropy of random prediction {-np.log(0.5):.3e}')
-    logg.info(f'cross entropy {entropy:.3e}')
-
-    # for manifold analysis, restrict to largest connected component in
-    # reference
-    # now that we clip at a quite high value below, this might not even be
-    # necessary
-    n_components, labels = sparse.csgraph.connected_components(graph_ref)
-    largest_component = np.arange(graph_ref.shape[0], dtype=int)
-    if n_components > 1:
-        component_sizes = np.bincount(labels)
-        logg.debug(f'largest component has size {component_sizes.max()}')
-        largest_component = np.where(
-            component_sizes == component_sizes.max())[0][0]
-        graph_ref_red = graph_ref.tocsr()[labels == largest_component, :]
-        graph_ref_red = graph_ref_red.tocsc()[:, labels == largest_component]
-        graph_ref_red = graph_ref_red.tocoo()
-        graph_cmp_red = graph_cmp.tocsr()[labels == largest_component, :]
-        graph_cmp_red = graph_cmp_red.tocsc()[:, labels == largest_component]
-        graph_cmp_red = graph_cmp_red.tocoo()
-        edgeset_ref_red = {e for e in zip(graph_ref_red.row, graph_ref_red.col)}
-        edgeset_cmp_red = {e for e in zip(graph_cmp_red.row, graph_cmp_red.col)}
-        edgeset_union_red = edgeset_ref_red.union(edgeset_cmp_red)
-        map_indices = np.where(labels == largest_component)[0]
-        edgeset_union_red = {
-            (map_indices[i], map_indices[j]) for (i, j) in edgeset_union_red}
-
-    from .neighbors import Neighbors
-    neigh_ref = Neighbors(adata_ref)
-    dist_ref = neigh_ref.distances_dpt  # we expect 'X_diffmap' to be already present
-
-    neigh_cmp = Neighbors(adata_cmp)
-    dist_cmp = neigh_cmp.distances_dpt
-
-    d_cmp = np.zeros_like(p_ref)
-    d_ref = np.zeros_like(p_ref)
-    for i, e in enumerate(edgeset_union):
-        # skip contributions that are not in the largest component
-        if n_components > 1 and e not in edgeset_union_red:
-            continue
-        d_cmp[i] = dist_cmp[e]
-        d_ref[i] = dist_ref[e]
-
-    MAX_DIST = 1000
-    d_cmp = np.clip(d_cmp, 0.1, MAX_DIST)  # we don't want to measure collapsing clusters
-    d_ref = np.clip(d_ref, 0.1, MAX_DIST)
-
-    weights = np.array(d_cmp / d_ref)            # disconnected regions
-    weights_overlap = np.array(d_ref / d_cmp)    # overlapping regions
-
-    # the following is just for annotation of figures
-    if 'highlights' not in adata_ref.uns:
-        adata_ref.uns['highlights'] = {}
-    else:
-        # remove old disconnected and overlapping points
-        new_highlights = {}
-        for k, v in adata_ref.uns['highlights'].items():
-            if v != 'O' and v not in {'D0', 'D1', 'D2', 'D3', 'D4'}:
-                new_highlights[k] = v
-        adata_ref.uns['highlights'] = new_highlights
-
-    # points that are maximally disconnected
-    max_weights = np.argpartition(weights, kth=-n_points)[-n_points:]
-    points = list(edgeset_union_indices[0][max_weights])
-    points2 = list(edgeset_union_indices[1][max_weights])
-    found_disconnected_points = False
-    for ip, p in enumerate(points):
-        if d_cmp[max_weights][ip] == MAX_DIST:
-            adata_ref.uns['highlights'][p] = 'D' + str(ip)
-            adata_ref.uns['highlights'][points2[ip]] = 'D' + str(ip)
-            found_disconnected_points = True
-    if found_disconnected_points:
-        logg.debug(f'most disconnected points {points}')
-        logg.debug(f'    with weights {weights[max_weights].round(1)}')
-
-    max_weights = np.argpartition(
-        weights_overlap, kth=-n_points)[-n_points:]
-    points = list(edgeset_union_indices[0][max_weights])
-    for p in points:
-        adata_ref.uns['highlights'][p] = 'O'
-    logg.debug(f'most overlapping points {points}')
-    logg.debug(f'    with weights {weights_overlap[max_weights].round(1)}')
-    logg.debug(f'    with d_rep {d_cmp[max_weights].round(1)}')
-    logg.debug(f'    with d_ref {d_ref[max_weights].round(1)}')
-
-    geo_entropy_d = np.sum(weights * p_ref * np.log(ratio))
-    geo_entropy_o = np.sum(weights_overlap * (1-p_ref) * np.log(ratio_1m))
-
-    geo_entropy_d /= n_edges_fully_connected
-    geo_entropy_o /= n_edges_fully_connected
-
-    logg.info(f'geodesic cross entropy {geo_entropy_d + geo_entropy_o:.3e}')
-    return entropy, geo_entropy_d, geo_entropy_o
-
-
-def get_graph_tool_from_adjacency(adjacency, directed=None):
-    """Get graph_tool graph from adjacency matrix."""
-    import graph_tool as gt
-    adjacency_edge_list = adjacency
-    if not directed:
-        from scipy.sparse import tril
-        adjacency_edge_list = tril(adjacency)
-    g = gt.Graph(directed=directed)
-    g.add_vertex(adjacency.shape[0])  # this adds adjacency.shap[0] vertices
-    g.add_edge_list(np.transpose(adjacency_edge_list.nonzero()))
-    weights = g.new_edge_property('double')
-    for e in g.edges():
-        # graph_tool uses the following convention,
-        # which is opposite to the rest of scanpy
-        weights[e] = adjacency[int(e.source()), int(e.target())]
-    g.edge_properties['weight'] = weights
-    return g
 
 
 def get_igraph_from_adjacency(adjacency, directed=None):
@@ -513,37 +283,13 @@ def compute_association_matrix_of_groups(
 
 
 def get_associated_colors_of_groups(reference_colors, asso_matrix):
-    asso_colors = [{reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
-                    for i_ref in range(asso_matrix.shape[1])}
-                   for i_pred in range(asso_matrix.shape[0])]
-    return asso_colors
-
-
-def compute_group_overlap_score(ref_labels, pred_labels,
-                                threshold_overlap_pred=0.5,
-                                threshold_overlap_ref=0.5):
-    """How well do the pred_labels explain the ref_labels?
-
-    A predicted cluster explains a reference cluster if it is contained within the reference
-    cluster with at least 50% (threshold_overlap_pred) of its points and these correspond
-    to at least 50% (threshold_overlap_ref) of the reference cluster.
-    """
-    ref_unique, ref_counts = np.unique(ref_labels, return_counts=True)
-    ref_dict = dict(zip(ref_unique, ref_counts))
-    pred_unique, pred_counts = np.unique(pred_labels, return_counts=True)
-    pred_dict = dict(zip(pred_unique, pred_counts))
-    summary = []
-    for true in ref_unique:
-        sub_pred_unique, sub_pred_counts = np.unique(pred_labels[true == ref_labels], return_counts=True)
-        relative_overlaps_pred = [sub_pred_counts[i] / pred_dict[n] for i, n in enumerate(sub_pred_unique)]
-        relative_overlaps_ref = [sub_pred_counts[i] / ref_dict[true] for i, n in enumerate(sub_pred_unique)]
-        pred_best_index = np.argmax(relative_overlaps_pred)
-        summary.append(1 if (relative_overlaps_pred[pred_best_index] >= threshold_overlap_pred and
-                             relative_overlaps_ref[pred_best_index] >= threshold_overlap_ref)
-                       else 0)
-        # print(true, sub_pred_unique[pred_best_index], relative_overlaps_pred[pred_best_index],
-        #       relative_overlaps_ref[pred_best_index], summary[-1])
-    return sum(summary)/len(summary)
+    return [
+        {
+            reference_colors[i_ref]: asso_matrix[i_pred, i_ref]
+            for i_ref in range(asso_matrix.shape[1])
+        }
+        for i_pred in range(asso_matrix.shape[0])
+    ]
 
 
 def identify_groups(ref_labels, pred_labels, return_overlaps=False):
@@ -581,48 +327,9 @@ def identify_groups(ref_labels, pred_labels, return_overlaps=False):
     if return_overlaps: return associated_predictions, associated_overlaps
     else: return associated_predictions
 
-
-def remove_repetitions_from_list(l):
-    return [l[0]] + [e for (i, e) in enumerate(l[1:]) if l[i] != e]
-
-
-def plot_category_association(adata, prediction, reference, asso_matrix):
-    pl.figure(figsize=(5, 5))
-    pl.imshow(np.array(asso_matrix)[:], shape=(12, 4))
-    pl.xticks(range(len(adata.uns[reference + '_order'])), adata.uns[reference + '_order'], rotation='vertical')
-    pl.yticks(range(len(adata.uns[prediction + '_order'])), adata.uns[prediction + '_order'])
-    pl.colorbar()
-
-
-def unique_categories(categories):
-    """Pass array-like categories, return sorted cleaned unique categories."""
-    categories = np.unique(categories)
-    categories = np.setdiff1d(categories, np.array(settings.categories_to_ignore))
-    categories = np.array(natsorted(categories, key=lambda v: v.upper()))
-    return categories
-
 # --------------------------------------------------------------------------------
 # Other stuff
 # --------------------------------------------------------------------------------
-
-
-def fill_in_datakeys(example_parameters, dexdata):
-    """Update the 'examples dictionary' _examples.example_parameters.
-
-    If a datakey (key in 'datafile dictionary') is not present in the 'examples
-    dictionary' it is used to initialize an entry with that key.
-
-    If not specified otherwise, any 'exkey' (key in 'examples dictionary') is
-    used as 'datakey'.
-    """
-    # default initialization of 'datakey' key with entries from data dictionary
-    for exkey in example_parameters:
-        if 'datakey' not in example_parameters[exkey]:
-            if exkey in dexdata:
-                example_parameters[exkey]['datakey'] = exkey
-            else:
-                example_parameters[exkey]['datakey'] = 'unspecified in dexdata'
-    return example_parameters
 
 
 # backwards compat... remove this in the future
@@ -696,40 +403,6 @@ def update_params(old_params, new_params, check=False):
 
 
 # --------------------------------------------------------------------------------
-# Command-line argument reading and processing
-# --------------------------------------------------------------------------------
-
-
-def read_args_tool(toolkey, example_parameters, tool_add_args=None):
-    """Read args for single tool.
-    """
-    import scanpy as sc
-    p = default_tool_argparser(help(toolkey), example_parameters)
-    if tool_add_args is None:
-        p = add_args(p)
-    else:
-        p = tool_add_args(p)
-    args = vars(p.parse_args())
-    args = settings.process_args(args)
-    return args
-
-
-def default_tool_argparser(description, example_parameters):
-    """Create default parser for single tools.
-    """
-    import argparse
-    epilog = '\n'
-    for k, v in sorted(example_parameters.items()):
-        epilog += '  ' + k + '\n'
-    p = argparse.ArgumentParser(
-        description=description,
-        add_help=False,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=('available values for examples (exkey):'+epilog))
-    return p
-
-
-# --------------------------------------------------------------------------------
 # Others
 # --------------------------------------------------------------------------------
 
@@ -773,85 +446,6 @@ def select_groups(adata, groups_order_subset='all', key='groups'):
     else:
         groups_order_subset = groups_order.values
     return groups_order_subset, groups_masks
-
-
-def pretty_dict_string(d, indent=0):
-    """Pretty output of nested dictionaries.
-    """
-    s = ''
-    for key, value in sorted(d.items()):
-        s += '    ' * indent + str(key)
-        if isinstance(value, dict):
-             s += '\n' + pretty_dict_string(value, indent+1)
-        else:
-             s += '=' + str(value) + '\n'
-    return s
-
-
-def markdown_dict_string(d):
-    """Markdown output that can be pasted in the examples/README.md.
-    """
-    # sort experimental data from simulated data
-    from collections import OrderedDict
-    types = OrderedDict()
-    for key, value in sorted(d.items()):
-        if 'type' in value:
-            if value['type'] not in types:
-                types[value['type']] = []
-            types[value['type']].append(key)
-        else:
-            print(key, 'does not define data type!')
-    # format output
-    s = ''
-    for type in ['scRNAseq', 'scqPCR', 'bulk', 'simulated']:
-        s += '\nExamples using ' + type + ' data.\n'
-        for key in types[type]:
-            value = d[key]
-            s += '* [' + key + '](#' + key + ')'
-            if 'ref' in value:
-                if 'doi' in value:
-                    link = 'http://dx.doi.org/' + value['doi']
-                elif 'url' in value:
-                    link = value['url']
-                s += (' - [' +  value['ref'].replace('et al.','*et al.*')
-                             + '](' + link +  ')')
-            if 'title' in value:
-                s += '   \n*' + value['title'] + '*'
-            s += '\n'
-    return s
-
-
-def merge_dicts(*ds):
-    """Given any number of dicts, shallow copy and merge into a new dict,
-    precedence goes to key value pairs in latter dicts.
-
-    Notes
-    -----
-    http://stackoverflow.com/questions/38987/how-to-merge-two-python-dictionaries-in-a-single-expression
-    """
-    result = ds[0]
-    for d in ds[1:]:
-        result.update(d)
-    return result
-
-
-def masks(list_of_index_lists, n):
-    """Make an array in which rows store 1d mask arrays from list of index lists.
-
-    Parameters
-    ----------
-    n : int
-        Maximal index / number of samples.
-    """
-    # make a list of mask arrays, it's easier to store
-    # as there is a hdf5 equivalent
-    for il,l in enumerate(list_of_index_lists):
-        mask = np.zeros(n,dtype=bool)
-        mask[l] = True
-        list_of_index_lists[il] = mask
-    # convert to arrays
-    masks = np.array(list_of_index_lists)
-    return masks
 
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
@@ -937,33 +531,6 @@ def check_presence_download(filename: Path, backup_url):
     if not filename.is_file():
         from .readwrite import _download
         _download(backup_url, filename)
-
-
-def hierarch_cluster(M):
-    """Cluster matrix using hierarchical clustering.
-
-    Parameters
-    ----------
-    M : np.ndarray
-        Matrix, for example, distance matrix.
-
-    Returns
-    -------
-    Mclus : np.ndarray
-        Clustered matrix.
-    indices : np.ndarray
-        Indices used to cluster the matrix.
-    """
-    import scipy as sp
-    import scipy.cluster
-    link = sp.cluster.hierarchy.linkage(M)
-    indices = sp.cluster.hierarchy.leaves_list(link)
-    Mclus = np.array(M[:, indices])
-    Mclus = Mclus[indices, :]
-    if False:
-        pl.matshow(Mclus)
-        pl.colorbar()
-    return Mclus, indices
 
 
 def lazy_import(full_name):
