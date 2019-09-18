@@ -1,8 +1,10 @@
 """Plotting functions for AnnData.
 """
 import collections.abc as cabc
-from typing import Optional, Union
-from typing import Tuple, Sequence, Collection, Iterable
+from itertools import product
+from typing import Optional, Union  # Special
+from typing import Sequence, Collection, Iterable  # ABCs
+from typing import Tuple, List  # Classes
 
 import numpy as np
 import pandas as pd
@@ -423,8 +425,9 @@ def _scatter_obs(
             ax.set_ylabel('')
             ax.set_frame_on(False)
 
+    show = settings.autoshow if show is None else show
     _utils.savefig_or_show('scatter' if basis is None else basis, show=show, save=save)
-    if show == False: return axs if len(keys) > 1 else axs[0]
+    if not show: return axs if len(keys) > 1 else axs[0]
 
 
 def ranking(
@@ -518,7 +521,8 @@ def ranking(
             (0.95 if score_min > 0 else 1.05) * score_min,
             (1.05 if score_max > 0 else 0.95) * score_max,
         )
-    if show == False: return gs
+    show = settings.autoshow if show is None else show
+    if not show: return gs
 
 
 @_doc_params(show_save_ax=doc_show_save_ax)
@@ -644,8 +648,9 @@ def violin(
                 ax.set_yscale('log')
             if rotation is not None:
                 ax.tick_params(axis='x', labelrotation=rotation)
+    show = settings.autoshow if show is None else show
     _utils.savefig_or_show('violin', show=show, save=save)
-    if show is False:
+    if not show:
         if multi_panel and groupby is None and len(ys) == 1:
             return g
         elif len(axs) == 1:
@@ -683,7 +688,7 @@ def clustermap(
 
     Returns
     -------
-    If `show == False`, a :class:`~seaborn.ClusterGrid` object
+    If `show` is `False`, a :class:`~seaborn.ClusterGrid` object
     (see :func:`~seaborn.clustermap`).
 
     Examples
@@ -715,6 +720,7 @@ def clustermap(
     else:
         g = sns.clustermap(df, **kwds)
     show = settings.autoshow if show is None else show
+    _utils.savefig_or_show('clustermap', show=show, save=save)
     if show: pl.show()
     else: return g
 
@@ -2154,12 +2160,13 @@ def correlation_matrix(
     adata: AnnData,
     groupby: str,
     show_correlation_numbers: bool = False,
-    dendrogram: Union[bool, str] = True,
+    dendrogram: Union[bool, str, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
     show: Optional[bool] = None,
     save: Optional[Union[bool, str]] = None,
+    ax: Optional[Axes] = None,
     **kwds,
-):
+) -> Union[Axes, List[Axes]]:
     """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
@@ -2199,7 +2206,13 @@ def correlation_matrix(
     index = adata.uns[dendrogram_key]['categories_idx_ordered']
     corr_matrix = adata.uns[dendrogram_key]['correlation_matrix']
     # reorder matrix columns according to the dendrogram
+    if dendrogram is None:
+        dendrogram = ax is None
     if dendrogram:
+        if ax is not None:
+            raise ValueError(
+                'Can only plot dendrogram when not plotting to an axis'
+            )
         assert(len(index)) == corr_matrix.shape[0]
         corr_matrix = corr_matrix[index, :]
         corr_matrix = corr_matrix[:, index]
@@ -2221,20 +2234,32 @@ def correlation_matrix(
         width, height = figsize
         corr_matrix_height = height - colorbar_height
 
-    fig = pl.figure(figsize=(width, height))
+    fig = pl.figure(figsize=(width, height)) if ax is None else None
     # layout with 2 rows and 2  columns:
     # row 1: dendrogram + correlation matrix
     # row 2: nothing + colormap bar (horizontal)
-    gs = gridspec.GridSpec(nrows=2, ncols=2, width_ratios=[dendrogram_width, corr_matrix_height],
-                           height_ratios=[corr_matrix_height, colorbar_height], wspace=0.01, hspace=0.05)
+    gs = gridspec.GridSpec(
+        nrows=2,
+        ncols=2,
+        width_ratios=[dendrogram_width, corr_matrix_height],
+        height_ratios=[corr_matrix_height, colorbar_height],
+        wspace=0.01,
+        hspace=0.05,
+    )
 
     axs = []
-    corr_matrix_ax = fig.add_subplot(gs[1])
+    corr_matrix_ax = fig.add_subplot(gs[1]) if ax is None else ax
     if dendrogram:
         dendro_ax = fig.add_subplot(gs[0], sharey=corr_matrix_ax)
-        _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram_key,
-                         remove_labels=True, orientation='left',
-                         ticks=np.arange(corr_matrix .shape[0]) + 0.5)
+        _plot_dendrogram(
+            dendro_ax,
+            adata,
+            groupby,
+            dendrogram_key=dendrogram_key,
+            remove_labels=True,
+            orientation='left',
+            ticks=np.arange(corr_matrix .shape[0]) + 0.5,
+        )
         axs.append(dendro_ax)
     # define some default pcolormesh parameters
     if 'edge_color' not in kwds:
@@ -2265,34 +2290,35 @@ def correlation_matrix(
     corr_matrix_ax.set_xticks(np.arange(corr_matrix .shape[0]) + 0.5)
     corr_matrix_ax.set_xticklabels(labels, rotation=45, ha='left')
 
-    corr_matrix_ax.tick_params(
-        axis='x',
-        which='both',
-        bottom=False,
-        top=False)
-
-    corr_matrix_ax.tick_params(
-        axis='y',
-        which='both',
-        left=False,
-        right=False)
+    for ax_name in 'xy':
+        corr_matrix_ax.tick_params(
+            axis=ax_name,
+            which='both',
+            bottom=False,
+            top=False,
+        )
 
     if show_correlation_numbers:
-        for row in range(num_rows):
-            for col in range(num_rows):
-                corr_matrix_ax.text(row + 0.5, col + 0.5,
-                              "{:.2f}".format(corr_matrix[row, col]),
-                              ha='center', va='center')
+        for row, col in product(range(num_rows), repeat=2):
+            corr_matrix_ax.text(
+                row + 0.5,
+                col + 0.5,
+                f"{corr_matrix[row, col]:.2f}",
+                ha='center',
+                va='center',
+            )
 
     axs.append(corr_matrix_ax)
 
-    # Plot colorbar
-    colormap_ax = fig.add_subplot(gs[3])
-    cobar = pl.colorbar(img_mat, cax=colormap_ax, orientation='horizontal')
-    cobar.solids.set_edgecolor("face")
-    axs.append(colormap_ax)
+    if ax is None:  # Plot colorbar
+        colormap_ax = fig.add_subplot(gs[3])
+        cobar = pl.colorbar(img_mat, cax=colormap_ax, orientation='horizontal')
+        cobar.solids.set_edgecolor("face")
+        axs.append(colormap_ax)
 
-    return axs
+    show = settings.autoshow if show is None else show
+    _utils.savefig_or_show('correlation_matrix', show=show, save=save)
+    if ax is None and not show: return axs
 
 
 def _prepare_dataframe(
