@@ -641,7 +641,7 @@ class Neighbors:
         if method == 'rapids' and metric != 'euclidean':
             raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
         if method not in {'umap', 'gauss', 'rapids'}:
-            raise ValueError('`method` needs to be \'umap\', \'gauss\', or \'rapids\'.')
+            raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
