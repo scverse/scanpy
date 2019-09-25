@@ -154,7 +154,7 @@ def louvain(
         g = cugraph.Graph()
         g.add_adj_list(offsets, indices, weights)
         logg.info('    using the "louvain" package of rapids')
-        louvain_parts, modularity_score = cugraph.nvLouvain(g)
+        louvain_parts, _ = cugraph.nvLouvain(g)
         groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
     elif flavor == 'taynaud':
         # this is deprecated

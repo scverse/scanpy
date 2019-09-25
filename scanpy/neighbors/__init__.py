@@ -241,6 +241,19 @@ def compute_neighbors_rapids(
     X: np.ndarray,
     n_neighbors: int
 ):
+    """Compute nearest neighbors using RAPIDS cuml.
+
+    Parameters
+    ----------
+    X: array of shape (n_samples, n_features)
+        The data to compute nearest neighbors for.
+    n_neighbors
+        The number of neighbors to use.
+
+        Returns
+    -------
+    **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
+    """
     from cuml.neighbors import NearestNeighbors
     nn = NearestNeighbors(n_neighbors=n_neighbors)
     X_contiguous = np.ascontiguousarray(X, dtype=np.float32)

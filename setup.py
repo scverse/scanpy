@@ -31,6 +31,7 @@ setup(
         louvain=['python-igraph', 'louvain>=0.6'],
         leiden=['python-igraph', 'leidenalg'],
         bbknn=['bbknn'],
+        rapids=['cudf', 'cuml', 'cugraph'],
         doc=[
             'sphinx',
             'sphinx_rtd_theme',
