@@ -62,9 +62,11 @@ def neighbors(
         `n_neighbors` nearest neighbor.
     random_state
         A numpy random seed.
-    method : {{`'umap'`, `'gauss'`, `None`}}  (default: `'umap'`)
+    method : {{`'umap'`, `'gauss'`, `'rapids'`, `None`}}  (default: `'umap'`)
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
+        Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
+        only).
     metric
         A known metric’s name or a callable that returns a distance.
     metric_kwds
@@ -233,6 +235,31 @@ def compute_neighbors_umap(
     )
 
     return knn_indices, knn_dists, forest
+
+
+def compute_neighbors_rapids(
+    X: np.ndarray,
+    n_neighbors: int
+):
+    """Compute nearest neighbors using RAPIDS cuml.
+
+    Parameters
+    ----------
+    X: array of shape (n_samples, n_features)
+        The data to compute nearest neighbors for.
+    n_neighbors
+        The number of neighbors to use.
+
+        Returns
+    -------
+    **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
+    """
+    from cuml.neighbors import NearestNeighbors
+    nn = NearestNeighbors(n_neighbors=n_neighbors)
+    X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+    nn.fit(X_contiguous)
+    knn_distsq, knn_indices = nn.kneighbors(X_contiguous)
+    return knn_indices, np.sqrt(knn_distsq) # cuml uses sqeuclidean metric so take sqrt
 
 
 def _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -611,8 +638,10 @@ class Neighbors:
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
-        if method not in {'umap', 'gauss'}:
-            raise ValueError('`method` needs to be \'umap\' or \'gauss\'.')
+        if method == 'rapids' and metric != 'euclidean':
+            raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
+        if method not in {'umap', 'gauss', 'rapids'}:
+            raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
@@ -629,6 +658,8 @@ class Neighbors:
                     knn_indices, knn_distances, X.shape[0], n_neighbors)
             else:
                 self._distances = _distances
+        elif method == 'rapids':
+            knn_indices, knn_distances = compute_neighbors_rapids(X, n_neighbors)
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
@@ -642,7 +673,7 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if not use_dense_distances or method == 'umap':
+        if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
             self._distances, self._connectivities = _compute_connectivities_umap(

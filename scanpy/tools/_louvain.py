@@ -60,7 +60,7 @@ def louvain(
     adjacency
         Sparse adjacency matrix of the graph, defaults to
         ``adata.uns['neighbors']['connectivities']``.
-    flavor : {``'vtraag'``, ``'igraph'``}
+    flavor : {``'vtraag'``, ``'igraph'``, ``'rapids'``}
         Choose between to packages for computing the clustering.
         ``'vtraag'`` is much more powerful, and the default.
     directed
@@ -137,6 +137,25 @@ def louvain(
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
+    elif flavor == 'rapids':
+        # nvLouvain only works with undirected graphs, and `adjacency` must have a directed edge in both directions
+        import cudf
+        import cugraph
+        offsets = cudf.Series(adjacency.indptr)
+        indices = cudf.Series(adjacency.indices)
+        if use_weights:
+            sources, targets = adjacency.nonzero()
+            weights = adjacency[sources, targets]
+            if isinstance(weights, np.matrix):
+                weights = weights.A1
+            weights = cudf.Series(weights)
+        else:
+            weights = None
+        g = cugraph.Graph()
+        g.add_adj_list(offsets, indices, weights)
+        logg.info('    using the "louvain" package of rapids')
+        louvain_parts, _ = cugraph.nvLouvain(g)
+        groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
     elif flavor == 'taynaud':
         # this is deprecated
         import networkx as nx

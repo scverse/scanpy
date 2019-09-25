@@ -21,6 +21,7 @@ def umap(
     a=None,
     b=None,
     copy=False,
+    method='umap'
 ):
     """Embed the neighborhood graph using UMAP [McInnes18]_.
 
@@ -89,6 +90,8 @@ def umap(
         `spread`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
+    method : {`'umap'`, `'rapids'`}  (default: `'umap'`)
+        Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
 
     Returns
     -------
@@ -122,28 +125,54 @@ def umap(
         init_coords = check_array(init_coords, dtype=np.float32, accept_sparse=False)
 
     random_state = check_random_state(random_state)
-    n_epochs = 0 if maxiter is None else maxiter
     neigh_params = adata.uns['neighbors']['params']
     X = _choose_representation(
         adata, neigh_params.get('use_rep', None), neigh_params.get('n_pcs', None), silent=True)
-    # the data matrix X is really only used for determining the number of connected components
-    # for the init condition in the UMAP embedding
-    X_umap = simplicial_set_embedding(
-        X,
-        adata.uns['neighbors']['connectivities'].tocoo(),
-        n_components,
-        alpha,
-        a,
-        b,
-        gamma,
-        negative_sample_rate,
-        n_epochs,
-        init_coords,
-        random_state,
-        neigh_params.get('metric', 'euclidean'),
-        neigh_params.get('metric_kwds', {}),
-        verbose=settings.verbosity > 3,
-    )
+    if method == 'umap':
+        # the data matrix X is really only used for determining the number of connected components
+        # for the init condition in the UMAP embedding
+        n_epochs = 0 if maxiter is None else maxiter
+        X_umap = simplicial_set_embedding(
+            X,
+            adata.uns['neighbors']['connectivities'].tocoo(),
+            n_components,
+            alpha,
+            a,
+            b,
+            gamma,
+            negative_sample_rate,
+            n_epochs,
+            init_coords,
+            random_state,
+            neigh_params.get('metric', 'euclidean'),
+            neigh_params.get('metric_kwds', {}),
+            verbose=settings.verbosity > 3,
+        )
+    elif method == 'rapids':
+        metric = neigh_params.get('metric', 'euclidean')
+        if metric != 'euclidean':
+            raise ValueError(
+                f'`sc.pp.neighbors` was called with `metric` {metric!r}, '
+                "but umap `method` 'rapids' only supports the 'euclidean' metric."
+            ) 
+        from cuml import UMAP
+        n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
+        n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap
+        X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+        umap = UMAP(
+            n_neighbors=n_neighbors,
+            n_components=n_components,
+            n_epochs=n_epochs,
+            learning_rate=alpha,
+            init=init_pos,
+            min_dist=min_dist,
+            spread=spread,
+            negative_sample_rate=negative_sample_rate,
+            a=a,
+            b=b,
+            verbose=settings.verbosity > 3,
+        )
+        X_umap = umap.fit_transform(X_contiguous)
     adata.obsm['X_umap'] = X_umap  # annotate samples with UMAP coordinates
     logg.info(
         '    finished',
