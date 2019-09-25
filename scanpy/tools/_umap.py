@@ -90,7 +90,7 @@ def umap(
         `spread`.
     copy : `bool` (default: `False`)
         Return a copy instead of writing to adata.
-    method : {{'umap', 'rapids'}}  (default: `'umap'`)
+    method : {`'umap'`, `'rapids'`}  (default: `'umap'`)
         Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
 
     Returns
