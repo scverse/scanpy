@@ -149,6 +149,12 @@ def umap(
             verbose=settings.verbosity > 3,
         )
     elif method == 'rapids':
+        metric = neigh_params.get('metric', 'euclidean')
+        if metric != 'euclidean':
+            raise ValueError(
+                f'`sc.pp.neighbors` was called with `metric` {metric!r}, '
+                "but umap `method` 'rapids' only supports the 'euclidean' metric."
+            ) 
         from cuml import UMAP
         n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap
