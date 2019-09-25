@@ -673,7 +673,7 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if not use_dense_distances or method == 'umap' or method == 'rapids':
+        if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
             self._distances, self._connectivities = _compute_connectivities_umap(
