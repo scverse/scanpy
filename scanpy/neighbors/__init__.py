@@ -638,6 +638,8 @@ class Neighbors:
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
+        if method == 'rapids' and metric != 'euclidean':
+            raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
         if method not in {'umap', 'gauss', 'rapids'}:
             raise ValueError('`method` needs to be \'umap\', \'gauss\', or \'rapids\'.')
         if self._adata.shape[0] >= 10000 and not knn:
