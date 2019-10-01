@@ -2,23 +2,16 @@ import numpy as np
 from scipy import sparse
 import numba
 
-STANDARD_SCALER_FIXED = False
-
 
 def _get_mean_var(X):
     if sparse.issparse(X):
         mean, var = sparse_mean_variance_axis(X, axis=0)
     else:
-        if STANDARD_SCALER_FIXED:
-            from sklearn.preprocessing import StandardScaler
-
-            scaler = StandardScaler(with_mean=False).partial_fit(X)
-            mean, var = scaler.mean_, scaler.var_
-        else:
-            mean = X.mean(axis=0, dtype=np.float64)
-            var = X.var(axis=0, dtype=np.float64)
+        mean = np.mean(X, axis=0, dtype=np.float64)
+        mean_sq = np.multiply(X, X).mean(axis=0, dtype=np.float64)
+        var = mean_sq - mean ** 2
     # enforce R convention (unbiased estimator) for variance
-    var = var * (X.shape[0] / (X.shape[0] - 1))
+    var *= X.shape[0] / (X.shape[0] - 1)
     return mean, var
 
 
