@@ -24,6 +24,42 @@ def test_log1p_chunked():
     assert np.allclose(ad3.X, ad.X)
 
 
+def test_mean_var_sparse():
+    from sklearn.utils.sparsefuncs import mean_variance_axis
+
+    csr64 = sp.random(10000, 1000, format="csr", dtype=np.float64)
+    csc64 = csr64.tocsc()
+
+    # Test that we're equivalent for 64 bit
+    for mtx in (csr64, csc64):
+        scm, scv = sc.pp._utils._get_mean_var(mtx)
+        skm, skv = mean_variance_axis(mtx, 0)
+        skv *= (mtx.shape[0] / (mtx.shape[0] - 1))
+
+        assert np.allclose(scm, skm)
+        assert np.allclose(scv, skv)
+
+    csr32 = csr64.astype(np.float32)
+    csc32 = csc64.astype(np.float32)
+
+    # Test whether ours is more accurate for 32 bit
+    for mtx32, mtx64 in [(csc32, csc64), (csr32, csr64)]:
+        scm32, scv32 = sc.pp._utils._get_mean_var(mtx32)
+        scm64, scv64 = sc.pp._utils._get_mean_var(mtx64)
+        skm32, skv32 = mean_variance_axis(mtx32, 0)
+        skm64, skv64 = mean_variance_axis(mtx64, 0)
+        skv32 *= (mtx.shape[0] / (mtx.shape[0] - 1))
+        skv64 *= (mtx.shape[0] / (mtx.shape[0] - 1))
+
+        m_resid_sc = np.mean(np.abs(scm64 - scm32))
+        m_resid_sk = np.mean(np.abs(skm64 - skm32))
+        v_resid_sc = np.mean(np.abs(scv64 - scv32))
+        v_resid_sk = np.mean(np.abs(skv64 - skv32))
+
+        assert m_resid_sc < m_resid_sk
+        assert v_resid_sc < v_resid_sk
+
+
 def test_normalize_per_cell():
     adata = AnnData(
         np.array([[1, 0], [3, 0], [5, 6]]))
