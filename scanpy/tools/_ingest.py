@@ -237,7 +237,7 @@ class Ingest:
                                             index_unique=index_unique)
 
         obs_update = self._obs.copy()
-        obs_update.index = adata[adata.obs['batch']=='1'].obs_names
+        obs_update.index = adata[adata.obs[batch_key]=='1'].obs_names
         adata.obs.update(obs_update)
 
         for key in self._obsm:
