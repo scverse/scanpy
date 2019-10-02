@@ -461,7 +461,7 @@ def pca(
     if use_highly_variable is True and 'highly_variable' not in adata.var.keys():
         raise ValueError('Did not find adata.var[\'highly_variable\']. '
                          'Either your data already only consists of highly-variable genes '
-                         'or consider running `pp.filter_genes_dispersion` first.')
+                         'or consider running `pp.highly_variable_genes` first.')
     if use_highly_variable is None:
         use_highly_variable = True if 'highly_variable' in adata.var.keys() else False
     if use_highly_variable:
