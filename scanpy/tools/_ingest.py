@@ -36,8 +36,9 @@ def ingest(
     ing = Ingest(adata_ref)
     ing.transform(adata)
 
-    for method in embedding_method:
-        ing.map_embedding(method)
+    if embedding_method is not None:
+        for method in embedding_method:
+            ing.map_embedding(method)
 
     if obs is not None:
         ing.neighbors(**kwargs)
