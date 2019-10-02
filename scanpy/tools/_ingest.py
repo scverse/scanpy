@@ -86,7 +86,7 @@ class Ingest:
 
         if 'use_rep' in adata.uns['neighbors']['params']:
             self._use_rep = adata.uns['neighbors']['params']['use_rep']
-            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[use_rep]
+            self._rep = adata.X if self._use_rep == 'X' else adata.obsm[self._use_rep]
         elif 'n_pcs' in adata.uns['neighbors']['params']:
             self._use_rep = 'X_pca'
             self._n_pcs = adata.uns['neighbors']['params']['n_pcs']
