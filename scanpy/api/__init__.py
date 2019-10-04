@@ -1,23 +1,79 @@
-"""\
-API
-===
+import warnings
+warnings.warn(
+    "\n\n"
+    "In a future version of Scanpy, `scanpy.api` will be removed.\n"
+    "Simply use `import scanpy as sc` and `import scanpy.external as sce` instead.\n",
+    FutureWarning,
+)
 
-Import Scanpy's high-level API as::
+from anndata import AnnData
+from ..neighbors import Neighbors
 
-   import scanpy.api as sc
+from anndata import read as read_h5ad
+from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
+
+from .. import __version__
+
+from . import tl
+from . import pl
+from . import pp
+from ..readwrite import read, read_10x_h5, read_10x_mtx, write, read_params, write_params
+from . import datasets
+from . import export_to
+from . import logging
+from . import queries
+
+from .. import plotting
+
+# unfortunately, we cannot put this here as long as we have simple global
+# variables in settings... they couldn't be set in this case...
+# the main drawback is that we have to import set_figure_params
+# to show in the docs for that reason...
+# it would be nice to make the simple data types "properties of the
+# module"... putting setters and getters for all of them wouldn't be very nice
+from .._settings import settings
+# for now - or maybe as the permanently favored solution - put the single function here
+# from ..settings import set_figure_params
+set_figure_params = settings.set_figure_params
+
+# some stuff that is not actually documented...
+from .. import _utils
+
+import sys
+_utils.annotate_doc_types(sys.modules[__name__], 'scanpy')
+del sys
+
+
+__doc__ = """\
+Global API (deprecated)
+=======================
+
+.. warning::
+
+    .. deprecated:: 1.3.7
+
+       Use the top level module instead: `import scanpy as sc`.
+
+For the deprecated high-level API documented on this page, use `import scanpy.api as sc`.
 
 Preprocessing: PP
 ------------------
 
-Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) normalization, preprocessing recipes.
+Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
 
-**Basic Preprocessing**
+Basic Preprocessing
+~~~~~~~~~~~~~~~~~~~
+
+For visual quality control, see :func:`~scanpy.api.pl.highest_expr_genes` and
+:func:`~scanpy.api.pl.filter_genes_dispersion` in the :doc:`plotting API
+<plotting>`.
 
 .. autosummary::
-   :toctree: .
 
+   pp.calculate_qc_metrics
    pp.filter_cells
    pp.filter_genes
+   pp.highly_variable_genes
    pp.filter_genes_dispersion
    pp.log1p
    pp.pca
@@ -27,26 +83,43 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
    pp.subsample
    pp.downsample_counts
 
-**Recipes**
+Recipes
+~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    pp.recipe_zheng17
    pp.recipe_weinreb17
+   pp.recipe_seurat
 
-**Batch effect correction**
+Batch effect correction
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that a simple batch correction method is available via
+:func:`scanpy.api.pp.regress_out`.
+
+``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
 
 .. autosummary::
-   :toctree: .
 
-   pp.regress_out
+   pp.bbknn
    pp.mnn_correct
 
-**Neighbors**
+Imputation
+~~~~~~~~~~
+
+Note that the fundamental limitations of imputation are still under `debate
+<https://github.com/theislab/scanpy/issues/189>`__.
 
 .. autosummary::
-   :toctree: .
+
+   pp.dca
+   pp.magic
+
+Neighbors
+~~~~~~~~~
+
+.. autosummary::
 
    pp.neighbors
 
@@ -54,140 +127,84 @@ Filtering of highly-variable genes, batch-effect correction, per-cell (UMI) norm
 Tools: TL
 ----------
 
-**Embeddings**
+Embeddings
+~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.pca
    tl.tsne
    tl.umap
    tl.draw_graph
    tl.diffmap
+   tl.phate
 
-**Clustering, branching trajectories and pseudotime based on single-cell graph**
+Clustering and trajectory inference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
+   tl.leiden
    tl.louvain
    tl.dpt
    tl.paga
 
-**Marker genes**
+Marker genes
+~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.rank_genes_groups
 
-**Gene scores, Cell cycle**
+Gene scores, Cell cycle
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.score_genes
    tl.score_genes_cell_cycle
    tl.sandbag
-   tl.
+   tl.cyclone
 
-**Simulations**
+Simulations
+~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: .
 
    tl.sim
 
 
 Plotting: PL
--------------
+------------
 
-**Generic plotting with AnnData**
-
-.. autosummary::
-   :toctree: .
-
-   pl.scatter
-   pl.ranking
-
-Thin wrappers for Seaborn functions.
-
-.. autosummary::
-   :toctree: .
-
-   pl.violin
-   pl.clustermap
-
-**Plotting tool results**
-
-Methods that extract and visualize tool-specific annotation in an AnnData object.
-For any method in module `tl`, there is a method with the same name in `pl`.
-
-*Embeddings*
-
-.. autosummary::
-   :toctree: .
-
-   pl.pca
-   pl.pca_loadings
-   pl.pca_scatter
-   pl.pca_variance_ratio
-   pl.tsne
-   pl.umap
-   pl.diffmap
-   pl.draw_graph
-
-*Branching trajectories and pseudotime, clustering, differential expression*
-
-.. autosummary::
-   :toctree: .
-
-   pl.louvain
-   pl.dpt
-   pl.dpt_scatter
-   pl.dpt_groups_pseudotime
-   pl.dpt_timeseries
-   pl.paga
-   pl.paga_path
-   pl.paga_compare
-   pl.rank_genes_groups
-   pl.rank_genes_groups_violin
-
-*Simulations*
-
-.. autosummary::
-   :toctree: .
-
-   pl.sim
+The plotting :doc:`plotting API <plotting>` largely parallels the ``tl.*`` and
+``pp.*`` functions. For most tools and for some preprocessing functions, you'll
+find a plotting function with the same name.
 
 
 Reading
 -------
 
-*Note:* For reading annotation use
-`pandas.read_… <http://pandas.pydata.org/pandas-docs/stable/io.html>`_ and add
+*Note:* For reading annotation use :ref:`pandas.read_… <pandas:io>` and add
 it to your `AnnData` object. The following read functions are intended for
 the numeric data in the data matrix `X`.
 
 Read common file formats using
 
 .. autosummary::
-   :toctree: .
 
    read
 
-Read 10x formatted hdf5 files using
+Read 10x formatted hdf5 files and directories containing `.mtx` files using
 
 .. autosummary::
-   :toctree: .
 
-   read_10x_h5
+    read_10x_h5
+    read_10x_mtx
 
-Read other formats using functions borrowed from `anndata
-<http://anndata.readthedocs.io>`_
+Read other formats using functions borrowed from :mod:`anndata`
 
 .. autosummary::
-   :toctree: .
 
    read_h5ad
    read_csv
@@ -198,90 +215,64 @@ Read other formats using functions borrowed from `anndata
    read_text
    read_umi_tools
 
+
+Queries
+-------
+
+.. autosummary::
+
+   queries.mitochondrial_genes
+
+
 Classes
 -------
 
-:class:`~scanpy.api.AnnData` is borrowed from `anndata <http://anndata.readthedocs.io>`_.
-
-.. autosummary::
-   :toctree: .
-
-   AnnData
+:class:`~anndata.AnnData` is reexported from :mod:`anndata`.
 
 Represent data as a neighborhood structure, usually a knn graph.
 
 .. autosummary::
-   :toctree: .
 
    Neighbors
 
 
-Exporting
----------
+Settings
+--------
+
+An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as
+`scanpy.settings` and allows configuring Scanpy.
+
+A convenience function for setting some default ``matplotlib.rcParams`` and a
+high-resolution jupyter display backend useful for use in notebooks.
 
 .. autosummary::
-   :toctree: .
 
-   export_to.spring_project
+   set_figure_params
+
+Print versions of packages that might influence numerical results.
+
+.. autosummary::
+
+   logging.print_versions
 
 
 Datasets
 --------
 
 .. autosummary::
-   :toctree: .
 
    datasets.blobs
    datasets.krumsiek11
    datasets.moignard15
+   datasets.pbmc3k
+   datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
 
+Exporting
+---------
 
-Settings and Logging
---------------------
+.. autosummary::
 
-Note the functions `settings.set_figure_params` and `logging.print_versions()`.
-
-==============================================  ===================================
-`settings.verbosity`                            Verbosity level (default: 1).
-`settings.file_format_figs`                     Format for saving figures (default: 'png').
-`settings.figdir`                               Default directory for saving figures (default: './figures/').
-`settings.cachedir`                             Directory for cache files (default: './cache/').
-`settings.autoshow`                             Automatically show figures (default: `True`).
-`settings.autosave`                             Automatically save figures, do not show them (default: `False`).
-==============================================  ===================================
-
-The verbosity levels have the following meaning:
-
-===  ======================================
- 0   Only show 'error' messages.
- 1   Also show 'warning' messages.
- 2   Also show 'info' messages.
- 3   Also show 'hint' messages.
- 4   Show very detailed progress.
-...  Show even more detailed progress.
-===  ======================================
-
+   export_to.spring_project
 """
-
-from anndata import AnnData
-from anndata import read as read_h5ad
-from anndata import read_csv, read_excel, read_hdf, read_loom, read_mtx, read_text, read_umi_tools
-
-from .. import __version__
-
-from ..neighbors import Neighbors
-from .. import settings
-from .. import logging
-from . import tl
-tools = tl
-from . import pl
-plotting = pl
-from . import pp
-preprocessing = pp
-from ..readwrite import read, read_10x_h5, write, read_params, write_params
-from . import datasets
-from .. import utils
-from . import export_to
-from .. import rtools

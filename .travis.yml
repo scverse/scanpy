@@ -1,8 +1,26 @@
+dist: xenial
 language: python
+matrix:
+  include:
+    - name: "static analysis"
+      python: "3.7"
+      script:
+        - black . --check --diff
+        - python -m scanpy.tests.blackdiff 10
+      after_success: skip
 python:
-  - "3.6"
-install: source .travis_install.sh
+  - '3.6'
+  - '3.7'
+  #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
+cache:
+  - pip
+  - directories: data
+install:
+  - pip install docutils sphinx
+  - pip install -e .[test,louvain,leiden]
+env:
+  - MPLBACKEND=Agg
 script:
-  - pytest
+  - pytest --ignore=scanpy/tests/_images
   - python setup.py check --restructuredtext --strict
   - rst2html.py --halt=2 README.rst >/dev/null

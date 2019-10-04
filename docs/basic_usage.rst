@@ -1,54 +1,53 @@
-Basic Usage
------------
+Usage Principles
+----------------
 
-Import the Scanpy API as::
+Import Scanpy as::
 
-    import scanpy.api as sc
+    import scanpy as sc
 
 Workflow
 ^^^^^^^^
 
 The typical workflow consists of subsequent calls of data analysis tools
-in ``sc.tl``, e.g.::
+in `sc.tl`, e.g.::
 
-    sc.tl.louvain(adata, **tool_params)  # cluster cells using Louvain clustering
+    sc.tl.umap(adata, **tool_params)  # embed a neighborhood graph of the data using UMAP
 
-where ``adata`` is an :class:`~scanpy.api.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations of *n_vars* gene expression variables. For each tool, there is at least one associated plotting function in ``sc.pl``, which retrieves and plots the added annotation::
+where `adata` is an :class:`~anndata.AnnData` object. Each of these calls adds annotation to an expression matrix *X*, which stores *n_obs* observations (cells) of *n_vars* variables (genes). For each tool, there typically is an associated plotting function in ``sc.pl``::
 
-    sc.pl.louvain(adata, **plotting_params)
+    sc.pl.umap(adata, **plotting_params)
 
-If you pass ``show=False``, a `matplotlib.Axes <https://matplotlib.org/api/axes_api.html>`_ instance is returned and you have all of matplotlib's detailed configuration possibilities.
+If you pass `show=False`, a :class:`matplotlib.axes.Axes` instance is returned and you have all of matplotlib's detailed configuration possibilities.
 
-To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on ``adata`` and return ``None`` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_. If you want to return a copy of the :class:`~scanpy.api.AnnData` object and leave the passed ``adata`` unchanged, pass ``copy=True``.
+To facilitate writing memory-efficient pipelines, by default, Scanpy tools operate *inplace* on `adata` and return `None` - this also allows to easily transition to `out-of-memory pipelines <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`__. If you want to return a copy of the :class:`~anndata.AnnData` object and leave the passed `adata` unchanged, pass `copy=True` or `inplace=False`.
 
-    
+
 AnnData
 ^^^^^^^
 
-Scanpy is based on `anndata <http://anndata.readthedocs.io>`_, which provides
-the :class:`~scanpy.api.AnnData` class.
+Scanpy is based on :mod:`anndata`, which provides the :class:`~anndata.AnnData` class.
 
 .. raw:: html
 
     <img src="http://falexwolf.de/img/scanpy/anndata.svg" style="width: 300px">
 
-At the most basic level, an :class:`~scanpy.api.AnnData` object ``adata`` stores
-a data matrix (``adata.X``), dataframe-like annotation of observations
-(``adata.obs``) and variables (``adata.var``) and unstructured dict-like
+At the most basic level, an :class:`~anndata.AnnData` object `adata` stores
+a data matrix (`adata.X`), dataframe-like annotation of observations
+(`adata.obs`) and variables (`adata.var`) and unstructured dict-like
 annotation (``adata.uns``). Values can be retrieved and appended via
-``adata.obs['key1']`` and ``adata.var['key2']``. Names of observations and
-variables can be accessed via ``adata.obs_names`` and ``adata.var_names``,
-respectively. :class:`~scanpy.api.AnnData` objects can be sliced like
-dataframes, for example, ``adata_subset = adata[:, list_of_gene_names]``.
-For more, see this `blog post <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`_.
-         
-To read a data file to an :class:`~scanpy.api.AnnData` object, call::
+`adata.obs['key1']` and `adata.var['key2']`. Names of observations and
+variables can be accessed via `adata.obs_names` and `adata.var_names`,
+respectively. :class:`~anndata.AnnData` objects can be sliced like
+dataframes, for example, `adata_subset = adata[:, list_of_gene_names]`.
+For more, see this `blog post <http://falexwolf.de/blog/171223_AnnData_indexing_views_HDF5-backing/>`__.
+
+To read a data file to an :class:`~anndata.AnnData` object, call::
 
     adata = sc.read(filename)
 
-to initialize an :class:`~scanpy.api.AnnData` object. Possibly add further annotation using, e.g., ``pd.read_csv``::
+to initialize an :class:`~anndata.AnnData` object. Possibly add further annotation using, e.g., `pd.read_csv`::
 
-    import pandas as pd 
+    import pandas as pd
     anno = pd.read_csv(filename_sample_annotation)
     adata.obs['cell_groups'] = anno['cell_groups']  # categorical annotation of type pandas.Categorical
     adata.obs['time'] = anno['time']                # numerical annotation of type float
@@ -59,7 +58,7 @@ To write, use::
 
     adata.write(filename)
     adata.write_csvs(filename)
-    adata.write_loom(filename)    
+    adata.write_loom(filename)
 
 
 .. _Seaborn: http://seaborn.pydata.org/

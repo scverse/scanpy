@@ -63,7 +63,7 @@ def _gradient_descent(objective, p0, it, n_iter, objective_error=None,
         Keyword arguments to pass to objective function.
     Returns
     -------
-    p : array, shape (n_params,)
+    **p** : array, shape (n_params,)
         Optimum parameters.
     error : float
         Optimum.

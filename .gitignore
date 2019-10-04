@@ -1,59 +1,43 @@
-# Scanpy
-.pytest_cache/
-.scanpy
-.coverage
-cache/
-coverage.xml
-test.h5
-test_compr.h5
-test_no_compr.h5
-docs/_build
-docs/api/scanpy.api.*
-archive/
-data/
-figs/
-*/figs*/
-write/
-./examples/
-scanpy.egg-info/
-scanpy_user/
-scanpy_save/
-scanpy_later/
-scripts_test/
-thirdp/
-test.py
-README.html
-scripts/
-test_notebooks.txt
-upload_to_pypi.sh
+# Scanpy outfiles
+/cache/
+/data/
+/write/
 
-# private files
-scanpy/examples/builtin_private.py
-scanpy/tools/paths.py
-scanpy/tools/tgdyn.py
-scanpy/tools/tgdyn_simple.py
-scripts/paths.py
-scripts/test_private.sh
-scripts/tgdyn.py
-scripts/tgdyn_simple.py
+# Docs
+/docs/_build/
+/docs/api/scanpy.*.rst
+/docs/external/scanpy.*.rst
+!/docs/api/scanpy.api.rst
+!/docs/api/scanpy.api.AnnData.rst
+!/docs/api/scanpy.plotting.rst
+!/docs/api/scanpy.external.rst
 
+# tests
+/.cache/
+/.pytest_cache/
+/scanpy/tests/test*.h5ad
+/scanpy/tests/figures/
+/scanpy/tests/notebooks/figures/
+
+# Environment management
+/Pipfile
+/Pipfile.lock
 
 # always-ignore extensions
 *~
 
-# Python / Byte-compiled / optimized / DLL
+# Python build files
 __pycache__/
-*.py[cod]
-*.so
-.cache
+/dist/
+/build/
+/scanpy.egg-info/
 
-# OS or Editor files and folders
+# OS stuff
 .DS_Store
 Thumbs.db
 .ipynb_checkpoints/
 .directory
-/.idea/
 
-# always-ignore directories
-/dist/
-/build/
+# IDEs and editors
+/.idea/
+/.vscode/

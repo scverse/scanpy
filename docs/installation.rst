@@ -1,15 +1,45 @@
 Installation
 ------------
 
+Anaconda
+~~~~~~~~
+
 If you do not have a working Python 3.5 or 3.6 installation, consider
-downloading and installing Miniconda_ (see `Installing Miniconda`_). Running
-installs most of the requirements::
+installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
-   conda install seaborn scikit-learn statsmodels numba
+    conda install seaborn scikit-learn statsmodels numba pytables
+    conda install -c conda-forge python-igraph louvain
 
-Pull Scanpy from `PyPI <https://pypi.python.org/pypi/scanpy>`__ (consider using ``pip3`` to access Python 3)::
+Pull Scanpy from `PyPI <https://pypi.org/project/scanpy>`__ (consider
+using ``pip3`` to access Python 3)::
 
-  pip install scanpy
+    pip install scanpy
+
+PyPI only
+~~~~~~~~~
+
+If you prefer to exclusively use PyPI run::
+
+    pip install scanpy[louvain]
+
+or::
+    
+    pip install scanpy python-igraph louvain
+
+The extra ``[louvain]`` installs two packages that are needed for
+parts of scanpy but aren't requirements: `python-igraph
+<http://igraph.org/python/>`__ [Csardi06]_ and `louvain
+<https://github.com/vtraag/louvain-igraph>`__ [Traag17]_.
+
+Bioconda
+~~~~~~~~
+
+Using bioconda_, simply run::
+
+    conda install -c bioconda scanpy
+
+Development Version
+~~~~~~~~~~~~~~~~~~~
 
 To work with the latest version on `GitHub
 <https://github.com/theislab/scanpy>`__: clone the repository and ``cd`` into
@@ -18,36 +48,28 @@ cloned version after you update with ``git pull``) call::
 
     pip install -e .
 
-Two further packages, needed for several graph computations, have not been
-automatically installed. Manually install them in this order
-
-- `python-igraph <http://igraph.org/python/>`__ [Csardi06]_: ``pip install python-igraph`` or ``conda install -c conda-forge python-igraph``
-- `louvain <https://github.com/vtraag/louvain-igraph>`__ [Traag17]_: ``pip install louvain`` or ``conda install -c vtraag louvain``
+Docker
+~~~~~~
 
 If you're using Docker_, you can use the minimal `fastgenomics/scanpy`_ image from the Docker Hub.
 
 .. _Docker: https://en.wikipedia.org/wiki/Docker_(software)
 .. _fastgenomics/scanpy: https://hub.docker.com/r/fastgenomics/scanpy
-  
-Trouble shooting
-~~~~~~~~~~~~~~~~
+.. _bioconda: https://bioconda.github.io/
 
-If you do not have sudo rights (you get a ``Permission denied`` error)::
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+If you get a `Permission denied` error, never use `sudo pip`. Instead, use virtual environments or::
 
     pip install --user scanpy
 
-**On MacOS**, if not using `conda`, you might need to install the C core of igraph via homebrew first
+**On MacOS**, if **not** using `conda`, you might need to install the C core of igraph via homebrew first
 
 - ``brew install igraph``
 - If python-igraph still fails to install, see `here <https://stackoverflow.com/questions/29589696/problems-compiling-c-core-of-igraph-with-python-2-7-9-anaconda-2-2-0-on-mac-osx>`__ or consider installing gcc via ``brew install gcc --without-multilib`` and exporting ``export CC="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"; export CXX="/usr/local/Cellar/gcc/X.x.x/bin/gcc-X"``, where ``X`` and ``x`` refers to the version of ``gcc``; in my case, the path reads ``/usr/local/Cellar/gcc/6.3.0_1/bin/gcc-6``.
 
-**On Windows**, you can follow these steps::
-  
-    conda install pandas cython
-    conda install -c vtraag python-igraph
-    conda install -c vtraag louvain
-    pip install scanpy
-      
+**On Windows**, there also often problems installing compiled packages such as `igraph`, but you can find precompiled packages on <https://www.lfd.uci.edu/~gohlke/pythonlibs/>. Download those and install them using `pip install ./path/to/file.whl`
 
 Installing Miniconda
 ~~~~~~~~~~~~~~~~~~~~

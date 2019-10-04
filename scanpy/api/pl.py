@@ -1,20 +1,19 @@
-from ..plotting.anndata import scatter, violin, ranking, clustermap
+from ..plotting._anndata import scatter, violin, ranking, clustermap, stacked_violin, heatmap, dotplot, matrixplot, tracksplot
 
-from ..plotting.preprocessing import filter_genes_dispersion
+from ..plotting._preprocessing import filter_genes_dispersion, highly_variable_genes
 
-from ..plotting.tools import pca, pca_loadings, pca_scatter, pca_variance_ratio
-from ..plotting.tools import diffmap
-from ..plotting.tools import draw_graph
-from ..plotting.tools import tsne
-from ..plotting.tools import umap
-from ..plotting.tools.paga import paga, paga_adjacency, paga_compare, paga_path, paga_scatter
-from ..plotting.tools import dpt, dpt_scatter, dpt_groups_pseudotime, dpt_timeseries
-from ..plotting.tools import louvain
-from ..plotting.tools import rank_genes_groups, rank_genes_groups_violin
-from ..plotting.tools import sim
+from ..plotting._tools.scatterplots import embedding, pca, diffmap, draw_graph, tsne, phate, umap
+from ..plotting._tools import pca_loadings, pca_scatter, pca_overview, pca_variance_ratio
+from ..plotting._tools.paga import paga, paga_adjacency, paga_compare, paga_path
+from ..plotting._tools import dpt_timeseries, dpt_groups_pseudotime
+from ..plotting._tools import rank_genes_groups, rank_genes_groups_violin
+from ..plotting._tools import rank_genes_groups_dotplot, rank_genes_groups_heatmap, rank_genes_groups_stacked_violin, rank_genes_groups_matrixplot, rank_genes_groups_tracksplot
+from ..plotting._tools import sim
 
-from ..plotting.rcmod import set_rcParams_scanpy, set_rcParams_defaults
+from ..plotting._rcmod import set_rcParams_scanpy, set_rcParams_defaults
 from ..plotting import palettes
 
-from ..plotting.utils import matrix
-from ..plotting.utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+from ..plotting._utils import matrix
+from ..plotting._utils import timeseries, timeseries_subplot, timeseries_as_heatmap
+
+from ..plotting._qc import highest_expr_genes
