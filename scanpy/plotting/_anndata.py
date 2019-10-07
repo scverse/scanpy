@@ -90,7 +90,7 @@ def scatter(
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
         `(layers, layers, layers)`.
-    basis : {{`'pca'`, `'tsne'`, `'umap'`, `'diffmap'`, `'draw_graph_fr'`, etc.}}
+    basis : {{`'pca'`, `'tsne'`, `'umap'`, `'trimap'`, `'diffmap'`, `'draw_graph_fr'`, etc.}}
         String that denotes a plotting tool that computed coordinates.
     {scatter_temp}
     {show_save_ax}
@@ -251,6 +251,7 @@ def _scatter_obs(
             else 'tSNE' if basis == 'tsne'
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
+            else 'TriMap' if basis == 'trimap'
             else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
             else basis
         )

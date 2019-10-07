@@ -1,6 +1,7 @@
 from ..preprocessing._simple import pca
 from ._tsne import tsne
 from ._umap import umap
+from ._trimap import trimap
 from ._diffmap import diffmap
 from ._draw_graph import draw_graph
 

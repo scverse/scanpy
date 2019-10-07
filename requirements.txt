@@ -16,3 +16,5 @@ natsort
 joblib
 numba>=0.41.0
 umap-learn>=0.3.0
+trimap>=1.0.10
+annoy>=1.11

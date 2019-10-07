@@ -1,6 +1,7 @@
 from ..tools._pca import pca
 from ..tools._tsne import tsne
 from ..tools._umap import umap
+from ..tools._trimap import trimap
 from ..tools._diffmap import diffmap
 from ..tools._draw_graph import draw_graph
 

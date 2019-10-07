@@ -135,6 +135,7 @@ Embeddings
    tl.pca
    tl.tsne
    tl.umap
+   tl.trimap
    tl.draw_graph
    tl.diffmap
    tl.phate
