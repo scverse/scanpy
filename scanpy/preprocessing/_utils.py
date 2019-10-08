@@ -3,15 +3,15 @@ from scipy import sparse
 import numba
 
 
-def _get_mean_var(X):
+def _get_mean_var(X, *, axis=0):
     if sparse.issparse(X):
-        mean, var = sparse_mean_variance_axis(X, axis=0)
+        mean, var = sparse_mean_variance_axis(X, axis=axis)
     else:
-        mean = np.mean(X, axis=0, dtype=np.float64)
-        mean_sq = np.multiply(X, X).mean(axis=0, dtype=np.float64)
+        mean = np.mean(X, axis=axis, dtype=np.float64)
+        mean_sq = np.multiply(X, X).mean(axis=axis, dtype=np.float64)
         var = mean_sq - mean ** 2
     # enforce R convention (unbiased estimator) for variance
-    var *= X.shape[0] / (X.shape[0] - 1)
+    var *= X.shape[axis] / (X.shape[axis] - 1)
     return mean, var
 
 
@@ -27,36 +27,22 @@ def sparse_mean_variance_axis(mtx: sparse.spmatrix, axis: int):
     """
     assert axis in (0, 1)
     if isinstance(mtx, sparse.csr_matrix):
-        if axis == 0:
-            return sparse_mean_var_minor_axis(
-                mtx.data, mtx.indices, mtx.shape[0], mtx.shape[1], np.float64
-            )
-        elif axis == 1:
-            return sparse_mean_var_major_axis(
-                mtx.data,
-                mtx.indices,
-                mtx.indptr,
-                mtx.shape[0],
-                mtx.shape[1],
-                np.float64,
-            )
+        ax_minor = 1
+        shape = mtx.shape
     elif isinstance(mtx, sparse.csc_matrix):
-        if axis == 0:
-            return sparse_mean_var_major_axis(
-                mtx.data,
-                mtx.indices,
-                mtx.indptr,
-                mtx.shape[1],
-                mtx.shape[0],
-                np.float64,
-            )
-        elif axis == 1:
-            return sparse_mean_var_minor_axis(
-                mtx.data, mtx.indices, mtx.shape[1], mtx.shape[0], np.float64
-            )
+        ax_minor = 0
+        shape = mtx.shape[::-1]
     else:
         raise ValueError(
             "This function only works on sparse csr and csc matrices"
+        )
+    if axis == ax_minor:
+        return sparse_mean_var_major_axis(
+            mtx.data, mtx.indices, mtx.indptr, *shape, np.float64
+        )
+    else:
+        return sparse_mean_var_minor_axis(
+            mtx.data, mtx.indices, *shape, np.float64
         )
 
 

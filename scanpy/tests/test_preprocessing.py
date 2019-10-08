@@ -1,3 +1,4 @@
+from itertools import product
 from pathlib import Path
 
 import numpy as np
@@ -31,10 +32,10 @@ def test_mean_var_sparse():
     csc64 = csr64.tocsc()
 
     # Test that we're equivalent for 64 bit
-    for mtx in (csr64, csc64):
-        scm, scv = sc.pp._utils._get_mean_var(mtx)
-        skm, skv = mean_variance_axis(mtx, 0)
-        skv *= (mtx.shape[0] / (mtx.shape[0] - 1))
+    for mtx, ax in product((csr64, csc64), (0, 1)):
+        scm, scv = sc.pp._utils._get_mean_var(mtx, axis=ax)
+        skm, skv = mean_variance_axis(mtx, ax)
+        skv *= (mtx.shape[ax] / (mtx.shape[ax] - 1))
 
         assert np.allclose(scm, skm)
         assert np.allclose(scv, skv)
