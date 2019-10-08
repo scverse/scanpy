@@ -11,6 +11,8 @@ from .._compat import Literal
 
 def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
+    if issubclass(X.dtype.type, (int, np.integer)):
+        X = X.astype(np.float32)  # TODO: Check if float64 should be used
     after = np.median(counts[counts>0]) if after is None else after
     counts += (counts == 0)
     counts = counts / after
@@ -182,10 +184,7 @@ def normalize_total(
         layer = adata.layers[layer_name]
         counts = np.ravel(layer.sum(1))
         if inplace:
-            if hasattr(layer, '__itruediv__'):
-                _normalize_data(layer, counts, after)
-            else:
-                adata.layers[layer_name] = _normalize_data(layer, counts, after, copy=True)
+            adata.layers[layer_name] = _normalize_data(layer, counts, after)
         else:
             dat[layer_name] = _normalize_data(layer, counts, after, copy=True)
 
