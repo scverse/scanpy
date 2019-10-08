@@ -994,8 +994,10 @@ def downsample_counts(
     adata: AnnData,
     counts_per_cell: Optional[Union[int, Collection[int]]] = None,
     total_counts: Optional[int] = None,
+    *,
     random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = False,
+    dtype: Optional[np.dtype] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -1021,6 +1023,9 @@ def downsample_counts(
         Random seed for subsampling.
     replace
         Whether to sample the counts with replacement.
+    dtype
+        What dtype X should be returned as, since data is converted to integers
+        during downsampling. Defaults to input dtype.
     copy
         Determines whether a copy of `adata` is returned.
 
@@ -1035,11 +1040,16 @@ def downsample_counts(
         raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
     if copy:
         adata = adata.copy()
+    if dtype is None:
+        dtype = adata.X.dtype
+
     adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
     if total_counts_call:
         adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
     elif counts_per_cell_call:
         adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
+
+    adata.X = adata.X.astype(dtype)
     if copy:
         return adata
 
