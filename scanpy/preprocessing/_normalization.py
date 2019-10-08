@@ -13,12 +13,12 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     after = np.median(counts[counts>0]) if after is None else after
     counts += (counts == 0)
-    counts /= after
+    counts = counts / after
     if issparse(X):
         sparsefuncs.inplace_row_scale(X, 1/counts)
     else:
-        X /= counts[:, None]
-    return X if copy else None
+        np.divide(X, counts[:, None], out=X)
+    return X
 
 
 def normalize_total(
@@ -170,10 +170,7 @@ def normalize_total(
     if inplace:
         if key_added is not None:
             adata.obs[key_added] = counts_per_cell
-        if hasattr(adata.X, '__itruediv__'):
-            _normalize_data(adata.X, counts_per_cell, target_sum)
-        else:
-            adata.X = _normalize_data(adata.X, counts_per_cell, target_sum, copy=True)
+        adata.X = _normalize_data(adata.X, counts_per_cell, target_sum)
     else:
         # not recarray because need to support sparse
         dat = dict(
