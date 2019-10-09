@@ -65,6 +65,7 @@ requires = [
     'sinfo',
     # for getting the stable version
     'importlib_metadata>=0.7; python_version < "3.8"',
+    'multipledispatch'
 ]
 
 [tool.flit.metadata.requires-extra]
