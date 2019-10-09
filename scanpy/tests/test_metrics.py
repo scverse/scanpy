@@ -37,3 +37,20 @@ def test_gearys_c():
         sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
     )
     assert sc.metrics.gearys_c(adata, vals=connected) == 0.
+
+
+def test_confusion_matrix():
+    mtx = sc.metrics.confusion_matrix(["a", "b"], ["c", "d"], normalize=False)
+    assert mtx.loc["a", "c"] == 1
+    assert mtx.loc["a", "d"] == 0
+    assert mtx.loc["b", "d"] == 1
+    assert mtx.loc["b", "c"] == 0
+
+    mtx = sc.metrics.confusion_matrix(["a", "b"], ["c", "d"], normalize=True)
+    assert mtx.loc["a", "c"] == 1.
+    assert mtx.loc["a", "d"] == 0
+    assert mtx.loc["b", "d"] == 1.
+    assert mtx.loc["b", "c"] == 0
+
+    mtx = sc.metrics.confusion_matrix(["a", "a", "b", "b"], ["c", "d", "c", "d"], normalize=True)
+    assert np.all(mtx == .5)
