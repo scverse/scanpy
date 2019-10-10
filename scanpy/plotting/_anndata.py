@@ -1982,7 +1982,7 @@ def tracksplot(
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
-        from ._tools.scatterplots import _set_default_colors_for_categorical_obs
+        from ._utils import _set_default_colors_for_categorical_obs
         _set_default_colors_for_categorical_obs(adata, groupby)
 
     groupby_colors = adata.uns[groupby + "_colors"]

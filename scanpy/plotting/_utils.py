@@ -313,7 +313,6 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
     None
     """
     from matplotlib.colors import to_hex
-    from cycler import Cycler, cycler
 
     categories = adata.obs[value_to_plot].cat.categories
     # check is palette is a valid matplotlib colormap
@@ -339,8 +338,8 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                 if not is_color_like(color):
                     # check if the color is a valid R color and translate it
                     # to a valid hex color value
-                    if color in _utils.additional_colors:
-                        color = _utils.additional_colors[color]
+                    if color in additional_colors:
+                        color = additional_colors[color]
                     else:
                         raise ValueError("The following color value of the given palette is not valid: {}".format(color))
                 _color_list.append(color)
@@ -406,7 +405,7 @@ def add_colors_for_categorical_sample_annotation(adata, key, palette=None,
     if palette and force_update_colors:
         _set_colors_for_categorical_obs(adata, key, palette)
     elif color_key in adata.uns and len(adata.uns[color_key]) <= colors_needed:
-        _validate_palette()
+        _validate_palette(adata, key)
     else:
         _set_default_colors_for_categorical_obs(adata, key)
 
