@@ -30,7 +30,7 @@ default_20 = vega_20_scanpy
 # https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 # update 1
 # orig reference http://epub.wu.ac.at/1692/1/document.pdf
-zeileis_26 = [
+zeileis_28 = [
     "#023fa5", "#7d87b9", "#bec1d4", "#d6bcc0", "#bb7784", "#8e063b", "#4a6fe3",
     "#8595e1", "#b5bbe3", "#e6afb9", "#e07b91", "#d33f6a", "#11c638", "#8dd593",
     "#c6dec7", "#ead3c6", "#f0b98d", "#ef9708", "#0fcfc0", "#9cded6", "#d5eae7",
@@ -38,10 +38,10 @@ zeileis_26 = [
     '#7f7f7f', "#c7c7c7", "#1CE6FF", "#336600",  # these last ones were added,
 ]
 
-default_26 = zeileis_26
+default_28 = zeileis_28
 
 # from http://godsnotwheregodsnot.blogspot.de/2012/09/color-distribution-methodology.html
-godsnot_64 = [
+godsnot_102 = [
     # "#000000",  # remove the black, as often, we have black colored annotation
     "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
     "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
@@ -58,7 +58,7 @@ godsnot_64 = [
     "#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72",
 ]
 
-default_64 = godsnot_64
+default_102 = godsnot_102
 
 
 from typing import Mapping, Sequence
