@@ -458,6 +458,8 @@ def test_paga(image_comparer):
     pbmc = sc.datasets.pbmc68k_reduced()
     sc.tl.paga(pbmc, groups='bulk_labels')
 
+    # delete bulk_labels_colors to test the creation of color list by paga
+    del pbmc.uns['bulk_labels_colors']
     sc.pl.paga(pbmc, threshold=0.5, max_edge_width=1.0, show=False)
     save_and_compare_images('master_paga')
 
