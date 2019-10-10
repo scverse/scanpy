@@ -1,15 +1,18 @@
 """
 Metrics which don't quite deserve their own file.
 """
-from typing import Sequence, Union
+from typing import Optional, Sequence, Union
+
 import pandas as pd
+from pandas.api.types import is_categorical
+from natsort import natsorted
 import numpy as np
 
 
 def confusion_matrix(
-    orig: "Union[pd.Series, np.ndarray, Sequence]",
-    new: "Union[pd.Series, np.ndarray, Sequence]",
-    data: pd.DataFrame = None,
+    orig: Union[pd.Series, np.ndarray, Sequence],
+    new: Union[pd.Series, np.ndarray, Sequence],
+    data: Optional[pd.DataFrame] = None,
     *,
     normalize: bool = True,
 ) -> pd.DataFrame:
@@ -26,10 +29,10 @@ def confusion_matrix(
 
     Usage
     -----
-    >>> import seaborn as sns
-    >>> import scanpy as sc
-    >>> confmtx = sc.metrics.confusion_matrix(labels["orig"], labels["new"])
-    >>> sns.heatmap(confmtx)
+    >>> import scanpy as sc; import seaborn as sns
+    >>> pbmc = sc.datasets.pbmc68k_reduced()
+    >>> cmtx = sc.metrics.confusion_matrix("bulk_labels", "louvain", pbmc.obs)
+    >>> sns.heatmap(cmtx)
     """
     from sklearn.metrics import confusion_matrix as _confusion_matrix
 
@@ -65,6 +68,14 @@ def confusion_matrix(
     )
 
     # Filter
-    df = df.loc[df.index.isin(pd.unique(orig)), df.columns.isin(pd.unique(new))]
+    if is_categorical(orig):
+        orig_idx = pd.Series(orig).cat.categories
+    else:
+        orig_idx = natsorted(pd.unique(orig))
+    if is_categorical(new):
+        new_idx = pd.Series(new).cat.categories
+    else:
+        new_idx = natsorted(pd.unique(new))
+    df = df.loc[np.array(orig_idx), np.array(new_idx)]
 
     return df
