@@ -56,6 +56,7 @@ def test_heatmap(image_comparer):
                   standard_scale='obs')
     save_and_compare_images('master_heatmap_std_scale_obs')
 
+
 def test_clustermap(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
 
@@ -65,6 +66,7 @@ def test_clustermap(image_comparer):
 
     sc.pl.clustermap(adata, 'cell_type')
     save_and_compare_images('master_clustermap_withcolor')
+
 
 def test_dotplot(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
@@ -321,7 +323,6 @@ def test_scatterplots(image_comparer):
     save_and_compare_images('master_umap')
 
     # test umap with gene expression
-    import numpy as np
     sc.pl.umap(pbmc, color=np.array(['LYZ', 'CD79A']), s=20, alpha=0.5, frameon=False,
                title=['gene1', 'gene2'], show=False)
     save_and_compare_images('master_umap_gene_expr')
@@ -451,6 +452,7 @@ def test_scatter_rep(tmpdir):
             assert comp is None, comp
         else:
             assert "Error" in comp, f"{s1.outpth}, {s2.outpth} aren't supposed to match"
+
 
 def test_paga(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=20)

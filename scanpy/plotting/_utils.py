@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like, ListedColormap
+from matplotlib.colors import is_color_like
 from matplotlib.figure import SubplotParams as sppars
 from cycler import Cycler, cycler
 
