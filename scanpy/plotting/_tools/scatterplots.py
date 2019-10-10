@@ -760,112 +760,6 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
 
-def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
-
-    Parameters
-    ----------
-    adata
-        annData object
-    value_to_plot
-        name of a valid categorical observation
-    palette
-        Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
-        a list of colors (in a format that can be understood by matplotlib,
-        eg. RGB, RGBS, hex, or a cycler object with key='color'
-
-    Returns
-    -------
-    None
-    """
-    from matplotlib.colors import to_hex
-    from cycler import Cycler, cycler
-
-    categories = adata.obs[value_to_plot].cat.categories
-    # check is palette is a valid matplotlib colormap
-    if isinstance(palette, str) and palette in pl.colormaps():
-        # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
-        cmap = pl.get_cmap(palette)
-        colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-
-    else:
-        # check if palette is a list and convert it to a cycler, thus
-        # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, cabc.Sequence):
-            if len(palette) < len(categories):
-                logg.warning(
-                    "Length of palette colors is smaller than the number of "
-                    f"categories (palette length: {len(palette)}, "
-                    f"categories length: {len(categories)}. "
-                    "Some categories will have the same color."
-                )
-            # check that colors are valid
-            _color_list = []
-            for color in palette:
-                if not is_color_like(color):
-                    # check if the color is a valid R color and translate it
-                    # to a valid hex color value
-                    if color in _utils.additional_colors:
-                        color = _utils.additional_colors[color]
-                    else:
-                        raise ValueError("The following color value of the given palette is not valid: {}".format(color))
-                _color_list.append(color)
-
-            palette = cycler(color=_color_list)
-        if not isinstance(palette, Cycler):
-            raise ValueError("Please check that the value of 'palette' is a "
-                             "valid matplotlib colormap string (eg. Set2), a "
-                             "list of color names or a cycler with a 'color' key.")
-        if 'color' not in palette.keys:
-            raise ValueError("Please set the palette key 'color'.")
-
-        cc = palette()
-        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
-
-    adata.uns[value_to_plot + '_colors'] = colors_list
-
-
-def _set_default_colors_for_categorical_obs(adata, value_to_plot):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] using default color palettes
-
-    Parameters
-    ----------
-    adata : annData object
-    value_to_plot : name of a valid categorical observation
-
-    Returns
-    -------
-    None
-    """
-    from .. import palettes
-
-    categories = adata.obs[value_to_plot].cat.categories
-    length = len(categories)
-
-    # check if default matplotlib palette has enough colors
-    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
-        cc = rcParams['axes.prop_cycle']()
-        palette = [next(cc)['color'] for _ in range(length)]
-
-    else:
-        if length <= 20:
-            palette = palettes.default_20
-        elif length <= 26:
-            palette = palettes.default_26
-        elif length <= len(palettes.default_64):  # 103 colors
-            palette = palettes.default_64
-        else:
-            palette = ['grey' for _ in range(length)]
-            logg.info(
-                f'the obs value {value_to_plot!r} has more than 103 categories. Uniform '
-                "'grey' color will be used for all categories."
-            )
-
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
-
-
 def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False,
                       gene_symbols=None, layer=None) -> Tuple[Union[np.ndarray, str], bool]:
     """
@@ -900,30 +794,14 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     else:  # is_categorical_dtype(values)
         color_key = f"{value_to_plot}_colors"
         if palette:
-            _set_colors_for_categorical_obs(adata, value_to_plot, palette)
+            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
         elif color_key not in adata.uns or \
             len(adata.uns[color_key]) < len(values.categories):
             #  set a default palette in case that no colors or few colors are found
-            _set_default_colors_for_categorical_obs(adata, value_to_plot)
+            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
         else:
-            _palette = []
-            for color in adata.uns[color_key]:
-                if not is_color_like(color):
-                    # check if the color is a valid R color and translate it
-                    # to a valid hex color value
-                    if color in _utils.additional_colors:
-                        color = _utils.additional_colors[color]
-                    else:
-                        logg.warning(
-                            f"The following color value found in adata.uns['{value_to_plot}_colors'] "
-                            f"is not valid: '{color}'. Default colors are used."
-                        )
-                        _set_default_colors_for_categorical_obs(adata, value_to_plot)
-                        _palette = None
-                        break
-                _palette.append(color)
-            if _palette is not None:
-                adata.uns[color_key] = _palette
+            _utils._validate_palette(adata, value_to_plot)
+
         color_vector = np.asarray(adata.uns[color_key])[values.codes]
 
         # Handle groups
