@@ -57,6 +57,7 @@ Embeddings
 
    tl.phate
    tl.palantir
+   tl.trimap
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,6 +84,7 @@ Plotting: PL
    :toctree: .
 
    pl.phate
+   pl.trimap
    tl.palantir
 
 

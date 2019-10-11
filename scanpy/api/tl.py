@@ -1,7 +1,6 @@
 from ..tools._pca import pca
 from ..tools._tsne import tsne
 from ..tools._umap import umap
-from ..tools._trimap import trimap
 from ..tools._diffmap import diffmap
 from ..tools._draw_graph import draw_graph
 
@@ -20,4 +19,4 @@ from ..tools._top_genes import correlation_matrix, ROC_AUC_analysis
 
 from ..tools._score_genes import score_genes, score_genes_cell_cycle
 
-from ..external.tl import cyclone, sandbag, phate
+from ..external.tl import cyclone, sandbag, phate, trimap
