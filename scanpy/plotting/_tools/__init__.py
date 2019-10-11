@@ -945,11 +945,14 @@ def embedding_density(
             dot_sizes[group_mask] = np.ones(sum(group_mask)) * fg_dotsize
 
             if title is None:
-                title = group_name
+                _title = group_name
+            else:
+                _title = title
+
             ax = embedding(
                 adata, basis, components=components, color=density_col_name,
                 color_map=color_map, norm=norm, size=dot_sizes, vmax=vmax,
-                vmin=vmin, save=False, title=title, ax=ax, show=False,
+                vmin=vmin, save=False, title=_title, ax=ax, show=False,
                 **kwargs,
             )
             axs.append(ax)

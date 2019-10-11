@@ -82,7 +82,7 @@ Further updates:
 - :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn't subset :noteversion:`1.3.6` :smaller:`thanks to S Rybakov`
 - :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements, see :pr:`398` :noteversion:`1.3.7` :smaller:`thanks to M Lange`
 - :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
-- :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Park18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
+- :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Polanski19]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
 - :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  :noteversion:`1.3.7` :smaller:`thanks to A Mousa`
 - :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :noteversion:`1.3.4` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn't require speciying default genomes anymore, see :pr:`442` and :pr:`444` :noteversion:`1.3.8`  :smaller:`thanks to I Vishrup`
