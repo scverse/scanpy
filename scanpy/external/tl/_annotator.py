@@ -79,16 +79,9 @@ def annotator(
     -------
 
     Here is the example of annotation of dendritic cells based on their gene
-    expressions. For annotation, we use data by Villani et al. (2017)[1] and
-    marker genes by Franzén et al. (2019)[2].
+    expressions. For annotation, we use data by [Villani17] and
+    marker genes published by [Franzen19]_.
 
-    [1]  Villani, A. C., Satija, ... Jardine, L. (2017). Single-cell
-         RNA-seq reveals new types of human blood dendritic cells, monocytes,
-         and progenitors. Science, 356(6335).
-
-    [2]  Oscar Franzén, Li-Ming Gan, Johan L M Björkegren, PanglaoDB:
-         a web server for exploration of mouse and human single-cell RNA
-         sequencing data, Database, Volume 2019, 2019.
 
     >>> import pandas as pd
     >>> from scanpy import AnnData
