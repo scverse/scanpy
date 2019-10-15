@@ -45,7 +45,7 @@ setup(
             'zappy',
             'zarr',
             'black',
-            'point-annotator',
+            'point-annotator~=2.0',
         ],
     ),
     packages=find_packages(),

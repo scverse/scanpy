@@ -51,21 +51,19 @@ def adata(data):
 
 
 def basic_check(annotations, adata):
-    assert type(annotations) == AnnData
+    assert type(annotations) == pd.DataFrame
     assert len(annotations) == len(adata)
     assert annotations.shape == (8, 2)  # two types in the data
-    assert np.nansum(annotations.X) > 0
-    assert np.nanmax(annotations.X) <= 1
-    assert np.nanmin(annotations.X) >= 0
+    assert np.nansum(annotations.values) > 0
+    assert np.nanmax(annotations.values) <= 1
+    assert np.nanmin(annotations.values) >= 0
 
 
 @pytest.mark.skipif(
     find_spec('pointannotator') is None, reason="point-annotator not installed"
 )
 def test_annotator(adata, markers):
-    annotations = annotator(
-        adata, markers, normalize=False, num_genes=15
-    )
+    annotations = annotator(adata, markers, normalize=False, num_genes=15)
 
     basic_check(annotations, adata)
 
@@ -89,16 +87,13 @@ def test_remove_empty_column(adata, markers):
     basic_check(annotations, adata)
 
     annotations = annotator(
-        adata,
-        markers,
-        num_genes=20,
-        return_nonzero_annotations=False,
+        adata, markers, num_genes=20, return_nonzero_annotations=False
     )
     assert len(annotations) == len(adata)
     assert annotations.shape == (8, 3)  # three types in the data
-    assert np.nansum(annotations.X) > 0
-    assert np.nanmax(annotations.X) <= 1
-    assert np.nanmin(annotations.X) >= 0
+    assert np.nansum(annotations.values) > 0
+    assert np.nanmax(annotations.values) <= 1
+    assert np.nanmin(annotations.values) >= 0
 
 
 @pytest.mark.skipif(
@@ -120,43 +115,48 @@ def test_sf(adata, markers):
 )
 def test_scoring(adata, markers, data):
     # scoring SCORING_EXP_RATIO
-    annotations = annotator(
-        adata, markers, num_genes=15, scoring="exp_ratio"
-    )
+    annotations = annotator(adata, markers, num_genes=15, scoring="exp_ratio")
 
     basic_check(annotations, adata)
 
     # scoring SCORING_MARKERS_SUM
     annotations = annotator(
-        adata,
-        markers,
-        num_genes=15,
-        scoring="sum_of_expressed_markers",
+        adata, markers, num_genes=15, scoring="sum_of_expressed_markers"
     )
 
-    assert type(annotations) == AnnData
+    assert type(annotations) == pd.DataFrame
     assert len(annotations) == len(adata)
     assert annotations.shape == (8, 2)  # two types in the data
 
     # based on provided data it should match
     # the third row is skipped, since it is special
-    assert pytest.approx(annotations.X[0, 0]) == data.iloc[0].sum()
-    assert pytest.approx(annotations.X[5, 1]) == data.iloc[5].sum()
+    assert pytest.approx(annotations.values[0, 0]) == data.iloc[0].sum()
+    assert pytest.approx(annotations.values[5, 1]) == data.iloc[5].sum()
 
     # scoring SCORING_LOG_FDR
-    annotations = annotator(
-        adata, markers, num_genes=15, scoring="log_fdr"
-    )
+    annotations = annotator(adata, markers, num_genes=15, scoring="log_fdr")
 
-    assert type(annotations) == AnnData
+    assert type(annotations) == pd.DataFrame
     assert len(annotations) == len(adata)
     assert annotations.shape == (8, 2)  # two types in the data
 
     # scoring SCORING_LOG_PVALUE
-    annotations = annotator(
-        adata, markers, num_genes=15, scoring="log_p_value"
-    )
+    annotations = annotator(adata, markers, num_genes=15, scoring="log_p_value")
 
-    assert type(annotations) == AnnData
+    assert type(annotations) == pd.DataFrame
     assert len(annotations) == len(adata)
     assert annotations.shape == (8, 2)  # two types in the data
+
+
+def test_inplace(adata, markers):
+    annotations_inplace = annotator(
+        adata, markers, normalize=False, num_genes=15, inplace=True
+    )
+
+    assert type(annotations_inplace) == AnnData
+    assert len(annotations_inplace.obs) == len(adata)
+    assert annotations_inplace.obs.shape == (8, 2)  # two types in the data
+
+    annotations_ = annotator(adata, markers, normalize=False, num_genes=15)
+
+    np.testing.assert_almost_equal(annotations_inplace.obs.values, annotations_)

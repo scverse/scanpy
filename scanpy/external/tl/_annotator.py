@@ -17,6 +17,7 @@ def annotator(
     z_threshold: float = 1.0,
     scoring: str = "exp_ratio",
     normalize: bool = False,
+    inplace: bool = False,
 ):
     """\
     Annotator marks the data with cell type annotations based on marker genes.
@@ -62,18 +63,21 @@ def annotator(
             Negative of the logarithm of an false discovery rate (FDR) value
         log_p_value
             Negative of the logarithm of a p-value
-    normalize : bool, optional (default = False)
+    normalize
         If this parameter is True data will be normalized during the
         a process with a log CPM normalization.
         That method works correctly data needs to be normalized.
         Set this `normalize` on True if your data are not normalized already.
+    inplace
+        If inplace is true return input data with annotations in the obs part
+        of the AnnData, otherwise return pd.DataFrame with annotations.
 
     Returns
     -------
-    pd.DataFrame
-        Cell type for each cell for each cell. The result is a sore matrix that
-        tells how probable is each cell type for each cell. Columns are cell
-        types and rows are cells.
+    Cell type for each cell. The result is a sore matrix that
+    tells how probable is each cell type for each cell. Columns are cell
+    types and rows are cells. The score matrix is attached to .obs if inplace
+    is True else it is returned as a numpy array.
 
     Example
     -------
@@ -114,7 +118,9 @@ def annotator(
             'Please install point-annotator: \n\t' 'pip install point-annotator'
         )
 
-    data_df = pd.DataFrame(adata.X, columns=adata.var.values.flatten())
+    data_df = pd.DataFrame(
+        adata.X, columns=adata.var.values.flatten(), index=adata.obs.index
+    )
     if num_genes is None:
         num_genes = data_df.shape[1]
         warnings.warn(
@@ -127,13 +133,19 @@ def annotator(
     annotations = AnnotateSamples.annotate_samples(
         data_df,
         markers,
-        num_genes=num_genes,
+        num_all_attributes=num_genes,
         return_nonzero_annotations=return_nonzero_annotations,
         p_threshold=p_threshold,
         p_value_fun=p_value_fun,
         z_threshold=z_threshold,
         scoring="scoring_" + scoring,
         normalize=normalize,
+        annotations_col="Cell Type",
+        attributes_col="Gene",
     )
 
-    return AnnData(annotations.values, var=annotations.columns.values)
+    if inplace:
+        adata.obs = pd.concat([adata.obs, annotations], axis=1)
+        return adata
+    else:
+        return annotations
