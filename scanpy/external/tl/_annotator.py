@@ -21,49 +21,51 @@ def annotator(
     """\
     Annotator marks the data with cell type annotations based on marker genes.
 
-    Over-expressed genes are selected with the  Mann-Whitney U tests and cell
+    Over-expressed genes are selected with the Mann-Whitney U tests and cell
     types are assigned with the hypergeometric test. This function first selects
-    genes from gene expression data with the Mann Whitney U test, then annotate
+    genes from gene expression data with the Mann-Whitney U test, then annotate
     them with the hypergeometric test, and finally filter out cell types that
     have zero scores for all cells. The results are scores that tell how
     probable is each cell type for each cell.
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         Tabular data with gene expressions.
-    markers : pd.DataFrame
+    markers
         The data-frame with marker genes and cell types. Data-frame has two
         columns **Gene** and **Cell Type** first holds gene names or ID and
         second cell type for this gene. Gene names must be written in the same
         format than genes in `adata`.
-    num_genes : int, optional (default=None)
+    num_genes
         The number of genes that the organism has.
-    return_nonzero_annotations : bool, optional (default=True)
+    return_nonzero_annotations
         If true return scores only for cell types that have no zero scores.
-    p_threshold : float
+    p_threshold
         A threshold for accepting the annotations. Annotations that have FDR
         value bellow this threshold are used.
-    p_value_fun : str, optional (defaults: binom)
+    p_value_fun
         A function that calculates a p-value. It can be either
         `binom` that uses binom.sf or
         `hypergeom` that uses hypergeom.sf.
-    z_threshold: float
+    z_threshold
         The threshold for selecting the gene from gene expression data.
         For each cell the attributes with z-value above this value are selected.
-    scoring : str, optional (default = "exp_ratio")
+    scoring
         Scoring method for cell type scores. Available scores are:
-        - exp_ratio - the proportion of genes typical for a cell type expressed
-        in the cell
-        - sum_of_expressed_markers - the sum of expressions of genes typical for
-        a cell type
-        - log_fdr - negative of the logarithm of an false discovery rate (FDR)
-        value
-        - log_p_value - negative of the logarithm of an p-value
+
+        exp_ratio
+            Proportion of genes typical for a cell type expressed in the cell
+        sum_of_expressed_markers
+            Sum of expressions of genes typical for a cell type
+        log_fdr
+            Negative of the logarithm of an false discovery rate (FDR) value
+        log_p_value
+            Negative of the logarithm of a p-value
     normalize : bool, optional (default = False)
         If this parameter is True data will be normalized during the
         a process with a log CPM normalization.
-       That method works correctly data needs to be normalized.
+        That method works correctly data needs to be normalized.
         Set this `normalize` on True if your data are not normalized already.
 
     Returns
