@@ -1,13 +1,18 @@
+import itertools
+from math import sqrt
 from typing import Collection, Optional, Union
 
-
-from anndata import AnnData
-from anndata.utils import Index
 import sparseqr
 import numpy as np
-import pandas as pd
-import itertools
+from numpy import array
+from scipy.sparse import coo_matrix
+from anndata import AnnData
+from anndata.utils import Index
+
+# from numpy.linalg import solve
+
 from .. import logging as logg
+
 
 def subset_to_index(subset, x, byrow=True):
     # Converts arbitrary subsetting vectors to an integer index vector.
@@ -21,12 +26,13 @@ def subset_to_index(subset, x, byrow=True):
 
     out = dummy
 
-    if (np.any(np.isnan(out))):
+    if np.any(np.isnan(out)):
         raise ValueError("'subset' indices out of range of 'x'")
 
     return out
 
-#TODO: check if necessary
+
+# TODO: check if necessary
 def subset_and_divide(x, row_subset, col_subset, scaling):
     row_subset = np.array([int(a) for a in row_subset], dtype=np.int)
     col_subset = np.array([int(b) for b in col_subset], dtype=np.int)
@@ -35,20 +41,20 @@ def subset_and_divide(x, row_subset, col_subset, scaling):
     return [x_subset.sum(axis=0), (x_subset / x_subset.sum(axis=0)), average]
 
 
-def generateSphere(lib_sizes):
+def generate_sphere(lib_sizes):
     # Sorts cells by their library sizes, and generates an ordering vector
     # to arrange cells in a circle based on increasing/decreasing lib size.
     nlibs = len(lib_sizes)
     o = np.argsort(lib_sizes)
-    even = np.arange(0,nlibs,2)
-    odd = np.arange(1,nlibs,2)
+    even = np.arange(0, nlibs, 2)
+    odd = np.arange(1, nlibs, 2)
     out = np.r_[o[even], np.flip(o[odd])]
     return np.r_[out, out]
 
 
 # TODO check
 def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
-    #A function to estimate the pooled size factors and construct the linear equations.
+    # A function to estimate the pooled size factors and construct the linear equations.
     ngenes, ncells = exprs.shape
     if ncells == 0:
         raise ValueError("at least one cell required for normalization")
@@ -63,8 +69,9 @@ def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
     for s in pool_sizes:
         if s < 1 or s > ncells:
             raise ValueError(
-                "each element of sizes should be within [1, number of cells]")
-        if (s < last_size):
+                "each element of sizes should be within [1, number of cells]"
+            )
+        if s < last_size:
             raise ValueError("sizes should be sorted")
         total_size += s
         last_size = s
@@ -72,7 +79,8 @@ def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
     # Checking pseudo cell.
     if ngenes != pseudo_cell.size:
         raise ValueError(
-            "length of pseudo-cell vector is not the same as the number of cells")
+            "length of pseudo-cell vector is not the same as the number of cells"
+        )
 
     # Checking ordering.
     if order.size < ncells * 2 - 1:
@@ -82,7 +90,6 @@ def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
             raise ValueError("elements of ordering vector are out of range")
 
     collected = [exprs[:, c] for c in order]
-
 
     if ngenes == 0:
         raise ValueError("insufficient features for median calculations")
@@ -112,17 +119,10 @@ def pool_size_factors(exprs, pseudo_cell, order, pool_sizes):
     return pool_factor
 
 
-# from numpy.linalg import solve
-from math import sqrt
-from scipy import sparse
-from numpy import array
-from scipy.sparse import coo_matrix
-
-
 # from itertools import chain
 
 # import itertools
-#TODO some code missing
+# TODO some code missing
 def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     # Does the heavy lifting of computing pool-based size factors
     # and creating the linear system out of the equations for each pool.
@@ -132,8 +132,7 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     output = []
 
     # Creating the linear system with the requested pool sizes.
-    out = pool_size_factors(cur_exprs, ave_cell, sphere,
-                            pool_sizes)  # sphere - 1L
+    out = pool_size_factors(cur_exprs, ave_cell, sphere, pool_sizes)  # sphere - 1L
 
     # TODO input code for row_dex , col_dex , output
     # output.append(out)
@@ -142,13 +141,13 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     # output.append(out[2])
     # -----------------------pool_size_factors doesnt work-> use output of r script
 
-    #a = readROutput_tonumpyArray('out_1.csv')
-    #b = readROutput_tonumpyArray('out_2.csv')
-    #c = readROutput_tonumpyArray('out_3.csv')
+    # a = readROutput_tonumpyArray('out_1.csv')
+    # b = readROutput_tonumpyArray('out_2.csv')
+    # c = readROutput_tonumpyArray('out_3.csv')
 
-    #row_dex.append(a)  # + 1L
-    #col_dex.append(b)  # + 1L
-    #output.append(c)
+    # row_dex.append(a)  # + 1L
+    # col_dex.append(b)  # + 1L
+    # output.append(c)
 
     # new
     # np.empty([nsizes, ncells],np.float64)
@@ -157,8 +156,8 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     # old
     # Adding extra equations to guarantee solvability.
     cur_cells = cur_exprs.shape[1]
-    row_dex.append(
-        np.arange(cur_cells) + cur_cells * len(pool_sizes))  # evtl +1 bei range
+    # evtl +1 bei range
+    row_dex.append(np.arange(cur_cells) + cur_cells * len(pool_sizes))
 
     col_dex.append(np.arange(cur_cells))  # evtl +1 bei range
 
@@ -167,8 +166,7 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
 
     # Setting up the entries of the LHS matrix.#
 
-    eqn_values = np.repeat([1, sqrt(LOWWEIGHT)],
-                           [len(row_dex[0]), len(row_dex[1])])
+    eqn_values = np.repeat([1, sqrt(LOWWEIGHT)], [len(row_dex[0]), len(row_dex[1])])
 
     # Constructing a sparse matrix.
 
@@ -177,8 +175,9 @@ def create_linear_system(cur_exprs, ave_cell, sphere, pool_sizes):
     output = array([y for x in output for y in x])
     # design = sparse.coo_matrix((eqn_values,(row_dex,col_dex)),shape=(len(output), cur_cells))#(i=row_dex, j=col_dex, x=eqn_values, dims=c(length(output), cur.cells))
 
-    design = coo_matrix((eqn_values, (row_dex, col_dex)),
-                        shape=(len(output), cur_cells))  # .toarray()
+    design = coo_matrix(
+        (eqn_values, (row_dex, col_dex)), shape=(len(output), cur_cells)
+    )  # .toarray()
 
     return [design, output]
 
@@ -198,9 +197,9 @@ def rescale_clusters(mean_prof, ref_col, min_mean):
         # are themselves equivalent to 'calcAverage()' across all cells in each cluster.
         cur_libsize = np.sum(cur_prof)
         ref_libsize = np.sum(ref_prof)
-        to_use = (np.divide(cur_prof, cur_libsize) + np.divide(ref_prof,
-                                                               ref_libsize)) / 2 * (
-                         cur_libsize + ref_libsize) / 2 >= min_mean
+        to_use = (
+            np.divide(cur_prof, cur_libsize) + np.divide(ref_prof, ref_libsize)
+        ) / 2 * (cur_libsize + ref_libsize) / 2 >= min_mean
         if not np.all(to_use):
             cur_prof = cur_prof[to_use]
             ref_prof = ref_prof[to_use]
@@ -212,7 +211,6 @@ def rescale_clusters(mean_prof, ref_col, min_mean):
     return rescaling
 
 
-
 def limit_cluster_size(clusters, max_size):
     # Limits the maximum cluster size to avoid problems with memory in Matrix::qr().
     # Done by arbitrarily splitting large clusters so that they fall below max_size.
@@ -221,34 +219,38 @@ def limit_cluster_size(clusters, max_size):
     new_clusters = np.zeros(clusters.size)
     counter = 1
     for id in np.unique(clusters):
-        current=np.equal( id, clusters)
+        current = np.equal(id, clusters)
         ncells = np.sum(current)
 
         if ncells <= max_size:
-            new_clusters[current]=counter
-            counter = counter+1
+            new_clusters[current] = counter
+            counter = counter + 1
             continue
         # Size of output clusters is max.size * N / ceil(N), where N = ncells/max.size.
         # This is minimal at the smallest N > 1, where output clusters are at least max.size/2.
         # Thus, we need max.size/2 >= min.size to guarantee that the output clusters are >= min.size.
 
-        #ToDo #testdata=anndata.read_csv("scran_computeSumFactors_countMatrix.csv")
+        # ToDo #testdata=anndata.read_csv("scran_computeSumFactors_countMatrix.csv")
 
-        mult =np.ceil(ncells/max_size)
-        realloc =np.tile(np.arange(1,mult+1) - 1 + counter, ncells)
-        new_clusters[current] =realloc
+        mult = np.ceil(ncells / max_size)
+        realloc = np.tile(np.arange(1, mult + 1) - 1 + counter, ncells)
+        new_clusters[current] = realloc
         counter = counter + mult
 
     return new_clusters
 
+
 def split(x, f):
-    return list(itertools.compress(x, f)), list(itertools.compress(x, (not i for i in f)))
+    return (
+        list(itertools.compress(x, f)),
+        list(itertools.compress(x, (not i for i in f))),
+    )
 
 
-
-#TODO check
-def per_cluster_normalize(x, curdex, sizes, subset_row, min_mean=1,
-                          positive=False, scaling=None):
+# TODO check
+def per_cluster_normalize(
+    x, curdex, sizes, subset_row, min_mean=1, positive=False, scaling=None
+):
     # Computes the normalization factors _within_ each cluster,
     # along with the reference pseudo-cell used for normalization.
     vals = []
@@ -256,8 +258,8 @@ def per_cluster_normalize(x, curdex, sizes, subset_row, min_mean=1,
     for i in curdex:
         cur_cells = len(i)
         vals.append(
-            subset_and_divide(x, np.array(subset_row) - 1, np.array(i) - 1,
-                              scaling))
+            subset_and_divide(x, np.array(subset_row) - 1, np.array(i) - 1, scaling)
+        )
 
         scaling = vals[index][0]
         exprs = vals[index][1]
@@ -276,9 +278,8 @@ def per_cluster_normalize(x, curdex, sizes, subset_row, min_mean=1,
         exprs = exprs[high_ave]
         use_ave_cell = use_ave_cell[high_ave]
 
-
     # Using our summation approach.
-    sphere = generateSphere(scaling)
+    sphere = generate_sphere(scaling)
     new_sys = create_linear_system(exprs, use_ave_cell, sphere, sizes)
 
     design = new_sys[0]
@@ -295,19 +296,17 @@ def per_cluster_normalize(x, curdex, sizes, subset_row, min_mean=1,
 
     final_nf = final_nf * scaling
 
-
     if any(final_nf < 0):
         raise ValueError("encountered negative size factor estimates")
         if positive:
-            num_detected = np.count_nonzero(exprs,
-                                            axis=0)
+            num_detected = np.count_nonzero(exprs, axis=0)
             final_nf = cleanSizeFactors(final_nf, num_detected)
 
-
-    final_nf = readROutput_tonumpyArray('final.csv')
+    final_nf = readROutput_tonumpyArray("final.csv")
     return [final_nf, use_ave_cell]  # or ave_cell wrong
 
-#TODO end
+
+# TODO end
 def calculate_sum_factors(
     x,  # count matrix
     sizes=np.arange(20, 101, 5),
@@ -324,18 +323,17 @@ def calculate_sum_factors(
     # scaling: A numeric scalar containing scaling factors to adjust the counts prior to computing size factors.
     min_mean=1,
     # min_mean: A numeric scalar specifying the minimum (library size-adjusted) average count of genes to be used for normalization.
-    subset_row=None
+    subset_row=None,
 ):
-
     ncells = x.shape[1]
     if clusters is None:
         clusters = np.zeros(ncells)
-    clusters = limit_cluster_size(clusters,
-                                  max_cluster_size)  # still have to check it with different input
+    clusters = limit_cluster_size(
+        clusters, max_cluster_size
+    )  # still have to check it with different input
 
     if ncells != clusters.size:
         raise ValueError("ncol(x) is not equal to clusters.size.")
-
 
     indices = split(np.arange(0, clusters.size), [int(i) for i in clusters])
     # indices = list(itertools.compress(np.arange(1,clusters.size+1), clusters))
@@ -391,8 +389,9 @@ def calculate_sum_factors(
 
         ref_clust = np.argmax(non_zeroes, axis=0)
 
-    rescaling_factors = rescale_clusters(clust_profile, ref_col=ref_clust,
-                                         min_mean=min_mean)
+    rescaling_factors = rescale_clusters(
+        clust_profile, ref_col=ref_clust, min_mean=min_mean
+    )
 
     clust_nf_scaled = np.zeros([nclusters])
 
@@ -409,8 +408,7 @@ def calculate_sum_factors(
     final_sf / np.mean(final_sf)
 
 
-
-#TODO connection to computeSumfactor
+# TODO connection to computeSumfactor
 def normalize_scran(
     adata: AnnData,
     *,
@@ -422,7 +420,8 @@ def normalize_scran(
     scaling: Union[str, Collection[float], None] = None,
     min_mean: Union[int, float] = 1,
     subset_gene: Union[str, Index, None] = None,
-    copy: bool = True,
+    key_added: Optional[str] = None,
+    inplace: bool = True,
 ):
     """\
     One sentence to describe it.
@@ -450,9 +449,12 @@ def normalize_scran(
     if isinstance(subset_gene, str):
         subset_gene = adata.var[subset_gene]
 
-    if copy:
-        adata = adata.copy()
+    factors = ...
+    x_norm = ...
 
-    ...
-
-    return adata if copy else None
+    if inplace:
+        adata.X = x_norm
+        if key_added is not None:
+            adata.obs[key_added] = factors
+    else:
+        return dict(X=x_norm, size_factors=factors)
