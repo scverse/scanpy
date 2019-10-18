@@ -26,26 +26,25 @@ def sniff_url(accession: str):
         with urlopen(base_url):  # Check if server up/ dataset exists
             pass
     except HTTPError as e:
-        e.msg = e.msg + f" ({base_url})"  # Report failed url
+        e.msg = f"{e.msg} ({base_url})"  # Report failed url
         raise
 
 
 def download_experiment(accession: str):
     sniff_url(accession)
 
-    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}/"
-    quantification_path = "download/zip?fileType=quantification-filtered&accessKey="
-    sampledata_path = "download?fileType=experiment-design&accessKey="
+    base_url = f"https://www.ebi.ac.uk/gxa/sc/experiment/{accession}"
+    download_url = f"{base_url}/download/zip?accessKey=&fileType="
 
     experiment_dir = settings.datasetdir / accession
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     _download(
-        base_url + sampledata_path,
+        download_url + "experiment-design",
         experiment_dir / "experimental_design.tsv",
     )
     _download(
-        base_url + quantification_path,
+        download_url + "quantification-filtered",
         experiment_dir / "expression_archive.zip",
     )
 
@@ -72,7 +71,8 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     with archive.open(mtx_data_info, "r") as f:
         expr = read_mtx_from_stream(f)
     with archive.open(mtx_rows_info, "r") as f:
-        varname = pd.read_csv(f, sep="\t", header=None)[1]  # TODO: Check what other value could be
+        # TODO: Check what other value could be
+        varname = pd.read_csv(f, sep="\t", header=None)[1]
     with archive.open(mtx_cols_info, "r") as f:
         obsname = pd.read_csv(f, sep="\t", header=None).iloc[:, 0]
     adata = anndata.AnnData(expr)
@@ -81,11 +81,16 @@ def read_expression_from_archive(archive: ZipFile) -> anndata.AnnData:
     return adata
 
 
-def ebi_expression_atlas(accession: str, *, filter_boring: bool = False) -> anndata.AnnData:
+def ebi_expression_atlas(
+    accession: str, *, filter_boring: bool = False
+) -> anndata.AnnData:
     """\
-    Load a dataset from the `EBI Single Cell Expression Atlas <https://www.ebi.ac.uk/gxa/sc/experiments>`__.
+    Load a dataset from the EBI Single Cell `Expression Atlas`_.
 
-    Downloaded datasets are saved in directory specified by `sc.settings.datasetdir`.
+    Downloaded datasets are saved in directory specified by
+    :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
+
+    .. _Expression Atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 
     Params
     ------
