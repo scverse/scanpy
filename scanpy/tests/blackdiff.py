@@ -41,6 +41,7 @@ if __name__ == '__main__':
         for src in Path().glob('**/*.py')
         if exclude_re.match(str(Path('/') / src))
         and not src.parts[0] == 'build'
+        and not src.parts[:2] == ('scanpy', 'api')
     ]
     for file, (added, removed) in sorted(excluded, key=lambda sd: -sum(sd[1])):
         print(f'{file}: +{added} -{removed}')

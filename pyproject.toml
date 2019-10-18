@@ -19,10 +19,8 @@ exclude = '''
     |neighbors/__init__
     |api/(__init__|pp|pl|datasets)
     |external/(exporting|tl/_palantir)
-    |datasets/(__init__|_ebi_expression_atlas)
     |preprocessing/(
-        __init__
-        |_qc
+        _qc
         |_combat
         |_simple
         |_recipes
@@ -60,8 +58,6 @@ exclude = '''
     |tests/(
         test_get
         |test_pca
-        |test_docs
-        |test_binary
         |test_combat
         |test_plotting
         |test_read_10x
@@ -69,7 +65,6 @@ exclude = '''
         |test_readwrite
         |test_clustering
         |test_qc_metrics
-        |test_score_genes
         |test_preprocessing
         |test_rank_genes_groups
         |test_marker_gene_overlap
