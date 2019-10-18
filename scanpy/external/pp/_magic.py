@@ -153,7 +153,7 @@ def magic(
     )
     # update AnnData instance
     if name_list == "pca_only":
-        # special case - update adata.obsm with smoothed values
+        # special case – update adata.obsm with smoothed values
         adata.obsm["X_magic"] = X_magic.X
     elif copy:
         # just return X_magic

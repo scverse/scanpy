@@ -25,7 +25,7 @@ distances_euclidean_all = [
 ]
 
 
-# umap "kernel" - only knn results
+# umap "kernel" – only knn results
 connectivities_umap = [
     [0.0, 1.0, 0.0, 1.0],
     [1.0, 0.0, 0.5849691143165735, 0.8277419907567016],
@@ -48,7 +48,7 @@ transitions_umap = [
 ]
 
 
-# gauss kernel [diffmap, dpt] - knn and dense results
+# gauss kernel [diffmap, dpt] – knn and dense results
 connectivities_gauss_knn = [
     [0.0, 0.8466368913650513, 0.0, 0.5660185813903809],
     [0.8466368913650513, 0.0, 0.4223647117614746, 0.4902938902378082],

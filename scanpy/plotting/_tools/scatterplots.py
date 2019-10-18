@@ -13,10 +13,12 @@ from matplotlib import patheffects
 from matplotlib.colors import Colormap
 
 from .. import _utils
+from .._utils import _IGraphLayout, _FontWeight
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
+from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params
-from ... import logging as logg
+from ..._compat import Literal
 
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
@@ -38,13 +40,13 @@ def embedding(
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
     layer: Optional[str] = None,
-    projection: str = '2d',
+    projection: Literal['2d', '3d'] = '2d',
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Optional[float] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Optional[int] = None,
-    legend_fontweight: str = 'bold',
+    legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
     vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
@@ -560,14 +562,18 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 @_wraps_plot_scatter
 @_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
-def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
+def draw_graph(
+    adata: AnnData,
+    layout: Optional[_IGraphLayout] = None,
+    **kwargs,
+) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
     {adata_color_etc}
-    layout : {{`'fa'`, `'fr'`, `'drl'`, ...}}, optional (default: last computed)
+    layout
         One of the :func:`~scanpy.tl.draw_graph` layouts.
         By default, the last computed layout is used.
     {edges_arrows}

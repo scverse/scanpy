@@ -1,18 +1,20 @@
+import warnings
 from typing import Optional
 
-from anndata import AnnData
 import numpy as np
 import pandas as pd
-import warnings
+from scipy.sparse import issparse
+from anndata import AnnData
+
 from ... import logging as logg
 from .._distributed import materialize_as_ndarray
 from .._utils import _get_mean_var
-from scipy.sparse import issparse
+from ..._compat import Literal
 
 
 def filter_genes_dispersion(
     data: AnnData,
-    flavor: str = 'seurat',
+    flavor: Literal['seurat', 'cell_ranger'] = 'seurat',
     min_disp: Optional[float] = None,
     max_disp: Optional[float] = None,
     min_mean: Optional[float] = None,
@@ -57,12 +59,12 @@ def filter_genes_dispersion(
     data
         The (annotated) data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    flavor: {`'seurat'`, `'cell_ranger'`}
+    flavor
         Choose the flavor for computing normalized dispersion. If choosing
-        'seurat', this expects non-logarithmized data - the logarithm of mean
+        'seurat', this expects non-logarithmized data – the logarithm of mean
         and dispersion is taken internally when `log` is at its default value
         `True`. For 'cell_ranger', this is usually called for logarithmized data
-        - in this case you should set `log` to `False`. In their default
+        – in this case you should set `log` to `False`. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
     min_mean
@@ -139,7 +141,6 @@ def filter_genes_dispersion(
         dispersion = np.log(dispersion)
         mean = np.log1p(mean)
     # all of the following quantities are "per-gene" here
-    import pandas as pd
     df = pd.DataFrame()
     df['mean'] = mean
     df['dispersion'] = dispersion

@@ -1,27 +1,34 @@
+from typing import Optional, Union
+
 import numpy as np
-from pandas.api.types import is_numeric_dtype
+from anndata import AnnData
+from numpy.random.mtrand import RandomState
 from sklearn.utils import check_random_state, check_array
 
 from ._utils import get_init_pos_from_paga, _choose_representation
-from .._settings import settings
 from .. import logging as logg
+from .._settings import settings
+from .._compat import Literal
+
+
+_InitPos = Literal['paga', 'spectral', 'random']
 
 
 def umap(
-    adata,
-    min_dist=0.5,
-    spread=1.0,
-    n_components=2,
-    maxiter=None,
-    alpha=1.0,
-    gamma=1.0,
-    negative_sample_rate=5,
-    init_pos='spectral',
-    random_state=0,
-    a=None,
-    b=None,
-    copy=False,
-    method='umap'
+    adata: AnnData,
+    min_dist: float = 0.5,
+    spread: float = 1.0,
+    n_components: int = 2,
+    maxiter: Optional[int] = None,
+    alpha: float = 1.0,
+    gamma: float = 1.0,
+    negative_sample_rate: int = 5,
+    init_pos: Union[_InitPos, np.ndarray, None] = 'spectral',
+    random_state: Optional[Union[int, RandomState]] = 0,
+    a: Optional[float] = None,
+    b: Optional[float] = None,
+    copy: bool = False,
+    method: Literal['umap', 'rapids'] = 'umap'
 ):
     """Embed the neighborhood graph using UMAP [McInnes18]_.
 
@@ -38,9 +45,9 @@ def umap(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    min_dist : `float`, optional (default: 0.5)
+    min_dist
         The effective minimum distance between embedded points. Smaller values
         will result in a more clustered/clumped embedding where nearby points on
         the manifold are drawn closer together, while larger values will result
@@ -48,49 +55,48 @@ def umap(
         the ``spread`` value, which determines the scale at which embedded
         points will be spread out. The default of in the `umap-learn` package is
         0.1.
-    spread : `float` (optional, default 1.0)
+    spread
         The effective scale of embedded points. In combination with `min_dist`
         this determines how clustered/clumped the embedded points are.
-    n_components : `int`, optional (default: 2)
+    n_components
         The number of dimensions of the embedding.
-    maxiter : `int`, optional (default: `None`)
+    maxiter
         The number of iterations (epochs) of the optimization. Called `n_epochs`
         in the original UMAP.
-    alpha : `float`, optional (default: 1.0)
+    alpha
         The initial learning rate for the embedding optimization.
-    gamma : `float` (optional, default 1.0)
+    gamma
         Weighting applied to negative samples in low dimensional embedding
         optimization. Values higher than one will result in greater weight
         being given to negative samples.
-    negative_sample_rate : `int` (optional, default 5)
+    negative_sample_rate
         The number of negative edge/1-simplex samples to use per positive
         edge/1-simplex sample in optimizing the low dimensional embedding.
-    init_pos : `string` or `np.array`, optional (default: 'spectral')
+    init_pos
         How to initialize the low dimensional embedding. Called `init` in the
-        original UMAP.
-        Options are:
+        original UMAP. Options are:
 
         * Any key for `adata.obsm`.
         * 'paga': positions from :func:`~scanpy.pl.paga`.
         * 'spectral': use a spectral embedding of the graph.
         * 'random': assign initial embedding positions at random.
         * A numpy array of initial embedding positions.
-    random_state : `int`, `RandomState` or `None`, optional (default: 0)
+    random_state
         If `int`, `random_state` is the seed used by the random number generator;
         If `RandomState`, `random_state` is the random number generator;
         If `None`, the random number generator is the `RandomState` instance used
         by `np.random`.
-    a : `float` (optional, default `None`)
+    a
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
         `spread`.
-    b : `float` (optional, default `None`)
+    b
         More specific parameters controlling the embedding. If `None` these
         values are set automatically as determined by `min_dist` and
         `spread`.
-    copy : `bool` (default: `False`)
+    copy
         Return a copy instead of writing to adata.
-    method : {`'umap'`, `'rapids'`}  (default: `'umap'`)
+    method
         Use the original 'umap' implementation, or 'rapids' (experimental, GPU only)
 
     Returns
@@ -154,7 +160,7 @@ def umap(
             raise ValueError(
                 f'`sc.pp.neighbors` was called with `metric` {metric!r}, '
                 "but umap `method` 'rapids' only supports the 'euclidean' metric."
-            ) 
+            )
         from cuml import UMAP
         n_neighbors = adata.uns['neighbors']['params']['n_neighbors']
         n_epochs = 500 if maxiter is None else maxiter # 0 is not a valid value for rapids, unlike original umap

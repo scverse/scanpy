@@ -8,6 +8,7 @@ from anndata import AnnData
 from .. import logging as logg
 from .._settings import settings, Verbosity
 from .._utils import sanitize_anndata
+from .._compat import Literal
 from ._utils import _get_mean_var
 from ._distributed import materialize_as_ndarray
 from ._simple import filter_genes
@@ -15,60 +16,21 @@ from ._simple import filter_genes
 
 def _highly_variable_genes_single_batch(
     adata: AnnData,
-    min_disp=None,
-    max_disp=None,
-    min_mean=None,
-    max_mean=None,
-    n_top_genes=None,
-    n_bins=20,
-    flavor='seurat',
+    min_disp: Optional[float] = None,
+    max_disp: Optional[float] = None,
+    min_mean: Optional[float] = None,
+    max_mean: Optional[float] = None,
+    n_top_genes: Optional[int] = None,
+    n_bins: int = 20,
+    flavor: Literal['seurat', 'cell_ranger'] = 'seurat',
 ) -> pd.DataFrame:
     """\
-    Internal function for annotating highly variable genes [Satija15]_ [Zheng17]_.
-
-    Expects logarithmized data.
-
-    Depending on `flavor`, this reproduces the R-implementations of Seurat
-    [Satija15]_ and Cell Ranger [Zheng17]_.
-
-    The normalized dispersion is obtained by scaling with the mean and standard
-    deviation of the dispersions for genes falling into a given bin for mean
-    expression of genes. This means that for each bin of mean expression, highly
-    variable genes are selected.
-
-    Parameters
-    ----------
-    adata
-        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
-        to cells and columns to genes.
-    min_mean : `float`, optional (default: 0.0125)
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
-    max_mean : `float`, optional (default: 3)
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
-    min_disp : `float`, optional (default: 0.5)
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
-    max_disp : `float`, optional (default: `None`)
-        If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
-        normalized dispersions are ignored.
-    n_top_genes : `int` or `None`, optional (default: `None`)
-        Number of highly-variable genes to keep.
-    n_bins : `int`, optional (default: 20)
-        Number of bins for binning the mean gene expression. Normalization is
-        done with respect to each bin. If just a single gene falls into a bin,
-        the normalized dispersion is artificially set to 1. You'll be informed
-        about this if you set `settings.verbosity = 4`.
-    flavor : {`'seurat'`, `'cell_ranger'`}
-        Choose the flavor for computing normalized dispersion. In their default
-        workflows, Seurat passes the cutoffs whereas Cell Ranger passes
-        `n_top_genes`.
+    See `highly_variable_genes`.
 
     Returns
     -------
-    highly_variable_data_frame
-        A DataFrame that contains colums highly_variable, means, dispersions and dispersions_norm.
+    A DataFrame that contains the columns
+    `highly_variable`, `means`, `dispersions`, and `dispersions_norm`.
     """
 
     if n_top_genes is not None and not all(m is None for m in [
@@ -166,14 +128,16 @@ def _highly_variable_genes_single_batch(
 
 def highly_variable_genes(
     adata: AnnData,
-    min_disp=None, max_disp=None,
-    min_mean=None, max_mean=None,
-    n_top_genes=None,
-    n_bins=20,
-    flavor='seurat',
-    subset=False,
-    inplace=True,
-    batch_key=None,
+    min_disp: Optional[float] = None,
+    max_disp: Optional[float] = None,
+    min_mean: Optional[float] = None,
+    max_mean: Optional[float] = None,
+    n_top_genes: Optional[int] = None,
+    n_bins: int = 20,
+    flavor: Literal['seurat', 'cell_ranger'] = 'seurat',
+    subset: bool = False,
+    inplace: bool = True,
+    batch_key: Optional[str] = None,
 ) -> Optional[np.recarray]:
     """\
     Annotate highly variable genes [Satija15]_ [Zheng17]_.
@@ -193,35 +157,35 @@ def highly_variable_genes(
     adata
         The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
         to cells and columns to genes.
-    min_mean : `float`, optional (default: 0.0125)
+    min_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
         normalized dispersions are ignored.
-    max_mean : `float`, optional (default: 3)
+    max_mean
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
         normalized dispersions are ignored.
-    min_disp : `float`, optional (default: 0.5)
+    min_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
         normalized dispersions are ignored.
-    max_disp : `float`, optional (default: `None`)
+    max_disp
         If `n_top_genes` unequals `None`, this and all other cutoffs for the means and the
         normalized dispersions are ignored.
-    n_top_genes : `int` or `None`, optional (default: `None`)
+    n_top_genes
         Number of highly-variable genes to keep.
-    n_bins : `int`, optional (default: 20)
+    n_bins
         Number of bins for binning the mean gene expression. Normalization is
         done with respect to each bin. If just a single gene falls into a bin,
         the normalized dispersion is artificially set to 1. You'll be informed
         about this if you set `settings.verbosity = 4`.
-    flavor : {`'seurat'`, `'cell_ranger'`}
+    flavor
         Choose the flavor for computing normalized dispersion. In their default
         workflows, Seurat passes the cutoffs whereas Cell Ranger passes
         `n_top_genes`.
-    subset : `bool`, optional (default: `False`)
+    subset
         Inplace subset to highly-variable genes if `True` otherwise merely indicate
         highly variable genes.
-    inplace : `bool`, optional (default: `True`)
+    inplace
         Whether to place calculated metrics in `.var` or return them.
-    batch_key : `str`, optional (default: `None`)
+    batch_key
         If specified, highly-variable genes are selected within each batch separately and merged.
         This simple process avoids the selection of batch-specific genes and acts as a
         lightweight batch correction method.
@@ -306,18 +270,22 @@ def highly_variable_genes(
 
         df = pd.concat(df, axis=0)
         df['highly_variable'] = df['highly_variable'].astype(int)
-        df = df.groupby('gene').agg({'means': np.nanmean,
-                                     'dispersions': np.nanmean,
-                                     'dispersions_norm': np.nanmean,
-                                     'highly_variable': np.nansum})
-        df.rename(columns={'highly_variable': 'highly_variable_nbatches'}, inplace=True)
+        df = df.groupby('gene').agg(dict(
+            means=np.nanmean,
+            dispersions=np.nanmean,
+            dispersions_norm=np.nanmean,
+            highly_variable=np.nansum,
+        ))
+        df.rename(columns=dict(highly_variable='highly_variable_nbatches'), inplace=True)
         df['highly_variable_intersection'] = df['highly_variable_nbatches'] == len(batches)
 
         if n_top_genes is not None:
             # sort genes by how often they selected as hvg within each batch and
             # break ties with normalized dispersion across batches
-            df.sort_values(['highly_variable_nbatches', 'dispersions_norm'],
-                           ascending=False, na_position='last', inplace=True)
+            df.sort_values(
+                ['highly_variable_nbatches', 'dispersions_norm'],
+                ascending=False, na_position='last', inplace=True,
+            )
             df['highly_variable'] = False
             df.loc[:n_top_genes, 'highly_variable'] = True
             df = df.loc[adata.var_names]
@@ -365,8 +333,12 @@ def highly_variable_genes(
             ('dispersions_norm', 'float32'),
         ]
         if batch_key is not None:
-            arrays.extend([df['highly_variable_nbatches'].values,
-                           df['highly_variable_intersection'].values])
-            dtypes.append([('highly_variable_nbatches', int),
-                           ('highly_variable_intersection', np.bool_)])
+            arrays.extend([
+                df['highly_variable_nbatches'].values,
+                df['highly_variable_intersection'].values,
+            ])
+            dtypes.append([
+                ('highly_variable_nbatches', int),
+                ('highly_variable_intersection', np.bool_),
+            ])
         return np.rec.fromarrays(arrays, dtype=dtypes)

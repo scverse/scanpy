@@ -36,7 +36,8 @@ setup(
             'sphinx',
             'sphinx_rtd_theme',
             'sphinx_autodoc_typehints',
-            'scanpydoc',
+            'scanpydoc>=0.4.2',
+            'typing_extensions',  # for `Literal`
         ],
         test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr', 'black'],
     ),

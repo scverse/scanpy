@@ -11,6 +11,11 @@ from scipy.sparse import issparse
 from .. import _utils
 from .. import logging as logg
 from ..preprocessing._simple import _get_mean_var
+from .._compat import Literal
+
+
+_Method = Literal['logreg', 't-test', 'wilcoxon', 't-test_overestim_var']
+_CorrMethod = Literal['benjamini-hochberg', 'bonferroni']
 
 
 # TODO: Make arguments after groupby keyword only
@@ -24,8 +29,8 @@ def rank_genes_groups(
     rankby_abs: bool = False,
     key_added: Optional[str] = None,
     copy: bool = False,
-    method: str = 't-test_overestim_var',
-    corr_method: str = 'benjamini-hochberg',
+    method: _Method = 't-test_overestim_var',
+    corr_method: _CorrMethod = 'benjamini-hochberg',
     layer: Optional[str] = None,
     **kwds,
 ):
@@ -49,14 +54,14 @@ def rank_genes_groups(
         If a group identifier, compare with respect to this group.
     n_genes
         The number of genes that appear in the returned tables.
-    method: {`'logreg'`, `'t-test'`, `'wilcoxon'`, `'t-test_overestim_var'`}`
+    method
         The default 't-test_overestim_var' overestimates variance of each group,
         `'t-test'` uses t-test, `'wilcoxon'` uses Wilcoxon rank-sum,
         `'logreg'` uses logistic regression. See [Ntranos18]_,
         `here <https://github.com/theislab/scanpy/issues/95>`__ and `here
         <http://www.nxn.se/valent/2018/3/5/actionable-scrna-seq-clusters>`__,
         for why this is meaningful.
-    corr_method: {`'benjamini-hochberg'`, `'bonferroni'`}
+    corr_method
         p-value correction method.
         Used only for `'t-test'`, `'t-test_overestim_var'`, and `'wilcoxon'`.
     rankby_abs

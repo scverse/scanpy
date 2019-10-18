@@ -48,7 +48,7 @@ groups
 components
     For instance, `['1,2', '2,3']`. To plot all available components use
     `components='all'`.
-projection : {`'2d'`, `'3d'`}
+projection
     Projection of plot (default: `'2d'`).
 legend_loc
     Location of legend, either `'on data'`, `'right margin'` or a valid keyword
@@ -56,9 +56,8 @@ legend_loc
 legend_fontsize
     Numeric size in pt or {`'[x-|xx-]small'`, `'medium'`, `'[x-|xx-]large'`}.
     See :meth:`~matplotlib.text.Text.set_fontsize`.
-legend_fontweight : {`'normal'`, `'bold'`, ...}
-    Legend font weight. A numeric value in range 0-1000 or a string like
-    [`'light'`, `'normal'`, `'medium'`, `'[semi]bold'`, `'heavy'`, `'black'`].
+legend_fontweight
+    Legend font weight. A numeric value in range 0-1000 or a string.
     Defaults to `'bold'` if `legend_loc == 'on data'`, otherwise to `'normal'`.
     See :meth:`~matplotlib.text.Text.set_fontweight`.
 legend_fontoutline
