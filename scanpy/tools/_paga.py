@@ -9,6 +9,7 @@ from scipy.sparse.csgraph import minimum_spanning_tree
 from .. import _utils
 from .. import logging as logg
 from ..neighbors import Neighbors
+from .._compat import Literal
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
 
@@ -17,7 +18,7 @@ def paga(
     adata: AnnData,
     groups: Optional[str] = None,
     use_rna_velocity: bool = False,
-    model: str = 'v1.2',
+    model: Literal['v1.2', 'v1.0'] = 'v1.2',
     copy: bool = False,
 ):
     """Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf19]_.
@@ -56,7 +57,7 @@ def paga(
         transitions. Requires that `adata.uns` contains a directed single-cell
         graph with key `['velocity_graph']`. This feature might be subject
         to change in the future.
-    model: {`'v1.2'`, `'v1.0'`}
+    model
         The PAGA connectivity model.
     copy
         Copy `adata` before computation and return a copy. Otherwise, perform

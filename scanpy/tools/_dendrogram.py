@@ -80,13 +80,17 @@ def dendrogram(
     >>> sc.pl.dotplot(adata, markers, groupby='bulk_labels', dendrogram=True)
     """
     if groupby not in adata.obs_keys():
-        raise ValueError('groupby has to be a valid observation. Given value: {}, '
-                         'valid observations: {}'.format(groupby, adata.obs_keys()))
+        raise ValueError(
+            'groupby has to be a valid observation. '
+            f'Given value: {groupby}, valid observations: {adata.obs_keys()}'
+        )
     if not is_categorical_dtype(adata.obs[groupby]):
         # if the groupby column is not categorical, turn it into one
         # by subdividing into  `num_categories` categories
-        raise ValueError('groupby has to be a categorical observation. Given value: {}, '
-                         'Column type: {}'.format(groupby, adata.obs[groupby].dtype))
+        raise ValueError(
+            'groupby has to be a categorical observation. '
+            f'Given value: {groupby}, Column type: {adata.obs[groupby].dtype}'
+        )
 
     if var_names is None:
         rep_df = pd.DataFrame(_choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs))

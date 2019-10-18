@@ -123,7 +123,7 @@ def pca_variance_ratio(adata, n_pcs=30, log=False, show=None, save=None):
 
 
 # ------------------------------------------------------------------------------
-# Subgroup identification and ordering - clustering, pseudotime, branching
+# Subgroup identification and ordering – clustering, pseudotime, branching
 # and tree inference tools
 # ------------------------------------------------------------------------------
 

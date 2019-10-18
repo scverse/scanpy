@@ -10,6 +10,7 @@ from typing import Tuple, List, ContextManager
 
 from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
+from ._compat import Literal
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
@@ -378,6 +379,13 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
+    # Collected from the print_* functions in matplotlib.backends
+    _Format = Literal[
+        'png', 'jpg', 'tif', 'tiff',
+        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
+        'raw', 'rgba',
+    ]
+
     def set_figure_params(
         self,
         scanpy: bool = True,
@@ -387,7 +395,7 @@ class ScanpyConfig:
         vector_friendly: bool = True,
         fontsize: int = 14,
         color_map: Optional[str] = None,
-        format: Union[str, Iterable[str]] = "pdf",
+        format: _Format = "pdf",
         transparent: bool = False,
         ipython_format: str = "png2x",
     ):
@@ -399,7 +407,7 @@ class ScanpyConfig:
         scanpy
             Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
         dpi
-            Resolution of rendered figures - this influences the size of figures in notebooks.
+            Resolution of rendered figures – this influences the size of figures in notebooks.
         dpi_save
             Resolution of saved figures. This should typically be higher to achieve
             publication quality.
@@ -411,7 +419,7 @@ class ScanpyConfig:
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format: {`'png'`, `'pdf'`, `'svg'`, etc.}, optional (default: `'pdf'`)
+        format
             This sets the default format for saving figures: `file_format_figs`.
         transparent
             Save figures with transparent back ground. Sets

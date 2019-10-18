@@ -105,9 +105,10 @@ def score_genes(
     for cut in np.unique(obs_cut.loc[gene_list]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
-        control_genes.update(set(r_genes[:ctrl_size]))  # uses full r_genes if ctrl_size > len(r_genes)
+        # uses full r_genes if ctrl_size > len(r_genes)
+        control_genes.update(set(r_genes[:ctrl_size]))
 
-    # To index, we need a list - indexing implies an order.
+    # To index, we need a list – indexing implies an order.
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
 

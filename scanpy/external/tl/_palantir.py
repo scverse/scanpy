@@ -48,30 +48,24 @@ def palantir(
     -------
     `.uns['palantir_norm_data']`
         A `data_df` copy of adata if normalized
-
     `pca_results`
         PCA projections and explained variance ratio of adata:
         - `.uns['palantir_pca_results']['pca_projections']`
         - `.uns['palantir_pca_results']['variance_ratio']`
-
     `dm_res`
         Diffusion components, corresponding eigen values and diffusion operator:
         - `.uns['palantir_diff_maps']['EigenVectors']`
         - `.uns['palantir_diff_maps']['EigenValues']`
         - `.uns['palantir_diff_maps']['T']`
-
     `.uns['palantir_ms_data']`
-        The `ms_data` - Multi scale data matrix
-
+        The `ms_data` – Multi scale data matrix
     `.uns['palantir_tsne']` : `tsne`
         tSNE on diffusion maps
-
     `.uns['palantir_imp_df']` : `imp_df`
         Imputed data matrix (MAGIC imputation)
 
     Example
     -------
-
     >>> import scanpy.external as sce
     >>> import scanpy as sc
 
@@ -90,7 +84,7 @@ def palantir(
     >>> d = sce.tl.palantir(adata)
 
     At this point, a new class object, `d`, will be instantiated. If the data
-    needs pre-processing - filtering low genes/cells counts, or normalization,
+    needs pre-processing – filtering low genes/cells counts, or normalization,
     or log transformation, set the `filter_low`, `normalize`, or `log_transform`
     to `True`:
 

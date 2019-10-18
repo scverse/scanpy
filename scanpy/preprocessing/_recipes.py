@@ -75,7 +75,7 @@ def recipe_seurat(adata, log=True, plot=False, copy=False):
 def recipe_zheng17(adata, n_top_genes=1000, log=True, plot=False, copy=False):
     """Normalization and filtering as of [Zheng17]_.
 
-    Reproduces the preprocessing of [Zheng17]_ - the Cell Ranger R Kit of 10x
+    Reproduces the preprocessing of [Zheng17]_ – the Cell Ranger R Kit of 10x
     Genomics.
 
     Expects non-logarithmized data. If using logarithmized data, pass `log=False`.

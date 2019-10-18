@@ -7,10 +7,9 @@ from natsort import natsorted
 from numpy.random.mtrand import RandomState
 from scipy.sparse import spmatrix
 
-from .. import _utils
-from .. import logging as logg
-
 from ._utils_clustering import rename_groups, restrict_adjacency
+from .. import _utils, logging as logg
+from .._compat import Literal
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -26,7 +25,7 @@ def louvain(
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: Optional[str] = 'louvain',
     adjacency: Optional[spmatrix] = None,
-    flavor: str = 'vtraag',
+    flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
     directed: bool = True,
     use_weights: bool = False,
     partition_type: Optional[Type[MutableVertexPartition]] = None,
@@ -60,7 +59,7 @@ def louvain(
     adjacency
         Sparse adjacency matrix of the graph, defaults to
         ``adata.uns['neighbors']['connectivities']``.
-    flavor : {``'vtraag'``, ``'igraph'``, ``'rapids'``}
+    flavor
         Choose between to packages for computing the clustering.
         ``'vtraag'`` is much more powerful, and the default.
     directed

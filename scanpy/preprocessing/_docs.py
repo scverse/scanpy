@@ -11,7 +11,7 @@ use_raw
 
 doc_obs_qc_args = """\
 qc_vars
-    Keys for boolean columns of `.var` which identify variables you could 
+    Keys for boolean columns of `.var` which identify variables you could
     want to control for (e.g. "ERCC" or "mito").
 percent_top
     Which proportions of top genes to cover. If empty or `None` don't
@@ -33,13 +33,13 @@ Observation level metrics include:
     E.g. "total_genes_by_counts". Number of genes with positive counts in a cell.
 `total_{expr_type}`
     E.g. "total_counts". Total number of counts for a cell.
-`pct_{expr_type}_in_top_{n}_{var_type}` - for `n` in `percent_top`
+`pct_{expr_type}_in_top_{n}_{var_type}` – for `n` in `percent_top`
     E.g. "pct_counts_in_top_50_genes". Cumulative percentage of counts
     for 50 most expressed genes in a cell.
-`total_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+`total_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
     E.g. "total_counts_mito". Total number of counts for variabes in
     `qc_vars`.
-`pct_{expr_type}_{qc_var}` - for `qc_var` in `qc_vars`
+`pct_{expr_type}_{qc_var}` – for `qc_var` in `qc_vars`
     E.g. "pct_counts_mito". Proportion of total counts for a cell which
     are mitochondrial.\
 """

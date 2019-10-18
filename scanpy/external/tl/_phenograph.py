@@ -7,6 +7,8 @@ import numpy as np
 from anndata import AnnData
 from scipy.sparse import spmatrix
 
+from ...neighbors import _Metric
+from ..._compat import Literal
 from ... import logging as logg
 
 
@@ -18,11 +20,11 @@ def phenograph(
     prune: bool = False,
     min_cluster_size: int = 10,
     jaccard: bool = True,
-    primary_metric: str = 'euclidean',
+    primary_metric: _Metric = 'euclidean',
     n_jobs: int = -1,
     q_tol: float = 1e-3,
     louvain_time_limit: int = 2000,
-    nn_method: str = 'kdtree',
+    nn_method: Literal['kdtree', 'brute'] = 'kdtree',
 ) -> Tuple[np.ndarray, spmatrix, float]:
     """\
     PhenoGraph clustering [Levine15]_.
@@ -48,7 +50,7 @@ def phenograph(
     jaccard
         If `True`, use Jaccard metric between k-neighborhoods to build graph.
         If `False`, use a Gaussian kernel.
-    primary_metric : {`'euclidean'`, `'manhattan'`, `'correlation'`, `'cosine'`}
+    primary_metric
         Distance metric to define nearest neighbors.
         Note that performance will be slower for correlation and cosine.
     n_jobs
@@ -59,7 +61,7 @@ def phenograph(
     louvain_time_limit
         Maximum number of seconds to run modularity optimization.
         If exceeded the best result so far is returned.
-    nn_method : {`'kdtree'`, `'brute'`}
+    nn_method
         Whether to use brute force or kdtree for nearest neighbor search.
         For very large high-dimensional data sets, brute force
         (with parallel computation) performs faster than kdtree.

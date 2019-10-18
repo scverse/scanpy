@@ -36,31 +36,31 @@ We use the numpydoc style for writing docstrings.
 Look at [`sc.tl.louvain`][] as an example for everything mentioned here:
 
 The `Params` abbreviation is a legit replacement for `Parameters`.
-There are two ways of documenting parameter types:
 
-1. In most cases, the type annotations you add to function parameters should be enough.
-   Use the [`typing`](https://docs.python.org/3/library/typing.html) module for containers,
-   e.g. `Sequence`s (like `list`), `Iterable`s (like `set`), and `Mapping`s (like `dict`).
-   Always specify what these contain, e.g. `{'a': (1, 2)}` → `Mapping[str, Tuple[int, int]]`.
-   If you can’t use one of those, use a concrete class like `AnnData`.
-2. If your parameter only accepts an enumeration of strings, specify them like so:
-   ``{`'elem-1'`, `'elem-2'`}``. These contain `a`–`z`, `0`-`9`, and sometimes `.`, `_` or `-`.
-   
+To document parameter types use type annotations on function parameters.
+Use the [`typing`][] module for containers, e.g. `Sequence`s (like `list`),
+`Iterable`s (like `set`), and `Mapping`s (like `dict`). Always specify
+what these contain, e.g. `{'a': (1, 2)}` → `Mapping[str, Tuple[int, int]]`.
+If you can’t use one of those, use a concrete class like `AnnData`.
+If your parameter only accepts an enumeration of strings, specify them like so:
+`Literal['elem-1', 'elem-2']`.
+
 The `Returns` section deserves special attention:
 There are three types of return sections – prose, tuple, and a mix of both.
 
 1. Prose is for simple cases.
 2. Tuple return sections are formatted like parameters.
-   Other than in numpydoc, each tuple is first characterized by the identifier name
-   and *not* by its type. You can provide type annotation in the function header
-   or by separation with a colon, as in parameters.
+   Other than in numpydoc, each tuple is first characterized by the identifier
+   and *not* by its type. Provide type annotation in the function header.
 3. Mix of prose and tuple is relevant in complicated cases,
-   e.g. when you want to describe that you *added something as annotation to an `AnnData` object*.
+   e.g. when you want to describe that you
+   *added something as annotation to an `AnnData` object*.
 
 [`sc.tl.louvain`]: https://github.com/theislab/scanpy/blob/a811fee0ef44fcaecbde0cad6336336bce649484/scanpy/tools/_louvain.py#L22-L90
+[`typing`]: https://docs.python.org/3/library/typing.html
 
 #### Examples
-For simple cases, use prose as in [`pp.normalize_total`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html)
+For simple cases, use prose as in [`pp.normalize_total`][].
 
 ```rst
 Returns
@@ -70,9 +70,9 @@ or updates ``adata`` with normalized versions of the original
 ``adata.X`` and ``adata.layers``, depending on ``inplace``.
 ```
 
-You can use the standard numpydoc way of populating it, e.g. as in
-[`pp.calculate_qc_metrics`](https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html).
-If you just use a plain type name here, there will be an automatically created link.
+You can use the standard numpydoc way of populating it,
+e.g. as in [`pp.calculate_qc_metrics`][].
+If you use a plain type name here, a link will be created.
 
 ```rst
 Returns
@@ -84,7 +84,7 @@ second_identifier : another.module.and_type
 ```
 
 Many functions also just modify parts of the passed AnnData object,
-like e.g. [`tl.dpt`](https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html).
+like e.g. [`tl.dpt`][].
 You can then combine prose and lists to best describe what happens.
 
 ```rst
@@ -103,10 +103,18 @@ dpt_groups : :class:`pandas.Series` (``adata.obs``, dtype ``category``)
     'progenitor cells', 'undecided cells' or 'branches' of a process.
 ```
 
+[`pp.normalize_total`]: https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.normalize_total.html
+[`pp.calculate_qc_metrics`]: https://scanpy.readthedocs.io/en/latest/api/scanpy.pp.calculate_qc_metrics.html
+[`tl.dpt`]: https://scanpy.readthedocs.io/en/latest/api/scanpy.tl.dpt.html
+
 ### Performance
 
 We defer loading a few modules until they’re first needed.
-If you want realistic performance measures, be sure to import them before running scanpy functions:
+If you want realistic performance measures,
+be sure to import them before running scanpy functions:
 
-- Check the list in `test_deferred_imports()` from [`scanpy/tests/test_performance.py`](https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_performance.py)
-- Everything in [`scanpy.external`](https://scanpy.readthedocs.io/en/stable/external/) wraps a 3rd party import.
+- Check the list in `test_deferred_imports()` from [`scanpy.tests.test_performance`][]
+- Everything in [`scanpy.external`][] wraps a 3rd party import.
+
+[`scanpy.tests.test_performance`]: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_performance.py
+[`scanpy.external`]: https://scanpy.readthedocs.io/en/stable/external/

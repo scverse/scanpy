@@ -115,24 +115,28 @@ def dca(
     -------
     If `copy` is true and `return_model` is false, AnnData object is returned.
 
-    In "denoise" mode, `adata.X` is overwritten with the denoised values. In "latent" mode, latent\
-    low dimensional representation of cells are stored in `adata.obsm['X_dca']` and `adata.X`\
-    is not modified. Note that these values are not corrected for library size effects.
+    In "denoise" mode, `adata.X` is overwritten with the denoised values.
+    In "latent" mode, latent low dimensional representation of cells are stored
+    in `adata.obsm['X_dca']` and `adata.X` is not modified.
+    Note that these values are not corrected for library size effects.
 
-    If `return_info` is true, all estimated distribution parameters are stored in AnnData such as:
+    If `return_info` is true, all estimated distribution parameters are stored
+    in AnnData like this:
 
-    - `.obsm["X_dca_dropout"]` which is the mixture coefficient (pi) of the zero component\
-    in ZINB, i.e. dropout probability (only if `ae_type` is `zinb` or `zinb-conddisp`).
-
-    - `.obsm["X_dca_dispersion"]` which is the dispersion parameter of NB.
-
-    - `.uns["dca_loss_history"]` which stores the loss history of the training. See `.history`\
-    attribute of Keras History class for mode details.
+    `.obsm["X_dca_dropout"]`
+        The mixture coefficient (pi) of the zero component in ZINB,
+        i.e. dropout probability (if `ae_type` is `zinb` or `zinb-conddisp`).
+    `.obsm["X_dca_dispersion"]`
+        The dispersion parameter of NB.
+    `.uns["dca_loss_history"]`
+        The loss history of the training.
+        See `.history` attribute of Keras History class for mode details.
 
     Finally, the raw counts are stored in `.raw` attribute of AnnData object.
 
-    If `return_model` is given, trained model is returned. When both `copy` and `return_model`\
-    are true, a tuple of anndata and model is returned in that order.
+    If `return_model` is given, trained model is returned.
+    When both `copy` and `return_model` are true,
+    a tuple of anndata and model is returned in that order.
     """
 
     try:

@@ -10,13 +10,26 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params
+from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-Metric = Callable[[np.ndarray, np.ndarray], float]
+_Method = Literal['umap', 'gauss', 'rapids']
+_MetricFn = Callable[[np.ndarray, np.ndarray], float]
+# from sklearn.metrics.pairwise_distances.__doc__:
+_MetricSparseCapable = Literal[
+    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
+]
+_MetricScipySpatial = Literal[
+    'braycurtis', 'canberra', 'chebyshev', 'correlation', 'dice', 'hamming',
+    'jaccard', 'kulsinski', 'mahalanobis', 'minkowski', 'rogerstanimoto',
+    'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean',
+    'yule'
+]
+_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -27,8 +40,8 @@ def neighbors(
     use_rep: Optional[str] = None,
     knn: bool = True,
     random_state: Optional[Union[int, RandomState]] = 0,
-    method: str = 'umap',
-    metric: Union[str, Metric] = 'euclidean',
+    method: Optional[_Method] = 'umap',
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -62,7 +75,7 @@ def neighbors(
         `n_neighbors` nearest neighbor.
     random_state
         A numpy random seed.
-    method : {{`'umap'`, `'gauss'`, `'rapids'`, `None`}}  (default: `'umap'`)
+    method
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
         Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
@@ -153,7 +166,7 @@ def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
     random_state: Optional[Union[int, RandomState]] = None,
-    metric: Union[str, Metric] = 'euclidean',
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
     angular: bool = False,
     verbose: bool = False,
@@ -607,10 +620,10 @@ class Neighbors:
         knn: bool = True,
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
-        method: str = 'umap',
+        method: _Method = 'umap',
         random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
-        metric: str = 'euclidean',
+        metric: _Metric = 'euclidean',
         metric_kwds: Mapping[str, Any] = {},
     ) -> None:
         """\

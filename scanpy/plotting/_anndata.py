@@ -23,8 +23,10 @@ from .. import get
 from .. import logging as logg
 from .._settings import settings
 from .._utils import sanitize_anndata, _doc_params
+from .._compat import Literal
 from . import _utils
-from ._utils import scatter_base, scatter_group, setup_axes, ColorLike
+from ._utils import scatter_base, scatter_group, setup_axes
+from ._utils import ColorLike, _FontWeight
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -35,6 +37,9 @@ VALID_LEGENDLOCS = {
     'center left', 'center right',
     'lower center', 'upper center', 'center',
 }
+
+# TODO: is that all?
+_Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
 
 
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
@@ -47,13 +52,13 @@ def scatter(
     layers: Union[str, Collection[str]] = None,
     sort_order: bool = True,
     alpha: Optional[float] = None,
-    basis: Optional[str] = None,
+    basis: Optional[_Basis] = None,
     groups: Union[str, Iterable[str]] = None,
     components: Union[str, Collection[str]] = None,
-    projection: str = '2d',
+    projection: Literal['2d', '3d'] = '2d',
     legend_loc: str = 'right margin',
     legend_fontsize: Union[int, float, str] = None,
-    legend_fontweight: Union[int, str] = None,
+    legend_fontweight: Union[int, _FontWeight, None] = None,
     legend_fontoutline: float = None,
     color_map: Union[str, Colormap] = None,
     palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
@@ -90,7 +95,7 @@ def scatter(
         Use the `layers` attribute of `adata` if present: specify the layer for
         `x`, `y` and `color`. If `layers` is a string, then it is expanded to
         `(layers, layers, layers)`.
-    basis : {{`'pca'`, `'tsne'`, `'umap'`, `'diffmap'`, `'draw_graph_fr'`, etc.}}
+    basis
         String that denotes a plotting tool that computed coordinates.
     {scatter_temp}
     {show_save_ax}
@@ -141,7 +146,7 @@ def _scatter_obs(
     basis=None,
     groups=None,
     components=None,
-    projection='2d',
+    projection: Literal['2d', '3d'] = '2d',
     legend_loc='right margin',
     legend_fontsize=None,
     legend_fontweight=None,
@@ -432,7 +437,7 @@ def _scatter_obs(
 
 def ranking(
     adata: AnnData,
-    attr: str,
+    attr: Literal['var', 'obs', 'uns', 'varm', 'obsm'],
     keys: Union[str, Sequence[str]],
     dictionary=None,
     indices=None,
@@ -452,7 +457,7 @@ def ranking(
     ----------
     adata
         The data.
-    attr: {`'var'`, `'obs'`, `'uns'`, `'varm'`, `'obsm'`}
+    attr
         The attribute of AnnData that contains the score.
     keys
         The scores to look up an array from the attribute of adata.
@@ -535,7 +540,7 @@ def violin(
     stripplot: bool = True,
     jitter: Union[float, bool] = True,
     size: int = 1,
-    scale: str = 'width',
+    scale: Literal['area', 'count', 'width'] = 'width',
     order: Optional[Sequence[str]] = None,
     multi_panel: Optional[bool] = None,
     xlabel: str = '',
@@ -570,7 +575,7 @@ def violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
-    scale : {{`'area'`, `'count'`, `'width'`}}
+    scale
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -738,13 +743,13 @@ def stacked_violin(
     gene_symbols=None,
     var_group_positions=None,
     var_group_labels=None,
-    standard_scale: Optional[str] = None,
+    standard_scale: Optional[Literal['var', 'obs']] = None,
     var_group_rotation=None,
     layer=None,
     stripplot: bool = False,
     jitter: Union[float, bool] = False,
     size: int = 1,
-    scale: str = 'width',
+    scale: Literal['area', 'count', 'width'] = 'width',
     order: Optional[Sequence[str]] = None,
     swap_axes: bool = False,
     show: Optional[bool] = None,
@@ -774,7 +779,7 @@ def stacked_violin(
         Size of the jitter points.
     order
         Order in which to show the categories.
-    scale: {{`'area'`, `'count'`, `'width'`}}
+    scale
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
         If 'area', each violin will have the same area.
@@ -785,7 +790,7 @@ def stacked_violin(
         (see :func:`~seaborn.color_palette`).
         Alternatively, a single color name or hex value can be passed,
         e.g. `'red'` or `'#cc33ff'`.
-    standard_scale: {{`'var'`, `'obs'`}}
+    standard_scale
         Whether or not to standardize a dimension between 0 and 1,
         meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
@@ -1081,9 +1086,9 @@ def heatmap(
     var_group_labels=None,
     var_group_rotation=None,
     layer=None,
-    standard_scale=None,
-    swap_axes=False,
-    show_gene_labels=None,
+    standard_scale: Optional[Literal['var', 'obs']] = None,
+    swap_axes: bool = False,
+    show_gene_labels: Optional[bool] = None,
     show=None,
     save=None,
     figsize=None,
@@ -1101,13 +1106,13 @@ def heatmap(
     Parameters
     ----------
     {common_plot_args}
-    standard_scale : {{`'var'`, `'obs'`}}, optional (default: `None`)
+    standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or observation,
         subtract the minimum and divide each by its maximum.
-    swap_axes: `bool`, optional (default: `False`)
+    swap_axes
          By default, the x axis contains `var_names` (e.g. genes) and the y axis the `groupby`
          categories (if any). By setting `swap_axes` then x are the `groupby` categories and y the `var_names`.
-    show_gene_labels: `bool`, optional (default: `None`).
+    show_gene_labels
          By default gene labels are shown when there are 50 or less genes. Otherwise the labels are removed.
     {show_save_ax}
     **kwds
@@ -1373,7 +1378,7 @@ def dotplot(
     dendrogram=False,
     gene_symbols=None,
     var_group_positions=None,
-    standard_scale=None,
+    standard_scale: Literal['var', 'group'] = None,
     smallest_dot=0.,
     var_group_labels=None,
     var_group_rotation=None,
@@ -1416,7 +1421,7 @@ def dotplot(
         If none, the minimum dot size is set to 0. If given,
         the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
         this value.
-    standard_scale : {{`'var'`, `'group'`}}, optional (default: `None`)
+    standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     smallest_dot : `float` optional (default: 0.)
@@ -1703,7 +1708,7 @@ def matrixplot(
     var_group_labels=None,
     var_group_rotation=None,
     layer=None,
-    standard_scale=None,
+    standard_scale: Literal['var', 'group'] = None,
     swap_axes=False,
     show=None,
     save=None,
@@ -1717,7 +1722,7 @@ def matrixplot(
     Parameters
     ----------
     {common_plot_args}
-    standard_scale : {{`'var'`, `'group'`}}, optional (default: `None`)
+    standard_scale
         Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
     {show_save_ax}
@@ -1970,15 +1975,20 @@ def tracksplot(
     """
 
     if groupby not in adata.obs_keys() or adata.obs[groupby].dtype.name != 'category':
-        raise ValueError('groupby has to be a valid categorical observation. Given value: {}, '
-                         'valid categorical observations: {}'.
-                         format(groupby, [x for x in adata.obs_keys() if adata.obs[x].dtype.name == 'category']))
+        raise ValueError(
+            'groupby has to be a valid categorical observation. '
+            f'Given value: {groupby}, valid categorical observations: '
+            f'{[x for x in adata.obs_keys() if adata.obs[x].dtype.name == "category"]}'
+        )
 
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
-                                                                             var_group_labels, var_group_positions)
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions
+    )
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, None,
-                                              gene_symbols=gene_symbols, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, None,
+        gene_symbols=gene_symbols, layer=layer,
+    )
 
     # get categories colors:
     if groupby + "_colors" not in adata.uns:
@@ -1990,10 +2000,12 @@ def tracksplot(
     if dendrogram:
         # compute dendrogram if needed and reorder
         # rows and columns to match leaves order.
-        dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                                           var_names=var_names,
-                                                           var_group_labels=var_group_labels,
-                                                           var_group_positions=var_group_positions)
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata, groupby, dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
@@ -2368,8 +2380,10 @@ def _prepare_dataframe(
 
     if groupby is not None:
         if groupby not in adata.obs_keys():
-            raise ValueError('groupby has to be a valid observation. Given value: {}, '
-                             'valid observations: {}'.format(groupby, adata.obs_keys()))
+            raise ValueError(
+                'groupby has to be a valid observation. '
+                f'Given {groupby}, valid observations: {adata.obs_keys()}'
+            )
 
     if gene_symbols is not None and gene_symbols in adata.var.columns:
         # translate gene_symbols to var_names
@@ -2377,15 +2391,20 @@ def _prepare_dataframe(
         translated_var_names = []
         for symbol in var_names:
             if symbol not in adata.var[gene_symbols].values:
-                logg.error(f"Gene symbol {symbol!r} not found in given gene_symbols column: {gene_symbols!r}")
+                logg.error(
+                    f"Gene symbol {symbol!r} not found in given "
+                    f"gene_symbols column: {gene_symbols!r}"
+                )
                 return
             translated_var_names.append(adata.var[adata.var[gene_symbols] == symbol].index[0])
         symbols = var_names
         var_names = translated_var_names
     if layer is not None:
         if layer not in adata.layers.keys():
-            raise KeyError('Selected layer: {} is not in the layers list. The list of '
-                           'valid layers is: {}'.format(layer, adata.layers.keys()))
+            raise KeyError(
+                f'Selected layer: {layer} is not in the layers list. '
+                f'The list of valid layers is: {adata.layers.keys()}'
+            )
         matrix = adata[:, var_names].layers[layer]
     elif use_raw:
         matrix = adata.raw[:, var_names].X

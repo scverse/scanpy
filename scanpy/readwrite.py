@@ -16,6 +16,7 @@ from anndata import (
 from anndata import read as read_h5ad
 
 from ._settings import settings
+from ._compat import Literal
 from . import logging as logg
 
 # .gz and .bz2 suffixes are also allowed for text formats
@@ -44,14 +45,14 @@ _empty = Empty.token
 
 def read(
     filename: Union[Path, str],
-    backed: Optional[str] = None,
+    backed: Optional[Literal['r', 'r+']] = None,
     sheet: Optional[str] = None,
     ext: Optional[str] = None,
     delimiter: Optional[str] = None,
     first_column_names: bool = False,
     backup_url: Optional[str] = None,
     cache: bool = False,
-    cache_compression: Union[str, None, Empty] = _empty,
+    cache_compression: Union[Literal['gzip', 'lzf'], None, Empty] = _empty,
     **kwargs,
 ) -> AnnData:
     """\
@@ -67,7 +68,7 @@ def read(
         generating a filename via ``sc.settings.writedir / (filename +
         sc.settings.file_format_data)``.  This is the same behavior as in
         ``sc.read(filename, ...)``.
-    backed : {``None``, ``'r'``, ``'r+'``}
+    backed
         If ``'r'``, load :class:`~anndata.AnnData` in ``backed`` mode instead
         of fully loading it into memory (`memory` mode). If you want to modify
         backed attributes of the AnnData object, you need to choose ``'r+'``.
@@ -88,7 +89,7 @@ def read(
         Retrieve the file from an URL if not present on disk.
     cache
         If `False`, read from source, if `True`, read from fast 'h5ad' cache.
-    cache_compression : {`'gzip'`, `'lzf'`, `None`}
+    cache_compression
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     kwargs
@@ -260,10 +261,10 @@ def _read_v3_10x_h5(filename, *, start=None):
 
 def read_10x_mtx(
     path: Union[Path, str],
-    var_names: str = 'gene_symbols',
+    var_names: Literal['gene_symbols', 'gene_ids'] = 'gene_symbols',
     make_unique: bool = True,
     cache: bool = False,
-    cache_compression: Union[str, None, Empty] = _empty,
+    cache_compression: Union[Literal['gzip', 'lzf'], None, Empty] = _empty,
     gex_only: bool = True,
 ) -> AnnData:
     """\
@@ -274,14 +275,14 @@ def read_10x_mtx(
     path
         Path to directory for `.mtx` and `.tsv` files,
         e.g. './filtered_gene_bc_matrices/hg19/'.
-    var_names: {`'gene_symbols'`, `'gene_ids'`}
+    var_names
         The variables index.
     make_unique
         Whether to make the variables index unique by appending '-1',
         '-2' etc. or not.
     cache
         If `False`, read from source, if `True`, read from fast 'h5ad' cache.
-    cache_compression : {`'gzip'`, `'lzf'`, `None`}
+    cache_compression
         See the h5py :ref:`dataset_compression`.
         (Default: `settings.cache_compression`)
     gex_only
@@ -377,8 +378,8 @@ def _read_v3_10x_mtx(
 def write(
     filename: Union[str, Path],
     adata: AnnData,
-    ext: Optional[str] = None,
-    compression: str = 'gzip',
+    ext: Optional[Literal['h5', 'csv', 'txt', 'npz']] = None,
+    compression: Optional[Literal['gzip', 'lzf']] = 'gzip',
     compression_opts: Optional[int] = None,
 ):
     """\
@@ -393,10 +394,10 @@ def write(
         :func:`~scanpy.read`.
     adata
         Annotated data matrix.
-    ext : {`None`, `'h5'`, `'csv'`, `'txt'`, `'npz'`} (default: `None`)
+    ext
         File extension from wich to infer file format. If `None`, defaults to
         `sc.settings.file_format_data`.
-    compression : {`None`, 'gzip', 'lzf'} (default: `'gzip'`)
+    compression
         See http://docs.h5py.org/en/latest/high/dataset.html.
     compression_opts
         See http://docs.h5py.org/en/latest/high/dataset.html.

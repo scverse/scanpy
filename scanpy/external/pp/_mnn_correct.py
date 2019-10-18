@@ -5,6 +5,7 @@ import pandas as pd
 from anndata import AnnData
 
 from ..._settings import settings
+from ..._compat import Literal
 
 
 def mnn_correct(
@@ -22,7 +23,7 @@ def mnn_correct(
     var_adj: bool = True,
     compute_angle: bool = False,
     mnn_order: Optional[Sequence[int]] = None,
-    svd_mode: str = 'rsvd',
+    svd_mode: Literal['svd', 'rsvd', 'irlb'] = 'rsvd',
     do_concatenate: bool = True,
     save_raw: bool = False,
     n_jobs: Optional[int] = None,
@@ -93,7 +94,7 @@ def mnn_correct(
     mnn_order
         The order in which batches are to be corrected. When set to None, datas
         are corrected sequentially.
-    svd_mode : {`'svd'`, `'rsvd'`, `'irlb'`}
+    svd_mode
         `'svd'` computes SVD using a non-randomized SVD-via-ID algorithm,
         while `'rsvd'` uses a randomized version. `'irlb'` perfores
         truncated SVD by implicitly restarted Lanczos bidiagonalization

@@ -12,12 +12,17 @@ from cycler import Cycler, cycler
 
 from .. import logging as logg
 from .._settings import settings
+from .._compat import Literal
 from . import palettes
 
 
 _tmp_cluster_pos = None  # just a hacky solution for storing a tmp global variable
 
 ColorLike = Union[str, Tuple[float, ...]]
+_IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
+_FontWeight = Literal[
+    'light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black'
+]
 
 
 # -------------------------------------------------------------------------------
@@ -341,14 +346,19 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
                     if color in additional_colors:
                         color = additional_colors[color]
                     else:
-                        raise ValueError("The following color value of the given palette is not valid: {}".format(color))
+                        raise ValueError(
+                            "The following color value of the given palette "
+                            f"is not valid: {color}"
+                        )
                 _color_list.append(color)
 
             palette = cycler(color=_color_list)
         if not isinstance(palette, Cycler):
-            raise ValueError("Please check that the value of 'palette' is a "
-                             "valid matplotlib colormap string (eg. Set2), a "
-                             "list of color names or a cycler with a 'color' key.")
+            raise ValueError(
+                "Please check that the value of 'palette' is a valid "
+                "matplotlib colormap string (eg. Set2), a  list of color names "
+                "or a cycler with a 'color' key."
+            )
         if 'color' not in palette.keys:
             raise ValueError("Please set the palette key 'color'.")
 
@@ -485,7 +495,7 @@ def setup_axes(
     colorbars=(False,),
     right_margin=None,
     left_margin=None,
-    projection='2d',
+    projection: Literal['2d', '3d'] = '2d',
     show_ticks=False,
 ):
     """Grid of axes for plotting, legends and colorbars.
@@ -560,7 +570,7 @@ def scatter_base(
     highlights=(),
     right_margin=None,
     left_margin=None,
-    projection='2d',
+    projection: Literal['2d', '3d'] = '2d',
     title=None,
     component_name='DC',
     component_indexnames=(1, 2, 3),
@@ -577,7 +587,7 @@ def scatter_base(
     ----------
     Y
         Data array.
-    projection: {`'2d'`, `'3d'`}
+    projection
 
     Returns
     -------

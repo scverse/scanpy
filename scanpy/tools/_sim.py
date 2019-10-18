@@ -21,14 +21,13 @@ import numpy as np
 import scipy as sp
 from anndata import AnnData
 
-from .. import _utils
-from .. import readwrite
+from .. import _utils, readwrite, logging as logg
 from .._settings import settings
-from .. import logging as logg
+from .._compat import Literal
 
 
 def sim(
-    model,
+    model: Literal['krumsiek11', 'toggleswitch'],
     params_file: bool = True,
     tmax: Optional[int] = None,
     branching: Optional[bool] = None,
@@ -47,7 +46,7 @@ def sim(
 
     Parameters
     ----------
-    model : {`'krumsiek11'`, `'toggleswitch'`}
+    model
         Model file in 'sim_models' directory.
     params_file
         Read default params from file.

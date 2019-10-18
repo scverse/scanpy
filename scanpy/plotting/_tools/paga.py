@@ -14,9 +14,10 @@ from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like, Colormap
 
 from .. import _utils
-from .._utils import matrix
+from .._utils import matrix, _IGraphLayout, _FontWeight
 from ... import _utils as _sc_utils, logging as logg
 from ..._settings import settings
+from ..._compat import Literal
 
 
 def paga_compare(
@@ -27,10 +28,10 @@ def paga_compare(
     alpha=None,
     groups=None,
     components=None,
-    projection='2d',
+    projection: Literal['2d', '3d'] = '2d',
     legend_loc='on data',
     legend_fontsize=None,
-    legend_fontweight='bold',
+    legend_fontweight: _FontWeight = 'bold',
     legend_fontoutline=None,
     color_map=None,
     palette=None,
@@ -243,7 +244,7 @@ def paga(
     adata: AnnData,
     threshold: Optional[float] = None,
     color: Optional[str] = None,
-    layout: str = None,
+    layout: Optional[_IGraphLayout] = None,
     layout_kwds: Optional[Mapping[str, Any]] = None,
     init_pos: Optional[np.ndarray] = None,
     root: Union[int, str, Sequence[int], None] = 0,
@@ -311,7 +312,7 @@ def paga(
         Two-column array-like storing the x and y coordinates for drawing.
         Otherwise, path to a `.gdf` file that has been exported from Gephi or
         a similar graph visualization software.
-    layout : {`'fa'`, `'fr'`, `'rt'`, `'rt_circular'`, `'eq_tree'`, ...}, optional (default: `'fr'`)
+    layout
         Plotting layout that computes positions.
         `'fa'` stands for “ForceAtlas2”,
         `'fr'` stands for “Fruchterman-Reingold”,
@@ -336,8 +337,8 @@ def paga(
         graph is connected). If this is `None` or an empty list, the root
         vertices are automatically calculated based on topological sorting.
     transitions
-        Key for `.uns['paga']` that specifies the matrix that - for instance
-        `'transistions_confidence'` - that specifies the matrix that stores the
+        Key for `.uns['paga']` that specifies the matrix that – for instance
+        `'transistions_confidence'` – that specifies the matrix that stores the
         arrows.
     solid_edges
         Key for `.uns['paga']` that specifies the matrix that stores the edges
@@ -402,7 +403,7 @@ def paga(
 
     Notes
     -----
-    When initializing the positions, note that - for some reason - igraph
+    When initializing the positions, note that – for some reason – igraph
     mirrors coordinates along the x axis... that is, you should increase the
     `maxiter` parameter by 1 if the layout is flipped.
 
@@ -886,7 +887,7 @@ def paga_path(
     show_yticks: bool = True,
     show_colorbar: bool = True,
     legend_fontsize: Optional[int] = None,
-    legend_fontweight: Optional[str] = None,
+    legend_fontweight: Union[_FontWeight, int, None] = None,
     normalize_to_zero_one: bool = False,
     as_heatmap: bool = True,
     return_data: bool = False,

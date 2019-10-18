@@ -16,6 +16,7 @@ from anndata import AnnData
 from textwrap import dedent
 
 from ._settings import settings
+from ._compat import Literal
 from . import logging as logg
 
 EPS = 1e-15
@@ -204,7 +205,7 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
-    normalization: str = 'prediction',
+    normalization: Literal['prediction', 'reference'] = 'prediction',
     threshold: float = 0.01,
     max_n_names: Optional[int] = 2,
 ):
@@ -219,7 +220,7 @@ def compute_association_matrix_of_groups(
         Field name of adata.obs.
     reference
         Field name of adata.obs.
-    normalization: {`'prediction'`, `'reference'`}
+    normalization
         Whether to normalize with respect to the predicted groups or the
         reference groups.
     threshold
