@@ -85,12 +85,11 @@ def ebi_expression_atlas(
     accession: str, *, filter_boring: bool = False
 ) -> anndata.AnnData:
     """\
-    Load a dataset from the EBI Single Cell `Expression Atlas`_.
+    Load a dataset from the `EBI Single Cell Expression Atlas
+    <https://www.ebi.ac.uk/gxa/sc/experiments>`__
 
-    Downloaded datasets are saved in directory specified by
+    Downloaded datasets are saved in the directory specified by
     :attr:`~scanpy._settings.ScanpyConfig.datasetdir`.
-
-    .. _Expression Atlas: https://www.ebi.ac.uk/gxa/sc/experiments
 
     Params
     ------

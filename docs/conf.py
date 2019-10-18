@@ -231,8 +231,8 @@ def show_param_warnings(app, exception):
         file_name = inspect.getsourcefile(fun)
         params_str = '\n'.join(f'\t{n}: {t}' for n, t in params)
         warnings.warn_explicit(
-            f'\nParameters in `{fname}` not set-like: {{`elm-1`, `s_el.2`}}.\n'
-            'Convert to this format or replace with type annotations:\n'
+            f'\nParameters in `{fname}` have types in docstring.\n'
+            'Replace them with type annotations.\n'
             + params_str,
             UserWarning,
             file_name,
