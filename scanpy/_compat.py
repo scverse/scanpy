@@ -4,6 +4,7 @@ except ImportError:
     try:
         from typing_extensions import Literal
     except ImportError:
+
         class LiteralMeta(type):
             def __getitem__(cls, values):
                 if not isinstance(values, tuple):
