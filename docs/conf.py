@@ -232,8 +232,7 @@ def show_param_warnings(app, exception):
         params_str = '\n'.join(f'\t{n}: {t}' for n, t in params)
         warnings.warn_explicit(
             f'\nParameters in `{fname}` have types in docstring.\n'
-            'Replace them with type annotations.\n'
-            + params_str,
+            f'Replace them with type annotations.\n{params_str}',
             UserWarning,
             file_name,
             line,
