@@ -32,7 +32,6 @@ exclude = '''
         _dpt
         |_sim
         |_paga
-        |_tsne
         |_umap
         |_utils
         |_leiden

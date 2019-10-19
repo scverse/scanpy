@@ -5,14 +5,15 @@ from ..preprocessing._simple import N_PCS
 from .. import settings
 
 doc_use_rep = """\
-use_rep : {`None`, 'X'} or any key for `.obsm`, optional (default: `None`)
-    Use the indicated representation. If `None`, the representation is chosen
-    automatically: for `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
-    If 'X_pca' is not present, it's computed with default parameters.\
+use_rep
+    Use the indicated representation. `'X'` or any key for `.obsm` is valid.
+    If `None`, the representation is chosen automatically:
+    For `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
+    If 'X_pca' is not present, it’s computed with default parameters.\
 """
 
 doc_n_pcs = """\
-n_pcs : `int` or `None`, optional (default: `None`)
+n_pcs
     Use this many PCs. If `n_pcs==0` use `.X` if `use_rep is None`.\
 """
 

@@ -1,12 +1,12 @@
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, Dict
 
 import numpy as np
 from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.utils import sparsefuncs
 
-
 from .. import logging as logg
+from .._compat import Literal
 
 
 def _normalize_data(X, counts, after=None, copy=False):
@@ -27,16 +27,16 @@ def normalize_total(
     exclude_highly_expressed: bool = False,
     max_fraction: float = 0.05,
     key_added: Optional[str] = None,
-    layers: Union[str, Iterable[str]] = None,
+    layers: Union[Literal['all'], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
-):
+) -> Union[AnnData, Dict[str, np.ndarray]]:
     """\
     Normalize counts per cell.
 
-    If choosing ``target_sum=1e6``, this is CPM normalization.
+    If choosing `target_sum=1e6`, this is CPM normalization.
 
-    If ``exclude_highly_expressed=True``, very highly expressed genes are excluded
+    If `exclude_highly_expressed=True`, very highly expressed genes are excluded
     from the computation of the normalization factor (size factor) for each
     cell. This is meaningful as these can strongly influence the resulting
     normalized values for all other genes [Weinreb17]_.
@@ -47,27 +47,27 @@ def normalize_total(
     Params
     ------
     adata
-        The annotated data matrix of shape ``n_obs`` × ``n_vars``. Rows correspond
-        to cells and columns to genes.
+        The annotated data matrix of shape `n_obs` × `n_vars`.
+        Rows correspond to cells and columns to genes.
     target_sum
-        If ``None``, after normalization, each observation (cell) has a total count
-        equal to the median of total counts for observations (cells)
+        If `None`, after normalization, each observation (cell) has a total
+        count equal to the median of total counts for observations (cells)
         before normalization.
     exclude_highly_expressed
         Exclude (very) highly expressed genes for the computation of the
         normalization factor (size factor) for each cell. A gene is considered
-        highly expressed, if it has more than ``max_fraction`` of the total counts
+        highly expressed, if it has more than `max_fraction` of the total counts
         in at least one cell. The not-excluded genes will sum up to
-        ``target_sum``.
+        `target_sum`.
     max_fraction
-        If ``exclude_highly_expressed=True``, consider cells as highly expressed
-        that have more counts than ``max_fraction`` of the original total counts
+        If `exclude_highly_expressed=True`, consider cells as highly expressed
+        that have more counts than `max_fraction` of the original total counts
         in at least one cell.
     key_added
-        Name of the field in ``adata.obs`` where the normalization factor is
+        Name of the field in `adata.obs` where the normalization factor is
         stored.
     layers
-        List of layers to normalize. Set to ``'all'`` to normalize all layers.
+        List of layers to normalize. Set to `'all'` to normalize all layers.
     layer_norm
         Specifies how to normalize layers:
 
@@ -81,8 +81,8 @@ def normalize_total(
           `adata.X` before normalization.
 
     inplace
-        Whether to update ``adata`` or return dictionary with normalized copies of
-        ``adata.X`` and ``adata.layers``.
+        Whether to update `adata` or return dictionary with normalized copies of
+        `adata.X` and `adata.layers`.
 
     Returns
     -------
@@ -96,7 +96,11 @@ def normalize_total(
     >>> import scanpy as sc
     >>> sc.settings.verbosity = 2
     >>> np.set_printoptions(precision=2)
-    >>> adata = AnnData(np.array([[3, 3, 3, 6, 6], [1, 1, 1, 2, 2], [1, 22, 1, 2, 2]]))
+    >>> adata = AnnData(np.array([
+    >>>    [3, 3, 3, 6, 6],
+    >>>    [1, 1, 1, 2, 2],
+    >>>    [1, 22, 1, 2, 2],
+    >>> ]))
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
@@ -106,7 +110,10 @@ def normalize_total(
     array([[0.14, 0.14, 0.14, 0.29, 0.29],
            [0.14, 0.14, 0.14, 0.29, 0.29],
            [0.04, 0.79, 0.04, 0.07, 0.07]], dtype=float32)
-    >>> X_norm = sc.pp.normalize_total(adata, target_sum=1, exclude_highly_expressed=True, max_fraction=0.2, inplace=False)['X']
+    >>> X_norm = sc.pp.normalize_total(
+    >>>     adata, target_sum=1, exclude_highly_expressed=True,
+    >>>     max_fraction=0.2, inplace=False
+    >>> )['X']
     The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
     >>> X_norm
