@@ -23,7 +23,7 @@ def louvain(
     resolution: Optional[float] = None,
     random_state: Optional[Union[int, RandomState]] = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
-    key_added: Optional[str] = 'louvain',
+    key_added: str = 'louvain',
     adjacency: Optional[spmatrix] = None,
     flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
     directed: bool = True,
@@ -32,13 +32,15 @@ def louvain(
     partition_kwargs: Optional[Mapping[str, Any]]=None,
     copy: bool = False,
 ) -> Optional[AnnData]:
-    """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
+    """\
+    Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
 
     Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
     of [Traag17]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
-    This requires having ran :func:`~scanpy.pp.neighbors` or :func:`~scanpy.external.pp.bbknn` first,
+    This requires having ran :func:`~scanpy.pp.neighbors` or
+    :func:`~scanpy.external.pp.bbknn` first,
     or explicitly passing a ``adjacency`` matrix.
 
     Parameters
@@ -48,7 +50,8 @@ def louvain(
     resolution
         For the default flavor (``'vtraag'``), you can provide a resolution
         (higher resolution means finding more and smaller clusters),
-        which defaults to 1.0. See “Time as a resolution parameter” in [Lambiotte09]_.
+        which defaults to 1.0.
+        See “Time as a resolution parameter” in [Lambiotte09]_.
     random_state
         Change the initialization of the optimization.
     restrict_to
@@ -90,11 +93,15 @@ def louvain(
     start = logg.info('running Louvain clustering')
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
-            '`partition_type` is only a valid argument when `flavour` is "vtraag"')
+            '`partition_type` is only a valid argument '
+            'when `flavour` is "vtraag"'
+        )
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
+            'You need to run `pp.neighbors` first '
+            'to compute a neighborhood graph.'
+        )
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
@@ -107,7 +114,9 @@ def louvain(
         )
     if flavor in {'vtraag', 'igraph'}:
         if flavor == 'igraph' and resolution is not None:
-            logg.warning('`resolution` parameter has no effect for flavor "igraph"')
+            logg.warning(
+                '`resolution` parameter has no effect for flavor "igraph"'
+            )
         if directed and flavor == 'igraph':
             directed = False
         if not directed: logg.debug('    using the undirected graph')
@@ -137,7 +146,8 @@ def louvain(
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
     elif flavor == 'rapids':
-        # nvLouvain only works with undirected graphs, and `adjacency` must have a directed edge in both directions
+        # nvLouvain only works with undirected graphs,
+        # and `adjacency` must have a directed edge in both directions
         import cudf
         import cugraph
         offsets = cudf.Series(adjacency.indptr)
@@ -164,7 +174,9 @@ def louvain(
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v
     else:
-        raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
+        raise ValueError(
+            '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
+        )
     if restrict_to is not None:
         if key_added == 'louvain':
             key_added += '_R'
@@ -181,7 +193,10 @@ def louvain(
         categories=natsorted(np.unique(groups).astype('U')),
     )
     adata.uns['louvain'] = {}
-    adata.uns['louvain']['params'] = {'resolution': resolution, 'random_state': random_state}
+    adata.uns['louvain']['params'] = dict(
+        resolution=resolution,
+        random_state=random_state,
+    )
     logg.info(
         '    finished',
         time=start,

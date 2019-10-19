@@ -1,8 +1,9 @@
-from typing import Tuple
+from typing import Tuple, Optional, Sequence
 
 import numpy as np
 import pandas as pd
 import scipy as sp
+from anndata import AnnData
 from natsort import natsorted
 
 from .. import logging as logg
@@ -27,9 +28,17 @@ def _diffmap(adata, n_comps=15):
     )
 
 
-def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
-        allow_kendall_tau_shift=True, copy=False):
-    """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf19]_.
+def dpt(
+    adata: AnnData,
+    n_dcs: int = 10,
+    n_branchings: int = 0,
+    min_group_size: float = 0.01,
+    allow_kendall_tau_shift: bool = True,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """\
+    Infer progression of cells through geodesic distance along the graph
+    [Haghverdi16]_ [Wolf19]_.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` has been introduced by [Haghverdi16]_ and
@@ -59,24 +68,24 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_dcs : `int`, optional (default: 10)
+    n_dcs
         The number of diffusion components to use.
-    n_branchings : `int`, optional (default: 0)
+    n_branchings
         Number of branchings to detect.
-    min_group_size : [0, 1] or `float`, optional (default: 0.01)
+    min_group_size
         During recursive splitting of branches ('dpt groups') for `n_branchings`
         > 1, do not consider groups that contain less than `min_group_size` data
         points. If a float, `min_group_size` refers to a fraction of the total
         number of data points.
-    allow_kendall_tau_shift : `bool`, optional (default: `True`)
+    allow_kendall_tau_shift
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    copy : `bool`, optional (default: `False`)
-        Copy instance before computation and return a copy. Otherwise, perform
-        computation inplace and return None.
+    copy
+        Copy instance before computation and return a copy.
+        Otherwise, perform computation inplace and return `None`.
 
     Returns
     -------
@@ -84,10 +93,10 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
     If `n_branchings==0`, no field `dpt_groups` will be written.
 
-    **dpt_pseudotime** : :class:`pandas.Series` (`adata.obs`, dtype `float`)
+    `dpt_pseudotime` : :class:`pandas.Series` (`adata.obs`, dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    **dpt_groups** : :class:`pandas.Series` (`adata.obs`, dtype `category`)
+    `dpt_groups` : :class:`pandas.Series` (`adata.obs`, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
@@ -155,7 +164,8 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
 
 class DPT(Neighbors):
-    """Hierarchical Diffusion Pseudotime.
+    """\
+    Hierarchical Diffusion Pseudotime.
     """
 
     def __init__(self, adata, n_dcs=None, min_group_size=0.01,
@@ -169,7 +179,8 @@ class DPT(Neighbors):
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
-        """Detect branchings and partition the data into corresponding segments.
+        """\
+        Detect branchings and partition the data into corresponding segments.
 
         Detect all branchings up to `n_branchings`.
 
@@ -191,7 +202,8 @@ class DPT(Neighbors):
         self.order_pseudotime()
 
     def detect_branchings(self):
-        """Detect all branchings up to `n_branchings`.
+        """\
+        Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
@@ -303,7 +315,8 @@ class DPT(Neighbors):
         # self.segs_adjacency.eliminate_zeros()
 
     def select_segment(self, segs, segs_tips, segs_undecided) -> Tuple[int, int]:
-        """Out of a list of line segments, choose segment that has the most
+        """\
+        Out of a list of line segments, choose segment that has the most
         distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -407,7 +420,8 @@ class DPT(Neighbors):
         self.segs_names = segs_names
 
     def order_pseudotime(self):
-        """Define indices that reflect segment and pseudotime order.
+        """\
+        Define indices that reflect segment and pseudotime order.
 
         Writes
         ------
@@ -445,9 +459,18 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(self, segs, segs_tips, segs_connects, segs_undecided, segs_adjacency,
-                         iseg, tips3):
-        """Detect branching on given segment.
+    def detect_branching(
+        self,
+        segs: Sequence[np.ndarray],
+        segs_tips: Sequence[np.ndarray],
+        segs_connects,
+        segs_undecided,
+        segs_adjacency,
+        iseg: int,
+        tips3: np.ndarray,
+    ):
+        """\
+        Detect branching on given segment.
 
         Updates all list parameters inplace.
 
@@ -456,13 +479,13 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        segs : list of np.ndarray
+        segs
             Dchosen distance matrix restricted to segment.
-        segs_tips : list of np.ndarray
+        segs_tips
             Stores all tip points for the segments in segs.
-        iseg : int
+        iseg
             Position of segment under study in segs.
-        tips3 : np.ndarray
+        tips3
             The three tip points. They form a 'triangle' that contains the data.
         """
         seg = segs[iseg]
@@ -601,8 +624,14 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(self, Dseg: np.ndarray, tips: np.ndarray, seg_reference=None):
-        """Detect branching on given segment.
+    def _detect_branching(
+        self,
+        Dseg: np.ndarray,
+        tips: np.ndarray,
+        seg_reference=None,
+    ):
+        """\
+        Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
         tips. Points that do not belong to the same segment in all three

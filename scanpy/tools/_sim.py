@@ -38,7 +38,8 @@ def sim(
     seed: Optional[int] = None,
     writedir: Optional[Union[str, Path]] = None,
 ) -> AnnData:
-    """Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
+    """\
+    Simulate dynamic gene expression data [Wittmann09]_ [Wolf18]_.
 
     Sample from a stochastic differential equation model built from
     literature-curated boolean gene regulatory networks, as suggested by

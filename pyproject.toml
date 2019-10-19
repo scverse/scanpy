@@ -38,13 +38,9 @@ exclude = '''
         |_louvain
         |_tsne_fix
         |_top_genes
-        |_dendrogram
-        |_draw_graph
         |_score_genes
         |_utils_clustering
         |_rank_genes_groups
-        |_embedding_density
-        |_marker_gene_overlap
     )
     |plotting/(
         __init__

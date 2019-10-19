@@ -2,7 +2,7 @@
 Computes a dendrogram based on a given categorical observation.
 """
 
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Dict, Any
 
 import pandas as pd
 from anndata import AnnData
@@ -24,23 +24,29 @@ def dendrogram(
     cor_method: str = 'pearson',
     linkage_method: str = 'complete',
     key_added: Optional[str] = None,
-) -> None:
+    inplace: bool = True,
+) -> Optional[Dict[str, Any]]:
     """\
     Computes a hierarchical clustering for the given `groupby` categories.
 
-    By default, the PCA representation is used unless `.X` has less than 50 variables.
+    By default, the PCA representation is used unless `.X`
+    has less than 50 variables.
 
     Alternatively, a list of `var_names` (e.g. genes) can be given.
 
-    Average values of either `var_names` or components are used to compute a correlation matrix.
+    Average values of either `var_names` or components are used
+    to compute a correlation matrix.
 
-    The hierarchical clustering can be visualized using `sc.pl.dendrogram` or multiple other
-    visualizations that can include a dendrogram: `matrixplot`, `heatmap`, `dotplot` and `stacked_violin`
+    The hierarchical clustering can be visualized using
+    :func:`scanpy.pl.dendrogram` or multiple other visualizations that can
+    include a dendrogram: :func:`~scanpy.pl.matrixplot`,
+    :func:`~scanpy.pl.heatmap`, :func:`~scanpy.pl.dotplot`,
+    and :func:`~scanpy.pl.stacked_violin`.
 
     .. note::
-        The computation of the hierarchical clustering is based on predefined groups and not
-        per cell. The correlation matrix is computed using by default pearson but other methods
-        are available.
+        The computation of the hierarchical clustering is based on predefined
+        groups and not per cell. The correlation matrix is computed using by
+        default pearson but other methods are available.
 
     Parameters
     ----------
@@ -64,11 +70,14 @@ def dendrogram(
         By default, the dendrogram information is added to
         `.uns[f'dendrogram_{{groupby}}']`.
         Notice that the `groupby` information is added to the dendrogram.
+    inplace
+        If `True`, adds dendrogram information to `adata.uns[key_added]`,
+        else this function returns the information.
 
     Returns
     -------
-    `adata.uns['dendrogram']` (or instead of 'dendrogram' the value selected
-    for `key_added`) is updated with the dendrogram information
+    If `inplace=False`, returns dendrogram information,
+    else `adata.uns[key_added]` is updated with it.
 
     Examples
     --------
@@ -93,19 +102,21 @@ def dendrogram(
         )
 
     if var_names is None:
-        rep_df = pd.DataFrame(_choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs))
+        rep_df = pd.DataFrame(
+            _choose_representation(adata, use_rep=use_rep, n_pcs=n_pcs)
+        )
         rep_df.set_index(adata.obs[groupby], inplace=True)
         categories = rep_df.index.categories
     else:
-        if use_raw is None and adata.raw is not None: use_raw = True
+        if use_raw is None and adata.raw is not None:
+            use_raw = True
         gene_names = adata.raw.var_names if use_raw else adata.var_names
         from ..plotting._anndata import _prepare_dataframe
-        categories, rep_df = _prepare_dataframe(adata, gene_names, groupby, use_raw)
 
-    if key_added is None:
-        key_added = 'dendrogram_' + groupby
+        categories, rep_df = _prepare_dataframe(
+            adata, gene_names, groupby, use_raw
+        )
 
-    logg.info(f'Storing dendrogram info using `.uns[{key_added!r}]`')
     # aggregate values within categories using 'mean'
     mean_df = rep_df.groupby(level=0).mean()
 
@@ -118,8 +129,21 @@ def dendrogram(
     # order of groupby categories
     categories_idx_ordered = dendro_info['leaves']
 
-    adata.uns[key_added] = dict(
-        linkage=z_var, groupby=groupby, use_rep=use_rep, cor_method=cor_method,
-        linkage_method=linkage_method, categories_idx_ordered=categories_idx_ordered,
-        dendrogram_info=dendro_info, correlation_matrix=corr_matrix.values,
+    dat = dict(
+        linkage=z_var,
+        groupby=groupby,
+        use_rep=use_rep,
+        cor_method=cor_method,
+        linkage_method=linkage_method,
+        categories_idx_ordered=categories_idx_ordered,
+        dendrogram_info=dendro_info,
+        correlation_matrix=corr_matrix.values,
     )
+
+    if inplace:
+        if key_added is None:
+            key_added = f'dendrogram_{groupby}'
+        logg.info(f'Storing dendrogram info using `.uns[{key_added!r}]`')
+        adata.uns[key_added] = dat
+    else:
+        return dat

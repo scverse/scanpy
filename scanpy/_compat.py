@@ -9,7 +9,7 @@ except ImportError:
             def __getitem__(cls, values):
                 if not isinstance(values, tuple):
                     values = (values,)
-                return type('Literal_', (Literal,), dict(params=values))
+                return type('Literal_', (Literal,), dict(__args__=values))
 
         class Literal(metaclass=LiteralMeta):
             pass

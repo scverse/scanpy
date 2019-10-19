@@ -30,7 +30,7 @@ def normalize_total(
     layers: Union[Literal['all'], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
-) -> Union[AnnData, Dict[str, np.ndarray]]:
+) -> Optional[Dict[str, np.ndarray]]:
     """\
     Normalize counts per cell.
 

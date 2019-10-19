@@ -12,12 +12,26 @@ import numpy as np
 from scipy import linalg
 import sklearn
 
-def _gradient_descent(objective, p0, it, n_iter, objective_error=None,
-                      n_iter_check=1, n_iter_without_progress=50,
-                      momentum=0.5, learning_rate=1000.0, min_gain=0.01,
-                      min_grad_norm=1e-7, min_error_diff=1e-7, verbose=0,
-                      args=None, kwargs=None):
-    """Batch gradient descent with momentum and individual gains.
+
+def _gradient_descent(
+    objective,
+    p0,
+    it,
+    n_iter,
+    objective_error=None,
+    n_iter_check=1,
+    n_iter_without_progress=50,
+    momentum=0.5,
+    learning_rate=1000.0,
+    min_gain=0.01,
+    min_grad_norm=1e-7,
+    min_error_diff=1e-7,
+    verbose=0,
+    args=None,
+    kwargs=None,
+):
+    """\
+    Batch gradient descent with momentum and individual gains.
     Parameters
     ----------
     objective : function or callable
