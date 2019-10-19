@@ -1,4 +1,4 @@
-from typing import Optional, Union, Iterable
+from typing import Optional, Union, Iterable, Dict
 
 import numpy as np
 from anndata import AnnData
@@ -30,7 +30,7 @@ def normalize_total(
     layers: Union[Literal['all'], Iterable[str]] = None,
     layer_norm: Optional[str] = None,
     inplace: bool = True,
-):
+) -> Union[AnnData, Dict[str, np.ndarray]]:
     """\
     Normalize counts per cell.
 
