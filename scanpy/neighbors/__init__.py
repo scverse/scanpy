@@ -771,12 +771,13 @@ class Neighbors:
 
         self._connectivities = W
 
-    def compute_transitions(self, density_normalize=True):
-        """Compute transition matrix.
+    def compute_transitions(self, density_normalize: bool = True):
+        """\
+        Compute transition matrix.
 
         Parameters
         ----------
-        density_normalize : `bool`
+        density_normalize
             The density rescaling of Coifman and Lafon (2006): Then only the
             geometry of the data matters, not the sampled density.
 
@@ -809,20 +810,24 @@ class Neighbors:
         self._transitions_sym = self.Z @ K @ self.Z
         logg.info('    finished', time=start)
 
-    def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
-        """Compute eigen decomposition of transition matrix.
+    def compute_eigen(
+        self,
+        n_comps: int = 15,
+        sym: Optional[bool] = None,
+        sort: Literal['decrease', 'increase'] = 'decrease',
+    ):
+        """\
+        Compute eigen decomposition of transition matrix.
 
         Parameters
         ----------
-        n_comps : `int`
+        n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        sym : `bool`
+        sym
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
-        matrix : sparse matrix, np.ndarray, optional (default: `.connectivities`)
-            Matrix to diagonalize. Merely for testing and comparison purposes.
 
         Returns
         -------
@@ -851,14 +856,17 @@ class Neighbors:
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
-            evals, evecs = scipy.sparse.linalg.eigsh(matrix, k=n_comps,
-                                                  which=which, ncv=ncv)
+            evals, evecs = scipy.sparse.linalg.eigsh(
+                matrix, k=n_comps, which=which, ncv=ncv
+            )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info('    eigenvalues of transition matrix\n'
-                  '    {}'.format(str(evals).replace('\n', '\n    ')))
+        logg.info(
+            '    eigenvalues of transition matrix\n'
+            '    {}'.format(str(evals).replace('\n', '\n    '))
+        )
         if self._number_connected_components > len(evals)/2:
             logg.warning('Transition matrix has many disconnected components!')
         self._eigen_values = evals

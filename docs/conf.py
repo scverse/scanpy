@@ -212,10 +212,11 @@ param_warnings = {}
 
 def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
     for _name, _type, _desc in fields:
-        if not _type:
-            continue
-        set_item = r"`'[a-z0-9_.-]+'`"
-        if re.fullmatch(rf"{{{set_item}(, {set_item})*}}", _type):
+        if (
+            not _type
+            or not self._obj.__module__.startswith('scanpy')
+            or self._name.startswith('scanpy.api')
+        ):
             continue
         w_list = param_warnings.setdefault((self._name, self._obj), [])
         if (_name, _type) not in w_list:
@@ -237,6 +238,8 @@ def show_param_warnings(app, exception):
             file_name,
             line,
         )
+    if param_warnings:
+        raise RuntimeError('Encountered text parameter type. Use annotations.')
 
 
 NumpyDocstring._format_docutils_params = scanpy_log_param_types

@@ -28,7 +28,7 @@ edges
     Show edges.
 edges_width
     Width of edges.
-edges_color : matplotlib color(s), optional (default: `'grey'`)
+edges_color
     Color of edges. See :func:`~networkx.drawing.nx_pylab.draw_networkx_edges`.
 arrows
     Show arrows (requires to run :func:`scvelo.tl.velocity_embedding` before).
@@ -152,50 +152,53 @@ ax
 
 
 doc_common_plot_args = """\
-adata : :class:`~anndata.AnnData`
+adata
     Annotated data matrix.
-var_names : `str`, list of `str`, dict or OrderedDict
-    `var_names` should be a valid subset of  `adata.var_names`.
-    If `var_names` is a dict, then the key is used as label
-    to group the values (see var_group_labels). The dict values
-    should be a list or str of valid adata.var_names. In this
+var_names
+    `var_names` should be a valid subset of `adata.var_names`.
+    If `var_names` is a mapping, then the key is used as label
+    to group the values (see `var_group_labels`). The mapping values
+    should be sequences of valid `adata.var_names`. In this
     case either coloring or 'brackets' are used for the grouping
-    of var names depending on the plot. When `var_names` is a dict,
+    of var names depending on the plot. When `var_names` is a mapping,
     then the `var_group_labels` and `var_group_positions` are set.
-groupby : `str` or `None`, optional (default: `None`)
+groupby
     The key of the observation grouping to consider.
-log : `bool`, optional (default: `False`)
-    Plot on logarithmic axis.
-use_raw : `bool`, optional (default: `None`)
+use_raw
     Use `raw` attribute of `adata` if present.
-num_categories : `int`, optional (default: `7`)
+log
+    Plot on logarithmic axis.
+num_categories
     Only used if groupby observation is not categorical. This value
     determines the number of groups into which the groupby observation
     should be subdivided.
-figsize : (`float`, `float`), optional (default: `None`)
-    Figure size when multi_panel = True. Otherwise the rcParam['figure.figsize] value is used.
+figsize
+    Figure size when `multi_panel=True`.
+    Otherwise the `rcParam['figure.figsize]` value is used.
     Format is (width, height)
-dendrogram: `bool` or `str`, optional (default, `False`)
-    If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
-    between the `groupby` categories is added. The dendrogram information is computed
-    using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
-    the function is called with default parameters.
-gene_symbols : string, optional (default: `None`)
-    Column name in `.var` DataFrame that stores gene symbols. By default `var_names`
-    refer to the index column of the `.var` DataFrame. Setting this option allows
-    alternative names to be used.
-var_group_positions :  list of `tuples`.
+dendrogram
+    If True or a valid dendrogram key, a dendrogram based on the hierarchical
+    clustering between the `groupby` categories is added.
+    The dendrogram information is computed using :func:`scanpy.tl.dendrogram`.
+    If `tl.dendrogram` has not been called previously the function is called
+    with default parameters.
+gene_symbols
+    Column name in `.var` DataFrame that stores gene symbols.
+    By default `var_names` refer to the index column of the `.var` DataFrame.
+    Setting this option allows alternative names to be used.
+var_group_positions
     Use this parameter to highlight groups of `var_names`.
-    This will draw a 'bracket' or a color block between the given start and end positions. If the
-    parameter `var_group_labels` is set, the corresponding labels are added on
-    top/left. E.g. var_group_positions = [(4,10)] will add a bracket
-    between the fourth var_name and the tenth var_name. By giving more
-    positions, more brackets/color blocks are drawn.
-var_group_labels : list of `str`
-    Labels for each of the var_group_positions that want to be highlighted.
-var_group_rotation : `float` (default: `None`)
-    Label rotation degrees. By default, labels larger than 4 characters are rotated 90 degrees
-layer: `str`, (default `None`)
+    This will draw a 'bracket' or a color block between the given start and end
+    positions. If the parameter `var_group_labels` is set, the corresponding
+    labels are added on top/left. E.g. `var_group_positions=[(4,10)]`
+    will add a bracket between the fourth `var_name` and the tenth `var_name`.
+    By giving more positions, more brackets/color blocks are drawn.
+var_group_labels
+    Labels for each of the `var_group_positions` that want to be highlighted.
+var_group_rotation
+    Label rotation degrees.
+    By default, labels larger than 4 characters are rotated 90 degrees.
+layer
     Name of the AnnData object layer that wants to be plotted. By default adata.raw.X is plotted.
     If `use_raw=False` is set, then `adata.X` is plotted. If `layer` is set to a valid layer name,
     then the layer is plotted. `layer` takes precedence over `use_raw`.\

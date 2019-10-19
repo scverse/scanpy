@@ -2,7 +2,7 @@
 """
 import collections.abc as cabc
 from itertools import product
-from typing import Optional, Union  # Special
+from typing import Optional, Union, Mapping  # Special
 from typing import Sequence, Collection, Iterable  # ABCs
 from typing import Tuple, List  # Classes
 
@@ -40,6 +40,7 @@ VALID_LEGENDLOCS = {
 
 # TODO: is that all?
 _Basis = Literal['pca', 'tsne', 'umap', 'diffmap', 'draw_graph_fr']
+_VarNames = Union[str, Sequence[str]]
 
 
 @_doc_params(scatter_temp=doc_scatter_basic, show_save_ax=doc_show_save_ax)
@@ -468,7 +469,7 @@ def ranking(
     """
     if isinstance(keys, str) and indices is not None:
         scores = getattr(adata, attr)[keys][:, indices]
-        keys = ['{}{}'.format(keys[:-1], i+1) for i in indices]
+        keys = [f'{keys[:-1]}{i + 1}' for i in indices]
     else:
         if dictionary is None:
             scores = getattr(adata, attr)[keys]
@@ -733,19 +734,19 @@ def clustermap(
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def stacked_violin(
     adata: AnnData,
-    var_names,
-    groupby=None,
-    log=False,
-    use_raw=None,
-    num_categories=7,
-    figsize=None,
-    dendrogram=False,
-    gene_symbols=None,
-    var_group_positions=None,
-    var_group_labels=None,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: Optional[str] = None,
+    log: bool = False,
+    use_raw: Optional[bool] = None,
+    num_categories: int = 7,
+    figsize: Optional[Tuple[float, float]] = None,
+    dendrogram: Union[bool, str] = False,
+    gene_symbols: Optional[str] = None,
+    var_group_positions: Optional[Sequence[Tuple[int, int]]]=None,
+    var_group_labels: Optional[Sequence[str]] = None,
     standard_scale: Optional[Literal['var', 'obs']] = None,
-    var_group_rotation=None,
-    layer=None,
+    var_group_rotation: Optional[float] = None,
+    layer: Optional[str] = None,
     stripplot: bool = False,
     jitter: Union[float, bool] = False,
     size: int = 1,
@@ -824,11 +825,14 @@ def stacked_violin(
     """
     import seaborn as sns  # Slow import, only import if called
     if use_raw is None and adata.raw is not None: use_raw = True
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
-                                                                             var_group_labels, var_group_positions)
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions
+    )
     has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                              gene_symbols=gene_symbols, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories,
+        gene_symbols=gene_symbols, layer=layer,
+    )
 
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -866,10 +870,12 @@ def stacked_violin(
         dendrogram = False
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                                           var_names=var_names,
-                                                           var_group_labels=var_group_labels,
-                                                           var_group_positions=var_group_positions)
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata, groupby, dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1006,9 +1012,13 @@ def stacked_violin(
         num_rows = len(var_names) + 1 # +1 to account for dendrogram
         height_ratios = [dendro_height] + ([1] * len(var_names))
 
-        axs = gridspec.GridSpec(nrows=num_rows, ncols=2,
-                                height_ratios=height_ratios, wspace=0.2,
-                                width_ratios=[width - vargroups_width, vargroups_width])
+        axs = gridspec.GridSpec(
+            nrows=num_rows,
+            ncols=2,
+            height_ratios=height_ratios,
+            wspace=0.2,
+            width_ratios=[width - vargroups_width, vargroups_width],
+        )
 
         axs_list = []
         if dendrogram:
@@ -1028,17 +1038,27 @@ def stacked_violin(
             else:
                 ax = fig.add_subplot(axs[ax_idx, 0])
             axs_list.append(ax)
-            ax = sns.violinplot(x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
+            ax = sns.violinplot(
+                x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
+                orient='vertical', scale=scale, ax=ax, color=row_colors[idx],
+                **kwds,
+            )
             if stripplot:
-                ax = sns.stripplot(x=obs_tidy.index, y=y, data=obs_tidy, order=order,
-                                   jitter=jitter, color='black', size=size, ax=ax)
+                ax = sns.stripplot(
+                    x=obs_tidy.index, y=y, data=obs_tidy, order=order,
+                    jitter=jitter, color='black', size=size, ax=ax,
+                )
 
-            ax.set_ylabel(var_names[idx], rotation=0, fontsize='small', labelpad=8, ha='right', va='center')
+            ax.set_ylabel(
+                var_names[idx], rotation=0, fontsize='small',
+                labelpad=8, ha='right', va='center',
+            )
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
-            ax.tick_params(axis='y', right=True, labelright=True, left=False,
-                           labelleft=False, labelrotation=0, labelsize='x-small')
+            ax.tick_params(
+                axis='y', right=True, labelright=True, left=False,
+                labelleft=False, labelrotation=0, labelsize='x-small',
+            )
             ax.tick_params(axis='x', labelsize='small')
 
             # remove the xticks labels except for the last processed plot (first from bottom-up).
@@ -1059,8 +1079,10 @@ def stacked_violin(
             arr = []
             for idx, pos in enumerate(var_group_positions):
                 arr += [idx] * (pos[1]+1 - pos[0])
-            _plot_gene_groups_brackets(gene_groups_ax, var_group_positions, var_group_labels,
-                                       left_adjustment=0.3, right_adjustment=0.7, orientation='right')
+            _plot_gene_groups_brackets(
+                gene_groups_ax, var_group_positions, var_group_labels,
+                left_adjustment=0.3, right_adjustment=0.7, orientation='right',
+            )
             gene_groups_ax.set_ylim(len(var_names), 0)
             axs_list.append(gene_groups_ax)
 
@@ -1075,23 +1097,23 @@ def stacked_violin(
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def heatmap(
     adata: AnnData,
-    var_names,
-    groupby=None,
-    use_raw=None,
-    log=False,
-    num_categories=7,
-    dendrogram=False,
-    gene_symbols=None,
-    var_group_positions=None,
-    var_group_labels=None,
-    var_group_rotation=None,
-    layer=None,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    num_categories: int = 7,
+    dendrogram: Union[bool, str] = False,
+    gene_symbols: Optional[str] = None,
+    var_group_positions: Optional[Sequence[Tuple[int, int]]]=None,
+    var_group_labels: Optional[Sequence[str]] = None,
+    var_group_rotation: Optional[float] = None,
+    layer: Optional[str] = None,
     standard_scale: Optional[Literal['var', 'obs']] = None,
     swap_axes: bool = False,
     show_gene_labels: Optional[bool] = None,
-    show=None,
-    save=None,
-    figsize=None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
+    figsize: Optional[Tuple[float, float]] = None,
     **kwds,
 ):
     """\
@@ -1140,11 +1162,14 @@ def heatmap(
     """
     if use_raw is None and adata.raw is not None: use_raw = True
 
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
-                                                                             var_group_labels, var_group_positions)
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions
+    )
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                              gene_symbols=gene_symbols, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories,
+        gene_symbols=gene_symbols, layer=layer,
+    )
 
     if standard_scale == 'obs':
         obs_tidy = obs_tidy.sub(obs_tidy.min(1), axis=0)
@@ -1170,10 +1195,12 @@ def heatmap(
             groupby_colors = None
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                                           var_names=var_names,
-                                                           var_group_labels=var_group_labels,
-                                                           var_group_positions=var_group_positions)
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata, groupby, dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1235,8 +1262,14 @@ def heatmap(
         width_ratios = [groupby_width, heatmap_width, dendro_width, colorbar_width]
         fig = pl.figure(figsize=(width, height))
 
-        axs = gridspec.GridSpec(nrows=2, ncols=4, width_ratios=width_ratios, wspace=0.15 / width,
-                                hspace=0.13 / height, height_ratios=height_ratios)
+        axs = gridspec.GridSpec(
+            nrows=2,
+            ncols=4,
+            width_ratios=width_ratios,
+            wspace=0.15 / width,
+            hspace=0.13 / height,
+            height_ratios=height_ratios,
+        )
 
         heatmap_ax = fig.add_subplot(axs[1, 1])
         im = heatmap_ax.imshow(obs_tidy.values, aspect='auto', **kwds)
@@ -1259,24 +1292,42 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[1, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy,
-                                                                          colors=groupby_colors, orientation='left')
+            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+                groupby_ax, obs_tidy, colors=groupby_colors, orientation='left'
+            )
 
             # add lines to main heatmap
             line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1] - 0.5
-            heatmap_ax.hlines(line_positions, -0.73, len(var_names) - 0.5, lw=0.6,
-                              zorder=10, clip_on=False)
+            heatmap_ax.hlines(
+                line_positions,
+                -0.73,
+                len(var_names) - 0.5,
+                lw=0.6,
+                zorder=10,
+                clip_on=False,
+            )
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[1, 2], sharey=heatmap_ax)
-            _plot_dendrogram(dendro_ax, adata, groupby, ticks=ticks, dendrogram_key=dendrogram)
+            _plot_dendrogram(
+                dendro_ax,
+                adata,
+                groupby,
+                ticks=ticks,
+                dendrogram_key=dendrogram,
+            )
 
         # plot group legends on top of heatmap_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[0, 1], sharex=heatmap_ax)
-            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                       group_labels=var_group_labels, rotation=var_group_rotation,
-                                       left_adjustment=-0.3, right_adjustment=0.3)
+            _plot_gene_groups_brackets(
+                gene_groups_ax,
+                group_positions=var_group_positions,
+                group_labels=var_group_labels,
+                rotation=var_group_rotation,
+                left_adjustment=-0.3,
+                right_adjustment=0.3,
+            )
 
     # swap axes case
     else:
@@ -1309,10 +1360,14 @@ def heatmap(
             width_ratios = [width, 0, colorbar_width]
 
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=3, ncols=3, wspace=0.25 / width,
-                                hspace=0.3 / height,
-                                width_ratios=width_ratios,
-                                height_ratios=height_ratios)
+        axs = gridspec.GridSpec(
+            nrows=3,
+            ncols=3,
+            wspace=0.25 / width,
+            hspace=0.3 / height,
+            width_ratios=width_ratios,
+            height_ratios=height_ratios,
+        )
 
         # plot heatmap
         heatmap_ax = fig.add_subplot(axs[1, 0])
@@ -1332,16 +1387,33 @@ def heatmap(
 
         if categorical:
             groupby_ax = fig.add_subplot(axs[2, 0])
-            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=groupby_colors,
-                                                                          orientation='bottom')
+            ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+                groupby_ax,
+                obs_tidy,
+                colors=groupby_colors,
+                orientation='bottom',
+            )
             # add lines to main heatmap
             line_positions = np.cumsum(obs_tidy.index.value_counts(sort=False))[:-1] - 0.5
-            heatmap_ax.vlines(line_positions, -0.5, len(var_names) + .35, lw=0.6,
-                              zorder=10, clip_on=False)
+            heatmap_ax.vlines(
+                line_positions,
+                -0.5,
+                len(var_names) + .35,
+                lw=0.6,
+                zorder=10,
+                clip_on=False,
+            )
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[0, 0], sharex=heatmap_ax)
-            _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=ticks, orientation='top')
+            _plot_dendrogram(
+                dendro_ax,
+                adata,
+                groupby,
+                dendrogram_key=dendrogram,
+                ticks=ticks,
+                orientation='top',
+            )
 
         # plot group legends next to the heatmap_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
@@ -1364,69 +1436,73 @@ def heatmap(
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def dotplot(
     adata: AnnData,
-    var_names,
-    groupby=None,
-    use_raw=None,
-    log=False,
-    num_categories=7,
-    expression_cutoff=0.,
-    mean_only_expressed=False,
-    color_map='Reds',
-    dot_max=None,
-    dot_min=None,
-    figsize=None,
-    dendrogram=False,
-    gene_symbols=None,
-    var_group_positions=None,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    num_categories: int = 7,
+    expression_cutoff: float = 0.,
+    mean_only_expressed: bool = False,
+    color_map: str = 'Reds',
+    dot_max: Optional[float] = None,
+    dot_min: Optional[float] = None,
     standard_scale: Literal['var', 'group'] = None,
-    smallest_dot=0.,
-    var_group_labels=None,
-    var_group_rotation=None,
-    layer=None,
-    show=None,
-    save=None,
+    smallest_dot: float = 0.,
+    figsize: Optional[Tuple[float, float]] = None,
+    dendrogram: Union[bool, str] = False,
+    gene_symbols: Optional[str] = None,
+    var_group_positions: Optional[Sequence[Tuple[int, int]]]=None,
+    var_group_labels: Optional[Sequence[str]] = None,
+    var_group_rotation: Optional[float] = None,
+    layer: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
     **kwds,
 ):
     """\
     Makes a *dot plot* of the expression values of `var_names`.
 
-    For each var_name and each `groupby` category a dot is plotted. Each dot
-    represents two values: mean expression within each category (visualized by
-    color) and fraction of cells expressing the var_name in the
-    category (visualized by the size of the dot).  If groupby is not given, the
-    dotplot assumes that all data belongs to a single category.
+    For each var_name and each `groupby` category a dot is plotted.
+    Each dot represents two values: mean expression within each category
+    (visualized by color) and fraction of cells expressing the `var_name` in the
+    category (visualized by the size of the dot). If `groupby` is not given,
+    the dotplot assumes that all data belongs to a single category.
 
-    **Note**: A gene is considered expressed if the expression value in the adata
-    (or adata.raw) is above the specified threshold which is zero by default.
+    .. note::
+       A gene is considered expressed if the expression value in the `adata` (or
+       `adata.raw`) is above the specified threshold which is zero by default.
 
     An example of dotplot usage is to visualize, for multiple marker genes,
-    the mean value and the percentage of cells expressing the gene accross multiple clusters.
+    the mean value and the percentage of cells expressing the gene
+    accross multiple clusters.
 
     Parameters
     ----------
     {common_plot_args}
-    expression_cutoff : `float` (default: `0.`)
-        Expression cutoff that is used for binarizing the gene expression and determining the fraction
-        of cells expressing given genes. A gene is expressed only if the expression value is greater than
-        this threshold.
-    mean_only_expressed : `bool` (default: `False`)
-        If True, gene expression is averaged only over the cells expressing the given genes.
-    color_map : `str`, optional (default: `Reds`)
+    expression_cutoff
+        Expression cutoff that is used for binarizing the gene expression and
+        determining the fraction of cells expressing given genes. A gene is
+        expressed only if the expression value is greater than this threshold.
+    mean_only_expressed
+        If True, gene expression is averaged only over the cells
+        expressing the given genes.
+    color_map
         String denoting matplotlib color map.
-    dot_max : `float` optional (default: `None`)
-        If none, the maximum dot size is set to the maximum fraction value found (e.g. 0.6). If given,
-        the value should be a number between 0 and 1. All fractions larger than dot_max are clipped to
-        this value.
-    dot_min : `float` optional (default: `None`)
+    dot_max
+        If none, the maximum dot size is set to the maximum fraction value found
+        (e.g. 0.6). If given, the value should be a number between 0 and 1.
+        All fractions larger than dot_max are clipped to this value.
+    dot_min
         If none, the minimum dot size is set to 0. If given,
-        the value should be a number between 0 and 1. All fractions smaller than dot_min are clipped to
-        this value.
+        the value should be a number between 0 and 1.
+        All fractions smaller than dot_min are clipped to this value.
     standard_scale
-        Whether or not to standardize that dimension between 0 and 1, meaning for each variable or group,
+        Whether or not to standardize that dimension between 0 and 1,
+        meaning for each variable or group,
         subtract the minimum and divide each by its maximum.
-    smallest_dot : `float` optional (default: 0.)
-        If none, the smallest dot has size 0. All expression levels with `dot_min` are potted with
-        `smallest_dot` dot size.
+    smallest_dot
+        If none, the smallest dot has size 0.
+        All expression levels with `dot_min` are plotted with this size.
 
     {show_save_ax}
     **kwds
@@ -1450,16 +1526,21 @@ def dotplot(
 
     See also
     --------
-    rank_genes_groups_dotplot: to plot marker genes identified using the :func:`~scanpy.tl.rank_genes_groups` function.
+    rank_genes_groups_dotplot: to plot marker genes identified using the
+    :func:`~scanpy.tl.rank_genes_groups` function.
     """
-    if use_raw is None and adata.raw is not None: use_raw = True
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
-                                                                             var_group_labels, var_group_positions)
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                              layer=layer, gene_symbols=gene_symbols)
+    if use_raw is None and adata.raw is not None:
+        use_raw = True
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions
+    )
+    categories, obs_tidy = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories,
+        layer=layer, gene_symbols=gene_symbols,
+    )
 
     # for if category defined by groupby (if any) compute for each var_name
-    # 1. the fraction of cells in the category having a value > expression_cutoff
+    # 1. the fraction of cells in the category having a value >expression_cutoff
     # 2. the mean value over the category
 
     # 1. compute fraction of cells having value > expression_cutoff
@@ -1467,8 +1548,8 @@ def dotplot(
     obs_bool = obs_tidy > expression_cutoff
 
     # compute the sum per group which in the boolean matrix this is the number
-    # of values > expression_cutoff, and divide the result by the total number of values
-    # in the group (given by `count()`)
+    # of values >expression_cutoff, and divide the result by the total number of
+    # values in the group (given by `count()`)
     fraction_obs = obs_bool.groupby(level=0).sum() / obs_bool.groupby(level=0).count()
 
     # 2. compute mean value
@@ -1523,15 +1604,27 @@ def dotplot(
     #             from the color bar to be hidden beneath the size lengend axis
     #   fifth ax is to plot the size legend
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(nrows=2, ncols=5, wspace=0.02, hspace=0.04,
-                            width_ratios=[heatmap_width, dendro_width, colorbar_width, colorbar_width_spacer, size_legend_width],
-                            height_ratios=height_ratios)
+    axs = gridspec.GridSpec(
+        nrows=2,
+        ncols=5,
+        wspace=0.02,
+        hspace=0.04,
+        width_ratios=[
+            heatmap_width, dendro_width, colorbar_width,
+            colorbar_width_spacer, size_legend_width,
+        ],
+        height_ratios=height_ratios,
+    )
     if len(categories) < 4:
         # when few categories are shown, the colorbar and size legend
         # need to be larger than the main plot, otherwise they would look
         # compressed. For this, the dotplot ax is split into two:
-        axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 0],
-                                                height_ratios=[len(categories) * 0.3, 1])
+        axs2 = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=axs[1, 0],
+            height_ratios=[len(categories) * 0.3, 1],
+        )
         dot_ax = fig.add_subplot(axs2[0])
     else:
         dot_ax = fig.add_subplot(axs[1, 0])
@@ -1543,10 +1636,12 @@ def dotplot(
         dendrogram = False
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                                           var_names=var_names,
-                                                           var_group_labels=var_group_labels,
-                                                           var_group_positions=var_group_positions)
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata, groupby, dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1555,7 +1650,7 @@ def dotplot(
         if dendro_data['var_names_idx_ordered'] is not None:
             # reorder columns (usually genes) if needed. This only happens when
             # var_group_positions and var_group_labels is set
-            mean_obs = mean_obs.iloc[:,dendro_data['var_names_idx_ordered']]
+            mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
             fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
 
         # reorder rows (categories) to match the dendrogram order
@@ -1572,9 +1667,16 @@ def dotplot(
     # wspace is proportional to the width but a constant value is
     # needed such that the spacing is the same for thinner or wider images.
     wspace = 10.5 / width
-    axs3 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[1, 4], wspace=wspace,
-                                            height_ratios=[size_legend_height / height,
-                                                           (height - size_legend_height) / height])
+    axs3 = gridspec.GridSpecFromSubplotSpec(
+        2,
+        1,
+        subplot_spec=axs[1, 4],
+        wspace=wspace,
+        height_ratios=[
+            size_legend_height / height,
+            (height - size_legend_height) / height,
+        ],
+    )
     # make scatter plot in which
     # x = var_names
     # y = groupby category
@@ -1635,9 +1737,12 @@ def dotplot(
     # plot group legends on top of dot_ax (if given)
     if var_group_positions is not None and len(var_group_positions) > 0:
         gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=dot_ax)
-        _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                   group_labels=var_group_labels,
-                                   rotation=var_group_rotation)
+        _plot_gene_groups_brackets(
+            gene_groups_ax,
+            group_positions=var_group_positions,
+            group_labels=var_group_labels,
+            rotation=var_group_rotation,
+        )
 
     # plot colorbar
     import matplotlib.colorbar
@@ -1696,22 +1801,22 @@ def dotplot(
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def matrixplot(
     adata: AnnData,
-    var_names,
-    groupby=None,
-    use_raw=None,
-    log=False,
-    num_categories=7,
-    figsize=None,
-    dendrogram=False,
-    gene_symbols=None,
-    var_group_positions=None,
-    var_group_labels=None,
-    var_group_rotation=None,
-    layer=None,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    num_categories: int = 7,
+    figsize: Optional[Tuple[float, float]] = None,
+    dendrogram: Union[bool, str] = False,
+    gene_symbols: Optional[str] = None,
+    var_group_positions: Optional[Sequence[Tuple[int, int]]]=None,
+    var_group_labels: Optional[Sequence[str]] = None,
+    var_group_rotation: Optional[float] = None,
+    layer: Optional[str] = None,
     standard_scale: Literal['var', 'group'] = None,
-    swap_axes=False,
-    show=None,
-    save=None,
+    swap_axes: bool = False,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
     **kwds,
 ):
     """\
@@ -1751,11 +1856,14 @@ def matrixplot(
     """
 
     if use_raw is None and adata.raw is not None: use_raw = True
-    var_names, var_group_labels, var_group_positions = _check_var_names_type(var_names,
-                                                                             var_group_labels, var_group_positions)
+    var_names, var_group_labels, var_group_positions = _check_var_names_type(
+        var_names, var_group_labels, var_group_positions
+    )
 
-    categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby, use_raw, log, num_categories,
-                                              gene_symbols=gene_symbols, layer=layer)
+    categories, obs_tidy = _prepare_dataframe(
+        adata, var_names, groupby, use_raw, log, num_categories,
+        gene_symbols=gene_symbols, layer=layer,
+    )
     if groupby is None or len(categories) <= 1:
         # dendrogram can only be computed  between groupby categories
         dendrogram = False
@@ -1774,10 +1882,12 @@ def matrixplot(
         logg.warning('Unknown type for standard_scale, ignored')
 
     if dendrogram:
-        dendro_data = _reorder_categories_after_dendrogram(adata, groupby, dendrogram,
-                                                           var_names=var_names,
-                                                           var_group_labels=var_group_labels,
-                                                           var_group_positions=var_group_positions)
+        dendro_data = _reorder_categories_after_dendrogram(
+            adata, groupby, dendrogram,
+            var_names=var_names,
+            var_group_labels=var_group_labels,
+            var_group_positions=var_group_positions,
+        )
 
         var_group_labels = dendro_data['var_group_labels']
         var_group_positions = dendro_data['var_group_positions']
@@ -1818,9 +1928,11 @@ def matrixplot(
         #   second ax is for the dendrogram
         #   third ax is for the color bar legend
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.02, hspace=0.04,
-                                width_ratios=[heatmap_width, dendro_width, colorbar_width],
-                                height_ratios=height_ratios)
+        axs = gridspec.GridSpec(
+            nrows=2, ncols=3, wspace=0.02, hspace=0.04,
+            width_ratios=[heatmap_width, dendro_width, colorbar_width],
+            height_ratios=height_ratios,
+        )
 
         matrix_ax = fig.add_subplot(axs[1, 0])
         y_ticks = np.arange(mean_obs.shape[0]) + 0.5
@@ -1848,9 +1960,14 @@ def matrixplot(
         # plot group legends on top of matrix_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
-            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                       group_labels=var_group_labels, rotation=var_group_rotation,
-                                       left_adjustment=0.2, right_adjustment=0.8)
+            _plot_gene_groups_brackets(
+                gene_groups_ax,
+                group_positions=var_group_positions,
+                group_labels=var_group_labels,
+                rotation=var_group_rotation,
+                left_adjustment=0.2,
+                right_adjustment=0.8,
+            )
 
         # plot colorbar
         _plot_colorbar(pc, fig, axs[1, 2])
@@ -1880,9 +1997,14 @@ def matrixplot(
         #   second ax is for the groupby categories (eg. brackets)
         #   third ax is for the color bar legend
         fig = pl.figure(figsize=(width, height))
-        axs = gridspec.GridSpec(nrows=2, ncols=3, wspace=0.05, hspace=0.005,
-                                width_ratios=[heatmap_width, vargroups_width, colorbar_width],
-                                height_ratios=[dendro_height, heatmap_height])
+        axs = gridspec.GridSpec(
+            nrows=2,
+            ncols=3,
+            wspace=0.05,
+            hspace=0.005,
+            width_ratios=[heatmap_width, vargroups_width, colorbar_width],
+            height_ratios=[dendro_height, heatmap_height],
+        )
 
         mean_obs = mean_obs.T
         matrix_ax = fig.add_subplot(axs[1, 0])
@@ -1903,14 +2025,23 @@ def matrixplot(
 
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[0, 0], sharex=matrix_ax)
-            _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram, ticks=x_ticks, orientation='top')
+            _plot_dendrogram(
+                dendro_ax, adata, groupby,
+                dendrogram_key=dendrogram, ticks=x_ticks, orientation='top',
+            )
 
         # plot group legends on top of matrix_ax (if given)
         if var_group_positions is not None and len(var_group_positions) > 0:
             gene_groups_ax = fig.add_subplot(axs[1, 1], sharey=matrix_ax)
-            _plot_gene_groups_brackets(gene_groups_ax, group_positions=var_group_positions,
-                                       group_labels=var_group_labels, rotation=var_group_rotation,
-                                       left_adjustment=0.2, right_adjustment=0.8, orientation='right')
+            _plot_gene_groups_brackets(
+                gene_groups_ax,
+                group_positions=var_group_positions,
+                group_labels=var_group_labels,
+                rotation=var_group_rotation,
+                left_adjustment=0.2,
+                right_adjustment=0.8,
+                orientation='right',
+            )
 
         # plot colorbar
         _plot_colorbar(pc, fig, axs[1, 2])
@@ -1922,18 +2053,18 @@ def matrixplot(
 @_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
 def tracksplot(
     adata: AnnData,
-    var_names,
-    groupby,
-    use_raw=None,
-    log=False,
-    dendrogram=False,
-    gene_symbols=None,
-    var_group_positions=None,
-    var_group_labels=None,
-    layer=None,
-    show=None,
-    save=None,
-    figsize=None,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: str,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    dendrogram: Union[bool, str] = False,
+    gene_symbols: Optional[str] = None,
+    var_group_positions: Optional[Sequence[Tuple[int, int]]]=None,
+    var_group_labels: Optional[Sequence[str]] = None,
+    layer: Optional[str] = None,
+    show: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
+    figsize: Optional[Tuple[float, float]] = None,
     **kwds,
 ):
     """\
@@ -1986,8 +2117,14 @@ def tracksplot(
     )
 
     categories, obs_tidy = _prepare_dataframe(
-        adata, var_names, groupby, use_raw, log, None,
-        gene_symbols=gene_symbols, layer=layer,
+        adata,
+        var_names,
+        groupby,
+        use_raw,
+        log,
+        None,
+        gene_symbols=gene_symbols,
+        layer=layer,
     )
 
     # get categories colors:
@@ -2042,9 +2179,14 @@ def tracksplot(
     obs_tidy = obs_tidy.T
 
     fig = pl.figure(figsize=(width, height))
-    axs = gridspec.GridSpec(ncols=2, nrows=num_rows, wspace=1.0 / width,
-                            hspace=0, height_ratios=height_ratios,
-                            width_ratios=[width, 0.14])
+    axs = gridspec.GridSpec(
+        ncols=2,
+        nrows=num_rows,
+        wspace=1.0 / width,
+        hspace=0,
+        height_ratios=height_ratios,
+        width_ratios=[width, 0.14],
+    )
     axs_list = []
     first_ax = None
     for idx, var in enumerate(var_names):
@@ -2057,14 +2199,21 @@ def tracksplot(
         axs_list.append(ax)
         for cat_idx, category in enumerate(categories):
             x_start, x_end = x_values[cat_idx]
-            ax.fill_between(range(x_start, x_end), 0, obs_tidy.iloc[idx, x_start:x_end], lw=0.1,
-                            color=groupby_colors[cat_idx])
+            ax.fill_between(
+                range(x_start, x_end),
+                0,
+                obs_tidy.iloc[idx, x_start:x_end],
+                lw=0.1,
+                color=groupby_colors[cat_idx],
+            )
 
         # remove the xticks labels except for the last processed plot.
-        # Because the plots share the x axis it is redundant and less compact to plot the
-        # axis for each plot
+        # Because the plots share the x axis it is redundant and less compact
+        # to plot the axis for each plot
         if idx < len(var_names) - 1:
-            ax.tick_params(labelbottom=False, labeltop=False, bottom=False, top=False)
+            ax.tick_params(
+                labelbottom=False, labeltop=False, bottom=False, top=False
+            )
             ax.set_xlabel('')
         if log:
             ax.set_yscale('log')
@@ -2077,8 +2226,17 @@ def tracksplot(
         ax.set_yticks([ymax])
         tt = ax.set_yticklabels([str(ymax)], ha='left', va='top')
         ax.spines['right'].set_position(('axes', 1.01))
-        ax.tick_params(axis='y', labelsize='x-small', right=True, left=False, length=2,
-                       which='both', labelright=True, labelleft=False, direction='in')
+        ax.tick_params(
+            axis='y',
+            labelsize='x-small',
+            right=True,
+            left=False,
+            length=2,
+            which='both',
+            labelright=True,
+            labelleft=False,
+            direction='in',
+        )
         ax.set_ylabel(var, rotation=0, fontsize='small', ha='right', va='bottom')
         ax.yaxis.set_label_coords(-0.005, 0.1)
     ax.set_xlim(0, x_end)
@@ -2086,13 +2244,18 @@ def tracksplot(
 
     # the ax to plot the groupby categories is split to add a small space
     # between the rest of the plot and the categories
-    axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=axs[num_rows - 1, 0],
-                                            height_ratios=[1, 1])
+    axs2 = gridspec.GridSpecFromSubplotSpec(
+        2,
+        1,
+        subplot_spec=axs[num_rows - 1, 0],
+        height_ratios=[1, 1],
+    )
 
     groupby_ax = fig.add_subplot(axs2[1])
 
-    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(groupby_ax, obs_tidy.T, colors=groupby_colors,
-                                                                  orientation='bottom')
+    ticks, labels, groupby_cmap, norm = _plot_categories_as_colorblocks(
+        groupby_ax, obs_tidy.T, colors=groupby_colors, orientation='bottom'
+    )
     # add lines to plot
     overlay_ax = fig.add_subplot(axs[1:-1, 0], sharex=first_ax)
     line_positions = np.cumsum(obs_tidy.T.index.value_counts(sort=False))[:-1]
@@ -2102,7 +2265,14 @@ def tracksplot(
 
     if dendrogram:
         dendro_ax = fig.add_subplot(axs[0], sharex=first_ax)
-        _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=dendrogram, orientation='top', ticks=ticks)
+        _plot_dendrogram(
+            dendro_ax,
+            adata,
+            groupby,
+            dendrogram_key=dendrogram,
+            orientation='top',
+            ticks=ticks,
+        )
         axs_list.append(dendro_ax)
 
     if var_group_positions is not None and len(var_group_positions) > 0:
@@ -2111,7 +2281,12 @@ def tracksplot(
         for idx, pos in enumerate(var_group_positions):
             arr += [idx] * (pos[1]+1 - pos[0])
 
-        gene_groups_ax.imshow(np.matrix(arr).T, aspect='auto', cmap=groupby_cmap, norm=norm)
+        gene_groups_ax.imshow(
+            np.matrix(arr).T,
+            aspect='auto',
+            cmap=groupby_cmap,
+            norm=norm,
+        )
         gene_groups_ax.axis('off')
         axs_list.append(gene_groups_ax)
 
@@ -2127,9 +2302,10 @@ def dendrogram(
     orientation: str = 'top',
     remove_labels: bool = False,
     show: Optional[bool] = None,
-    save: Optional[bool] = None,
+    save: Union[str, bool, None] = None,
 ):
-    """Plots a dendrogram of the categories defined in `groupby`.
+    """\
+    Plots a dendrogram of the categories defined in `groupby`.
 
     See :func:`~scanpy.tl.dendrogram`.
 
@@ -2159,8 +2335,14 @@ def dendrogram(
     >>> sc.pl.dendrogram(adata, 'bulk_labels')
     """
     fig, ax = pl.subplots()
-    _plot_dendrogram(ax, adata, groupby, dendrogram_key=dendrogram_key,
-                     remove_labels=remove_labels, orientation=orientation)
+    _plot_dendrogram(
+        ax,
+        adata,
+        groupby,
+        dendrogram_key=dendrogram_key,
+        remove_labels=remove_labels,
+        orientation=orientation,
+    )
 
     _utils.savefig_or_show('dendrogram', show=show, save=save)
 
@@ -2175,11 +2357,12 @@ def correlation_matrix(
     dendrogram: Union[bool, str, None] = None,
     figsize: Optional[Tuple[float, float]] = None,
     show: Optional[bool] = None,
-    save: Optional[Union[bool, str]] = None,
+    save: Union[str, bool, None] = None,
     ax: Optional[Axes] = None,
     **kwds,
 ) -> Union[Axes, List[Axes]]:
-    """Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
+    """\
+    Plots the correlation matrix computed as part of `sc.tl.dendrogram`.
 
     Parameters
     ----------
@@ -2187,15 +2370,16 @@ def correlation_matrix(
     groupby
         Categorical data column used to create the dendrogram
     show_correlation_numbers
-        If `show_correlation` is True, plot the correlation number on top of each cell.
+        If `show_correlation=True`, plot the correlation on top of each cell.
     dendrogram
-        If True or a valid dendrogram key, a dendrogram based on the hierarchical clustering
-        between the `groupby` categories is added. The dendrogram information is computed
-        using :func:`scanpy.tl.dendrogram`. If `tl.dendrogram` has not been called previously
+        If True or a valid dendrogram key, a dendrogram based on the
+        hierarchical clustering between the `groupby` categories is added.
+        The dendrogram is computed using :func:`scanpy.tl.dendrogram`.
+        If `tl.dendrogram` has not been called previously,
         the function is called with default parameters.
     figsize
-        By default a figure size that aims to produce a squared correlation matrix plot is used.
-        Format is (width, height)
+        By default a figure size that aims to produce a squared correlation
+        matrix plot is used. Format is (width, height)
     {show_save_ax}
     **kwds
         Only if `show_correlation` is True:
@@ -2330,18 +2514,19 @@ def correlation_matrix(
 
     show = settings.autoshow if show is None else show
     _utils.savefig_or_show('correlation_matrix', show=show, save=save)
-    if ax is None and not show: return axs
+    if ax is None and not show:
+        return axs
 
 
 def _prepare_dataframe(
     adata: AnnData,
-    var_names,
-    groupby=None,
-    use_raw=None,
-    log=False,
-    num_categories=7,
+    var_names: Union[_VarNames, Mapping[str, _VarNames]],
+    groupby: Optional[str] = None,
+    use_raw: Optional[bool] = None,
+    log: bool = False,
+    num_categories: int = 7,
     layer=None,
-    gene_symbols=None,
+    gene_symbols: Optional[str] = None,
 ):
     """
     Given the anndata object, prepares a data frame in which the row index are the categories
@@ -2351,21 +2536,21 @@ def _prepare_dataframe(
     ----------
     adata
         Annotated data matrix.
-    var_names : `str` or list of `str`
+    var_names
         `var_names` should be a valid subset of  `adata.var_names`.
-    groupby : `str` or `None`, optional (default: `None`)
+    groupby
         The key of the observation grouping to consider. It is expected that
         groupby is a categorical. If groupby is not a categorical observation,
         it would be subdivided into `num_categories`.
-    log : `bool`, optional (default: `False`)
-        Use the log of the values
-    use_raw : `bool`, optional (default: `None`)
+    use_raw
         Use `raw` attribute of `adata` if present.
-    num_categories : `int`, optional (default: `7`)
+    log
+        Use the log of the values
+    num_categories
         Only used if groupby observation is not categorical. This value
         determines the number of groups into which the groupby observation
         should be subdivided.
-    gene_symbols : string, optional (default: `None`)
+    gene_symbols
         Key for field in .var that stores gene symbols.
 
     Returns
@@ -2374,7 +2559,8 @@ def _prepare_dataframe(
     """
     from scipy.sparse import issparse
     sanitize_anndata(adata)
-    if use_raw is None and adata.raw is not None: use_raw = True
+    if use_raw is None and adata.raw is not None:
+        use_raw = True
     if isinstance(var_names, str):
         var_names = [var_names]
 
@@ -2387,7 +2573,7 @@ def _prepare_dataframe(
 
     if gene_symbols is not None and gene_symbols in adata.var.columns:
         # translate gene_symbols to var_names
-        # slow method but gives a meaningful error en case no gene symbol is found:
+        # slow method but gives a meaningful error if no gene symbol is found:
         translated_var_names = []
         for symbol in var_names:
             if symbol not in adata.var[gene_symbols].values:
@@ -2431,7 +2617,9 @@ def _prepare_dataframe(
     obs_tidy.set_index(categorical, groupby, inplace=True)
     if gene_symbols is not None:
         # translate the column names to the symbol names
-        obs_tidy.rename(columns=dict([(var_names[x], symbols[x]) for x in range(len(var_names))]), inplace=True)
+        obs_tidy.rename(columns=dict(
+            [(var_names[x], symbols[x]) for x in range(len(var_names))]
+        ), inplace=True)
     categories = obs_tidy.index.categories
 
     return categories, obs_tidy
@@ -2441,10 +2629,10 @@ def _plot_gene_groups_brackets(
     gene_groups_ax,
     group_positions,
     group_labels,
-    left_adjustment=-0.3,
-    right_adjustment=0.3,
-    rotation=None,
-    orientation='top',
+    left_adjustment: float = -0.3,
+    right_adjustment: float = 0.3,
+    rotation: Optional[float] = None,
+    orientation: Literal['top', 'right'] = 'top',
 ):
     """\
     Draws brackets that represent groups of genes on the give axis.
@@ -2468,13 +2656,13 @@ def _plot_gene_groups_brackets(
         in positions 0-4 and other for positions 5-8
     group_labels :  list
         List of group labels
-    left_adjustment : `float`
+    left_adjustment
         adjustment to plot the bracket start slightly before or after the first gene position.
         If the value is negative the start is moved before.
-    right_adjustment : `float`
+    right_adjustment
         adjustment to plot the bracket end slightly before or after the last gene position
         If the value is negative the start is moved before.
-    rotation : `float` (default None)
+    rotation
         rotation degrees for the labels. If not given, small labels (<4 characters) are not
         rotated, otherwise, they are rotated 90 degrees
     orientation : `str` (default `top`)
@@ -2496,7 +2684,7 @@ def _plot_gene_groups_brackets(
     codes = []
     if orientation == 'top':
         # rotate labels if any of them is longer than 4 characters
-        if rotation is None and group_labels is not None and len(group_labels) > 0:
+        if rotation is None and group_labels:
             if max([len(x) for x in group_labels]) > 4:
                 rotation = 90
             else:
@@ -2514,8 +2702,14 @@ def _plot_gene_groups_brackets(
 
             try:
                 group_x_center = left[idx] + float(right[idx] - left[idx]) / 2
-                gene_groups_ax.text(group_x_center, 1.1, group_labels[idx], ha='center',
-                                    va='bottom', rotation=rotation)
+                gene_groups_ax.text(
+                    group_x_center,
+                    1.1,
+                    group_labels[idx],
+                    ha='center',
+                    va='bottom',
+                    rotation=rotation,
+                )
             except:
                 pass
     else:
@@ -2538,8 +2732,15 @@ def _plot_gene_groups_brackets(
                 if diff * 2 < len(group_labels[idx]):
                     # cut label to fit available space
                     group_labels[idx] = group_labels[idx][:int(diff * 2)] + "."
-                gene_groups_ax.text(0.6, group_y_center,  group_labels[idx], ha='right',
-                                    va='center', rotation=270, fontsize='small')
+                gene_groups_ax.text(
+                    0.6,
+                    group_y_center,
+                    group_labels[idx],
+                    ha='right',
+                    va='center',
+                    rotation=270,
+                    fontsize='small',
+                )
             except Exception as e:
                 print('problems {}'.format(e))
                 pass
@@ -2569,33 +2770,34 @@ def _reorder_categories_after_dendrogram(
     var_group_labels=None,
     var_group_positions=None,
 ):
-    """
-    Function used by plotting functions that need to reorder the the groupby observations
-    based on the dendrogram results.
+    """\
+    Function used by plotting functions that need to reorder the the groupby
+    observations based on the dendrogram results.
 
-    The function checks if a dendrogram has already been precomputed. If not, sc.tl.dendrogram
-    is run with default parameters.
+    The function checks if a dendrogram has already been precomputed.
+    If not, `sc.tl.dendrogram` is run with default parameters.
 
-    The results found in .uns[dendrogram_key] are used to reorder var_group_labels
-    and var_group_positions.
+    The results found in `.uns[dendrogram_key]` are used to reorder
+    `var_group_labels` and `var_group_positions`.
 
 
     Returns
     -------
-    dictionary with keys: 'categories_idx_ordered','var_group_names_idx_ordered',
-                      'var_group_labels', and 'var_group_positions'
+    dictionary with keys:
+    'categories_idx_ordered', 'var_group_names_idx_ordered',
+    'var_group_labels', and 'var_group_positions'
     """
 
     key = _get_dendrogram_key(adata, dendrogram, groupby)
 
     dendro_info = adata.uns[key]
     if groupby != dendro_info['groupby']:
-        raise ValueError("Incompatible observations. The precomputed dendrogram contains information "
-                         "for the observation: '{}' while the plot is made for the "
-                         "observation: '{}. Please run sc.tl.dendrogram "
-                         "using the right observation.'".format(groupby, dendro_info['groupby']))
-
-    has_var_groups = True if var_group_positions is not None and len(var_group_positions) > 0 else False
+        raise ValueError(
+            "Incompatible observations. The precomputed dendrogram contains "
+            f"information for the observation: '{groupby}' while the plot is "
+            f"made for the observation: '{dendro_info['groupby']}. "
+            "Please run `sc.tl.dendrogram` using the right observation.'"
+        )
 
     categories = adata.obs[dendro_info['groupby']].cat.categories
 
@@ -2603,18 +2805,20 @@ def _reorder_categories_after_dendrogram(
     categories_idx_ordered = dendro_info['categories_idx_ordered']
 
     if len(categories) != len(categories_idx_ordered):
-        raise ValueError("Incompatible observations. Dendrogram data has {} categories but "
-                         "current groupby observation {!r} contains {} categories. Most likely "
-                         "the underlying groupby observation changed after the initial "
-                         "computation of `sc.tl.dendrogram`. Please run sc.tl.dendrogram "
-                         "again.'".format(len(categories_idx_ordered),
-                                          groupby, len(categories)))
+        raise ValueError(
+            "Incompatible observations. Dendrogram data has "
+            f"{len(categories_idx_ordered)} categories but current groupby "
+            f"observation {groupby!r} contains {len(categories)} categories. "
+            "Most likely the underlying groupby observation changed after the "
+            "initial computation of `sc.tl.dendrogram`. "
+            "Please run `sc.tl.dendrogram` again.'"
+        )
 
     # reorder var_groups (if any)
     if var_names is not None:
         var_names_idx_ordered = list(range(len(var_names)))
 
-    if has_var_groups:
+    if var_group_positions:
         if list(var_group_labels) == list(categories):
             positions_ordered = []
             labels_ordered = []
@@ -2622,9 +2826,11 @@ def _reorder_categories_after_dendrogram(
             var_names_idx_ordered = []
             for idx in categories_idx_ordered:
                 position = var_group_positions[idx]
-                _var_names = var_names[position[0]:position[1] + 1]
-                var_names_idx_ordered.extend(range(position[0], position[1] + 1))
-                positions_ordered.append((position_start, position_start + len(_var_names) - 1))
+                _var_names = var_names[position[0]:position[1]+1]
+                var_names_idx_ordered.extend(range(position[0], position[1]+1))
+                positions_ordered.append(
+                    (position_start, position_start + len(_var_names) - 1)
+                )
                 position_start += len(_var_names)
                 labels_ordered.append(var_group_labels[idx])
             var_group_labels = labels_ordered
@@ -2639,12 +2845,12 @@ def _reorder_categories_after_dendrogram(
     else:
         var_names_idx_ordered = None
 
-    var_group_data = {'categories_idx_ordered': categories_idx_ordered,
-                      'var_names_idx_ordered': var_names_idx_ordered,
-                      'var_group_labels': var_group_labels,
-                      'var_group_positions': var_group_positions}
-
-    return var_group_data
+    return dict(
+        categories_idx_ordered=categories_idx_ordered,
+        var_names_idx_ordered=var_names_idx_ordered,
+        var_group_labels=var_group_labels,
+        var_group_positions=var_group_positions,
+    )
 
 
 def _format_first_three_categories(categories):
@@ -2663,21 +2869,31 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
         logg.warning(
-            f"dendrogram data not found (using key={dendrogram_key}). Running `sc.tl.dendrogram` "
-            "with default parameters. For fine tuning it is recommended to run `sc.tl.dendrogram` "
-            "independently."
+            f"dendrogram data not found (using key={dendrogram_key}). "
+            "Running `sc.tl.dendrogram` with default parameters. For fine "
+            "tuning it is recommended to run `sc.tl.dendrogram` independently."
         )
         dendrogram(adata, groupby, key_added=dendrogram_key)
 
     if 'dendrogram_info' not in adata.uns[dendrogram_key]:
-        raise ValueError("The given dendrogram key ({!r}) does not contain "
-                         "valid dendrogram information.".format(dendrogram_key))
+        raise ValueError(
+            f"The given dendrogram key ({dendrogram_key!r}) does not contain "
+            "valid dendrogram information."
+        )
 
     return dendrogram_key
 
 
-def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation='right', remove_labels=True, ticks=None):
-    """
+def _plot_dendrogram(
+    dendro_ax,
+    adata,
+    groupby,
+    dendrogram_key=None,
+    orientation='right',
+    remove_labels=True,
+    ticks=None,
+):
+    """\
     Plots a dendrogram on the given ax using the precomputed dendrogram information
     stored in .uns[dendrogram_key]
     """
@@ -2706,9 +2922,8 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
 
         Examples
         --------
-        >>> translate([5, 15, 20, 21 ], [0, 1, 2, 3], [5, 15, 25, 35])
+        >>> translate_pos([5, 15, 20, 21 ], [0, 1, 2, 3], [5, 15, 25, 35])
         ... [0, 1, 1.5, 1.6]
-
         """
         # of given coordinates.
 
@@ -2727,7 +2942,10 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
                 old_max = old_ticks[idx_next]
                 new_min = new_ticks[idx_prev]
                 new_max = new_ticks[idx_next]
-                new_x_val = ((x_val - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+                new_x_val = (
+                    ((x_val - old_min) / (old_max - old_min))
+                    * (new_max - new_min) + new_min
+                )
             new_xs.append(new_x_val)
         return new_xs
 
@@ -2739,7 +2957,10 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
     orig_ticks = np.arange(5, len(leaves) * 10 + 5, 10).astype(float)
     # check that ticks has the same length as orig_ticks
     if ticks is not None and len(orig_ticks) != len(ticks):
-        logg.warning("ticks argument does not have the same size as orig_ticks. The argument will be ignored")
+        logg.warning(
+            "ticks argument does not have the same size as orig_ticks. "
+            "The argument will be ignored"
+        )
         ticks = None
 
     for xs, ys in zip(icoord, dcoord):
@@ -2780,19 +3001,25 @@ def _plot_dendrogram(dendro_ax, adata, groupby, dendrogram_key=None, orientation
     dendro_ax.spines['bottom'].set_visible(False)
 
 
-def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientation='left', cmap_name='tab20'):
+def _plot_categories_as_colorblocks(
+    groupby_ax: Axes,
+    obs_tidy: pd.DataFrame,
+    colors=None,
+    orientation: str = 'left',
+    cmap_name: str = 'tab20',
+):
     """
-    Plots categories as colored blocks. If orientation is 'left', the categories are plotted vertically, otherwise
-    they are plotted horizontally.
+    Plots categories as colored blocks. If orientation is 'left', the categories
+    are plotted vertically, otherwise they are plotted horizontally.
 
     Parameters
     ----------
-    groupby_ax : matplotlib ax
+    groupby_ax
     obs_tidy
-    colors : list of valid color names optional (default: `None`)
-        Color to use for each category.
-    orientation : `str`, optional (default: `left`)
-    cmap_name : `str`
+    colors
+        Sequence of valid color names to use for each category.
+    orientation
+    cmap_name
         Name of colormap to use, in case colors is None
 
     Returns
@@ -2823,7 +3050,10 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
     groupby_ax.grid(False)
 
     if orientation == 'left':
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]).T, aspect='auto', cmap=groupby_cmap, norm=norm)
+        groupby_ax.imshow(
+            np.matrix([label2code[lab] for lab in obs_tidy.index]).T,
+            aspect='auto', cmap=groupby_cmap, norm=norm,
+        )
         if len(labels) > 1:
             groupby_ax.set_yticks(ticks)
             groupby_ax.set_yticklabels(labels)
@@ -2841,7 +3071,10 @@ def _plot_categories_as_colorblocks(groupby_ax, obs_tidy, colors=None, orientati
 
         groupby_ax.set_ylabel(groupby)
     else:
-        groupby_ax.imshow(np.matrix([label2code[lab] for lab in obs_tidy.index]), aspect='auto', cmap=groupby_cmap, norm=norm)
+        groupby_ax.imshow(
+            np.matrix([label2code[lab] for lab in obs_tidy.index]),
+            aspect='auto', cmap=groupby_cmap, norm=norm,
+        )
         if len(labels) > 1:
             groupby_ax.set_xticks(ticks)
             if max([len(x) for x in labels]) < 3:
@@ -2888,8 +3121,12 @@ def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height=4):
     if height > max_cbar_height:
         # to make the colorbar shorter, the
         # ax is split and the lower portion is used.
-        axs2 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=subplot_spec,
-                                                height_ratios=[height - max_cbar_height, max_cbar_height])
+        axs2 = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=subplot_spec,
+            height_ratios=[height - max_cbar_height, max_cbar_height],
+        )
         heatmap_cbar_ax = fig.add_subplot(axs2[1])
     else:
         heatmap_cbar_ax = fig.add_subplot(subplot_spec)

@@ -21,7 +21,7 @@ from ..._compat import Literal
 
 
 def paga_compare(
-    adata,
+    adata: AnnData,
     basis=None,
     edges=False,
     color=None,
@@ -58,11 +58,11 @@ def paga_compare(
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    kwds_scatter : `dict`
+    kwds_scatter
         Keywords for :func:`~scanpy.pl.scatter`.
-    kwds_paga : `dict`
+    kwds_paga
         Keywords for :func:`~scanpy.pl.paga`.
 
     Returns
@@ -264,10 +264,10 @@ def paga(
     max_edge_width: Optional[float] = None,
     arrowsize: int = 30,
     title: Optional[str] = None,
-    left_margin=0.01,
+    left_margin: float = 0.01,
     random_state: Optional[int] = 0,
     pos: Union[np.ndarray, str, Path, None] = None,
-    normalize_to_color=False,
+    normalize_to_color: bool = False,
     cmap: Union[str, Colormap]=None,
     cax: Optional[Axes] = None,
     colorbar=None,  # TODO: this seems to be unused
@@ -371,7 +371,7 @@ def paga(
     export_to_gexf
         Export to gexf format to be read by graph visualization programs such as
         Gephi.
-    normalize_to_color : `bool`, optional (default: `False`)
+    normalize_to_color
         Whether to normalize categorical plots to `color` or the underlying
         grouping.
     cmap

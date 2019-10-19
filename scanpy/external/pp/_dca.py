@@ -1,36 +1,43 @@
-from typing import Optional
+from types import MappingProxyType
+from typing import Optional, Sequence, Union, Mapping, Any
 
 from anndata import AnnData
+from numpy.random.mtrand import RandomState
+
+from ..._compat import Literal
+
+
+_AEType = Literal['zinb-conddisp', 'zinb', 'nb-conddisp', 'nb']
 
 
 def dca(
     adata: AnnData,
-    mode='denoise',
-    ae_type='zinb-conddisp',
-    normalize_per_cell=True,
-    scale=True,
-    log1p=True,
+    mode: Literal['denoise', 'latent'] = 'denoise',
+    ae_type: _AEType = 'zinb-conddisp',
+    normalize_per_cell: bool = True,
+    scale: bool = True,
+    log1p: bool = True,
     # network args
-    hidden_size=(64, 32, 64),
-    hidden_dropout=0.0,
-    batchnorm=True,
-    activation='relu',
-    init='glorot_uniform',
-    network_kwds={},
+    hidden_size: Sequence[int] = (64, 32, 64),
+    hidden_dropout: Union[float, Sequence[float]] = 0.0,
+    batchnorm: bool = True,
+    activation: str = 'relu',
+    init: str = 'glorot_uniform',
+    network_kwds: Mapping[str, Any] = MappingProxyType({}),
     # training args
-    epochs=300,
-    reduce_lr=10,
-    early_stop=15,
-    batch_size=32,
-    optimizer='rmsprop',
-    random_state=0,
-    threads=None,
-    learning_rate=None,
-    verbose=False,
-    training_kwds={},
-    return_model=False,
-    return_info=False,
-    copy=False,
+    epochs: int = 300,
+    reduce_lr: int = 10,
+    early_stop: int = 15,
+    batch_size: int = 32,
+    optimizer: str = 'rmsprop',
+    random_state: Union[int, RandomState] = 0,
+    threads: Optional[int] = None,
+    learning_rate: Optional[float] = None,
+    verbose: bool = False,
+    training_kwds: Mapping[str, Any] = MappingProxyType({}),
+    return_model: bool = False,
+    return_info: bool = False,
+    copy: bool = False,
 ) -> Optional[AnnData]:
     """\
     Deep count autoencoder [Eraslan18]_.
@@ -47,68 +54,68 @@ def dca(
     ----------
     adata
         An anndata file with `.raw` attribute representing raw counts.
-    mode : `str`, optional. `denoise`(default), or `latent`.
+    mode
         `denoise` overwrites `adata.X` with denoised expression values.
         In `latent` mode DCA adds `adata.obsm['X_dca']` to given adata
         object. This matrix represent latent representation of cells via DCA.
-    ae_type : `str`, optional. `zinb-conddisp`(default), `zinb`, `nb-conddisp` or `nb`.
+    ae_type
         Type of the autoencoder. Return values and the architecture is
         determined by the type e.g. `nb` does not provide dropout
         probabilities. Types that end with "-conddisp", assumes that dispersion is mean dependant.
-    normalize_per_cell : `bool`, optional. Default: `True`.
+    normalize_per_cell
         If true, library size normalization is performed using
         the `sc.pp.normalize_per_cell` function in Scanpy and saved into adata
         object. Mean layer is re-introduces library size differences by
         scaling the mean value of each cell in the output layer. See the
         manuscript for more details.
-    scale : `bool`, optional. Default: `True`.
+    scale
         If true, the input of the autoencoder is centered using
         `sc.pp.scale` function of Scanpy. Note that the output is kept as raw
         counts as loss functions are designed for the count data.
-    log1p : `bool`, optional. Default: `True`.
+    log1p
         If true, the input of the autoencoder is log transformed with a
         pseudocount of one using `sc.pp.log1p` function of Scanpy.
-    hidden_size : `tuple` or `list`, optional. Default: (64, 32, 64).
+    hidden_size
         Width of hidden layers.
-    hidden_dropout : `float`, `tuple` or `list`, optional. Default: 0.0.
+    hidden_dropout
         Probability of weight dropout in the autoencoder (per layer if list
         or tuple).
-    batchnorm : `bool`, optional. Default: `True`.
+    batchnorm
         If true, batch normalization is performed.
-    activation : `str`, optional. Default: `relu`.
+    activation
         Activation function of hidden layers.
-    init : `str`, optional. Default: `glorot_uniform`.
+    init
         Initialization method used to initialize weights.
-    network_kwds : `dict`, optional.
+    network_kwds
         Additional keyword arguments for the autoencoder.
-    epochs : `int`, optional. Default: 300.
+    epochs
         Number of total epochs in training.
-    reduce_lr : `int`, optional. Default: 10.
+    reduce_lr
         Reduces learning rate if validation loss does not improve in given number of epochs.
-    early_stop : `int`, optional. Default: 15.
+    early_stop
         Stops training if validation loss does not improve in given number of epochs.
-    batch_size : `int`, optional. Default: 32.
+    batch_size
         Number of samples in the batch used for SGD.
-    optimizer : `str`, optional. Default: "rmsprop".
+    optimizer
         Type of optimization method used for training.
-    random_state : `int`, optional. Default: 0.
+    random_state
         Seed for python, numpy and tensorflow.
-    threads : `int` or None, optional. Default: None
+    threads
         Number of threads to use in training. All cores are used by default.
-    learning_rate : `float`, optional. Default: None.
+    learning_rate
         Learning rate to use in the training.
-    verbose : `bool`, optional. Default: `False`.
+    verbose
         If true, prints additional information about training and architecture.
-    training_kwds : `dict`, optional.
+    training_kwds
         Additional keyword arguments for the training process.
-    return_model : `bool`, optional. Default: `False`.
+    return_model
         If true, trained autoencoder object is returned. See "Returns".
-    return_info : `bool`, optional. Default: `False`.
+    return_info
         If true, all additional parameters of DCA are stored in `adata.obsm` such as dropout
         probabilities (obsm['X_dca_dropout']) and estimated dispersion values
         (obsm['X_dca_dispersion']), in case that autoencoder is of type
         zinb or zinb-conddisp.
-    copy : `bool`, optional. Default: `False`.
+    copy
         If true, a copy of anndata is returned.
 
     Returns
