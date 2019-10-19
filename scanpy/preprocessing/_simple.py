@@ -77,7 +77,7 @@ def filter_cells(
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
     number_per_cell : numpy.ndarray
-        Depending on what was tresholded (`counts` or ``genes`),
+        Depending on what was tresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
     Examples
@@ -415,7 +415,7 @@ def pca(
     chunked
         If `True`, perform an incremental PCA on segments of `chunk_size`.
         The incremental PCA automatically zero centers and ignores settings of
-        `random_seed` and `svd_solver``. If `False`, perform a full PCA.
+        `random_seed` and `svd_solver`. If `False`, perform a full PCA.
     chunk_size
         Number of observations to include in each chunk.
         Required if `chunked=True` was passed.
@@ -423,7 +423,7 @@ def pca(
     Returns
     -------
     X_pca : :class:`scipy.sparse.spmatrix` or :class:`numpy.ndarray`
-        If `data` is array-like and ``return_info=False`` was passed,
+        If `data` is array-like and `return_info=False` was passed,
         this function only returns `X_pca`…
     adata : anndata.AnnData
         …otherwise if `copy=True` it returns or else adds fields to `adata`:

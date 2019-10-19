@@ -3,7 +3,7 @@
 
 doc_expr_reps = """\
 layer
-    If provided, use ``adata.layers[layer]`` for expression values instead
+    If provided, use `adata.layers[layer]` for expression values instead
     of `adata.X`.
 use_raw
     If True, use `adata.raw.X` for expression values instead of `adata.X`.\
