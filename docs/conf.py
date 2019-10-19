@@ -217,9 +217,9 @@ def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
         set_item = r"`'[a-z0-9_.-]+'`"
         if re.fullmatch(rf"{{{set_item}(, {set_item})*}}", _type):
             continue
-        param_warnings.setdefault((self._name, self._obj), []).append(
-            (_name, _type)
-        )
+        w_list = param_warnings.setdefault((self._name, self._obj), [])
+        if (_name, _type) not in w_list:
+            w_list.append((_name, _type))
     return _format_docutils_params_orig(self, fields, field_role, type_role)
 
 

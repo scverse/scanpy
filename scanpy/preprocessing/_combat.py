@@ -1,4 +1,4 @@
-from typing import Collection, Tuple, Optional
+from typing import Collection, Tuple, Optional, Union
 
 import pandas as pd
 import numpy as np
@@ -15,7 +15,7 @@ def _design_matrix(
         batch_key: str,
         batch_levels: Collection[str],
 ) -> pd.DataFrame:
-    """
+    """\
     Computes a simple design matrix.
 
     Parameters
@@ -69,7 +69,7 @@ def _standardize_data(
     data: pd.DataFrame,
     batch_key: str,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
-    """
+    """\
     Standardizes the data per gene.
 
     The aim here is to make mean and variance be comparable across batches.
@@ -132,32 +132,43 @@ def _standardize_data(
     return s_data, design, var_pooled, stand_mean
 
 
-def combat(adata: AnnData, key: str = 'batch', covariates: Optional[Collection[str]] = None, inplace: bool = True):
-    """ComBat function for batch effect correction [Johnson07]_ [Leek12]_ [Pedersen12]_.
+def combat(
+    adata: AnnData,
+    key: str = 'batch',
+    covariates: Optional[Collection[str]] = None,
+    inplace: bool = True,
+) -> Union[AnnData, np.ndarray, None]:
+    """\
+    ComBat function for batch effect correction [Johnson07]_ [Leek12]_
+    [Pedersen12]_.
 
     Corrects for batch effects by fitting linear models, gains statistical power
-    via an EB framework where information is borrowed across genes. This uses the
-    implementation of `ComBat <https://github.com/brentp/combat.py>`__ [Pedersen12]_.
+    via an EB framework where information is borrowed across genes.
+    This uses the implementation `combat.py`_ [Pedersen12]_.
+
+    .. _combat.py: https://github.com/brentp/combat.py
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix
-    key: `str`, optional (default: `"batch"`)
-        Key to a categorical annotation from adata.obs that will be used for batch effect removal
+    key
+        Key to a categorical annotation from :attr:`~anndata.AnnData.obs`
+        that will be used for batch effect removal.
     covariates
-        Additional covariates besides the batch variable such as adjustment variables or biological
-        condition. This parameter refers to the design matrix `X` in Equation 2.1 in [Johnson07]_ and
-        to the `mod` argument in the original combat function in the sva R package. Note that not
-        including covariates may introduce bias or lead to the removal of biological signal in
-        unbalanced designs.
-    inplace: bool, optional (default: `True`)
-        Wether to replace adata.X or to return the corrected data
+        Additional covariates besides the batch variable such as adjustment
+        variables or biological condition. This parameter refers to the design
+        matrix `X` in Equation 2.1 in [Johnson07]_ and to the `mod` argument in
+        the original combat function in the sva R package.
+        Note that not including covariates may introduce bias or lead to the
+        removal of biological signal in unbalanced designs.
+    inplace
+        Whether to replace adata.X or to return the corrected data
 
     Returns
     -------
-    Depending on the value of inplace, either returns an updated AnnData object
-    or modifies the passed one.
+    Depending on the value of `inplace`, either returns the corrected matrix or
+    or modifies `adata.X`.
     """
 
     # check the input
@@ -276,7 +287,7 @@ def _it_sol(
     b: float,
     conv: float = 0.0001,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
+    """\
     Iteratively compute the conditional posterior means for gamma and delta.
 
     gamma is an estimator for the additive batch effect, deltat is an estimator
