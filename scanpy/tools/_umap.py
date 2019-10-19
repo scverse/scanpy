@@ -29,8 +29,9 @@ def umap(
     b: Optional[float] = None,
     copy: bool = False,
     method: Literal['umap', 'rapids'] = 'umap'
-):
-    """Embed the neighborhood graph using UMAP [McInnes18]_.
+) -> Optional[AnnData]:
+    """\
+    Embed the neighborhood graph using UMAP [McInnes18]_.
 
     UMAP (Uniform Manifold Approximation and Projection) is a manifold learning
     technique suitable for visualizing high-dimensional data. Besides tending to

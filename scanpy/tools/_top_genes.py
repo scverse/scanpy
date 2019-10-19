@@ -7,6 +7,7 @@ from typing import Optional, Collection
 
 import pandas as pd
 from anndata import AnnData
+from sklearn import metrics
 from scipy.sparse import issparse
 
 from .. import logging as logg
@@ -23,7 +24,7 @@ def correlation_matrix(
     data: Literal['Complete', 'Group', 'Rest'] = 'Complete',
     method: Literal['pearson', 'kendall', 'spearman'] = 'pearson',
     annotation_key: Optional[str] = None,
-):
+) -> None:
     """\
     Calculate correlation matrix.
 
@@ -115,9 +116,6 @@ def correlation_matrix(
         adata.uns[annotation_key] = cor_table
 
 
-
-
-from sklearn import metrics
 def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
     """Calculate correlation matrix.
 
@@ -179,6 +177,7 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
     adata.uns['ROCthresholds' +groupby+ str(group)] = thresholds
     adata.uns['ROC_AUC' + groupby + str(group)] = roc_auc
 
+
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
     ## Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
     ## calculates how much has to be subsampled in order to reach a certain precision with a certain probability
@@ -191,6 +190,7 @@ def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99)
 
 
     # TODO: Subsample
+
 
 def dominated_ROC_elimination(adata,grouby):
     ## This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.

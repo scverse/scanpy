@@ -8,11 +8,16 @@ from scipy.sparse import spmatrix
 from .. import _utils
 from .. import logging as logg
 from ._utils import get_init_pos_from_paga
+from .._compat import Literal
+
+
+_LAYOUTS = ('fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa')
+_Layout = Literal[_LAYOUTS]
 
 
 def draw_graph(
     adata: AnnData,
-    layout: str = 'fa',
+    layout: _Layout = 'fa',
     init_pos: Union[str, bool, None] = None,
     root: Optional[int] = None,
     random_state: Optional[Union[int, RandomState]] = 0,
@@ -28,16 +33,18 @@ def draw_graph(
     An alternative to tSNE that often preserves the topology of the data
     better. This requires to run :func:`~scanpy.pp.neighbors`, first.
 
-    The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package `fa2
-    <https://github.com/bhargavchippada/forceatlas2>`__ [Chippada18]_, which can
-    be installed via `pip install fa2`.
+    The default layout ('fa', `ForceAtlas2`) [Jacomy14]_ uses the package |fa2|_
+    [Chippada18]_, which can be installed via `pip install fa2`.
 
-    `Force-directed graph drawing
-    <https://en.wikipedia.org/wiki/Force-directed_graph_drawing>`__ describes a
-    class of long-established algorithms for visualizing graphs. It has been
-    suggested for visualizing single-cell data by [Islam11]_. Many other layouts
-    as implemented in igraph [Csardi06]_ are available. Similar approaches have
-    been used by [Zunder15]_ or [Weinreb17]_.
+    `Force-directed graph drawing`_ describes a class of long-established
+    algorithms for visualizing graphs.
+    It has been suggested for visualizing single-cell data by [Islam11]_.
+    Many other layouts as implemented in igraph [Csardi06]_ are available.
+    Similar approaches have been used by [Zunder15]_ or [Weinreb17]_.
+
+    .. |fa2| replace:: `fa2`
+    .. _fa2: https://github.com/bhargavchippada/forceatlas2
+    .. _Force-directed graph drawing: https://en.wikipedia.org/wiki/Force-directed_graph_drawing
 
     Parameters
     ----------
@@ -79,24 +86,27 @@ def draw_graph(
     Depending on `copy`, returns or updates `adata` with the following field.
 
     **X_draw_graph_layout** : `adata.obsm`
-        Coordinates of graph layout. E.g. for layout='fa' (the default), the field is called 'X_draw_graph_fa'
+        Coordinates of graph layout. E.g. for layout='fa' (the default),
+        the field is called 'X_draw_graph_fa'
     """
     start = logg.info(f'drawing single-cell graph using layout {layout!r}')
-    avail_layouts = {'fr', 'drl', 'kk', 'grid_fr', 'lgl', 'rt', 'rt_circular', 'fa'}
-    if layout not in avail_layouts:
-        raise ValueError('Provide a valid layout, one of {}.'.format(avail_layouts))
+    if layout not in _LAYOUTS:
+        raise ValueError(f'Provide a valid layout, one of {_LAYOUTS}.')
     adata = adata.copy() if copy else adata
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
-            'You need to run `pp.neighbors` first to compute a neighborhood graph.')
+            'You need to run `pp.neighbors` first '
+            'to compute a neighborhood graph.'
+        )
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
-    key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
     # init coordinates
     if init_pos in adata.obsm.keys():
         init_coords = adata.obsm[init_pos]
     elif init_pos == 'paga' or init_pos:
-        init_coords = get_init_pos_from_paga(adata, adjacency, random_state=random_state)
+        init_coords = get_init_pos_from_paga(
+            adata, adjacency, random_state=random_state
+        )
     else:
         np.random.seed(random_state)
         init_coords = np.random.random((adjacency.shape[0], 2))
@@ -106,9 +116,9 @@ def draw_graph(
             from fa2 import ForceAtlas2
         except ImportError:
             logg.warning(
-                'Package \'fa2\' is not installed, falling back to layout \'fr\'.'
-                'To use the faster and better ForceAtlas2 layout, '
-                'install package \'fa2\' (`pip install fa2`).'
+                "Package 'fa2' is not installed, falling back to layout 'fr'."
+                "To use the faster and better ForceAtlas2 layout, "
+                "install package 'fa2' (`pip install fa2`)."
             )
             layout = 'fr'
     # actual drawing
@@ -129,7 +139,8 @@ def draw_graph(
             strongGravityMode=False,
             gravity=1.0,
             # Log
-            verbose=False)
+            verbose=False,
+        )
         if 'maxiter' in kwds:
             iterations = kwds['maxiter']
         elif 'iterations' in kwds:
@@ -137,21 +148,25 @@ def draw_graph(
         else:
             iterations = 500
         positions = forceatlas2.forceatlas2(
-            adjacency, pos=init_coords, iterations=iterations)
+            adjacency, pos=init_coords, iterations=iterations
+        )
         positions = np.array(positions)
     else:
         g = _utils.get_igraph_from_adjacency(adjacency)
         if layout in {'fr', 'drl', 'kk', 'grid_fr'}:
             ig_layout = g.layout(layout, seed=init_coords.tolist(), **kwds)
         elif 'rt' in layout:
-            if root is not None: root = [root]
+            if root is not None:
+                root = [root]
             ig_layout = g.layout(layout, root=root, **kwds)
         else:
             ig_layout = g.layout(layout, **kwds)
         positions = np.array(ig_layout.coords)
     adata.uns['draw_graph'] = {}
-    adata.uns['draw_graph']['params'] = {'layout': layout, 'random_state': random_state}
-    key_added = 'X_draw_graph_' + (layout if key_added_ext is None else key_added_ext)
+    adata.uns['draw_graph']['params'] = dict(
+        layout=layout, random_state=random_state
+    )
+    key_added = f'X_draw_graph_{key_added_ext or layout}'
     adata.obsm[key_added] = positions
     logg.info(
         '    finished',

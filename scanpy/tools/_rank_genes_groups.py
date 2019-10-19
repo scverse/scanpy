@@ -23,7 +23,7 @@ def rank_genes_groups(
     adata: AnnData,
     groupby: str,
     use_raw: bool = True,
-    groups: Union[str, Iterable[str]] = 'all',
+    groups: Union[Literal['all'], Iterable[str]] = 'all',
     reference: str = 'rest',
     n_genes: int = 100,
     rankby_abs: bool = False,
@@ -33,8 +33,9 @@ def rank_genes_groups(
     corr_method: _CorrMethod = 'benjamini-hochberg',
     layer: Optional[str] = None,
     **kwds,
-):
-    """Rank genes for characterizing groups.
+) -> Optional[AnnData]:
+    """\
+    Rank genes for characterizing groups.
 
     Parameters
     ----------
@@ -71,8 +72,7 @@ def rank_genes_groups(
         The key in `adata.uns` information is saved to.
     **kwds
         Are passed to test methods. Currently this affects only parameters that
-        are passed to `sklearn.linear_model.LogisticRegression
-        <http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`__.
+        are passed to :class:`sklearn.linear_model.LogisticRegression`.
         For instance, you can pass `penalty='l1'` to try to come up with a
         minimal set of genes that are good predictors (sparse solution meaning
         few non-zero fitted coefficients).
@@ -103,6 +103,7 @@ def rank_genes_groups(
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
 
@@ -115,11 +116,11 @@ def rank_genes_groups(
     start = logg.info('ranking genes')
     avail_methods = {'t-test', 't-test_overestim_var', 'wilcoxon', 'logreg'}
     if method not in avail_methods:
-        raise ValueError('Method must be one of {}.'.format(avail_methods))
+        raise ValueError(f'Method must be one of {avail_methods}.')
 
     avail_corr = {'benjamini-hochberg', 'bonferroni'}
     if corr_method not in avail_corr:
-        raise ValueError('Correction method must be one of {}.'.format(avail_corr))
+        raise ValueError(f'Correction method must be one of {avail_corr}.')
 
     adata = adata.copy() if copy else adata
     _utils.sanitize_anndata(adata)
@@ -150,14 +151,11 @@ def rank_genes_groups(
     if key_added is None:
         key_added = 'rank_genes_groups'
     adata.uns[key_added] = {}
-    adata.uns[key_added]['params'] = {
-        'groupby': groupby,
-        'reference': reference,
-        'method': method,
-        'use_raw': use_raw,
-        'layer': layer,
-        'corr_method': corr_method,
-    }
+    adata.uns[key_added]['params'] = dict(
+        groupby=groupby, reference=reference,
+        method=method, use_raw=use_raw,
+        layer=layer, corr_method=corr_method,
+    )
 
     # adata_comp mocks an AnnData object if use_raw is True
     # otherwise it's just the AnnData object
@@ -299,8 +297,10 @@ def rank_genes_groups(
                 mean_rest, var_rest = _get_mean_var(X[mask_rest]) # for fold-change only
 
                 if ns_rest <= 25 or ns[imask] <= 25:
-                    logg.hint('Few observations in a group for '
-                              'normal approximation (<=25). Lower test accuracy.')
+                    logg.hint(
+                        'Few observations in a group for '
+                        'normal approximation (<=25). Lower test accuracy.'
+                    )
                 n_active = ns[imask]
                 m_active = ns_rest
 
@@ -358,8 +358,8 @@ def rank_genes_groups(
                 rankings_gene_pvals.append(pvals[global_indices])
                 rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
-
-        # If no reference group exists, ranking needs only to be done once (full mask)
+        # If no reference group exists,
+        # ranking needs only to be done once (full mask)
         else:
             scores = np.zeros((n_groups, n_genes))
             chunk = []
@@ -388,8 +388,9 @@ def rank_genes_groups(
 
             for imask, mask in enumerate(groups_masks):
                 mask_rest = ~groups_masks[imask]
-                means[imask], vars[imask] = _get_mean_var(X[mask]) #for fold-change
-                mean_rest, var_rest = _get_mean_var(X[mask_rest])  # for fold-change
+                # for fold-change
+                means[imask], vars[imask] = _get_mean_var(X[mask])
+                mean_rest, var_rest = _get_mean_var(X[mask_rest])
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / sqrt(
                     (ns[imask] * (n_cells - ns[imask]) * (n_cells + 1) / 12))
@@ -397,7 +398,8 @@ def rank_genes_groups(
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
 
                 if corr_method == 'benjamini-hochberg':
-                    pvals[np.isnan(pvals)] = 1  # set Nan values to 1 to properly convert using Benhjamini Hochberg
+                    # set NaN values to 1 to convert using Benjamini Hochberg
+                    pvals[np.isnan(pvals)] = 1
                     _, pvals_adj, _, _ = multipletests(pvals, alpha=0.05, method='fdr_bh')
                 elif corr_method == 'bonferroni':
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
@@ -414,27 +416,31 @@ def rank_genes_groups(
                 rankings_gene_pvals.append(pvals[global_indices])
                 rankings_gene_pvals_adj.append(pvals_adj[global_indices])
 
-
     groups_order_save = [str(g) for g in groups_order]
     if (reference != 'rest' and method != 'logreg') or (method == 'logreg' and len(groups) == 2):
         groups_order_save = [g for g in groups_order if g != reference]
     adata.uns[key_added]['scores'] = np.rec.fromarrays(
         [n for n in rankings_gene_scores],
-        dtype=[(rn, 'float32') for rn in groups_order_save])
+        dtype=[(rn, 'float32') for rn in groups_order_save],
+    )
     adata.uns[key_added]['names'] = np.rec.fromarrays(
         [n for n in rankings_gene_names],
-        dtype=[(rn, 'U50') for rn in groups_order_save])
+        dtype=[(rn, 'U50') for rn in groups_order_save],
+    )
 
     if method in {'t-test', 't-test_overestim_var', 'wilcoxon'}:
         adata.uns[key_added]['logfoldchanges'] = np.rec.fromarrays(
             [n for n in rankings_gene_logfoldchanges],
-            dtype=[(rn, 'float32') for rn in groups_order_save])
+            dtype=[(rn, 'float32') for rn in groups_order_save],
+        )
         adata.uns[key_added]['pvals'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals],
-            dtype=[(rn, 'float64') for rn in groups_order_save])
+            dtype=[(rn, 'float64') for rn in groups_order_save],
+        )
         adata.uns[key_added]['pvals_adj'] = np.rec.fromarrays(
             [n for n in rankings_gene_pvals_adj],
-            dtype=[(rn, 'float64') for rn in groups_order_save])
+            dtype=[(rn, 'float64') for rn in groups_order_save],
+        )
     logg.info(
         '    finished',
         time=start,
@@ -464,16 +470,18 @@ def filter_rank_genes_groups(
     min_in_group_fraction=0.25,
     min_fold_change=2,
     max_out_group_fraction=0.5,
-):
+) -> None:
     """\
-    Filters out genes based on fold change and fraction of genes expressing the gene within and outside the `groupby` categories.
+    Filters out genes based on fold change and fraction of genes expressing the
+    gene within and outside the `groupby` categories.
 
     See :func:`~scanpy.tl.rank_genes_groups`.
 
-    Results are stored in `adata.uns[key_added]` (default: 'rank_genes_groups_filtered').
+    Results are stored in `adata.uns[key_added]`
+    (default: 'rank_genes_groups_filtered').
 
-    To preserve the original structure of adata.uns['rank_genes_groups'], filtered genes
-    are set to `NaN`.
+    To preserve the original structure of adata.uns['rank_genes_groups'],
+    filtered genes are set to `NaN`.
 
     Parameters
     ----------
@@ -495,6 +503,7 @@ def filter_rank_genes_groups(
 
     Examples
     --------
+    >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.rank_genes_groups(adata, 'bulk_labels', method='wilcoxon')
     >>> sc.tl.filter_rank_genes_groups(adata, min_fold_change=3)
@@ -512,27 +521,43 @@ def filter_rank_genes_groups(
     # convert structured numpy array into DataFrame
     gene_names = pd.DataFrame(adata.uns[key]['names'])
 
-    fraction_in_cluster_matrix = pd.DataFrame(np.zeros(gene_names.shape), columns=gene_names.columns,
-                                              index=gene_names.index)
-    fold_change_matrix = pd.DataFrame(np.zeros(gene_names.shape), columns=gene_names.columns, index=gene_names.index)
-    fraction_out_cluster_matrix = pd.DataFrame(np.zeros(gene_names.shape), columns=gene_names.columns,
-                                               index=gene_names.index)
+    fraction_in_cluster_matrix = pd.DataFrame(
+        np.zeros(gene_names.shape),
+        columns=gene_names.columns,
+        index=gene_names.index,
+    )
+    fold_change_matrix = pd.DataFrame(
+        np.zeros(gene_names.shape),
+        columns=gene_names.columns,
+        index=gene_names.index,
+    )
+    fraction_out_cluster_matrix = pd.DataFrame(
+        np.zeros(gene_names.shape),
+        columns=gene_names.columns,
+        index=gene_names.index,
+    )
     logg.info(
         f"Filtering genes using: "
         f"min_in_group_fraction: {min_in_group_fraction} "
         f"min_fold_change: {min_fold_change}, "
-        f"max_out_group_fraction: {max_out_group_fraction}")
+        f"max_out_group_fraction: {max_out_group_fraction}"
+    )
     from ..plotting._anndata import _prepare_dataframe
     for cluster in gene_names.columns:
         # iterate per column
         var_names = gene_names[cluster].values
 
-        # add column to adata as __is_in_cluster__. This facilitates to measure fold change
-        # of each gene with respect to all other clusters
+        # add column to adata as __is_in_cluster__. This facilitates to measure
+        # fold change of each gene with respect to all other clusters
         adata.obs['__is_in_cluster__'] = pd.Categorical(adata.obs[groupby] == cluster)
 
         # obs_tidy has rows=groupby, columns=var_names
-        categories, obs_tidy = _prepare_dataframe(adata, var_names, groupby='__is_in_cluster__', use_raw=use_raw)
+        categories, obs_tidy = _prepare_dataframe(
+            adata,
+            var_names,
+            groupby='__is_in_cluster__',
+            use_raw=use_raw,
+        )
 
         # for if category defined by groupby (if any) compute for each var_name
         # 1. the mean value over the category
@@ -567,9 +592,11 @@ def filter_rank_genes_groups(
     # remove temporary columns
     adata.obs.drop(columns='__is_in_cluster__')
     # filter original_matrix
-    gene_names = gene_names[(fraction_in_cluster_matrix > min_in_group_fraction) &
-                            (fraction_out_cluster_matrix < max_out_group_fraction) &
-                            (fold_change_matrix > min_fold_change)]
+    gene_names = gene_names[
+        (fraction_in_cluster_matrix > min_in_group_fraction) &
+        (fraction_out_cluster_matrix < max_out_group_fraction) &
+        (fold_change_matrix > min_fold_change)
+    ]
     # create new structured array using 'key_added'.
     adata.uns[key_added] = adata.uns[key].copy()
     adata.uns[key_added]['names'] = gene_names.to_records(index=False)
