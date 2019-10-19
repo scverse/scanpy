@@ -93,6 +93,7 @@ def tsne(
     if n_jobs >= 1 and use_fast_tsne:
         try:
             from MulticoreTSNE import MulticoreTSNE as TSNE
+
             tsne = TSNE(n_jobs=n_jobs, **params_sklearn)
             logg.info("    using the 'MulticoreTSNE' package by Ulyanov (2017)")
             # need to transform to float64 for MulticoreTSNE...
@@ -106,7 +107,8 @@ def tsne(
             )
     if X_tsne is None:
         from sklearn.manifold import TSNE
-        from . import _tsne_fix   # fix by D. DeTomaso for sklearn < 0.19
+        from . import _tsne_fix  # fix by D. DeTomaso for sklearn < 0.19
+
         # unfortunately, sklearn does not allow to set a minimum number
         # of iterations for barnes-hut tSNE
         tsne = TSNE(**params_sklearn)
@@ -117,9 +119,6 @@ def tsne(
     logg.info(
         '    finished',
         time=start,
-        deep=(
-            'added\n'
-            "    'X_tsne', tSNE coordinates (adata.obsm)"
-        ),
+        deep="added\n    'X_tsne', tSNE coordinates (adata.obsm)",
     )
     return adata if copy else None
