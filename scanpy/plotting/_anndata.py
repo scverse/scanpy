@@ -2298,11 +2298,13 @@ def tracksplot(
 def dendrogram(
     adata: AnnData,
     groupby: str,
+    *,
     dendrogram_key: Optional[str] = None,
-    orientation: str = 'top',
+    orientation: Literal['top', 'bottom', 'left', 'right'] = 'top',
     remove_labels: bool = False,
     show: Optional[bool] = None,
     save: Union[str, bool, None] = None,
+    ax: Optional[Axes] = None,
 ):
     """\
     Plots a dendrogram of the categories defined in `groupby`.
@@ -2312,15 +2314,18 @@ def dendrogram(
     Parameters
     ----------
     adata
+        Annotated data matrix.
     groupby
         Categorical data column used to create the dendrogram
     dendrogram_key
         Key under with the dendrogram information was stored.
-        By default the dendrogram information is stored under .uns['dendrogram_' + groupby].
+        By default the dendrogram information is stored under
+        `.uns[f'dendrogram_{{groupby}}']`.
     orientation
-        Options are `top` (default), `bottom`, `left`, and `right`.
-        Only when `show_correlation` is False.
+        Origin of the tree. Will grow into the opposite direction.
     remove_labels
+        Don’t draw labels. Used e.g. by :func:`scanpy.pl.correlation_matrix`
+        to annotate matrix columns/rows.
     {show_save_ax}
 
     Returns
@@ -2334,7 +2339,8 @@ def dendrogram(
     >>> sc.tl.dendrogram(adata, 'bulk_labels')
     >>> sc.pl.dendrogram(adata, 'bulk_labels')
     """
-    fig, ax = pl.subplots()
+    if ax is None:
+        _, ax = pl.subplots()
     _plot_dendrogram(
         ax,
         adata,
@@ -2343,9 +2349,7 @@ def dendrogram(
         remove_labels=remove_labels,
         orientation=orientation,
     )
-
     _utils.savefig_or_show('dendrogram', show=show, save=save)
-
     return ax
 
 
@@ -2394,7 +2398,7 @@ def correlation_matrix(
     >>> import scanpy as sc
     >>> adata = sc.datasets.pbmc68k_reduced()
     >>> sc.tl.dendrogram(adata, 'bulk_labels')
-    >>> sc.pl.correlation(adata, 'bulk_labels')
+    >>> sc.pl.correlation_matrix(adata, 'bulk_labels')
     """
 
     dendrogram_key = _get_dendrogram_key(adata, dendrogram, groupby)
@@ -2864,7 +2868,7 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
     # the `dendrogram_key` can be a bool an NoneType or the name of the
     # dendrogram key. By default the name of the dendrogram key is 'dendrogram'
     if not isinstance(dendrogram_key, str):
-        dendrogram_key = 'dendrogram_' + groupby
+        dendrogram_key = f'dendrogram_{groupby}'
 
     if dendrogram_key not in adata.uns:
         from ..tools._dendrogram import dendrogram
@@ -2885,36 +2889,40 @@ def _get_dendrogram_key(adata, dendrogram_key, groupby):
 
 
 def _plot_dendrogram(
-    dendro_ax,
-    adata,
-    groupby,
-    dendrogram_key=None,
-    orientation='right',
-    remove_labels=True,
-    ticks=None,
+    dendro_ax: Axes,
+    adata: AnnData,
+    groupby: str,
+    dendrogram_key: Optional[str] = None,
+    orientation: Literal['top', 'bottom', 'left', 'right'] = 'right',
+    remove_labels: bool = True,
+    ticks: Optional[Collection[float]] = None,
 ):
     """\
-    Plots a dendrogram on the given ax using the precomputed dendrogram information
-    stored in .uns[dendrogram_key]
+    Plots a dendrogram on the given ax using the precomputed dendrogram
+    information stored in `.uns[dendrogram_key]`
     """
 
     dendrogram_key = _get_dendrogram_key(adata, dendrogram_key, groupby)
 
     def translate_pos(pos_list, new_ticks, old_ticks):
-        """
+        """\
         transforms the dendrogram coordinates to a given new position.
         The xlabel_pos and orig_ticks should be of the same
         length.
 
         This is mostly done for the heatmap case, where the position of the
-        dendrogram leaves needs to be adjusted dependening on the size of the category.
+        dendrogram leaves needs to be adjusted depending on the category size.
 
         Parameters
         ----------
-        pos_list :  list of dendrogram positions that should be translated
-        new_ticks : sorted list of goal tick positions (e.g. [0,1,2,3] )
-        old_ticks: sorted list of original tick positions (e.g. [5, 15, 25, 35]), This list is
-                   usually the default position used by scipy.cluster.hierarchy.dendrogram`
+        pos_list
+            list of dendrogram positions that should be translated
+        new_ticks
+            sorted list of goal tick positions (e.g. [0,1,2,3] )
+        old_ticks
+            sorted list of original tick positions (e.g. [5, 15, 25, 35]),
+            This list is usually the default position used by
+            `scipy.cluster.hierarchy.dendrogram`.
 
         Returns
         -------
@@ -2922,8 +2930,12 @@ def _plot_dendrogram(
 
         Examples
         --------
-        >>> translate_pos([5, 15, 20, 21 ], [0, 1, 2, 3], [5, 15, 25, 35])
-        ... [0, 1, 1.5, 1.6]
+        >>> translate_pos(
+        ...     [5, 15, 20, 21],
+        ...     [0,  1,  2, 3 ],
+        ...     [5, 15, 25, 35],
+        ... )
+        [0, 1, 1.5, 1.6]
         """
         # of given coordinates.
 
@@ -2967,9 +2979,8 @@ def _plot_dendrogram(
         if ticks is not None:
             xs = translate_pos(xs, ticks, orig_ticks)
         if orientation in ['right', 'left']:
-            dendro_ax.plot(ys, xs, color='#555555')
-        else:
-            dendro_ax.plot(xs, ys, color='#555555')
+            xs, ys = ys, xs
+        dendro_ax.plot(xs, ys, color='#555555')
 
     dendro_ax.tick_params(bottom=False, top=False, left=False, right=False)
     ticks = ticks if ticks is not None else orig_ticks
@@ -2978,7 +2989,7 @@ def _plot_dendrogram(
         dendro_ax.set_yticklabels(leaves, fontsize='small', rotation=0)
         dendro_ax.tick_params(labelbottom=False, labeltop=False)
         if orientation == 'left':
-            xmin, xmax=dendro_ax.get_xlim()
+            xmin, xmax = dendro_ax.get_xlim()
             dendro_ax.set_xlim(xmax, xmin)
             dendro_ax.tick_params(labelleft=False, labelright=True)
     else:
@@ -2986,7 +2997,7 @@ def _plot_dendrogram(
         dendro_ax.set_xticklabels(leaves, fontsize='small', rotation=90)
         dendro_ax.tick_params(labelleft=False, labelright=False)
         if orientation == 'bottom':
-            ymin, ymax=dendro_ax.get_ylim()
+            ymin, ymax = dendro_ax.get_ylim()
             dendro_ax.set_ylim(ymax, ymin)
             dendro_ax.tick_params(labeltop=True, labelbottom=False)
 
@@ -3005,10 +3016,10 @@ def _plot_categories_as_colorblocks(
     groupby_ax: Axes,
     obs_tidy: pd.DataFrame,
     colors=None,
-    orientation: str = 'left',
+    orientation: Literal['top', 'bottom', 'left', 'right'] = 'left',
     cmap_name: str = 'tab20',
 ):
-    """
+    """\
     Plots categories as colored blocks. If orientation is 'left', the categories
     are plotted vertically, otherwise they are plotted horizontally.
 

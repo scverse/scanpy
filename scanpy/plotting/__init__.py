@@ -27,8 +27,8 @@ Plotting API
 .. currentmodule:: scanpy
 
 .. note::
+   See the :ref:`settings` section for all important plotting configurations.
 
-    See the :ref:`settings` section for all important plotting configurations.
 
 Generic
 -------
@@ -45,6 +45,7 @@ Generic
    pl.matrixplot
    pl.clustermap
    pl.ranking
+   pl.dendrogram
 
 
 Preprocessing
@@ -69,7 +70,6 @@ a method with the same name in ``pl``.
 
 PCA
 ~~~
-
 .. autosummary::
    :toctree: .
 
@@ -80,7 +80,6 @@ PCA
 
 Embeddings
 ~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 
@@ -93,7 +92,6 @@ Embeddings
 
 Branching trajectories and pseudotime, clustering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Visualize clusters using one of the embedding methods passing ``color='louvain'``.
 
 .. autosummary::
@@ -107,7 +105,6 @@ Visualize clusters using one of the embedding methods passing ``color='louvain'`
 
 Marker genes
 ~~~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 
@@ -121,7 +118,6 @@ Marker genes
 
 Simulations
 ~~~~~~~~~~~
-
 .. autosummary::
    :toctree: .
 

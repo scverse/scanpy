@@ -97,10 +97,10 @@ def normalize_total(
     >>> sc.settings.verbosity = 2
     >>> np.set_printoptions(precision=2)
     >>> adata = AnnData(np.array([
-    >>>    [3, 3, 3, 6, 6],
-    >>>    [1, 1, 1, 2, 2],
-    >>>    [1, 22, 1, 2, 2],
-    >>> ]))
+    ...    [3, 3, 3, 6, 6],
+    ...    [1, 1, 1, 2, 2],
+    ...    [1, 22, 1, 2, 2],
+    ... ]))
     >>> adata.X
     array([[ 3.,  3.,  3.,  6.,  6.],
            [ 1.,  1.,  1.,  2.,  2.],
@@ -111,9 +111,9 @@ def normalize_total(
            [0.14, 0.14, 0.14, 0.29, 0.29],
            [0.04, 0.79, 0.04, 0.07, 0.07]], dtype=float32)
     >>> X_norm = sc.pp.normalize_total(
-    >>>     adata, target_sum=1, exclude_highly_expressed=True,
-    >>>     max_fraction=0.2, inplace=False
-    >>> )['X']
+    ...     adata, target_sum=1, exclude_highly_expressed=True,
+    ...     max_fraction=0.2, inplace=False
+    ... )['X']
     The following highly-expressed genes are not considered during normalization factor computation:
     ['1', '3', '4']
     >>> X_norm
