@@ -2324,7 +2324,7 @@ def dendrogram(
     orientation
         Origin of the tree. Will grow into the opposite direction.
     remove_labels
-        Don’t draw labels. Used e.g. by :func:`scanpy.pl.correlation_matrix`
+        Don’t draw labels. Used e.g. by :func:`scanpy.pl.matrixplot`
         to annotate matrix columns/rows.
     {show_save_ax}
 
