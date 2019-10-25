@@ -13,7 +13,7 @@ from matplotlib import patheffects
 from matplotlib.colors import Colormap
 
 from .. import _utils
-from .._utils import _IGraphLayout, _FontWeight
+from .._utils import _IGraphLayout, _FontWeight, _FontSize
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
 from ... import logging as logg
 from ..._settings import settings
@@ -45,7 +45,7 @@ def embedding(
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Optional[float] = None,
     frameon: Optional[bool] = None,
-    legend_fontsize: Optional[int] = None,
+    legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,

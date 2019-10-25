@@ -26,7 +26,7 @@ from .._utils import sanitize_anndata, _doc_params
 from .._compat import Literal
 from . import _utils
 from ._utils import scatter_base, scatter_group, setup_axes
-from ._utils import ColorLike, _FontWeight
+from ._utils import ColorLike, _FontWeight, _FontSize
 from ._docs import doc_scatter_basic, doc_show_save_ax, doc_common_plot_args
 
 
@@ -58,7 +58,7 @@ def scatter(
     components: Union[str, Collection[str]] = None,
     projection: Literal['2d', '3d'] = '2d',
     legend_loc: str = 'right margin',
-    legend_fontsize: Union[int, float, str] = None,
+    legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight, None] = None,
     legend_fontoutline: float = None,
     color_map: Union[str, Colormap] = None,
