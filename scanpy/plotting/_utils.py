@@ -23,6 +23,9 @@ _IGraphLayout = Literal['fa', 'fr', 'rt', 'rt_circular', 'drl', 'eq_tree', ...]
 _FontWeight = Literal[
     'light', 'normal', 'medium', 'semibold', 'bold', 'heavy', 'black'
 ]
+_FontSize = Literal[
+    'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'
+]
 
 
 # -------------------------------------------------------------------------------
