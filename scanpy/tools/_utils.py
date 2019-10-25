@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from .. import logging as logg
 from ._pca import pca
@@ -56,11 +58,11 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     return X
 
 
-def preprocess_with_pca(adata, n_pcs=None, random_state=0):
+def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
     """
     Parameters
     ----------
-    n_pcs : `int` or `None`, optional (default: `None`)
+    n_pcs
         If `n_pcs=0`, do not preprocess with PCA.
         If `None` and there is a PCA version of the data, use this.
         If an integer, compute the PCA.

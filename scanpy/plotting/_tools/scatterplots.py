@@ -626,9 +626,9 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
 
     Returns
     -------
-    data_points : list
+    data_points
         Each entry is a numpy array containing the data points
-    components : list
+    components
         The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
         for components = [1,2] and components=['1,2', '2,3'] respectively
     """
@@ -777,7 +777,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
 
     Returns
     -------
-    Tuple of values to plot, and boolean indicating whether they are categorical.
+    values
+        Values to plot
+    is_categorical
+        Are the values categorical?
     """
     if value_to_plot is None:
         return "lightgray", False

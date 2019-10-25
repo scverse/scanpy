@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import List, Optional
+from typing import List, Optional, NamedTuple
 
 import numpy as np
 import scipy as sp
@@ -360,12 +360,12 @@ class PAGA:
         self.transitions_confidence = transitions_confidence.T
 
 
-def paga_degrees(adata) -> List[int]:
+def paga_degrees(adata: AnnData) -> List[int]:
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
     ----------
-    adata : AnnData
+    adata
         Annotated data matrix.
 
     Returns
@@ -403,8 +403,19 @@ def paga_expression_entropies(adata) -> List[float]:
     return entropies
 
 
-def paga_compare_paths(adata1, adata2,
-                       adjacency_key='connectivities', adjacency_key2=None):
+class PAGAComparePathsResult(NamedTuple):
+    frac_steps: float
+    n_steps: int
+    frac_paths: float
+    n_paths: int
+
+
+def paga_compare_paths(
+    adata1: AnnData,
+    adata2: AnnData,
+    adjacency_key: str = 'connectivities',
+    adjacency_key2: Optional[str] = None,
+) -> PAGAComparePathsResult:
     """Compare paths in abstracted graphs in two datasets.
 
     Compute the fraction of consistent paths between leafs, a measure for the
@@ -417,20 +428,26 @@ def paga_compare_paths(adata1, adata2,
 
     Parameters
     ----------
-    adata1, adata2 : AnnData
+    adata1, adata2
         Annotated data matrices to compare.
-    adjacency_key : str
+    adjacency_key
         Key for indexing the adjacency matrices in `.uns['paga']` to be used in
         adata1 and adata2.
-    adjacency_key2 : str, None
+    adjacency_key2
         If provided, used for adata2.
-
 
     Returns
     -------
-    OrderedTuple with attributes ``n_steps`` (total number of steps in paths)
-    and ``frac_steps`` (fraction of consistent steps), ``n_paths`` and
-    ``frac_paths``.
+    NamedTuple with attributes
+    
+    frac_steps
+        fraction of consistent steps
+    n_steps
+        total number of steps in paths
+    frac_paths
+        Fraction of consistent paths
+    n_paths
+        Number of paths
     """
     import networkx as nx
     g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
@@ -500,33 +517,32 @@ def paga_compare_paths(adata1, adata2,
         ip_progress = 0
         for il, l in enumerate(path_compare[:-1]):
             for ip, p in enumerate(path_mapped):
-                if ip >= ip_progress and l in p:
-                    # check whether we can find the step forward of path_compare in path_mapped
-                    if (
-                        ip + 1 < len(path_mapped)
-                        and path_compare[il + 1] in path_mapped[ip + 1]
-                    ):
-                        # make sure that a step backward leads us to the same value of l
-                        # in case we "jumped"
-                        logg.debug(
-                            f'found matching step ({l} -> {path_compare_orig_names[il + 1]}) '
-                            f'at position {il} in path{path_compare_id} and position {ip} in path_mapped'
-                        )
-                        consistent_history = True
-                        for iip in range(ip, ip_progress, -1):
-                            if l not in path_mapped[iip - 1]:
-                                consistent_history = False
-                        if consistent_history:
-                            # here, we take one step further back (ip_progress - 1); it's implied that this
-                            # was ok in the previous step
-                            poss = list(range(ip - 1, ip_progress - 2, -1))
-                            logg.debug(
-                                f'    step(s) backward to position(s) {poss} '
-                                'in path_mapped are fine, too: valid step'
-                            )
-                            n_agreeing_steps_path += 1
-                            ip_progress = ip + 1
-                            break
+                if ip < ip_progress or l not in p or not (
+                    ip + 1 < len(path_mapped)
+                    and path_compare[il + 1] in path_mapped[ip + 1]
+                ):
+                    continue
+                # make sure that a step backward leads us to the same value of l
+                # in case we "jumped"
+                logg.debug(
+                    f'found matching step ({l} -> {path_compare_orig_names[il + 1]}) '
+                    f'at position {il} in path{path_compare_id} and position {ip} in path_mapped'
+                )
+                consistent_history = True
+                for iip in range(ip, ip_progress, -1):
+                    if l not in path_mapped[iip - 1]:
+                        consistent_history = False
+                if consistent_history:
+                    # here, we take one step further back (ip_progress - 1); it's implied that this
+                    # was ok in the previous step
+                    poss = list(range(ip - 1, ip_progress - 2, -1))
+                    logg.debug(
+                        f'    step(s) backward to position(s) {poss} '
+                        'in path_mapped are fine, too: valid step'
+                    )
+                    n_agreeing_steps_path += 1
+                    ip_progress = ip + 1
+                    break
         n_steps_path = len(path_compare) - 1
         n_agreeing_steps += n_agreeing_steps_path
         n_steps += n_steps_path
@@ -542,9 +558,9 @@ def paga_compare_paths(adata1, adata2,
             f'      path2 = {path2_orig_names},\n'
             f'-> n_agreeing_steps = {n_agreeing_steps_path} / n_steps = {n_steps_path}.',
         )
-    Result = namedtuple('paga_compare_paths_result',
-                        ['frac_steps', 'n_steps', 'frac_paths', 'n_paths'])
-    return Result(frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
-                  n_steps=n_steps if n_steps > 0 else np.nan,
-                  frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
-                  n_paths=n_paths if n_steps > 0 else np.nan)
+    return PAGAComparePathsResult(
+        frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
+        n_steps=n_steps if n_steps > 0 else np.nan,
+        frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
+        n_paths=n_paths if n_steps > 0 else np.nan,
+    )

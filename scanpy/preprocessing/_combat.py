@@ -85,13 +85,13 @@ def _standardize_data(
 
     Returns
     --------
-    s_data : pandas.DataFrame
+    s_data
         Standardized Data
-    design : pandas.DataFrame
+    design
         Batch assignment as one-hot encodings
-    var_pooled : numpy.ndarray
+    var_pooled
         Pooled variance per gene
-    stand_mean : numpy.ndarray
+    stand_mean
         Gene-wise mean
     """
 
