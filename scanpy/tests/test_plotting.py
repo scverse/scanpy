@@ -349,6 +349,19 @@ def test_scatterplots(image_comparer):
     save_and_compare_images('master_umap_symbols')
 
 
+def test_scatter_embedding_groups_and_size(image_comparer):
+    # test that the 'groups' parameter sorts
+    # cells, such that the cells belonging to the groups are
+    # plotted on top. This new ordering requires that the size
+    # vector is also ordered (if given).
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
+    pbmc = sc.datasets.pbmc68k_reduced()
+    sc.pl.embedding(pbmc, 'umap', color=['bulk_labels'],
+                    groups=['CD14+ Monocyte', 'Dendritic'],
+                    size=(np.arange(pbmc.shape[0]) / 40) ** 1.7)
+    save_and_compare_images('master_embedding_groups_size')
+
+
 def test_scatter_embedding_add_outline_vmin_vmax(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
     pbmc = sc.datasets.pbmc68k_reduced()
@@ -383,6 +396,7 @@ def test_scatter_specify_layer_and_raw():
     pbmc.layers["layer"] = pbmc.raw.X.copy()
     with pytest.raises(ValueError):
         sc.pl.umap(pbmc, color="HES4", use_raw=True, layer="layer")
+
 
 def test_rankings(image_comparer):
     save_and_compare_images = image_comparer(ROOT, FIGS, tol=15)
