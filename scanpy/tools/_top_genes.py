@@ -44,7 +44,7 @@ def correlation_matrix(
     group
         Group index for which the correlation matrix for top_ranked genes should be calculated.
         Currently only int is supported, will change very soon
-    n_genes : `int`, optional (default: 20)
+    n_genes
         For how many genes to calculate correlation matrix? If specified, cuts the name list
         (in whatever order it is passed).
     data
@@ -55,9 +55,13 @@ def correlation_matrix(
         If 'Rest', calculate corrlation for everything except the group
     method
         Which kind of correlation coefficient to use
-        pearson : standard correlation coefficient
-        kendall : Kendall Tau correlation coefficient
-        spearman : Spearman rank correlation
+
+        pearson
+            standard correlation coefficient
+        kendall
+            Kendall Tau correlation coefficient
+        spearman
+            Spearman rank correlation
     annotation_key
         Allows to define the name of the anndata entry where results are stored.
     """
@@ -116,25 +120,31 @@ def correlation_matrix(
         adata.uns[annotation_key] = cor_table
 
 
-def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
-    """Calculate correlation matrix.
+def ROC_AUC_analysis(
+    adata: AnnData,
+    groupby: str,
+    group: Optional[str] = None,
+    n_genes: int = 100,
+):
+    """\
+    Calculate correlation matrix.
 
-            Calculate a correlation matrix for genes strored in sample annotation using rank_genes_groups.py
-
-            Parameters
-            ----------
-            adata : :class:`~anndata.AnnData`
-                Annotated data matrix.
-            groupby : `str`
-                The key of the sample grouping to consider.
-            group : `str`, int, optional (default: None)
-                Group name or index for which the correlation matrix for top_ranked genes should be calculated.
-                If no parameter is passed, ROC/AUC is calculated for all groups
-            n_genes : `int`, optional (default: 100)
-                For how many genes to calculate ROC and AUC. If no parameter is passed, calculation is done for
-                all stored top ranked genes.
-
-        """
+    Calculate a correlation matrix for genes strored in sample annotation
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    groupby
+        The key of the sample grouping to consider.
+    group
+        Group name or index for which the correlation matrix for top ranked
+        genes should be calculated.
+        If no parameter is passed, ROC/AUC is calculated for all groups
+    n_genes
+        For how many genes to calculate ROC and AUC. If no parameter is passed,
+        calculation is done for all stored top ranked genes.
+    """
     if group is None:
         pass
         # TODO: Loop over all groups instead of just taking one.

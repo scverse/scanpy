@@ -7,7 +7,7 @@ from matplotlib import pyplot as pl
 from matplotlib import rcParams, ticker
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
-from matplotlib.figure import SubplotParams as sppars
+from matplotlib.figure import SubplotParams as sppars, Figure
 from cycler import Cycler, cycler
 
 from .. import logging as logg
@@ -57,23 +57,26 @@ def timeseries(X, **kwargs):
     timeseries_subplot(X, **kwargs)
 
 
-def timeseries_subplot(X,
-                       time=None,
-                       color=None,
-                       var_names=(),
-                       highlightsX=(),
-                       xlabel='',
-                       ylabel='gene expression',
-                       yticks=None,
-                       xlim=None,
-                       legend=True,
-                       palette=None,
-                       color_map='viridis'):
-    """Plot X.
+def timeseries_subplot(
+    X: np.ndarray,
+    time=None,
+    color=None,
+    var_names=(),
+    highlightsX=(),
+    xlabel='',
+    ylabel='gene expression',
+    yticks=None,
+    xlim=None,
+    legend=True,
+    palette=None,
+    color_map='viridis',
+):
+    """\
+    Plot X.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Call this with:
         X with one column, color categorical.
         X with one column, color continuous.
@@ -120,14 +123,20 @@ def timeseries_subplot(X,
         pl.legend(frameon=False)
 
 
-def timeseries_as_heatmap(X, var_names=None, highlightsX=None, color_map=None):
-    """Plot timeseries as heatmap.
+def timeseries_as_heatmap(
+    X: np.ndarray,
+    var_names: np.ndarray = None,
+    highlightsX=None,
+    color_map=None,
+):
+    """\
+    Plot timeseries as heatmap.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Data array.
-    var_names : array_like
+    var_names
         Array of strings naming variables stored in columns of X.
     """
     if highlightsX is None:
@@ -377,8 +386,10 @@ def _set_default_colors_for_categorical_obs(adata, value_to_plot):
 
     Parameters
     ----------
-    adata : annData object
-    value_to_plot : name of a valid categorical observation
+    adata
+        AnnData object
+    value_to_plot
+        Name of a valid categorical observation
 
     Returns
     -------
@@ -699,14 +710,14 @@ def scatter_base(
     return axs
 
 
-def scatter_single(ax, Y, *args, **kwargs):
+def scatter_single(ax: Axes, Y: np.ndarray, *args, **kwargs):
     """Plot scatter plot of data.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis to plot on.
-    Y : np.array
+    Y
         Data array, data to be plotted needs to be in the first two columns.
     """
     if 's' not in kwargs:
@@ -718,17 +729,22 @@ def scatter_single(ax, Y, *args, **kwargs):
     ax.set_yticks([])
 
 
-def arrows_transitions(ax, X, indices, weight=None):
+def arrows_transitions(
+    ax: Axes,
+    X: np.ndarray,
+    indices: Sequence[int],
+    weight=None,
+):
     """
     Plot arrows of transitions in data matrix.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    X : np.array
+    X
         Data array, any representation wished (X, psi, phi, etc).
-    indices : array_like
+    indices
         Indices storing the transitions.
     """
     step = 1
@@ -741,34 +757,40 @@ def arrows_transitions(ax, X, indices, weight=None):
         width = axis_to_data(ax, 0.0001)
     head_width = 10*width
     for ix, x in enumerate(X):
-        if ix % step == 0:
-            X_step = X[indices[ix]] - x
-            # don't plot arrow of length 0
-            for itrans in range(X_step.shape[0]):
-                alphai = 1
-                widthi = width
-                head_widthi = head_width
-                if weight is not None:
-                    alphai *= weight[ix, itrans]
-                    widthi *= weight[ix, itrans]
-                if np.any(X_step[itrans, :1]):
-                    ax.arrow(x[0], x[1],
-                             X_step[itrans, 0], X_step[itrans, 1],
-                             length_includes_head=True,
-                             width=widthi,
-                             head_width=head_widthi,
-                             alpha=alphai,
-                             color='grey')
+        if ix % step != 0:
+            continue
+        X_step = X[indices[ix]] - x
+        # don't plot arrow of length 0
+        for itrans in range(X_step.shape[0]):
+            alphai = 1
+            widthi = width
+            head_widthi = head_width
+            if weight is not None:
+                alphai *= weight[ix, itrans]
+                widthi *= weight[ix, itrans]
+            if not np.any(X_step[itrans, :1]):
+                continue
+            ax.arrow(
+                x[0],
+                x[1],
+                X_step[itrans, 0],
+                X_step[itrans, 1],
+                length_includes_head=True,
+                width=widthi,
+                head_width=head_widthi,
+                alpha=alphai,
+                color='grey',
+            )
 
 
 def ticks_formatter(x, pos):
     # pretty scientific notation
     if False:
-        a, b = '{:.2e}'.format(x).split('e')
+        a, b = f'{x:.2e}'.split('e')
         b = int(b)
-        return r'${} \times 10^{{{}}}$'.format(a, b)
+        return fr'${a} \times 10^{{{b}}}$'
     else:
-        return ('%.3f' % (x)).rstrip('0').rstrip('.')
+        return f'{x:.3f}'.rstrip('0').rstrip('.')
 
 
 def pimp_axis(x_or_y_ax):
@@ -877,14 +899,14 @@ def zoom(ax, xy='x', factor=1):
         ax.set_ylim(new_limits)
 
 
-def get_ax_size(ax, fig):
+def get_ax_size(ax: Axes, fig: Figure):
     """Get axis size
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    fig : matplotlib.Figure
+    fig
         Figure.
     """
     bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -893,15 +915,15 @@ def get_ax_size(ax, fig):
     height *= fig.dpi
 
 
-def axis_to_data(ax, width):
+def axis_to_data(ax: Axes, width: float):
     """For a width in axis coordinates, return the corresponding in data
     coordinates.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    width : float
+    width
         Width in xaxis coordinates.
     """
     xlim = ax.get_xlim()
@@ -911,32 +933,32 @@ def axis_to_data(ax, width):
     return 0.5*(widthx + widthy)
 
 
-def axis_to_data_points(ax, points_axis):
+def axis_to_data_points(ax: Axes, points_axis: np.ndarray):
     """Map points in axis coordinates to data coordinates.
 
     Uses matplotlib.transform.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    points_axis : np.array
+    points_axis
         Points in axis coordinates.
     """
     axis_to_data = ax.transAxes + ax.transData.inverted()
     return axis_to_data.transform(points_axis)
 
 
-def data_to_axis_points(ax, points_data):
+def data_to_axis_points(ax: Axes, points_data: np.ndarray):
     """Map points in data coordinates to axis coordinates.
 
     Uses matplotlib.transform.
 
     Parameters
     ----------
-    ax : matplotlib.axis
+    ax
         Axis object from matplotlib.
-    points_axis : np.array
+    points_data
         Points in data coordinates.
     """
     data_to_axis = axis_to_data.inverted()

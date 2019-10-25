@@ -2630,9 +2630,9 @@ def _prepare_dataframe(
 
 
 def _plot_gene_groups_brackets(
-    gene_groups_ax,
-    group_positions,
-    group_labels,
+    gene_groups_ax: Axes,
+    group_positions: Iterable[Tuple[int, int]],
+    group_labels: Sequence[str],
     left_adjustment: float = -0.3,
     right_adjustment: float = 0.3,
     rotation: Optional[float] = None,
@@ -2651,14 +2651,14 @@ def _plot_gene_groups_brackets(
 
     Parameters
     ----------
-    gene_groups_ax : matplotlib axis
+    gene_groups_ax
         In this axis the gene marks are drawn
-    group_positions : list of `tuples`
+    group_positions
         Each item in the list, should contain the start and end position that the
         bracket should cover.
         Eg. [(0, 4), (5, 8)] means that there are two brackets, one for the var_names (eg genes)
         in positions 0-4 and other for positions 5-8
-    group_labels :  list
+    group_labels
         List of group labels
     left_adjustment
         adjustment to plot the bracket start slightly before or after the first gene position.
@@ -2669,7 +2669,7 @@ def _plot_gene_groups_brackets(
     rotation
         rotation degrees for the labels. If not given, small labels (<4 characters) are not
         rotated, otherwise, they are rotated 90 degrees
-    orientation : `str` (default `top`)
+    orientation
         location of the brackets. Either `top` or `right`
     Returns
     -------
@@ -3111,17 +3111,20 @@ def _plot_categories_as_colorblocks(
     return ticks, labels, groupby_cmap, norm
 
 
-def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height=4):
+def _plot_colorbar(mappable, fig, subplot_spec, max_cbar_height: float = 4.0):
     """
     Plots a vertical color bar based on mappable.
     The height of the colorbar is min(figure-height, max_cmap_height)
 
     Parameters
     ----------
-    mappable : The image to which the colorbar applies.
-    fig ; The figure object
-    subplot_spec : the gridspec subplot. Eg. axs[1,2]
-    max_cbar_height : `float`
+    mappable
+        The image to which the colorbar applies.
+    fig
+        The figure object
+    subplot_spec
+        The gridspec subplot. Eg. axs[1,2]
+    max_cbar_height
         The maximum colorbar height
 
     Returns
