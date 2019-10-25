@@ -780,7 +780,8 @@ def stacked_violin(
         Size of the jitter points.
     order
         Order in which to show the categories. Note: if `dendrogram=True`
-        the order will be given by the dendrogram and `order` will be ignored.
+        the categories order will be given by the dendrogram and `order`
+        will be ignored.
     scale
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
@@ -899,7 +900,7 @@ def stacked_violin(
 
     elif order is not None:
         if set(obs_tidy.index.categories) != set(order):
-            logg.error("Please check that the categories given the "
+            logg.error("Please check that the categories given by "
                        "the `order` parameter match the categories that "
                        "want to be reordered.\n\n"
                        f"Mismatch: {set(obs_tidy.index.categories).difference(order)}\n\n"
