@@ -43,7 +43,7 @@ def embedding(
     projection: Literal['2d', '3d'] = '2d',
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
-    size: Optional[float] = None,
+    size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Optional[int] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
@@ -95,18 +95,6 @@ def embedding(
     if groups:
         if isinstance(groups, str):
             groups = [groups]
-
-    import pandas.core.series
-    if (
-        size is not None
-        and isinstance(size, (
-            cabc.Sequence,
-            pandas.core.series.Series,
-            np.ndarray,
-        ))
-        and len(size) == adata.shape[0]
-    ):
-        size = np.array(size)
 
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
@@ -180,9 +168,25 @@ def embedding(
     if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
 
-    if 's' not in kwargs:
-        kwargs['s'] = 120000 / adata.shape[0]
-    size = kwargs.pop('s')
+    if 's' in kwargs:
+        size = kwargs.pop('s')
+
+    if size is not None:
+        # check if size is any type of sequence, and if so
+        # set as ndarray
+        import pandas.core.series
+        if (
+            size is not None
+            and isinstance(size, (
+                cabc.Sequence,
+                pandas.core.series.Series,
+                np.ndarray,
+            ))
+            and len(size) == adata.shape[0]
+        ):
+            size = np.array(size, dtype=float)
+    else:
+        size = 120000 / adata.shape[0]
 
     ###
     # make the plots
