@@ -779,7 +779,8 @@ def stacked_violin(
     size
         Size of the jitter points.
     order
-        Order in which to show the categories.
+        Order in which to show the categories. Note: if `dendrogram=True`
+        the order will be given by the dendrogram and `order` will be ignored.
     scale
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
@@ -889,6 +890,26 @@ def stacked_violin(
             [categories[x] for x in dendro_data['categories_idx_ordered']], ordered=True)
         categories = [categories[x] for x in dendro_data['categories_idx_ordered']]
 
+        # set order to None, to avoid a different order in case this is given
+        # by the user as the dendrogram order takes precedence.
+        if order is not None:
+            logg.warning("The `order` and `dendrogram` parameters are both set. "
+                         "Categories will only be ordered by the order"
+                         "given by the dendrogram")
+
+    elif order is not None:
+        if set(obs_tidy.index.categories) != set(order):
+            logg.error("Please check that the categories given the "
+                       "the `order` parameter match the categories that "
+                       "want to be reordered.\n\n"
+                       f"Mismatch: {set(obs_tidy.index.categories).difference(order)}\n\n"
+                       f"Given order categories: {order}\n\n"
+                       f"{groupby} categories: {list(obs_tidy.index.categories)}\n")
+            return
+
+        else:
+            obs_tidy.index = obs_tidy.index.reorder_categories(order,
+                                                               ordered=True)
     global count
     count = 0
 
@@ -955,7 +976,8 @@ def stacked_violin(
 
                 continue
 
-            df = pd.melt(obs_tidy[obs_tidy.index == category], value_vars=obs_tidy.columns)
+            df = pd.melt(obs_tidy[obs_tidy.index == category],
+                         value_vars=obs_tidy.columns)
             if ax0 is None:
                 ax = fig.add_subplot(axs[idx, 0])
                 ax0 = ax
@@ -965,12 +987,14 @@ def stacked_violin(
 
             axs_list.append(ax)
 
-            ax = sns.violinplot('variable', y='value', data=df, inner=None, order=order,
-                                orient='vertical', scale=scale, ax=ax, color=row_colors[idx], **kwds)
+            ax = sns.violinplot('variable', y='value', data=df, inner=None,
+                                orient='vertical', scale=scale, ax=ax,
+                                color=row_colors[idx], **kwds)
 
             if stripplot:
-                ax = sns.stripplot('variable', y='value', data=df, order=order,
-                                   jitter=jitter, color='black', size=size, ax=ax)
+                ax = sns.stripplot('variable', y='value', data=df,
+                                   jitter=jitter, color='black',
+                                   size=size, ax=ax)
 
             # remove the grids because in such a compact plot are unnecessary
             ax.grid(False)
@@ -1023,7 +1047,8 @@ def stacked_violin(
         axs_list = []
         if dendrogram:
             dendro_ax = fig.add_subplot(axs[0])
-            _plot_dendrogram(dendro_ax, adata, groupby, orientation='top', dendrogram_key=dendrogram)
+            _plot_dendrogram(dendro_ax, adata, groupby, orientation='top',
+                             dendrogram_key=dendrogram)
             axs_list.append(dendro_ax)
         first_ax = None
         if is_color_like(row_palette):
@@ -1039,13 +1064,13 @@ def stacked_violin(
                 ax = fig.add_subplot(axs[ax_idx, 0])
             axs_list.append(ax)
             ax = sns.violinplot(
-                x=obs_tidy.index, y=y, data=obs_tidy, inner=None, order=order,
+                x=obs_tidy.index, y=y, data=obs_tidy, inner=None,
                 orient='vertical', scale=scale, ax=ax, color=row_colors[idx],
                 **kwds,
             )
             if stripplot:
                 ax = sns.stripplot(
-                    x=obs_tidy.index, y=y, data=obs_tidy, order=order,
+                    x=obs_tidy.index, y=y, data=obs_tidy,
                     jitter=jitter, color='black', size=size, ax=ax,
                 )
 
