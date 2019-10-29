@@ -2,15 +2,14 @@
 Denoise high-dimensional data using MAGIC
 """
 from typing import Union, Sequence, Optional
-from ..._compat import Literal
 
 from anndata import AnnData
 from numpy.random.mtrand import RandomState
-
-from scanpy._settings import settings
-from scanpy import logging as logg
-
 from legacy_api_wrap import legacy_api
+
+from ... import logging as logg
+from ..._settings import settings
+from ..._compat import Literal
 
 
 @legacy_api('k', 'a')
