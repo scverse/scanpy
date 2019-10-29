@@ -73,10 +73,10 @@ def filter_cells(
     Depending on `inplace`, returns the following arrays or directly subsets
     and annotates the data matrix:
 
-    cells_subset : numpy.ndarray
+    cells_subset
         Boolean index mask that does filtering. `True` means that the
         cell is kept. `False` means the cell is removed.
-    number_per_cell : numpy.ndarray
+    number_per_cell
         Depending on what was tresholded (`counts` or `genes`),
         the array stores `n_counts` or `n_cells` per gene.
 
@@ -193,10 +193,10 @@ def filter_genes(
     Depending on `inplace`, returns the following arrays or directly subsets
     and annotates the data matrix
 
-    gene_subset : numpy.ndarray
+    gene_subset
         Boolean index mask that does filtering. `True` means that the
         gene is kept. `False` means the gene is removed.
-    number_per_gene : numpy.ndarray
+    number_per_gene
         Depending on what was tresholded (`counts` or `cells`), the array stores
         `n_counts` or `n_cells` per gene.
     """
@@ -422,7 +422,7 @@ def pca(
 
     Returns
     -------
-    X_pca : :class:`scipy.sparse.spmatrix` or :class:`numpy.ndarray`
+    X_pca : :class:`~scipy.sparse.spmatrix`, :class:`~numpy.ndarray`
         If `data` is array-like and `return_info=False` was passed,
         this function only returns `X_pca`…
     adata : anndata.AnnData

@@ -15,7 +15,7 @@ import shutil
 import sys
 from collections import OrderedDict as odict
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, List, Tuple
 
 import numpy as np
 import scipy as sp
@@ -379,8 +379,11 @@ class GRNsim:
         params={},
     ):
         """
-            model : either string for predefined model, or directory with
-                    a model file and a coupl matrix file
+        Params
+        ------
+        model
+            either string for predefined model,
+            or directory with a model file and a couple matrix files
         """
         self.dim = dim if Coupl is None else Coupl.shape[0]  # number of nodes / dimension of system
         self.maxnpar = 1    # maximal number of parents
@@ -861,26 +864,35 @@ class GRNsim:
         )
 
 
-def _check_branching(X,Xsamples,restart,threshold=0.25):
+def _check_branching(
+    X: np.ndarray,
+    Xsamples: np.ndarray,
+    restart: int,
+    threshold: float = 0.25
+) -> Tuple[bool, List[np.ndarray]]:
     """\
     Check whether time series branches.
 
     Parameters
     ----------
-    X (np.array): current time series data.
-    Xsamples (np.array): list of previous branching samples.
-    restart (int): counts number of restart trials.
-    threshold (float, optional): sets threshold for attractor
-        identification.
+    X
+        current time series data.
+    Xsamples
+        list of previous branching samples.
+    restart
+        counts number of restart trials.
+    threshold
+        sets threshold for attractor identification.
 
     Returns
     -------
-    check : bool
+    check
         true if branching realization
     Xsamples
         updated list
     """
     check = True
+    Xsamples = list(Xsamples)
     if restart == 0:
         Xsamples.append(X)
     else:
@@ -900,13 +912,14 @@ def _check_branching(X,Xsamples,restart,threshold=0.25):
     return check, Xsamples
 
 
-def check_nocycles(Adj, verbosity=2):
+def check_nocycles(Adj: np.ndarray, verbosity: int = 2) -> bool:
     """\
     Checks that there are no cycles in graph described by adjacancy matrix.
 
     Parameters
     ----------
-    Adj (np.array): adjancancy matrix of dimension (dim, dim)
+    Adj
+        adjancancy matrix of dimension (dim, dim)
 
     Returns
     -------
@@ -930,7 +943,9 @@ def check_nocycles(Adj, verbosity=2):
     return True
 
 
-def sample_coupling_matrix(dim=3, connectivity=0.5):
+def sample_coupling_matrix(
+    dim: int = 3, connectivity: float = 0.5
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     """\
     Sample coupling matrix.
 
@@ -938,17 +953,23 @@ def sample_coupling_matrix(dim=3, connectivity=0.5):
 
     Parameters
     ----------
-    dim : int
+    dim
         dimension of coupling matrix.
-    connectivity : float
+    connectivity
         fraction of connectivity, fully connected means 1.,
         not-connected means 0, in the case of fully connected, one has
         dim*(dim-1)/2 edges in the graph.
 
     Returns
     -------
-    Tuple (Coupl,Adj,Adj_signed) of coupling matrix, adjancancy and
-    signed adjacancy matrix.
+    coupl
+        coupling matrix
+    adj
+        adjancancy matrix
+    adj_signed
+        signed adjacancy matrix
+    n_edges
+        Number of edges
     """
     max_trial = 10
     check = False

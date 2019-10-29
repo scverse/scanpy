@@ -13,7 +13,7 @@ from matplotlib import patheffects
 from matplotlib.colors import Colormap
 
 from .. import _utils
-from .._utils import _IGraphLayout, _FontWeight
+from .._utils import _IGraphLayout, _FontWeight, _FontSize
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
 from ... import logging as logg
 from ..._settings import settings
@@ -45,7 +45,7 @@ def embedding(
     palette: Union[str, Sequence[str], Cycler, None] = None,
     size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
-    legend_fontsize: Optional[int] = None,
+    legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
@@ -672,9 +672,9 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
 
     Returns
     -------
-    data_points : list
+    data_points
         Each entry is a numpy array containing the data points
-    components : list
+    components
         The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
         for components = [1,2] and components=['1,2', '2,3'] respectively
     """
@@ -823,7 +823,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
 
     Returns
     -------
-    Tuple of values to plot, and boolean indicating whether they are categorical.
+    values
+        Values to plot
+    is_categorical
+        Are the values categorical?
     """
     if value_to_plot is None:
         return "lightgray", False

@@ -68,11 +68,11 @@ def phenograph(
 
     Returns
     -------
-    communities : numpy.ndarray
+    communities
         Integer array of community assignments for each row in data.
-    graph : scipy.sparse.spmatrix
+    graph
         The graph that was used for clustering.
-    Q : float
+    Q
         The modularity score for communities on graph.
 
 

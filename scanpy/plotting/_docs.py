@@ -54,7 +54,7 @@ legend_loc
     Location of legend, either `'on data'`, `'right margin'` or a valid keyword
     for the `loc` parameter of :class:`~matplotlib.legend.Legend`.
 legend_fontsize
-    Numeric size in pt or {`'[x-|xx-]small'`, `'medium'`, `'[x-|xx-]large'`}.
+    Numeric size in pt or string describing the size.
     See :meth:`~matplotlib.text.Text.set_fontsize`.
 legend_fontweight
     Legend font weight. A numeric value in range 0-1000 or a string.

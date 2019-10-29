@@ -112,12 +112,12 @@ def mnn_correct(
 
     Returns
     -------
-    `datas` : :class:`~numpy.ndarray` or :class:`~anndata.AnnData`
+    datas
         Corrected matrix/matrices or AnnData object/objects, depending on the
         input type and `do_concatenate`.
-    `mnn_list` : ``List[pandas.DataFrame]``
+    mnn_list
         A list containing MNN pairing information as DataFrames in each iteration step.
-    `angle_list` : ``List[Tuple[Optional[float], int]]`` or ``None``
+    angle_list
         A list containing angles of each batch.
     """
     if len(datas) < 2:
