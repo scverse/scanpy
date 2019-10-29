@@ -72,7 +72,9 @@ def scatter(
     legend_fontweight: Union[int, _FontWeight, None] = None,
     legend_fontoutline: float = None,
     color_map: Union[str, Colormap] = None,
-    palette: Union[Cycler, ListedColormap, ColorLike, Sequence[ColorLike]] = None,
+    palette: Union[
+        Cycler, ListedColormap, ColorLike, Sequence[ColorLike]
+    ] = None,
     frameon: Optional[bool] = None,
     right_margin: Optional[float] = None,
     left_margin: Optional[float] = None,
@@ -123,18 +125,26 @@ def scatter(
     if (
         (x in adata.obs.keys() or x in adata.var.index)
         and (y in adata.obs.keys() or y in adata.var.index)
-        and (color is None or color in adata.obs.keys() or color in adata.var.index)
+        and (
+            color is None
+            or color in adata.obs.keys()
+            or color in adata.var.index
+        )
     ):
         return _scatter_obs(**args)
     if (
         (x in adata.var.keys() or x in adata.obs.index)
         and (y in adata.var.keys() or y in adata.obs.index)
-        and (color is None or color in adata.var.keys() or color in adata.obs.index)
+        and (
+            color is None
+            or color in adata.var.keys()
+            or color in adata.obs.index
+        )
     ):
         adata_T = adata.T
         axs = _scatter_obs(
             adata=adata_T,
-            **{name: val for name, val in args.items() if name != 'adata'}
+            **{name: val for name, val in args.items() if name != 'adata'},
         )
         # store .uns annotations that were added to the new adata object
         adata.uns = adata_T.uns
@@ -467,11 +477,14 @@ def _scatter_obs(
                 loc='center left',
                 bbox_to_anchor=(1, 0.5),
                 ncol=(
-                    1 if len(adata.obs[key].cat.categories) <= 14 else
-                    2 if len(adata.obs[key].cat.categories) <= 30 else
-                    3
+                    1
+                    if len(adata.obs[key].cat.categories) <= 14
+                    else 2
+                    if len(adata.obs[key].cat.categories) <= 30
+                    else 3
                 ),
-                fontsize=legend_fontsize)
+                fontsize=legend_fontsize,
+            )
         elif legend_loc != 'none':
             legend = axs[ikey].legend(
                 frameon=False, loc=legend_loc, fontsize=legend_fontsize
@@ -846,7 +859,9 @@ def clustermap(
         return g
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
+)
 def stacked_violin(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -1109,11 +1124,15 @@ def stacked_violin(
         if is_color_like(row_palette):
             row_colors = [row_palette] * len(categories)
         else:
-            row_colors = sns.color_palette(row_palette, n_colors=len(categories))
-        for idx in range(num_rows)[::-1]:  # iterate in reverse to start on the bottom plot
-                                           # this facilitates adding the brackets plot (if
-                                           # needed) by sharing the x axis with a previous
-                                           # violing plot.
+            row_colors = sns.color_palette(
+                row_palette, n_colors=len(categories)
+            )
+        for idx in range(num_rows)[
+            ::-1
+        ]:  # iterate in reverse to start on the bottom plot
+            # this facilitates adding the brackets plot (if
+            # needed) by sharing the x axis with a previous
+            # violing plot.
             category = categories[idx]
             if has_var_groups and idx <= 1:
                 # if var_group_positions is given, axs[0] and axs[1] are the location for the
@@ -1340,7 +1359,9 @@ def stacked_violin(
     return axs_list
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
+)
 def heatmap(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -1614,9 +1635,7 @@ def heatmap(
             else:
                 heatmap_height = 4
             width = 10
-            height = (
-                heatmap_height + dendro_height + groupby_height
-            )
+            height = heatmap_height + dendro_height + groupby_height
         else:
             width, height = figsize
             heatmap_height = height - (dendro_height + groupby_height)
@@ -1707,7 +1726,9 @@ def heatmap(
     return axs
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
+)
 def dotplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -1949,11 +1970,15 @@ def dotplot(
             # reorder columns (usually genes) if needed. This only happens when
             # var_group_positions and var_group_labels is set
             mean_obs = mean_obs.iloc[:, dendro_data['var_names_idx_ordered']]
-            fraction_obs = fraction_obs.iloc[:, dendro_data['var_names_idx_ordered']]
+            fraction_obs = fraction_obs.iloc[
+                :, dendro_data['var_names_idx_ordered']
+            ]
 
         # reorder rows (categories) to match the dendrogram order
         mean_obs = mean_obs.iloc[dendro_data['categories_idx_ordered'], :]
-        fraction_obs = fraction_obs.iloc[dendro_data['categories_idx_ordered'], :]
+        fraction_obs = fraction_obs.iloc[
+            dendro_data['categories_idx_ordered'], :
+        ]
 
         y_ticks = range(mean_obs.shape[0])
         dendro_ax = fig.add_subplot(axs[1, 1], sharey=dot_ax)
@@ -2119,7 +2144,9 @@ def dotplot(
     return axs
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
+)
 def matrixplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2403,7 +2430,9 @@ def matrixplot(
     return axs
 
 
-@_doc_params(show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args)
+@_doc_params(
+    show_save_ax=doc_show_save_ax, common_plot_args=doc_common_plot_args
+)
 def tracksplot(
     adata: AnnData,
     var_names: Union[_VarNames, Mapping[str, _VarNames]],
@@ -2505,7 +2534,9 @@ def tracksplot(
         # reorder obs_tidy
         if dendro_data['var_names_idx_ordered'] is not None:
             obs_tidy = obs_tidy.iloc[:, dendro_data['var_names_idx_ordered']]
-            var_names = [var_names[x] for x in dendro_data['var_names_idx_ordered']]
+            var_names = [
+                var_names[x] for x in dendro_data['var_names_idx_ordered']
+            ]
 
         obs_tidy.index = obs_tidy.index.reorder_categories(
             [categories[x] for x in dendro_data['categories_idx_ordered']],
@@ -2515,7 +2546,9 @@ def tracksplot(
             categories[x] for x in dendro_data['categories_idx_ordered']
         ]
 
-        groupby_colors = [groupby_colors[x] for x in dendro_data['categories_idx_ordered']]
+        groupby_colors = [
+            groupby_colors[x] for x in dendro_data['categories_idx_ordered']
+        ]
 
     obs_tidy = obs_tidy.sort_index()
 
@@ -2535,7 +2568,9 @@ def tracksplot(
         track_height = 0.25
     else:
         width, height = figsize
-        track_height = (height - (dendro_height + groupby_height)) / len(var_names)
+        track_height = (height - (dendro_height + groupby_height)) / len(
+            var_names
+        )
 
     height_ratios = (
         [dendro_height] + [track_height] * len(var_names) + [groupby_height]
