@@ -64,9 +64,9 @@ legend_fontoutline
     Line width of the legend font outline in pt. Draws a white outline using
     the path effect :class:`~matplotlib.patheffects.withStroke`.
 size
-    Point size. If `None`, is automatically computed as 120000 / num. cells.
-    Can be a list containing the size for each cell. The order should be de
-    same as in adata.obs.
+    Point size. If `None`, is automatically computed as 120000 / n_cells.
+    Can be a sequence containing the size for each cell. The order should be
+    the same as in adata.obs.
 color_map
     Color map to use for continous variables. Can be a name or a
     :class:`~matplotlib.colors.Colormap` instance (e.g. `"magma`", `"viridis"`
