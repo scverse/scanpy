@@ -50,6 +50,7 @@ if __name__ == '__main__':
                 'This above file has 0 changes to black formatting, good job! '
                 'Please remove it from “tool.black.exclude" in pyproject.toml'
             )
+            sys.exit(1)
         elif added + removed < thresh:
             print(
                 'This above file has < {thresh} changes to black formatting. '
