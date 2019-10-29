@@ -46,8 +46,10 @@ if __name__ == '__main__':
     for file, (added, removed) in sorted(excluded, key=lambda sd: -sum(sd[1])):
         print(f'{file}: +{added} -{removed}')
         if 0 < added + removed < thresh:
-            print(f'File: {file}: has < {threshold} changes to '
-                  f'black formatting. Do it!')
+            print(
+                f'File: {file}: has < {threshold} changes to '
+                f'black formatting. Do it!'
+            )
             sys.exit(1)
     sys.exit(0)
 
