@@ -15,7 +15,9 @@ from legacy_api_wrap import legacy_api
 @legacy_api('k', 'a')
 def magic(
     adata: AnnData,
-    name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,
+    name_list: Union[
+        Literal['all_genes', 'pca_only'], Sequence[str], None
+    ] = None,
     *,
     knn: int = 10,
     decay: int = 15,
