@@ -2,6 +2,7 @@
 Denoise high-dimensional data using MAGIC
 """
 from typing import Union, Sequence, Optional
+from ..._compat import Literal
 
 from anndata import AnnData
 from numpy.random.mtrand import RandomState
@@ -9,10 +10,13 @@ from numpy.random.mtrand import RandomState
 from scanpy._settings import settings
 from scanpy import logging as logg
 
+from legacy_api_wrap import legacy_api
 
+@legacy_api('k', 'a')
 def magic(
     adata: AnnData,
-    name_list: Union[str, Sequence[str], None] = None,
+    name_list: Union[Literal['all_genes', 'pca_only'], Sequence[str], None] = None,
+    *,
     knn: int = 10,
     decay: int = 15,
     t: str = 'auto',
