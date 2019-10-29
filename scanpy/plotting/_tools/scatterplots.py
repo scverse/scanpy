@@ -305,15 +305,19 @@ def embedding(
                     in_groups_size = not_in_groups_size = size
 
                 ax.scatter(
-                    _data_points[~in_groups, 0], _data_points[~in_groups, 1],
-                    s=not_in_groups_size, marker=".",
+                    _data_points[~in_groups, 0],
+                    _data_points[~in_groups, 1],
+                    s=not_in_groups_size,
+                    marker=".",
                     c=color_vector[~in_groups],
                     rasterized=settings._vector_friendly,
                     **kwargs,
                 )
                 cax = ax.scatter(
-                    _data_points[in_groups, 0], _data_points[in_groups, 1],
-                    s=in_groups_size, marker=".",
+                    _data_points[in_groups, 0],
+                    _data_points[in_groups, 1],
+                    s=in_groups_size,
+                    marker=".",
                     c=color_vector[in_groups],
                     rasterized=settings._vector_friendly,
                     **kwargs,
@@ -321,8 +325,12 @@ def embedding(
 
             else:
                 cax = ax.scatter(
-                    _data_points[:, 0], _data_points[:, 1], s=size,
-                    marker=".", c=color_vector, rasterized=settings._vector_friendly,
+                    _data_points[:, 0],
+                    _data_points[:, 1],
+                    s=size,
+                    marker=".",
+                    c=color_vector,
+                    rasterized=settings._vector_friendly,
                     **kwargs,
                 )
 
