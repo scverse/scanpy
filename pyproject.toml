@@ -45,7 +45,6 @@ exclude = '''
     |plotting/(
         __init__
         |palettes
-        |_anndata
         |_utils
         |_preprocessing
         |_tools/(scatterplots|__init__|paga)
@@ -54,7 +53,6 @@ exclude = '''
         test_get
         |test_pca
         |test_combat
-        |test_plotting
         |test_read_10x
         |test_neighbors
         |test_readwrite
