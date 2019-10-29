@@ -45,8 +45,18 @@ if __name__ == '__main__':
     ]
     for file, (added, removed) in sorted(excluded, key=lambda sd: -sum(sd[1])):
         print(f'{file}: +{added} -{removed}')
-        if added + removed < thresh:
-            print('File has < 10 changes to black formatting. Do it!')
+        if added == removed == 0:
+            print(
+                'This above file has 0 changes to black formatting, good job! '
+                'Please remove it from “tool.black.exclude" in pyproject.toml'
+            )
+            sys.exit(1)
+        elif added + removed < thresh:
+            print(
+                'This above file has < {thresh} changes to black formatting. '
+                'Please black format it and afterwards remove it from '
+                '“tool.black.exclude" in pyproject.toml'
+            )
             sys.exit(1)
     sys.exit(0)
 

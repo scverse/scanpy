@@ -43,7 +43,7 @@ def embedding(
     projection: Literal['2d', '3d'] = '2d',
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
-    size: Optional[float] = None,
+    size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
     legend_fontsize: Union[int, float, _FontSize, None] = None,
     legend_fontweight: Union[int, _FontWeight] = 'bold',
@@ -91,6 +91,10 @@ def embedding(
         # very small sizes the edge will not reduce its size
         # (https://github.com/theislab/scanpy/issues/293)
         kwargs['edgecolor'] = 'none'
+
+    if groups:
+        if isinstance(groups, str):
+            groups = [groups]
 
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
@@ -164,9 +168,25 @@ def embedding(
     if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
 
-    if 's' not in kwargs:
-        kwargs['s'] = 120000 / adata.shape[0]
-    size = kwargs.pop('s')
+    if 's' in kwargs:
+        size = kwargs.pop('s')
+
+    if size is not None:
+        # check if size is any type of sequence, and if so
+        # set as ndarray
+        import pandas.core.series
+        if (
+            size is not None
+            and isinstance(size, (
+                cabc.Sequence,
+                pandas.core.series.Series,
+                np.ndarray,
+            ))
+            and len(size) == adata.shape[0]
+        ):
+            size = np.array(size, dtype=float)
+    else:
+        size = 120000 / adata.shape[0]
 
     ###
     # make the plots
@@ -195,18 +215,8 @@ def embedding(
 
             # check if 'size' is given (stored in kwargs['s']
             # and reorder it.
-            import pandas.core.series
-            if (
-                's' in kwargs
-                and kwargs['s'] is not None
-                and isinstance(kwargs['s'], (
-                    cabc.Sequence,
-                    pandas.core.series.Series,
-                    np.ndarray,
-                ))
-                and len(kwargs['s']) == len(color_vector)
-            ):
-                kwargs['s'] = np.array(kwargs['s'])[order]
+            if isinstance(size, np.ndarray):
+                size = np.array(size)[order]
         else:
             _data_points = data_points[component_idx]
 
@@ -247,9 +257,9 @@ def embedding(
             )
         else:
             if add_outline:
-                # the default contour is a black edge followd by a
+                # the default outline is a black edge followed by a
                 # thin white edged added around connected clusters.
-                # To add a contour
+                # To add an outline
                 # three overlapping scatter plots are drawn:
                 # First black dots with slightly larger size,
                 # then, white dots a bit smaller, but still larger
@@ -268,7 +278,7 @@ def embedding(
                 # because edge needs to be set to None
                 kwargs['edgecolor'] = 'none'
 
-                # remove alpha for contour
+                # remove alpha for outline
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
@@ -282,11 +292,47 @@ def embedding(
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
-            cax = ax.scatter(
-                _data_points[:, 0], _data_points[:, 1], s=size,
-                marker=".", c=color_vector, rasterized=settings._vector_friendly,
-                **kwargs,
-            )
+            if groups:
+                # first plot non-groups and then plot the
+                # required groups on top
+
+                in_groups = np.array(adata.obs[value_to_plot].isin(groups))
+
+                if isinstance(size, np.ndarray):
+                    in_groups_size = size[in_groups]
+                    not_in_groups_size = size[~in_groups]
+                else:
+                    in_groups_size = not_in_groups_size = size
+
+                ax.scatter(
+                    _data_points[~in_groups, 0],
+                    _data_points[~in_groups, 1],
+                    s=not_in_groups_size,
+                    marker=".",
+                    c=color_vector[~in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
+                cax = ax.scatter(
+                    _data_points[in_groups, 0],
+                    _data_points[in_groups, 1],
+                    s=in_groups_size,
+                    marker=".",
+                    c=color_vector[in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
+
+            else:
+                cax = ax.scatter(
+                    _data_points[:, 0],
+                    _data_points[:, 1],
+                    s=size,
+                    marker=".",
+                    c=color_vector,
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -814,9 +860,7 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
         color_vector = np.asarray(adata.uns[color_key])[values.codes]
 
         # Handle groups
-        if groups is not None:
-            if isinstance(groups, str):
-                groups = [groups]
+        if groups:
             color_vector = np.array(color_vector, dtype='<U15')
             # set color to 'light gray' for all values
             # that are not in the groups
