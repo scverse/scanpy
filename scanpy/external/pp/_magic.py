@@ -12,6 +12,7 @@ from scanpy import logging as logg
 
 from legacy_api_wrap import legacy_api
 
+
 @legacy_api('k', 'a')
 def magic(
     adata: AnnData,
