@@ -631,6 +631,7 @@ def violin(
     stripplot: bool = True,
     jitter: Union[float, bool] = True,
     size: int = 1,
+    layer: Optional[str] = None,
     scale: Literal['area', 'count', 'width'] = 'width',
     order: Optional[Sequence[str]] = None,
     multi_panel: Optional[bool] = None,
@@ -666,6 +667,11 @@ def violin(
         See :func:`~seaborn.stripplot`.
     size
         Size of the jitter points.
+    layer
+        Name of the AnnData object layer that wants to be plotted. By
+        default adata.raw.X is plotted. If `use_raw=False` is set,
+        then `adata.X` is plotted. If `layer` is set to a valid layer name,
+        then the layer is plotted. `layer` takes precedence over `use_raw`.
     scale
         The method used to scale the width of each violin.
         If 'width' (the default), each violin will have the same width.
@@ -696,9 +702,11 @@ def violin(
     if isinstance(keys, str):
         keys = [keys]
     if groupby is not None:
-        obs_df = get.obs_df(adata, keys=[groupby] + keys, use_raw=use_raw)
+        obs_df = get.obs_df(
+            adata, keys=[groupby] + keys, layer=layer, use_raw=use_raw
+        )
     else:
-        obs_df = get.obs_df(adata, keys=keys, use_raw=use_raw)
+        obs_df = get.obs_df(adata, keys=keys, layer=layer, use_raw=use_raw)
     if groupby is None:
         obs_tidy = pd.melt(obs_df, value_vars=keys)
         x = 'variable'
@@ -707,6 +715,12 @@ def violin(
         obs_tidy = obs_df
         x = groupby
         ys = keys
+
+    # set by default the violin plot cut=0 to limit the extend
+    # of the violin plot (see stacked_violin code) for more info.
+    if 'cut' not in kwds:
+        kwds['cut'] = 0
+
     if multi_panel and groupby is None and len(ys) == 1:
         # This is a quick and dirty way for adapting scales across several
         # keys if groupby is None.
@@ -1127,12 +1141,11 @@ def stacked_violin(
             row_colors = sns.color_palette(
                 row_palette, n_colors=len(categories)
             )
-        for idx in range(num_rows)[
-            ::-1
-        ]:  # iterate in reverse to start on the bottom plot
-            # this facilitates adding the brackets plot (if
-            # needed) by sharing the x axis with a previous
-            # violing plot.
+        # Iterate in reverse to start on the bottom plot.
+        # This facilitates adding the brackets plot (if
+        # needed) by sharing the x axis with a previous
+        # violin plot.
+        for idx in range(num_rows)[::-1]:
             category = categories[idx]
             if has_var_groups and idx <= 1:
                 # if var_group_positions is given, axs[0] and axs[1] are the location for the
