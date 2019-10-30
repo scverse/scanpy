@@ -339,7 +339,7 @@ def test_violin(image_comparer):
         multi_panel=True,
         jitter=True,
         show=False,
-        rotation=90
+        rotation=90,
     )
     save_and_compare_images('master_violin_multi_panel_with_groupby')
 
