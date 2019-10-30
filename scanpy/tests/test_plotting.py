@@ -339,8 +339,25 @@ def test_violin(image_comparer):
         multi_panel=True,
         jitter=True,
         show=False,
+        rotation=90,
     )
     save_and_compare_images('master_violin_multi_panel_with_groupby')
+
+    # test use of layer
+    pbmc.layers['negative'] = pbmc.X * -1
+    sc.pl.violin(
+        pbmc,
+        'CST3',
+        groupby='bulk_labels',
+        stripplot=True,
+        multi_panel=True,
+        jitter=True,
+        show=False,
+        layer='negative',
+        use_raw=False,
+        rotation=90,
+    )
+    save_and_compare_images('master_violin_multi_panel_with_layer')
 
 
 def test_dendrogram(image_comparer):
