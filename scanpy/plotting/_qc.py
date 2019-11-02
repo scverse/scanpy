@@ -19,7 +19,7 @@ def highest_expr_genes(
     save: Optional[Union[str, bool]] = None,
     ax: Optional[Axes] = None,
     gene_symbols: Optional[str] = None,
-    log: False,
+    log: bool = False,
     **kwds,
 ):
     """\
