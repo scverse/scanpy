@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 from anndata import AnnData
 from matplotlib import pyplot as plt
