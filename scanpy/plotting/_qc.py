@@ -75,9 +75,14 @@ def highest_expr_genes(
         mean_percent = norm_dict['X'].mean(axis=0)
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
         counts_top_genes = norm_dict['X'][:, top_idx]
-
-    columns = adata.var_names[top_idx] if gene_symbols is None else adata.var[gene_symbols][top_idx]
-    counts_top_genes = pd.DataFrame(counts_top_genes, index=adata.obs_names, columns=columns)
+    columns = (
+        adata.var_names[top_idx]
+        if gene_symbols is None
+        else adata.var[gene_symbols][top_idx]
+    )
+    counts_top_genes = pd.DataFrame(
+        counts_top_genes, index=adata.obs_names, columns=columns
+    )
 
     if not ax:
         # figsize is hardcoded to produce a tall image. To change the fig size,
@@ -86,6 +91,7 @@ def highest_expr_genes(
         fig, ax = plt.subplots(figsize=(5, height))
     sns.boxplot(data=counts_top_genes, orient='h', ax=ax, fliersize=1, **kwds)
     ax.set_xlabel('% of total counts')
-    if log: ax.set_xscale('log')
+    if log: 
+        ax.set_xscale('log')
     _utils.savefig_or_show('highest_expr_genes', show=show, save=save)
     return ax if not show else None
