@@ -7,19 +7,18 @@ from sklearn.neighbors import KDTree
 from umap import UMAP
 
 
-X = np.array([
-    [ 1. ,  2.5,  3. ,  5. ,  8.7],
-    [ 4.2,  7. ,  9. , 11. ,  7. ],
-    [ 5.1,  2. ,  9. ,  4. ,  9. ],
-    [ 7. ,  9.4,  6.8,  9.1,  8. ],
-    [ 8.9,  8.6,  9.6,  1. ,  2. ],
-    [ 6.5,  8.9,  2.2,  4.5,  8.9]
-])
+X = np.array(
+    [
+        [1.0, 2.5, 3.0, 5.0, 8.7],
+        [4.2, 7.0, 9.0, 11.0, 7.0],
+        [5.1, 2.0, 9.0, 4.0, 9.0],
+        [7.0, 9.4, 6.8, 9.1, 8.0],
+        [8.9, 8.6, 9.6, 1.0, 2.0],
+        [6.5, 8.9, 2.2, 4.5, 8.9],
+    ]
+)
 
-T = np.array([
-    [2. , 3.5, 4. , 1. , 4.7],
-    [3.2, 2. , 5. , 5. , 8. ]
-])
+T = np.array([[2.0, 3.5, 4.0, 1.0, 4.7], [3.2, 2.0, 5.0, 5.0, 8.0]])
 
 
 @pytest.fixture
@@ -53,7 +52,7 @@ def test_representation(adatas):
     ing = sc.tl.Ingest(adata_ref)
     ing.fit(adata_new)
 
-    assert ing._use_rep  == 'X_pca'
+    assert ing._use_rep == 'X_pca'
     assert ing._obsm['rep'].shape == (adata_new.n_obs, 30)
     assert not ing._pca_centered
 
@@ -91,10 +90,11 @@ def test_ingest_function(adatas):
     adata_new = adatas[1].copy()
 
     sc.tl.ingest(
-        adata_new, adata_ref,
+        adata_new,
+        adata_ref,
         obs='bulk_labels',
         embedding_method=['umap', 'pca'],
-        inplace=True
+        inplace=True,
     )
 
     assert 'bulk_labels' in adata_new.obs
@@ -102,26 +102,26 @@ def test_ingest_function(adatas):
     assert 'X_pca' in adata_new.obsm
 
     ad = sc.tl.ingest(
-            adata_new,
-            adata_ref,
-            obs='bulk_labels',
-            embedding_method=['umap', 'pca'],
-            inplace=False
-        )
+        adata_new,
+        adata_ref,
+        obs='bulk_labels',
+        embedding_method=['umap', 'pca'],
+        inplace=False,
+    )
 
     assert 'bulk_labels' in ad.obs
     assert 'X_umap' in ad.obsm
     assert 'X_pca' in ad.obsm
 
     ad = sc.tl.ingest(
-            adata_new,
-            adata_ref,
-            obs='bulk_labels',
-            embedding_method=['umap', 'pca'],
-            return_joint = True
-        )
+        adata_new,
+        adata_ref,
+        obs='bulk_labels',
+        embedding_method=['umap', 'pca'],
+        return_joint=True,
+    )
 
-    assert ad.shape == (adata_new.n_obs+adata_ref.n_obs, adata_ref.n_vars)
+    assert ad.shape == (adata_new.n_obs + adata_ref.n_obs, adata_ref.n_vars)
     assert 'bulk_labels' in ad.obs
     assert 'X_umap' in ad.obsm
     assert 'X_pca' in ad.obsm
@@ -131,7 +131,9 @@ def test_ingest_map_embedding_umap():
     adata_ref = sc.AnnData(X)
     adata_new = sc.AnnData(T)
 
-    sc.pp.neighbors(adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0)
+    sc.pp.neighbors(
+        adata_ref, method='umap', use_rep='X', n_neighbors=4, random_state=0
+    )
     sc.tl.umap(adata_ref, random_state=0)
 
     ing = sc.tl.Ingest(adata_ref)
