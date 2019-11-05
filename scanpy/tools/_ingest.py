@@ -124,6 +124,18 @@ def ingest(
 
 
 class Ingest:
+    """\
+    Class to map labels and embeddings from existing data to new data.
+
+    You need to run :func:`~scanpy.pp.neighbors` on `adata` before
+    initializing Ingest with it.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`
+        with embeddings and labels.
+    """
 
     def _init_umap(self, adata):
         from umap import UMAP
@@ -245,6 +257,18 @@ class Ingest:
         return adata.X
 
     def fit(self, adata_new):
+        """\
+        Map `adata_new` to the same representation as `adata`.
+
+        This function identifies the representation which was used to
+        calculate neighbors in 'adata' and maps `adata_new` to
+        this representation.
+        Variables (`n_vars` and `var_names`) of `adata_new` should be the same
+        as in `adata`.
+
+        `adata` refers to the :class:`~anndata.AnnData` object
+        that is passed during the initialization of an Ingest instance.
+        """
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         #not sure if it should be AxisArrays
         self._obsm = AxisArrays(adata_new, 0)
@@ -253,6 +277,12 @@ class Ingest:
         self._obsm['rep'] = self._same_rep()
 
     def neighbors(self, k=10, queue_size=5, random_state=0):
+        """\
+        Calculate neighbors of `adata_new` observations in `adata`.
+
+        This function calculates `k` neighbors in `adata` for
+        each observation of `adata_new`.
+        """
         from umap.nndescent import initialise_search
         from umap.utils import deheap_sort
         from umap.umap_ import INT32_MAX, INT32_MIN
@@ -274,12 +304,19 @@ class Ingest:
         return self._umap.transform(self._obsm['rep'])
 
     def map_embedding(self, method):
+        """\
+        Map embeddings of `adata` to `adata_new`.
+
+        This function infers embeddings, specified by `method`,
+        for `adata_new` from existing embeddings in `adata`.
+        `method` can be 'umap' or 'pca'.
+        """
         if method == 'umap':
             self._obsm['X_umap'] = self._umap_transform()
         elif method == 'pca':
             self._obsm['X_pca'] = self._pca()
         else:
-            raise NotImplementedError('Ingest supports only umap embeddings for now.')
+            raise NotImplementedError('Ingest supports only umap and pca embeddings for now.')
 
     def _knn_classify(self, labels):
         cat_array = self._adata_ref.obs[labels]
@@ -288,12 +325,27 @@ class Ingest:
         return pd.Categorical(values=values, categories=cat_array.cat.categories)
 
     def map_labels(self, labels, method):
+        """\
+        Map labels of `adata` to `adata_new`.
+
+        This function infers `labels` for `adata_new.obs`
+        from existing labels in `adata.obs`.
+        `method` can be only 'knn'.
+        """
         if method == 'knn':
             self._obs[labels] = self._knn_classify(labels)
         else:
             raise NotImplementedError('Ingest supports knn labeling for now.')
 
     def to_adata(self, inplace=False):
+        """\
+        Returns `adata_new` with mapped embeddings and labels.
+
+        If `inplace=False` returns a copy of `adata_new`
+        with mapped embeddings and labels in `obsm` and `obs` correspondingly.
+        If `inplace=True` returns nothing and updates `adata_new.obsm`
+        and `adata_new.obs` with mapped embeddings and labels.
+        """
         adata = self._adata_new if inplace else self._adata_new.copy()
 
         adata.obsm.update(self._obsm)
@@ -305,6 +357,13 @@ class Ingest:
             return adata
 
     def to_adata_joint(self, batch_key='batch', batch_categories=None, index_unique='-'):
+        """\
+        Returns concatenated object.
+
+        This function returns the new :class:`~anndata.AnnData` object
+        with concatenated existing embeddings and labels of 'adata'
+        and inferred embeddings and labels for `adata_new`.
+        """
         adata = self._adata_ref.concatenate(self._adata_new, batch_key=batch_key,
                                             batch_categories=batch_categories,
                                             index_unique=index_unique)
