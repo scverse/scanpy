@@ -10,13 +10,26 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params
+from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-Metric = Callable[[np.ndarray, np.ndarray], float]
+_Method = Literal['umap', 'gauss', 'rapids']
+_MetricFn = Callable[[np.ndarray, np.ndarray], float]
+# from sklearn.metrics.pairwise_distances.__doc__:
+_MetricSparseCapable = Literal[
+    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
+]
+_MetricScipySpatial = Literal[
+    'braycurtis', 'canberra', 'chebyshev', 'correlation', 'dice', 'hamming',
+    'jaccard', 'kulsinski', 'mahalanobis', 'minkowski', 'rogerstanimoto',
+    'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean',
+    'yule'
+]
+_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -27,8 +40,8 @@ def neighbors(
     use_rep: Optional[str] = None,
     knn: bool = True,
     random_state: Optional[Union[int, RandomState]] = 0,
-    method: str = 'umap',
-    metric: Union[str, Metric] = 'euclidean',
+    method: Optional[_Method] = 'umap',
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
     copy: bool = False,
 ) -> Optional[AnnData]:
@@ -62,9 +75,11 @@ def neighbors(
         `n_neighbors` nearest neighbor.
     random_state
         A numpy random seed.
-    method : {{`'umap'`, `'gauss'`, `None`}}  (default: `'umap'`)
+    method
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
+        Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
+        only).
     metric
         A known metric’s name or a callable that returns a distance.
     metric_kwds
@@ -151,7 +166,7 @@ def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
     random_state: Optional[Union[int, RandomState]] = None,
-    metric: Union[str, Metric] = 'euclidean',
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
     metric_kwds: Mapping[str, Any] = {},
     angular: bool = False,
     verbose: bool = False,
@@ -233,6 +248,31 @@ def compute_neighbors_umap(
     )
 
     return knn_indices, knn_dists, forest
+
+
+def compute_neighbors_rapids(
+    X: np.ndarray,
+    n_neighbors: int
+):
+    """Compute nearest neighbors using RAPIDS cuml.
+
+    Parameters
+    ----------
+    X: array of shape (n_samples, n_features)
+        The data to compute nearest neighbors for.
+    n_neighbors
+        The number of neighbors to use.
+
+        Returns
+    -------
+    **knn_indices**, **knn_dists** : np.arrays of shape (n_observations, n_neighbors)
+    """
+    from cuml.neighbors import NearestNeighbors
+    nn = NearestNeighbors(n_neighbors=n_neighbors)
+    X_contiguous = np.ascontiguousarray(X, dtype=np.float32)
+    nn.fit(X_contiguous)
+    knn_distsq, knn_indices = nn.kneighbors(X_contiguous)
+    return knn_indices, np.sqrt(knn_distsq) # cuml uses sqeuclidean metric so take sqrt
 
 
 def _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors):
@@ -580,10 +620,10 @@ class Neighbors:
         knn: bool = True,
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
-        method: str = 'umap',
+        method: _Method = 'umap',
         random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
-        metric: str = 'euclidean',
+        metric: _Metric = 'euclidean',
         metric_kwds: Mapping[str, Any] = {},
     ) -> None:
         """\
@@ -611,8 +651,10 @@ class Neighbors:
             logg.warning(f'n_obs too small: adjusting to `n_neighbors = {n_neighbors}`')
         if method == 'umap' and not knn:
             raise ValueError('`method = \'umap\' only with `knn = True`.')
-        if method not in {'umap', 'gauss'}:
-            raise ValueError('`method` needs to be \'umap\' or \'gauss\'.')
+        if method == 'rapids' and metric != 'euclidean':
+            raise ValueError("`method` 'rapids' only supports the 'euclidean' `metric`.")
+        if method not in {'umap', 'gauss', 'rapids'}:
+            raise ValueError("`method` needs to be 'umap', 'gauss', or 'rapids'.")
         if self._adata.shape[0] >= 10000 and not knn:
             logg.warning('Using high n_obs without `knn=True` takes a lot of memory...')
         self.n_neighbors = n_neighbors
@@ -629,6 +671,8 @@ class Neighbors:
                     knn_indices, knn_distances, X.shape[0], n_neighbors)
             else:
                 self._distances = _distances
+        elif method == 'rapids':
+            knn_indices, knn_distances = compute_neighbors_rapids(X, n_neighbors)
         else:
             # non-euclidean case and approx nearest neighbors
             if X.shape[0] < 4096:
@@ -642,7 +686,7 @@ class Neighbors:
             self.knn_indices = knn_indices
             self.knn_distances = knn_distances
         start_connect = logg.debug('computed neighbors', time=start_neighbors)
-        if not use_dense_distances or method == 'umap':
+        if not use_dense_distances or method in {'umap', 'rapids'}:
             # we need self._distances also for method == 'gauss' if we didn't
             # use dense distances
             self._distances, self._connectivities = _compute_connectivities_umap(
@@ -727,12 +771,13 @@ class Neighbors:
 
         self._connectivities = W
 
-    def compute_transitions(self, density_normalize=True):
-        """Compute transition matrix.
+    def compute_transitions(self, density_normalize: bool = True):
+        """\
+        Compute transition matrix.
 
         Parameters
         ----------
-        density_normalize : `bool`
+        density_normalize
             The density rescaling of Coifman and Lafon (2006): Then only the
             geometry of the data matters, not the sampled density.
 
@@ -765,20 +810,24 @@ class Neighbors:
         self._transitions_sym = self.Z @ K @ self.Z
         logg.info('    finished', time=start)
 
-    def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
-        """Compute eigen decomposition of transition matrix.
+    def compute_eigen(
+        self,
+        n_comps: int = 15,
+        sym: Optional[bool] = None,
+        sort: Literal['decrease', 'increase'] = 'decrease',
+    ):
+        """\
+        Compute eigen decomposition of transition matrix.
 
         Parameters
         ----------
-        n_comps : `int`
+        n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        sym : `bool`
+        sym
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
-        matrix : sparse matrix, np.ndarray, optional (default: `.connectivities`)
-            Matrix to diagonalize. Merely for testing and comparison purposes.
 
         Returns
         -------
@@ -807,14 +856,17 @@ class Neighbors:
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
-            evals, evecs = scipy.sparse.linalg.eigsh(matrix, k=n_comps,
-                                                  which=which, ncv=ncv)
+            evals, evecs = scipy.sparse.linalg.eigsh(
+                matrix, k=n_comps, which=which, ncv=ncv
+            )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info('    eigenvalues of transition matrix\n'
-                  '    {}'.format(str(evals).replace('\n', '\n    ')))
+        logg.info(
+            '    eigenvalues of transition matrix\n'
+            '    {}'.format(str(evals).replace('\n', '\n    '))
+        )
         if self._number_connected_components > len(evals)/2:
             logg.warning('Transition matrix has many disconnected components!')
         self._eigen_values = evals

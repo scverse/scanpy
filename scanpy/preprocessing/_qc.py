@@ -1,9 +1,11 @@
-from typing import Optional, Tuple, Collection
+from typing import Optional, Tuple, Collection, Union
+from warnings import warn
 
 import numba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, isspmatrix_coo
+from scipy.sparse import issparse, isspmatrix_csr, isspmatrix_coo
+from scipy.sparse import spmatrix, csr_matrix
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 from anndata import AnnData
@@ -59,6 +61,9 @@ def describe_obs(
     Calculates a number of qc metrics for observations in AnnData object. See
     section `Returns` for a description of those metrics.
 
+    Note that this method can take a while to compile on the first call. That
+    result is then cached to disk to be used later.
+
     Params
     ------
     {doc_adata_basic}
@@ -69,9 +74,6 @@ def describe_obs(
         Whether to place calculated metrics in `adata.obs`.
     X
         Matrix to calculate values on. Meant for internal usage.
-    parallel
-        Whether values are calculated in parallel. If `None`, heuristic based
-        on numba compilation time is used.
 
     Returns
     -------
@@ -80,6 +82,11 @@ def describe_obs(
 
     {doc_obs_qc_returns}
     """
+    if parallel is not None:
+        warn(
+            "Argument `parallel` is deprecated, and currently has no effect.",
+            FutureWarning
+        )
     # Handle whether X is passed
     if X is None:
         X = _choose_mtx_rep(adata, use_raw, layer)
@@ -99,7 +106,7 @@ def describe_obs(
     obs_metrics[f"log1p_total_{expr_type}"] = np.log1p(obs_metrics[f"total_{expr_type}"])
     if percent_top:
         percent_top = sorted(percent_top)
-        proportions = top_segment_proportions(X, percent_top, parallel)
+        proportions = top_segment_proportions(X, percent_top)
         for i, n in enumerate(percent_top):
             obs_metrics[f"pct_{expr_type}_in_top_{n}_{var_type}"] = (
                 proportions[:, i] * 100
@@ -111,10 +118,10 @@ def describe_obs(
         obs_metrics[f"log1p_total_{expr_type}_{qc_var}"] = np.log1p(
             obs_metrics[f"total_{expr_type}_{qc_var}"]
         )
-        # "total_{expr_type}" not formatted yet
         obs_metrics[f"pct_{expr_type}_{qc_var}"] = (
-            obs_metrics[f"total_{expr_type}_{qc_var}"] /
-            obs_metrics[f"total_{expr_type}"] * 100
+            obs_metrics[f"total_{expr_type}_{qc_var}"]
+            / obs_metrics[f"total_{expr_type}"]
+            * 100
         )
     if inplace:
         adata.obs[obs_metrics.columns] = obs_metrics
@@ -177,8 +184,9 @@ def describe_var(
         var_metrics["n_cells_by_{expr_type}"] = np.count_nonzero(X, axis=0)
         var_metrics["mean_{expr_type}"] = X.mean(axis=0)
     var_metrics["log1p_mean_{expr_type}"] = np.log1p(var_metrics["mean_{expr_type}"])
-    var_metrics["pct_dropout_by_{expr_type}"] = \
-        (1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]) * 100
+    var_metrics["pct_dropout_by_{expr_type}"] = (
+        1 - var_metrics["n_cells_by_{expr_type}"] / X.shape[0]
+    ) * 100
     var_metrics["total_{expr_type}"] = np.ravel(X.sum(axis=0))
     var_metrics["log1p_total_{expr_type}"] = np.log1p(var_metrics["total_{expr_type}"])
     # Relabel
@@ -219,6 +227,9 @@ def calculate_qc_metrics(
     `Returns` for specifics. Largely based on `calculateQCMetrics` from scater
     [McCarthy17]_. Currently is most efficient on a sparse CSR or dense matrix.
 
+    Note that this method can take a while to compile on the first call. That
+    result is then cached to disk to be used later.
+
     Parameters
     ----------
     {doc_adata_basic}
@@ -227,9 +238,6 @@ def calculate_qc_metrics(
     {doc_expr_reps}
     inplace
         Whether to place calculated metrics in `adata`'s `.obs` and `.var`.
-    parallel
-        Whether to force parallelism. Otherwise usage of paralleism is based on
-        compilation time and sample size heuristics.
 
     Returns
     -------
@@ -253,6 +261,11 @@ def calculate_qc_metrics(
             data=adata.obs, kind="hex"
         )
     """
+    if parallel is not None:
+        warn(
+            "Argument `parallel` is deprecated, and currently has no effect.",
+            FutureWarning
+        )
     # Pass X so I only have to do it once
     X = _choose_mtx_rep(adata, use_raw, layer)
     if isspmatrix_coo(X):
@@ -268,7 +281,6 @@ def calculate_qc_metrics(
         percent_top=percent_top,
         inplace=inplace,
         X=X,
-        parallel=parallel,
     )
     var_metrics = describe_var(
         adata, expr_type=expr_type, var_type=var_type, inplace=inplace, X=X
@@ -278,15 +290,15 @@ def calculate_qc_metrics(
         return obs_metrics, var_metrics
 
 
-def top_proportions(mtx, n):
-    """
+def top_proportions(mtx: Union[np.array, spmatrix], n: int):
+    """\
     Calculates cumulative proportions of top expressed genes
 
     Parameters
     ----------
-    mtx : `Union[np.array, sparse.spmatrix]`
+    mtx
         Matrix, where each row is a sample, each column a feature.
-    n : `int`
+    n
         Rank to calculate proportions up to. Value is treated as 1-indexed,
         `n=50` will calculate cumulative proportions up to the 50th most
         expressed gene.
@@ -329,15 +341,17 @@ def top_proportions_sparse_csr(data, indptr, n):
     return values
 
 
-def top_segment_proportions(mtx, ns, parallel=None):
+def top_segment_proportions(
+    mtx: Union[np.array, spmatrix], ns: Collection[int]
+) -> np.ndarray:
     """
     Calculates total percentage of counts in top ns genes.
 
     Parameters
     ----------
-    mtx : `Union[np.array, sparse.spmatrix]`
+    mtx
         Matrix, where each row is a sample, each column a feature.
-    ns : `Container[Int]`
+    ns
         Positions to calculate cumulative proportion at. Values are considered
         1-indexed, e.g. `ns=[50]` will calculate cumulative proportion up to
         the 50th most expressed gene.
@@ -349,19 +363,19 @@ def top_segment_proportions(mtx, ns, parallel=None):
         if not isspmatrix_csr(mtx):
             mtx = csr_matrix(mtx)
         return top_segment_proportions_sparse_csr(
-            mtx.data, mtx.indptr, np.array(ns, dtype=np.int), parallel
+            mtx.data, mtx.indptr, np.array(ns, dtype=np.int)
         )
     else:
         return top_segment_proportions_dense(mtx, ns)
 
 
-def top_segment_proportions_dense(mtx, ns):
+def top_segment_proportions_dense(
+    mtx: Union[np.array, spmatrix], ns: Collection[int]
+) -> np.ndarray:
     # Currently ns is considered to be 1 indexed
     ns = np.sort(ns)
     sums = mtx.sum(axis=1)
-    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][
-        :, : ns[-1]
-    ]
+    partitioned = np.apply_along_axis(np.partition, 1, mtx, mtx.shape[1] - ns)[:, ::-1][:, :ns[-1]]
     values = np.zeros((mtx.shape[0], len(ns)))
     acc = np.zeros((mtx.shape[0]))
     prev = 0
@@ -372,15 +386,8 @@ def top_segment_proportions_dense(mtx, ns):
     return values / sums[:, None]
 
 
-def top_segment_proportions_sparse_csr(data, indptr, ns, parallel: bool = None):
-    # Rough estimate for when compilation + paralleziation is faster than single-threaded
-    if (indptr.size > 300_000) or (parallel == True):
-        return _top_segment_proportions_sparse_csr_parallel(data, indptr, ns)
-    else:
-        return _top_segment_proportions_sparse_csr_cached(data, indptr, ns)
-
-
-def _top_segment_proportions_sparse_csr(data, indptr, ns):
+@numba.njit(cache=True, parallel=True)
+def top_segment_proportions_sparse_csr(data, indptr, ns):
     ns = np.sort(ns)
     maxidx = ns[-1]
     sums = np.zeros((indptr.size - 1), dtype=data.dtype)
@@ -403,12 +410,3 @@ def _top_segment_proportions_sparse_csr(data, indptr, ns):
         values[:, j] = acc
         prev = n
     return values / sums.reshape((indptr.size - 1, 1))
-
-
-_top_segment_proportions_sparse_csr_cached = numba.njit(cache=True)(
-    _top_segment_proportions_sparse_csr
-)
-
-_top_segment_proportions_sparse_csr_parallel = numba.njit(parallel=True)(
-    _top_segment_proportions_sparse_csr
-)

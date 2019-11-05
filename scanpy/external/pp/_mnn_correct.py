@@ -5,6 +5,7 @@ import pandas as pd
 from anndata import AnnData
 
 from ..._settings import settings
+from ..._compat import Literal
 
 
 def mnn_correct(
@@ -15,14 +16,14 @@ def mnn_correct(
     index_unique: str = '-',
     batch_categories: Optional[Collection[Any]] = None,
     k: int = 20,
-    sigma: float = 1.,
+    sigma: float = 1.0,
     cos_norm_in: bool = True,
     cos_norm_out: bool = True,
     svd_dim: Optional[int] = None,
     var_adj: bool = True,
     compute_angle: bool = False,
     mnn_order: Optional[Sequence[int]] = None,
-    svd_mode: str = 'rsvd',
+    svd_mode: Literal['svd', 'rsvd', 'irlb'] = 'rsvd',
     do_concatenate: bool = True,
     save_raw: bool = False,
     n_jobs: Optional[int] = None,
@@ -93,7 +94,7 @@ def mnn_correct(
     mnn_order
         The order in which batches are to be corrected. When set to None, datas
         are corrected sequentially.
-    svd_mode : {`'svd'`, `'rsvd'`, `'irlb'`}
+    svd_mode
         `'svd'` computes SVD using a non-randomized SVD-via-ID algorithm,
         while `'rsvd'` uses a randomized version. `'irlb'` perfores
         truncated SVD by implicitly restarted Lanczos bidiagonalization
@@ -111,41 +112,45 @@ def mnn_correct(
 
     Returns
     -------
-    **datas** : :class:`~numpy.ndarray` or :class:`~anndata.AnnData`
+    datas
         Corrected matrix/matrices or AnnData object/objects, depending on the
         input type and `do_concatenate`.
-    **mnn_list** : ``List[pandas.DataFrame]``
+    mnn_list
         A list containing MNN pairing information as DataFrames in each iteration step.
-    **angle_list** : ``List[Tuple[Optional[float], int]]`` or ``None``
+    angle_list
         A list containing angles of each batch.
     """
+    if len(datas) < 2:
+        return datas, [], []
+
     try:
         from mnnpy import mnn_correct
-        n_jobs = settings.n_jobs if n_jobs is None else n_jobs
-        datas, mnn_list, angle_list = mnn_correct(
-            *datas,
-            var_index=var_index,
-            var_subset=var_subset,
-            batch_key=batch_key,
-            index_unique=index_unique,
-            batch_categories=batch_categories,
-            k=k,
-            sigma=sigma,
-            cos_norm_in=cos_norm_in,
-            cos_norm_out=cos_norm_out,
-            svd_dim=svd_dim,
-            var_adj=var_adj,
-            compute_angle=compute_angle,
-            mnn_order=mnn_order,
-            svd_mode=svd_mode,
-            do_concatenate=do_concatenate,
-            save_raw=save_raw,
-            n_jobs=n_jobs,
-            **kwargs,
-        )
-        return datas, mnn_list, angle_list
     except ImportError:
         raise ImportError(
             'Please install the package mnnpy '
             '(https://github.com/chriscainx/mnnpy). '
         )
+
+    n_jobs = settings.n_jobs if n_jobs is None else n_jobs
+    datas, mnn_list, angle_list = mnn_correct(
+        *datas,
+        var_index=var_index,
+        var_subset=var_subset,
+        batch_key=batch_key,
+        index_unique=index_unique,
+        batch_categories=batch_categories,
+        k=k,
+        sigma=sigma,
+        cos_norm_in=cos_norm_in,
+        cos_norm_out=cos_norm_out,
+        svd_dim=svd_dim,
+        var_adj=var_adj,
+        compute_angle=compute_angle,
+        mnn_order=mnn_order,
+        svd_mode=svd_mode,
+        do_concatenate=do_concatenate,
+        save_raw=save_raw,
+        n_jobs=n_jobs,
+        **kwargs,
+    )
+    return datas, mnn_list, angle_list

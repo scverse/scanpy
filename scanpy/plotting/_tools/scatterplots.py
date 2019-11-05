@@ -1,4 +1,4 @@
-from collections import abc
+import collections.abc as cabc
 from typing import Union, Optional, Sequence, Any, Mapping, List, Tuple, Callable
 
 import numpy as np
@@ -10,13 +10,15 @@ from pandas.api.types import is_categorical_dtype
 from matplotlib import pyplot as pl
 from matplotlib import rcParams
 from matplotlib import patheffects
-from matplotlib.colors import is_color_like, Colormap
+from matplotlib.colors import Colormap
 
 from .. import _utils
+from .._utils import _IGraphLayout, _FontWeight, _FontSize
 from .._docs import doc_adata_color_etc, doc_edges_arrows, doc_scatter_embedding, doc_show_save_ax
+from ... import logging as logg
 from ..._settings import settings
 from ..._utils import sanitize_anndata, _doc_params
-from ... import logging as logg
+from ..._compat import Literal
 
 VMinMax = Union[str, float, Callable[[Sequence[float]], float]]
 
@@ -38,13 +40,13 @@ def embedding(
     groups: Optional[str] = None,
     components: Union[str, Sequence[str]] = None,
     layer: Optional[str] = None,
-    projection: str = '2d',
+    projection: Literal['2d', '3d'] = '2d',
     color_map: Union[Colormap, str, None] = None,
     palette: Union[str, Sequence[str], Cycler, None] = None,
-    size: Optional[float] = None,
+    size: Union[float, Sequence[float], None] = None,
     frameon: Optional[bool] = None,
-    legend_fontsize: Optional[int] = None,
-    legend_fontweight: str = 'bold',
+    legend_fontsize: Union[int, float, _FontSize, None] = None,
+    legend_fontweight: Union[int, _FontWeight] = 'bold',
     legend_loc: str = 'right margin',
     legend_fontoutline: Optional[int] = None,
     vmax: Union[VMinMax, Sequence[VMinMax], None] = None,
@@ -90,6 +92,10 @@ def embedding(
         # (https://github.com/theislab/scanpy/issues/293)
         kwargs['edgecolor'] = 'none'
 
+    if groups:
+        if isinstance(groups, str):
+            groups = [groups]
+
     if projection == '3d':
         from mpl_toolkits.mplot3d import Axes3D
         args_3d = {'projection': '3d'}
@@ -130,7 +136,13 @@ def embedding(
     # 'color' is a list of names that want to be plotted.
     # Eg. ['Gene1', 'louvain', 'Gene2'].
     # component_list is a list of components [[0,1], [1,2]]
-    if (isinstance(color, abc.Sequence) and len(color) > 1) or len(components_list) > 1:
+    if (
+        (
+            not isinstance(color, str)
+            and isinstance(color, cabc.Sequence)
+            and len(color) > 1
+        ) or len(components_list) > 1
+    ):
         if ax is not None:
             raise ValueError(
                 "Cannot specify `ax` when plotting multiple panels "
@@ -151,14 +163,30 @@ def embedding(
             ax = fig.add_subplot(111, **args_3d)
 
     # turn vmax and vmin into a sequence
-    if not isinstance(vmax, abc.Sequence):
+    if isinstance(vmax, str) or not isinstance(vmax, cabc.Sequence):
         vmax = [vmax]
-    if not isinstance(vmin, abc.Sequence):
+    if isinstance(vmin, str) or not isinstance(vmin, cabc.Sequence):
         vmin = [vmin]
 
-    if 's' not in kwargs:
-        kwargs['s'] = 120000 / adata.shape[0]
-    size = kwargs.pop('s')
+    if 's' in kwargs:
+        size = kwargs.pop('s')
+
+    if size is not None:
+        # check if size is any type of sequence, and if so
+        # set as ndarray
+        import pandas.core.series
+        if (
+            size is not None
+            and isinstance(size, (
+                cabc.Sequence,
+                pandas.core.series.Series,
+                np.ndarray,
+            ))
+            and len(size) == adata.shape[0]
+        ):
+            size = np.array(size, dtype=float)
+    else:
+        size = 120000 / adata.shape[0]
 
     ###
     # make the plots
@@ -187,18 +215,8 @@ def embedding(
 
             # check if 'size' is given (stored in kwargs['s']
             # and reorder it.
-            import pandas.core.series
-            if (
-                's' in kwargs
-                and kwargs['s'] is not None
-                and isinstance(kwargs['s'], (
-                    abc.Sequence,
-                    pandas.core.series.Series,
-                    np.ndarray,
-                ))
-                and len(kwargs['s']) == len(color_vector)
-            ):
-                kwargs['s'] = np.array(kwargs['s'])[order]
+            if isinstance(size, np.ndarray):
+                size = np.array(size)[order]
         else:
             _data_points = data_points[component_idx]
 
@@ -239,9 +257,9 @@ def embedding(
             )
         else:
             if add_outline:
-                # the default contour is a black edge followd by a
+                # the default outline is a black edge followed by a
                 # thin white edged added around connected clusters.
-                # To add a contour
+                # To add an outline
                 # three overlapping scatter plots are drawn:
                 # First black dots with slightly larger size,
                 # then, white dots a bit smaller, but still larger
@@ -260,7 +278,7 @@ def embedding(
                 # because edge needs to be set to None
                 kwargs['edgecolor'] = 'none'
 
-                # remove alpha for contour
+                # remove alpha for outline
                 alpha = kwargs.pop('alpha') if 'alpha' in kwargs else None
 
                 ax.scatter(
@@ -274,11 +292,47 @@ def embedding(
                 # if user did not set alpha, set alpha to 0.7
                 kwargs['alpha'] = 0.7 if alpha is None else alpha
 
-            cax = ax.scatter(
-                _data_points[:, 0], _data_points[:, 1], s=size,
-                marker=".", c=color_vector, rasterized=settings._vector_friendly,
-                **kwargs,
-            )
+            if groups:
+                # first plot non-groups and then plot the
+                # required groups on top
+
+                in_groups = np.array(adata.obs[value_to_plot].isin(groups))
+
+                if isinstance(size, np.ndarray):
+                    in_groups_size = size[in_groups]
+                    not_in_groups_size = size[~in_groups]
+                else:
+                    in_groups_size = not_in_groups_size = size
+
+                ax.scatter(
+                    _data_points[~in_groups, 0],
+                    _data_points[~in_groups, 1],
+                    s=not_in_groups_size,
+                    marker=".",
+                    c=color_vector[~in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
+                cax = ax.scatter(
+                    _data_points[in_groups, 0],
+                    _data_points[in_groups, 1],
+                    s=in_groups_size,
+                    marker=".",
+                    c=color_vector[in_groups],
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
+
+            else:
+                cax = ax.scatter(
+                    _data_points[:, 0],
+                    _data_points[:, 1],
+                    s=size,
+                    marker=".",
+                    c=color_vector,
+                    rasterized=settings._vector_friendly,
+                    **kwargs,
+                )
 
         # remove y and x ticks
         ax.set_yticks([])
@@ -314,12 +368,16 @@ def embedding(
             continue
 
         if legend_fontoutline is not None:
-            legend_fontoutline = [patheffects.withStroke(linewidth=legend_fontoutline,
-                                                         foreground='w')]
+            path_effect = [patheffects.withStroke(
+                linewidth=legend_fontoutline,
+                foreground='w',
+            )]
+        else:
+            path_effect = None
 
         _add_legend_or_colorbar(
             adata, ax, cax, categorical, value_to_plot, legend_loc,
-            _data_points, legend_fontweight, legend_fontsize, legend_fontoutline,
+            _data_points, legend_fontweight, legend_fontsize, path_effect,
             groups, bool(grid),
         )
 
@@ -550,14 +608,18 @@ def diffmap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
 
 @_wraps_plot_scatter
 @_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
-def draw_graph(adata, layout=None, **kwargs) -> Union[Axes, List[Axes], None]:
+def draw_graph(
+    adata: AnnData,
+    layout: Optional[_IGraphLayout] = None,
+    **kwargs,
+) -> Union[Axes, List[Axes], None]:
     """\
     Scatter plot in graph-drawing basis.
 
     Parameters
     ----------
     {adata_color_etc}
-    layout : {{`'fa'`, `'fr'`, `'drl'`, ...}}, optional (default: last computed)
+    layout
         One of the :func:`~scanpy.tl.draw_graph` layouts.
         By default, the last computed layout is used.
     {edges_arrows}
@@ -610,9 +672,9 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
 
     Returns
     -------
-    data_points : list
+    data_points
         Each entry is a numpy array containing the data points
-    components : list
+    components
         The cleaned list of components. Eg. [(0,1)] or [(0,1), (1,2)]
         for components = [1,2] and components=['1,2', '2,3'] respectively
     """
@@ -657,7 +719,7 @@ def _get_data_points(adata, basis, projection, components) -> Tuple[List[np.ndar
             # eg: components='1,2'
             components_list.append(tuple(int(x.strip()) - 1 + offset for x in components.split(',')))
 
-        elif isinstance(components, abc.Sequence):
+        elif isinstance(components, cabc.Sequence):
             if isinstance(components[0], int):
                 # components=[1,2]
                 components_list.append(tuple(int(x) - 1 + offset for x in components))
@@ -750,112 +812,6 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
 
-def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
-
-    Parameters
-    ----------
-    adata
-        annData object
-    value_to_plot
-        name of a valid categorical observation
-    palette
-        Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
-        a list of colors (in a format that can be understood by matplotlib,
-        eg. RGB, RGBS, hex, or a cycler object with key='color'
-
-    Returns
-    -------
-    None
-    """
-    from matplotlib.colors import to_hex
-    from cycler import Cycler, cycler
-
-    categories = adata.obs[value_to_plot].cat.categories
-    # check is palette is a valid matplotlib colormap
-    if isinstance(palette, str) and palette in pl.colormaps():
-        # this creates a palette from a colormap. E.g. 'Accent, Dark2, tab20'
-        cmap = pl.get_cmap(palette)
-        colors_list = [to_hex(x) for x in cmap(np.linspace(0, 1, len(categories)))]
-
-    else:
-        # check if palette is a list and convert it to a cycler, thus
-        # it doesnt matter if the list is shorter than the categories length:
-        if isinstance(palette, abc.Sequence):
-            if len(palette) < len(categories):
-                logg.warning(
-                    "Length of palette colors is smaller than the number of "
-                    f"categories (palette length: {len(palette)}, "
-                    f"categories length: {len(categories)}. "
-                    "Some categories will have the same color."
-                )
-            # check that colors are valid
-            _color_list = []
-            for color in palette:
-                if not is_color_like(color):
-                    # check if the color is a valid R color and translate it
-                    # to a valid hex color value
-                    if color in _utils.additional_colors:
-                        color = _utils.additional_colors[color]
-                    else:
-                        raise ValueError("The following color value of the given palette is not valid: {}".format(color))
-                _color_list.append(color)
-
-            palette = cycler(color=_color_list)
-        if not isinstance(palette, Cycler):
-            raise ValueError("Please check that the value of 'palette' is a "
-                             "valid matplotlib colormap string (eg. Set2), a "
-                             "list of color names or a cycler with a 'color' key.")
-        if 'color' not in palette.keys:
-            raise ValueError("Please set the palette key 'color'.")
-
-        cc = palette()
-        colors_list = [to_hex(next(cc)['color']) for x in range(len(categories))]
-
-    adata.uns[value_to_plot + '_colors'] = colors_list
-
-
-def _set_default_colors_for_categorical_obs(adata, value_to_plot):
-    """
-    Sets the adata.uns[value_to_plot + '_colors'] using default color palettes
-
-    Parameters
-    ----------
-    adata : annData object
-    value_to_plot : name of a valid categorical observation
-
-    Returns
-    -------
-    None
-    """
-    from .. import palettes
-
-    categories = adata.obs[value_to_plot].cat.categories
-    length = len(categories)
-
-    # check if default matplotlib palette has enough colors
-    if len(rcParams['axes.prop_cycle'].by_key()['color']) >= length:
-        cc = rcParams['axes.prop_cycle']()
-        palette = [next(cc)['color'] for _ in range(length)]
-
-    else:
-        if length <= 20:
-            palette = palettes.default_20
-        elif length <= 26:
-            palette = palettes.default_26
-        elif length <= len(palettes.default_64):  # 103 colors
-            palette = palettes.default_64
-        else:
-            palette = ['grey' for _ in range(length)]
-            logg.info(
-                f'the obs value {value_to_plot!r} has more than 103 categories. Uniform '
-                "'grey' color will be used for all categories."
-            )
-
-    adata.uns[value_to_plot + '_colors'] = palette[:length]
-
-
 def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False,
                       gene_symbols=None, layer=None) -> Tuple[Union[np.ndarray, str], bool]:
     """
@@ -867,7 +823,10 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
 
     Returns
     -------
-    Tuple of values to plot, and boolean indicating whether they are categorical.
+    values
+        Values to plot
+    is_categorical
+        Are the values categorical?
     """
     if value_to_plot is None:
         return "lightgray", False
@@ -890,36 +849,18 @@ def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=F
     else:  # is_categorical_dtype(values)
         color_key = f"{value_to_plot}_colors"
         if palette:
-            _set_colors_for_categorical_obs(adata, value_to_plot, palette)
+            _utils._set_colors_for_categorical_obs(adata, value_to_plot, palette)
         elif color_key not in adata.uns or \
             len(adata.uns[color_key]) < len(values.categories):
             #  set a default palette in case that no colors or few colors are found
-            _set_default_colors_for_categorical_obs(adata, value_to_plot)
+            _utils._set_default_colors_for_categorical_obs(adata, value_to_plot)
         else:
-            _palette = []
-            for color in adata.uns[color_key]:
-                if not is_color_like(color):
-                    # check if the color is a valid R color and translate it
-                    # to a valid hex color value
-                    if color in _utils.additional_colors:
-                        color = _utils.additional_colors[color]
-                    else:
-                        logg.warning(
-                            f"The following color value found in adata.uns['{value_to_plot}_colors'] "
-                            f"is not valid: '{color}'. Default colors are used."
-                        )
-                        _set_default_colors_for_categorical_obs(adata, value_to_plot)
-                        _palette = None
-                        break
-                _palette.append(color)
-            if _palette is not None:
-                adata.uns[color_key] = _palette
+            _utils._validate_palette(adata, value_to_plot)
+
         color_vector = np.asarray(adata.uns[color_key])[values.codes]
 
         # Handle groups
-        if groups is not None:
-            if isinstance(groups, str):
-                groups = [groups]
+        if groups:
             color_vector = np.array(color_vector, dtype='<U15')
             # set color to 'light gray' for all values
             # that are not in the groups

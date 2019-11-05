@@ -1,8 +1,9 @@
-from typing import Tuple
+from typing import Tuple, Optional, Sequence, List
 
 import numpy as np
 import pandas as pd
 import scipy as sp
+from anndata import AnnData
 from natsort import natsorted
 
 from .. import logging as logg
@@ -27,9 +28,17 @@ def _diffmap(adata, n_comps=15):
     )
 
 
-def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
-        allow_kendall_tau_shift=True, copy=False):
-    """Infer progression of cells through geodesic distance along the graph [Haghverdi16]_ [Wolf19]_.
+def dpt(
+    adata: AnnData,
+    n_dcs: int = 10,
+    n_branchings: int = 0,
+    min_group_size: float = 0.01,
+    allow_kendall_tau_shift: bool = True,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """\
+    Infer progression of cells through geodesic distance along the graph
+    [Haghverdi16]_ [Wolf19]_.
 
     Reconstruct the progression of a biological process from snapshot
     data. `Diffusion Pseudotime` has been introduced by [Haghverdi16]_ and
@@ -59,24 +68,24 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_dcs : `int`, optional (default: 10)
+    n_dcs
         The number of diffusion components to use.
-    n_branchings : `int`, optional (default: 0)
+    n_branchings
         Number of branchings to detect.
-    min_group_size : [0, 1] or `float`, optional (default: 0.01)
+    min_group_size
         During recursive splitting of branches ('dpt groups') for `n_branchings`
         > 1, do not consider groups that contain less than `min_group_size` data
         points. If a float, `min_group_size` refers to a fraction of the total
         number of data points.
-    allow_kendall_tau_shift : `bool`, optional (default: `True`)
+    allow_kendall_tau_shift
         If a very small branch is detected upon splitting, shift away from
         maximum correlation in Kendall tau criterion of [Haghverdi16]_ to
         stabilize the splitting.
-    copy : `bool`, optional (default: `False`)
-        Copy instance before computation and return a copy. Otherwise, perform
-        computation inplace and return None.
+    copy
+        Copy instance before computation and return a copy.
+        Otherwise, perform computation inplace and return `None`.
 
     Returns
     -------
@@ -84,10 +93,10 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
     If `n_branchings==0`, no field `dpt_groups` will be written.
 
-    **dpt_pseudotime** : :class:`pandas.Series` (`adata.obs`, dtype `float`)
+    `dpt_pseudotime` : :class:`pandas.Series` (`adata.obs`, dtype `float`)
         Array of dim (number of samples) that stores the pseudotime of each
         cell, that is, the DPT distance with respect to the root cell.
-    **dpt_groups** : :class:`pandas.Series` (`adata.obs`, dtype `category`)
+    `dpt_groups` : :class:`pandas.Series` (`adata.obs`, dtype `category`)
         Array of dim (number of samples) that stores the subgroup id ('0',
         '1', ...) for each cell. The groups  typically correspond to
         'progenitor cells', 'undecided cells' or 'branches' of a process.
@@ -155,7 +164,8 @@ def dpt(adata, n_dcs=10, n_branchings=0, min_group_size=0.01,
 
 
 class DPT(Neighbors):
-    """Hierarchical Diffusion Pseudotime.
+    """\
+    Hierarchical Diffusion Pseudotime.
     """
 
     def __init__(self, adata, n_dcs=None, min_group_size=0.01,
@@ -169,7 +179,8 @@ class DPT(Neighbors):
         self.allow_kendall_tau_shift = allow_kendall_tau_shift
 
     def branchings_segments(self):
-        """Detect branchings and partition the data into corresponding segments.
+        """\
+        Detect branchings and partition the data into corresponding segments.
 
         Detect all branchings up to `n_branchings`.
 
@@ -191,7 +202,8 @@ class DPT(Neighbors):
         self.order_pseudotime()
 
     def detect_branchings(self):
-        """Detect all branchings up to `n_branchings`.
+        """\
+        Detect all branchings up to `n_branchings`.
 
         Writes Attributes
         -----------------
@@ -303,7 +315,8 @@ class DPT(Neighbors):
         # self.segs_adjacency.eliminate_zeros()
 
     def select_segment(self, segs, segs_tips, segs_undecided) -> Tuple[int, int]:
-        """Out of a list of line segments, choose segment that has the most
+        """\
+        Out of a list of line segments, choose segment that has the most
         distant second data point.
 
         Assume the distance matrix Ddiff is sorted according to seg_idcs.
@@ -311,9 +324,9 @@ class DPT(Neighbors):
 
         Returns
         -------
-        iseg : int
+        iseg
             Index identifying the position within the list of line segments.
-        tips3 : int
+        tips3
             Positions of tips within chosen segment.
         """
         scores_tips = np.zeros((len(segs), 4))
@@ -407,7 +420,8 @@ class DPT(Neighbors):
         self.segs_names = segs_names
 
     def order_pseudotime(self):
-        """Define indices that reflect segment and pseudotime order.
+        """\
+        Define indices that reflect segment and pseudotime order.
 
         Writes
         ------
@@ -445,9 +459,18 @@ class DPT(Neighbors):
         self.indices = indices
         self.changepoints = changepoints
 
-    def detect_branching(self, segs, segs_tips, segs_connects, segs_undecided, segs_adjacency,
-                         iseg, tips3):
-        """Detect branching on given segment.
+    def detect_branching(
+        self,
+        segs: Sequence[np.ndarray],
+        segs_tips: Sequence[np.ndarray],
+        segs_connects,
+        segs_undecided,
+        segs_adjacency,
+        iseg: int,
+        tips3: np.ndarray,
+    ):
+        """\
+        Detect branching on given segment.
 
         Updates all list parameters inplace.
 
@@ -456,13 +479,13 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        segs : list of np.ndarray
+        segs
             Dchosen distance matrix restricted to segment.
-        segs_tips : list of np.ndarray
+        segs_tips
             Stores all tip points for the segments in segs.
-        iseg : int
+        iseg
             Position of segment under study in segs.
-        tips3 : np.ndarray
+        tips3
             The three tip points. They form a 'triangle' that contains the data.
         """
         seg = segs[iseg]
@@ -601,8 +624,20 @@ class DPT(Neighbors):
                     break
         segs_undecided += [False for i in range(n_add)]
 
-    def _detect_branching(self, Dseg: np.ndarray, tips: np.ndarray, seg_reference=None):
-        """Detect branching on given segment.
+    def _detect_branching(
+        self,
+        Dseg: np.ndarray,
+        tips: np.ndarray,
+        seg_reference=None,
+    ) -> Tuple[
+        List[np.ndarray],
+        List[np.ndarray],
+        List[List[int]],
+        List[List[int]],
+        int,
+    ]:
+        """\
+        Detect branching on given segment.
 
         Call function __detect_branching three times for all three orderings of
         tips. Points that do not belong to the same segment in all three
@@ -618,11 +653,17 @@ class DPT(Neighbors):
 
         Returns
         -------
-        ssegs : list of np.ndarray
+        ssegs
             List of segments obtained from splitting the single segment defined
             via the first two tip cells.
-        ssegs_tips : list of np.ndarray
+        ssegs_tips
             List of tips of segments in ssegs.
+        ssegs_adjacency
+            ?
+        ssegs_connects
+            ?
+        trunk
+            ?
         """
         if self.flavor == 'haghverdi16':
             ssegs = self._detect_branching_single_haghverdi16(Dseg, tips)
@@ -687,12 +728,16 @@ class DPT(Neighbors):
             added_dist[1] = Dseg[closest_points[0, 1], closest_points[1, 0]] + Dseg[closest_points[2, 1], closest_points[1, 2]]
             added_dist[2] = Dseg[closest_points[1, 2], closest_points[2, 1]] + Dseg[closest_points[0, 2], closest_points[2, 0]]
             trunk = np.argmin(added_dist)
-            ssegs_adjacency = [[trunk] if i != trunk else
-                               [j for j in range(3) if j != trunk]
-                               for i in range(3)]
-            ssegs_connects = [[closest_points[i, trunk]] if i != trunk else
-                              [closest_points[trunk, j] for j in range(3) if j != trunk]
-                              for i in range(3)]
+            ssegs_adjacency = [
+                [trunk] if i != trunk else
+                [j for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
+            ssegs_connects = [
+                [closest_points[i, trunk]] if i != trunk else
+                [closest_points[trunk, j] for j in range(3) if j != trunk]
+                for i in range(3)
+            ]
         else:
             trunk = 0
             ssegs_adjacency = [[1], [0]]
@@ -748,8 +793,11 @@ class DPT(Neighbors):
         ssegs = [closer_to_0_than_to_1, ~closer_to_0_than_to_1]
         return ssegs
 
-    def __detect_branching_haghverdi16(self, Dseg, tips):
-        """Detect branching on given segment.
+    def __detect_branching_haghverdi16(
+        self, Dseg: np.ndarray, tips: np.ndarray
+    ) -> np.ndarray:
+        """\
+        Detect branching on given segment.
 
         Compute point that maximizes kendall tau correlation of the sequences of
         distances to the second and the third tip, respectively, when 'moving
@@ -758,15 +806,14 @@ class DPT(Neighbors):
 
         Parameters
         ----------
-        Dseg : np.ndarray
+        Dseg
             Dchosen distance matrix restricted to segment.
-        tips : np.ndarray
+        tips
             The three tip points. They form a 'triangle' that contains the data.
 
         Returns
         -------
-        ssegs : list of np.ndarray
-            List of segments obtained from "splitting away the first tip cell".
+        Segments obtained from "splitting away the first tip cell".
         """
         # sort distance from first tip point
         # then the sequence of distances Dseg[tips[0]][idcs] increases
@@ -776,17 +823,21 @@ class DPT(Neighbors):
         # where they become correlated
         # at the point where this happens, we define a branching point
         if True:
-            imax = self.kendall_tau_split(Dseg[tips[1]][idcs],
-                                          Dseg[tips[2]][idcs])
+            imax = self.kendall_tau_split(
+                Dseg[tips[1]][idcs],
+                Dseg[tips[2]][idcs],
+            )
         if False:
             # if we were in euclidian space, the following should work
             # as well, but here, it doesn't because the scales in Dseg are
             # highly different, one would need to write the following equation
             # in terms of an ordering, such as exploited by the kendall
             # correlation method above
-            imax = np.argmin(Dseg[tips[0]][idcs]
-                             + Dseg[tips[1]][idcs]
-                             + Dseg[tips[2]][idcs])
+            imax = np.argmin(
+                Dseg[tips[0]][idcs]
+                + Dseg[tips[1]][idcs]
+                + Dseg[tips[2]][idcs]
+            )
         # init list to store new segments
         ssegs = []
         # first new segment: all points until, but excluding the branching point
@@ -869,34 +920,34 @@ class DPT(Neighbors):
             logg.debug('    is root itself, never obtain significant correlation')
         return imax
 
-    def _kendall_tau_add(self, len_old, diff_pos, tau_old):
+    def _kendall_tau_add(self, len_old: int, diff_pos: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old + 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_pos : int
+        diff_pos
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
         return 2./(len_old+1)*(float(diff_pos)/len_old-tau_old)
 
-    def _kendall_tau_subtract(self, len_old, diff_neg, tau_old):
+    def _kendall_tau_subtract(self, len_old: int, diff_neg: int, tau_old: float):
         """Compute Kendall tau delta.
 
         The new sequence has length len_old - 1.
 
         Parameters
         ----------
-        len_old : int
+        len_old
             The length of the old sequence, used to compute tau_old.
-        diff_neg : int
+        diff_neg
             Difference between concordant and non-concordant pairs.
-        tau_old : float
+        tau_old
             Kendall rank correlation of the old sequence.
         """
         return 2./(len_old-2)*(-float(diff_neg)/(len_old-1)+tau_old)

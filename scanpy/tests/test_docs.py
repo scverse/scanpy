@@ -8,19 +8,20 @@ from scanpy._utils import descend_classes_and_funcs
 import scanpy.cli
 
 
-@pytest.mark.parametrize("f", [
-    c_or_f for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
+scanpy_functions = [
+    c_or_f
+    for c_or_f in descend_classes_and_funcs(scanpy, "scanpy")
     if isinstance(c_or_f, FunctionType)
-])
+]
+
+
+@pytest.mark.parametrize("f", scanpy_functions)
 def test_function_headers(f):
     name = f"{f.__module__}.{f.__qualname__}"
     assert f.__doc__ is not None, f"{name} has no docstring"
     lines = getattr(f, "__orig_doc__", f.__doc__).split("\n")
     assert lines[0], f"{name} needs a single-line summary"
-    broken = [
-        i for i, l in enumerate(lines)
-        if l and not l.startswith("    ")
-    ]
+    broken = [i for i, l in enumerate(lines) if l and not l.startswith("    ")]
     if any(broken):
         msg = f'''\
 Header of function `{name}`’s docstring should start with one-line description:

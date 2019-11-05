@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from .. import logging as logg
 from ._pca import pca
@@ -5,14 +7,15 @@ from ..preprocessing._simple import N_PCS
 from .. import settings
 
 doc_use_rep = """\
-use_rep : {`None`, 'X'} or any key for `.obsm`, optional (default: `None`)
-    Use the indicated representation. If `None`, the representation is chosen
-    automatically: for `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
-    If 'X_pca' is not present, it's computed with default parameters.\
+use_rep
+    Use the indicated representation. `'X'` or any key for `.obsm` is valid.
+    If `None`, the representation is chosen automatically:
+    For `.n_vars` < 50, `.X` is used, otherwise 'X_pca' is used.
+    If 'X_pca' is not present, it’s computed with default parameters.\
 """
 
 doc_n_pcs = """\
-n_pcs : `int` or `None`, optional (default: `None`)
+n_pcs
     Use this many PCs. If `n_pcs==0` use `.X` if `use_rep is None`.\
 """
 
@@ -55,11 +58,11 @@ def _choose_representation(adata, use_rep=None, n_pcs=None, silent=False):
     return X
 
 
-def preprocess_with_pca(adata, n_pcs=None, random_state=0):
+def preprocess_with_pca(adata, n_pcs: Optional[int] = None, random_state=0):
     """
     Parameters
     ----------
-    n_pcs : `int` or `None`, optional (default: `None`)
+    n_pcs
         If `n_pcs=0`, do not preprocess with PCA.
         If `None` and there is a PCA version of the data, use this.
         If an integer, compute the PCA.

@@ -1,7 +1,7 @@
 import os
 import sys
+import collections.abc as cabc
 from argparse import ArgumentParser, Namespace, _SubParsersAction, ArgumentError
-from collections import abc
 from functools import lru_cache, partial
 from pathlib import Path
 from shutil import which
@@ -25,7 +25,7 @@ class _DelegatingSubparsersAction(_SubParsersAction):
         )
 
 
-class _CommandDelegator(abc.MutableMapping):
+class _CommandDelegator(cabc.MutableMapping):
     """\
     Provide the ability to delegate,
     but don’t calculate the whole list until necessary
@@ -130,16 +130,16 @@ def main(
         "Try e.g. `pip install scanpy-scripts`!"
     ))
     parser.set_defaults(func=parser.print_help)
-    
+
     subparsers: _DelegatingSubparsersAction = parser.add_subparsers(
         action=_DelegatingSubparsersAction,
         _command='scanpy',
         _runargs={**runargs, 'check': check},
     )
-    
+
     parser_settings = subparsers.add_parser('settings')
     parser_settings.set_defaults(func=_cmd_settings)
-    
+
     args = parser.parse_args(argv)
     return args.func()
 

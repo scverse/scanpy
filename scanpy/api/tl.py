@@ -4,7 +4,12 @@ from ..tools._umap import umap
 from ..tools._diffmap import diffmap
 from ..tools._draw_graph import draw_graph
 
-from ..tools._paga import paga, paga_degrees, paga_expression_entropies, paga_compare_paths
+from ..tools._paga import (
+    paga,
+    paga_degrees,
+    paga_expression_entropies,
+    paga_compare_paths,
+)
 from ..tools._rank_genes_groups import rank_genes_groups
 from ..tools._dpt import dpt
 from ..tools._leiden import leiden

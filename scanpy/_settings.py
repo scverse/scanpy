@@ -10,6 +10,7 @@ from typing import Tuple, List, ContextManager
 
 from . import logging
 from .logging import _set_log_level, _set_log_file, _RootLogger
+from ._compat import Literal
 
 _VERBOSITY_TO_LOGLEVEL = {
     'error': 'ERROR',
@@ -76,6 +77,7 @@ class ScanpyConfig:
         cachedir: Union[str, Path] = "./cache/",
         datasetdir: Union[str, Path] = "./data/",
         figdir: Union[str, Path] = "./figures/",
+        cache_compression: Union[str, None] = 'lzf',
         max_memory=15,
         n_jobs=1,
         logfile: Union[str, Path, None] = None,
@@ -98,6 +100,7 @@ class ScanpyConfig:
         self.cachedir = cachedir
         self.datasetdir = datasetdir
         self.figdir = figdir
+        self.cache_compression = cache_compression
         self.max_memory = max_memory
         self.n_jobs = n_jobs
         self.categories_to_ignore = categories_to_ignore
@@ -277,6 +280,24 @@ class ScanpyConfig:
         self._figdir = Path(figdir)
 
     @property
+    def cache_compression(self) -> Optional[str]:
+        """\
+        Compression for `sc.read(..., cache=True)` (default `'lzf'`).
+
+        May be `'lzf'`, `'gzip'`, or `None`.
+        """
+        return self._cache_compression
+
+    @cache_compression.setter
+    def cache_compression(self, cache_compression: Optional[str]):
+        if cache_compression not in {'lzf', 'gzip', None}:
+            raise ValueError(
+                f"`cache_compression` ({cache_compression}) "
+                "must be in {'lzf', 'gzip', None}"
+            )
+        self._cache_compression = cache_compression
+
+    @property
     def max_memory(self) -> Union[int, float]:
         """\
         Maximal memory usage in Gigabyte.
@@ -358,6 +379,13 @@ class ScanpyConfig:
     # Functions
     # --------------------------------------------------------------------------------
 
+    # Collected from the print_* functions in matplotlib.backends
+    _Format = Literal[
+        'png', 'jpg', 'tif', 'tiff',
+        'pdf', 'ps', 'eps', 'svg', 'svgz', 'pgf',
+        'raw', 'rgba',
+    ]
+
     def set_figure_params(
         self,
         scanpy: bool = True,
@@ -367,7 +395,7 @@ class ScanpyConfig:
         vector_friendly: bool = True,
         fontsize: int = 14,
         color_map: Optional[str] = None,
-        format: Union[str, Iterable[str]] = "pdf",
+        format: _Format = "pdf",
         transparent: bool = False,
         ipython_format: str = "png2x",
     ):
@@ -379,7 +407,7 @@ class ScanpyConfig:
         scanpy
             Init default values for :obj:`matplotlib.rcParams` suited for Scanpy.
         dpi
-            Resolution of rendered figures - this influences the size of figures in notebooks.
+            Resolution of rendered figures – this influences the size of figures in notebooks.
         dpi_save
             Resolution of saved figures. This should typically be higher to achieve
             publication quality.
@@ -391,7 +419,7 @@ class ScanpyConfig:
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
-        format: {`'png'`, `'pdf'`, `'svg'`, etc.}, optional (default: `'pdf'`)
+        format
             This sets the default format for saving figures: `file_format_figs`.
         transparent
             Save figures with transparent back ground. Sets

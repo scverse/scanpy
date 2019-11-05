@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 import scanpy as sc
 
+
 @pytest.mark.internet
 def test_enrich():
     pbmc = sc.datasets.pbmc68k_reduced()
@@ -19,4 +20,6 @@ def test_enrich():
 def test_mito_genes():
     pbmc = sc.datasets.pbmc68k_reduced()
     mt_genes = sc.queries.mitochondrial_genes("hsapiens")
-    assert pbmc.var_names.isin(mt_genes["external_gene_name"]).sum() == 1  # Should only be MT-ND3
+    assert (
+        pbmc.var_names.isin(mt_genes["external_gene_name"]).sum() == 1
+    )  # Should only be MT-ND3

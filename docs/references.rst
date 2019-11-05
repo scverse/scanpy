@@ -148,9 +148,9 @@ References
    *Identification of transcriptional signatures for cell types from single-cell RNA-Seq*,
    `bioRxiv <https://doi.org/10.1101/258566>`__.
 
-.. [Park18] Park *et al.* (2018),
-   *Fast Batch Alignment of Single Cell Transcriptomes Unifies Multiple Mouse Cell Atlases into an Integrated Landscape*
-   `bioRxiv <https://doi.org/10.1101/397042>`__.
+.. [Polanski19] Polanski *et al.* (2019),
+   *BBKNN: fast batch alignment of single cell transcriptomes*
+   `Bioinformatics <https://doi.org/10.1093/bioinformatics/btz625>`__.
 
 .. [Pedersen12] Pedersen (2012),
    *Python implementation of ComBat*
