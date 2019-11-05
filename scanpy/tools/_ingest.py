@@ -21,10 +21,82 @@ def ingest(
     index_unique='-',
     **kwargs
 ):
-    """
-    Note
-    ----
-    This doesn't update the neighbor graph.
+    """\
+    Map labels and embeddings from existing data to new data.
+
+    This function allows to map the specified labels and embeddings
+    from `adata_ref` to `adata`.
+    The function uses the k-nearest neighbors method for mapping labels.
+    You need to run :func:`~scanpy.pp.neighbors` on `adata_ref` before
+    passing it.
+
+    Parameters
+    ----------
+    adata : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes. This is the dataset without labels and
+        embeddings.
+    adata_ref : :class:`~anndata.AnnData`
+        The annotated data matrix of shape `n_obs` × `n_vars`. Rows correspond
+        to cells and columns to genes.
+        Variables (`n_vars` and `var_names`) of `adata_ref` should be the same
+        as in `adata`.
+        This is the dataset with labels and embeddings
+        which need to be mapped to `adata`.
+    obs : `str` or list of `str` or `None`, optional (default: `None`)
+        Labels' keys in `adata_ref.obs` which need to be mapped to `adata.obs`
+        (inferred for observation of `adata`).
+    embedding_method : `str` or list of `str`, optional (default: `('umap', 'pca')`)
+        Embeddings in `adata_ref` which need to be mapped to `adata`.
+        The only supported values are 'umap' and 'pca'.
+    labeling_method : `str`, optional (default: `knn`)
+        The method to map labels in `adata_ref.obs` to `adata.obs`.
+        The only supported value is 'knn'.
+    return_joint : `bool`, optional (default: `False`)
+        If set to `True` the function
+        returns the new :class:`~anndata.AnnData` object with concatenated
+        existing embeddings and labels of 'adata_ref' and inferred embeddings
+        and labels for `adata`.
+    batch_key : `str`, optional (default: `'batch'`)
+        Only works if `return_joint=True`.
+        Add the batch annotation to `obs`
+        of the new :class:`~anndata.AnnData` object using this key.
+    batch_categories : `str` or `None`, optional (default: `None`)
+        Only works if `return_joint=True`.
+        Use these as categories for the batch annotation.
+        By default, use increasing numbers.
+    index_unique : `str` or `None`, optional (default: `None`)
+        Only works if `return_joint=True`.
+        Make the index unique by joining the existing index names with the
+        batch category, using `index_unique='-'`, for instance. Provide
+        `None` to keep existing indices.
+    inplace : `bool`, optional (default: `True`)
+        Only works if `return_joint=False`.
+        Add labels and embeddings to the passed `adata` (if `True`)
+        or return a copy of `adata` with mapped embeddings and labels.
+
+    Returns
+    -------
+    if `return_joint=True` returns the new :class:`~anndata.AnnData` object
+    with concatenated existing embeddings and labels of 'adata_ref' and
+    inferred embeddings and labels for `adata`.
+    if `return_joint=False` then:
+
+    * if `inplace=False` returns a copy of `adata`
+      with mapped embeddings and labels in `obsm` and `obs` correspondingly.
+    * if `inplace=True` returns nothing and updates `adata.obsm` and `adata.obs`
+      with mapped embeddings and labels.
+
+    Example
+    -------
+    Assuming there is `adata_ref` with 'cell_type' in `adata_ref.obs`
+    which we want to infer for observations in `adata`.
+    >>> sc.pp.neighbors(adata_ref)
+    >>> sc.tl.umap(adata_ref)
+    >>> adata_joint = sc.tl.ingest(adata, adata_ref, obs='cell_type',
+                                   embedding_method='umap',
+                                   batch_key='ing_batch',
+                                   return_joint=True)
     """
     obs = [obs] if isinstance(obs, str) else obs
     embedding_method = [embedding_method] if isinstance(embedding_method, str) else embedding_method
