@@ -242,7 +242,7 @@ def pbmc68k_reduced() -> AnnData:
     filename = HERE / '10x_pbmc68k_reduced.h5ad'
     return read(filename)
 
- 
+
 def pbmc3k() -> AnnData:
     """\
     3k PBMCs from 10x Genomics.
@@ -298,3 +298,4 @@ def pbmc3k_processed() -> AnnData:
         settings.datasetdir / "pbmc3k_processed.h5ad",
         backup_url="https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad",
     )
+    return adata
