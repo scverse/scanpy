@@ -34,7 +34,7 @@ def ingest(
         labeling_method = labeling_method*len(obs)
 
     ing = Ingest(adata_ref)
-    ing.transform(adata)
+    ing.fit(adata)
 
     if embedding_method is not None:
         for method in embedding_method:
@@ -172,7 +172,7 @@ class Ingest:
             return adata.obsm[self._use_rep]
         return adata.X
 
-    def transform(self, adata_new):
+    def fit(self, adata_new):
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         #not sure if it should be AxisArrays
         self._obsm = AxisArrays(adata_new, 0)
