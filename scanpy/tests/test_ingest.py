@@ -41,7 +41,7 @@ def test_representation(adatas):
     adata_new = adatas[1].copy()
 
     ing = sc.tl.Ingest(adata_ref)
-    ing.transform(adata_new)
+    ing.fit(adata_new)
 
     assert ing._use_rep == 'X_pca'
     assert ing._obsm['rep'].shape == (adata_new.n_obs, N_PCS)
@@ -51,7 +51,7 @@ def test_representation(adatas):
     sc.pp.neighbors(adata_ref)
 
     ing = sc.tl.Ingest(adata_ref)
-    ing.transform(adata_new)
+    ing.fit(adata_new)
 
     assert ing._use_rep  == 'X_pca'
     assert ing._obsm['rep'].shape == (adata_new.n_obs, 30)
@@ -60,7 +60,7 @@ def test_representation(adatas):
     sc.pp.neighbors(adata_ref, use_rep='X')
 
     ing = sc.tl.Ingest(adata_ref)
-    ing.transform(adata_new)
+    ing.fit(adata_new)
 
     assert ing._use_rep == 'X'
     assert ing._obsm['rep'] is adata_new.X
@@ -71,7 +71,7 @@ def test_neighbors(adatas):
     adata_new = adatas[1].copy()
 
     ing = sc.tl.Ingest(adata_ref)
-    ing.transform(adata_new)
+    ing.fit(adata_new)
     ing.neighbors(k=10)
     indices = ing._indices
 
@@ -135,7 +135,7 @@ def test_ingest_map_embedding_umap():
     sc.tl.umap(adata_ref, random_state=0)
 
     ing = sc.tl.Ingest(adata_ref)
-    ing.transform(adata_new)
+    ing.fit(adata_new)
     ing.map_embedding(method='umap')
 
     reducer = UMAP(min_dist=0.5, random_state=0, n_neighbors=4)
