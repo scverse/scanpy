@@ -68,8 +68,8 @@ def burczynski06() -> AnnData:
     blood mononuclear cells"
     J Mol Diagn 8, 51 (2006). PMID:16436634.
     """
-    filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
-    url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
+    filename = settings.datasetdir / 'burczynski06/GDS1615_full.soft.gz'
+    url = 'ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz'
     adata = read(filename, backup_url=url)
     return adata
 
@@ -164,8 +164,8 @@ def paul15() -> AnnData:
     Annotated data matrix.
     """
     logg.warning(
-        "In Scanpy 0.*, this returned logarithmized data. "
-        "Now it returns non-logarithmized data."
+        'In Scanpy 0.*, this returned logarithmized data. '
+        'Now it returns non-logarithmized data.'
     )
     import h5py
 
@@ -189,7 +189,7 @@ def paul15() -> AnnData:
     # make string annotations categorical (optional)
     _utils.sanitize_anndata(adata)
     # just keep the first of the two equivalent names per gene
-    adata.var_names = [gn.split(";")[0] for gn in adata.var_names]
+    adata.var_names = [gn.split(';')[0] for gn in adata.var_names]
     # remove 10 corrupted gene names
     infogenes_names = np.intersect1d(infogenes_names, adata.var_names)
     # restrict data array to the 3461 informative genes
@@ -295,7 +295,7 @@ def pbmc3k_processed() -> AnnData:
     Annotated data matrix.
     """
     adata = read(
-        settings.datasetdir / "pbmc3k_processed.h5ad",
-        backup_url="https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad",
+        settings.datasetdir / 'pbmc3k_processed.h5ad',
+        backup_url='https://raw.githubusercontent.com/chanzuckerberg/cellxgene/master/example-dataset/pbmc3k.h5ad',
     )
     return adata
