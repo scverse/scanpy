@@ -70,7 +70,7 @@ def burczynski06() -> AnnData:
     """
     filename = settings.datasetdir / "burczynski06/GDS1615_full.soft.gz"
     url = "ftp://ftp.ncbi.nlm.nih.gov/geo/datasets/GDS1nnn/GDS1615/soft/GDS1615_full.soft.gz"
-    adata = sc.read(filename, backup_url=url)
+    adata = read(filename, backup_url=url)
     return adata
 
 
