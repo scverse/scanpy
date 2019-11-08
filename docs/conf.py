@@ -163,8 +163,11 @@ def insert_function_images(app, what, name, obj, options, lines):
 
 def autolink(url_template, title_template='{}'):
     from docutils import nodes
+    from types import MappingProxyType
 
-    def role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    mp = MappingProxyType({})
+
+    def role(name, rawtext, text, lineno, inliner, options=mp, content=()):
         url = url_template.format(text)
         title = title_template.format(text)
         node = nodes.reference(rawtext, title, refuri=url, **options)

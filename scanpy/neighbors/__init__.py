@@ -1,3 +1,4 @@
+from types import MappingProxyType
 from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generator, Tuple
 
 import numpy as np
@@ -42,7 +43,7 @@ def neighbors(
     random_state: Optional[Union[int, RandomState]] = 0,
     method: Optional[_Method] = 'umap',
     metric: Union[_Metric, _MetricFn] = 'euclidean',
-    metric_kwds: Mapping[str, Any] = {},
+    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -167,7 +168,7 @@ def compute_neighbors_umap(
     n_neighbors: int,
     random_state: Optional[Union[int, RandomState]] = None,
     metric: Union[_Metric, _MetricFn] = 'euclidean',
-    metric_kwds: Mapping[str, Any] = {},
+    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     angular: bool = False,
     verbose: bool = False,
 ):
@@ -624,7 +625,7 @@ class Neighbors:
         random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
         metric: _Metric = 'euclidean',
-        metric_kwds: Mapping[str, Any] = {},
+        metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.

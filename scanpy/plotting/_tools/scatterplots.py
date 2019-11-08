@@ -812,8 +812,15 @@ def _add_legend_or_colorbar(adata, ax, cax, categorical, value_to_plot, legend_l
         pl.colorbar(cax, ax=ax, pad=0.01, fraction=0.08, aspect=30)
 
 
-def _get_color_values(adata, value_to_plot, groups=None, palette=None, use_raw=False,
-                      gene_symbols=None, layer=None) -> Tuple[Union[np.ndarray, str], bool]:
+def _get_color_values(
+    adata,
+    value_to_plot,
+    groups=None,
+    palette: Union[str, Sequence[str], Cycler, None] = None,
+    use_raw=False,
+    gene_symbols=None,
+    layer=None,
+) -> Tuple[Union[np.ndarray, str], bool]:
     """
     Returns the value or color associated to each data point.
     For categorical data, the return value is list of colors taken
