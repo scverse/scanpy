@@ -1,6 +1,7 @@
 import warnings
 import collections.abc as cabc
 from pathlib import Path
+from types import MappingProxyType
 from typing import Optional, Union, List, Sequence, Mapping, Any, Tuple
 
 import numpy as np
@@ -154,7 +155,7 @@ def _compute_pos(
     init_pos=None,
     adj_tree=None,
     root=0,
-    layout_kwds: Mapping[str, Any] = {},
+    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
     import networkx as nx
 
@@ -248,7 +249,7 @@ def paga(
     threshold: Optional[float] = None,
     color: Optional[str] = None,
     layout: Optional[_IGraphLayout] = None,
-    layout_kwds: Optional[Mapping[str, Any]] = None,
+    layout_kwds: Mapping[str, Any] = MappingProxyType({}),
     init_pos: Optional[np.ndarray] = None,
     root: Union[int, str, Sequence[int], None] = 0,
     labels: Union[str, Sequence[str], Mapping[str, str], None] = None,
@@ -259,7 +260,7 @@ def paga(
     fontsize: Optional[int] = None,
     fontweight: str = 'bold',
     fontoutline: Optional[int] = None,
-    text_kwds: Optional[Mapping[str, Any]] = None,
+    text_kwds: Mapping[str, Any] = MappingProxyType({}),
     node_size_scale: float = 1.,
     node_size_power: float = 0.5,
     edge_width_scale: float = 1.,
@@ -274,7 +275,7 @@ def paga(
     cmap: Union[str, Colormap]=None,
     cax: Optional[Axes] = None,
     colorbar=None,  # TODO: this seems to be unused
-    cb_kwds: Optional[Mapping[str, Any]] = None,
+    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
     frameon: Optional[bool] = None,
     add_pos: bool = True,
     export_to_gexf: bool = False,
@@ -418,9 +419,6 @@ def paga(
     pl.paga_compare
     pl.paga_path
     """
-    if layout_kwds is None: layout_kwds = {}
-    if text_kwds is None: text_kwds = {}
-    if cb_kwds is None: cb_kwds = {}
 
     if groups is not None:  # backwards compat
         labels = groups
@@ -585,7 +583,7 @@ def _paga_graph(
     fontsize=None,
     fontweight=None,
     fontoutline=None,
-    text_kwds=None,
+    text_kwds: Mapping[str, Any] = MappingProxyType({}),
     node_size_scale=1.,
     node_size_power=0.5,
     edge_width_scale=1.,
@@ -599,13 +597,11 @@ def _paga_graph(
     export_to_gexf=False,
     colorbar=None,
     use_raw=True,
-    cb_kwds=None,
+    cb_kwds: Mapping[str, Any] = MappingProxyType({}),
     single_component=False,
     arrowsize=30,
 ):
     import networkx as nx
-    if text_kwds is None: text_kwds = {}
-    if cb_kwds is None: cb_kwds = {}
 
     node_labels = labels  # rename for clarity
     if (node_labels is not None
@@ -779,10 +775,11 @@ def _paga_graph(
         for count, n in enumerate(nx_g_solid.nodes()):
             nx_g_solid.node[count]['label'] = str(node_labels[count])
             nx_g_solid.node[count]['color'] = str(colors[count])
-            nx_g_solid.node[count]['viz'] = {
-                'position': {'x': 1000*pos[count][0],
-                             'y': 1000*pos[count][1],
-                             'z': 0}}
+            nx_g_solid.node[count]['viz'] = dict(position=dict(
+                x=1000 * pos[count][0],
+                y=1000 * pos[count][1],
+                z=0,
+            ))
         filename = settings.writedir / 'paga_graph.gexf'
         logg.warning(f'exporting to {filename}')
         settings.writedir.mkdir(parents=True, exist_ok=True)
@@ -807,8 +804,10 @@ def _paga_graph(
     if fontsize is None:
         fontsize = rcParams['legend.fontsize']
     if fontoutline is not None:
-        text_kwds['path_effects'] = [patheffects.withStroke(linewidth=fontoutline,
-                                                            foreground='w')]
+        text_kwds = dict(text_kwds)
+        text_kwds['path_effects'] = [
+            patheffects.withStroke(linewidth=fontoutline, foreground='w')
+        ]
     # usual scatter plot
     if not isinstance(colors[0], cabc.Mapping):
         n_groups = len(pos_array)
@@ -877,7 +876,8 @@ def paga_path(
     use_raw: bool = True,
     annotations: Sequence[str] = ('dpt_pseudotime',),
     color_map: Union[str, Colormap, None] = None,
-    color_maps_annotations: Optional[Mapping[str, Union[str, Colormap]]] = {'dpt_pseudotime': 'Greys'},
+    color_maps_annotations: Mapping[str, Union[str, Colormap]] =
+        MappingProxyType(dict(dpt_pseudotime='Greys')),
     palette_groups: Optional[Sequence[str]] = None,
     n_avg: int = 1,
     groups_key: Optional[str] = None,

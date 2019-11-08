@@ -1,6 +1,6 @@
 import warnings
 import collections.abc as cabc
-from typing import Union, List, Sequence, Tuple
+from typing import Union, List, Sequence, Tuple, Collection, Optional
 
 import numpy as np
 from matplotlib import pyplot as pl
@@ -52,8 +52,10 @@ def matrix(matrix, xlabel=None, ylabel=None, xticks=None, yticks=None,
 
 def timeseries(X, **kwargs):
     """Plot X. See timeseries_subplot."""
-    pl.figure(figsize=(2*rcParams['figure.figsize'][0], rcParams['figure.figsize'][1]),
-              subplotpars=sppars(left=0.12, right=0.98, bottom=0.13))
+    pl.figure(
+        figsize=tuple(2*s for s in rcParams['figure.figsize']),
+        subplotpars=sppars(left=0.12, right=0.98, bottom=0.13),
+    )
     timeseries_subplot(X, **kwargs)
 
 
@@ -62,14 +64,15 @@ def timeseries_subplot(
     time=None,
     color=None,
     var_names=(),
-    highlightsX=(),
+    highlights_x=(),
     xlabel='',
     ylabel='gene expression',
     yticks=None,
     xlim=None,
     legend=True,
-    palette=None,
+    palette: Union[Sequence[str], Cycler, None] = None,
     color_map='viridis',
+    ax: Optional[Axes] = None,
 ):
     """\
     Plot X.
@@ -99,8 +102,10 @@ def timeseries_subplot(
         colors = np.array(palette[:len(levels)].by_key()['color'])
         subsets = [(x_range[color == l], X[color == l, :]) for l in levels]
 
+    if ax is None:
+        ax = pl.subplot()
     for i, (x, y) in enumerate(subsets):
-        pl.scatter(
+        ax.scatter(
             x, y,
             marker='.',
             edgecolor='face',
@@ -108,25 +113,26 @@ def timeseries_subplot(
             c=colors[i],
             label=var_names[i] if len(var_names) > 0 else '',
             cmap=color_map,
-            rasterized=settings._vector_friendly)
-    ylim = pl.ylim()
-    for ih, h in enumerate(highlightsX):
-        pl.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
-    pl.ylim(ylim)
+            rasterized=settings._vector_friendly,
+        )
+    ylim = ax.get_ylim()
+    for h in highlights_x:
+        ax.plot([h, h], [ylim[0], ylim[1]], '--', color='black')
+    ax.set_ylim(ylim)
     if xlim is not None:
-        pl.xlim(xlim)
-    pl.xlabel(xlabel)
-    pl.ylabel(ylabel)
+        ax.set_xlim(xlim)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     if yticks is not None:
-        pl.yticks(yticks)
+        ax.set_yticks(yticks)
     if len(var_names) > 0 and legend:
-        pl.legend(frameon=False)
+        ax.legend(frameon=False)
 
 
 def timeseries_as_heatmap(
     X: np.ndarray,
-    var_names: np.ndarray = None,
-    highlightsX=None,
+    var_names: Collection[str] = (),
+    highlights_x=(),
     color_map=None,
 ):
     """\
@@ -139,10 +145,6 @@ def timeseries_as_heatmap(
     var_names
         Array of strings naming variables stored in columns of X.
     """
-    if highlightsX is None:
-        highlightsX = []
-    if var_names is None:
-        var_names = []
     if len(var_names) == 0:
         var_names = np.arange(X.shape[1])
     if var_names.ndim == 2:
@@ -150,32 +152,36 @@ def timeseries_as_heatmap(
 
     # transpose X
     X = X.T
-    minX = np.min(X)
+    min_x = np.min(X)
 
     # insert space into X
     if False:
-        # generate new array with highlightsX
+        # generate new array with highlights_x
         space = 10  # integer
-        Xnew = np.zeros((X.shape[0], X.shape[1] + space*len(highlightsX)))
+        x_new = np.zeros((X.shape[0], X.shape[1] + space*len(highlights_x)))
         hold = 0
         _hold = 0
         space_sum = 0
-        for ih, h in enumerate(highlightsX):
+        for ih, h in enumerate(highlights_x):
             _h = h + space_sum
-            Xnew[:, _hold:_h] = X[:, hold:h]
-            Xnew[:, _h:_h+space] = minX * np.ones((X.shape[0], space))
+            x_new[:, _hold:_h] = X[:, hold:h]
+            x_new[:, _h:_h+space] = min_x * np.ones((X.shape[0], space))
             # update variables
             space_sum += space
             _hold = _h + space
             hold = h
-        Xnew[:, _hold:] = X[:, hold:]
+        x_new[:, _hold:] = X[:, hold:]
 
-    fig = pl.figure(figsize=(1.5*4, 2*4))
-    im = pl.imshow(np.array(X, dtype=np.float_), aspect='auto',
-                   interpolation='nearest', cmap=color_map)
+    _, ax = pl.subplots(figsize=(1.5*4, 2*4))
+    ax.imshow(
+        np.array(X, dtype=np.float_),
+        aspect='auto',
+        interpolation='nearest',
+        cmap=color_map,
+    )
     pl.colorbar(shrink=0.5)
     pl.yticks(range(X.shape[0]), var_names)
-    for ih, h in enumerate(highlightsX):
+    for h in highlights_x:
         pl.plot([h, h], [0, X.shape[0]], '--', color='black')
     pl.xlim([0, X.shape[1]-1])
     pl.ylim([0, X.shape[0]-1])
@@ -254,7 +260,13 @@ def savefig(writekey, dpi=None, ext=None):
     pl.savefig(filename, dpi=dpi, bbox_inches='tight')
 
 
-def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
+def savefig_or_show(
+    writekey: str,
+    show: Optional[bool] = None,
+    dpi: Optional[int] = None,
+    ext: str = None,
+    save: Union[bool, str, None] = None,
+):
     if isinstance(save, str):
         # check whether `save` contains a figure extension
         if ext is None:
@@ -273,7 +285,9 @@ def savefig_or_show(writekey, show=None, dpi=None, ext=None, save=None):
     if save: pl.close()  # clear figure
 
 
-def default_palette(palette=None):
+def default_palette(
+    palette: Union[Sequence[str], Cycler, None] = None
+) -> Cycler:
     if palette is None: return rcParams['axes.prop_cycle']
     elif not isinstance(palette, Cycler): return cycler(color=palette)
     else: return palette
@@ -310,7 +324,11 @@ def _validate_palette(adata, key):
         adata.uns[color_key] = _palette
 
 
-def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
+def _set_colors_for_categorical_obs(
+    adata,
+    value_to_plot,
+    palette: Union[str, Sequence[str], Cycler],
+):
     """
     Sets the adata.uns[value_to_plot + '_colors'] according to the given palette
 
@@ -322,7 +340,7 @@ def _set_colors_for_categorical_obs(adata, value_to_plot, palette):
         name of a valid categorical observation
     palette
         Palette should be either a valid :func:`~matplotlib.pyplot.colormaps` string,
-        a list of colors (in a format that can be understood by matplotlib,
+        a sequence of colors (in a format that can be understood by matplotlib,
         eg. RGB, RGBS, hex, or a cycler object with key='color'
 
     Returns

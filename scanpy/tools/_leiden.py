@@ -98,6 +98,7 @@ def leiden(
         raise ImportError(
             'Please install the leiden algorithm: `pip3 install leidenalg`.'
         )
+    partition_kwargs = dict(partition_kwargs)
 
     start = logg.info('running Leiden clustering')
     adata = adata.copy() if copy else adata
@@ -126,8 +127,6 @@ def leiden(
     # appending to whatever the user provided. It needs to be this way
     # as this allows for the accounting of a None resolution
     # (in the case of a partition variant that doesn't take it on input)
-    if partition_kwargs is None:
-        partition_kwargs = {}
     if use_weights:
         partition_kwargs['weights'] = np.array(g.es['weight']).astype(np.float64)
     partition_kwargs['n_iterations'] = n_iterations

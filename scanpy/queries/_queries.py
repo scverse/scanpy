@@ -1,6 +1,6 @@
 import collections.abc as cabc
-from copy import copy
 from functools import singledispatch
+from types import MappingProxyType
 from typing import Any, Union, Optional, Iterable, Dict, Mapping
 
 import pandas as pd
@@ -205,7 +205,7 @@ def enrich(
     container: Iterable[str],
     *,
     org: str = "hsapiens",
-    gprofiler_kwargs: Mapping[str, Any] = {},
+    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
     """\
     Get enrichment for DE results.
@@ -262,7 +262,7 @@ def enrich(
             "This method requires the `gprofiler-official` module to be installed."
         )
     gprofiler = GProfiler(user_agent="scanpy", return_dataframe=True)
-    gprofiler_kwargs = copy(gprofiler_kwargs)
+    gprofiler_kwargs = dict(gprofiler_kwargs)
     for k in ["organism"]:
         if gprofiler_kwargs.get(k) is not None:
             raise ValueError(
@@ -283,7 +283,7 @@ def _enrich_anndata(
     log2fc_min: Optional[float] = None,
     log2fc_max: Optional[float] = None,
     gene_symbols: Optional[str] = None,
-    gprofiler_kwargs: dict = {},
+    gprofiler_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> pd.DataFrame:
     de = rank_genes_groups_df(
         adata,

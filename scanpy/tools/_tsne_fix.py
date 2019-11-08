@@ -8,7 +8,8 @@ modified version. Patch is only applied for versions earlier than 0.19.
 Code courtesy of David DeTomaso; available from
 https://github.com/YosefLab/FastProject/blob/stable/FastProject/_tsne_fix.py
 """
-from typing import Callable, Tuple, Optional, Mapping, Sequence
+from types import MappingProxyType
+from typing import Callable, Tuple, Optional, Mapping, Any, Iterable
 
 import numpy as np
 from scipy import linalg
@@ -29,8 +30,8 @@ def _gradient_descent(
     min_grad_norm: float = 1e-7,
     min_error_diff: float = 1e-7,
     verbose: int = 0,
-    args: Optional[Sequence] = None,
-    kwargs: Optional[Mapping] = None,
+    args: Iterable[Any] = (),
+    kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> Tuple[np.ndarray, float, int]:
     """\
     Batch gradient descent with momentum and individual gains.
@@ -86,11 +87,6 @@ def _gradient_descent(
     i
         Last iteration.
     """
-
-    if args is None:
-        args = []
-    if kwargs is None:
-        kwargs = {}
 
     p = p0.copy().ravel()
     update = np.zeros_like(p)
