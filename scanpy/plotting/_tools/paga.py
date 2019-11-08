@@ -154,7 +154,7 @@ def _compute_pos(
     random_state=0,
     init_pos=None,
     adj_tree=None,
-    root=0,
+    roots: Sequence[int] = (0,),
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
 ):
     import networkx as nx
@@ -206,17 +206,18 @@ def _compute_pos(
         pos = {n: [p[0], -p[1]] for n, p in enumerate(pos_list)}
     elif layout == 'eq_tree':
         nx_g_tree = nx.Graph(adj_tree)
-        pos = _utils.hierarchy_pos(nx_g_tree, root)
+        pos = _utils.hierarchy_pos(nx_g_tree, roots)
         if len(pos) < adjacency_solid.shape[0]:
-            raise ValueError('This is a forest and not a single tree. '
-                             'Try another `layout`, e.g., {\'fr\'}.')
+            raise ValueError(
+                "This is a forest and not a single tree. "
+                "Try another `layout`, e.g., {'fr'}."
+            )
     else:
         # igraph layouts
         g = _sc_utils.get_igraph_from_adjacency(adjacency_solid)
         if 'rt' in layout:
             g_tree = _sc_utils.get_igraph_from_adjacency(adj_tree)
-            pos_list = g_tree.layout(
-                layout, root=root if isinstance(root, list) else [root]).coords
+            pos_list = g_tree.layout(layout, root=roots).coords
         elif layout == 'circle':
             pos_list = g.layout(layout).coords
         else:
@@ -244,6 +245,25 @@ def _compute_pos(
     return pos_array
 
 
+def _node_labels(
+    adata: AnnData,
+    node_labels: Union[str, Sequence[str], Mapping[str, str], None],
+) -> Union[Sequence[str], Mapping[str, str]]:
+    groups_key = adata.uns['paga']['groups']
+    if (
+        node_labels is not None
+        and isinstance(node_labels, str)
+        and node_labels != groups_key
+    ):
+        raise ValueError(
+            'Provide a list of group labels for the PAGA groups '
+            f'{groups_key}, not {node_labels}.'
+        )
+    if node_labels is None:
+        node_labels = adata.obs[groups_key].cat.categories
+    return node_labels
+
+
 def paga(
     adata: AnnData,
     threshold: Optional[float] = None,
@@ -251,8 +271,14 @@ def paga(
     layout: Optional[_IGraphLayout] = None,
     layout_kwds: Mapping[str, Any] = MappingProxyType({}),
     init_pos: Optional[np.ndarray] = None,
-    root: Union[int, str, Sequence[int], None] = 0,
-    labels: Union[str, Sequence[str], Mapping[str, str], None] = None,
+    root: Union[int, str, Sequence[Union[int, str]], None] = 0,
+    labels: Union[
+        str,
+        Sequence[str],
+        Mapping[str, str],
+        Sequence[Mapping[str, str]],
+        None
+    ] = None,
     single_component: bool = False,
     solid_edges: str = 'connectivities',
     dashed_edges: Optional[str] = None,
@@ -436,7 +462,7 @@ def paga(
         return (
             has_one_per_category
             or x is None
-            or isinstance(x, str)
+            or isinstance(x, (str, cabc.Mapping))
         )
 
     if is_flat(colors):
@@ -445,31 +471,41 @@ def paga(
         frameon = settings._frameon
     # labels is a list that contains no lists
     if is_flat(labels):
-        labels = [labels for _ in range(len(colors))]
+        labels = [labels] * len(colors)
+    labels = [_node_labels(adata, l) for l in labels]
 
     if title is None and len(colors) > 1:
         title = [c for c in colors]
     elif isinstance(title, str):
-        title = [title for c in colors]
+        title = [title] * len(colors)
     elif title is None:
-        title = [None for c in colors]
+        title = [None] * len(colors)
 
     if colorbar is None:
         var_names = adata.var_names if adata.raw is None else adata.raw.var_names
-        colorbars = [((c in adata.obs_keys() and adata.obs[c].dtype.name != 'category') or
-                      (c in var_names)) for c in colors]
+        colorbars = [
+            (
+                (c in adata.obs_keys() and adata.obs[c].dtype.name != 'category')
+                or c in var_names
+            ) for c in colors
+        ]
     else:
         colorbars = [False for _ in colors]
 
-    if isinstance(root, str):
-        if root not in labels:
+    roots = root
+    roots = [roots] if isinstance(roots, (str, int)) else list(roots)
+    for r, root in enumerate(roots):
+        if isinstance(root, int):
+            continue
+        for ls in labels:
+            if root in ls:
+                roots[r] = ls[root] if isinstance(ls, cabc.Mapping) else list(ls).index(root_)
+                break
+        else:
             raise ValueError(
-                'If `root` is a string, '
-                f'it needs to be one of {labels} not {root!r}.'
+                f'`root[{r}]={root!r}` is a string, '
+                f'it needs to be one in {labels} not {root!r}.'
             )
-        root = list(labels).index(root)
-    if isinstance(root, cabc.Sequence) and root[0] in labels:
-        root = [list(labels).index(r) for r in root]
 
     # define the adjacency matrices
     adjacency_solid = adata.uns['paga'][solid_edges].copy()
@@ -493,7 +529,7 @@ def paga(
         pos = _compute_pos(
             adjacency_solid,
             layout=layout, random_state=random_state, init_pos=init_pos,
-            layout_kwds=layout_kwds, adj_tree=adj_tree, root=root,
+            layout_kwds=layout_kwds, adj_tree=adj_tree, roots=roots,
         )
 
     if plot:
@@ -519,8 +555,7 @@ def paga(
                 threshold=threshold,
                 adjacency_solid=adjacency_solid,
                 adjacency_dashed=adjacency_dashed,
-                root=root,
-                labels=labels[icolor],
+                node_labels=labels[icolor],
                 fontsize=fontsize,
                 fontweight=fontweight,
                 fontoutline=fontoutline,
@@ -577,9 +612,8 @@ def _paga_graph(
     adjacency_dashed=None,
     transitions=None,
     threshold=None,
-    root=0,
     colors=None,
-    labels=None,
+    node_labels: Union[Sequence[str], Mapping[str, str], None] = None,
     fontsize=None,
     fontweight=None,
     fontoutline=None,
@@ -603,15 +637,7 @@ def _paga_graph(
 ):
     import networkx as nx
 
-    node_labels = labels  # rename for clarity
-    if (node_labels is not None
-        and isinstance(node_labels, str)
-        and node_labels != adata.uns['paga']['groups']):
-        raise ValueError('Provide a list of group labels for the PAGA groups {}, not {}.'
-                         .format(adata.uns['paga']['groups'], node_labels))
     groups_key = adata.uns['paga']['groups']
-    if node_labels is None:
-        node_labels = adata.obs[groups_key].cat.categories
 
     if (colors is None or colors == groups_key) and groups_key is not None:
         if (groups_key + '_colors' not in adata.uns
@@ -652,7 +678,7 @@ def _paga_graph(
 
     # uniform color
     if isinstance(colors, str) and is_color_like(colors):
-        colors = [colors for c in range(len(node_labels))]
+        colors = [colors] * len(node_labels)
 
     # color degree of the graph
     if isinstance(colors, str) and colors.startswith('degree'):

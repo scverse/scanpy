@@ -825,10 +825,11 @@ def scale_to_zero_one(x):
     return xscaled
 
 
-def hierarchy_pos(G, root, levels=None, width=1., height=1.):
+def hierarchy_pos(G, roots: Sequence[int], levels=None, width=1., height=1.):
     """Tree layout for networkx graph.
 
-       See https://stackoverflow.com/questions/29586520/can-one-get-hierarchical-graphs-from-networkx-with-python-3
+       See https://stackoverflow.com/questions/29586520/can-one-get
+       -hierarchical-graphs-from-networkx-with-python-3
        answer by burubum.
 
        If there is a cycle that is reachable from root, then this will see
@@ -837,7 +838,7 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
        Parameters
        ----------
        G: the graph
-       root: the root node
+       roots: the root node(s)
        levels: a dictionary
                key: level number (starting from 0)
                value: number of nodes in this level
@@ -847,30 +848,30 @@ def hierarchy_pos(G, root, levels=None, width=1., height=1.):
     TOTAL = "total"
     CURRENT = "current"
 
-    def make_levels(levels, node=root, currentLevel=0, parent=None):
+    def make_levels(levels, nodes=roots, currentLevel=0, parent=None):
         """Compute the number of nodes for each level
         """
         if currentLevel not in levels:
             levels[currentLevel] = {TOTAL: 0, CURRENT: 0}
         levels[currentLevel][TOTAL] += 1
-        neighbors = list(G.neighbors(node))
+        neighbors = list(G.neighbors(nodes))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            levels = make_levels(levels, neighbor, currentLevel + 1, node)
+            levels = make_levels(levels, neighbor, currentLevel + 1, nodes)
         return levels
 
-    def make_pos(pos, node=root, currentLevel=0, parent=None, vert_loc=0):
+    def make_pos(pos, nodes=roots, currentLevel=0, parent=None, vert_loc=0):
         dx = 1/levels[currentLevel][TOTAL]
         left = dx/2
-        pos[node] = ((left + dx*levels[currentLevel][CURRENT])*width,
-                     vert_loc)
+        pos[nodes] = ((left + dx * levels[currentLevel][CURRENT]) * width,
+                      vert_loc)
         levels[currentLevel][CURRENT] += 1
-        neighbors = list(G.neighbors(node))
+        neighbors = list(G.neighbors(nodes))
         if parent is not None:
             neighbors.remove(parent)
         for neighbor in neighbors:
-            pos = make_pos(pos, neighbor, currentLevel + 1, node, vert_loc-vert_gap)
+            pos = make_pos(pos, neighbor, currentLevel + 1, nodes, vert_loc - vert_gap)
         return pos
 
     if levels is None:
