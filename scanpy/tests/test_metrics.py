@@ -51,10 +51,13 @@ def test_gearys_c():
     assert sc.metrics.gearys_c(graph, connected) == 0.0
     assert sc.metrics.gearys_c(graph, connected) \
         == sc.metrics.gearys_c(graph, sparse.csr_matrix(connected))
-    adata = sc.AnnData(
-        sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
-    )
-    assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
+    # Check for anndata > 0.7
+    if hasattr(sc.AnnData, "obsp"):
+        # Checking that obsp works
+        adata = sc.AnnData(
+            sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
+        )
+        assert sc.metrics.gearys_c(adata, vals=connected) == 0.0
 
 
 def test_confusion_matrix():
