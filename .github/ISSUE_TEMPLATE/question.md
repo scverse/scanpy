@@ -1,10 +1,9 @@
 ---
 name: Question
-about: Ask a question about design here. Ask about usage on https://scanpy.discourse.group/
+about: Ask about Scanpy’s design. If your question is “how can I do X?”, then please ask it in https://scanpy.discourse.group/
 title: ''
 labels: question
 assignees: ''
-
 ---
 
 <!--

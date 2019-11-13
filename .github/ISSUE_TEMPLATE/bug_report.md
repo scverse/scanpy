@@ -2,9 +2,8 @@
 name: Bug report
 about: Scanpy doesn’t do what it should? Please help us fix it!
 title: ''
-labels: ''
+labels: bug
 assignees: ''
-
 ---
 
 <!-- Please give a clear and concise description of what the bug is: -->
