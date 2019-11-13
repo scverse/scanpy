@@ -270,7 +270,8 @@ def gearys_c(
     a scalar if `vals` is 1d.
     """
     if use_graph is None:
-        if "connectivities" in adata.obsp:
+        # Fix for anndata<0.7
+        if hasattr(adata, "obsp") and "connectivities" in adata.obsp:
             g = adata.obsp["connectivities"]
         elif "neighbors" in adata.uns:
             g = adata.uns["neighbors"]["connectivities"]
