@@ -725,10 +725,11 @@ def regress_out(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
-    Regress out unwanted sources of variation.
+    Regress out (mostly) unwanted sources of variation.
 
     Uses simple linear regression. This is inspired by Seurat's `regressOut`
-    function in R [Satija15].
+    function in R [Satija15]. Note that this function tends to overcorrect
+    in certain circumstances as described in :issue:`526`.
 
     Parameters
     ----------
