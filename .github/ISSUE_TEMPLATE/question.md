@@ -1,6 +1,6 @@
 ---
 name: Question
-about: Ask about Scanpy’s design. If your question is “how can I do X?”, then please ask it in https://scanpy.discourse.group/
+about: Ask about Scanpy’s design. If your question is “how can I do X?”, then please look below ↓
 title: ''
 labels: question
 assignees: ''

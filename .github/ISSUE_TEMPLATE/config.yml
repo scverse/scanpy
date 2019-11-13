@@ -2,4 +2,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Scanpy Community Forum
     url: https://scanpy.discourse.group/
-    about: Please ask and answer questions here.
+    about: If you have questions about “How to do X”, please ask them here.
