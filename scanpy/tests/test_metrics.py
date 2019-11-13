@@ -27,6 +27,19 @@ def test_gearys_c():
         sc.metrics.gearys_c(g, pbmc.obsm["X_pca"].T),
     )
 
+    all_genes = sc.metrics.gearys_c(pbmc, layer="raw")
+    first_gene = sc.metrics.gearys_c(
+        pbmc,
+        vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
+    )
+
+    assert np.allclose(all_genes[0], first_gene)
+
+    assert np.allclose(
+        sc.metrics.gearys_c(pbmc, layer="raw"),
+        sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray())
+    )
+
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
     connected[np.random.choice(100, size=30, replace=False)] = 1
@@ -36,6 +49,8 @@ def test_gearys_c():
     graph = sparse.csr_matrix(graph)
 
     assert sc.metrics.gearys_c(graph, connected) == 0.0
+    assert sc.metrics.gearys_c(graph, connected) \
+        == sc.metrics.gearys_c(graph, sparse.csr_matrix(connected))
     adata = sc.AnnData(
         sparse.csr_matrix((100, 100)), obsp={"connectivities": graph}
     )
