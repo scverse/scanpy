@@ -121,6 +121,7 @@ def setup(app):
     app.connect('autodoc-process-docstring', insert_function_images)
     app.connect('build-finished', show_param_warnings)
     app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
+    app.add_role('issue', autolink(f'{gh_url}/issue/{{}}', 'issue {}'))
 
 
 # -- Options for other output formats ------------------------------------------
