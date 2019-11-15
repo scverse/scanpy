@@ -18,3 +18,6 @@ If Scanpy is useful for your research, consider citing `Genome Biology (2018) <h
    api/index
    external/index
    references
+
+.. intersphinx-tocs::
+   scanpy_tutorials: Tutorials

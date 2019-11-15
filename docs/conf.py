@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 
 import matplotlib  # noqa
+from sphinx.application import Sphinx
 
 # Don’t use tkinter agg when importing scanpy → … → matplotlib
 matplotlib.use('agg')
@@ -115,13 +116,57 @@ gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(
 )
 
 
-def setup(app):
+def setup(app: Sphinx):
     app.warningiserror = on_rtd
     app.add_stylesheet('css/custom.css')
     app.connect('autodoc-process-docstring', insert_function_images)
     app.connect('build-finished', show_param_warnings)
+    app.add_directive('intersphinx-tocs', AdditionalTOCDirective)
     app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
     app.add_role('issue', autolink(f'{gh_url}/issues/{{}}', 'issue {}'))
+
+
+# -- Insert other toctrees -----------------------------------------------------
+
+
+from typing import List, Generator, Tuple, Optional
+
+from docutils.parsers.rst import Directive
+from docutils import nodes
+from sphinx.environment import BuildEnvironment
+from sphinx.addnodes import toctree
+
+
+class AdditionalTOCDirective(Directive):
+    required_arguments = 1
+    final_argument_whitespace = True
+
+    def run(self) -> List[nodes.Node]:
+        return [
+            toctree(
+                caption=tree_title,
+                entries=entries,
+                glob=False,
+                includefiles=[],
+            )
+            for tree_title, entries in self.parse()
+        ]
+
+    def parse(
+        self,
+    ) -> Generator[Tuple[Optional[str], List[Tuple[str, str]]], None, None]:
+        env: BuildEnvironment = self.state.document.settings.env
+        for name in self.arguments[0].split('\n'):
+            tree_title = None
+            if ':' in name:
+                name, tree_title = (n.strip() for n in name.split(':', 1))
+            documents = env.intersphinx_named_inventory[name]['std:doc']
+            entries = []
+            for k, (mod_name, version, url, title) in documents.items():
+                if k in {'index', 'README'}:
+                    continue
+                entries.append((title, url))
+            yield tree_title, entries
 
 
 # -- Options for other output formats ------------------------------------------
