@@ -31,7 +31,7 @@ You can extend this to multi-resolution analyses of whole animals, such as `here
 
    <img src="http://www.falexwolf.de/img/paga_planaria.png" style="width: 350px">
 
-The PAGA method behind this is described `here <https://rawgit.com/falexwolf/paga_paper/master/paga.pdf>`__ and can be cited using this `doi <https://doi.org/10.1101/208819>`__. As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_ for two hematopoiesis datasets: `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`__ for [Paul15]_ and `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`__ for [Moignard15]_.
+The PAGA method behind this is described in [Wolf19]_. As a reference for simple pseudotime analyses, we provide the diffusion pseudotime analyses of [Haghverdi16]_ for two hematopoiesis datasets: `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170502_paul15/paul15.ipynb>`__ for [Paul15]_ and `here <https://nbviewer.jupyter.org/github/theislab/scanpy_usage/blob/master/170501_moignard15/moignard15.ipynb>`__ for [Moignard15]_.
 
 
 -----------------
