@@ -20,7 +20,7 @@ def score_genes(
     score_name: str = 'score',
     random_state: Optional[Union[int, RandomState]] = 0,
     copy: bool = False,
-    use_raw: bool = None,
+    use_raw: Optional[bool] = None,
 ) -> Optional[AnnData]:
     """\
     Score a set of genes [Satija15]_.
@@ -79,7 +79,7 @@ def score_genes(
             genes_to_ignore.append(gene)
     if len(genes_to_ignore) > 0:
         logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
-    gene_list = set(gene_list_in_var[:])
+    gene_list = set(gene_list_in_var)
 
     if len(gene_list) == 0:
         logg.warning('provided gene list has length 0, scores as 0')
@@ -96,7 +96,7 @@ def score_genes(
     # interval of expression.
 
     if use_raw is None:
-        use_raw = True if adata.raw is not None else False
+        use_raw = adata.raw is not None
     _adata = adata.raw if use_raw else adata
 
     _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
