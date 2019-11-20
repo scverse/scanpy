@@ -20,7 +20,7 @@ def score_genes(
     score_name: str = 'score',
     random_state: Optional[Union[int, RandomState]] = 0,
     copy: bool = False,
-    use_raw: bool = False,
+    use_raw: bool = None,
 ) -> Optional[AnnData]:
     """\
     Score a set of genes [Satija15]_.
@@ -53,6 +53,7 @@ def score_genes(
         Copy `adata` or modify it inplace.
     use_raw
         Use `raw` attribute of `adata` if present.
+
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with an additional field
@@ -70,14 +71,22 @@ def score_genes(
 
     gene_list_in_var = []
     var_names = adata.raw.var_names if use_raw else adata.var_names
+    genes_to_ignore = []
     for gene in gene_list:
         if gene in var_names:
             gene_list_in_var.append(gene)
         else:
-            logg.warning(f'gene: {gene} is not in adata.var_names and will be ignored')
+            genes_to_ignore.append(gene)
+    if len(genes_to_ignore) > 0:
+        logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
     gene_list = set(gene_list_in_var[:])
 
-    if not gene_pool:
+    if len(gene_list) == 0:
+        logg.warning('provided gene list has length 0, scores as 0')
+        adata.obs[score_name] = 0
+        return adata if copy else None
+
+    if gene_pool is None:
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
@@ -86,15 +95,17 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
+    if use_raw is None:
+        use_raw = True if adata.raw is not None else False
     _adata = adata.raw if use_raw else adata
-    # TODO: this densifies the whole data matrix for `gene_pool`
-    if issparse(_adata.X):
+
+    _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
+    if issparse(_adata_subset.X):
         obs_avg = pd.Series(
-            np.nanmean(
-                _adata[:, gene_pool].X.toarray(), axis=0), index=gene_pool)  # average expression of genes
+            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
-            np.nanmean(_adata[:, gene_pool].X, axis=0), index=gene_pool)  # average expression of genes
+            np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
 
     obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
 
@@ -112,7 +123,6 @@ def score_genes(
     # To index, we need a list – indexing implies an order.
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
-
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list): X_list = X_list.toarray()
