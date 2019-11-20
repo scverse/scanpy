@@ -138,7 +138,11 @@ def score_genes(
         )
         return adata if copy else None
     elif len(gene_list) == 1:
-        score = _adata[:, gene_list].X - X_control
+        if _adata[:, gene_list].X.ndim == 2:
+            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
+        else:
+            vector =  _adata[:, gene_list].X  # old anndata
+        score = vector - X_control
     else:
         score = np.nanmean(X_list, axis=1) - X_control
 
