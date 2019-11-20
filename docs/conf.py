@@ -10,7 +10,7 @@ import matplotlib  # noqa
 matplotlib.use('agg')
 
 HERE = Path(__file__).parent
-sys.path.insert(0, str(HERE.parent))
+sys.path[:0] = [str(HERE.parent), str(HERE / 'extensions')]
 import scanpy  # noqa
 
 with warnings.catch_warnings():
@@ -55,6 +55,7 @@ extensions = [
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     'scanpydoc',
+    *[p.stem for p in (HERE / 'extensions').glob('*.py')],
 ]
 
 # Generate the API documentation when building
@@ -68,6 +69,7 @@ napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
 napoleon_custom_sections = [('Params', 'Parameters')]
 todo_include_todos = False
+api_dir = HERE / 'api'  # function_images
 
 intersphinx_mapping = dict(
     anndata=('https://anndata.readthedocs.io/en/stable/', None),
@@ -110,18 +112,11 @@ html_context = dict(
 html_static_path = ['_static']
 html_show_sphinx = False
 html_logo = '_static/img/Scanpy_Logo_BrightFG.svg'
-gh_url = 'https://github.com/{github_user}/{github_repo}'.format_map(
-    html_context
-)
 
 
 def setup(app):
     app.warningiserror = on_rtd
     app.add_stylesheet('css/custom.css')
-    app.connect('autodoc-process-docstring', insert_function_images)
-    app.connect('build-finished', show_param_warnings)
-    app.add_role('pr', autolink(f'{gh_url}/pull/{{}}', 'PR {}'))
-    app.add_role('issue', autolink(f'{gh_url}/issues/{{}}', 'issue {}'))
 
 
 # -- Options for other output formats ------------------------------------------
@@ -142,130 +137,6 @@ texinfo_documents = [
         'Miscellaneous',
     )
 ]
-
-
-# -- Images for plot functions -------------------------------------------------
-
-
-def insert_function_images(app, what, name, obj, options, lines):
-    path = Path(__file__).parent / 'api' / f'{name}.png'
-    if what != 'function' or not path.is_file():
-        return
-    lines[0:0] = [
-        f'.. image:: {path.name}',
-        '   :width: 200',
-        '   :align: right',
-        '',
-    ]
-
-
-# -- GitHub links --------------------------------------------------------------
-
-
-def autolink(url_template, title_template='{}'):
-    from docutils import nodes
-    from types import MappingProxyType
-
-    mp = MappingProxyType({})
-
-    def role(name, rawtext, text, lineno, inliner, options=mp, content=()):
-        url = url_template.format(text)
-        title = title_template.format(text)
-        node = nodes.reference(rawtext, title, refuri=url, **options)
-        return [node], []
-
-    return role
-
-
-# -- Test for new scanpydoc functionality --------------------------------------
-
-
-import re
-from sphinx.ext.napoleon import NumpyDocstring
-
-
-def process_return(lines):
-    for line in lines:
-        m = re.fullmatch(r'(?P<param>\w+)\s+:\s+(?P<type>[\w.]+)', line)
-        if m:
-            # Once this is in scanpydoc, we can use the fancy hover stuff
-            yield f'**{m["param"]}** : :class:`~{m["type"]}`'
-        else:
-            yield line
-
-
-def scanpy_parse_returns_section(self, section):
-    lines_raw = list(
-        process_return(self._dedent(self._consume_to_next_section()))
-    )
-    lines = self._format_block(':returns: ', lines_raw)
-    if lines and lines[-1]:
-        lines.append('')
-    return lines
-
-
-NumpyDocstring._parse_returns_section = scanpy_parse_returns_section
-
-
-# -- Warn for non-annotated params ---------------------------------------------
-
-
-_format_docutils_params_orig = NumpyDocstring._format_docutils_params
-param_warnings = {}
-
-
-def scanpy_log_param_types(self, fields, field_role='param', type_role='type'):
-    for _name, _type, _desc in fields:
-        if (
-            not _type
-            or not self._obj.__module__.startswith('scanpy')
-            or self._name.startswith('scanpy.api')
-        ):
-            continue
-        w_list = param_warnings.setdefault((self._name, self._obj), [])
-        if (_name, _type) not in w_list:
-            w_list.append((_name, _type))
-    return _format_docutils_params_orig(self, fields, field_role, type_role)
-
-
-def show_param_warnings(app, exception):
-    import inspect
-
-    for (fname, fun), params in param_warnings.items():
-        _, line = inspect.getsourcelines(fun)
-        file_name = inspect.getsourcefile(fun)
-        params_str = '\n'.join(f'\t{n}: {t}' for n, t in params)
-        warnings.warn_explicit(
-            f'\nParameters in `{fname}` have types in docstring.\n'
-            f'Replace them with type annotations.\n{params_str}',
-            UserWarning,
-            file_name,
-            line,
-        )
-    if param_warnings:
-        raise RuntimeError('Encountered text parameter type. Use annotations.')
-
-
-NumpyDocstring._format_docutils_params = scanpy_log_param_types
-
-
-# -- Debug code ----------------------------------------------------------------
-
-
-# Just do the following to see the rst of a function:
-# rm -f _build/doctrees/api/scanpy.<what_you_want>.doctree; DEBUG=1 make html
-import os
-
-if os.environ.get('DEBUG') is not None:
-    import sphinx.ext.napoleon
-
-    pd = sphinx.ext.napoleon._process_docstring
-
-    def pd_new(app, what, name, obj, options, lines):
-        pd(app, what, name, obj, options, lines)
-        print(*lines, sep='\n')
-
-    sphinx.ext.napoleon._process_docstring = pd_new
 
 
 # -- Suppress link warnings ----------------------------------------------------
