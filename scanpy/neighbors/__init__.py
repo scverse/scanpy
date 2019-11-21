@@ -110,7 +110,7 @@ def neighbors(
         random_state=random_state,
     )
     adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
+    adata.uns['neighbors']['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
     adata.uns['neighbors']['params']['metric'] = metric
     if metric_kwds:
         adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
@@ -145,8 +145,8 @@ RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, None, None]:
-    props = FlatTree._fields[0]
-    num_trees = len(rp_forest_dict[props]['start'])-1
+    props = FlatTree._fields
+    num_trees = len(rp_forest_dict[props[0]]['start'])-1
 
     for i in range(num_trees):
         tree = []
@@ -679,9 +679,9 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, _ = compute_neighbors_umap(
+            knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
-            #self._rp_forest = _make_forest_dict(forest)
+            self._rp_forest = _make_forest_dict(forest)
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices

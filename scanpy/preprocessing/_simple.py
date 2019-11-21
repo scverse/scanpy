@@ -520,12 +520,16 @@ def pca(
 
     if data_is_AnnData:
         adata.obsm['X_pca'] = X_pca
+        adata.uns['pca'] = {}
+        adata.uns['pca']['params'] = {
+            'zero_center': zero_center,
+            'use_highly_variable': use_highly_variable
+        }
         if use_highly_variable:
             adata.varm['PCs'] = np.zeros(shape=(adata.n_vars, n_comps))
             adata.varm['PCs'][adata.var['highly_variable']] = pca_.components_.T
         else:
             adata.varm['PCs'] = pca_.components_.T
-        adata.uns['pca'] = {}
         adata.uns['pca']['variance'] = pca_.explained_variance_
         adata.uns['pca']['variance_ratio'] = pca_.explained_variance_ratio_
         logg.info('    finished', time=start)
