@@ -283,6 +283,9 @@ def log1p(
     -------
     Returns or updates `data`, depending on `copy`.
     """
+    if 'log1p' in adata.uns_keys():
+        logg.warning('adata.X seems to be already log-transformed.')
+
     if copy:
         if not isinstance(data, AnnData):
             data = data.astype(np.floating)
