@@ -23,6 +23,7 @@
 On master
 ---------
 
+- :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` now store all partitioning parameters as well as a modularity score under adata.uns[key_added]. The key for the adata.uns field was incorrectly set to 'louvain' in leiden function before, this is also fixed. :pr:`819` :noteversion:`1.4.5` :smaller:`thanks to G Eraslan`
 - :mod:`scanpy.queries` recieved many updates. This includes enrichment through `gprofiler <https://biit.cs.ut.ee/gprofiler/>`_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
 
 Post v1.4 :small:`July 20, 2019`
