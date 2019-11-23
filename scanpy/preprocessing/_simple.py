@@ -255,12 +255,13 @@ def log1p(
     copy: bool = False,
     chunked: bool = False,
     chunk_size: Optional[int] = None,
+    base: Optional[float] = None,
 ) -> Optional[AnnData]:
     """\
     Logarithmize the data matrix.
 
     Computes :math:`X = \\log(X + 1)`,
-    where :math:`log` denotes the natural logarithm.
+    where :math:`log` denotes the natural logarithm unless a different base is given.
 
     Parameters
     ----------
@@ -275,6 +276,8 @@ def log1p(
         Applies only to :class:`~anndata.AnnData`.
     chunk_size
         `n_obs` of the chunks to process the data in.
+    base
+        Base of the logarithm. Natural logarithm is used by default.
 
     Returns
     -------
@@ -294,8 +297,12 @@ def log1p(
     def _log1p(X):
         if issparse(X):
             np.log1p(X.data, out=X.data)
+            if base is not None:
+                X.data /= np.log(base)
         else:
             np.log1p(X, out=X)
+            if base is not None:
+                X /= np.log(base)
         return X
 
     if isinstance(data, AnnData):
@@ -309,6 +316,7 @@ def log1p(
     else:
         _log1p(data)
 
+    data.uns['log1p'] = {'base': base}
     return data if copy else None
 
 
