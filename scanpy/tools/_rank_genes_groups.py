@@ -193,6 +193,11 @@ def rank_genes_groups(
     rankings_gene_pvals = []
     rankings_gene_pvals_adj = []
 
+    if 'log1p' in adata.uns_keys() and adata.uns['log1p']['base'] is not None:
+        expm1_func = lambda x: np.expm1(x * np.log(adata.uns['log1p']['base']))
+    else:
+        expm1_func = np.expm1
+
     if method in {'t-test', 't-test_overestim_var'}:
         from scipy import stats
         from statsmodels.stats.multitest import multipletests
@@ -229,7 +234,7 @@ def rank_genes_groups(
                 )
 
             # Fold change
-            foldchanges = (np.expm1(mean_group) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+            foldchanges = (expm1_func(mean_group) + 1e-9) / (expm1_func(mean_rest) + 1e-9)  # add small value to remove 0's
 
             scores[np.isnan(scores)] = 0  # I think it's only nan when means are the same and vars are 0
             pvals[np.isnan(pvals)] = 1  # This also has to happen for Benjamini Hochberg
@@ -347,7 +352,7 @@ def rank_genes_groups(
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 # Fold change
-                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+                foldchanges = (expm1_func(means[imask]) + 1e-9) / (expm1_func(mean_rest) + 1e-9)  # add small value to remove 0's
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort, -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[partition])[::-1]
@@ -405,7 +410,7 @@ def rank_genes_groups(
                     pvals_adj = np.minimum(pvals * n_genes, 1.0)
 
                 # Fold change
-                foldchanges = (np.expm1(means[imask]) + 1e-9) / (np.expm1(mean_rest) + 1e-9)  # add small value to remove 0's
+                foldchanges = (expm1_func(means[imask]) + 1e-9) / (expm1_func(mean_rest) + 1e-9)  # add small value to remove 0's
                 scores_sort = np.abs(scores) if rankby_abs else scores
                 partition = np.argpartition(scores_sort[imask, :], -n_genes_user)[-n_genes_user:]
                 partial_indices = np.argsort(scores_sort[imask, partition])[::-1]
