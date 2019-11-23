@@ -283,7 +283,7 @@ def log1p(
     -------
     Returns or updates `data`, depending on `copy`.
     """
-    if 'log1p' in adata.uns_keys():
+    if 'log1p' in data.uns_keys():
         logg.warning('adata.X seems to be already log-transformed.')
 
     if copy:
