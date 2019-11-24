@@ -301,11 +301,11 @@ def log1p(
         if issparse(X):
             np.log1p(X.data, out=X.data)
             if base is not None:
-                X.data /= np.log(base)
+                np.divide(X.data, np.log(base), out=X.data)
         else:
             np.log1p(X, out=X)
             if base is not None:
-                X /= np.log(base)
+                np.divide(X, np.log(base), out=X)
         return X
 
     if isinstance(data, AnnData):
