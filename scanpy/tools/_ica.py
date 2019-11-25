@@ -8,6 +8,30 @@ from sklearn.utils import check_random_state
 from .. import AnnData
 
 
+def _choose_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
+    """
+    Choose array aligned with obs annotation.
+    """
+    is_layer = layer is not None
+    is_raw = use_raw is not False
+    is_obsm = obsm is not None
+    is_obsp = obsp is not None
+    choices_made = sum((is_layer, is_raw, is_obsm, is_obsp))
+    assert choices_made <= 1
+    if choices_made == 0:
+        return adata.X
+    elif is_layer:
+        return adata.layers[layer]
+    elif use_raw:
+        return adata.raw.X
+    elif is_obsm:
+        return adata.obsm[obsm]
+    elif is_obsp:
+        return adata.obsp[obsp]
+    else:
+        raise RuntimeError("You broke it. But how? Please report this.")
+
+
 def ica(
     adata: AnnData,
     n_components: int,
