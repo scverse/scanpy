@@ -13,7 +13,8 @@ def _normalize_data(X, counts, after=None, copy=False):
     X = X.copy() if copy else X
     if issubclass(X.dtype.type, (int, np.integer)):
         X = X.astype(np.float32)  # TODO: Check if float64 should be used
-    after = np.median(counts[counts>0]) if after is None else after
+    counts = np.asarray(counts)  # dask doesn't do medians
+    after = np.median(counts[counts>0], axis=0) if after is None else after
     counts += (counts == 0)
     counts = counts / after
     if issparse(X):
