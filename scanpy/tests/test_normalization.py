@@ -14,7 +14,7 @@ X_frac = [[1, 0, 1], [3, 0, 1], [5, 6, 1]]
 )
 @pytest.mark.parametrize('dtype', ['float32', 'int64'])
 def test_normalize_total(typ, dtype):
-    adata = AnnData(typ(X_total, dtype=dtype))
+    adata = AnnData(typ(X_total), dtype=dtype)
     sc.pp.normalize_total(adata, key_added='n_counts')
     assert np.allclose(np.ravel(adata.X.sum(axis=1)), [3.0, 3.0, 3.0])
     sc.pp.normalize_total(adata, target_sum=1, key_added='n_counts2')
