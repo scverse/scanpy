@@ -29,15 +29,14 @@ def test_gearys_c():
 
     all_genes = sc.metrics.gearys_c(pbmc, layer="raw")
     first_gene = sc.metrics.gearys_c(
-        pbmc,
-        vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
+        pbmc, vals=pbmc.obs_vector(pbmc.var_names[0], layer="raw")
     )
 
     assert np.allclose(all_genes[0], first_gene)
 
     assert np.allclose(
         sc.metrics.gearys_c(pbmc, layer="raw"),
-        sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray())
+        sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
 
     # Test case with perfectly seperated groups
@@ -49,8 +48,10 @@ def test_gearys_c():
     graph = sparse.csr_matrix(graph)
 
     assert sc.metrics.gearys_c(graph, connected) == 0.0
-    assert sc.metrics.gearys_c(graph, connected) \
-        == sc.metrics.gearys_c(graph, sparse.csr_matrix(connected))
+    assert eq(
+        sc.metrics.gearys_c(graph, connected),
+        sc.metrics.gearys_c(graph, sparse.csr_matrix(connected)),
+    )
     # Check for anndata > 0.7
     if hasattr(sc.AnnData, "obsp"):
         # Checking that obsp works
