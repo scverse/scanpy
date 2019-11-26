@@ -1,4 +1,4 @@
-.. note::
+ries 1.4.5 :pr:`467` .. note::
 
     Also see the `release notes <https://anndata.readthedocs.io>`__ of :mod:`anndata`.
 
@@ -23,7 +23,10 @@
 On master
 ---------
 
-- :mod:`scanpy.queries` recieved many updates. This includes enrichment through `gprofiler <https://biit.cs.ut.ee/gprofiler/>`_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
+- :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
+- Allow specifying a base for :func:`~scanpy.pp.log1p` :noteversion:`1.4.5` :pr:`931` :smaller:`thanks to G Eraslan`
+
+.. _gprofiler: https://biit.cs.ut.ee/gprofiler/
 
 Post v1.4 :small:`July 20, 2019`
 --------------------------------
@@ -74,8 +77,11 @@ Major updates:
 
 Two new possibilities for interactive exploration of analysis results:
 
-- CZI's `cellxgene <https://github.com/chanzuckerberg/cellxgene>`__ directly reads `.h5ad` files :smaller:`thanks to the cellxgene developers`
-- the `UCSC Single Cell Browser <https://github.com/maximilianh/cellBrowser>`__ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` :noteversion:`1.3.6` :smaller:`thanks to M Haeussler`
+- CZI's cellxgene_ directly reads `.h5ad` files :smaller:`thanks to the cellxgene developers`
+- the `UCSC Single Cell Browser`_ requires exporting via :func:`~scanpy.external.exporting.cellbrowser` :noteversion:`1.3.6` :smaller:`thanks to M Haeussler`
+
+.. _cellxgene: https://github.com/chanzuckerberg/cellxgene
+.. _UCSC Single Cell Browser: https://github.com/maximilianh/cellBrowser
 
 Further updates:
 
