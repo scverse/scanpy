@@ -1,5 +1,7 @@
 .. note::
-   Also see the `release notes <https://anndata.readthedocs.io>`__ of :mod:`anndata`.
+   Also see the `release notes`__ of :mod:`anndata`.
+
+.. __: https://anndata.readthedocs.io
 
 .. role:: small
 .. role:: smaller
@@ -7,7 +9,8 @@
 
 .. sidebar:: Key Contributors
 
-   [`anndata <https://github.com/theislab/anndata/graphs/contributors>`__ & `scanpy <https://github.com/theislab/scanpy/graphs/contributors>`__ graphs; the ☀ signifies current maintainers]
+   `anndata graph`_ & `scanpy graph`_;
+   the ☀ signifies current maintainers
 
    * `Isaac Virshup`_: anndata overhaul, diverse contributions ☀
    * Gökcen Eraslan: diverse contributions ☀
@@ -18,6 +21,8 @@
    * `Alex Wolf`_: initial anndata & scanpy conception/development ☀
    * `Fabian Theis`_ & lab: enabling guidance, support and environment
 
+.. _anndata graph: https://github.com/theislab/anndata/graphs/contributors
+.. _scanpy graph: https://github.com/theislab/scanpy/graphs/contributors
 .. _Isaac Virshup: https://twitter.com/ivirshup
 .. _Tom White: https://twitter.com/tom_e_white
 .. _Alex Wolf: https://twitter.com/falexwolf
