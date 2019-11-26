@@ -161,12 +161,17 @@ def count_matrix_format(request):
 def replace(request):
     return request.param
 
+@pytest.fixture(params=[np.int64, np.float32, np.float64])
+def dtype(request):
+    return request.param
 
-def test_downsample_counts_per_cell(count_matrix_format, replace):
+
+def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
     X = np.random.randint(0, 100, (1000, 100)) * \
         np.random.binomial(1, .3, (1000, 100))
-    adata = AnnData(X=count_matrix_format(X))
+    X = X.astype(dtype)
+    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace)
     with pytest.raises(ValueError):
@@ -185,13 +190,15 @@ def test_downsample_counts_per_cell(count_matrix_format, replace):
                 == new_totals[initial_totals <= TARGET])
     if not replace:
         assert np.all(X >= adata.X)
+    assert X.dtype == adata.X.dtype
 
 
-def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replace):
+def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replace, dtype):
     TARGETS = np.random.randint(500, 1500, 1000)
     X = np.random.randint(0, 100, (1000, 100)) * \
         np.random.binomial(1, .3, (1000, 100))
-    adata = AnnData(X=count_matrix_format(X))
+    X = X.astype(dtype)
+    adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
@@ -207,12 +214,14 @@ def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replac
                 == new_totals[initial_totals <= TARGETS])
     if not replace:
         assert np.all(X >= adata.X)
+    assert X.dtype == adata.X.dtype
 
 
-def test_downsample_total_counts(count_matrix_format, replace):
+def test_downsample_total_counts(count_matrix_format, replace, dtype):
     X = np.random.randint(0, 100, (1000, 100)) * \
         np.random.binomial(1, .3, (1000, 100))
-    adata_orig = AnnData(X=count_matrix_format(X))
+    X = X.astype(dtype)
+    adata_orig = AnnData(X=count_matrix_format(X), dtype=dtype)
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
@@ -230,3 +239,4 @@ def test_downsample_total_counts(count_matrix_format, replace):
         adata = sc.pp.downsample_counts(adata_orig, total_counts=total + 10,
                                         replace=False, copy=True)
         assert (adata.X == X).all()
+    assert X.dtype == adata.X.dtype

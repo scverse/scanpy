@@ -997,7 +997,6 @@ def downsample_counts(
     *,
     random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = False,
-    dtype: Optional[np.dtype] = None,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -1023,9 +1022,6 @@ def downsample_counts(
         Random seed for subsampling.
     replace
         Whether to sample the counts with replacement.
-    dtype
-        What dtype X should be returned as, since data is converted to integers
-        during downsampling. Defaults to input dtype.
     copy
         Determines whether a copy of `adata` is returned.
 
@@ -1040,16 +1036,10 @@ def downsample_counts(
         raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
     if copy:
         adata = adata.copy()
-    if dtype is None:
-        dtype = adata.X.dtype
-
-    adata.X = adata.X.astype(np.integer)  # Numba doesn't want floats
     if total_counts_call:
         adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
     elif counts_per_cell_call:
         adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
-
-    adata.X = adata.X.astype(dtype)
     if copy:
         return adata
 
@@ -1060,6 +1050,8 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         counts_per_cell = np.full(n_obs, counts_per_cell)
     else:
         counts_per_cell = np.asarray(counts_per_cell)
+    # np.random.choice needs int arguments in numba code:
+    counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
     if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
         raise ValueError(
             "If provided, 'counts_per_cell' must be either an integer, or "
@@ -1072,7 +1064,7 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
             X = csr_matrix(X)
         totals = np.ravel(X.sum(axis=1))  # Faster for csr matrix
         under_target = np.nonzero(totals > counts_per_cell)[0]
-        rows = np.split(X.data.view(), X.indptr[1:-1])
+        rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
             row = rows[rowidx]
             _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
@@ -1084,13 +1076,14 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         totals = np.ravel(X.sum(axis=1))
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
-            row = X[rowidx, :].view()
+            row = X[rowidx, :]
             _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
                               replace=replace, inplace=True)
     return X
 
 
 def _downsample_total_counts(X, total_counts, random_state, replace):
+    total_counts = int(total_counts)
     total = X.sum()
     if total < total_counts:
         return X
@@ -1104,7 +1097,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
         if original_type is not csr_matrix:
             X = original_type(X)
     else:
-        v = X.view().reshape(np.multiply(*X.shape))
+        v = X.reshape(np.multiply(*X.shape))
         _downsample_array(v, total_counts, random_state, replace=replace,
                           inplace=True)
     return X
@@ -1112,7 +1105,7 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
 
 @numba.njit(cache=True)
 def _downsample_array(
-    col: np.array,
+    col: np.ndarray,
     target: int,
     random_state: Optional[Union[int, RandomState]] = 0,
     replace: bool = True,
@@ -1123,7 +1116,6 @@ def _downsample_array(
 
     This is an internal function and has some restrictions:
 
-    * `dtype` of col must be an integer (i.e. satisfy issubclass(col.dtype.type, np.integer))
     * total counts in cell must be less than target
     """
     np.random.seed(random_state)
@@ -1132,7 +1124,7 @@ def _downsample_array(
         col[:] = 0
     else:
         col = np.zeros_like(col)
-    total = cumcounts[-1]
+    total = np.int_(cumcounts[-1])
     sample = np.random.choice(total, target, replace=replace)
     sample.sort()
     geneptr = 0
