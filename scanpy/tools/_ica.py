@@ -1,11 +1,10 @@
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 from scipy import sparse
 from sklearn.utils import check_random_state
 
-from .. import AnnData
+from anndata import AnnData
 
 
 def _choose_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
