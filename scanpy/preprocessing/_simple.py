@@ -1033,13 +1033,19 @@ def downsample_counts(
     total_counts_call = total_counts is not None
     counts_per_cell_call = counts_per_cell is not None
     if total_counts_call is counts_per_cell_call:
-        raise ValueError("Must specify exactly one of `total_counts` or `counts_per_cell`.")
+        raise ValueError(
+            "Must specify exactly one of `total_counts` or `counts_per_cell`."
+        )
     if copy:
         adata = adata.copy()
     if total_counts_call:
-        adata.X = _downsample_total_counts(adata.X, total_counts, random_state, replace)
+        adata.X = _downsample_total_counts(
+            adata.X, total_counts, random_state, replace
+        )
     elif counts_per_cell_call:
-        adata.X = _downsample_per_cell(adata.X, counts_per_cell, random_state, replace)
+        adata.X = _downsample_per_cell(
+            adata.X, counts_per_cell, random_state, replace
+        )
     if copy:
         return adata
 
@@ -1052,7 +1058,10 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         counts_per_cell = np.asarray(counts_per_cell)
     # np.random.choice needs int arguments in numba code:
     counts_per_cell = counts_per_cell.astype(np.int_, copy=False)
-    if not isinstance(counts_per_cell, np.ndarray) or len(counts_per_cell) != n_obs:
+    if (
+        not isinstance(counts_per_cell, np.ndarray)
+        or len(counts_per_cell) != n_obs
+    ):
         raise ValueError(
             "If provided, 'counts_per_cell' must be either an integer, or "
             "coercible to an `np.ndarray` of length as number of observations"
@@ -1067,8 +1076,13 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         rows = np.split(X.data, X.indptr[1:-1])
         for rowidx in under_target:
             row = rows[rowidx]
-            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
-                              replace=replace, inplace=True)
+            _downsample_array(
+                row,
+                counts_per_cell[rowidx],
+                random_state=random_state,
+                replace=replace,
+                inplace=True,
+            )
         X.eliminate_zeros()
         if original_type is not csr_matrix:  # Put it back
             X = original_type(X)
@@ -1077,8 +1091,13 @@ def _downsample_per_cell(X, counts_per_cell, random_state, replace):
         under_target = np.nonzero(totals > counts_per_cell)[0]
         for rowidx in under_target:
             row = X[rowidx, :]
-            _downsample_array(row, counts_per_cell[rowidx], random_state=random_state,
-                              replace=replace, inplace=True)
+            _downsample_array(
+                row,
+                counts_per_cell[rowidx],
+                random_state=random_state,
+                replace=replace,
+                inplace=True,
+            )
     return X
 
 
@@ -1091,15 +1110,21 @@ def _downsample_total_counts(X, total_counts, random_state, replace):
         original_type = type(X)
         if not isspmatrix_csr(X):
             X = csr_matrix(X)
-        _downsample_array(X.data, total_counts, random_state=random_state,
-                          replace=replace, inplace=True)
+        _downsample_array(
+            X.data,
+            total_counts,
+            random_state=random_state,
+            replace=replace,
+            inplace=True,
+        )
         X.eliminate_zeros()
         if original_type is not csr_matrix:
             X = original_type(X)
     else:
         v = X.reshape(np.multiply(*X.shape))
-        _downsample_array(v, total_counts, random_state, replace=replace,
-                          inplace=True)
+        _downsample_array(
+            v, total_counts, random_state, replace=replace, inplace=True
+        )
     return X
 
 
@@ -1133,6 +1158,7 @@ def _downsample_array(
             geneptr += 1
         col[geneptr] += 1
     return col
+
 
 
 def zscore_deprecated(X: np.ndarray) -> np.ndarray:

@@ -168,17 +168,22 @@ def dtype(request):
 
 def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
     TARGET = 1000
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
+    X = (
+        np.random.randint(0, 100, (1000, 100))
+        * np.random.binomial(1, 0.3, (1000, 100))
+    )
     X = X.astype(dtype)
     adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     with pytest.raises(ValueError):
-        sc.pp.downsample_counts(adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace)
+        sc.pp.downsample_counts(
+            adata, counts_per_cell=TARGET, total_counts=TARGET, replace=replace
+        )
     with pytest.raises(ValueError):
         sc.pp.downsample_counts(adata, replace=replace)
     initial_totals = np.ravel(adata.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGET,
-                                    replace=replace, copy=True)
+    adata = sc.pp.downsample_counts(
+        adata, counts_per_cell=TARGET, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -186,23 +191,33 @@ def test_downsample_counts_per_cell(count_matrix_format, replace, dtype):
         assert all(adata.X[X == 0] == 0)
     assert all(new_totals <= TARGET)
     assert all(initial_totals >= new_totals)
-    assert all(initial_totals[initial_totals <= TARGET]
-                == new_totals[initial_totals <= TARGET])
+    assert all(
+        initial_totals[initial_totals <= TARGET]
+        == new_totals[initial_totals <= TARGET]
+    )
     if not replace:
         assert np.all(X >= adata.X)
     assert X.dtype == adata.X.dtype
 
 
-def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replace, dtype):
+def test_downsample_counts_per_cell_multiple_targets(
+    count_matrix_format, replace, dtype
+):
     TARGETS = np.random.randint(500, 1500, 1000)
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
+    X = (
+        np.random.randint(0, 100, (1000, 100))
+        * np.random.binomial(1, 0.3, (1000, 100))
+    )
     X = X.astype(dtype)
     adata = AnnData(X=count_matrix_format(X), dtype=dtype)
     initial_totals = np.ravel(adata.X.sum(axis=1))
     with pytest.raises(ValueError):
-        sc.pp.downsample_counts(adata, counts_per_cell=[40, 10], replace=replace)
-    adata = sc.pp.downsample_counts(adata, counts_per_cell=TARGETS, replace=replace, copy=True)
+        sc.pp.downsample_counts(
+            adata, counts_per_cell=[40, 10], replace=replace
+        )
+    adata = sc.pp.downsample_counts(
+        adata, counts_per_cell=TARGETS, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -210,23 +225,28 @@ def test_downsample_counts_per_cell_multiple_targets(count_matrix_format, replac
         assert all(adata.X[X == 0] == 0)
     assert all(new_totals <= TARGETS)
     assert all(initial_totals >= new_totals)
-    assert all(initial_totals[initial_totals <= TARGETS]
-                == new_totals[initial_totals <= TARGETS])
+    assert all(
+        initial_totals[initial_totals <= TARGETS]
+        == new_totals[initial_totals <= TARGETS]
+    )
     if not replace:
         assert np.all(X >= adata.X)
     assert X.dtype == adata.X.dtype
 
 
 def test_downsample_total_counts(count_matrix_format, replace, dtype):
-    X = np.random.randint(0, 100, (1000, 100)) * \
-        np.random.binomial(1, .3, (1000, 100))
+    X = (
+        np.random.randint(0, 100, (1000, 100))
+        * np.random.binomial(1, 0.3, (1000, 100))
+    )
     X = X.astype(dtype)
     adata_orig = AnnData(X=count_matrix_format(X), dtype=dtype)
     total = X.sum()
     target = np.floor_divide(total, 10)
     initial_totals = np.ravel(adata_orig.X.sum(axis=1))
-    adata = sc.pp.downsample_counts(adata_orig, total_counts=target,
-                                    replace=replace, copy=True)
+    adata = sc.pp.downsample_counts(
+        adata_orig, total_counts=target, replace=replace, copy=True
+    )
     new_totals = np.ravel(adata.X.sum(axis=1))
     if sp.issparse(adata.X):
         assert all(adata.X.toarray()[X == 0] == 0)
@@ -236,7 +256,8 @@ def test_downsample_total_counts(count_matrix_format, replace, dtype):
     assert all(initial_totals >= new_totals)
     if not replace:
         assert np.all(X >= adata.X)
-        adata = sc.pp.downsample_counts(adata_orig, total_counts=total + 10,
-                                        replace=False, copy=True)
+        adata = sc.pp.downsample_counts(
+            adata_orig, total_counts=total + 10, replace=False, copy=True
+        )
         assert (adata.X == X).all()
     assert X.dtype == adata.X.dtype
