@@ -12,17 +12,24 @@ from anndata import AnnData
 HERE = Path(__file__).parent
 
 
-def test_log1p_chunked():
+def test_log1p():
     A = np.random.rand(200, 10)
+    A_l = np.log1p(A)
     ad = AnnData(A)
     ad2 = AnnData(A)
     ad3 = AnnData(A)
     ad3.filename = HERE / 'test.h5ad'
     sc.pp.log1p(ad)
+    assert np.allclose(ad.X, A_l)
     sc.pp.log1p(ad2, chunked=True)
     assert np.allclose(ad2.X, ad.X)
     sc.pp.log1p(ad3, chunked=True)
     assert np.allclose(ad3.X, ad.X)
+
+    # Test base
+    ad4 = AnnData(A)
+    sc.pp.log1p(ad4, base=2)
+    assert np.allclose(ad4.X, A_l/np.log(2))
 
 
 def test_mean_var_sparse():
