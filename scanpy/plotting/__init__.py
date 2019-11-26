@@ -29,6 +29,7 @@ Plotting API
 .. note::
    See the :ref:`settings` section for all important plotting configurations.
 
+.. _pl-generic:
 
 Generic
 -------
