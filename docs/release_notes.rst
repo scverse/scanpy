@@ -32,6 +32,7 @@
 On master
 ---------
 
+- :mod:`scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`thanks to I Virshup`
 - :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
 - Allow specifying a base for :func:`~scanpy.pp.log1p` :noteversion:`1.4.5` :pr:`931` :smaller:`thanks to G Eraslan`
 
