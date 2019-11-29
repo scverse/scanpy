@@ -16,7 +16,8 @@ def confusion_matrix(
     *,
     normalize: bool = True,
 ) -> pd.DataFrame:
-    """Given an original and new set of labels, create a labelled confusion matrix.
+    """\
+    Given an original and new set of labels, create a labelled confusion matrix.
 
     Params
     ------

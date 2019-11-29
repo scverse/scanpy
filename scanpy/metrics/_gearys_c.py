@@ -185,6 +185,17 @@ def gearys_c(g, vals) -> np.ndarray:
 
 @dispatch(sparse.spmatrix, np.ndarray)  # noqa
 def gearys_c(g, vals):
+    """\
+    Params
+    ------
+    g
+        Connectivity graph as a scipy sparse matrix. Should have shape:
+        `(n_obs, n_obs)`.
+    vals
+        Values to calculate Geary's C for. If one dimensional, should have
+        shape `(n_obs,)`. If two dimensional (i.e calculating Geary's C for
+        multiple variables) should have shape `(n_vars, n_obs)`.
+    """
     assert g.shape[0] == g.shape[1], "`g` should be a square matrix."
     if not isinstance(g, sparse.csr_matrix):
         g = g.tocsr()
@@ -226,7 +237,7 @@ def gearys_c(
     obsp: Optional[str] = None,
     use_raw: bool = False,
 ) -> Union[np.ndarray, float]:
-    """
+    """\
     Calculate `Geary's C` <https://en.wikipedia.org/wiki/Geary's_C>`_, as used
     by `VISION <https://doi.org/10.1038/s41467-019-12235-0>`_.
 
