@@ -54,14 +54,8 @@ def confusion_matrix(
         mtx = np.divide(mtx, sums, where=sums != 0)
 
     # Label
-    if orig.name is None:
-        orig_name = "Original labels"
-    else:
-        orig_name = orig.name
-    if new.name is None:
-        new_name = "New labels"
-    else:
-        new_name = new.name
+    orig_name = "Original labels" if orig.name is None else orig.name
+    new_name = "New Labels" if new.name is None else new.name
     df = pd.DataFrame(
         mtx,
         index=pd.Index(unique_labels, name=orig_name),
