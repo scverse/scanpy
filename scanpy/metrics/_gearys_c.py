@@ -29,7 +29,11 @@ def _choose_obs_rep(adata, *, use_raw=False, layer=None, obsm=None, obsp=None):
     elif is_obsp:
         return adata.obsp[obsp]
     else:
-        raise RuntimeError("You broke it. But how? Please report this.")
+        assert False, (
+            "That was unexpected. Please report this bug at:\n\n\t"
+            " https://github.com/theislab/scanpy/issues"
+        )
+
 
 
 ###############################################################################
@@ -95,9 +99,9 @@ def _gearys_c_mtx_csr(
         numer = (N - 1) * total
         # Expanded from 2 * W * ((x_k - x_k_bar) ** 2).sum(), but uses sparsity
         # to skip some calculations
+        # fmt: off
         denom = (
-            2
-            * W
+            2 * W
             * (
                 np.sum(x_k_data ** 2)
                 - np.sum(x_k_data * x_k_bar * 2)
