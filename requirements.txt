@@ -11,7 +11,7 @@ importlib_metadata>=0.7; python_version < '3.8'
 scikit-learn>=0.21.2
 statsmodels>=0.10.0rc2
 patsy
-networkx
+networkx==1.*
 natsort
 joblib
 numba>=0.41.0
