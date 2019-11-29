@@ -7,7 +7,7 @@ import scanpy as sc
 from scipy import sparse
 
 
-def test_gearys_c():
+def test_gearys_c_consistency():
     pbmc = sc.datasets.pbmc68k_reduced()
     pbmc.layers["raw"] = pbmc.raw.X.copy()
     g = pbmc.uns["neighbors"]["connectivities"]
@@ -39,6 +39,8 @@ def test_gearys_c():
         sc.metrics.gearys_c(pbmc, vals=pbmc.layers["raw"].T.toarray()),
     )
 
+
+def test_gearys_c_correctness():
     # Test case with perfectly seperated groups
     connected = np.zeros(100)
     connected[np.random.choice(100, size=30, replace=False)] = 1
