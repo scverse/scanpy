@@ -8,7 +8,7 @@ installing Miniconda_ (see `Installing Miniconda`_). Then run::
 
     conda install -c bioconda scanpy
 
-Otherwise, you might want to pull Scanpy `from PyPI`_:
+Alternatively, you might want to pull Scanpy `from PyPI`_.
 
 .. _from PyPI: https://pypi.org/project/scanpy
 
