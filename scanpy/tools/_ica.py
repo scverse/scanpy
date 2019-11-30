@@ -91,6 +91,7 @@ def ica(
                 X = X.copy()
             X_mean = X.mean(axis=-1)
             X -= X_mean[:, np.newaxis]
+            del X_mean
         # Using arpack for whitening, could add other options as well
         # Maybe use sklearn transformer for this?
         v0 = random_state.uniform(-1, 1, size=min(X.shape))
@@ -101,6 +102,8 @@ def ica(
         K = (u / d).T[:n_components]
         X1 = K @ X  # np.dot takes way more memory if X is sparse
         X1 *= np.sqrt(X.shape[1])
+
+        del u, _, v0
     else:
         raise NotImplementedError()
 
