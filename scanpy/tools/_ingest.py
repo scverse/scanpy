@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.utils import check_random_state
 from scipy.sparse import issparse
-from anndata.core.alignedmapping import AxisArrays
+from anndata.core.anndata import AxisArrays
 
 from ..preprocessing._simple import N_PCS
 from ..neighbors import _rp_forest_generate
@@ -290,6 +290,15 @@ class Ingest:
         `adata` refers to the :class:`~anndata.AnnData` object
         that is passed during the initialization of an Ingest instance.
         """
+        ref_var_names = self._adata_ref.var_names.str.upper()
+        new_var_names = adata_new.var_names.str.upper()
+
+        if not ref_var_names.equals(new_var_names):
+            raise ValueError(
+                'Variables in the new adata are different '
+                'from variables in the reference adata'
+            )
+
         self._obs = pd.DataFrame(index=adata_new.obs.index)
         # not sure if it should be AxisArrays
         self._obsm = AxisArrays(adata_new, 0)
