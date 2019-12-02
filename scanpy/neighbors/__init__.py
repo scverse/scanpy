@@ -689,8 +689,12 @@ class Neighbors:
                 metric = 'precomputed'
             knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
-            if forest:
-                self._rp_forest = _make_forest_dict(forest)
+            # very cautious here
+            try:
+                if forest:
+                    self._rp_forest = _make_forest_dict(forest)
+            except:
+                pass
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices
