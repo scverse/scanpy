@@ -99,6 +99,8 @@ def test_subsample():
     assert adata.n_obs == 40
     sc.pp.subsample(adata, fraction=0.1)
     assert adata.n_obs == 4
+    sc.pp.subsample(adata, n_obs=201, replace=True)
+    assert adata.n_obs == 201
 
 
 def test_scale():

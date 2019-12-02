@@ -941,6 +941,7 @@ def subsample(
     n_obs: Optional[int] = None,
     random_state: Union[int, RandomState] = 0,
     copy: bool = False,
+    replace: bool = False,
 ) -> Optional[AnnData]:
     """\
     Subsample to a fraction of the number of observations.
@@ -959,6 +960,8 @@ def subsample(
     copy
         If an :class:`~anndata.AnnData` is passed,
         determines whether a copy is returned.
+    replace
+        If True, samples are drawn with replacement.
 
     Returns
     -------
@@ -979,7 +982,7 @@ def subsample(
         logg.debug(f'... subsampled to {new_n_obs} data points')
     else:
         raise ValueError('Either pass `n_obs` or `fraction`.')
-    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=False)
+    obs_indices = np.random.choice(old_n_obs, size=new_n_obs, replace=replace)
     if isinstance(data, AnnData):
         adata = data.copy() if copy else data
         adata._inplace_subset_obs(obs_indices)
