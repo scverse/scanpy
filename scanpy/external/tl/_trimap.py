@@ -18,7 +18,7 @@ def trimap(
     copy=False,
 ):
     """
-    TriMap: Large-scale Dimensionality Reduction Using Triplets
+    TriMap: Large-scale Dimensionality Reduction Using Triplets.
 
     TriMap is a dimensionality reduction method that uses triplet constraints
     to form a low-dimensional embedding of a set of points. The triplet
