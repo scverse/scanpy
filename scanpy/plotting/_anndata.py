@@ -290,8 +290,7 @@ def _scatter_obs(
             else 'UMAP' if basis == 'umap'
             else 'PC' if basis == 'pca'
             else 'TriMap' if basis == 'trimap'
-            else basis.replace('draw_graph_', '').upper()
-            if 'draw_graph' in basis
+            else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
             else basis
         )
     else:
