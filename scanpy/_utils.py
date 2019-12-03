@@ -9,13 +9,14 @@ from weakref import WeakSet
 from collections import namedtuple
 from functools import partial, wraps
 from types import ModuleType, MethodType
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Mapping, Any, Dict, Tuple
 
 import numpy as np
 from anndata import AnnData
 from textwrap import dedent
 
 from ._settings import settings
+from ._compat import Literal
 from . import logging as logg
 
 EPS = 1e-15
@@ -75,7 +76,7 @@ def getdoc(c_or_f: Union[Callable, type]) -> Optional[str]:
     )
 
 
-def deprecated_arg_names(arg_mapping):
+def deprecated_arg_names(arg_mapping: Mapping[str, str]):
     """
     Decorator which marks a functions keyword arguments as deprecated. It will
     result in a warning being emitted when the deprecated keyword argument is
@@ -83,7 +84,7 @@ def deprecated_arg_names(arg_mapping):
 
     Parameters
     ----------
-    arg_mapping : dict[str, str]
+    arg_mapping
         Mapping from deprecated argument name to current argument name.
     """
     def decorator(func):
@@ -204,7 +205,7 @@ def compute_association_matrix_of_groups(
     adata: AnnData,
     prediction: str,
     reference: str,
-    normalization: str = 'prediction',
+    normalization: Literal['prediction', 'reference'] = 'prediction',
     threshold: float = 0.01,
     max_n_names: Optional[int] = 2,
 ):
@@ -219,7 +220,7 @@ def compute_association_matrix_of_groups(
         Field name of adata.obs.
     reference
         Field name of adata.obs.
-    normalization: {`'prediction'`, `'reference'`}
+    normalization
         Whether to normalize with respect to the predicted groups or the
         reference groups.
     threshold
@@ -346,14 +347,14 @@ def view_to_actual(adata):
         adata._init_as_actual(adata.copy())
 
 
-def moving_average(a, n):
+def moving_average(a: np.ndarray, n: int):
     """Moving average over one-dimensional array.
 
     Parameters
     ----------
-    a : np.ndarray
+    a
         One-dimensional array.
-    n : int
+    n
         Number of entries to average over. n=2 means averaging over the currrent
         the previous entry.
 
@@ -371,8 +372,13 @@ def moving_average(a, n):
 # --------------------------------------------------------------------------------
 
 
-def update_params(old_params, new_params, check=False):
-    """Update old_params with new_params.
+def update_params(
+    old_params: Mapping[str, Any],
+    new_params: Mapping[str, Any],
+    check=False,
+) -> Dict[str, Any]:
+    """\
+    Update old_params with new_params.
 
     If check==False, this merely adds and overwrites the content of old_params.
 
@@ -381,13 +387,13 @@ def update_params(old_params, new_params, check=False):
 
     Parameters
     ----------
-    old_params : dict
-    new_params : dict
-    check : bool, optional (default: False)
+    old_params
+    new_params
+    check
 
     Returns
     -------
-    updated_params : dict
+    updated_params
     """
     updated_params = dict(old_params)
     if new_params:  # allow for new_params to be None
@@ -463,23 +469,28 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     settings.write(warnings.formatwarning(message, category, filename, lineno, line))
 
 
-def subsample(X, subsample=1, seed=0):
-    """Subsample a fraction of 1/subsample samples from the rows of X.
+def subsample(
+    X: np.ndarray,
+    subsample: int = 1,
+    seed: int = 0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+    Subsample a fraction of 1/subsample samples from the rows of X.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Data array.
-    subsample : int
+    subsample
         1/subsample is the fraction of data sampled, n = X.shape[0]/subsample.
-    seed : int
+    seed
         Seed for sampling.
 
     Returns
     -------
-    Xsampled : np.ndarray
+    Xsampled
         Subsampled X.
-    rows : np.ndarray
+    rows
         Indices of rows that are stored in Xsampled.
     """
     if subsample == 1 and seed == 0:
@@ -500,21 +511,25 @@ def subsample(X, subsample=1, seed=0):
     return Xsampled, rows
 
 
-def subsample_n(X, n=0, seed=0):
+def subsample_n(
+    X: np.ndarray, n: int = 0, seed: int = 0
+) -> Tuple[np.ndarray, np.ndarray]:
     """Subsample n samples from rows of array.
 
     Parameters
     ----------
-    X : np.ndarray
+    X
         Data array.
-    seed : int
+    n
+        Sample size.
+    seed
         Seed for sampling.
 
     Returns
     -------
-    Xsampled : np.ndarray
+    Xsampled
         Subsampled X.
-    rows : np.ndarray
+    rows
         Indices of rows that are stored in Xsampled.
     """
     if n < 0:

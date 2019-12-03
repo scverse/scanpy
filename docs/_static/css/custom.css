@@ -1,8 +1,9 @@
 /* ReadTheDocs theme colors */
 
 
-.wy-side-nav-search { background-color: transparent }
 .wy-nav-top { background-color: #f07e44 }
+.wy-side-nav-search { background-color: transparent }
+.wy-side-nav-search input[type="text"] { border-width: 0 }
 
 
 /* Custom classes */

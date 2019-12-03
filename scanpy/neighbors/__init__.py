@@ -1,3 +1,4 @@
+from types import MappingProxyType
 from typing import Union, Optional, Any, Mapping, Callable, NamedTuple, Generator, Tuple
 
 import numpy as np
@@ -10,13 +11,26 @@ from sklearn.utils import check_random_state
 from .. import logging as logg
 from .. import _utils
 from .._utils import _doc_params
+from .._compat import Literal
 from ..tools._utils import _choose_representation, doc_use_rep, doc_n_pcs
 
 N_DCS = 15  # default number of diffusion components
 N_PCS = 50  # default number of PCs
 
 
-Metric = Callable[[np.ndarray, np.ndarray], float]
+_Method = Literal['umap', 'gauss', 'rapids']
+_MetricFn = Callable[[np.ndarray, np.ndarray], float]
+# from sklearn.metrics.pairwise_distances.__doc__:
+_MetricSparseCapable = Literal[
+    'cityblock', 'cosine', 'euclidean', 'l1', 'l2', 'manhattan'
+]
+_MetricScipySpatial = Literal[
+    'braycurtis', 'canberra', 'chebyshev', 'correlation', 'dice', 'hamming',
+    'jaccard', 'kulsinski', 'mahalanobis', 'minkowski', 'rogerstanimoto',
+    'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean',
+    'yule'
+]
+_Metric = Union[_MetricSparseCapable, _MetricScipySpatial]
 
 
 @_doc_params(n_pcs=doc_n_pcs, use_rep=doc_use_rep)
@@ -27,9 +41,9 @@ def neighbors(
     use_rep: Optional[str] = None,
     knn: bool = True,
     random_state: Optional[Union[int, RandomState]] = 0,
-    method: str = 'umap',
-    metric: Union[str, Metric] = 'euclidean',
-    metric_kwds: Mapping[str, Any] = {},
+    method: Optional[_Method] = 'umap',
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
+    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     copy: bool = False,
 ) -> Optional[AnnData]:
     """\
@@ -62,7 +76,7 @@ def neighbors(
         `n_neighbors` nearest neighbor.
     random_state
         A numpy random seed.
-    method : {{`'umap'`, `'gauss'`, `'rapids'`, `None`}}  (default: `'umap'`)
+    method
         Use 'umap' [McInnes18]_ or 'gauss' (Gauss kernel following [Coifman05]_
         with adaptive width [Haghverdi16]_) for computing connectivities.
         Use 'rapids' for the RAPIDS implementation of UMAP (experimental, GPU
@@ -96,7 +110,7 @@ def neighbors(
         random_state=random_state,
     )
     adata.uns['neighbors'] = {}
-    adata.uns['neighbors']['params'] = {'n_neighbors': n_neighbors, 'method': method}
+    adata.uns['neighbors']['params'] = {'n_neighbors': neighbors.n_neighbors, 'method': method}
     adata.uns['neighbors']['params']['metric'] = metric
     if metric_kwds:
         adata.uns['neighbors']['params']['metric_kwds'] = metric_kwds
@@ -131,8 +145,8 @@ RPForestDict = Mapping[str, Mapping[str, np.ndarray]]
 
 
 def _rp_forest_generate(rp_forest_dict: RPForestDict) -> Generator[FlatTree, None, None]:
-    props = FlatTree._fields[0]
-    num_trees = len(rp_forest_dict[props]['start'])-1
+    props = FlatTree._fields
+    num_trees = len(rp_forest_dict[props[0]]['start'])-1
 
     for i in range(num_trees):
         tree = []
@@ -153,8 +167,8 @@ def compute_neighbors_umap(
     X: Union[np.ndarray, csr_matrix],
     n_neighbors: int,
     random_state: Optional[Union[int, RandomState]] = None,
-    metric: Union[str, Metric] = 'euclidean',
-    metric_kwds: Mapping[str, Any] = {},
+    metric: Union[_Metric, _MetricFn] = 'euclidean',
+    metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     angular: bool = False,
     verbose: bool = False,
 ):
@@ -304,16 +318,24 @@ def _compute_connectivities_umap(
     from umap.umap_ import fuzzy_simplicial_set
 
     X = coo_matrix(([], ([], [])), shape=(n_obs, 1))
-    connectivities = fuzzy_simplicial_set(X, n_neighbors, None, None,
-                                          knn_indices=knn_indices, knn_dists=knn_dists,
-                                          set_op_mix_ratio=set_op_mix_ratio,
-                                          local_connectivity=local_connectivity)
+    connectivities = fuzzy_simplicial_set(
+        X,
+        n_neighbors,
+        None,
+        None,
+        knn_indices=knn_indices,
+        knn_dists=knn_dists,
+        set_op_mix_ratio=set_op_mix_ratio,
+        local_connectivity=local_connectivity,
+    )
 
     if isinstance(connectivities, tuple):
         # In umap-learn 0.4, this returns (result, sigmas, rhos)
         connectivities = connectivities[0]
 
-    distances = _get_sparse_matrix_from_indices_distances_umap(knn_indices, knn_dists, n_obs, n_neighbors)
+    distances = _get_sparse_matrix_from_indices_distances_umap(
+        knn_indices, knn_dists, n_obs, n_neighbors
+    )
 
     return distances, connectivities.tocsr()
 
@@ -607,11 +629,11 @@ class Neighbors:
         knn: bool = True,
         n_pcs: Optional[int] = None,
         use_rep: Optional[str] = None,
-        method: str = 'umap',
+        method: _Method = 'umap',
         random_state: Optional[Union[int, RandomState]] = 0,
         write_knn_indices: bool = False,
-        metric: str = 'euclidean',
-        metric_kwds: Mapping[str, Any] = {},
+        metric: _Metric = 'euclidean',
+        metric_kwds: Mapping[str, Any] = MappingProxyType({}),
     ) -> None:
         """\
         Compute distances and connectivities of neighbors.
@@ -665,9 +687,14 @@ class Neighbors:
             if X.shape[0] < 4096:
                 X = pairwise_distances(X, metric=metric, **metric_kwds)
                 metric = 'precomputed'
-            knn_indices, knn_distances, _ = compute_neighbors_umap(
+            knn_indices, knn_distances, forest = compute_neighbors_umap(
                 X, n_neighbors, random_state, metric=metric, metric_kwds=metric_kwds)
-            #self._rp_forest = _make_forest_dict(forest)
+            # very cautious here
+            try:
+                if forest:
+                    self._rp_forest = _make_forest_dict(forest)
+            except:
+                pass
         # write indices as attributes
         if write_knn_indices:
             self.knn_indices = knn_indices
@@ -758,12 +785,13 @@ class Neighbors:
 
         self._connectivities = W
 
-    def compute_transitions(self, density_normalize=True):
-        """Compute transition matrix.
+    def compute_transitions(self, density_normalize: bool = True):
+        """\
+        Compute transition matrix.
 
         Parameters
         ----------
-        density_normalize : `bool`
+        density_normalize
             The density rescaling of Coifman and Lafon (2006): Then only the
             geometry of the data matters, not the sampled density.
 
@@ -796,20 +824,24 @@ class Neighbors:
         self._transitions_sym = self.Z @ K @ self.Z
         logg.info('    finished', time=start)
 
-    def compute_eigen(self, n_comps=15, sym=None, sort='decrease'):
-        """Compute eigen decomposition of transition matrix.
+    def compute_eigen(
+        self,
+        n_comps: int = 15,
+        sym: Optional[bool] = None,
+        sort: Literal['decrease', 'increase'] = 'decrease',
+    ):
+        """\
+        Compute eigen decomposition of transition matrix.
 
         Parameters
         ----------
-        n_comps : `int`
+        n_comps
             Number of eigenvalues/vectors to be computed, set `n_comps = 0` if
             you need all eigenvectors.
-        sym : `bool`
+        sym
             Instead of computing the eigendecomposition of the assymetric
             transition matrix, computed the eigendecomposition of the symmetric
             Ktilde matrix.
-        matrix : sparse matrix, np.ndarray, optional (default: `.connectivities`)
-            Matrix to diagonalize. Merely for testing and comparison purposes.
 
         Returns
         -------
@@ -838,14 +870,17 @@ class Neighbors:
             which = 'LM' if sort == 'decrease' else 'SM'
             # it pays off to increase the stability with a bit more precision
             matrix = matrix.astype(np.float64)
-            evals, evecs = scipy.sparse.linalg.eigsh(matrix, k=n_comps,
-                                                  which=which, ncv=ncv)
+            evals, evecs = scipy.sparse.linalg.eigsh(
+                matrix, k=n_comps, which=which, ncv=ncv
+            )
             evals, evecs = evals.astype(np.float32), evecs.astype(np.float32)
         if sort == 'decrease':
             evals = evals[::-1]
             evecs = evecs[:, ::-1]
-        logg.info('    eigenvalues of transition matrix\n'
-                  '    {}'.format(str(evals).replace('\n', '\n    ')))
+        logg.info(
+            '    eigenvalues of transition matrix\n'
+            '    {}'.format(str(evals).replace('\n', '\n    '))
+        )
         if self._number_connected_components > len(evals)/2:
             logg.warning('Transition matrix has many disconnected components!')
         self._eigen_values = evals

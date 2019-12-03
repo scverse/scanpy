@@ -20,9 +20,10 @@ def score_genes(
     score_name: str = 'score',
     random_state: Optional[Union[int, RandomState]] = 0,
     copy: bool = False,
-    use_raw: bool = False,
-):  # we use the scikit-learn convention of calling the seed "random_state"
-    """Score a set of genes [Satija15]_.
+    use_raw: bool = None,
+) -> Optional[AnnData]:
+    """\
+    Score a set of genes [Satija15]_.
 
     The score is the average expression of a set of genes subtracted with the
     average expression of a reference set of genes. The reference set is
@@ -52,6 +53,7 @@ def score_genes(
         Copy `adata` or modify it inplace.
     use_raw
         Use `raw` attribute of `adata` if present.
+
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with an additional field
@@ -69,14 +71,22 @@ def score_genes(
 
     gene_list_in_var = []
     var_names = adata.raw.var_names if use_raw else adata.var_names
+    genes_to_ignore = []
     for gene in gene_list:
         if gene in var_names:
             gene_list_in_var.append(gene)
         else:
-            logg.warning(f'gene: {gene} is not in adata.var_names and will be ignored')
+            genes_to_ignore.append(gene)
+    if len(genes_to_ignore) > 0:
+        logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
     gene_list = set(gene_list_in_var[:])
 
-    if not gene_pool:
+    if len(gene_list) == 0:
+        logg.warning('provided gene list has length 0, scores as 0')
+        adata.obs[score_name] = 0
+        return adata if copy else None
+
+    if gene_pool is None:
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
@@ -85,15 +95,17 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
+    if use_raw is None:
+        use_raw = True if adata.raw is not None else False
     _adata = adata.raw if use_raw else adata
-    # TODO: this densifies the whole data matrix for `gene_pool`
-    if issparse(_adata.X):
+
+    _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
+    if issparse(_adata_subset.X):
         obs_avg = pd.Series(
-            np.nanmean(
-                _adata[:, gene_pool].X.toarray(), axis=0), index=gene_pool)  # average expression of genes
+            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
     else:
         obs_avg = pd.Series(
-            np.nanmean(_adata[:, gene_pool].X, axis=0), index=gene_pool)  # average expression of genes
+            np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
 
     obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
 
@@ -105,12 +117,12 @@ def score_genes(
     for cut in np.unique(obs_cut.loc[gene_list]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
-        control_genes.update(set(r_genes[:ctrl_size]))  # uses full r_genes if ctrl_size > len(r_genes)
+        # uses full r_genes if ctrl_size > len(r_genes)
+        control_genes.update(set(r_genes[:ctrl_size]))
 
-    # To index, we need a list - indexing implies an order.
+    # To index, we need a list – indexing implies an order.
     control_genes = list(control_genes - gene_list)
     gene_list = list(gene_list)
-
 
     X_list = _adata[:, gene_list].X
     if issparse(X_list): X_list = X_list.toarray()
@@ -126,7 +138,11 @@ def score_genes(
         )
         return adata if copy else None
     elif len(gene_list) == 1:
-        score = _adata[:, gene_list].X - X_control
+        if _adata[:, gene_list].X.ndim == 2:
+            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
+        else:
+            vector =  _adata[:, gene_list].X  # old anndata
+        score = vector - X_control
     else:
         score = np.nanmean(X_list, axis=1) - X_control
 
@@ -149,8 +165,9 @@ def score_genes_cell_cycle(
     g2m_genes: Sequence[str],
     copy: bool = False,
     **kwargs,
-):
-    """Score cell cycle genes [Satija15]_.
+) -> Optional[AnnData]:
+    """\
+    Score cell cycle genes [Satija15]_.
 
     Given two lists of genes associated to S phase and G2M phase, calculates
     scores and assigns a cell cycle phase (G1, S or G2M). See
