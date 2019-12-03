@@ -285,12 +285,18 @@ def _scatter_obs(
 
     if basis is not None:
         component_name = (
-            'DC' if basis == 'diffmap'
-            else 'tSNE' if basis == 'tsne'
-            else 'UMAP' if basis == 'umap'
-            else 'PC' if basis == 'pca'
-            else 'TriMap' if basis == 'trimap'
-            else basis.replace('draw_graph_', '').upper() if 'draw_graph' in basis
+            'DC'
+            if basis == 'diffmap'
+            else 'tSNE'
+            if basis == 'tsne'
+            else 'UMAP'
+            if basis == 'umap'
+            else 'PC'
+            if basis == 'pca'
+            else 'TriMap'
+            if basis == 'trimap'
+            else basis.replace('draw_graph_', '').upper()
+            if 'draw_graph' in basis
             else basis
         )
     else:
