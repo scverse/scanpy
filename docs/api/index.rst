@@ -303,6 +303,7 @@ Datasets
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
+   datasets.pbmc3k_processed
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch

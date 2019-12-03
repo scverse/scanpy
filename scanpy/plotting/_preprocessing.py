@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 from matplotlib import pyplot as pl
@@ -11,20 +11,26 @@ from . import _utils
 # --------------------------------------------------------------------------------
 
 
-def highly_variable_genes(adata_or_result, log=False, show=None, save=None, highly_variable_genes=True):
+def highly_variable_genes(
+    adata_or_result: Union[AnnData, np.recarray],
+    log: bool = False,
+    show: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
+    highly_variable_genes: bool = True,
+):
     """Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`, `np.recarray`
+    adata
         Result of :func:`~scanpy.pp.highly_variable_genes`.
-    log : `bool`
+    log
         Plot on logarithmic axes.
-    show : bool, optional (default: `None`)
+    show
          Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
@@ -70,9 +76,10 @@ def filter_genes_dispersion(
     result: np.recarray,
     log: bool = False,
     show: Optional[bool] = None,
-    save: Optional[bool] = None,
+    save: Union[bool, str, None] = None,
 ):
-    """Plot dispersions versus means for genes.
+    """\
+    Plot dispersions versus means for genes.
 
     Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
 
@@ -82,11 +89,13 @@ def filter_genes_dispersion(
         Result of :func:`~scanpy.pp.filter_genes_dispersion`.
     log
         Plot on logarithmic axes.
-    show : bool, optional (default: `None`)
+    show
          Show the plot, do not return axis.
-    save : `bool` or `str`, optional (default: `None`)
+    save
         If `True` or a `str`, save the figure.
         A string is appended to the default filename.
         Infer the filetype if ending on {{`'.pdf'`, `'.png'`, `'.svg'`}}.
     """
-    highly_variable_genes(result, log=False, show=None, save=None, highly_variable_genes=False)
+    highly_variable_genes(
+        result, log=log, show=show, save=save, highly_variable_genes=False
+    )

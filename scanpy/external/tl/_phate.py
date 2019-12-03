@@ -7,6 +7,7 @@ from anndata import AnnData
 from numpy.random.mtrand import RandomState
 
 from ..._settings import settings
+from ..._compat import Literal
 from ... import logging as logg
 
 
@@ -21,7 +22,7 @@ def phate(
     n_pca: int = 100,
     knn_dist: str = 'euclidean',
     mds_dist: str = 'euclidean',
-    mds: str = 'metric',
+    mds: Literal['classic', 'metric', 'nonmetric'] = 'metric',
     n_jobs: Optional[int] = None,
     random_state: Optional[Union[int, RandomState]] = None,
     verbose: Union[bool, int, None] = None,
@@ -76,7 +77,7 @@ def phate(
         recommended values: 'euclidean' and 'cosine'
         Any metric from `scipy.spatial.distance` can be used
         distance metric for MDS
-    mds : {`'classic'`, `'metric'`, `'nonmetric'`}
+    mds
         Selects which MDS algorithm is used for dimensionality reduction.
     n_jobs
         The number of jobs to use for the computation.

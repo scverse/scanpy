@@ -32,7 +32,7 @@ from .. import plotting
 # it would be nice to make the simple data types "properties of the
 # module"... putting setters and getters for all of them wouldn't be very nice
 from .._settings import settings
-# for now - or maybe as the permanently favored solution - put the single function here
+# for now – or maybe as the permanently favored solution – put the single function here
 # from ..settings import set_figure_params
 set_figure_params = settings.set_figure_params
 
@@ -98,18 +98,21 @@ Batch effect correction
 Note that a simple batch correction method is available via
 :func:`scanpy.api.pp.regress_out`.
 
-``pp.bbknn`` is just an alias for :func:`bbknn.bbknn`. Refer to it for the documentation.
+`pp.bbknn` is just an alias for :func:`bbknn.bbknn`.
+Refer to it for the documentation.
 
 .. autosummary::
 
    pp.bbknn
    pp.mnn_correct
 
+.. _pp-imputation:
+
 Imputation
 ~~~~~~~~~~
 
-Note that the fundamental limitations of imputation are still under `debate
-<https://github.com/theislab/scanpy/issues/189>`__.
+Note that the fundamental limitations of imputation are still under debate
+(:issue:`189`)
 
 .. autosummary::
 

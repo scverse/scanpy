@@ -40,12 +40,17 @@ def test_help_output(set_path: type(None), capsys: CaptureFixture):
     with pytest.raises(SystemExit, match='^0$'):
         main(['-h'])
     captured = capsys.readouterr()
-    assert re.search(r'^positional arguments:\n\s+\{settings,[\w,-]*testbin[\w,-]*\}$', captured.out, re.MULTILINE)
+    assert re.search(
+        r'^positional arguments:\n\s+\{settings,[\w,-]*testbin[\w,-]*\}$',
+        captured.out,
+        re.MULTILINE,
+    )
 
 
 def test_external(set_path: type(None)):
     # We need to capture the output manually, since subprocesses don’t write to sys.stderr
-    cmd = main(['testbin', '-t', '--testarg', 'testpos'], stdout=PIPE, encoding='utf-8', check=True)
+    cmdline = ['testbin', '-t', '--testarg', 'testpos']
+    cmd = main(cmdline, stdout=PIPE, encoding='utf-8', check=True)
     assert cmd.stdout == 'test -t --testarg testpos\n'
 
 

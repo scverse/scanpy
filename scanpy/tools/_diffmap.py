@@ -1,8 +1,11 @@
+from anndata import AnnData
+
 from ._dpt import _diffmap
 
 
-def diffmap(adata, n_comps=15, copy=False):
-    """Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
+def diffmap(adata: AnnData, n_comps: int = 15, copy: bool = False):
+    """\
+    Diffusion Maps [Coifman05]_ [Haghverdi15]_ [Wolf18]_.
 
     Diffusion maps [Coifman05]_ has been proposed for visualizing single-cell
     data by [Haghverdi15]_. The tool uses the adapted Gaussian kernel suggested
@@ -18,22 +21,23 @@ def diffmap(adata, n_comps=15, copy=False):
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
+    adata
         Annotated data matrix.
-    n_comps : `int`, optional (default: 15)
+    n_comps
         The number of dimensions of the representation.
-    copy : `bool` (default: `False`)
+    copy
         Return a copy instead of writing to adata.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    **X_diffmap** : :class:`numpy.ndarray` (`adata.obsm`)
+    `X_diffmap` : :class:`numpy.ndarray` (`adata.obsm`)
         Diffusion map representation of data, which is the right eigen basis of
         the transition matrix with eigenvectors as columns.
-    **diffmap_evals** : :class:`numpy.ndarray` (`adata.uns`)
-        Array of size (number of eigen vectors). Eigenvalues of transition matrix.
+    `diffmap_evals` : :class:`numpy.ndarray` (`adata.uns`)
+        Array of size (number of eigen vectors).
+        Eigenvalues of transition matrix.
     """
     if 'neighbors' not in adata.uns:
         raise ValueError(
