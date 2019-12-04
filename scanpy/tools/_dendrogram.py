@@ -128,7 +128,9 @@ def dendrogram(
     import scipy.cluster.hierarchy as sch
 
     corr_matrix = mean_df.T.corr(method=cor_method)
-    z_var = sch.linkage(corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering)
+    z_var = sch.linkage(
+        corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering
+    )
     dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
 
     # order of groupby categories
