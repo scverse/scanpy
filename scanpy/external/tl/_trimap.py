@@ -1,22 +1,29 @@
-from ... import logging as logg
-import numpy as np
+"""\
+Embed high-dimensional data using TriMap
+"""
+from typing import Optional, Union
+
+from anndata import AnnData
 import scipy.sparse as scp
+
+from ..._settings import settings
+from ..._compat import Literal
+from ... import logging as logg
 
 
 def trimap(
-    adata,
-    n_dims=2,
-    n_inliers=10,
-    n_outliers=5,
-    n_random=5,
-    metric='euclidean',
-    weight_adj=500.0,
-    lr=1000.0,
-    n_iters=400,
-    init_pos=None,
-    verbose=False,
-    copy=False,
-):
+    adata: AnnData,
+    n_components: int = 2,
+    n_inliers: int = 10,
+    n_outliers: int = 5,
+    n_random: int = 5,
+    metric: Literal['angular', 'euclidean', 'hamming', 'manhattan'] = 'euclidean',
+    weight_adj: float = 500.0,
+    lr: float = 1000.0,
+    n_iters: int = 400,
+    verbose: Union[bool, int, None] = None,
+    copy: bool = False,
+) -> Optional[AnnData]:
     """\
     TriMap: Large-scale Dimensionality Reduction Using Triplets.
 
@@ -46,40 +53,38 @@ def trimap(
      year = 2019,
     }
 
-    Input
+    Parameters
     ------
+    adata
+        Annotated data matrix.
+    n_components
+        Number of dimensions of the embedding.
+    n_inliers
+        Number of inlier points for triplet constraints.
+    n_outliers
+        Number of outlier points for triplet constraints.
+    n_random
+        Number of random triplet constraints per point.
+    metric
+        Distance measure: 'angular', 'euclidean', 'hamming', 'manhattan'.
+    weight_adj
+        Adjusting the weights using a non-linear transformation.
+    lr
+        Learning rate.
+    n_iters
+        Number of iterations.
+    verbose
+        If `True`, print the progress report.
+        If `None`, `sc.settings.verbosity` is used.
+    copy
+        Return a copy instead of writing to `adata`.
 
-    n_dims: Number of dimensions of the embedding (default = 2)
+    Returns
+    -------
+    Depending on `copy`, returns or updates `adata` with the following fields.
 
-    n_inliers: Number of inlier points for triplet constraints (default = 10)
-
-    n_outliers: Number of outlier points for triplet constraints (default = 5)
-
-    n_random: Number of random triplet constraints per point (default = 5)
-
-    metric: Distance measure ('euclidean' (default), 'manhattan', 'angular',
-    'hamming')
-
-    lr: Learning rate (default = 1000.0)
-
-    n_iters: Number of iterations (default = 400)
-
-    knn_tuple: Use the pre-computed nearest-neighbors information in form of a
-    tuple (knn_nbrs, knn_distances) (default = None)
-
-    apply_pca: Apply PCA to reduce the dimensions to 100 if necessary before the
-    nearest-neighbor calculation (default = True)
-
-    opt_method: Optimization method ('sd': steepest descent,  'momentum': GD
-    with momentum, 'dbd': GD with momentum delta-bar-delta (default))
-
-    verbose: Print the progress report (default = True)
-
-    weight_adj: Adjusting the weights using a non-linear transformation
-    (default = 500.0)
-
-    return_seq: Return the sequence of maps recorded every 10 iterations
-    (default = False)
+    **X_trimap** : `np.ndarray`, (`adata.obs`, shape=[n_samples, n_components], dtype `float`)
+        TriMap coordinates of data.
 
     Example
     -------
@@ -89,7 +94,6 @@ def trimap(
     >>> pbmc = sc.datasets.pbmc68k_reduced()
     >>> pbmc = sce.tl.trimap(pbmc, copy=True)
     >>> sce.pl.trimap(pbmc, color=['bulk_labels'], s=10)
-
     """
 
     try:
@@ -99,18 +103,10 @@ def trimap(
             '\nplease install trimap: \n\n\tsudo pip install trimap'
         )
     adata = adata.copy() if copy else adata
-    start = logg.info('computing TRIMAP')
-
-    if isinstance(init_pos, str) and init_pos in adata.obsm.keys():
-        init_coords = adata.obsm[init_pos]
-    elif isinstance(init_pos, str) and init_pos == 'paga':
-        init_coords = get_init_pos_from_paga(adata, random_state=random_state)
-    else:
-        init_coords = init_pos  # Let TriMap handle it
-    if hasattr(init_coords, "dtype"):
-        init_coords = check_array(
-            init_coords, dtype=np.float32, accept_sparse=False
-        )
+    start = logg.info('computing TriMap')
+    adata = adata.copy() if copy else adata
+    verbosity = settings.verbosity if verbose is None else verbose
+    verbose = verbosity if isinstance(verbosity, bool) else verbosity > 0
 
     if 'X_pca' in adata.obsm:
         n_dim_pca = adata.obsm['X_pca'].shape[1]
@@ -119,17 +115,12 @@ def trimap(
         X = adata.X
         if scp.issparse(X):
             raise ValueError(
-                'trimap currently does not support sparse matrices. please'
+                'trimap currently does not support sparse matrices. Please'
                 'use a dense matrix or apply pca first.'
             )
-    if metric not in ['euclidean', 'manhattan', 'angular', 'hamming']:
-        raise ValueError(
-            'metric \'' + metric + '\' is currently not supported '
-            'by trimap. acceptable values are \'euclidean\', \'manhattan\', '
-            '\'angular\', and \'hamming\'.'
-        )
+        logg.warning('`X_pca` not found. Run `sc.pp.pca` first for speedup.')
     X_trimap = TRIMAP(
-        n_dims=n_dims,
+        n_dims=n_components,
         n_inliers=n_inliers,
         n_outliers=n_outliers,
         n_random=n_random,
@@ -138,11 +129,11 @@ def trimap(
         weight_adj=weight_adj,
         n_iters=n_iters,
         verbose=verbose,
-    ).fit_transform(X, init=init_coords)
+    ).fit_transform(X)
     adata.obsm['X_trimap'] = X_trimap
     logg.info(
         '    finished',
         time=start,
-        deep=('added\n' "    'X_trimap', TriMap coordinates (adata.obsm)"),
+        deep="added\n    'X_trimap', TriMap coordinates (adata.obsm)",
     )
     return adata if copy else None
