@@ -56,7 +56,7 @@ def trimap(
     }
 
     Parameters
-    ------
+    ----------
     adata
         Annotated data matrix.
     n_components
