@@ -68,8 +68,8 @@ def dendrogram(
         linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
     optimal_ordering
-        Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage` 
-        which reorders the linkage matrix so that the distance between successive 
+        Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
+        which reorders the linkage matrix so that the distance between successive
         leaves is minimal.
     key_added
         By default, the dendrogram information is added to
