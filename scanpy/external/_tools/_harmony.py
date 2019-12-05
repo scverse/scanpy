@@ -10,7 +10,6 @@ import os
 
 
 def harmony(adata, **kargs):
-
     """Harmony for data visualization with augmented affinity matrix at discrete timepoints [Setty18i]_.
 
     Harmony is a framework for data visualization, trajectory detection and interpretation
@@ -27,7 +26,7 @@ def harmony(adata, **kargs):
     Parameters
     ----------
     adata : `list`
-        of :class:`~anndata.AnnData`, or `.csv` filenames of count matrices from two time 
+        of :class:`~anndata.AnnData`, or cell x gene `.csv` filenames of count matrices from two time
         points. Please ensure that replicates of the same time point are consecutive in order
     timepoints : `list` (default: `None`)
         timepoints at which each cell was measured. Important for Harmony augmented affinity matrix
@@ -117,13 +116,13 @@ def harmony(adata, **kargs):
             - processing of input data
         """
 
-        def __init__(self ,
+        def __init__(self,
                      adata,
-                     func = None ,
-                     timepoints = None,
-                     sample_names = None,
-                     log_transform = False
-                    ):
+                     func=None,
+                     timepoints=None,
+                     sample_names=None,
+                     log_transform=False
+                     ):
             """
             Parameters
             ----------
@@ -157,35 +156,36 @@ def harmony(adata, **kargs):
             if self.sample_names is None:
                 print('"sample_names" not provided, constructed internally')
                 rep = range(len(self.adata))
-                self.sample_names = ['_'.join(['sample{}'.format(n+1),str(n+1)]) for n in rep]
+                self.sample_names = ['_'.join(['sample{}'.format(n + 1), str(n + 1)]) for n in rep]
                 print('"sample_names": {}'.format(self.sample_names))
 
             try:
-                assert(self.timepoints)
+                assert self.timepoints
             except AssertionError:
                 try:
                     self.timepoints = [i.split("_")[0] for i in self.sample_names]
                 except:
-                    raise AssertionError('"timepoints" must be a list of Time Points!!\n\n\t' +\
-                                         '"timepoints" = {}'.format( self.timepoints ) +\
-                                         '\n\tset the values of Time Points and try again!')
+                    msg = '"timepoints" must be a list of Time Points!!\n\n\t' +\
+                          '"timepoints" = {}'.format(self.timepoints) +\
+                          '\n\tset the values of Time Points and try again!'
+                    raise AssertionError(msg)
             # keep the order of unique time points
             self.timepoints = list(OrderedDict.fromkeys(self.timepoints))
 
             try:
-                assert(os.path.exists(self.adata[0]))
+                assert (os.path.exists(self.adata[0]))
                 counts = self.harmony.utils.load_from_csvs(self.adata, self.sample_names)
                 logg.info('Input data is a list of .csv files', r=True)
             except:
                 try:
                     if not isinstance(adata[0], pd.DataFrame):
-                        assert(isinstance( adata[0].to_df(), pd.DataFrame))
+                        assert (isinstance(adata[0].to_df(), pd.DataFrame))
                     else:
-                        assert(isinstance( adata[0], pd.DataFrame))
+                        assert (isinstance(adata[0], pd.DataFrame))
                     counts = self.load_from_AnnData(self.adata, self.sample_names)
                     logg.info('Input data is a list of scanpy.AnnData objects', r=True)
                 except:
-                    raise RuntimeError('Input data must be a list of .csv files,' +\
+                    raise RuntimeError('Input data must be a list of .csv files,' + \
                                        ' scanpy.AnnData, or pandas DataFrames')
 
             # PREPROCESS
@@ -195,7 +195,7 @@ def harmony(adata, **kargs):
             # select highly variable genes
             hvg_genes = self.harmony.utils.hvg_genes(norm_df)
 
-            self.data_df = norm_df.loc[:,hvg_genes]
+            self.data_df = norm_df.loc[:, hvg_genes]
             logg.info('data normalized and returned as annData ...', r=True)
 
         def __call__(self):
@@ -220,16 +220,16 @@ def harmony(adata, **kargs):
                 self.tp[cells] = t
             self.timepoint_connections = pd.DataFrame(columns=[0, 1])
             index = 0
-            for i in range(len(self.timepoints)-1):
-                self.timepoint_connections.loc[index, :] = self.timepoints[i:i+2]
+            for i in range(len(self.timepoints) - 1):
+                self.timepoint_connections.loc[index, :] = self.timepoints[i:i + 2]
                 index += 1
 
             # compute the augmented and non-augmented affinity matrices
             self.aug_aff, self.aff = self.harmony.core.augmented_affinity_matrix(
-                                                    self.data_df,
-                                                    self.tp,
-                                                    self.timepoint_connections
-                                                    )
+                self.data_df,
+                self.tp,
+                self.timepoint_connections
+                )
 
             # Visualization using force directed layouts
             self.layout = self.harmony.plot.force_directed_layout(self.aug_aff,
@@ -237,7 +237,7 @@ def harmony(adata, **kargs):
 
             # push outputs to a new scanpy.AnnDana
             from scanpy import AnnData
-            self.harmony_adata = AnnData( self.data_df )
+            self.harmony_adata = AnnData(self.data_df)
             self.harmony_adata.obsm['layout'] = np.array(self.layout)
             self.harmony_adata.uns['tp'] = self.tp
             self.harmony_adata.uns['aff'] = self.aff
@@ -252,9 +252,9 @@ def harmony(adata, **kargs):
 
         def load_from_AnnData(self,
                               adata_list,
-                              sample_names = None,
-                              min_cell_count = 10
-                             ):
+                              sample_names=None,
+                              min_cell_count=10
+                              ):
             """
             Read in scRNA-seq data from :class:`~anndata.AnnData` list
 
@@ -283,8 +283,7 @@ def harmony(adata, **kargs):
                     counts = adata.to_df()
                 except AttributeError:
                     # assume the data is a cell X genes Dataframe
-                    logg.info('Assuming the data is a cell X genes Dataframe',
-                	      r=True)
+                    logg.info('Assuming the data is a cell X genes Dataframe', r=True)
                     counts = adata
 
                 # Update sample names
@@ -321,12 +320,12 @@ def harmony(adata, **kargs):
         @property
         def log_transform(self):
             return self._log_transform
+
         @log_transform.setter
-        def log_transform(self , value):
+        def log_transform(self, value):
             if value is True:
                 self.data_df = self.harmony.utils.log_transform(self.data_df)
                 logg.info('data log transformed ...', r=True)
-
 
     def wrapper_cls(adata, func=None, **kargs):
         """
@@ -337,11 +336,12 @@ def harmony(adata, **kargs):
         else:
             def wrapper(func):
                 return _wrapper_cls(adata, func, **kargs)
+
             return wrapper
 
     # import palantir and wrap it in a function passed to the wrapper class
     # this method allows passing positional argument of adata to `_wrapper_cls`
-    @wrapper_cls(adata , **kargs)
+    @wrapper_cls(adata, **kargs)
     def _run():
         import importlib
         try:
@@ -361,4 +361,5 @@ def harmony(adata, **kargs):
                 'cd Harmony\n\t'
                 'sudo -H pip3 install .\n')
         return harmony
+
     return _run

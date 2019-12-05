@@ -169,8 +169,8 @@ References
    `bioRxiv <https://doi.org/10.1101/385328>`__.
 
 .. [Setty18i] Setty *et al.* (2018),
-   *Charting the emergent organotypic landscape of the mammalian gut endoderm at single-cell resolution*
-   `bioRxiv <https://doi.org/10.1101/471078>`__.
+   *The emergent landscape of the mouse gut endoderm at single-cell resolution*
+   `Nature <https://www.nature.com/articles/s41586-019-1127-1>`__.
 
 .. [Traag17] Traag (2017),
    *Louvain*,
