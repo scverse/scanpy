@@ -18,7 +18,7 @@ def load_timepoints():
 
 def load_timepoints_from_anndata_list():
 
-    adatalist = [sc.read(i) for i in COUNTS]
+    adatalist = [sce.read(i) for i in COUNTS]
     d = sce.tl.harmony(adata=adatalist, sample_names=sample_names)
     d.log_transform = True
     d.process()
