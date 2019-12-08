@@ -394,6 +394,7 @@ class ScanpyConfig:
         frameon: bool = True,
         vector_friendly: bool = True,
         fontsize: int = 14,
+        figsize: Optional[int] = None,
         color_map: Optional[str] = None,
         format: _Format = "pdf",
         transparent: bool = False,
@@ -417,6 +418,8 @@ class ScanpyConfig:
             Plot scatter plots using `png` backend even when exporting as `pdf` or `svg`.
         fontsize
             Set the fontsize for several `rcParams` entries. Ignored if `scanpy=False`.
+        figsize
+            Set plt.rcParams['figure.figsize'].
         color_map
             Convenience method for setting the default color map. Ignored if `scanpy=False`.
         format
@@ -447,6 +450,8 @@ class ScanpyConfig:
         if scanpy:
             from .plotting._rcmod import set_rcParams_scanpy
             set_rcParams_scanpy(fontsize=fontsize, color_map=color_map)
+        if figsize is not None:
+            rcParams['figure.figsize'] = figsize
         self._frameon = frameon
 
     @staticmethod
