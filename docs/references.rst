@@ -42,6 +42,10 @@ References
    *PyPairs*,
    `GitHub <https://github.com/rfechtner/pypairs>`__.
 
+.. [Franzen19] Franzén *et al.* (2019),
+   *PanglaoDB: a web server for exploration of mouse and human single-cell RNA sequencing data*,
+   `Database <https://academic.oup.com/database/article/doi/10.1093/database/baz046/5427041>`__
+
 .. [Fruchterman91] Fruchterman & Reingold (1991),
    *Graph drawing by force-directed placement*,
    `Software: Practice & Experience <http://doi.org:10.1002/spe.4380211102>`__.
@@ -187,6 +191,10 @@ References
 .. [vanDijk18] Van Dijk D *et al.* (2018),
    *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
    `Cell <https://www.cell.com/cell/abstract/S0092-8674(18)30724-4>`__.
+
+.. [Villani17] Villani *et al.* (2017).
+   *Single-cell RNA-seq reveals new types of human blood dendritic cells, monocytes, and progenitors*
+   `Science <https://science.sciencemag.org/content/356/6335/eaah4573.long>`__.
 
 .. [Weinreb17] Weinreb *et al.* (2016),
    *SPRING: a kinetic interface for visualizing high dimensional single-cell expression data*,
