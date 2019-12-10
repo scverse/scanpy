@@ -5,7 +5,6 @@
 
 .. role:: small
 .. role:: smaller
-.. role:: noteversion
 
 .. sidebar:: Key Contributors
 
