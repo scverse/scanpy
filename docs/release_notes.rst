@@ -32,21 +32,61 @@ On master
 ---------
 
 - :mod:`scanpy.pp.downsample_counts` now always preserves the dtype of it's input, instead of converting to floats to int :noteversion:`1.4.5` :pr:`865` :smaller:`thanks to I Virshup`
-- :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :noteversion:`1.4.5` :pr:`467` :smaller:`thanks to I Virshup`
-- Allow specifying a base for :func:`~scanpy.pp.log1p` :noteversion:`1.4.5` :pr:`931` :smaller:`thanks to G Eraslan`
+- :mod:`scanpy.queries` recieved many updates. This includes enrichment through gprofiler_ and more advanced biomart queries :pr:`467` :smaller:`thanks to I Virshup`
+- Allow specifying a base for :func:`~scanpy.pp.log1p` :pr:`931` :smaller:`thanks to G Eraslan`
 
 .. _gprofiler: https://biit.cs.ut.ee/gprofiler/
 
 
-Post v1.4 :small:`July 20, 2019`
---------------------------------
+Version 1.4.*
+-------------
 
+1.4.4
+~~~~~
 New functionality:
 
 - :mod:`scanpy.get` adds helper functions for extracting data in convenient formats :noteversion:`1.4.4` :pr:`619` :smaller:`thanks to I Virshup`
+
+Bug fixes:
+
+- Stopped deprecations warnings from AnnData `0.6.22` :noteversion:`1.4.4` :smaller:`thanks to I Virshup`
+
+Code design:
+
+- :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :noteversion:`1.4.4` :smaller:`thanks to A Wolf`
+
+1.4.3
+~~~~~
+Bug fixes:
+
+- :func:`~scanpy.pp.neighbors` correctly infers `n_neighbors` again from `params`, which was temporarily broken in `v1.4.2` :noteversion:`1.4.3` :smaller:`thanks to I Virshup`
+
+Code design:
+
+- :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :noteversion:`1.4.3` :pr:`615 :smaller:`thanks to I Virshup`
+
+1.4.2
+~~~~~
+New functionality:
+
 - :func:`~scanpy.pp.combat` supports additional covariates which may include adjustment variables or biological condition :noteversion:`1.4.2` :pr:`618 :smaller:`thanks to G Eraslan`
 - :func:`~scanpy.pp.highly_variable_genes` has a `batch_key` option which performs HVG selection in each batch separately to avoid selecting genes that vary strongly across batches :noteversion:`1.4.2` :pr:`622 :smaller:`thanks to G Eraslan`
-- Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`) :pr:`604` :smaller:`thanks to P Angerer`
+
+Bug fixes:
+
+- :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :noteversion:`1.4.2` :pr:`621 :smaller:`thanks to I Virshup`
+- :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
+- :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` auto-generate `key_added=louvain_R` upon passing `restrict_to`, which was temporarily changed in `v1.4.1` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
+
+Code design:
+
+- :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :noteversion:`1.4.2` :pr:`576 :smaller:`thanks to S Rybakov`
+
+1.4.1
+~~~~~
+New functionality:
+
+- Scanpy has a command line interface again. Invoking it with `scanpy somecommand [args]` calls `scanpy-somecommand [args]`, except for builtin commands (currently `scanpy settings`) :noteversion:`1.4.1` :pr:`604` :smaller:`thanks to P Angerer`
 - :func:`~scanpy.datasets.ebi_expression_atlas` allows convenient download of EBI expression atlas :noteversion:`1.4.1` :smaller:`thanks to I Virshup`
 - :func:`~scanpy.tl.marker_gene_overlap` computes overlaps of marker genes :noteversion:`1.4.1` :smaller:`thanks to M Luecken`
 - :func:`~scanpy.tl.filter_rank_genes_groups` filters out genes based on fold change and fraction of cells expressing genes :noteversion:`1.4.1` :smaller:`thanks to F Ramirez`
@@ -55,35 +95,37 @@ New functionality:
 - :func:`~scanpy.pl.embedding_density` allows plots of cell densities on embeddings :noteversion:`1.4.1` :pr:`543 :smaller:`thanks to M Luecken`
 - :func:`~scanpy.external.tl.palantir` interfaces Palantir [Setty18]_ :noteversion:`1.4.1` :pr:`493 :smaller:`thanks to A Mousa`
 
-Bug fixes:
-
-- Stopped deprecations warnings from AnnData `0.6.22` :noteversion:`1.4.4` :smaller:`thanks to I Virshup`
-- :func:`~scanpy.tl.rank_genes_groups` t-test implementation doesn't return NaN when variance is 0, also changed to scipy's implementation :noteversion:`1.4.2` :pr:`621 :smaller:`thanks to I Virshup`
-- :func:`~scanpy.tl.umap` with `init_pos='paga'` detects correct `dtype` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
-- :func:`~scanpy.pp.neighbors` correctly infers `n_neighbors` again from `params`, which was temporarily broken in `v1.4.2` :noteversion:`1.4.3` :smaller:`thanks to I Virshup`
-- :func:`~scanpy.tl.louvain` and :func:`~scanpy.tl.leiden` auto-generate `key_added=louvain_R` upon passing `restrict_to`, which was temporarily changed in `v1.4.1` :noteversion:`1.4.2` :smaller:`thanks to A Wolf`
-
 Code design:
 
-- :func:`~scanpy.pp.neighbors` and :func:`~scanpy.tl.umap` got rid of UMAP legacy code and introduced UMAP as a dependency :noteversion:`1.4.2` :pr:`576 :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.pp.calculate_qc_metrics` is single threaded by default for datasets under 300,000 cells -- allowing cached compilation :noteversion:`1.4.3` :pr:`615 :smaller:`thanks to I Virshup`
-- :func:`~scanpy.pp.normalize_total` gains param `exclude_highly_expressed`, and `fraction` is renamed to `max_fraction` with better docs :smaller:`thanks to A Wolf`
 - `.layers` support of scatter plots :noteversion:`1.4.1` :smaller:`thanks to F Ramirez`
 - fix double-logarithmization in compute of log fold change in :func:`~scanpy.tl.rank_genes_groups` :noteversion:`1.4.1` :smaller:`thanks to A Muñoz-Rojas`
 - fix return sections of docs :noteversion:`1.4.1` :smaller:`thanks to P Angerer`
 
 
-Version 1.4 :small:`February 5, 2019`
--------------------------------------
+Version 1.3.*
+-------------
 
+1.3.8
+~~~~~
+- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore. :noteversion:`1.3.8` :pr:`442` and :pr:`444  :smaller:`thanks to I Vishrup`
+
+1.3.7
+~~~~~
 Major updates:
 
 - one can `import scanpy as sc` instead of `import scanpy.api as sc`, see :mod:`scanpy` :noteversion:`1.3.7`
+
+Further updates:
+
+- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements, see :noteversion:`1.3.7` :pr:`398 :smaller:`thanks to M Lange`
+- :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  :noteversion:`1.3.7` :smaller:`thanks to A Mousa`
+
+1.3.6
+~~~~~
+Major updates:
+
 - a new plotting gallery for :doc:`visualizing-marker-genes` :noteversion:`1.3.6` :smaller:`thanks to F Ramirez`
 - tutorials are integrated on ReadTheDocs, :doc:`pbmc3k` and :doc:`paga-paul15` :noteversion:`1.3.6`
-- a fully distributed preprocessing backend :noteversion:`1.3.3` :smaller:`thanks to T White and the Laserson Lab`
-- changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
-- performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`thanks to S Rybakov`
 
 Two new possibilities for interactive exploration of analysis results:
 
@@ -93,45 +135,76 @@ Two new possibilities for interactive exploration of analysis results:
 .. _cellxgene: https://github.com/chanzuckerberg/cellxgene
 .. _UCSC Single Cell Browser: https://github.com/maximilianh/cellBrowser
 
+
 Further updates:
 
-- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset :noteversion:`1.3.6` :smaller:`thanks to S Rybakov`
-- :func:`~scanpy.pp.combat` reimplements Combat for batch effect correction [Johnson07]_ [Leek12]_, heavily based on the Python implementation of [Pedersen12]_, but with performance improvements, see :noteversion:`1.3.7` :pr:`398 :smaller:`thanks to M Lange`
+- :func:`~scanpy.pp.highly_variable_genes` supersedes :func:`~scanpy.pp.filter_genes_dispersion`, it gives the same results but, by default, expects logarithmized data and doesn’t subset :noteversion:`1.3.6`
+
+1.3.5
+~~~~~
+
+- Uncountable figure improvements :noteversion:`1.3.5` :pr:`369` :smaller:`thanks to F Ramirez`
+
+1.3.4
+~~~~~
+
 - :func:`~scanpy.tl.leiden` wraps the recent graph clustering package by [Traag18]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
 - :func:`~scanpy.external.pp.bbknn` wraps the recent batch correction package [Polanski19]_ :noteversion:`1.3.4` :smaller:`thanks to K Polanski`
-- :func:`~scanpy.external.tl.phenograph` wraps the graph clustering package Phenograph [Levine15]_  :noteversion:`1.3.7` :smaller:`thanks to A Mousa`
 - :func:`~scanpy.pp.calculate_qc_metrics` caculates a number of quality control metrics, similar to `calculateQCMetrics` from *Scater* [McCarthy17]_ :noteversion:`1.3.4` :smaller:`thanks to I Virshup`
-- :func:`~scanpy.read_10x_h5` throws more stringent errors and doesn’t require speciying default genomes anymore, see :pr:`442` and :noteversion:`1.3.8` :pr:`444  :smaller:`thanks to I Vishrup`
-- :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see :noteversion:`1.3.3` :pr:`334  :smaller:`thanks to Q Gong`
 
+1.3.3
+~~~~~
 
-Version 1.3 :small:`September 3, 2018`
---------------------------------------
+Major updates:
+
+- a fully distributed preprocessing backend :noteversion:`1.3.3` :smaller:`thanks to T White and the Laserson Lab`
+
+Further updates:
+
+- :func:`~scanpy.read_10x_h5` and :func:`~scanpy.read_10x_mtx` read Cell Ranger 3.0 outputs, see :noteversion:`1.3.3` :pr:`334` :smaller:`thanks to Q Gong`
+
+AnnData 0.6.*
+~~~~~~~~~~~~~
+
+- changed default compression to `None` in :meth:`~anndata.AnnData.write_h5ad` to speed up read and write, disk space use is usually less critical :noteversion:`anndata 0.6.16`
+- performance gains in :meth:`~anndata.AnnData.write_h5ad` due to better handling of strings and categories :noteversion:`anndata 0.6.19` :smaller:`thanks to S Rybakov`
+
+1.3
+~~~
 
 RNA velocity in single cells [Manno18]_:
 
 - Scanpy and AnnData support loom’s layers so that computations for single-cell RNA velocity [Manno18]_ become feasible :smaller:`thanks to S Rybakov and V Bergen`
-- the package `scvelo`_ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
+- the package scvelo_ perfectly harmonizes with Scanpy and is able to process loom files with splicing information produced by Velocyto [Manno18]_, it runs a lot faster than the count matrix analysis of Velocyto and provides several conceptual developments (preprint to come)
 
 .. _scvelo: https://github.com/theislab/scvelo
 
 Plotting of :ref:`pl-generic` marker genes and quality control.
 
-- :func:`~scanpy.pl.dotplot` for visualizing genes across conditions and clusters, see `here`__ :smaller:`thanks to F Ramirez`
-- :func:`~scanpy.pl.heatmap` for pretty heatmaps, see :pr:`175` :smaller:`thanks to F Ramirez`
-- :func:`~scanpy.pl.violin` produces very compact overview figures with many panels, see :pr:`175` :smaller:`thanks to F Ramirez`
-- :func:`~scanpy.pl.highest_expr_genes` for quality control, see :pr:`169`; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_ :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.pl.dotplot` for visualizing genes across conditions and clusters, see `here`__. :noteversion:`1.3` :pr:`199` :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.pl.heatmap` for pretty heatmaps. :noteversion:`1.3` :pr:`175` :smaller:`thanks to F Ramirez`
+- :func:`~scanpy.pl.violin` produces very compact overview figures with many panels. :noteversion:`1.3` :pr:`175` :smaller:`thanks to F Ramirez`
 
 .. __: https://gist.github.com/fidelram/2289b7a8d6da055fb058ac9a79ed485c
 
 There is now a section on :ref:`pp-imputation`:
 
-- :func:`~scanpy.external.pp.magic` for imputation using data diffusion [vanDijk18]_ :smaller:`thanks to S Gigante`
-- :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_
+- :func:`~scanpy.external.pp.magic` for imputation using data diffusion [vanDijk18]_. :noteversion:`1.3` :pr:`187` :smaller:`thanks to S Gigante`
+- :func:`~scanpy.external.pp.dca` for imputation and latent space construction using an autoencoder [Eraslan18]_. :noteversion:`1.3` :pr:`186` :smaller:`thanks to G Eraslan`
 
 
 Version 1.2 :small:`June 8, 2018`
 ---------------------------------
+
+1.2.1
+~~~~~
+
+Plotting of :ref:`pl-generic` marker genes and quality control.
+
+- :func:`~scanpy.pl.highest_expr_genes` for quality control; plot genes with highest mean fraction of cells, similar to `plotQC` of *Scater* [McCarthy17]_. :noteversion:`1.2.1` :pr:`169` :smaller:`thanks to F Ramirez`
+
+1.2
+~~~
 
 - :func:`~scanpy.tl.paga` improved, see `theislab/paga`_; the default model changed, restore the previous default model by passing `model='v1.0'`
 
