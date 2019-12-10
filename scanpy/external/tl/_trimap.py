@@ -73,7 +73,7 @@ def trimap(
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
-    **X_trimap** : `np.ndarray`, (`adata.obs`, shape=[n_samples, n_components], dtype `float`)
+    **X_trimap** : :class:`~numpy.ndarray`, (:attr:`~anndata.AnnData.obsm`, shape=(n_samples, n_components), dtype `float`)
         TriMap coordinates of data.
 
     Example
