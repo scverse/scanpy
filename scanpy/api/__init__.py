@@ -141,6 +141,7 @@ Embeddings
    tl.draw_graph
    tl.diffmap
    tl.phate
+   tl.trimap
 
 Clustering and trajectory inference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

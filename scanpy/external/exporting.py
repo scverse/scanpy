@@ -450,7 +450,7 @@ def cellbrowser(
         Coordinates missing from `adata` are skipped.
         By default (or when specifying `'all'` or `None`), these keys are tried:
         [`"tsne"`, `"umap"`, `"pagaFa"`, `"pagaFr"`, `"pagaUmap"`, `"phate"`,
-        `"fa"`, `"fr"`, `"kk"`, `"drl"`, `"rt"`].
+        `"fa"`, `"fr"`, `"kk"`, `"drl"`, `"rt"`, `"trimap"`].
         For these, default display labels are automatically used.
         For other values, you can specify a mapping from coordinate name to
         display label, e.g. `{"tsne": "t-SNE by Scanpy"}`.

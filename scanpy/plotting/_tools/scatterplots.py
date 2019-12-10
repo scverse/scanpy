@@ -502,6 +502,25 @@ def _wraps_plot_scatter(wrapper):
 
 # API
 
+@_wraps_plot_scatter
+@_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
+def trimap(adata, **kwargs) -> Union[Axes, List[Axes], None]:
+    """\
+    Scatter plot in TriMap basis.
+
+    Parameters
+    ----------
+    {adata_color_etc}
+    {edges_arrows}
+    {scatter_bulk}
+    {show_save_ax}
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes` or a list of it.
+    """
+    return embedding(adata, 'trimap', **kwargs)
+
 
 @_wraps_plot_scatter
 @_doc_params(adata_color_etc=doc_adata_color_etc, edges_arrows=doc_edges_arrows, scatter_bulk=doc_scatter_embedding, show_save_ax=doc_show_save_ax)
