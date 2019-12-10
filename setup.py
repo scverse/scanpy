@@ -39,7 +39,15 @@ setup(
             'scanpydoc>=0.4.3',
             'typing_extensions; python_version < "3.8"',  # for `Literal`
         ],
-        test=['pytest>=4.4', 'dask[array]', 'fsspec', 'zappy', 'zarr', 'black'],
+        test=[
+            'pytest>=4.4',
+            'dask[array]',
+            'fsspec',
+            'zappy',
+            'zarr',
+            'black',
+            'profimp',
+        ],
     ),
     packages=find_packages(),
     entry_points=dict(console_scripts=['scanpy=scanpy.cli:console_main']),
