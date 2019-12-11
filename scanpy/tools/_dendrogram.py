@@ -23,6 +23,7 @@ def dendrogram(
     use_raw: Optional[bool] = None,
     cor_method: str = 'pearson',
     linkage_method: str = 'complete',
+    optimal_ordering: bool = False,
     key_added: Optional[str] = None,
     inplace: bool = True,
 ) -> Optional[Dict[str, Any]]:
@@ -66,6 +67,10 @@ def dendrogram(
     linkage_method
         linkage method to use. See :func:`scipy.cluster.hierarchy.linkage`
         for more information.
+    optimal_ordering
+        Same as the optimal_ordering argument of :func:`scipy.cluster.hierarchy.linkage`
+        which reorders the linkage matrix so that the distance between successive
+        leaves is minimal.
     key_added
         By default, the dendrogram information is added to
         `.uns[f'dendrogram_{{groupby}}']`.
@@ -123,7 +128,9 @@ def dendrogram(
     import scipy.cluster.hierarchy as sch
 
     corr_matrix = mean_df.T.corr(method=cor_method)
-    z_var = sch.linkage(corr_matrix, method=linkage_method)
+    z_var = sch.linkage(
+        corr_matrix, method=linkage_method, optimal_ordering=optimal_ordering
+    )
     dendro_info = sch.dendrogram(z_var, labels=categories, no_plot=True)
 
     # order of groupby categories
