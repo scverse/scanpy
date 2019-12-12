@@ -398,7 +398,7 @@ def rank_genes_groups(
                 mean_rest, var_rest = _get_mean_var(X[mask_rest])
 
                 scores[imask, :] = (scores[imask, :] - (ns[imask] * (n_cells + 1) / 2)) / (
-                        (sqrt(ns[imask]) * sqrt(n_cells - ns[imask]) * sqrt((n_cells + 1) / 12))
+                        sqrt(ns[imask]) * sqrt(n_cells - ns[imask]) * sqrt((n_cells + 1) / 12))
                 scores[np.isnan(scores)] = 0
                 pvals = 2 * stats.distributions.norm.sf(np.abs(scores[imask,:]))
 
