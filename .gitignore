@@ -65,3 +65,7 @@ Thumbs.db
 # always-ignore directories
 /dist/
 /build/
+Lib1-1_E4.5.csv
+Lib1-2_E4.5.csv
+Lib1-3_E3.5.csv
+Lib1-4_E3.5.csv
