@@ -1,4 +1,4 @@
-"""Harmony for data visualization with augmented affinity matrix at discrete timepoints
+"""Harmony time series for data visualization with augmented affinity matrix at discrete timepoints
 """
 
 from scanpy import logging as logg
@@ -9,10 +9,11 @@ import numpy as np
 import os
 
 
-def harmony(adata, **kargs):
-    """Harmony for data visualization with augmented affinity matrix at discrete timepoints [Setty18i]_.
+def harmony_timeseries(adata, **kargs):
+    """
+    Harmony time series for data visualization with augmented affinity matrix at discrete timepoints [Nowotschin18i]_.
 
-    Harmony is a framework for data visualization, trajectory detection and interpretation
+    Harmony time series is a framework for data visualization, trajectory detection and interpretation
     for scRNA-seq data measured at discrete timepoints. Harmony constructs an augmented
     affinity matrix by augmenting the kNN graph affinity matrix with mutually nearest
     neighbors between successive time points. This augmented affinity matrix forms the
@@ -28,10 +29,15 @@ def harmony(adata, **kargs):
     adata : `list`
         of :class:`~anndata.AnnData`, or cell x gene `.csv` filenames of count matrices from two time
         points. Please ensure that replicates of the same time point are consecutive in order
-    timepoints : `list` (default: `None`)
+    timepoints : `list`
+        default: `None`,
         timepoints at which each cell was measured. Important for Harmony augmented affinity matrix
-    sample_names : `list` (default: `None`)
+    sample_names : `list`
+        default: `None`,
         sample names in the form of timepoint_rep# of length `adata`
+    log_transform : `bool`
+        default: `False`,
+        property setter passed to harmony
 
     Returns
     -------
@@ -62,19 +68,19 @@ def harmony(adata, **kargs):
     >>> sample_names = ['sa1_Rep1', 'sa1_Rep2',
                         'sa2_Rep1', 'sa2_Rep2']
     >>> # timepoints = ['sa1', 'sa2', 'sa3', 'sa4']
-    >>> d = sce.tl.harmony(adata=csv_files , sample_names=sample_names)
+    >>> d = sce.tl.harmony_timeseries(adata=csv_files , sample_names=sample_names)
 
     At this point, a new class object, `d`, will be instantiated
 
     **Pre-processing**
 
-    Data normalization is performed internally once `sce.tl.harmony` is instantiated.
+    Data normalization is performed internally once `sce.tl.harmony_timeseries` is instantiated.
 
     The data can be log transformed by setting `log_transform` to `True`
 
     >>> d.log_transform = True
 
-    The created object `d.harmony` can be used to override the default parameters as well
+    The created object `d.harmony_timeseries` can be used to override the default parameters as well
     as running the different methods embedded in it for plotting
 
     Follow the next step to pass the data to harmony methods, to generate the
@@ -82,7 +88,7 @@ def harmony(adata, **kargs):
 
     **Run Harmony**
 
-    >>> d.process()
+    >>> d.process(n_components=902)
 
     By calling this method `harmony` will run and generate the **Harmony augmented affinity matrix**.
     The generated objects will be pushed to `harmony_adata` and stored for further use.
@@ -91,14 +97,14 @@ def harmony(adata, **kargs):
 
     Use Harmony methods for plotting. Example:
 
-    >>> d.harmony.plot.plot_timepoints(d.layout, d.tp)
+    >>> d.harmony_timeseries.plot.plot_timepoints(d.layout, d.tp)
 
     For further demonstration of Harmony visualizations please follow this notebook
     `Harmony_sample_notebook.ipynb <https://github.com/dpeerlab/Harmony/blob/master/notebooks/Harmony_sample_notebook.ipynb>`_.
     It provides a comprehensive guide to draw *gene expression trends*, amongst other things.
     """
 
-    logg.info('Harmony augmented affinity matrix', r=True)
+    logg.info("Harmony augmented affinity matrix", r=True)
 
     class _wrapper_cls(object):
 
@@ -116,13 +122,14 @@ def harmony(adata, **kargs):
             - processing of input data
         """
 
-        def __init__(self,
-                     adata,
-                     func=None,
-                     timepoints=None,
-                     sample_names=None,
-                     log_transform=False
-                     ):
+        def __init__(
+            self,
+            adata,
+            func=None,
+            timepoints=None,
+            sample_names=None,
+            log_transform=False,
+        ):
             """
             Parameters
             ----------
@@ -147,16 +154,18 @@ def harmony(adata, **kargs):
             self.sample_names = sample_names
             self._log_transform = log_transform
 
-            # load harmony
+            # load harmony_timeseries
             self.__call__()
-            logg.info('harmony loaded ...', r=True)
+            logg.info("harmony_timeseries loaded ...", r=True)
 
             # determine if adata is a .csv file or a scanpy.AnnData object
             # and load the counts matrices into the instantiated attribute
             if self.sample_names is None:
                 print('"sample_names" not provided, constructed internally')
                 rep = range(len(self.adata))
-                self.sample_names = ['_'.join(['sample{}'.format(n + 1), str(n + 1)]) for n in rep]
+                self.sample_names = [
+                    "_".join(["sample{}".format(n + 1), str(n + 1)]) for n in rep
+                ]
                 print('"sample_names": {}'.format(self.sample_names))
 
             try:
@@ -165,54 +174,61 @@ def harmony(adata, **kargs):
                 try:
                     self.timepoints = [i.split("_")[0] for i in self.sample_names]
                 except:
-                    msg = '"timepoints" must be a list of Time Points!!\n\n\t' +\
-                          '"timepoints" = {}'.format(self.timepoints) +\
-                          '\n\tset the values of Time Points and try again!'
+                    msg = (
+                        '"timepoints" must be a list of Time Points!!\n\n\t'
+                        + '"timepoints" = {}'.format(self.timepoints)
+                        + "\n\tset the values of Time Points and try again!"
+                    )
                     raise AssertionError(msg)
             # keep the order of unique time points
             self.timepoints = list(OrderedDict.fromkeys(self.timepoints))
 
             try:
-                assert (os.path.exists(self.adata[0]))
-                counts = self.harmony.utils.load_from_csvs(self.adata, self.sample_names)
-                logg.info('Input data is a list of .csv files', r=True)
+                assert os.path.exists(self.adata[0])
+                counts = self.harmony_timeseries.utils.load_from_csvs(
+                    self.adata, self.sample_names
+                )
+                logg.info("Input data is a list of .csv files", r=True)
             except:
                 try:
                     if not isinstance(adata[0], pd.DataFrame):
-                        assert (isinstance(adata[0].to_df(), pd.DataFrame))
+                        assert isinstance(adata[0].to_df(), pd.DataFrame)
                     else:
-                        assert (isinstance(adata[0], pd.DataFrame))
+                        assert isinstance(adata[0], pd.DataFrame)
                     counts = self.load_from_AnnData(self.adata, self.sample_names)
-                    logg.info('Input data is a list of scanpy.AnnData objects', r=True)
+                    logg.info("Input data is a list of scanpy.AnnData objects", r=True)
                 except:
-                    raise RuntimeError('Input data must be a list of .csv files,' + \
-                                       ' scanpy.AnnData, or pandas DataFrames')
+                    raise RuntimeError(
+                        "Input data must be a list of .csv files,"
+                        + " scanpy.AnnData, or pandas DataFrames"
+                    )
 
             # PREPROCESS
             # normalize data
-            norm_df = self.harmony.utils.normalize_counts(counts)
+            norm_df = self.harmony_timeseries.utils.normalize_counts(counts)
 
             # select highly variable genes
-            hvg_genes = self.harmony.utils.hvg_genes(norm_df)
+            hvg_genes = self.harmony_timeseries.utils.hvg_genes(norm_df)
 
             self.data_df = norm_df.loc[:, hvg_genes]
-            logg.info('data normalized and returned as annData ...', r=True)
+            logg.info("data normalized and returned as annData ...", r=True)
 
         def __call__(self):
             """
-            Call for function to import harmony and instantiate it as a class
+            Call for function to import harmony_timeseries and instantiate it as a class
             attribute
             """
-            self.harmony = self.func()
+            self.harmony_timeseries = self.func()
 
-        def process(self):
+        def process(self, n_components: int = 1000):
 
             """
-            A method to run `harmony` on input Data Frame
+            A method to run `harmony_timeseries` on input Data Frame
+            :param n_components: int
             """
 
-            # Harmony augmented affinity matrix
-            logg.info('Harmony augmented affinity matrix ...', r=True)
+            # harmony_timeseries augmented affinity matrix
+            logg.info("harmony_timeseries augmented affinity matrix ...", r=True)
 
             self.tp = pd.Series(index=self.data_df.index)
             for t in self.timepoints:
@@ -221,40 +237,42 @@ def harmony(adata, **kargs):
             self.timepoint_connections = pd.DataFrame(columns=[0, 1])
             index = 0
             for i in range(len(self.timepoints) - 1):
-                self.timepoint_connections.loc[index, :] = self.timepoints[i:i + 2]
+                self.timepoint_connections.loc[index, :] = self.timepoints[i : i + 2]
                 index += 1
 
             # compute the augmented and non-augmented affinity matrices
-            self.aug_aff, self.aff = self.harmony.core.augmented_affinity_matrix(
+            (
+                self.aug_aff,
+                self.aff,
+            ) = self.harmony_timeseries.core.augmented_affinity_matrix(
                 self.data_df,
                 self.tp,
-                self.timepoint_connections
-                )
+                self.timepoint_connections,
+                pc_components=n_components,
+            )
 
             # Visualization using force directed layouts
-            self.layout = self.harmony.plot.force_directed_layout(self.aug_aff,
-                                                                  self.data_df.index)
+            self.layout = self.harmony_timeseries.plot.force_directed_layout(
+                self.aug_aff, self.data_df.index
+            )
 
             # push outputs to a new scanpy.AnnDana
             from scanpy import AnnData
-            self.harmony_adata = AnnData(self.data_df)
-            self.harmony_adata.obsm['layout'] = np.array(self.layout)
-            self.harmony_adata.uns['tp'] = self.tp
-            self.harmony_adata.uns['aff'] = self.aff
-            self.harmony_adata.uns['aug_aff'] = self.aug_aff
-            self.harmony_adata.uns['sample_names'] = self.sample_names
-            self.harmony_adata.uns['timepoints'] = self.timepoints
-            self.harmony_adata.uns['timepoint_connections'] = self.timepoint_connections
 
-            logg.info('End of processing, start plotting.', r=True)
+            self.harmony_adata = AnnData(self.data_df)
+            self.harmony_adata.obsm["layout"] = np.array(self.layout)
+            self.harmony_adata.uns["tp"] = self.tp
+            self.harmony_adata.uns["aff"] = self.aff
+            self.harmony_adata.uns["aug_aff"] = self.aug_aff
+            self.harmony_adata.uns["sample_names"] = self.sample_names
+            self.harmony_adata.uns["timepoints"] = self.timepoints
+            self.harmony_adata.uns["timepoint_connections"] = self.timepoint_connections
+
+            logg.info("End of processing, start plotting.", r=True)
 
             return self.harmony_adata
 
-        def load_from_AnnData(self,
-                              adata_list,
-                              sample_names=None,
-                              min_cell_count=10
-                              ):
+        def load_from_AnnData(self, adata_list, sample_names=None, min_cell_count=10):
             """
             Read in scRNA-seq data from :class:`~anndata.AnnData` list
 
@@ -273,7 +291,7 @@ def harmony(adata, **kargs):
             """
 
             # Load counts
-            print('Loading count matrices...')
+            print("Loading count matrices...")
             counts_dict = OrderedDict()
 
             for adata, sample in zip(adata_list, sample_names):
@@ -283,11 +301,11 @@ def harmony(adata, **kargs):
                     counts = adata.to_df()
                 except AttributeError:
                     # assume the data is a cell X genes Dataframe
-                    logg.info('Assuming the data is a cell X genes Dataframe', r=True)
+                    logg.info("Assuming the data is a cell X genes Dataframe", r=True)
                     counts = adata
 
                 # Update sample names
-                counts.index = sample + '_' + counts.index.astype(str)
+                counts.index = sample + "_" + counts.index.astype(str)
 
                 # Remove zero count genes
                 counts = counts.loc[:, counts.sum() > 0]
@@ -297,16 +315,17 @@ def harmony(adata, **kargs):
                 counts_dict[sample] = counts
 
             # Concatenate cells and genes
-            print('Concatenating data..')
-            all_cells = list(chain(*[list(counts_dict[sample].index)
-                                     for sample in sample_names]))
+            print("Concatenating data..")
+            all_cells = list(
+                chain(*[list(counts_dict[sample].index) for sample in sample_names])
+            )
             all_genes = list(
-                chain(*[list(counts_dict[sample].columns) for sample in sample_names]))
+                chain(*[list(counts_dict[sample].columns) for sample in sample_names])
+            )
             all_genes = list(set(all_genes))
 
             # Counts matrix
-            counts = pd.DataFrame(0, index=all_cells,
-                                  columns=all_genes, dtype=np.int16)
+            counts = pd.DataFrame(0, index=all_cells, columns=all_genes, dtype=np.int16)
             for sample in sample_names:
                 sample_counts = counts_dict[sample]
                 counts.loc[sample_counts.index, sample_counts.columns] = sample_counts
@@ -324,8 +343,8 @@ def harmony(adata, **kargs):
         @log_transform.setter
         def log_transform(self, value):
             if value is True:
-                self.data_df = self.harmony.utils.log_transform(self.data_df)
-                logg.info('data log transformed ...', r=True)
+                self.data_df = self.harmony_timeseries.utils.log_transform(self.data_df)
+                logg.info("data log transformed ...", r=True)
 
     def wrapper_cls(adata, func=None, **kargs):
         """
@@ -334,6 +353,7 @@ def harmony(adata, **kargs):
         if func:
             return _wrapper_cls(func)
         else:
+
             def wrapper(func):
                 return _wrapper_cls(adata, func, **kargs)
 
@@ -344,22 +364,25 @@ def harmony(adata, **kargs):
     @wrapper_cls(adata, **kargs)
     def _run():
         import importlib
+
         try:
             import palantir
-        except:
-            raise ImportError(
-                ' please install palantir: \n\n\t'
-                'git clone git://github.com/dpeerlab/Palantir.git\n\t'
-                'cd Palantir\n\t'
-                'sudo -H pip3 install .\n')
-        try:
-            harmony = importlib.import_module('harmony')
         except ImportError:
             raise ImportError(
-                '\nplease install harmony: \n\n\t'
-                'git clone git://github.com/dpeerlab/Harmony.git\n\t'
-                'cd Harmony\n\t'
-                'sudo -H pip3 install .\n')
+                " please install palantir: \n\n\t"
+                "git clone git://github.com/dpeerlab/Palantir.git\n\t"
+                "cd Palantir\n\t"
+                "sudo -H pip3 install .\n"
+            )
+        try:
+            harmony = importlib.import_module("harmony")
+        except ImportError:
+            raise ImportError(
+                "\nplease install harmony: \n\n\t"
+                "git clone git://github.com/dpeerlab/Harmony.git\n\t"
+                "cd Harmony\n\t"
+                "sudo -H pip3 install .\n"
+            )
         return harmony
 
     return _run

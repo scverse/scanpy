@@ -63,7 +63,7 @@ Clustering and trajectory inference
    :toctree: .
 
    tl.phenograph
-   tl.harmony
+   tl.harmony_timeseries
 
 Gene scores, Cell cycle
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,7 +83,7 @@ Plotting: PL
 
    pl.phate
    tl.palantir
-   tl.harmony
+   tl.harmony_timeseries
 
 
 Exporting
