@@ -1,6 +1,10 @@
 from types import ModuleType
 
+<<<<<<< HEAD
 from scanpy.utils import descend_classes_and_funcs
+=======
+from scanpy._utils import descend_classes_and_funcs
+>>>>>>> upstream/master
 
 
 def test_descend_classes_and_funcs():

@@ -1,0 +1,68 @@
+[build-system]
+requires = ['setuptools', 'setuptools_scm', 'wheel']
+build-backend = 'setuptools.build_meta'
+
+[tool.black]
+line-length = 80
+target-version = ['py36']
+skip-string-normalization = true
+exclude = '''
+/build/.*
+|/scanpy/(
+    get
+    |__init__
+    |cli
+    |logging
+    |readwrite
+    |_utils
+    |_settings
+    |neighbors/__init__
+    |api/(__init__|pp|pl|datasets)
+    |external/(exporting|tl/_palantir)
+    |preprocessing/(
+        _qc
+        |_combat
+        |_simple
+        |_recipes
+        |_normalization
+        |_highly_variable_genes
+        |_deprecated/highly_variable_genes
+    )
+    |tools/(
+        _dpt
+        |_sim
+        |_paga
+        |_umap
+        |_utils
+        |_leiden
+        |_louvain
+        |_tsne_fix
+        |_top_genes
+        |_score_genes
+        |_utils_clustering
+        |_rank_genes_groups
+    )
+    |plotting/(
+        __init__
+        |palettes
+        |_utils
+        |_preprocessing
+        |_tools/(scatterplots|__init__|paga)
+    )
+    |tests/(
+        test_get
+        |test_pca
+        |test_combat
+        |test_read_10x
+        |test_neighbors
+        |test_readwrite
+        |test_clustering
+        |test_qc_metrics
+        |test_preprocessing
+        |test_rank_genes_groups
+        |test_marker_gene_overlap
+        |test_highly_variable_genes
+        |test_rank_genes_groups_logreg
+        |notebooks/(test_paga_paul15_subsampled|test_pbmc3k)
+    )
+).py'''

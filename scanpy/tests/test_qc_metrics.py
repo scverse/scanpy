@@ -1,11 +1,31 @@
 import numpy as np
 import pandas as pd
 import pytest
+<<<<<<< HEAD
 import scanpy as sc
 import scanpy
 from scipy import sparse
 
 from scanpy.preprocessing._qc import top_proportions, top_segment_proportions
+=======
+from anndata import AnnData
+from scipy import sparse
+
+import scanpy as sc
+from scanpy.preprocessing._qc import top_proportions, top_segment_proportions, describe_var, describe_obs
+
+
+@pytest.fixture
+def anndata():
+    a = np.random.binomial(100, .005, (1000, 1000))
+    adata = AnnData(
+        sparse.csr_matrix(a),
+        obs=pd.DataFrame(index=[f"cell{i}" for i in range(a.shape[0])]),
+        var=pd.DataFrame(index=[f"gene{i}" for i in range(a.shape[1])]),
+    )
+    return adata
+
+>>>>>>> upstream/master
 
 def test_proportions():
     a_dense = np.ones((100, 100))
@@ -61,14 +81,25 @@ def test_top_segments_sparse():
         propfull = top_proportions(a, 100)
         assert (segfull == propfull).all()
 
+<<<<<<< HEAD
 # While many of these are trivial, they're also just making sure the metrics are there
 def test_qc_metrics():
     adata = sc.AnnData(X=sparse.csr_matrix(
+=======
+
+# While many of these are trivial, they're also just making sure the metrics are there
+def test_qc_metrics():
+    adata = AnnData(X=sparse.csr_matrix(
+>>>>>>> upstream/master
         np.random.binomial(100, .005, (1000, 1000))))
     adata.var["mito"] = np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))
     adata.var["negative"] = False
+<<<<<<< HEAD
     sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"], 
+=======
+    sc.pp.calculate_qc_metrics(adata, qc_vars=["mito", "negative"],
+>>>>>>> upstream/master
                                inplace=True)
     assert (adata.obs["n_genes_by_counts"] < adata.shape[1]).all()
     assert (adata.obs["n_genes_by_counts"] >= adata.obs["log1p_n_genes_by_counts"]).all()
@@ -106,22 +137,39 @@ def test_qc_metrics_format():
     a = np.random.binomial(100, .005, (1000, 1000))
     init_var = pd.DataFrame({"mito": np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
+<<<<<<< HEAD
     adata_dense = sc.AnnData(X=a, var=init_var.copy())
     sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"], 
         inplace=True)
     for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
         adata = sc.AnnData(X=fmt(a), var=init_var.copy())
         sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"], 
+=======
+    adata_dense = AnnData(X=a, var=init_var.copy())
+    sc.pp.calculate_qc_metrics(adata_dense, qc_vars=["mito"],
+        inplace=True)
+    for fmt in [sparse.csr_matrix, sparse.csc_matrix, sparse.coo_matrix]:
+        adata = AnnData(X=fmt(a), var=init_var.copy())
+        sc.pp.calculate_qc_metrics(adata, qc_vars=["mito"],
+>>>>>>> upstream/master
             inplace=True)
         assert np.allclose(adata.obs, adata_dense.obs)
         for col in adata.var: # np.allclose doesn't like mix of types
             assert np.allclose(adata.var[col], adata_dense.var[col])
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 def test_qc_metrics_percentage(): # In response to #421
     a = np.random.binomial(100, .005, (1000, 1000))
     init_var = pd.DataFrame({"mito": np.concatenate(
         (np.ones(100, dtype=bool), np.zeros(900, dtype=bool)))})
+<<<<<<< HEAD
     adata_dense = sc.AnnData(X=a, var=init_var.copy())
+=======
+    adata_dense = AnnData(X=a, var=init_var.copy())
+>>>>>>> upstream/master
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=[])
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=())
     sc.pp.calculate_qc_metrics(adata_dense, percent_top=(None))
@@ -131,3 +179,36 @@ def test_qc_metrics_percentage(): # In response to #421
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[1, 2, 3, -5])
     with pytest.raises(IndexError):
         sc.pp.calculate_qc_metrics(adata_dense, percent_top=[20, 30, 1001])
+<<<<<<< HEAD
+=======
+
+
+def test_layer_raw(anndata):
+    adata = anndata.copy()
+    adata.raw = adata.copy()
+    adata.layers["counts"] = adata.X.copy()
+    obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
+    sc.pp.log1p(adata)  # To be sure they aren't reusing it
+    obs_layer, var_layer = sc.pp.calculate_qc_metrics(adata, layer="counts")
+    obs_raw, var_raw = sc.pp.calculate_qc_metrics(adata, use_raw=True)
+    assert np.allclose(obs_orig, obs_layer)
+    assert np.allclose(obs_orig, obs_raw)
+    assert np.allclose(var_orig, var_layer)
+    assert np.allclose(var_orig, var_raw)
+
+
+def test_inner_methods(anndata):
+    adata = anndata.copy()
+    full_inplace = adata.copy()
+    partial_inplace = adata.copy()
+    obs_orig, var_orig = sc.pp.calculate_qc_metrics(adata)
+    assert np.all(obs_orig == describe_obs(adata))
+    assert np.all(var_orig == describe_var(adata))
+    sc.pp.calculate_qc_metrics(full_inplace, inplace=True)
+    describe_obs(partial_inplace, inplace=True)
+    describe_var(partial_inplace, inplace=True)
+    assert np.all(full_inplace.obs == partial_inplace.obs)
+    assert np.all(full_inplace.var == partial_inplace.var)
+    assert np.all(partial_inplace.obs[obs_orig.columns] == obs_orig)
+    assert np.all(partial_inplace.var[var_orig.columns] == var_orig)
+>>>>>>> upstream/master

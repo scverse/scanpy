@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+:orphan:
+
+>>>>>>> upstream/master
 scanpy.api.plotting
 ===================
 

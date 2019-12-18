@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import pandas as pd
 from .. import logging as logg
 
@@ -106,3 +107,11 @@ def gene_coordinates(host, org, gene, chr_exclude=[]):
     res = res.set_index('symbol')
 
     return res.loc[[gene], :]
+=======
+from ._queries import (
+    biomart_annotations,
+    gene_coordinates,
+    mitochondrial_genes,
+)  # Biomart queries
+from ._queries import enrich  # gprofiler queries
+>>>>>>> upstream/master

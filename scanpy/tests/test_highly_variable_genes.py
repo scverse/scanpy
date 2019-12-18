@@ -10,6 +10,24 @@ def test_highly_variable_genes_basic():
     adata = sc.datasets.blobs()
     sc.pp.highly_variable_genes(adata)
 
+<<<<<<< HEAD
+=======
+    adata = sc.datasets.blobs()
+    np.random.seed(0)
+    adata.obs['batch'] = np.random.binomial(3, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(adata, batch_key='batch')
+    assert 'highly_variable_nbatches' in adata.var.columns
+    assert 'highly_variable_intersection' in adata.var.columns
+
+    adata = sc.datasets.blobs()
+    adata.obs['batch'] = np.random.binomial(4, 0.5, size=(adata.n_obs))
+    adata.obs['batch'] = adata.obs['batch'].astype('category')
+    sc.pp.highly_variable_genes(adata, batch_key='batch', n_top_genes=3)
+    assert 'highly_variable_nbatches' in adata.var.columns
+    assert adata.var['highly_variable'].sum() == 3
+
+>>>>>>> upstream/master
 
 def test_higly_variable_genes_compare_to_seurat():
     seurat_hvg_info = pd.read_csv(FILE, sep=' ')
@@ -81,3 +99,50 @@ def test_filter_genes_dispersion_compare_to_seurat():
         rtol=2e-05,
         atol=2e-05,
     )
+<<<<<<< HEAD
+=======
+
+
+def test_highly_variable_genes_batches():
+    adata = sc.datasets.pbmc68k_reduced()
+    adata[:100,:100].X = np.zeros((100,100))
+
+    adata.obs['batch'] = ['0' if i<100 else '1' for i in range(adata.n_obs)]
+    adata_1 = adata[adata.obs.batch.isin(['0']),:]
+    adata_2 = adata[adata.obs.batch.isin(['1']),:]
+
+    sc.pp.highly_variable_genes(
+        adata,
+        batch_key='batch',
+        flavor='cell_ranger',
+        n_top_genes=200,
+    )
+
+    sc.pp.filter_genes(adata_1, min_cells=1)
+    sc.pp.filter_genes(adata_2, min_cells=1)
+    hvg1 = sc.pp.highly_variable_genes(
+        adata_1,
+        flavor='cell_ranger',
+        n_top_genes=200,
+        inplace=False
+    )
+    hvg2 = sc.pp.highly_variable_genes(
+        adata_2,
+        flavor='cell_ranger',
+        n_top_genes=200,
+        inplace=False
+    )
+
+    assert np.isclose(
+        adata.var['dispersions_norm'][100],
+        0.5*hvg1['dispersions_norm'][0] + 0.5*hvg2['dispersions_norm'][100]
+    )
+    assert np.isclose(
+        adata.var['dispersions_norm'][101],
+        0.5*hvg1['dispersions_norm'][1] + 0.5*hvg2['dispersions_norm'][101]
+    )
+    assert np.isclose(
+        adata.var['dispersions_norm'][0],
+        0.5*hvg2['dispersions_norm'][0]
+    )
+>>>>>>> upstream/master

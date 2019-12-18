@@ -3,6 +3,7 @@
 #
 # This is the subsampled notebook for testing.
 
+<<<<<<< HEAD
 from matplotlib.testing import setup
 setup()
 
@@ -29,6 +30,24 @@ def save_and_compare_images(basename):
 
 
 def test_paga_paul15_subsampled():
+=======
+from pathlib import Path
+
+import numpy as np
+from matplotlib.testing import setup
+setup()
+
+import scanpy as sc
+
+
+HERE: Path = Path(__file__).parent
+ROOT = HERE / '_images_paga_paul15_subsampled'
+FIGS = HERE / 'figures'
+
+
+def test_paga_paul15_subsampled(image_comparer, plt):
+    save_and_compare_images = image_comparer(ROOT, FIGS, tol=25)
+>>>>>>> upstream/master
 
     adata = sc.datasets.paul15()
     sc.pp.subsample(adata, n_obs=200)
@@ -90,8 +109,13 @@ def test_paga_paul15_subsampled():
 
     adata.obs['distance'] = adata.obs['dpt_pseudotime']
 
+<<<<<<< HEAD
     _, axs = pl.subplots(ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12})
     pl.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
+=======
+    _, axs = plt.subplots(ncols=3, figsize=(6, 2.5), gridspec_kw={'wspace': 0.05, 'left': 0.12})
+    plt.subplots_adjust(left=0.05, right=0.98, top=0.82, bottom=0.2)
+>>>>>>> upstream/master
     for ipath, (descr, path) in enumerate(paths):
         _, data = sc.pl.paga_path(
             adata, path, gene_names,

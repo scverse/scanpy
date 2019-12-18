@@ -64,7 +64,13 @@ def set_rcParams_scanpy(fontsize=14, color_map=None):
     rcParams['grid.color'] = '.8'
 
     # color map
+<<<<<<< HEAD:scanpy/plotting/_rcmod.py
     rcParams['image.cmap'] = rcParams['image.cmap'] if color_map is None else color_map
+=======
+    rcParams['image.cmap'] = (
+        rcParams['image.cmap'] if color_map is None else color_map
+    )
+>>>>>>> upstream/master:scanpy/plotting/_rcmod.py
 
 
 def set_rcParams_defaults():

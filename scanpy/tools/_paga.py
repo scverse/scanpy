@@ -1,4 +1,5 @@
 from collections import namedtuple
+<<<<<<< HEAD
 
 import numpy as np
 import scipy as sp
@@ -8,11 +9,25 @@ from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
 from ..neighbors import Neighbors
+=======
+from typing import List, Optional, NamedTuple
+
+import numpy as np
+import scipy as sp
+from anndata import AnnData
+from scipy.sparse.csgraph import minimum_spanning_tree
+
+from .. import _utils
+from .. import logging as logg
+from ..neighbors import Neighbors
+from .._compat import Literal
+>>>>>>> upstream/master
 
 _AVAIL_MODELS = {'v1.0', 'v1.2'}
 
 
 def paga(
+<<<<<<< HEAD
         adata,
         groups='louvain',
         use_rna_velocity=False,
@@ -21,19 +36,38 @@ def paga(
     """\
     Generate cellular maps of differentiation manifolds with complex
     topologies [Wolf17i]_.
+=======
+    adata: AnnData,
+    groups: Optional[str] = None,
+    use_rna_velocity: bool = False,
+    model: Literal['v1.2', 'v1.0'] = 'v1.2',
+    copy: bool = False,
+):
+    """\
+    Mapping out the coarse-grained connectivity structures of complex manifolds [Wolf19]_.
+>>>>>>> upstream/master
 
     By quantifying the connectivity of partitions (groups, clusters) of the
     single-cell graph, partition-based graph abstraction (PAGA) generates a much
     simpler abstracted graph (*PAGA graph*) of partitions, in which edge weights
     represent confidence in the presence of connections. By tresholding this
+<<<<<<< HEAD
     confidence in :func:`scanpy.api.paga`, a much simpler representation of data
     can be obtained.
 
     The confidence can be interpreted as the ratio of the actual versus the
+=======
+    confidence in :func:`~scanpy.pl.paga`, a much simpler representation of the
+    manifold data is obtained, which is nonetheless faithful to the topology of
+    the manifold.
+
+    The confidence should be interpreted as the ratio of the actual versus the
+>>>>>>> upstream/master
     expected value of connetions under the null model of randomly connecting
     partitions. We do not provide a p-value as this null model does not
     precisely capture what one would consider "connected" in real data, hence it
     strongly overestimates the expected value. See an extensive discussion of
+<<<<<<< HEAD
     this in [Wolf17i]_.
 
     Parameters
@@ -44,30 +78,70 @@ def paga(
         You can pass your predefined groups by choosing any categorical
         annotation of observations (`adata.obs`).
     use_rna_velocity : `bool` (default: `False`)
+=======
+    this in [Wolf19]_.
+
+    .. note::
+        Note that you can use the result of :func:`~scanpy.pl.paga` in
+        :func:`~scanpy.tl.umap` and :func:`~scanpy.tl.draw_graph` via
+        `init_pos='paga'` to get single-cell embeddings that are typically more
+        faithful to the global topology.
+
+    Parameters
+    ----------
+    adata
+        An annotated data matrix.
+    groups
+        Key for categorical in `adata.obs`. You can pass your predefined groups
+        by choosing any categorical annotation of observations. Default:
+        The first present key of `'leiden'` or `'louvain'`.
+    use_rna_velocity
+>>>>>>> upstream/master
         Use RNA velocity to orient edges in the abstracted graph and estimate
         transitions. Requires that `adata.uns` contains a directed single-cell
         graph with key `['velocity_graph']`. This feature might be subject
         to change in the future.
+<<<<<<< HEAD
     model : {{'v1.2', 'v1.0'}}, optional (default: 'v1.2')
         The PAGA connectivity model.
     copy : `bool`, optional (default: `False`)
+=======
+    model
+        The PAGA connectivity model.
+    copy
+>>>>>>> upstream/master
         Copy `adata` before computation and return a copy. Otherwise, perform
         computation inplace and return `None`.
 
     Returns
     -------
+<<<<<<< HEAD
     Returns or updates `adata` depending on `copy` with
     connectivities : np.ndarray (adata.uns['connectivities'])
         The full adjacency matrix of the abstracted graph, weights correspond to
         confidence in the connectivities of partitions.
     connectivities_tree : sc.sparse csr matrix (adata.uns['connectivities_tree'])
+=======
+    **connectivities** : :class:`numpy.ndarray` (adata.uns['connectivities'])
+        The full adjacency matrix of the abstracted graph, weights correspond to
+        confidence in the connectivities of partitions.
+    **connectivities_tree** : :class:`scipy.sparse.csr_matrix` (adata.uns['connectivities_tree'])
+>>>>>>> upstream/master
         The adjacency matrix of the tree-like subgraph that best explains
         the topology.
 
     Notes
     -----
+<<<<<<< HEAD
     Together with a random walk-based distance measure, this generates a partial
     coordinatization of data useful for exploring and explaining its variation.
+=======
+    Together with a random walk-based distance measure
+    (e.g. :func:`scanpy.tl.dpt`) this generates a partial coordinatization of
+    data useful for exploring and explaining its variation.
+
+    .. currentmodule:: scanpy
+>>>>>>> upstream/master
 
     See Also
     --------
@@ -75,12 +149,34 @@ def paga(
     pl.paga_path
     pl.paga_compare
     """
+<<<<<<< HEAD
     if 'neighbors' not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
     adata = adata.copy() if copy else adata
     utils.sanitize_anndata(adata)
     logg.info('running PAGA', reset=True)
+=======
+    if 'neighbors' not in adata.uns: raise ValueError(
+        'You need to run `pp.neighbors` first to compute a neighborhood graph.'
+    )
+    if groups is None:
+        for k in ("leiden", "louvain"):
+            if k in adata.obs.columns:
+                groups = k
+                break
+    if groups is None:
+        raise ValueError(
+            'You need to run `tl.leiden` or `tl.louvain` to compute '
+            "community labels, or specify `groups='an_existing_key'`"
+        )
+    elif groups not in adata.obs.columns:
+        raise KeyError(f'`groups` key {groups!r} not found in `adata.obs`.')
+
+    adata = adata.copy() if copy else adata
+    _utils.sanitize_anndata(adata)
+    start = logg.info('running PAGA')
+>>>>>>> upstream/master
     paga = PAGA(adata, groups, model=model)
     # only add if not present
     if 'paga' not in adata.uns:
@@ -96,6 +192,7 @@ def paga(
         adata.uns['paga']['transitions_confidence'] = paga.transitions_confidence
         # adata.uns['paga']['transitions_ttest'] = paga.transitions_ttest
     adata.uns['paga']['groups'] = groups
+<<<<<<< HEAD
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     if use_rna_velocity:
         logg.hint(
@@ -117,6 +214,29 @@ class PAGA():
         self._neighbors = Neighbors(adata)
         self._groups_key = groups
         self._model = model
+=======
+    logg.info(
+        '    finished',
+        time=start,
+        deep='added\n' + (
+            "    'paga/transitions_confidence', connectivities adjacency (adata.uns)"
+            # "    'paga/transitions_ttest', t-test on transitions (adata.uns)"
+            if use_rna_velocity else
+            "    'paga/connectivities', connectivities adjacency (adata.uns)\n"
+            "    'paga/connectivities_tree', connectivities subtree (adata.uns)"
+        ),
+    )
+    return adata if copy else None
+
+
+class PAGA:
+    def __init__(self, adata, groups, model='v1.2'):
+        assert groups in adata.obs.columns
+        self._adata = adata
+        self._neighbors = Neighbors(adata)
+        self._model = model
+        self._groups_key = groups
+>>>>>>> upstream/master
 
     def compute_connectivities(self):
         if self._model == 'v1.2':
@@ -125,22 +245,38 @@ class PAGA():
             return self._compute_connectivities_v1_0()
         else:
             raise ValueError(
+<<<<<<< HEAD
                 '`model` {} needs to be one of {}.'
                 .format(self._model, _AVAIL_MODELS))
+=======
+                f'`model` {self._model} needs to be one of {_AVAIL_MODELS}.'
+            )
+>>>>>>> upstream/master
 
     def _compute_connectivities_v1_2(self):
         import igraph
         ones = self._neighbors.distances.copy()
         ones.data = np.ones(len(ones.data))
         # should be directed if we deal with distances
+<<<<<<< HEAD
         g = utils.get_igraph_from_adjacency(ones, directed=True)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
+=======
+        g = _utils.get_igraph_from_adjacency(ones, directed=True)
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
+>>>>>>> upstream/master
         ns = vc.sizes()
         n = sum(ns)
         es_inner_cluster = [vc.subgraph(i).ecount() for i in range(len(ns))]
         cg = vc.cluster_graph(combine_edges='sum')
+<<<<<<< HEAD
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')
+=======
+        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight')
+>>>>>>> upstream/master
         es = np.array(es_inner_cluster) + inter_es.sum(axis=1).A1
         inter_es = inter_es + inter_es.T  # \epsilon_i + \epsilon_j
         connectivities = inter_es.copy()
@@ -167,12 +303,22 @@ class PAGA():
         import igraph
         ones = self._neighbors.connectivities.copy()
         ones.data = np.ones(len(ones.data))
+<<<<<<< HEAD
         g = utils.get_igraph_from_adjacency(ones)
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         ns = vc.sizes()
         cg = vc.cluster_graph(combine_edges='sum')
         inter_es = utils.get_sparse_from_igraph(cg, weight_attr='weight')/2
+=======
+        g = _utils.get_igraph_from_adjacency(ones)
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
+        ns = vc.sizes()
+        cg = vc.cluster_graph(combine_edges='sum')
+        inter_es = _utils.get_sparse_from_igraph(cg, weight_attr='weight') / 2
+>>>>>>> upstream/master
         connectivities = inter_es.copy()
         inter_es = inter_es.tocoo()
         n_neighbors_sq = self._neighbors.n_neighbors**2
@@ -222,6 +368,7 @@ class PAGA():
         if vkey not in self._adata.uns:
             if 'velocyto_transitions' in self._adata.uns:
                 self._adata.uns[vkey] = self._adata.uns['velocyto_transitions']
+<<<<<<< HEAD
                 logg.msg('The key \'velocyto_transitions\' has been changed to \'velocity_graph\'.', v=5, no_indent=True)
             else:
                 raise ValueError(
@@ -232,11 +379,25 @@ class PAGA():
                 'The passed \'velocity_graph\' have shape {} but shoud have shape {}'
                 .format(self._adata.uns[vkey].shape,
                         (self._adata.n_obs, self._adata.n_obs)))
+=======
+                logg.debug("The key 'velocyto_transitions' has been changed to 'velocity_graph'.")
+            else:
+                raise ValueError(
+                    'The passed AnnData needs to have an `uns` annotation '
+                    "with key 'velocity_graph' - a sparse matrix from RNA velocity."
+                )
+        if self._adata.uns[vkey].shape != (self._adata.n_obs, self._adata.n_obs):
+            raise ValueError(
+                f"The passed 'velocity_graph' have shape {self._adata.uns[vkey].shape} "
+                f"but shoud have shape {(self._adata.n_obs, self._adata.n_obs)}"
+            )
+>>>>>>> upstream/master
         # restore this at some point
         # if 'expected_n_edges_random' not in self._adata.uns['paga']:
         #     raise ValueError(
         #         'Before running PAGA with `use_rna_velocity=True`, run it with `False`.')
         import igraph
+<<<<<<< HEAD
         g = utils.get_igraph_from_adjacency(
             self._adata.uns[vkey].astype('bool'), directed=True)
         vc = igraph.VertexClustering(
@@ -244,6 +405,18 @@ class PAGA():
         # set combine_edges to False if you want self loops
         cg_full = vc.cluster_graph(combine_edges='sum')
         transitions = utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
+=======
+        g = _utils.get_igraph_from_adjacency(
+            self._adata.uns[vkey].astype('bool'),
+            directed=True,
+        )
+        vc = igraph.VertexClustering(
+            g, membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
+        # set combine_edges to False if you want self loops
+        cg_full = vc.cluster_graph(combine_edges='sum')
+        transitions = _utils.get_sparse_from_igraph(cg_full, weight_attr='weight')
+>>>>>>> upstream/master
         transitions = transitions - transitions.T
         transitions_conf = transitions.copy()
         transitions = transitions.tocoo()
@@ -266,19 +439,39 @@ class PAGA():
 
     def compute_transitions_old(self):
         import igraph
+<<<<<<< HEAD
         g = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'], directed=True)
+=======
+        g = _utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'],
+            directed=True,
+        )
+>>>>>>> upstream/master
         vc = igraph.VertexClustering(
             g, membership=self._adata.obs[self._groups_key].cat.codes.values)
         # this stores all single-cell edges in the cluster graph
         cg_full = vc.cluster_graph(combine_edges=False)
         # this is the boolean version that simply counts edges in the clustered graph
+<<<<<<< HEAD
         g_bool = utils.get_igraph_from_adjacency(
             self._adata.uns['velocyto_transitions'].astype('bool'), directed=True)
         vc_bool = igraph.VertexClustering(
             g_bool, membership=self._adata.obs[self._groups_key].cat.codes.values)
         cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
         transitions = utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
+=======
+        g_bool = _utils.get_igraph_from_adjacency(
+            self._adata.uns['velocyto_transitions'].astype('bool'),
+            directed=True,
+        )
+        vc_bool = igraph.VertexClustering(
+            g_bool,
+            membership=self._adata.obs[self._groups_key].cat.codes.values
+        )
+        cg_bool = vc_bool.cluster_graph(combine_edges='sum')  # collapsed version
+        transitions = _utils.get_sparse_from_igraph(cg_bool, weight_attr='weight')
+>>>>>>> upstream/master
         total_n = self._neighbors.n_neighbors * np.array(vc_bool.sizes())
         transitions_ttest = transitions.copy()
         transitions_confidence = transitions.copy()
@@ -323,18 +516,30 @@ class PAGA():
         self.transitions_confidence = transitions_confidence.T
 
 
+<<<<<<< HEAD
 def paga_degrees(adata):
+=======
+def paga_degrees(adata: AnnData) -> List[int]:
+>>>>>>> upstream/master
     """Compute the degree of each node in the abstracted graph.
 
     Parameters
     ----------
+<<<<<<< HEAD
     adata : AnnData
+=======
+    adata
+>>>>>>> upstream/master
         Annotated data matrix.
 
     Returns
     -------
+<<<<<<< HEAD
     degrees : list
         List of degrees for each node.
+=======
+    List of degrees for each node.
+>>>>>>> upstream/master
     """
     import networkx as nx
     g = nx.Graph(adata.uns['paga']['connectivities'])
@@ -342,7 +547,11 @@ def paga_degrees(adata):
     return degrees
 
 
+<<<<<<< HEAD
 def paga_expression_entropies(adata):
+=======
+def paga_expression_entropies(adata) -> List[float]:
+>>>>>>> upstream/master
     """Compute the median expression entropy for each node-group.
 
     Parameters
@@ -352,12 +561,21 @@ def paga_expression_entropies(adata):
 
     Returns
     -------
+<<<<<<< HEAD
     entropies : list
         Entropies of median expressions for each node.
     """
     from scipy.stats import entropy
     groups_order, groups_masks = utils.select_groups(
         adata, key=adata.uns['paga']['groups'])
+=======
+    Entropies of median expressions for each node.
+    """
+    from scipy.stats import entropy
+    groups_order, groups_masks = _utils.select_groups(
+        adata, key=adata.uns['paga']['groups']
+    )
+>>>>>>> upstream/master
     entropies = []
     for mask in groups_masks:
         X_mask = adata.X[mask].todense()
@@ -365,10 +583,28 @@ def paga_expression_entropies(adata):
         x_probs = (x_median - np.nanmin(x_median)) / (np.nanmax(x_median) - np.nanmin(x_median))
         entropies.append(entropy(x_probs))
     return entropies
+<<<<<<< HEAD
     
 
 def paga_compare_paths(adata1, adata2,
                        adjacency_key='connectivities', adjacency_key2=None):
+=======
+
+
+class PAGAComparePathsResult(NamedTuple):
+    frac_steps: float
+    n_steps: int
+    frac_paths: float
+    n_paths: int
+
+
+def paga_compare_paths(
+    adata1: AnnData,
+    adata2: AnnData,
+    adjacency_key: str = 'connectivities',
+    adjacency_key2: Optional[str] = None,
+) -> PAGAComparePathsResult:
+>>>>>>> upstream/master
     """Compare paths in abstracted graphs in two datasets.
 
     Compute the fraction of consistent paths between leafs, a measure for the
@@ -381,6 +617,7 @@ def paga_compare_paths(adata1, adata2,
 
     Parameters
     ----------
+<<<<<<< HEAD
     adata1, adata2 : AnnData
         Annotated data matrices to compare.
     adjacency_key : str
@@ -395,17 +632,52 @@ def paga_compare_paths(adata1, adata2,
     OrderedTuple with attributes ``n_steps`` (total number of steps in paths)
     and ``frac_steps`` (fraction of consistent steps), ``n_paths`` and
     ``frac_paths``.
+=======
+    adata1, adata2
+        Annotated data matrices to compare.
+    adjacency_key
+        Key for indexing the adjacency matrices in `.uns['paga']` to be used in
+        adata1 and adata2.
+    adjacency_key2
+        If provided, used for adata2.
+
+    Returns
+    -------
+    NamedTuple with attributes
+    
+    frac_steps
+        fraction of consistent steps
+    n_steps
+        total number of steps in paths
+    frac_paths
+        Fraction of consistent paths
+    n_paths
+        Number of paths
+>>>>>>> upstream/master
     """
     import networkx as nx
     g1 = nx.Graph(adata1.uns['paga'][adjacency_key])
     g2 = nx.Graph(adata2.uns['paga'][adjacency_key2 if adjacency_key2 is not None else adjacency_key])
     leaf_nodes1 = [str(x) for x in g1.nodes() if g1.degree(x) == 1]
+<<<<<<< HEAD
     logg.msg('leaf nodes in graph 1: {}'.format(leaf_nodes1), v=5, no_indent=True)
     paga_groups = adata1.uns['paga']['groups']
     asso_groups1 = utils.identify_groups(adata1.obs[paga_groups].values,
                                          adata2.obs[paga_groups].values)
     asso_groups2 = utils.identify_groups(adata2.obs[paga_groups].values,
                                          adata1.obs[paga_groups].values)
+=======
+    logg.debug(f'leaf nodes in graph 1: {leaf_nodes1}')
+    paga_groups = adata1.uns['paga']['groups']
+    asso_groups1 = _utils.identify_groups(
+        adata1.obs[paga_groups].values,
+        adata2.obs[paga_groups].values,
+    )
+    asso_groups2 = _utils.identify_groups(
+        adata2.obs[paga_groups].values,
+        adata1.obs[paga_groups].values,
+    )
+>>>>>>> upstream/master
     orig_names1 = adata1.obs[paga_groups].cat.categories
     orig_names2 = adata2.obs[paga_groups].cat.categories
 
@@ -417,6 +689,7 @@ def paga_compare_paths(adata1, adata2,
     # loop over all pairs of leaf nodes in the reference adata1
     for (r, s) in itertools.combinations(leaf_nodes1, r=2):
         r2, s2 = asso_groups1[r][0], asso_groups1[s][0]
+<<<<<<< HEAD
         orig_names = [orig_names1[int(i)] for i in [r, s]]
         orig_names += [orig_names2[int(i)] for i in [r2, s2]]
         logg.msg('compare shortest paths between leafs ({}, {}) in graph1 and ({}, {}) in graph2:'
@@ -432,14 +705,37 @@ def paga_compare_paths(adata1, adata2,
         except nx.NetworkXNoPath:
             no_path2 = True
         if no_path1 and no_path2:
+=======
+        on1_g1, on2_g1 = [orig_names1[int(i)] for i in [r, s]]
+        on1_g2, on2_g2 = [orig_names2[int(i)] for i in [r2, s2]]
+        logg.debug(
+            f'compare shortest paths between leafs ({on1_g1}, {on2_g1}) '
+            f'in graph1 and ({on1_g2}, {on2_g2}) in graph2:'
+        )
+        try:
+            path1 = [str(x) for x in nx.shortest_path(g1, int(r), int(s))]
+        except nx.NetworkXNoPath:
+            path1 = None
+        try:
+            path2 = [str(x) for x in nx.shortest_path(g2, int(r2), int(s2))]
+        except nx.NetworkXNoPath:
+            path2 = None
+        if path1 is None and path2 is None:
+>>>>>>> upstream/master
             # consistent behavior
             n_paths += 1
             n_agreeing_paths += 1
             n_steps += 1
             n_agreeing_steps += 1
+<<<<<<< HEAD
             logg.msg('there are no connecting paths in both graphs', v=5, no_indent=True)
             continue
         elif no_path1 or no_path2:
+=======
+            logg.debug('there are no connecting paths in both graphs')
+            continue
+        elif path1 is None or path2 is None:
+>>>>>>> upstream/master
             # non-consistent result
             n_paths += 1
             n_steps += 1
@@ -460,6 +756,7 @@ def paga_compare_paths(adata1, adata2,
         ip_progress = 0
         for il, l in enumerate(path_compare[:-1]):
             for ip, p in enumerate(path_mapped):
+<<<<<<< HEAD
                 if ip >= ip_progress and l in p:
                     # check whether we can find the step forward of path_compare in path_mapped
                     if (ip + 1 < len(path_mapped)
@@ -481,6 +778,34 @@ def paga_compare_paths(adata1, adata2,
                             n_agreeing_steps_path += 1
                             ip_progress = ip + 1
                             break
+=======
+                if ip < ip_progress or l not in p or not (
+                    ip + 1 < len(path_mapped)
+                    and path_compare[il + 1] in path_mapped[ip + 1]
+                ):
+                    continue
+                # make sure that a step backward leads us to the same value of l
+                # in case we "jumped"
+                logg.debug(
+                    f'found matching step ({l} -> {path_compare_orig_names[il + 1]}) '
+                    f'at position {il} in path{path_compare_id} and position {ip} in path_mapped'
+                )
+                consistent_history = True
+                for iip in range(ip, ip_progress, -1):
+                    if l not in path_mapped[iip - 1]:
+                        consistent_history = False
+                if consistent_history:
+                    # here, we take one step further back (ip_progress - 1); it's implied that this
+                    # was ok in the previous step
+                    poss = list(range(ip - 1, ip_progress - 2, -1))
+                    logg.debug(
+                        f'    step(s) backward to position(s) {poss} '
+                        'in path_mapped are fine, too: valid step'
+                    )
+                    n_agreeing_steps_path += 1
+                    ip_progress = ip + 1
+                    break
+>>>>>>> upstream/master
         n_steps_path = len(path_compare) - 1
         n_agreeing_steps += n_agreeing_steps_path
         n_steps += n_steps_path
@@ -490,6 +815,7 @@ def paga_compare_paths(adata1, adata2,
         # only for the output, use original names
         path1_orig_names = [orig_names1[int(s)] for s in path1]
         path2_orig_names = [orig_names2[int(s)] for s in path2]
+<<<<<<< HEAD
         logg.msg('      path1 = {},\n'
                'path_mapped = {},\n'
                '      path2 = {},\n'
@@ -504,3 +830,17 @@ def paga_compare_paths(adata1, adata2,
                   n_steps=n_steps if n_steps > 0 else np.nan,
                   frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
                   n_paths=n_paths if n_steps > 0 else np.nan)
+=======
+        logg.debug(
+            f'      path1 = {path1_orig_names},\n'
+            f'path_mapped = {[list(p) for p in path_mapped_orig_names]},\n'
+            f'      path2 = {path2_orig_names},\n'
+            f'-> n_agreeing_steps = {n_agreeing_steps_path} / n_steps = {n_steps_path}.',
+        )
+    return PAGAComparePathsResult(
+        frac_steps=n_agreeing_steps/n_steps if n_steps > 0 else np.nan,
+        n_steps=n_steps if n_steps > 0 else np.nan,
+        frac_paths=n_agreeing_paths/n_paths if n_steps > 0 else np.nan,
+        n_paths=n_paths if n_steps > 0 else np.nan,
+    )
+>>>>>>> upstream/master

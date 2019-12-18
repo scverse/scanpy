@@ -1,10 +1,30 @@
+dist: xenial
 language: python
+matrix:
+  include:
+    - name: "static analysis"
+      python: "3.7"
+      script:
+        - black . --check --diff
+        - python -m scanpy.tests.blackdiff 10
+      after_success: skip
 python:
+<<<<<<< HEAD
   - "3.5"
   - "3.6"
 cache: pip
 install:
   - pip install docutils
+=======
+  - '3.6'
+  - '3.7'
+  #- '3.8-dev' # https://github.com/numpy/numpy/issues/13790
+cache:
+  - pip
+  - directories: data
+install:
+  - pip install docutils sphinx
+>>>>>>> upstream/master
   - pip install -e .[test,louvain,leiden]
 env:
   - MPLBACKEND=Agg

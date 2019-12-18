@@ -1,5 +1,6 @@
 # Author: David DeTomaso (https://github.com/deto)
-"""Fix for sklearn.tsne gradient descent.
+"""\
+Fix for sklearn.tsne gradient descent.
 
 This module fixes it by patching the original function with this
 modified version. Patch is only applied for versions earlier than 0.19.
@@ -7,74 +8,85 @@ modified version. Patch is only applied for versions earlier than 0.19.
 Code courtesy of David DeTomaso; available from
 https://github.com/YosefLab/FastProject/blob/stable/FastProject/_tsne_fix.py
 """
+from types import MappingProxyType
+from typing import Callable, Tuple, Optional, Mapping, Any, Iterable
 
 import numpy as np
 from scipy import linalg
 import sklearn
 
-def _gradient_descent(objective, p0, it, n_iter, objective_error=None,
-                      n_iter_check=1, n_iter_without_progress=50,
-                      momentum=0.5, learning_rate=1000.0, min_gain=0.01,
-                      min_grad_norm=1e-7, min_error_diff=1e-7, verbose=0,
-                      args=None, kwargs=None):
-    """Batch gradient descent with momentum and individual gains.
+
+def _gradient_descent(
+    objective: Callable[[np.ndarray, ...], Tuple[int, np.ndarray]],
+    p0: np.ndarray,
+    it: int,
+    n_iter: int,
+    objective_error: Optional[Callable[[np.ndarray, ...], float]] = None,
+    n_iter_check: int = 1,
+    n_iter_without_progress: int = 50,
+    momentum: float = 0.5,
+    learning_rate: float = 1000.0,
+    min_gain: float = 0.01,
+    min_grad_norm: float = 1e-7,
+    min_error_diff: float = 1e-7,
+    verbose: int = 0,
+    args: Iterable[Any] = (),
+    kwargs: Mapping[str, Any] = MappingProxyType({}),
+) -> Tuple[np.ndarray, float, int]:
+    """\
+    Batch gradient descent with momentum and individual gains.
+
     Parameters
     ----------
-    objective : function or callable
+    objective
         Should return a tuple of cost and gradient for a given parameter
         vector. When expensive to compute, the cost can optionally
         be None and can be computed every n_iter_check steps using
         the objective_error function.
-    p0 : array-like, shape (n_params,)
-        Initial parameter vector.
-    it : int
+    p0
+        Initial parameter vector. shape (n_params,)
+    it
         Current number of iterations (this function will be called more than
         once during the optimization).
-    n_iter : int
+    n_iter
         Maximum number of gradient descent iterations.
-    n_iter_check : int
+    objective_error
+        Should return error for a given parameter vector.
+    n_iter_check
         Number of iterations before evaluating the global error. If the error
         is sufficiently low, we abort the optimization.
-    objective_error : function or callable
-        Should return a tuple of cost and gradient for a given parameter
-        vector.
-    n_iter_without_progress : int, optional (default: 30)
+    n_iter_without_progress
         Maximum number of iterations without progress before we abort the
         optimization.
-    momentum : float, within (0.0, 1.0), optional (default: 0.5)
+    momentum
         The momentum generates a weight for previous gradients that decays
-        exponentially.
-    learning_rate : float, optional (default: 1000.0)
+        exponentially. within (0.0, 1.0)
+    learning_rate
         The learning rate should be extremely high for t-SNE! Values in the
         range [100.0, 1000.0] are common.
-    min_gain : float, optional (default: 0.01)
+    min_gain
         Minimum individual gain for each parameter.
-    min_grad_norm : float, optional (default: 1e-7)
+    min_grad_norm
         If the gradient norm is below this threshold, the optimization will
         be aborted.
-    min_error_diff : float, optional (default: 1e-7)
+    min_error_diff
         If the absolute difference of two successive cost function values
         is below this threshold, the optimization will be aborted.
-    verbose : int, optional (default: 0)
+    verbose
         Verbosity level.
-    args : sequence
+    args
         Arguments to pass to objective function.
-    kwargs : dict
+    kwargs
         Keyword arguments to pass to objective function.
     Returns
     -------
-    p : array, shape (n_params,)
-        Optimum parameters.
-    error : float
+    p
+        Optimum parameters. shape (n_params,)
+    error
         Optimum.
-    i : int
+    i
         Last iteration.
     """
-
-    if args is None:
-        args = []
-    if kwargs is None:
-        kwargs = {}
 
     p = p0.copy().ravel()
     update = np.zeros_like(p)

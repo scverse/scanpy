@@ -4,7 +4,16 @@ from ..tools._umap import umap
 from ..tools._diffmap import diffmap
 from ..tools._draw_graph import draw_graph
 
+<<<<<<< HEAD
 from ..tools._paga import paga, paga_degrees, paga_expression_entropies, paga_compare_paths
+=======
+from ..tools._paga import (
+    paga,
+    paga_degrees,
+    paga_expression_entropies,
+    paga_compare_paths,
+)
+>>>>>>> upstream/master
 from ..tools._rank_genes_groups import rank_genes_groups
 from ..tools._dpt import dpt
 from ..tools._leiden import leiden
@@ -14,6 +23,10 @@ from ..tools._top_genes import correlation_matrix, ROC_AUC_analysis
 
 from ..tools._score_genes import score_genes, score_genes_cell_cycle
 
+<<<<<<< HEAD
 from ..tools._pypairs import cyclone, sandbag
 
 from ..tools._phate import phate
+=======
+from ..external.tl import cyclone, sandbag, phate, trimap
+>>>>>>> upstream/master

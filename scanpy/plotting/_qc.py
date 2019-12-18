@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import seaborn as sns
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -12,6 +13,33 @@ def highest_expr_genes(
         adata, n_top=30, show=None, save=None,
         ax=None, gene_symbols=None, **kwds
     ):
+=======
+from typing import Optional, Union
+
+import numpy as np
+import pandas as pd
+from anndata import AnnData
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+
+from . import _utils
+from ._docs import doc_show_save_ax
+from ..preprocessing._normalization import normalize_total
+from .._utils import _doc_params
+
+
+@_doc_params(show_save_ax=doc_show_save_ax)
+def highest_expr_genes(
+    adata: AnnData,
+    n_top: int = 30,
+    show: Optional[bool] = None,
+    save: Optional[Union[str, bool]] = None,
+    ax: Optional[Axes] = None,
+    gene_symbols: Optional[str] = None,
+    log: bool = False,
+    **kwds,
+):
+>>>>>>> upstream/master
     """\
     Fraction of counts assigned to each gene over all cells.
 
@@ -33,6 +61,7 @@ def highest_expr_genes(
 
     Parameters
     ----------
+<<<<<<< HEAD
     adata : :class:`~anndata.AnnData`
         Annotated data matrix.
     n_top : `int`, optional (default:30)
@@ -72,3 +101,56 @@ def highest_expr_genes(
     ax.set_xlabel('% of total counts')
     utils.savefig_or_show('highest_expr_genes', show=show, save=save)
     return ax if show == False else None
+=======
+    adata
+        Annotated data matrix.
+    n_top
+        Number of top
+    {show_save_ax}
+    gene_symbols
+        Key for field in .var that stores gene symbols if you do not want to use .var_names.
+    log
+        Plot x-axis in log scale
+    **kwds
+        Are passed to :func:`~seaborn.boxplot`.
+
+    Returns
+    -------
+    If `show==False` a :class:`~matplotlib.axes.Axes`.
+    """
+    import seaborn as sns  # Slow import, only import if called
+    from scipy.sparse import issparse
+
+    # compute the percentage of each gene per cell
+    norm_dict = normalize_total(adata, target_sum=100, inplace=False)
+
+    # identify the genes with the highest mean
+    if issparse(norm_dict['X']):
+        mean_percent = norm_dict['X'].mean(axis=0).A1
+        top_idx = np.argsort(mean_percent)[::-1][:n_top]
+        counts_top_genes = norm_dict['X'][:, top_idx].A
+    else:
+        mean_percent = norm_dict['X'].mean(axis=0)
+        top_idx = np.argsort(mean_percent)[::-1][:n_top]
+        counts_top_genes = norm_dict['X'][:, top_idx]
+    columns = (
+        adata.var_names[top_idx]
+        if gene_symbols is None
+        else adata.var[gene_symbols][top_idx]
+    )
+    counts_top_genes = pd.DataFrame(
+        counts_top_genes, index=adata.obs_names, columns=columns
+    )
+
+    if not ax:
+        # figsize is hardcoded to produce a tall image. To change the fig size,
+        # a matplotlib.axes.Axes object needs to be passed.
+        height = (n_top * 0.2) + 1.5
+        fig, ax = plt.subplots(figsize=(5, height))
+    sns.boxplot(data=counts_top_genes, orient='h', ax=ax, fliersize=1, **kwds)
+    ax.set_xlabel('% of total counts')
+    if log:
+        ax.set_xscale('log')
+    _utils.savefig_or_show('highest_expr_genes', show=show, save=save)
+    return ax if not show else None
+>>>>>>> upstream/master

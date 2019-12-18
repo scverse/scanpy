@@ -1,14 +1,28 @@
+<<<<<<< HEAD
 from typing import Optional, Tuple, Sequence, Type, Mapping, Any
+=======
+from types import MappingProxyType
+from typing import Optional, Tuple, Sequence, Type, Mapping, Any, Union
+>>>>>>> upstream/master
 
 import numpy as np
 import pandas as pd
 from anndata import AnnData
 from natsort import natsorted
+<<<<<<< HEAD
 from scipy.sparse import spmatrix
 
 from .. import utils
 from .. import logging as logg
 from ..logging import _settings_verbosity_greater_or_equal_than
+=======
+from numpy.random.mtrand import RandomState
+from scipy.sparse import spmatrix
+
+from ._utils_clustering import rename_groups, restrict_adjacency
+from .. import _utils, logging as logg
+from .._compat import Literal
+>>>>>>> upstream/master
 
 try:
     from louvain.VertexPartition import MutableVertexPartition
@@ -20,6 +34,7 @@ except ImportError:
 def louvain(
     adata: AnnData,
     resolution: Optional[float] = None,
+<<<<<<< HEAD
     random_state: int = 0,
     restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
     key_added: Optional[str] = None,
@@ -32,12 +47,33 @@ def louvain(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
+=======
+    random_state: Optional[Union[int, RandomState]] = 0,
+    restrict_to: Optional[Tuple[str, Sequence[str]]] = None,
+    key_added: str = 'louvain',
+    adjacency: Optional[spmatrix] = None,
+    flavor: Literal['vtraag', 'igraph', 'rapids'] = 'vtraag',
+    directed: bool = True,
+    use_weights: bool = False,
+    partition_type: Optional[Type[MutableVertexPartition]] = None,
+    partition_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """\
+    Cluster cells into subgroups [Blondel08]_ [Levine15]_ [Traag17]_.
+>>>>>>> upstream/master
 
     Cluster cells using the Louvain algorithm [Blondel08]_ in the implementation
     of [Traag17]_. The Louvain algorithm has been proposed for single-cell
     analysis by [Levine15]_.
 
+<<<<<<< HEAD
     This requires to run :func:`~scanpy.api.pp.neighbors` first.
+=======
+    This requires having ran :func:`~scanpy.pp.neighbors` or
+    :func:`~scanpy.external.pp.bbknn` first,
+    or explicitly passing a ``adjacency`` matrix.
+>>>>>>> upstream/master
 
     Parameters
     ----------
@@ -46,7 +82,12 @@ def louvain(
     resolution
         For the default flavor (``'vtraag'``), you can provide a resolution
         (higher resolution means finding more and smaller clusters),
+<<<<<<< HEAD
         which defaults to 1.0. See “Time as a resolution parameter” in [Lambiotte09]_.
+=======
+        which defaults to 1.0.
+        See “Time as a resolution parameter” in [Lambiotte09]_.
+>>>>>>> upstream/master
     random_state
         Change the initialization of the optimization.
     restrict_to
@@ -57,7 +98,11 @@ def louvain(
     adjacency
         Sparse adjacency matrix of the graph, defaults to
         ``adata.uns['neighbors']['connectivities']``.
+<<<<<<< HEAD
     flavor : {``'vtraag'``, ``'igraph'``}
+=======
+    flavor
+>>>>>>> upstream/master
         Choose between to packages for computing the clustering.
         ``'vtraag'`` is much more powerful, and the default.
     directed
@@ -85,6 +130,7 @@ def louvain(
     :class:`~anndata.AnnData`
         When ``copy=True`` is set, a copy of ``adata`` with those fields is returned.
     """
+<<<<<<< HEAD
     logg.info('running Louvain clustering', r=True)
     if (flavor != 'vtraag') and (partition_type is not None):
         raise ValueError(
@@ -93,10 +139,26 @@ def louvain(
     if adjacency is None and 'neighbors' not in adata.uns:
         raise ValueError(
             'You need to run `pp.neighbors` first to compute a neighborhood graph.')
+=======
+    partition_kwargs = dict(partition_kwargs)
+    start = logg.info('running Louvain clustering')
+    if (flavor != 'vtraag') and (partition_type is not None):
+        raise ValueError(
+            '`partition_type` is only a valid argument '
+            'when `flavour` is "vtraag"'
+        )
+    adata = adata.copy() if copy else adata
+    if adjacency is None and 'neighbors' not in adata.uns:
+        raise ValueError(
+            'You need to run `pp.neighbors` first '
+            'to compute a neighborhood graph.'
+        )
+>>>>>>> upstream/master
     if adjacency is None:
         adjacency = adata.uns['neighbors']['connectivities']
     if restrict_to is not None:
         restrict_key, restrict_categories = restrict_to
+<<<<<<< HEAD
         if not isinstance(restrict_categories[0], str):
             raise ValueError('You need to use strings to label categories, '
                              'e.g. \'1\' instead of 1.')
@@ -115,14 +177,34 @@ def louvain(
             directed = False
         if not directed: logg.m('    using the undirected graph', v=4)
         g = utils.get_igraph_from_adjacency(adjacency, directed=directed)
+=======
+        adjacency, restrict_indices = restrict_adjacency(
+            adata,
+            restrict_key,
+            restrict_categories,
+            adjacency,
+        )
+    if flavor in {'vtraag', 'igraph'}:
+        if flavor == 'igraph' and resolution is not None:
+            logg.warning(
+                '`resolution` parameter has no effect for flavor "igraph"'
+            )
+        if directed and flavor == 'igraph':
+            directed = False
+        if not directed: logg.debug('    using the undirected graph')
+        g = _utils.get_igraph_from_adjacency(adjacency, directed=directed)
+>>>>>>> upstream/master
         if use_weights:
             weights = np.array(g.es["weight"]).astype(np.float64)
         else:
             weights = None
         if flavor == 'vtraag':
             import louvain
+<<<<<<< HEAD
             if partition_kwargs is None:
                 partition_kwargs = {}
+=======
+>>>>>>> upstream/master
             if partition_type is None:
                 partition_type = louvain.RBConfigurationVertexPartition
             if resolution is not None:
@@ -139,6 +221,29 @@ def louvain(
         else:
             part = g.community_multilevel(weights=weights)
         groups = np.array(part.membership)
+<<<<<<< HEAD
+=======
+    elif flavor == 'rapids':
+        # nvLouvain only works with undirected graphs,
+        # and `adjacency` must have a directed edge in both directions
+        import cudf
+        import cugraph
+        offsets = cudf.Series(adjacency.indptr)
+        indices = cudf.Series(adjacency.indices)
+        if use_weights:
+            sources, targets = adjacency.nonzero()
+            weights = adjacency[sources, targets]
+            if isinstance(weights, np.matrix):
+                weights = weights.A1
+            weights = cudf.Series(weights)
+        else:
+            weights = None
+        g = cugraph.Graph()
+        g.add_adj_list(offsets, indices, weights)
+        logg.info('    using the "louvain" package of rapids')
+        louvain_parts, _ = cugraph.nvLouvain(g)
+        groups = louvain_parts.to_pandas().sort_values('vertex')[['partition']].to_numpy().ravel()
+>>>>>>> upstream/master
     elif flavor == 'taynaud':
         # this is deprecated
         import networkx as nx
@@ -148,6 +253,7 @@ def louvain(
         groups = np.zeros(len(partition), dtype=int)
         for k, v in partition.items(): groups[k] = v
     else:
+<<<<<<< HEAD
         raise ValueError('`flavor` needs to be "vtraag" or "igraph" or "taynaud".')
     unique_groups = np.unique(groups)
     n_clusters = len(unique_groups)
@@ -172,4 +278,37 @@ def louvain(
     logg.hint('found {} clusters and added\n'
               '    \'{}\', the cluster labels (adata.obs, categorical)'
               .format(n_clusters, key_added))
+=======
+        raise ValueError(
+            '`flavor` needs to be "vtraag" or "igraph" or "taynaud".'
+        )
+    if restrict_to is not None:
+        if key_added == 'louvain':
+            key_added += '_R'
+        groups = rename_groups(
+            adata,
+            key_added,
+            restrict_key,
+            restrict_categories,
+            restrict_indices,
+            groups,
+        )
+    adata.obs[key_added] = pd.Categorical(
+        values=groups.astype('U'),
+        categories=natsorted(np.unique(groups).astype('U')),
+    )
+    adata.uns['louvain'] = {}
+    adata.uns['louvain']['params'] = dict(
+        resolution=resolution,
+        random_state=random_state,
+    )
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            f'found {len(np.unique(groups))} clusters and added\n'
+            f'    {key_added!r}, the cluster labels (adata.obs, categorical)'
+        ),
+    )
+>>>>>>> upstream/master
     return adata if copy else None

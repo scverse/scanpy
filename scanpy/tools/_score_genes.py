@@ -1,5 +1,6 @@
 """Calculate scores based on the expression of gene lists.
 """
+<<<<<<< HEAD
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,32 @@ def score_genes(
         copy=False,
         use_raw=False):  # we use the scikit-learn convention of calling the seed "random_state"
     """Score a set of genes [Satija15]_.
+=======
+from typing import Sequence, Optional, Union
+
+import numpy as np
+import pandas as pd
+from anndata import AnnData
+from numpy.random.mtrand import RandomState
+from scipy.sparse import issparse
+
+from .. import logging as logg
+
+
+def score_genes(
+    adata: AnnData,
+    gene_list: Sequence[str],
+    ctrl_size: int = 50,
+    gene_pool: Optional[Sequence[str]] = None,
+    n_bins: int = 25,
+    score_name: str = 'score',
+    random_state: Optional[Union[int, RandomState]] = 0,
+    copy: bool = False,
+    use_raw: bool = None,
+) -> Optional[AnnData]:
+    """\
+    Score a set of genes [Satija15]_.
+>>>>>>> upstream/master
 
     The score is the average expression of a set of genes subtracted with the
     average expression of a reference set of genes. The reference set is
@@ -30,6 +57,7 @@ def score_genes(
 
     Parameters
     ----------
+<<<<<<< HEAD
     adata : :class:`~anndata.AnnData`
         The annotated data matrix.
     gene_list : iterable
@@ -49,6 +77,28 @@ def score_genes(
         Copy `adata` or modify it inplace.
     use_raw : `bool`, optional (default: `False`)
         Use `raw` attribute of `adata` if present.
+=======
+    adata
+        The annotated data matrix.
+    gene_list
+        The list of gene names used for score calculation.
+    ctrl_size
+        Number of reference genes to be sampled. If `len(gene_list)` is not too
+        low, you can set `ctrl_size=len(gene_list)`.
+    gene_pool
+        Genes for sampling the reference set. Default is all genes.
+    n_bins
+        Number of expression level bins for sampling.
+    score_name
+        Name of the field to be added in `.obs`.
+    random_state
+        The random seed for sampling.
+    copy
+        Copy `adata` or modify it inplace.
+    use_raw
+        Use `raw` attribute of `adata` if present.
+
+>>>>>>> upstream/master
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with an additional field
@@ -58,22 +108,47 @@ def score_genes(
     --------
     See this `notebook <https://github.com/theislab/scanpy_usage/tree/master/180209_cell_cycle>`__.
     """
+<<<<<<< HEAD
     logg.info('computing score \'{}\''.format(score_name), r=True)
     adata = adata.copy() if copy else adata
 
     if random_state:
+=======
+    start = logg.info(f'computing score {score_name!r}')
+    adata = adata.copy() if copy else adata
+
+    if random_state is not None:
+>>>>>>> upstream/master
         np.random.seed(random_state)
 
     gene_list_in_var = []
     var_names = adata.raw.var_names if use_raw else adata.var_names
+<<<<<<< HEAD
+=======
+    genes_to_ignore = []
+>>>>>>> upstream/master
     for gene in gene_list:
         if gene in var_names:
             gene_list_in_var.append(gene)
         else:
+<<<<<<< HEAD
             logg.warn('gene: {} is not in adata.var_names and will be ignored'.format(gene))
     gene_list = set(gene_list_in_var[:])
 
     if not gene_pool:
+=======
+            genes_to_ignore.append(gene)
+    if len(genes_to_ignore) > 0:
+        logg.warning(f'genes are not in var_names and ignored: {genes_to_ignore}')
+    gene_list = set(gene_list_in_var[:])
+
+    if len(gene_list) == 0:
+        logg.warning('provided gene list has length 0, scores as 0')
+        adata.obs[score_name] = 0
+        return adata if copy else None
+
+    if gene_pool is None:
+>>>>>>> upstream/master
         gene_pool = list(var_names)
     else:
         gene_pool = [x for x in gene_pool if x in var_names]
@@ -82,6 +157,7 @@ def score_genes(
     # Basically we need to compare genes against random genes in a matched
     # interval of expression.
 
+<<<<<<< HEAD
     _adata = adata.raw if use_raw else adata
     # TODO: this densifies the whole data matrix for `gene_pool`
     if issparse(_adata.X):
@@ -91,6 +167,19 @@ def score_genes(
     else:
         obs_avg = pd.Series(
             np.nanmean(_adata[:, gene_pool].X, axis=0), index=gene_pool)  # average expression of genes
+=======
+    if use_raw is None:
+        use_raw = True if adata.raw is not None else False
+    _adata = adata.raw if use_raw else adata
+
+    _adata_subset = _adata[:, gene_pool] if len(gene_pool) < len(_adata.var_names) else _adata
+    if issparse(_adata_subset.X):
+        obs_avg = pd.Series(
+            np.array(_adata_subset.X.mean(axis=0)).flatten(), index=gene_pool)  # average expression of genes
+    else:
+        obs_avg = pd.Series(
+            np.nanmean(_adata_subset.X, axis=0), index=gene_pool)  # average expression of genes
+>>>>>>> upstream/master
 
     obs_avg = obs_avg[np.isfinite(obs_avg)] # Sometimes (and I don't know how) missing data may be there, with nansfor
 
@@ -102,6 +191,7 @@ def score_genes(
     for cut in np.unique(obs_cut.loc[gene_list]):
         r_genes = np.array(obs_cut[obs_cut == cut].index)
         np.random.shuffle(r_genes)
+<<<<<<< HEAD
         control_genes.update(set(r_genes[:ctrl_size]))  # uses full r_genes if ctrl_size > len(r_genes)
 
     # To index, we need a list - indexing implies an order.
@@ -109,6 +199,15 @@ def score_genes(
     gene_list = list(gene_list)
 
 
+=======
+        # uses full r_genes if ctrl_size > len(r_genes)
+        control_genes.update(set(r_genes[:ctrl_size]))
+
+    # To index, we need a list – indexing implies an order.
+    control_genes = list(control_genes - gene_list)
+    gene_list = list(gene_list)
+
+>>>>>>> upstream/master
     X_list = _adata[:, gene_list].X
     if issparse(X_list): X_list = X_list.toarray()
     X_control = _adata[:, control_genes].X
@@ -118,23 +217,48 @@ def score_genes(
     if len(gene_list) == 0:
         # We shouldn't even get here, but just in case
         logg.hint(
+<<<<<<< HEAD
             'could not add \n'
             '    \'{}\', score of gene set (adata.obs)'.format(score_name))
         return adata if copy else None
     elif len(gene_list) == 1:
         score = _adata[:, gene_list].X - X_control
+=======
+            f'could not add \n'
+            f'    {score_name!r}, score of gene set (adata.obs)'
+        )
+        return adata if copy else None
+    elif len(gene_list) == 1:
+        if _adata[:, gene_list].X.ndim == 2:
+            vector = _adata[:, gene_list].X.toarray()[:, 0] # new anndata
+        else:
+            vector =  _adata[:, gene_list].X  # old anndata
+        score = vector - X_control
+>>>>>>> upstream/master
     else:
         score = np.nanmean(X_list, axis=1) - X_control
 
     adata.obs[score_name] = pd.Series(np.array(score).ravel(), index=adata.obs_names)
 
+<<<<<<< HEAD
     logg.info('    finished', time=True, end=' ' if _settings_verbosity_greater_or_equal_than(3) else '\n')
     logg.hint('added\n'
               '    \'{}\', score of gene set (adata.obs)'.format(score_name))
+=======
+    logg.info(
+        '    finished',
+        time=start,
+        deep=(
+            'added\n'
+            f'    {score_name!r}, score of gene set (adata.obs)'
+        ),
+    )
+>>>>>>> upstream/master
     return adata if copy else None
 
 
 def score_genes_cell_cycle(
+<<<<<<< HEAD
         adata,
         s_genes,
         g2m_genes,
@@ -158,17 +282,52 @@ def score_genes_cell_cycle(
         Copy `adata` or modify it inplace.
     **kwargs : optional keyword arguments
         Are passed to :func:`~scanpy.api.score_genes`. `ctrl_size` is not
+=======
+    adata: AnnData,
+    s_genes: Sequence[str],
+    g2m_genes: Sequence[str],
+    copy: bool = False,
+    **kwargs,
+) -> Optional[AnnData]:
+    """\
+    Score cell cycle genes [Satija15]_.
+
+    Given two lists of genes associated to S phase and G2M phase, calculates
+    scores and assigns a cell cycle phase (G1, S or G2M). See
+    :func:`~scanpy.tl.score_genes` for more explanation.
+
+    Parameters
+    ----------
+    adata
+        The annotated data matrix.
+    s_genes
+        List of genes associated with S phase.
+    g2m_genes
+        List of genes associated with G2M phase.
+    copy
+        Copy `adata` or modify it inplace.
+    **kwargs
+        Are passed to :func:`~scanpy.tl.score_genes`. `ctrl_size` is not
+>>>>>>> upstream/master
         possible, as it's set as `min(len(s_genes), len(g2m_genes))`.
 
     Returns
     -------
     Depending on `copy`, returns or updates `adata` with the following fields.
 
+<<<<<<< HEAD
     S_score : `adata.obs`, dtype `object`
         The score for S phase for each cell.
     G2M_score : `adata.obs`, dtype `object`
         The score for G2M phase for each cell.
     phase : `adata.obs`, dtype `object`
+=======
+    **S_score** : `adata.obs`, dtype `object`
+        The score for S phase for each cell.
+    **G2M_score** : `adata.obs`, dtype `object`
+        The score for G2M phase for each cell.
+    **phase** : `adata.obs`, dtype `object`
+>>>>>>> upstream/master
         The cell cycle phase (`S`, `G2M` or `G1`) for each cell.
 
     See also

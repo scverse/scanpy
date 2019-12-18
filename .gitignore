@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Scanpy
 .pytest_cache/
 .scanpy
@@ -44,24 +45,49 @@ scripts/tgdyn_simple.py
 .spyproject/
 scanpy/.spyproject/
 
+=======
+# Scanpy outfiles
+/cache/
+/data/
+/write/
 
+# Docs
+/docs/_build/
+/docs/api/scanpy.*.rst
+/docs/external/scanpy.*.rst
+!/docs/api/scanpy.api.rst
+!/docs/api/scanpy.api.AnnData.rst
+!/docs/api/scanpy.plotting.rst
+!/docs/api/scanpy.external.rst
+>>>>>>> upstream/master
+
+# tests
+/.cache/
+/.pytest_cache/
+/scanpy/tests/test*.h5ad
+/scanpy/tests/figures/
+/scanpy/tests/notebooks/figures/
+
+# Environment management
+/Pipfile
+/Pipfile.lock
 
 # always-ignore extensions
 *~
 
-# Python / Byte-compiled / optimized / DLL
+# Python build files
 __pycache__/
-*.py[cod]
-*.so
-.cache
+/dist/
+/build/
+/scanpy.egg-info/
 
-# OS or Editor files and folders
+# OS stuff
 .DS_Store
 Thumbs.db
 .ipynb_checkpoints/
 .directory
-/.idea/
 
+<<<<<<< HEAD
 # always-ignore directories
 /dist/
 /build/
@@ -69,3 +95,8 @@ Lib1-1_E4.5.csv
 Lib1-2_E4.5.csv
 Lib1-3_E3.5.csv
 Lib1-4_E3.5.csv
+=======
+# IDEs and editors
+/.idea/
+/.vscode/
+>>>>>>> upstream/master

@@ -1,5 +1,6 @@
 # Author: T. Callies
 #
+<<<<<<< HEAD
 """This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
 """
 
@@ -47,6 +48,72 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
 
 
 
+=======
+"""\
+This modules provides all non-visualization tools for advanced gene ranking and exploration of genes
+"""
+from typing import Optional, Collection
+
+import pandas as pd
+from anndata import AnnData
+from sklearn import metrics
+from scipy.sparse import issparse
+
+from .. import logging as logg
+from .._utils import select_groups
+from .._compat import Literal
+
+
+def correlation_matrix(
+    adata: AnnData,
+    name_list: Optional[Collection[str]] = None,
+    groupby: Optional[str] = None,
+    group: Optional[int] = None,
+    n_genes: int = 20,
+    data: Literal['Complete', 'Group', 'Rest'] = 'Complete',
+    method: Literal['pearson', 'kendall', 'spearman'] = 'pearson',
+    annotation_key: Optional[str] = None,
+) -> None:
+    """\
+    Calculate correlation matrix.
+
+    Calculate a correlation matrix for genes strored in sample annotation
+    using :func:`~scanpy.tl.rank_genes_groups`.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    name_list
+        Takes a list of genes for which to calculate the correlation matrix
+    groupby
+        If no name list is passed, genes are selected from the
+        results of rank_gene_groups. Then this is the key of the sample grouping to consider.
+        Note that in this case also a group index has to be specified.
+    group
+        Group index for which the correlation matrix for top_ranked genes should be calculated.
+        Currently only int is supported, will change very soon
+    n_genes
+        For how many genes to calculate correlation matrix? If specified, cuts the name list
+        (in whatever order it is passed).
+    data
+        At the moment, this is only relevant for the case that name_list is drawn from rank_gene_groups results.
+        If specified, collects mask for the called group and then takes only those cells specified.
+        If 'Complete', calculate correlation using full data
+        If 'Group', calculate correlation within the selected group.
+        If 'Rest', calculate corrlation for everything except the group
+    method
+        Which kind of correlation coefficient to use
+
+        pearson
+            standard correlation coefficient
+        kendall
+            Kendall Tau correlation coefficient
+        spearman
+            Spearman rank correlation
+    annotation_key
+        Allows to define the name of the anndata entry where results are stored.
+>>>>>>> upstream/master
     """
 
     # TODO: At the moment, only works for int identifiers
@@ -68,21 +135,34 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
     adata_relevant = adata[:, name_list]
     # This line just makes group_mask access easier. Nothing else but 'all' will stand here.
     groups = 'all'
+<<<<<<< HEAD
     if data is 'Complete' or groupby is None:
+=======
+    if data == 'Complete' or groupby is None:
+>>>>>>> upstream/master
         if issparse(adata_relevant.X):
             Data_array = adata_relevant.X.todense()
         else:
             Data_array = adata_relevant.X
     else:
         # get group_mask
+<<<<<<< HEAD
         groups_order, groups_masks = utils.select_groups(
             adata, groups, groupby)
         if data is 'Group':
+=======
+        groups_order, groups_masks = select_groups(adata, groups, groupby)
+        if data == 'Group':
+>>>>>>> upstream/master
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[groups_masks[group], :].todense()
             else:
                 Data_array = adata_relevant.X[groups_masks[group], :]
+<<<<<<< HEAD
         elif data is 'Rest':
+=======
+        elif data == 'Rest':
+>>>>>>> upstream/master
             if issparse(adata_relevant.X):
                 Data_array = adata_relevant.X[~groups_masks[group], :].todense()
             else:
@@ -104,6 +184,7 @@ def correlation_matrix(adata, name_list=None, groupby=None, group=None, n_genes=
         adata.uns[annotation_key] = cor_table
 
 
+<<<<<<< HEAD
 
 
 from sklearn import metrics
@@ -126,6 +207,33 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
                 all stored top ranked genes.
 
         """
+=======
+def ROC_AUC_analysis(
+    adata: AnnData,
+    groupby: str,
+    group: Optional[str] = None,
+    n_genes: int = 100,
+):
+    """\
+    Calculate correlation matrix.
+
+    Calculate a correlation matrix for genes strored in sample annotation
+    
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    groupby
+        The key of the sample grouping to consider.
+    group
+        Group name or index for which the correlation matrix for top ranked
+        genes should be calculated.
+        If no parameter is passed, ROC/AUC is calculated for all groups
+    n_genes
+        For how many genes to calculate ROC and AUC. If no parameter is passed,
+        calculation is done for all stored top ranked genes.
+    """
+>>>>>>> upstream/master
     if group is None:
         pass
         # TODO: Loop over all groups instead of just taking one.
@@ -140,8 +248,12 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
 
     # TODO: For the moment, see that everything works for comparison against the rest. Resolve issues later.
     groups = 'all'
+<<<<<<< HEAD
     groups_order, groups_masks = utils.select_groups(
         adata, groups, groupby)
+=======
+    groups_order, groups_masks = select_groups(adata, groups, groupby)
+>>>>>>> upstream/master
 
     # Use usual convention, better for looping later.
     imask = group
@@ -169,6 +281,10 @@ def ROC_AUC_analysis(adata,groupby,group=None, n_genes=100):
     adata.uns['ROCthresholds' +groupby+ str(group)] = thresholds
     adata.uns['ROC_AUC' + groupby + str(group)] = roc_auc
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99):
     ## Simple method that can be called by rank_gene_group. It uses masks that have been passed to the function and
     ## calculates how much has to be subsampled in order to reach a certain precision with a certain probability
@@ -182,6 +298,10 @@ def subsampled_estimates(mask, mask_rest=None, precision=0.01, probability=0.99)
 
     # TODO: Subsample
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 def dominated_ROC_elimination(adata,grouby):
     ## This tool has the purpose to take a set of genes (possibly already pre-selected) and analyze AUC.
     ## Those and only those are eliminated who are dominated completely

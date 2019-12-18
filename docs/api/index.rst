@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .. automodule:: scanpy
 
 API
@@ -135,6 +136,155 @@ For most tools and for some preprocessing functions, you'll find a plotting func
 .. toctree::
    :hidden:
    :maxdepth: 1
+=======
+.. module:: scanpy
+.. automodule:: scanpy
+   :noindex:
+
+API
+===
+
+
+Import Scanpy as::
+
+   import scanpy as sc
+
+.. note::
+   Wrappers to external functionality are found in :mod:`scanpy.external`.
+   Previously, both core and external functionality were available through :mod:`scanpy.api` (deprecated since 1.3.7).
+
+Preprocessing: `pp`
+-------------------
+
+.. module:: scanpy.pp
+.. currentmodule:: scanpy
+
+Filtering of highly-variable genes, batch-effect correction, per-cell normalization, preprocessing recipes.
+
+Any transformation of the data matrix that is not a *tool*. Other than *tools*, preprocessing steps usually don't return an easily interpretable annotation, but perform a basic transformation on the data matrix.
+
+Basic Preprocessing
+~~~~~~~~~~~~~~~~~~~
+
+For visual quality control, see :func:`~scanpy.pl.highest_expr_genes` and
+:func:`~scanpy.pl.filter_genes_dispersion` in :mod:`scanpy.plotting`.
+
+.. autosummary::
+   :toctree: .
+
+   pp.calculate_qc_metrics
+   pp.filter_cells
+   pp.filter_genes
+   pp.highly_variable_genes
+   pp.log1p
+   pp.pca
+   pp.normalize_total
+   pp.regress_out
+   pp.scale
+   pp.subsample
+   pp.downsample_counts
+
+Recipes
+~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   pp.recipe_zheng17
+   pp.recipe_weinreb17
+   pp.recipe_seurat
+
+Batch effect correction
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Note that a simple batch correction method is available via :func:`pp.regress_out`. Checkout :class:`scanpy.external` for more.
+
+.. autosummary::
+   :toctree: .
+
+   pp.combat
+
+Neighbors
+~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   pp.neighbors
+
+
+Tools: `tl`
+-----------
+
+.. module:: scanpy.tl
+.. currentmodule:: scanpy
+
+Any transformation of the data matrix that is not *preprocessing*. In contrast to a *preprocessing* function, a *tool* usually adds an easily interpretable annotation to the data matrix, which can then be visualized with a corresponding plotting function.
+
+Embeddings
+~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.pca
+   tl.tsne
+   tl.umap
+   tl.draw_graph
+   tl.diffmap
+
+Clustering and trajectory inference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.leiden
+   tl.louvain
+   tl.dendrogram
+   tl.dpt
+   tl.paga
+
+Marker genes
+~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.rank_genes_groups
+   tl.filter_rank_genes_groups
+   tl.marker_gene_overlap
+
+Gene scores, Cell cycle
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.score_genes
+   tl.score_genes_cell_cycle
+
+Simulations
+~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: .
+
+   tl.sim
+
+
+Plotting: `pl`
+--------------
+
+.. module:: scanpy.pl
+.. currentmodule:: scanpy
+
+The plotting module :mod:`scanpy.plotting` largely parallels the ``tl.*`` and a few of the ``pp.*`` functions.
+For most tools and for some preprocessing functions, you'll find a plotting function with the same name.
+
+.. autosummary::
+   :toctree: .
+>>>>>>> upstream/master
 
    plotting
 
@@ -142,9 +292,16 @@ For most tools and for some preprocessing functions, you'll find a plotting func
 Reading
 -------
 
+<<<<<<< HEAD
 *Note:* For reading annotation use :ref:`pandas.read_… <pandas:/io.rst#io-tools-text-csv-hdf5>`
 and add it to your :class:`anndata.AnnData` object.
 The following read functions are intended for the numeric data in the data matrix `X`.
+=======
+.. note::
+   For reading annotation use :ref:`pandas.read_… <pandas:io>`
+   and add it to your :class:`anndata.AnnData` object. The following read functions are
+   intended for the numeric data in the data matrix `X`.
+>>>>>>> upstream/master
 
 Read common file formats using
 
@@ -176,6 +333,7 @@ Read other formats using functions borrowed from :mod:`anndata`
    read_umi_tools
 
 
+<<<<<<< HEAD
 Queries
 -------
 
@@ -183,6 +341,40 @@ Queries
    :toctree: .
 
    queries.mitochondrial_genes
+=======
+Get object from `AnnData`: `get`
+--------------------------------
+
+.. module:: scanpy.get
+.. currentmodule:: scanpy
+
+The module `sc.get` provides convenience functions for getting values back in
+useful formats.
+
+.. autosummary::
+   :toctree:
+
+   get.obs_df
+   get.var_df
+   get.rank_genes_groups_df
+
+
+Queries
+-------
+
+.. module:: scanpy.queries
+.. currentmodule:: scanpy
+
+This module provides useful queries for annotation and enrichment.
+
+.. autosummary::
+   :toctree: .
+
+   queries.biomart_annotations
+   queries.gene_coordinates
+   queries.mitochondrial_genes
+   queries.enrich
+>>>>>>> upstream/master
 
 
 Classes
@@ -211,6 +403,7 @@ high-resolution jupyter display backend useful for use in notebooks.
 
    set_figure_params
 
+<<<<<<< HEAD
 Influence the global behavior of plotting functions. In non-interactive scripts,
 you'd usually want to set :class:`settings.autoshow` to ``False``.
 
@@ -225,14 +418,47 @@ The default directories for saving figures and caching files.
 :class:`settings.figdir`                        Directory for saving figures (default: ``'./figures/'``).
 :class:`settings.cachedir`                      Directory for cache files (default: ``'./cache/'``).
 ==============================================  ===================================
+=======
+An instance of the :class:`~scanpy._settings.ScanpyConfig` is available as `scanpy.settings` and allows configuring Scanpy.
+
+.. autosummary::
+   :toctree: .
+
+   _settings.ScanpyConfig
+
+Some selected settings are discussed in the following.
+
+Influence the global behavior of plotting functions. In non-interactive scripts,
+you'd usually want to set `settings.autoshow` to ``False``.
+
+.. no :toctree: here because they are linked under the class
+.. autosummary::
+
+   ~_settings.ScanpyConfig.autoshow
+   ~_settings.ScanpyConfig.autosave
+
+The default directories for saving figures, caching files and storing datasets.
+
+.. autosummary::
+
+   ~_settings.ScanpyConfig.figdir
+   ~_settings.ScanpyConfig.cachedir
+   ~_settings.ScanpyConfig.datasetdir
+>>>>>>> upstream/master
 
 The verbosity of logging output, where verbosity levels have the following
 meaning: 0='error', 1='warning', 2='info', 3='hint', 4=more details, 5=even more
 details, etc.
 
+<<<<<<< HEAD
 ==============================================  ===================================
 :class:`settings.verbosity`                     Verbosity level (default: 1).
 ==============================================  ===================================
+=======
+.. autosummary::
+
+   ~_settings.ScanpyConfig.verbosity
+>>>>>>> upstream/master
 
 Print versions of packages that might influence numerical results.
 
@@ -245,24 +471,57 @@ Print versions of packages that might influence numerical results.
 Datasets
 --------
 
+<<<<<<< HEAD
+=======
+.. module:: scanpy.datasets
+.. currentmodule:: scanpy
+
+>>>>>>> upstream/master
 .. autosummary::
    :toctree: .
 
    datasets.blobs
+<<<<<<< HEAD
    datasets.krumsiek11
    datasets.moignard15
    datasets.pbmc3k
+=======
+   datasets.ebi_expression_atlas
+   datasets.krumsiek11
+   datasets.moignard15
+   datasets.pbmc3k
+   datasets.pbmc3k_processed
+>>>>>>> upstream/master
    datasets.pbmc68k_reduced
    datasets.paul15
    datasets.toggleswitch
 
 
+<<<<<<< HEAD
 Further Modules
+=======
+Further modules
+>>>>>>> upstream/master
 ---------------
 
 .. autosummary::
    :toctree: .
 
+<<<<<<< HEAD
    external
    api
    plotting
+=======
+   api
+   plotting
+
+
+Deprecated functions
+--------------------
+
+.. autosummary::
+   :toctree: .
+
+   pp.filter_genes_dispersion
+   pp.normalize_per_cell
+>>>>>>> upstream/master

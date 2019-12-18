@@ -6,6 +6,10 @@ try:
 except ImportError:
     da = None
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 def materialize_as_ndarray(a):
     """Convert distributed arrays to ndarrays."""
     if type(a) in (list, tuple):

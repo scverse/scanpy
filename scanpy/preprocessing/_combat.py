@@ -1,12 +1,18 @@
+<<<<<<< HEAD
 import sys
 
 import numba
+=======
+from typing import Collection, Tuple, Optional, Union
+
+>>>>>>> upstream/master
 import pandas as pd
 import numpy as np
 from numpy import linalg as la
 from scipy.sparse import issparse
 from anndata import AnnData
 
+<<<<<<< HEAD
 
 def design_mat(model, batch_levels):
     """
@@ -20,16 +26,42 @@ def design_mat(model, batch_levels):
     model : pd.DataFrame
         Contains the batch annotation
     batch_levels : list
+=======
+from .. import logging as logg
+from .._utils import sanitize_anndata
+
+
+def _design_matrix(
+        model: pd.DataFrame,
+        batch_key: str,
+        batch_levels: Collection[str],
+) -> pd.DataFrame:
+    """\
+    Computes a simple design matrix.
+
+    Parameters
+    --------
+    model
+        Contains the batch annotation
+    batch_key
+        Name of the batch column
+    batch_levels
+>>>>>>> upstream/master
         Levels of the batch annotation
 
     Returns
     --------
+<<<<<<< HEAD
     design : pd.DataFrame
         The design matrix for the regression problem
+=======
+    The design matrix for the regression problem
+>>>>>>> upstream/master
     """
     import patsy
 
     design = patsy.dmatrix(
+<<<<<<< HEAD
         "~ 0 + C(batch, levels={})".format(batch_levels),
         model,
         return_type="dataframe",
@@ -41,18 +73,56 @@ def design_mat(model, batch_levels):
     design = pd.concat((design, factor_matrix), axis=1)
     sys.stderr.write("found %i categorical variables:" % len(other_cols))
     sys.stderr.write("\t" + ", ".join(other_cols) + '\n')
+=======
+        "~ 0 + C(Q('{}'), levels=batch_levels)".format(batch_key),
+        model,
+        return_type="dataframe",
+    )
+    model = model.drop([batch_key], axis=1)
+    numerical_covariates = model.select_dtypes('number').columns.values
+
+    logg.info(f"Found {design.shape[1]} batches\n")
+    other_cols = [c for c in model.columns.values if c not in numerical_covariates]
+
+    if other_cols:
+        col_repr = " + ".join("Q('{}')".format(x) for x in other_cols)
+        factor_matrix = patsy.dmatrix("~ 0 + {}".format(col_repr),
+                                      model[other_cols],
+                                      return_type="dataframe")
+
+        design = pd.concat((design, factor_matrix), axis=1)
+        logg.info(f"Found {len(other_cols)} categorical variables:")
+        logg.info("\t" + ", ".join(other_cols) + '\n')
+
+    if numerical_covariates is not None:
+        logg.info(f"Found {len(numerical_covariates)} numerical variables:")
+        logg.info("\t" + ", ".join(numerical_covariates) + '\n')
+
+        for nC in numerical_covariates:
+            design[nC] = model[nC]
+>>>>>>> upstream/master
 
     return design
 
 
+<<<<<<< HEAD
 def stand_data(model, data):
     """
+=======
+def _standardize_data(
+    model: pd.DataFrame,
+    data: pd.DataFrame,
+    batch_key: str,
+) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray]:
+    """\
+>>>>>>> upstream/master
     Standardizes the data per gene.
 
     The aim here is to make mean and variance be comparable across batches.
 
     Parameters
     --------
+<<<<<<< HEAD
     model : pd.DataFrame
         Contains the batch annotation
     data : pd.DataFrame
@@ -67,10 +137,29 @@ def stand_data(model, data):
     var_pooled : np.array
         Pooled variance per gene
     stand_mean : np.array
+=======
+    model
+        Contains the batch annotation
+    data
+        Contains the Data
+    batch_key
+        Name of the batch column in the model matrix
+
+    Returns
+    --------
+    s_data
+        Standardized Data
+    design
+        Batch assignment as one-hot encodings
+    var_pooled
+        Pooled variance per gene
+    stand_mean
+>>>>>>> upstream/master
         Gene-wise mean
     """
 
     # compute the design matrix
+<<<<<<< HEAD
     batch_items = model.groupby("batch").groups.items()
     batch_levels = [k for k, v in batch_items]
     batch_info = [v for k, v in batch_items]
@@ -80,6 +169,15 @@ def stand_data(model, data):
     drop_cols = [cname for cname, inter in ((model == 1).all()).iteritems() if inter]
     model = model[[c for c in model.columns if c not in drop_cols]]
     design = design_mat(model, batch_levels)
+=======
+    batch_items = model.groupby(batch_key).groups.items()
+    batch_levels, batch_info = zip(*batch_items)
+    n_batch = len(batch_info)
+    n_batches = np.array([len(v) for v in batch_info])
+    n_array = float(sum(n_batches))
+
+    design = _design_matrix(model, batch_key, batch_levels)
+>>>>>>> upstream/master
 
     # compute pooled variance estimator
     B_hat = np.dot(np.dot(la.inv(np.dot(design.T, design)), design.T), data.T)
@@ -109,6 +207,7 @@ def stand_data(model, data):
     return s_data, design, var_pooled, stand_mean
 
 
+<<<<<<< HEAD
 def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     """
     ComBat function for batch effect correction [Johnson07]_ [Leek12]_ [Pedersen12]_.
@@ -136,6 +235,63 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     if key not in adata.obs.keys():
         raise ValueError('Could not find the key {!r} in adata.obs'.format(key))
 
+=======
+def combat(
+    adata: AnnData,
+    key: str = 'batch',
+    covariates: Optional[Collection[str]] = None,
+    inplace: bool = True,
+) -> Union[AnnData, np.ndarray, None]:
+    """\
+    ComBat function for batch effect correction [Johnson07]_ [Leek12]_
+    [Pedersen12]_.
+
+    Corrects for batch effects by fitting linear models, gains statistical power
+    via an EB framework where information is borrowed across genes.
+    This uses the implementation `combat.py`_ [Pedersen12]_.
+
+    .. _combat.py: https://github.com/brentp/combat.py
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix
+    key
+        Key to a categorical annotation from :attr:`~anndata.AnnData.obs`
+        that will be used for batch effect removal.
+    covariates
+        Additional covariates besides the batch variable such as adjustment
+        variables or biological condition. This parameter refers to the design
+        matrix `X` in Equation 2.1 in [Johnson07]_ and to the `mod` argument in
+        the original combat function in the sva R package.
+        Note that not including covariates may introduce bias or lead to the
+        removal of biological signal in unbalanced designs.
+    inplace
+        Whether to replace adata.X or to return the corrected data
+
+    Returns
+    -------
+    Depending on the value of `inplace`, either returns the corrected matrix or
+    or modifies `adata.X`.
+    """
+
+    # check the input
+    if key not in adata.obs_keys():
+        raise ValueError('Could not find the key {!r} in adata.obs'.format(key))
+
+    if covariates is not None:
+        cov_exist = np.isin(covariates, adata.obs_keys())
+        if np.any(~cov_exist):
+            missing_cov = np.array(covariates)[~cov_exist].tolist()
+            raise ValueError('Could not find the covariate(s) {!r} in adata.obs'.format(missing_cov))
+
+        if key in covariates:
+            raise ValueError('Batch key and covariates cannot overlap')
+
+        if len(covariates) != len(set(covariates)):
+            raise ValueError('Covariates must be unique')
+
+>>>>>>> upstream/master
     # only works on dense matrices so far
     if issparse(adata.X):
         X = adata.X.A.T
@@ -147,21 +303,37 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         columns=adata.obs_names,
     )
 
+<<<<<<< HEAD
     # construct a pandas series of the batch annotation
     batch = pd.Series(adata.obs[key])
     model = pd.DataFrame({'batch': batch})
     batch_items = model.groupby("batch").groups.items()
     batch_info = [v for k, v in batch_items]
+=======
+    sanitize_anndata(adata)
+
+    # construct a pandas series of the batch annotation
+    model = adata.obs[[key] + (covariates if covariates else [])]
+    batch_info = model.groupby(key).groups.values()
+>>>>>>> upstream/master
     n_batch = len(batch_info)
     n_batches = np.array([len(v) for v in batch_info])
     n_array = float(sum(n_batches))
 
     # standardize across genes using a pooled variance estimator
+<<<<<<< HEAD
     sys.stderr.write("Standardizing Data across genes.\n")
     s_data, design, var_pooled, stand_mean = stand_data(model, data)
 
     # fitting the parameters on the standardized data
     sys.stderr.write("Fitting L/S model and finding priors\n")
+=======
+    logg.info("Standardizing Data across genes.\n")
+    s_data, design, var_pooled, stand_mean = _standardize_data(model, data, key)
+
+    # fitting the parameters on the standardized data
+    logg.info("Fitting L/S model and finding priors\n")
+>>>>>>> upstream/master
     batch_design = design[design.columns[:n_batch]]
     # first estimate of the additive batch effect
     gamma_hat = np.dot(np.dot(la.inv(np.dot(batch_design.T, batch_design)), batch_design.T), s_data.T)
@@ -175,10 +347,17 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     gamma_bar = gamma_hat.mean(axis=1)
     t2 = gamma_hat.var(axis=1)
     # a_prior and b_prior are the priors on lambda and theta from Johnson and Li (2006)
+<<<<<<< HEAD
     a_prior = list(map(aprior, delta_hat))
     b_prior = list(map(bprior, delta_hat))
 
     sys.stderr.write("Finding parametric adjustments\n")
+=======
+    a_prior = list(map(_aprior, delta_hat))
+    b_prior = list(map(_bprior, delta_hat))
+
+    logg.info("Finding parametric adjustments\n")
+>>>>>>> upstream/master
     # gamma star and delta star will be our empirical bayes (EB) estimators
     # for the additive and multiplicative batch effect per batch and cell
     gamma_star, delta_star = [], []
@@ -199,7 +378,11 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         gamma_star.append(gamma)
         delta_star.append(delta)
 
+<<<<<<< HEAD
     sys.stdout.write("Adjusting data\n")
+=======
+    logg.info("Adjusting data\n")
+>>>>>>> upstream/master
     bayesdata = s_data
     gamma_star = np.array(gamma_star)
     delta_star = np.array(delta_star)
@@ -207,7 +390,10 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
     # we now apply the parametric adjustment to the standardized data from above
     # loop over all batches in the data
     for j, batch_idxs in enumerate(batch_info):
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/master
         # we basically substract the additive batch effect, rescale by the ratio
         # of multiplicative batch effect to pooled variance and add the overall gene
         # wise mean
@@ -227,9 +413,23 @@ def combat(adata: AnnData, key: str = 'batch', inplace: bool = True):
         return bayesdata.values.transpose()
 
 
+<<<<<<< HEAD
 @numba.jit
 def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     """
+=======
+def _it_sol(
+    s_data: np.ndarray,
+    g_hat: np.ndarray,
+    d_hat: np.ndarray,
+    g_bar: float,
+    t2: float,
+    a: float,
+    b: float,
+    conv: float = 0.0001,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+>>>>>>> upstream/master
     Iteratively compute the conditional posterior means for gamma and delta.
 
     gamma is an estimator for the additive batch effect, deltat is an estimator
@@ -239,6 +439,7 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
 
     Parameters
     --------
+<<<<<<< HEAD
     s_data : pd.DataFrame
         Contains the standardized Data
     g_hat : float
@@ -246,15 +447,30 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     d_hat : float
         Initial guess for delta
     g_bar, t_2, a, b : float
+=======
+    s_data
+        Contains the standardized Data
+    g_hat
+        Initial guess for gamma
+    d_hat
+        Initial guess for delta
+    g_bar, t_2, a, b
+>>>>>>> upstream/master
         Hyperparameters
     conv: float, optional (default: `0.0001`)
         convergence criterium
 
     Returns:
     --------
+<<<<<<< HEAD
     gamma: float
         estimated value for gamma
     delta: float
+=======
+    gamma
+        estimated value for gamma
+    delta
+>>>>>>> upstream/master
         estimated value for delta
     """
 
@@ -265,6 +481,12 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     change = 1
     count = 0
 
+<<<<<<< HEAD
+=======
+    # They need to be initialized for numba to properly infer types
+    g_new = g_old
+    d_new = d_old
+>>>>>>> upstream/master
     # we place a normally distributed prior on gamma and and inverse gamma prior on delta
     # in the loop, gamma and delta are updated together. they depend on each other. we iterate until convergence.
     while change > conv:
@@ -282,13 +504,21 @@ def _it_sol(s_data, g_hat, d_hat, g_bar, t2, a, b, conv=0.0001):
     return g_new, d_new
 
 
+<<<<<<< HEAD
 def aprior(delta_hat):
+=======
+def _aprior(delta_hat):
+>>>>>>> upstream/master
     m = delta_hat.mean()
     s2 = delta_hat.var()
     return (2*s2 + m**2) / s2
 
 
+<<<<<<< HEAD
 def bprior(delta_hat):
+=======
+def _bprior(delta_hat):
+>>>>>>> upstream/master
     m = delta_hat.mean()
     s2 = delta_hat.var()
     return (m*s2 + m**3) / s2
