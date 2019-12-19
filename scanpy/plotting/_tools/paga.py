@@ -886,8 +886,9 @@ def paga_path(
     use_raw: bool = True,
     annotations: Sequence[str] = ('dpt_pseudotime',),
     color_map: Union[str, Colormap, None] = None,
-    color_maps_annotations: Mapping[str, Union[str, Colormap]] =
-                            MappingProxyType(dict(dpt_pseudotime='Greys')),
+    color_maps_annotations: Mapping[
+        str, Union[str, Colormap]
+    ] = MappingProxyType(dict(dpt_pseudotime='Greys')),
     palette_groups: Optional[Sequence[str]] = None,
     n_avg: int = 1,
     groups_key: Optional[str] = None,
