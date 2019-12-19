@@ -829,7 +829,12 @@ def test_paga(image_comparer):
     save_and_compare_images('master_paga')
 
     sc.pl.paga(
-        pbmc, color='CST3', threshold=0.5, max_edge_width=1.0, show=False, key='key'
+        pbmc,
+        color='CST3',
+        threshold=0.5,
+        max_edge_width=1.0,
+        show=False,
+        key='key',
     )
     save_and_compare_images('master_paga_continuous')
 
